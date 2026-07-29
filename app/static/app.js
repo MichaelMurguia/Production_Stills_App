@@ -1674,11 +1674,11 @@ async function openSpecEditor(specId) {
     <div class="spec-section">
       <h4>Evidence ledger <span class="hint">(every required object needs a PASS row — added automatically when you add an object)</span></h4>
       <div class="ledger-row grid-head">
-        <span title="Which panel this evidence row belongs to.">Panel</span>
+        <span title="Which panel this evidence row belongs to (its Panel ID, e.g. P01).">ID</span>
         <span title="The visible object this row justifies.">Object</span>
-        <span title="How strongly the canon supports this object.">Evidence class</span>
-        <span title="Where the evidence comes from — free text for the human audit trail; never sent to the image model.">Source citation</span>
-        <span title="PASS renders; HOLD blocks approval until you resolve it; REMOVE marks for removal.">Status</span>
+        <span title="How strongly the canon supports this object — the evidence class.">Source</span>
+        <span title="The citation itself — an exact quote or scene reference; free text for the human audit trail, never sent to the image model.">Cited evidence</span>
+        <span title="PASS renders; HOLD blocks approval until you resolve it; REMOVE marks for removal.">State</span>
         <span></span>
       </div>
       <div id="sp-ledger"></div>
@@ -1870,6 +1870,16 @@ REMOVE — marked for removal from the board.">
       </select>
       ${locked ? "<span></span>" : '<button class="danger" title="Remove row">×</button>'}`;
     if (!locked) $("button.danger", row).onclick = () => row.remove();
+    // Non-PASS rows read at a glance: status colors the row's left border
+    // and tints its ground. Inline style so it beats the zebra rule.
+    const paint = () => {
+      const st = $("[data-f=status]", row).value;
+      row.style.borderLeftColor =
+        st === "HOLD" ? "var(--hold)" : st === "REMOVE" ? "var(--bad)" : "transparent";
+      row.style.background = st === "PASS" ? "" : "var(--panel)";
+    };
+    $("[data-f=status]", row).addEventListener("change", paint);
+    paint();
     ledgerHost.append(row);
   }
 
