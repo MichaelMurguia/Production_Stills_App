@@ -12,34 +12,44 @@
 <body>
 <header>
   <div class="brand">
-    <span class="brand-title">SCREENBOARD STUDIO</span>
-    <span class="brand-sub">Your Movie Visualized</span>
+    <span class="brand-title">SCREENBOARD</span>
+    <span class="brand-sub" id="brand-project">THE BELTMINERS</span>
+  </div>
+  <div class="head-right">
+    <span class="engine-dots" id="engine-dots" title="Engine credentials — filled green: key saved here · blue: environment variable · hollow: none"></span>
+    <nav class="tools" id="tools-nav">
+      <button data-view="status" class="active" title="Where the project stands: the next action, everything blocking, and recent activity">Status</button>
+      <button data-view="references" title="Gathered reference: lookbook style plates and subject research (cast, vehicles, props)">Research</button>
+      <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">Settings</button>
+    </nav>
   </div>
 </header>
 
-<!-- The nav IS the pipeline. Numbered stages run left to right in the order the
-     work actually happens; Research and Settings sit apart because they are not
-     stages. app.js binds via closest("button[data-view]"), so the nested spans
-     and the reordering are both safe. -->
+<!-- The band IS the pipeline: five numbered stages in work order, each with a
+     live status subline. Top-border color states progress (--ok complete,
+     --accent current, --bad blocked, --line not reached); the HERE chip marks
+     the viewed stage. Status/Research/Settings are tools, not stages — they
+     live in the header. app.js binds via closest("button[data-view]"). -->
 <nav id="nav">
-  <button data-view="dashboard" class="active" title="Where the project stands: what is blocking the next render, the screenplay, and the standing prohibitions">
-    <span class="stage-n">01</span><span class="stage-l">Dashboard</span>
+  <button data-view="screenplay" title="Stage 01 — the root dependency: the screenplay file, what it gave us per location, and citation health">
+    <span class="stage-top"><span class="stage-n">01</span><span class="stage-l">Screenplay</span><span class="here">HERE</span></span>
+    <span class="stage-sub" data-ssub="screenplay"></span>
   </button>
-  <button data-view="wizard" title="The visual concept: the wizard, the Art Direction Bible, style anchors, lessons learned">
-    <span class="stage-n">02</span><span class="stage-l">Production Design</span>
+  <button data-view="wizard" title="Stage 02 — the visual concept: the wizard, the Art Direction Bible, style anchors, lessons learned">
+    <span class="stage-top"><span class="stage-n">02</span><span class="stage-l">Prod. Design</span><span class="here">HERE</span></span>
+    <span class="stage-sub" data-ssub="wizard"></span>
   </button>
-  <button data-view="specs" title="Breakdown sheets: the script broken into each board's sets, dressing, props, and evidence">
-    <span class="stage-n">03</span><span class="stage-l">Breakdowns</span>
+  <button data-view="specs" title="Stage 03 — breakdown sheets: the script broken into each board's sets, dressing, props, and evidence">
+    <span class="stage-top"><span class="stage-n">03</span><span class="stage-l">Breakdowns</span><span class="here">HERE</span></span>
+    <span class="stage-sub" data-ssub="specs"></span>
   </button>
-  <button data-view="boards" title="The department wall: generate panels, review takes, assemble boards">
-    <span class="stage-n">04</span><span class="stage-l">Boards</span>
+  <button data-view="boards" title="Stage 04 — the judging room: generate takes, review, approve panels">
+    <span class="stage-top"><span class="stage-n">04</span><span class="stage-l">Panels</span><span class="here">HERE</span></span>
+    <span class="stage-sub" data-ssub="boards"></span>
   </button>
-  <span class="nav-gap"></span>
-  <button data-view="references" title="Gathered reference: lookbook style plates and subject research (cast, vehicles, props)">
-    <span class="stage-l">Research</span>
-  </button>
-  <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">
-    <span class="stage-l">Settings</span>
+  <button data-view="assembly" title="Stage 05 — board assembly: the slot map, layout variants, and the finished 4K boards">
+    <span class="stage-top"><span class="stage-n">05</span><span class="stage-l">Boards</span><span class="here">HERE</span></span>
+    <span class="stage-sub" data-ssub="assembly"></span>
   </button>
 </nav>
 
@@ -61,20 +71,13 @@
 <!-- Dashboard: what is blocking you leads at full width on the left; counts and
      standing rules recede into a sidebar. Same four render targets as before
      (#dash-cards, #dash-missing, #dash-prohibited, #dash-screenplay). -->
-<template id="tpl-dashboard">
+<!-- Status: the landing tool — the next action leads, everything blocking
+     below it, counts and history in the sidebar. -->
+<template id="tpl-status">
   <section class="view dash">
     <div class="dash-main">
       <div class="panel panel-lead" id="dash-next"></div>
       <div class="panel hidden" id="dash-missing"></div>
-      <div class="panel">
-        <h2>Screenplay <span class="hint">(everything downstream depends on this file)</span></h2>
-        <div id="dash-screenplay"></div>
-        <form id="screenplay-form" class="row">
-          <input type="file" id="screenplay-file" accept=".pdf,.fdx,.txt,.fountain" required>
-          <button type="submit" class="primary">Upload screenplay</button>
-        </form>
-        <div id="dash-locations"></div>
-      </div>
     </div>
     <aside class="dash-side">
       <div class="cards" id="dash-cards"></div>
@@ -87,6 +90,52 @@
         <ul id="dash-prohibited" class="taglist"></ul>
       </div>
     </aside>
+  </section>
+</template>
+
+<!-- Screenplay: stage 01. The root dependency gets its own room — coverage
+     table left, file card + downstream counts + replace right. -->
+<template id="tpl-screenplay">
+  <section class="view dash">
+    <div class="dash-main">
+      <div class="panel">
+        <div class="stage-kicker">STAGE 01 OF 5</div>
+        <h3 class="stage-headline">What the script gave us</h3>
+        <p class="hint">Every location the read found, with how much the script actually says about each. Thin coverage means a breakdown here will lean on inference — and inference is budgeted.</p>
+        <div id="dash-locations"></div>
+      </div>
+      <div class="panel hidden" id="scr-citations"></div>
+    </div>
+    <aside class="dash-side">
+      <div class="panel">
+        <h2>Current screenplay</h2>
+        <div id="dash-screenplay"></div>
+        <div id="scr-downstream"></div>
+      </div>
+      <div class="panel">
+        <h2>Replace</h2>
+        <p class="hint">A new draft does not invalidate approved work — cited quotes are re-checked and broken citations surface as CITE blockers for your review.</p>
+        <form id="screenplay-form" class="row">
+          <input type="file" id="screenplay-file" accept=".pdf,.fdx,.txt,.fountain" required>
+          <button type="submit" class="primary">Upload a new draft</button>
+        </form>
+        <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>
+      </div>
+    </aside>
+  </section>
+</template>
+
+<!-- Assembly: stage 05. Sheet picker, slot map + variant picker, the
+     assemble action, and the board gallery. -->
+<template id="tpl-assembly">
+  <section class="view">
+    <div class="panel">
+      <h2>Board assembly <span class="hint">(the slot map makes the never-upscaled rule visible before you spend a render)</span></h2>
+      <div class="row" style="margin-top:0">
+        <select id="asm-spec" style="max-width:480px"></select>
+      </div>
+    </div>
+    <div id="assembly-host"></div>
   </section>
 </template>
 

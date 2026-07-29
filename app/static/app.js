@@ -365,14 +365,18 @@ function initLightbox() {
 
 /* ------------------------------------------------------------- navigation */
 
-const views = { dashboard: renderDashboard, wizard: renderWizard, references: renderReferences, specs: renderSpecs, boards: renderBoards, settings: renderSettings };
+const views = { status: renderStatus, screenplay: renderScreenplay, wizard: renderWizard,
+                references: renderReferences, specs: renderSpecs, boards: renderBoards,
+                assembly: renderAssembly, settings: renderSettings };
+const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
+let activeView = "status";
 
-$("#nav").addEventListener("click", e => {
-  const btn = e.target.closest("button[data-view]");
-  if (!btn) return;
-  $$("#nav button").forEach(b => b.classList.toggle("active", b === btn));
-  showView(btn.dataset.view);
-});
+for (const navSel of ["#nav", "#tools-nav"]) {
+  $(navSel).addEventListener("click", e => {
+    const btn = e.target.closest("button[data-view]");
+    if (btn) showView(btn.dataset.view);
+  });
+}
 
 function useTemplate(id) {
   const main = $("#main");
@@ -381,16 +385,79 @@ function useTemplate(id) {
 }
 
 async function showView(name) {
+  activeView = name;
+  $$("#tools-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  updateBand();  // fire and forget — the band must never block the view
   try { await views[name](); }
   catch (err) { toast(err.message, true); }
+}
+
+/* The band is the pipeline's state, refreshed on every navigation:
+   subline per stage from stage_summary, top border --ok complete /
+   --accent current / --bad blocked / --line not reached, HERE on the
+   viewed stage, engine dots from credentials. */
+async function updateBand() {
+  let state, settings;
+  try {
+    [state, settings] = await Promise.all([api("/api/state"), api("/api/settings")]);
+  } catch { return; }
+
+  $("#brand-project").textContent = (state.project || "").toUpperCase();
+
+  const eng = settings.engines || {};
+  $("#engine-dots").innerHTML = ["gemini", "openai"].map(k => {
+    const src = (eng[k] || {}).source;
+    return `<span class="edot ${src === "settings" ? "ok" : src === "env" ? "env" : "none"}"><i></i>${k.toUpperCase()}</span>`;
+  }).join("");
+
+  const ss = state.stage_summary || {};
+  const pd = ss.production_design || {}, bd = ss.breakdowns || {},
+        pn = ss.panels || {}, bo = ss.boards || {};
+  const subs = {
+    screenplay: ss.screenplay ? ss.screenplay.file : "not uploaded",
+    wizard: pd.bible_saved
+      ? `Bible rev ${pd.bible_rev} · ${pd.style_anchors} anchor${pd.style_anchors === 1 ? "" : "s"}`
+      : "no bible yet",
+    specs: (bd.locked || bd.drafts)
+      ? `${bd.locked} locked · ${bd.drafts} draft${bd.drafts === 1 ? "" : "s"}${bd.blocked ? ` · ${bd.blocked} blocked` : ""}`
+      : "no sheets yet",
+    boards: pn.candidates ? `${pn.approved} approved of ${pn.candidates}` : "no candidates yet",
+    assembly: bo.assembled
+      ? `${bo.assembled} assembled${bo.approved ? ` · ${bo.approved} approved` : ""}`
+      : "none assembled",
+  };
+  const complete = {
+    screenplay: !!ss.screenplay,
+    wizard: !!pd.bible_saved,
+    specs: (bd.locked || 0) > 0,
+    boards: (bo.assembled || 0) > 0,
+    assembly: (bo.approved || 0) > 0,
+  };
+  const BLOCK_STAGE = { dashboard: "screenplay", references: "wizard", wizard: "wizard",
+                        specs: "specs", boards: "boards" };
+  const blocked = new Set((state.blocking || []).map(b =>
+    b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs"));
+  const frontier = STAGE_ORDER.find(s => !complete[s]) || "assembly";
+
+  for (const stage of STAGE_ORDER) {
+    const btn = $(`#nav button[data-view="${stage}"]`);
+    if (!btn) continue;
+    $(".stage-sub", btn).textContent = subs[stage] || "";
+    const isHere = activeView === stage;
+    const isCurrent = isHere || (!STAGE_ORDER.includes(activeView) && stage === frontier && !isHere);
+    btn.classList.toggle("here", isHere);
+    btn.classList.toggle("s-cur", isCurrent);
+    btn.classList.toggle("s-bad", !isCurrent && blocked.has(stage));
+    btn.classList.toggle("s-ok", !isCurrent && !blocked.has(stage) && complete[stage]);
+  }
 }
 
 /* -------------------------------------------------------------- dashboard */
 
 const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review" };
 
-async function renderDashboard() {
-  useTemplate("tpl-dashboard");
+async function renderStatus() {
+  useTemplate("tpl-status");
   const [state, recent] = await Promise.all([
     api("/api/state"),
     api("/api/activity?limit=8").catch(() => []),
@@ -451,6 +518,11 @@ async function renderDashboard() {
   $("#dash-prohibited").innerHTML =
     state.prohibited_inventions.map(p => `<li>${esc(p)}</li>`).join("") ||
     `<li class="mini">none recorded</li>`;
+}
+
+async function renderScreenplay() {
+  useTemplate("tpl-screenplay");
+  const state = await api("/api/state");
 
   $("#dash-screenplay").innerHTML = state.screenplay
     ? `<p><span class="badge APPROVED">CURRENT</span> ${esc(state.screenplay.file)}
@@ -470,7 +542,7 @@ async function renderDashboard() {
       toast(cc && cc.missing
         ? `Screenplay uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; see Blocking.`
         : "Screenplay uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
-      renderDashboard();
+      showView("screenplay");
     } catch (err) { toast(err.message, true); }
   });
 }
@@ -1984,11 +2056,10 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec }, refs, candidates, boards, appSettings] = await Promise.all([
+  const [{ spec }, refs, candidates, appSettings] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
-    api(`/api/specs/${specId}/boards`),
     api("/api/settings"),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
@@ -2257,7 +2328,34 @@ async function renderBoardPanels(specId) {
   derivedCands.forEach((c, i) =>
     derGallery.append(renderCard(specId, c, () => renderBoardPanels(specId), derItems, i)));
 
-  // -------- board assembly section --------
+}
+
+/* --------------------------------------------------- assembly (stage 05) */
+
+async function renderAssembly() {
+  useTemplate("tpl-assembly");
+  const specs = (await api("/api/specs")).filter(s => s.locked);
+  const sel = $("#asm-spec");
+  sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
+    specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
+  sel.onchange = () => sel.value && renderAssemblyFor(sel.value);
+  if (specs.length === 1) { sel.value = specs[0].specification_id; renderAssemblyFor(sel.value); }
+  if (!specs.length) {
+    $("#assembly-host").innerHTML =
+      `<div class="panel mini">No signed-off breakdowns yet. Approve one on the Breakdowns tab first.</div>`;
+  }
+}
+
+async function renderAssemblyFor(specId) {
+  const host = $("#assembly-host");
+  host.innerHTML = `<div class="panel mini">Loading…</div>`;
+  const [{ spec }, candidates, boards] = await Promise.all([
+    api(`/api/specs/${specId}`),
+    api(`/api/specs/${specId}/candidates`),
+    api(`/api/specs/${specId}/boards`),
+  ]);
+  host.innerHTML = "";
+
   const approvedByPanel = {};
   for (const c of candidates) {
     if (c.status === "APPROVED") approvedByPanel[c.panel_id] = c.candidate_id;
@@ -2339,7 +2437,7 @@ async function renderBoardPanels(specId) {
     try {
       const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h, variant } });
       toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout) — BOARD CANDIDATE, unapproved.`);
-      renderBoardPanels(specId);
+      renderAssemblyFor(specId);
     } catch (err) {
       busy.done();
       toast(err.message, true);
@@ -2354,11 +2452,11 @@ async function renderBoardPanels(specId) {
     caption: `${b.candidate_id} — assembled board (${b.status}) ${b.width}×${b.height}`,
   }));
   orderedBoards.forEach((b, i) => {
-    asmGallery.append(renderCard(specId, b, () => renderBoardPanels(specId), boardItems, i));
+    asmGallery.append(renderCard(specId, b, () => renderAssemblyFor(specId), boardItems, i));
   });
 }
 
 /* ------------------------------------------------------------------ start */
 
 initLightbox();
-showView("dashboard");
+showView("status");
