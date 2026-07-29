@@ -83,7 +83,55 @@ is static markup, not generated.
 **Ledger rows.** `.ledger-row` — every row *including the header* carries
 `border-left: 2px solid transparent`. A state marker colors that border in. Never
 add the border only to marked rows; it shifts columns 2px and destroys vertical
-scanning.
+scanning. Non-PASS rows tint `--panel` (inline style beats the zebra rule).
+
+**Pipeline band (v3).** Five stage cells in `minmax(0,1fr)` tracks, each with
+number, label, a live Courier subline from `stage_summary`, and a top border
+stating progress: `--ok` complete, `--accent` current (the viewed stage, else
+the work frontier — exactly one amber in the chrome), `--bad` blocked,
+`--line` unreached. `HERE` chip marks the viewed stage only. Tools (Status ·
+Research · Settings) live in the header with the engine credential dots.
+
+**Judging room** (`.board-room` = `.board-rail` 230px · `.board-stage` ·
+`.board-side` 300px). Rail: sheet block, panel list with latest-take thumbs
+and readiness marks, derived entry, assembly pointer. Stage: panel strip, one
+big staged render on `--field`, status chip left / actions right (Approve
+panel is the screen's only amber; → Reference disabled until approved), ghost
+secondary row (Repair region · Crop → reference · → Light study · Delete
+forever on rejected takes only), takes filmstrip (rejected dims the image
+only), then the generation bench — whose Generate button is deliberately not
+amber. Side: THIS RENDER facts, ANCHORED TO, COMPILED PROMPT with Full
+toggle, CARRIED REJECTIONS.
+
+**Blocking rows + DO-THIS-NEXT.** Row grid `badge · text · action`: kind
+badge fixed 52px Courier 10px bordered in its status color (never filled),
+rows split by `--line-soft` top borders, action is an amber text link-button
+(`.block-act`), not a bordered button. The DO-THIS-NEXT lead is blocking[0]
+promoted into `.panel-lead` — Courier amber kicker, one-line verb headline
+(Archivo 600 21px), one supporting sentence max, primary button right. It is
+a presentation of the first blocker, never a second list.
+
+**Recent feed.** `.recent-row` — timestamp column flex-none Courier
+`--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
+Courier `--ink` (`monoIds()`). No icons, no dots — the timestamp column is
+the rhythm.
+
+**Coverage meter.** `.loc-meter` — 4 segments 11×4px, 3px gap; filled =
+`--ok`; a single amber first segment means "thin — inference will be spent
+here"; empty = `--line-soft`. This is the project's only meter vocabulary —
+reuse it anywhere "how much support exists" appears (canon budget included);
+never invent another bar.
+
+**Slot map.** `.slotmap` — exact assembler geometry as absolutely-positioned
+`.slot` cells on `--bg2` in a `--line` frame; panel ID chip top-left, verdict
+chip bottom-right (status-color border, never filled); TOO-SMALL tints
+border + id `--bad`; app-drawn title/canon blocks are labeled `APP-DRAWN`.
+The map is read-only geometry — actions live outside it.
+
+**CANNOT-LOCK gate strip.** `.gate-strip` — amber left border, Courier amber
+label, one line per failing validate condition (the *server's* rules: PASS
+gaps, allocation, citations, weak budget), "Jump to first ↓" as a text
+action. Approve & lock disabled while it shows.
 
 ---
 
@@ -170,10 +218,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-29 | DO-THIS-NEXT lead + blocking rows (`.next-label/.next-row/.block-row/.block-kind`) | Dashboard | mock 1a's single-verb lead and kind-badged blocker rows; no existing row pattern carried a kind chip + resolving action |
-| 2026-07-29 | Recent activity feed (`.recent-row/.recent-ts`) | Dashboard sidebar | mock 1a's timestamped feed; `.ledger-row` is a 6-col editing grid, not a two-part log line |
-| 2026-07-29 | Location coverage table (`.loc-row/.loc-meter`) | Dashboard screenplay panel | mock 4a's slugline × scenes × detail-meter grid; the segmented meter had no existing form |
-| 2026-07-29 | Assembly slot map (`.slotmap/.slot/.slot-verdict/.slot-alert`) | Boards assembly section | mock 4b's pre-render slot geometry preview; absolutely-positioned proportional slots exist nowhere else |
+| — | *(none — the 2026-07-29 patterns were canonized into the sections above by plan v3 Part A)* | | |
 
 ---
 
@@ -182,6 +227,15 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-29** — Plan v3 built (C1–C14): five-stage band with live
+  sublines + engine dots; Status/Screenplay/Assembly views split out; the
+  judging room (rail · stage · provenance); canonical blocking rows, recent
+  feed, coverage meter, slot map, gate strip, fact rows — all folded into the
+  sections above and the uncanonized table cleared. Variant chips, engine
+  cards, filter chips, step badges added per mocks 4b/4c/4d/2a. Known
+  deliberate ambers beyond the one-per-screen rule, both mock-sanctioned:
+  the active variant/filter chip (selection state) and the band's current
+  stage. Reject/quarantine copy corrected; Generate is not amber.
 - **2026-07-29** — Backend-enablement UI (mocks 1a/4a/4b in the current nav):
   dashboard rebuilt around DO-THIS-NEXT + blocking rows + recent feed;
   screenplay panel gains the location coverage table; assembly gains the slot

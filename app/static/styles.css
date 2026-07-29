@@ -159,8 +159,8 @@ nav#nav button.s-cur .stage-n { color: var(--accent); }
 nav#nav button.s-cur .stage-l { font-weight: 700; }
 nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
-/* UNCANONIZED — 2026-07-29 — C5 CANNOT-LOCK gate strip (mock 3a): amber
-   Courier label, one line per failing validate condition, jump link. */
+/* CANNOT-LOCK gate strip — canonical (plan v3 B7, mock 3a): amber Courier
+   label, one line per failing validate condition, jump link. */
 .gate-strip {
   border: 1px solid var(--line); border-left: 3px solid var(--accent);
   background: rgba(224, 163, 63, .06); padding: 9px 13px; margin: 4px 0 14px;
@@ -730,8 +730,8 @@ details.meta pre {
 .loc-open.held { color: var(--accent); }
 .loc-draft { justify-self: start; font-family: var(--mono); font-size: 12px; }
 
-/* UNCANONIZED — 2026-07-29 — C3 fact rows (screenplay file card + downstream
-   counts; the 4a right column). Label faint Courier left, value Courier right. */
+/* Fact rows — canonical (mocks 4a/4d): label faint Courier left, value
+   Courier right; the vocabulary for any machine-facts card. */
 .scr-file { font-family: var(--mono); font-weight: 700; font-size: 14px; letter-spacing: .02em; margin: 4px 0 10px; }
 .fact {
   display: flex; justify-content: space-between; gap: 12px; padding: 4px 0;
@@ -751,8 +751,9 @@ details.meta pre {
 .dsrow:first-of-type { border-top: none; }
 .dsrow b { font-family: var(--mono); color: var(--ink); font-weight: 700; }
 
-/* UNCANONIZED — 2026-07-29 — assembly slot map: geometry + verdicts before
-   a render is spent (mock 4b). Status colors report state only. */
+/* Assembly slot map — canonical (plan v3 Part A.4, mock 4b): geometry +
+   verdicts before a render is spent. ID chip top-left, verdict chip
+   bottom-right, status colors report state only, APP-DRAWN blocks labeled. */
 .slot-caption { margin: 4px 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .slot-alert {
   font-family: var(--mono); font-size: 12px; color: var(--bad);
@@ -795,7 +796,7 @@ details.meta pre {
 .slot-verdict.NO_CANDIDATE { color: var(--ink-faint); border-color: var(--line); }
 .slot-dims { font-family: var(--mono); font-size: 10px; color: var(--bad); }
 
-/* UNCANONIZED — 2026-07-29 — judging room layout (mock 3b): rail · stage ·
+/* Judging room — canonical (plan v3 C6–C9, mock 3b): rail · stage ·
    provenance as one flex row inside #board-panels. */
 .board-room { display: flex; gap: 20px; align-items: flex-start; }
 .board-rail { flex: 0 0 230px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
