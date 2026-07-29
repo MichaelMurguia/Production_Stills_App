@@ -387,9 +387,14 @@ async function showView(name) {
 
 /* -------------------------------------------------------------- dashboard */
 
+const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review" };
+
 async function renderDashboard() {
   useTemplate("tpl-dashboard");
-  const state = await api("/api/state");
+  const [state, recent] = await Promise.all([
+    api("/api/state"),
+    api("/api/activity?limit=8").catch(() => []),
+  ]);
 
   const specCounts = { APPROVED: 0, DRAFT: 0, REVIEWED: 0, REJECTED: 0 };
   state.specs.forEach(s => { specCounts[s.status] = (specCounts[s.status] || 0) + 1; });
@@ -401,13 +406,47 @@ async function renderDashboard() {
     ["Draft specs", specCounts.DRAFT + (specCounts.REVIEWED || 0)],
   ].map(([lbl, num]) => `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join("");
 
-  const missing = $("#dash-missing");
-  if (state.missing_dependencies.length) {
-    missing.innerHTML = `<h2>Missing dependencies</h2><ul>` +
-      state.missing_dependencies.map(m => `<li>${esc(m)}</li>`).join("") + `</ul>`;
+  // The lead: the single next action — first blocker, or the next stage verb.
+  const next = state.next || { text: "Upload the screenplay", action: "dashboard" };
+  const lead = $("#dash-next");
+  lead.innerHTML = `
+    <div class="next-label">DO THIS NEXT</div>
+    <div class="next-row">
+      <div class="next-text">${esc(next.text)}</div>
+      ${next.action !== "dashboard"
+        ? `<button class="primary" data-f="go">${esc(BLOCK_VERBS[(state.blocking[0] || {}).kind] || "Open")}</button>`
+        : ""}
+    </div>`;
+  const go = $("[data-f=go]", lead);
+  if (go) go.onclick = () => showView(next.action);
+
+  // Everything that stops the next render, as structured rows (kind badge,
+  // text, resolving jump). The panel hides entirely when nothing blocks.
+  const blocking = $("#dash-missing");
+  if (state.blocking.length) {
+    blocking.classList.remove("hidden");
+    blocking.innerHTML =
+      `<h2>Blocking — ${state.blocking.length} <span class="hint">everything that stops the next render</span></h2>` +
+      state.blocking.map((b, i) => `
+        <div class="block-row">
+          <span class="block-kind ${esc(b.kind)}">${esc(b.kind)}</span>
+          <span class="block-text" title="${esc(b.detail || "")}">${esc(b.text)}</span>
+          <button class="ghost" data-block="${i}">${esc(BLOCK_VERBS[b.kind] || "Open")}</button>
+        </div>`).join("");
+    $$("[data-block]", blocking).forEach(btn => {
+      btn.onclick = () => showView(state.blocking[+btn.dataset.block].action || "dashboard");
+    });
   } else {
-    missing.innerHTML = `<h2>Dependencies</h2><p class="mini">All core dependencies satisfied.</p>`;
+    blocking.classList.add("hidden");
   }
+
+  $("#dash-recent").innerHTML = recent.length
+    ? recent.map(e => `
+        <div class="recent-row${e.kind === "error" ? " error" : ""}">
+          <span class="recent-ts">${esc((e.ts || "").slice(11, 16))}</span>
+          <span class="recent-text">${esc(e.text)}</span>
+        </div>`).join("")
+    : `<p class="mini">No activity recorded yet.</p>`;
 
   $("#dash-prohibited").innerHTML =
     state.prohibited_inventions.map(p => `<li>${esc(p)}</li>`).join("") ||
@@ -417,6 +456,7 @@ async function renderDashboard() {
     ? `<p><span class="badge APPROVED">CURRENT</span> ${esc(state.screenplay.file)}
        <span class="mini">(${(state.screenplay.size / 1048576).toFixed(2)} MB, uploaded ${esc(state.screenplay.uploaded_at)})</span></p>`
     : `<p class="mini">No screenplay uploaded yet.</p>`;
+  if (state.screenplay) renderLocations();
 
   $("#screenplay-form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -425,10 +465,47 @@ async function renderDashboard() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      await api("/api/screenplay", { method: "POST", body: fd });
-      toast("Screenplay uploaded.");
+      const rec = await api("/api/screenplay", { method: "POST", body: fd });
+      const cc = rec.citation_check;
+      toast(cc && cc.missing
+        ? `Screenplay uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; see Blocking.`
+        : "Screenplay uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
       renderDashboard();
     } catch (err) { toast(err.message, true); }
+  });
+}
+
+async function renderLocations() {
+  const host = $("#dash-locations");
+  if (!host) return;
+  let data;
+  try { data = await api("/api/screenplay/locations"); }
+  catch { return; }
+  if (!data.available) {
+    host.innerHTML = `<p class="mini">${esc(data.reason || "location map unavailable")}</p>`;
+    return;
+  }
+  const rows = data.locations.slice(0, 12);
+  const meter = d => `<span class="loc-meter" title="how much the script describes — thin coverage spends inference budget faster">`
+    + [1, 2, 3, 4].map(i => `<i class="${i <= d ? "on" : ""}"></i>`).join("") + `</span>`;
+  host.innerHTML = `
+    <div class="loc-head"><span class="f-label">What the script gave us</span>
+      <span class="hint">${data.locations.length} locations · ${data.scene_count} scenes · sorted by scene count — detail is a line-count heuristic, not a model's opinion</span></div>
+    ${rows.map(l => `
+      <div class="loc-row">
+        <span class="loc-slug">${esc(l.int_ext)}. ${esc(l.location)}</span>
+        <span class="loc-scenes">${l.scenes}</span>
+        ${meter(l.detail)}
+        ${l.sheet
+          ? `<span class="loc-sheet"><span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span> ${esc(l.sheet.spec_id)}</span>`
+          : `<button class="ghost loc-draft" data-loc="${esc(l.location)}">Draft a sheet</button>`}
+      </div>`).join("")}
+    ${data.locations.length > rows.length ? `<p class="mini">+ ${data.locations.length - rows.length} more location(s) with fewer scenes</p>` : ""}`;
+  $$(".loc-draft", host).forEach(btn => {
+    btn.onclick = () => {
+      sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
+      showView("specs");
+    };
   });
 }
 
@@ -455,14 +532,23 @@ async function renderSettings() {
       toast(`Preferred image model: ${pref.options[pref.selectedIndex].text}.`);
     } catch (err) { toast(err.message, true); }
   };
-  $("#dash-keystate").innerHTML = settings.gemini_api_key_set
+  // Honest connection state: key source, plus the persisted outcome of the
+  // user's own last Test click — never a fake CONNECTED.
+  const lastTest = provider => {
+    const t = (settings.engines || {})[provider]?.last_test;
+    if (!t) return "";
+    return ` · last test <span class="badge ${t.ok ? "APPROVED" : "REJECTED"}">${t.ok ? "PASS" : "FAIL"}</span> <span class="mini">${esc((t.at || "").slice(0, 16).replace("T", " "))}</span>`;
+  };
+  $("#dash-keystate").innerHTML = (settings.gemini_api_key_set
     ? `<span class="badge APPROVED">KEY SET</span> ${esc(settings.gemini_api_key_hint)} — image model ${esc(settings.model)}`
-    : `<span class="badge REJECTED">NO KEY</span> generation and auto-fill disabled until a key is saved`;
-  $("#openai-keystate").innerHTML = settings.openai_api_key_set
+    : `<span class="badge REJECTED">NO KEY</span> generation and auto-fill disabled until a key is saved`)
+    + lastTest("gemini");
+  $("#openai-keystate").innerHTML = (settings.openai_api_key_set
     ? `<span class="badge APPROVED">KEY SET</span> ${esc(settings.openai_api_key_hint)} — image model ${esc(settings.openai_model)}`
     : settings.openai_env_key_hint
       ? `<span class="badge PROVISIONAL">ENV VAR</span> no key saved here — falling back to OPENAI_API_KEY (${esc(settings.openai_env_key_hint)}) from your system environment. Save a key below to override it.`
-      : `<span class="badge REJECTED">NO KEY</span> optional — only needed to generate with GPT Image 2`;
+      : `<span class="badge REJECTED">NO KEY</span> optional — only needed to generate with GPT Image 2`)
+    + lastTest("openai");
 
   const keyForm = (formSel, inputSel, field, label) => {
     $(formSel).addEventListener("submit", async e => {
@@ -1068,15 +1154,15 @@ async function renderWizard() {
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
     $("#style-bible").value = bible.text;
-    if (bible.is_default) {
-      $("#style-status").textContent = "showing built-in default — save to make it yours";
-    }
+    $("#style-status").textContent = bible.is_default
+      ? "showing built-in default — save to make it yours"
+      : (bible.rev ? `REV ${bible.rev} — every future prompt uses this` : "");
   };
   await loadBibleEditor();
   $("#style-save").onclick = async () => {
     try {
-      await api("/api/style-bible", { method: "PUT", json: { text: $("#style-bible").value } });
-      $("#style-status").textContent = "saved — every future prompt uses this";
+      const r = await api("/api/style-bible", { method: "PUT", json: { text: $("#style-bible").value } });
+      $("#style-status").textContent = `REV ${r.rev} — saved; every future prompt uses this`;
       toast("Art Direction Bible saved.");
     } catch (err) { toast(err.message, true); }
   };
@@ -1149,6 +1235,7 @@ async function renderReferences() {
         <div class="meta">controls: ${esc(r.controls.join(", ") || "—")}</div>
         <div class="meta">does not control: ${esc(r.does_not_control.join(", ") || "—")}</div>
         ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
+        <div class="meta">${r.used_in ? `used in ${r.used_in} render${r.used_in > 1 ? "s" : ""}` : "not used in a render yet"}</div>
       </div>
       <div class="actions"></div>`;
     $("img", card).onclick = () => openLightbox(lbItems, i);
@@ -1161,7 +1248,7 @@ async function renderReferences() {
       actions.append(b);
     } else {
       const cr = document.createElement("button");
-      cr.className = "ghost"; cr.textContent = "✂ Crop";
+      cr.className = "ghost"; cr.textContent = "Crop";
       cr.title = "Harvest a region of this image (e.g. one cell of a master board) as a new reference with its own narrow role";
       cr.onclick = () => cropToReference(
         { type: "reference", id: r.id }, `/api/references/${r.id}/image`);
@@ -1225,6 +1312,14 @@ async function renderSpecs(openId = null) {
   };
   persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt", "spec-auto-mode", "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode"]);
+
+  // Arriving from the dashboard's location map: seed the draft subject.
+  const locHint = sessionStorage.getItem("draftLocationHint");
+  if (locHint) {
+    sessionStorage.removeItem("draftLocationHint");
+    const promptEl = $("#spec-auto-prompt");
+    if (promptEl && !promptEl.value.trim()) promptEl.value = locHint;
+  }
 
   $("#spec-auto-form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -1818,7 +1913,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
       actions.append(ls);
     }
     const cr = document.createElement("button");
-    cr.className = "ghost"; cr.textContent = "✂ Crop";
+    cr.className = "ghost"; cr.textContent = "Crop";
     cr.title = "Harvest a region of this image as a new reference with its own narrow role";
     cr.onclick = () => cropToReference(
       { type: "candidate", spec_id: specId, id: c.candidate_id },
@@ -1842,7 +1937,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
   }
   if (c.kind !== "derived_palette") {
     const rp = document.createElement("button");
-    rp.className = "ghost"; rp.textContent = "🖌 Repair";
+    rp.className = "ghost"; rp.textContent = "Repair";
     rp.title = "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region. The result is a new candidate; this one is untouched.";
     rp.onclick = () => openRepair(
       `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
@@ -2167,16 +2262,38 @@ async function renderBoardPanels(specId) {
   for (const c of candidates) {
     if (c.status === "APPROVED") approvedByPanel[c.panel_id] = c.candidate_id;
   }
-  const readiness = spec.panels.map(p =>
-    `<span class="badge ${approvedByPanel[p.id] ? "APPROVED" : "PROVISIONAL"}">${esc(p.id)}${approvedByPanel[p.id] ? " ✓" : " — no approved panel"}</span>`
-  ).join(" ");
   const ready = spec.panels.every(p => approvedByPanel[p.id]);
+
+  // The slot map makes the never-upscaled rule visible BEFORE a render is
+  // spent: exact assembler geometry, one verdict per slot (design mock 4b).
+  let slotMapHtml = "";
+  try {
+    const sm = await api(`/api/specs/${specId}/slot-map`);
+    const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
+                      TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE" };
+    const notReady = sm.slots.filter(s => s.status !== "OK");
+    slotMapHtml = `
+      ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
+        ${esc(notReady.map(s => `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
+        — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
+      <div class="slot-caption"><span class="f-label">Slot map</span>
+        <span class="hint">true ${sm.canvas.width} × ${sm.canvas.height} canvas — all board typography is drawn by the app, never by the model</span></div>
+      <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
+        ${sm.slots.map(s => `
+          <div class="slot ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
+               title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
+            <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}</span>
+            <span class="slot-verdict ${esc(s.status)}">${VERDICT[s.status]}</span>
+            ${s.status === "TOO_SMALL" ? `<span class="slot-dims">${s.candidate_width}×${s.candidate_height} INTO ${s.slot_width}×${s.slot_height}</span>` : ""}
+          </div>`).join("")}
+      </div>`;
+  } catch { /* the map is a preview; assembly still states its own errors */ }
 
   const asm = document.createElement("div");
   asm.className = "panel";
   asm.innerHTML = `
     <h2>Assemble board <span class="hint">(composes the latest approved candidate of every panel onto a 4K canvas with board typography — no upscaling)</span></h2>
-    <p>${readiness}</p>
+    ${slotMapHtml}
     <div class="row">
       <label class="mini" title="Pixel dimensions of the final assembled board. Panels are composed at native resolution — never upscaled — so every panel needs enough source resolution for its allocation.">Canvas <select id="asm-size">
         <option value="3840x2160" selected>3840 × 2160 (4K UHD)</option>

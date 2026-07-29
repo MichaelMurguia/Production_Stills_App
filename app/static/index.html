@@ -64,7 +64,8 @@
 <template id="tpl-dashboard">
   <section class="view dash">
     <div class="dash-main">
-      <div class="panel panel-lead" id="dash-missing"></div>
+      <div class="panel panel-lead" id="dash-next"></div>
+      <div class="panel hidden" id="dash-missing"></div>
       <div class="panel">
         <h2>Screenplay <span class="hint">(everything downstream depends on this file)</span></h2>
         <div id="dash-screenplay"></div>
@@ -72,10 +73,15 @@
           <input type="file" id="screenplay-file" accept=".pdf,.fdx,.txt,.fountain" required>
           <button type="submit" class="primary">Upload screenplay</button>
         </form>
+        <div id="dash-locations"></div>
       </div>
     </div>
     <aside class="dash-side">
       <div class="cards" id="dash-cards"></div>
+      <div class="panel">
+        <h2>Recent <span class="hint">(from the activity log)</span></h2>
+        <div id="dash-recent"></div>
+      </div>
       <div class="panel">
         <h2>Prohibited inventions <span class="hint">(from rejection history — enforced on every board)</span></h2>
         <ul id="dash-prohibited" class="taglist"></ul>

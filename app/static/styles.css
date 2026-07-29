@@ -600,6 +600,82 @@ details.meta pre {
   padding: 10px 12px; margin: 8px 0 0; color: var(--ink-dim);
 }
 
+/* UNCANONIZED — 2026-07-29 — dashboard: DO THIS NEXT lead + blocking rows
+   (design mock 1a; tokens only) */
+.next-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+  color: var(--accent); margin-bottom: 6px;
+}
+.next-row { display: flex; align-items: center; gap: 16px; }
+.next-text { flex: 1; font-size: 19px; font-weight: 600; color: var(--ink); min-width: 0; }
+.block-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0; border-top: 1px solid var(--line-soft);
+}
+.block-kind {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+  border: 1px solid var(--line); padding: 2px 7px; flex: none;
+}
+.block-kind.HOLD { color: var(--hold); border-color: var(--hold); }
+.block-kind.GAP, .block-kind.SIZE, .block-kind.CITE { color: var(--bad); border-color: var(--bad); }
+.block-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
+.block-row button { flex: none; }
+
+/* UNCANONIZED — 2026-07-29 — dashboard: recent activity feed (mock 1a) */
+.recent-row {
+  display: flex; gap: 10px; padding: 5px 0;
+  border-top: 1px solid var(--line-soft); font-size: 12px;
+}
+.recent-row:first-child { border-top: none; }
+.recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none; }
+.recent-text { color: var(--ink-dim); min-width: 0; }
+.recent-row.error .recent-text { color: var(--bad); }
+
+/* UNCANONIZED — 2026-07-29 — screenplay location coverage table (mock 4a) */
+.loc-head { margin: 16px 0 4px; }
+.loc-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 44px 64px minmax(0, 220px);
+  gap: 10px; align-items: center; padding: 6px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.loc-slug { font-family: var(--mono); font-size: 12.5px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loc-scenes { font-family: var(--mono); font-size: 12.5px; color: var(--ink-dim); text-align: right; }
+.loc-meter { display: inline-flex; gap: 3px; }
+.loc-meter i { width: 12px; height: 4px; background: var(--line); }
+.loc-meter i.on { background: var(--ok); }
+.loc-sheet { font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loc-draft { justify-self: start; padding: 3px 10px; font-size: 12px; }
+
+/* UNCANONIZED — 2026-07-29 — assembly slot map: geometry + verdicts before
+   a render is spent (mock 4b). Status colors report state only. */
+.slot-caption { margin: 4px 0 6px; }
+.slot-alert {
+  font-family: var(--mono); font-size: 12px; color: var(--bad);
+  border: 1px solid var(--bad); border-left-width: 3px;
+  background: rgba(205, 97, 85, .07); padding: 8px 12px; margin: 10px 0 12px;
+}
+.slotmap {
+  position: relative; width: 100%; background: var(--field);
+  border: 1px solid var(--line); margin-bottom: 14px;
+}
+.slot {
+  position: absolute; border: 1px solid var(--line); background: var(--panel);
+  padding: 6px 8px; display: flex; flex-direction: column; gap: 4px;
+  overflow: hidden; min-width: 0;
+}
+.slot.TOO_SMALL { border-color: var(--bad); background: rgba(205, 97, 85, .07); }
+.slot.NO_CANDIDATE { border-style: dashed; background: transparent; }
+.slot-id { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-dim); }
+.slot-verdict {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  border: 1px solid; padding: 1px 6px; align-self: flex-start;
+}
+.slot-verdict.OK { color: var(--ok); border-color: var(--ok); }
+.slot-verdict.UNAPPROVED { color: var(--hold); border-color: var(--hold); }
+.slot-verdict.TOO_SMALL { color: var(--bad); border-color: var(--bad); }
+.slot-verdict.NO_CANDIDATE { color: var(--ink-faint); border-color: var(--line); }
+.slot-dims { font-family: var(--mono); font-size: 10px; color: var(--bad); }
+
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
   .busy .busy-bar, .busy .spinner { animation: none; }

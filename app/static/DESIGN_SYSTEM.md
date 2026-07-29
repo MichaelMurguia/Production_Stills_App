@@ -170,7 +170,10 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| — | *(none yet)* | | |
+| 2026-07-29 | DO-THIS-NEXT lead + blocking rows (`.next-label/.next-row/.block-row/.block-kind`) | Dashboard | mock 1a's single-verb lead and kind-badged blocker rows; no existing row pattern carried a kind chip + resolving action |
+| 2026-07-29 | Recent activity feed (`.recent-row/.recent-ts`) | Dashboard sidebar | mock 1a's timestamped feed; `.ledger-row` is a 6-col editing grid, not a two-part log line |
+| 2026-07-29 | Location coverage table (`.loc-row/.loc-meter`) | Dashboard screenplay panel | mock 4a's slugline × scenes × detail-meter grid; the segmented meter had no existing form |
+| 2026-07-29 | Assembly slot map (`.slotmap/.slot/.slot-verdict/.slot-alert`) | Boards assembly section | mock 4b's pre-render slot geometry preview; absolutely-positioned proportional slots exist nowhere else |
 
 ---
 
@@ -179,6 +182,13 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-29** — Backend-enablement UI (mocks 1a/4a/4b in the current nav):
+  dashboard rebuilt around DO-THIS-NEXT + blocking rows + recent feed;
+  screenplay panel gains the location coverage table; assembly gains the slot
+  map; reference cards state their render usage; bible shows REV n; settings
+  show last engine-test outcome. Four uncanonized patterns logged above —
+  table is at the review threshold. Emoji stripped from Crop/Repair buttons
+  (mock-sanctioned arrows on → Reference / → Light study kept).
 - **2026-07-29** — Initial system. Replaces v1: amber restricted to stage /
   primary action / focus, Courier assigned to machine data, prose capped and
   moved to tooltips, nav rebuilt as the numbered pipeline band, ledger rows given
