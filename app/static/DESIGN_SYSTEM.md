@@ -155,3 +155,31 @@ the button.
 - Wrap content in more nested panels — depth was the v1 clutter mechanism.
 - Rename existing CSS classes. `app.js` generates markup against these names;
   the stylesheet was written to preserve every one of them.
+
+---
+
+## Uncanonized patterns
+
+New UI that needed a pattern this document doesn't cover. Built with existing
+tokens, marked `/* UNCANONIZED — date — feature */` in the CSS, and logged here.
+
+This table is a to-do list, not a home. At ~4 rows, tell the user the UI has
+accumulated patterns worth a design review — re-attaching the project folder in
+Omelette gets them designed properly and folded into the sections above, and the
+rows are then deleted.
+
+| Date | Pattern | Used in | Why nothing existing worked |
+|---|---|---|---|
+| — | *(none yet)* | | |
+
+---
+
+## Changelog
+
+Newest first. One line per change, dated. Amend the relevant section above as
+well — this log records what changed, it does not replace the rules.
+
+- **2026-07-29** — Initial system. Replaces v1: amber restricted to stage /
+  primary action / focus, Courier assigned to machine data, prose capped and
+  moved to tooltips, nav rebuilt as the numbered pipeline band, ledger rows given
+  a uniform border box. All v1 class names preserved; `app.js` untouched.
