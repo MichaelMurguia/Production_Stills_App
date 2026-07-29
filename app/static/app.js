@@ -697,31 +697,50 @@ async function renderSettings() {
   });
 
   const settings = await api("/api/settings");
-  const pref = $("#pref-provider");
-  pref.innerHTML = Object.entries(settings.providers).map(([v, label]) =>
-    `<option value="${esc(v)}" ${v === settings.preferred_provider ? "selected" : ""}>${esc(label)}</option>`).join("");
-  pref.onchange = async () => {
-    try {
-      await api("/api/settings", { method: "POST", json: { preferred_provider: pref.value } });
-      toast(`Preferred image model: ${pref.options[pref.selectedIndex].text}.`);
-    } catch (err) { toast(err.message, true); }
+
+  // Default engine as a three-chip toggle (B3) — saved immediately.
+  const PREF_LABELS = { gemini: "GEMINI", openai: "GPT IMAGE 2", "openai-chat": "PIPELINE" };
+  const prefChips = $("#pref-chips");
+  prefChips.innerHTML = Object.keys(settings.providers).map(v =>
+    `<button class="vchip${v === settings.preferred_provider ? " on" : ""}" data-v="${esc(v)}">${esc(PREF_LABELS[v] || v.toUpperCase())}</button>`).join("");
+  $$(".vchip", prefChips).forEach(ch => {
+    ch.onclick = async () => {
+      try {
+        await api("/api/settings", { method: "POST", json: { preferred_provider: ch.dataset.v } });
+        $$(".vchip", prefChips).forEach(x => x.classList.toggle("on", x === ch));
+        toast(`Default engine: ${esc(settings.providers[ch.dataset.v])}.`);
+      } catch (err) { toast(err.message, true); }
+    };
+  });
+
+  // Honest connection state (B3): CONNECTED only after the user's own Test
+  // passed; otherwise the key source. Never a fake CONNECTED, no polling.
+  const eng = settings.engines || {};
+  const chip = provider => {
+    const e = eng[provider] || {};
+    if (e.last_test?.ok) return '<span class="badge APPROVED">● CONNECTED</span>';
+    if (e.last_test && !e.last_test.ok) return '<span class="badge REJECTED">● TEST FAILED</span>';
+    if (e.source === "settings") return '<span class="badge APPROVED">KEY SET</span>';
+    if (e.source === "env") return '<span class="badge PROVISIONAL">● ENV VAR</span>';
+    return '<span class="badge REJECTED">NO KEY</span>';
   };
-  // Honest connection state: key source, plus the persisted outcome of the
-  // user's own last Test click — never a fake CONNECTED.
+  $("#gem-chip").innerHTML = chip("gemini");
+  $("#oai-chip").innerHTML = chip("openai");
+
   const lastTest = provider => {
-    const t = (settings.engines || {})[provider]?.last_test;
+    const t = eng[provider]?.last_test;
     if (!t) return "";
-    return ` · last test <span class="badge ${t.ok ? "APPROVED" : "REJECTED"}">${t.ok ? "PASS" : "FAIL"}</span> <span class="mini">${esc((t.at || "").slice(0, 16).replace("T", " "))}</span>`;
+    return `LAST TEST — <span class="badge ${t.ok ? "APPROVED" : "REJECTED"}">${t.ok ? "PASS" : "FAIL"}</span> <span class="mini">${esc((t.at || "").slice(0, 16).replace("T", " "))}</span>`;
   };
   $("#dash-keystate").innerHTML = (settings.gemini_api_key_set
-    ? `<span class="badge APPROVED">KEY SET</span> ${esc(settings.gemini_api_key_hint)} — image model ${esc(settings.model)}`
-    : `<span class="badge REJECTED">NO KEY</span> generation and auto-fill disabled until a key is saved`)
+    ? `<span class="mini">key ${esc(settings.gemini_api_key_hint)} saved here. </span>`
+    : `<span class="mini">no key — generation and auto-fill via Gemini disabled until one is saved. </span>`)
     + lastTest("gemini");
   $("#openai-keystate").innerHTML = (settings.openai_api_key_set
-    ? `<span class="badge APPROVED">KEY SET</span> ${esc(settings.openai_api_key_hint)} — image model ${esc(settings.openai_model)}`
+    ? `<span class="mini">key ${esc(settings.openai_api_key_hint)} saved here. </span>`
     : settings.openai_env_key_hint
-      ? `<span class="badge PROVISIONAL">ENV VAR</span> no key saved here — falling back to OPENAI_API_KEY (${esc(settings.openai_env_key_hint)}) from your system environment. Save a key below to override it.`
-      : `<span class="badge REJECTED">NO KEY</span> optional — only needed to generate with GPT Image 2`)
+      ? `<span class="mini">no key saved here — falling back to OPENAI_API_KEY (${esc(settings.openai_env_key_hint)}) from your environment. </span>`
+      : `<span class="mini">no key — optional, needed for GPT Image 2 and the pipeline. </span>`)
     + lastTest("openai");
 
   const keyForm = (formSel, inputSel, field, label) => {

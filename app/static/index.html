@@ -391,35 +391,68 @@
     </nav>
 
     <div data-subview="api">
-      <div class="panel">
-        <h2>Google Gemini API key</h2>
-        <div id="dash-keystate" class="mini"></div>
-        <form id="settings-form" class="row">
-          <input type="password" id="gemini-key" placeholder="Paste Gemini API key" style="max-width:420px">
-          <button type="submit" class="primary">Save key</button>
-          <button type="button" class="ghost" id="test-key">Test connection</button>
+      <div class="panel" style="margin-bottom:20px">
+        <h2>Engines &amp; keys</h2>
+        <p class="hint">Keys are written to <code>data/settings.json</code> on this machine and leave it only to call the provider you gave them to. Gemini keys come from aistudio.google.com; OpenAI keys from platform.openai.com (API billing is separate from ChatGPT Plus).</p>
+      </div>
+      <div class="engine-cards">
+        <div class="panel engine-card">
+          <div class="eng-head">
+            <div><h3 style="margin:0">Google Gemini</h3><span class="eng-model">gemini-3-pro-image</span></div>
+            <span id="gem-chip"></span>
+          </div>
+          <form id="settings-form" class="row">
+            <input type="password" id="gemini-key" placeholder="Paste Gemini API key" style="flex:1;min-width:0">
+            <button type="submit" class="primary">Save</button>
+            <button type="button" class="ghost" id="test-key">Test</button>
+          </form>
           <span id="test-key-result" class="mini"></span>
-        </form>
-        <p class="hint">Powers image generation (gemini-3-pro-image) and screenplay auto-fill. Stored only in <code>data/settings.json</code> on this machine — it never leaves your PC except to call Google. Get a key at aistudio.google.com.</p>
-      </div>
-      <div class="panel">
-        <h2>Image generation</h2>
-        <div class="fgroup" style="max-width:360px" title="The default engine pre-selected in every Model dropdown (panel generation, derived materials). You can still override per generation.">
-          <span class="f-label">Preferred model</span>
-          <select id="pref-provider"></select>
+          <div class="fact-head">POWERS</div>
+          <p class="eng-powers">Panel renders to native 4K · screenplay reads · bible drafting</p>
+          <p class="eng-note">BILLED PER RENDER — REJECTED TAKES COST THE SAME</p>
+          <div id="dash-keystate" class="mini"></div>
         </div>
-        <p class="hint" style="margin-top:10px">Saved immediately on change. Applies wherever a Model dropdown appears; each generation records which model actually ran.</p>
-      </div>
-      <div class="panel">
-        <h2>OpenAI API key</h2>
-        <div id="openai-keystate" class="mini"></div>
-        <form id="openai-settings-form" class="row">
-          <input type="password" id="openai-key" placeholder="Paste OpenAI API key" style="max-width:420px">
-          <button type="submit" class="primary">Save key</button>
-          <button type="button" class="ghost" id="test-openai-key">Test connection</button>
+        <div class="panel engine-card">
+          <div class="eng-head">
+            <div><h3 style="margin:0">OpenAI</h3><span class="eng-model">gpt-image-2</span></div>
+            <span id="oai-chip"></span>
+          </div>
+          <form id="openai-settings-form" class="row">
+            <input type="password" id="openai-key" placeholder="Paste OpenAI API key" style="flex:1;min-width:0">
+            <button type="submit" class="primary">Save</button>
+            <button type="button" class="ghost" id="test-openai-key">Test</button>
+          </form>
           <span id="test-openai-key-result" class="mini"></span>
-        </form>
-        <p class="hint">Powers image generation with GPT Image 2 when you pick it as the model on the Boards tab. Stored only in <code>data/settings.json</code> on this machine — it never leaves your PC except to call OpenAI. Get a key at platform.openai.com (API billing is separate from ChatGPT Plus). Note: OpenAI flags output above 2560×1440 as experimental, so prefer Gemini for 4K renders.</p>
+          <div class="fact-head">POWERS</div>
+          <p class="eng-powers">Panel renders · screenplay reads · bible drafting</p>
+          <p class="eng-note warn">FLAGS OUTPUT ABOVE 2560×1440 — PREFER GEMINI FOR 4K</p>
+          <div id="openai-keystate" class="mini"></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <div class="eng-head">
+          <div><h3 style="margin:0">OpenAI — ChatGPT pipeline</h3><span class="eng-model">gpt-5.6 rewrite → gpt-image-2</span></div>
+          <span class="badge PROVISIONAL">USES OPENAI KEY</span>
+        </div>
+        <p class="hint" style="margin-bottom:0">GPT-5.6 first rewrites the compiled spec into render prose under zero-invention rules, then calls the same image model ChatGPT uses. No separate credential — it runs on the OpenAI key above.</p>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <div class="eng-head">
+          <div><h3 style="margin:0">Default engine</h3>
+            <p class="hint" style="margin:4px 0 0">pre-selected everywhere a Model dropdown appears — still overridable per render</p></div>
+          <span class="variant-chips" id="pref-chips" title="The default engine pre-selected in every Model dropdown (panel generation, derived materials, repair). You can still override per generation."></span>
+        </div>
+      </div>
+      <div class="facts-row">
+        <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">EVERYTHING LIVES HERE</div>
+          <p class="eng-powers" style="font-family:var(--mono)">data/</p>
+          <p class="mini">references, screenplay, sheets, boards, keys</p></div>
+        <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">APPROVAL RECORD</div>
+          <p class="eng-powers" style="font-family:var(--mono)">project_state/approval_log.md</p>
+          <p class="mini">append-only, human readable</p></div>
+        <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">LEAVES THIS MACHINE</div>
+          <p class="eng-powers" style="font-family:var(--mono)">generation calls only</p>
+          <p class="mini">nothing else is uploaded anywhere</p></div>
       </div>
     </div>
 

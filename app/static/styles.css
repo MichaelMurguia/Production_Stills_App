@@ -907,6 +907,19 @@ details.meta pre {
 .juris.ok { color: var(--ok); }
 .juris.bad { color: var(--bad); }
 
+/* settings: engine cards (mock 4d) */
+.engine-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.eng-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.eng-model { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .04em; }
+.eng-powers { margin: 4px 0; font-size: 13px; color: var(--ink-dim); }
+.eng-note { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
+.eng-note.warn { color: var(--accent); }
+.facts-row {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+  background: var(--line-soft); border: 1px solid var(--line-soft); margin-top: 20px;
+}
+.facts-row > div { background: var(--panel); padding: 16px 18px; }
+
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
   .busy .busy-bar, .busy .spinner { animation: none; }
