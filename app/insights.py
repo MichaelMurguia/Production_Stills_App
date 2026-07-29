@@ -345,6 +345,19 @@ _text_cache: dict[str, str] = {}
 
 _SLUG_RE = re.compile(r"^(INT\.?/EXT\.?|EXT\.?/INT\.?|I/E|INT|EXT)[.\s]+(.+)$")
 
+# Trailing time-of-day / continuity markers that PDF extraction often glues
+# onto the location when the " - " separator is lost.
+_TIME_TAIL = {"DAY", "NIGHT", "DAWN", "DUSK", "MORNING", "AFTERNOON",
+              "EVENING", "LATER", "CONTINUOUS", "SAME", "MOMENTS",
+              "SUNSET", "SUNRISE", "NIGHTFALL", "TIME", "PRESENT"}
+
+
+def _strip_time_tail(place: str) -> str:
+    words = place.split()
+    while len(words) > 1 and words[-1].strip(".,") in _TIME_TAIL:
+        words.pop()
+    return " ".join(words)
+
 
 def screenplay_text() -> str:
     rec = store.load_app_state().get("screenplay")
@@ -392,6 +405,7 @@ def locations() -> dict:
         if not m:
             continue
         place = re.split(r"\s+[-–—]\s+", m.group(2))[0].strip(" .-–—")
+        place = _strip_time_tail(place)
         if not place:
             continue
         scenes.append({"line": i,
@@ -410,24 +424,31 @@ def locations() -> dict:
         g["scenes"] += 1
         g["body_lines"] += sc["body"]
 
-    # Sheet match: a spec covers a location when either name contains the other.
+    # Sheet match: a spec covers a location when either name contains the
+    # other (apostrophes/dashes folded — PDFs and specs disagree on curly
+    # quotes).
     sheets = []
     for meta in store.list_specs():
         spec = store.get_spec(meta["specification_id"])
         if spec is None:
             continue
         loc = str((spec.get("setting") or {}).get("location", "")).strip()
-        sheets.append({"spec_id": meta["specification_id"], "loc": loc.casefold(),
-                       "subject": str(spec.get("subject", "")).casefold(),
+        sheets.append({"spec_id": meta["specification_id"], "loc": _norm(loc),
+                       "subject": _norm(str(spec.get("subject", ""))),
                        "status": meta["status"], "locked": meta["locked"]})
+
+    def word_in(needle: str, hay: str) -> bool:
+        # Whole-word containment — "shop" must not match "workshop".
+        return bool(needle) and bool(
+            re.search(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", hay))
 
     out = []
     for g in sorted(groups.values(), key=lambda x: -x["scenes"]):
-        lc = g["location"].casefold()
+        lc = _norm(g["location"])
         match = next((s for s in sheets if s["loc"] and
-                      (s["loc"] in lc or lc in s["loc"])), None)
+                      (word_in(s["loc"], lc) or word_in(lc, s["loc"]))), None)
         if match is None:
-            match = next((s for s in sheets if lc in s["subject"]), None)
+            match = next((s for s in sheets if word_in(lc, s["subject"])), None)
         detail = (1 if g["body_lines"] < 10 else
                   2 if g["body_lines"] < 30 else
                   3 if g["body_lines"] < 80 else 4)
