@@ -238,7 +238,9 @@ function openRepair(imgUrl, onSubmit) {
 
 async function cropToReference(source, imgUrl) {
   openCropper(imgUrl, async (rect) => {
-    const role = prompt("Role for the cropped reference (what does this cell control?):", "PROP_REFERENCE");
+    const role = await askText("Crop → reference", "Role — what does this cell control?",
+      { value: "PROP_REFERENCE", confirmLabel: "Create reference",
+        hint: "the crop enters the library approved, with this single jurisdiction" });
     if (role === null || !role.trim()) return;
     try {
       const ref = await api("/api/references/crop", {
@@ -262,6 +264,58 @@ function roleHead(role) {
 // Roles auto-attached to every render (BOARD_LAYOUT_STYLE governs assembly
 // only — it never enters a panel render).
 const AUTO_ATTACH_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"];
+
+/* The app's own dialog (plan v3 C15) — replaces every browser prompt()/
+   confirm(). Resolves to an object of field values on confirm, null on
+   cancel/Escape/scrim click. Same endpoints, same rules — only the box
+   belongs to the app now. */
+function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger = false }) {
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-title">${esc(title)}</div>
+        ${body ? `<p class="modal-body">${esc(body)}</p>` : ""}
+        ${fields.map((f, i) => `
+          <label class="modal-field">${esc(f.label)}
+            ${f.textarea
+              ? `<textarea data-mf="${i}" placeholder="${esc(f.placeholder || "")}">${esc(f.value || "")}</textarea>`
+              : `<input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">`}
+            ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
+          </label>`).join("")}
+        <div class="modal-actions">
+          <button class="ghost" data-mf="cancel">Cancel</button>
+          <button class="${danger ? "danger" : "primary"}" data-mf="ok">${esc(confirmLabel)}</button>
+        </div>
+      </div>`;
+    document.body.append(ov);
+    const done = val => { window.removeEventListener("keydown", onKey, true); ov.remove(); resolve(val); };
+    const collect = () => Object.fromEntries(
+      fields.map((f, i) => [f.name, $(`[data-mf="${i}"]`, ov).value.trim()]));
+    const onKey = e => {
+      if (e.key === "Escape") { e.stopPropagation(); done(null); }
+      else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); done(collect()); }
+    };
+    window.addEventListener("keydown", onKey, true);
+    ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
+    $("[data-mf=cancel]", ov).onclick = () => done(null);
+    $("[data-mf=ok]", ov).onclick = () => done(collect());
+    const first = $("input, textarea", ov);
+    (first || $("[data-mf=ok]", ov)).focus();
+  });
+}
+const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
+  (await modal({ title, body, confirmLabel, danger })) !== null;
+const askText = async (title, label, opts = {}) => {
+  const r = await modal({
+    title, body: opts.body || "",
+    fields: [{ name: "v", label, value: opts.value || "",
+               placeholder: opts.placeholder || "", hint: opts.hint || "" }],
+    confirmLabel: opts.confirmLabel || "Confirm", danger: !!opts.danger,
+  });
+  return r === null ? null : r.v;
+};
 
 /* --------------------------------------------------------------- lightbox */
 
@@ -996,7 +1050,9 @@ async function renderWizard() {
           <button class="danger" data-f="del" title="Permanently delete this image">×</button>`;
         $("img", item).onclick = () => openLightbox(lbItems, i);
         $("[data-f=del]", item).onclick = async () => {
-          if (!confirm(`Permanently delete ${r.id}? It is removed from the reference library and future generations. This cannot be undone.`)) return;
+          if (!(await askConfirm(`Delete ${r.id} forever`,
+            "It is removed from the reference library and future generations. This cannot be undone.",
+            "Delete forever", true))) return;
           try {
             await api(`/api/references/${r.id}`, { method: "DELETE" });
             toast(`${r.id} permanently deleted.`);
@@ -1103,7 +1159,8 @@ async function renderWizard() {
           <button class="danger" title="Permanently delete ${esc(r.id)}">×</button>`;
         $("img", wrap).onclick = () => openLightbox(lbItems, i);
         $("button", wrap).onclick = async () => {
-          if (!confirm(`Permanently delete ${r.id}? This cannot be undone.`)) return;
+          if (!(await askConfirm(`Delete ${r.id} forever`,
+            "This cannot be undone.", "Delete forever", true))) return;
           try {
             await api(`/api/references/${r.id}`, { method: "DELETE" });
             toast(`${r.id} deleted.`); renderSubjectGrid();
@@ -1123,7 +1180,8 @@ async function renderWizard() {
         } catch (err) { toast(err.message, true); }
       });
       $("[data-f=del]", card).onclick = async () => {
-        if (!confirm(`Remove ${s.name}'s title card? Its reference images stay in the library.`)) return;
+        if (!(await askConfirm(`Remove ${s.name}'s title card`,
+          "Its reference images stay in the library.", "Remove card", true))) return;
         try {
           await api(`/api/subjects/${s.id}`, { method: "DELETE" });
           toast(`${s.name} removed.`); renderSubjectTags(); renderSubjectGrid();
@@ -1175,8 +1233,10 @@ async function renderWizard() {
     ].filter(Boolean).join(" — ");
     lockHost.innerHTML = `<span class="badge APPROVED">READ</span> ${bits}
       <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
-    $("#wiz-analyze-unlock").onclick = () => {
-      if (!confirm("Unlock the screenplay analysis? Re-running replaces the design languages and subject recommendations with a fresh read. The current analysis is kept until the re-run succeeds.")) return;
+    $("#wiz-analyze-unlock").onclick = async () => {
+      if (!(await askConfirm("Unlock the screenplay analysis",
+        "Re-running replaces the design languages and subject recommendations with a fresh read. The current analysis is kept until the re-run succeeds.",
+        "Unlock"))) return;
       $("#wiz-provider").disabled = false;
       $("#wiz-analyze").classList.remove("hidden");
       lockHost.innerHTML = `<span class="mini">unlocked — pick a model and re-run; the previous analysis stands until then</span>`;
@@ -1267,8 +1327,10 @@ async function renderWizard() {
         toast(`${a.design_worlds[i].name} saved.`);
         renderWorlds();
       };
-      $("[data-f=del]", row).onclick = () => {
-        if (!confirm(`Delete the design language "${w.name}"? It will be left out of the Bible draft. (Re-running the analysis can propose it again.)`)) return;
+      $("[data-f=del]", row).onclick = async () => {
+        if (!(await askConfirm(`Delete design language "${w.name}"`,
+          "It will be left out of the Bible draft. Re-running the analysis can propose it again.",
+          "Delete", true))) return;
         const a = getAnalysis();
         a.design_worlds.splice(i, 1);
         saveAnalysis(a);
@@ -1335,7 +1397,9 @@ async function renderWizard() {
   $("#wiz-save").onclick = async () => {
     const text = $("#wiz-bible").value.trim();
     if (!text) return;
-    if (!confirm("Save this as the project's Art Direction Bible? It replaces the current bible and every future prompt uses it immediately.")) return;
+    if (!(await askConfirm("Save the Art Direction Bible",
+      "This replaces the current bible, and every future prompt uses it immediately.",
+      "Save bible"))) return;
     try {
       await api("/api/style-bible", { method: "PUT", json: { text } });
       toast("Art Direction Bible saved — it now governs every render.");
@@ -1516,8 +1580,10 @@ async function renderReferences() {
     if (r.status !== "REJECTED") {
       const b = document.createElement("button");
       b.className = "danger"; b.textContent = "Reject";
-      b.onclick = () => {
-        const reason = prompt(`Reject ${r.id} — reason (recorded, quarantines the file):`);
+      b.onclick = async () => {
+        const reason = await askText(`Reject ${r.id}`, "Reason",
+          { hint: "recorded on the card and in the rejection history; the file is quarantined from the pipeline — Reinstate undoes it",
+            confirmLabel: "Reject", danger: true });
         if (reason !== null) setRefStatus(r.id, "REJECTED", reason);
       };
       actions.append(b);
@@ -1531,7 +1597,9 @@ async function renderReferences() {
     del.className = "danger"; del.textContent = "Delete";
     del.title = "Permanently delete this image and its record — journaled in the approval log";
     del.onclick = async () => {
-      if (!confirm(`Permanently delete ${r.id} (${r.role})? It is removed from the library and from future generations — past candidates keep their own records. This cannot be undone.`)) return;
+      if (!(await askConfirm(`Delete ${r.id} forever`,
+        `${r.role}\nRemoved from the library and from future generations — past candidates keep their own records. This cannot be undone.`,
+        "Delete forever", true))) return;
       try {
         await api(`/api/references/${r.id}`, { method: "DELETE" });
         toast(`${r.id} permanently deleted.`);
@@ -1650,9 +1718,10 @@ async function renderSpecs(openId = null) {
     $("[data-f=open]", tr).onclick = () => openSpecEditor(s.specification_id);
     $("[data-f=del]", tr).onclick = async () => {
       const warn = s.locked
-        ? `${s.specification_id} is APPROVED and LOCKED. Permanently delete it anyway, along with all its candidate images?\n\n(Refused automatically if it has any approved candidates or boards.)`
-        : `Permanently delete ${s.specification_id} and all its candidate images? This cannot be undone.`;
-      if (!confirm(warn)) return;
+        ? `${s.specification_id} is APPROVED and LOCKED. Deleting it anyway removes all its candidate images. Refused automatically if it has any approved candidates or boards.`
+        : `All of ${s.specification_id}'s candidate images are removed with it. This cannot be undone.`;
+      if (!(await askConfirm(`Delete ${s.specification_id} forever`, warn,
+        "Delete forever", true))) return;
       try {
         const r = await api(`/api/specs/${s.specification_id}`, { method: "DELETE" });
         toast(`${r.deleted} deleted — ${r.candidates_removed} candidate record(s), ${r.images_removed} image(s) removed.`);
@@ -2154,7 +2223,9 @@ REMOVE — marked for removal from the board.">
       } catch (err) { toast(err.message, true); }
     };
     $("#sp-approve", panel).onclick = async () => {
-      if (!confirm(`Approve and LOCK ${specId}? Locked specs cannot be edited — only revised.`)) return;
+      if (!(await askConfirm(`Approve & lock ${specId}`,
+        "Locked sheets cannot be edited — only revised. Locking mints the spec hash every candidate is judged against.",
+        "Approve & lock"))) return;
       try {
         await api(`/api/specs/${specId}`, { method: "PUT", json: collect() });
         await api(`/api/specs/${specId}/approve`, { method: "POST" });
@@ -2171,7 +2242,9 @@ REMOVE — marked for removal from the board.">
       } catch (err) { toast(err.message, true); }
     };
     $("#sp-unlock", panel).onclick = async () => {
-      if (!confirm(`Unlock ${specId} for editing?\n\nThis VOIDS its approval (journaled in the approval log) and returns it to DRAFT — it disappears from the Boards tab until you approve it again, and re-approving mints a new spec hash. Unapproved candidates keep the hash they were generated against.\n\nRefused automatically if any APPROVED candidate or board depends on this spec — approved canon can never change out from under what it was approved against.\n\nIf you want to keep the approved version as history instead, use Create revision.`)) return;
+      if (!(await askConfirm(`Unlock ${specId} for editing`,
+        "This VOIDS its approval (journaled in the approval log) and returns it to DRAFT — it disappears from Panels until you approve it again, and re-approving mints a new spec hash. Unapproved candidates keep the hash they were generated against.\n\nRefused automatically if any APPROVED candidate or board depends on this sheet — approved canon can never change out from under what it was approved against.\n\nTo keep the approved version as history instead, use Create revision.",
+        "Unlock & edit", true))) return;
       try {
         await api(`/api/specs/${specId}/unlock`, { method: "POST" });
         toast(`${specId} unlocked — now an editable DRAFT. Approve again when done.`);
@@ -2214,6 +2287,28 @@ async function renderBoards() {
   }
 }
 
+// Promote an approved render into the reference library — one dialog, three
+// fields (was three browser prompts in a row).
+async function promoteDialog(specId, c) {
+  const r = await modal({
+    title: `Promote ${c.candidate_id} to reference`,
+    body: "The render enters the library approved — a canon anchor future generations attach to.",
+    fields: [
+      { name: "role", label: "Role", value: "SCENE_REFERENCE",
+        hint: "the single jurisdiction this anchor controls" },
+      { name: "notes", label: "Notes", placeholder: "e.g. which screenplay scene this anchors" },
+      { name: "controls", label: "Controls", placeholder: "comma-separated, optional" },
+    ],
+    confirmLabel: "Promote",
+  });
+  if (r === null || !r.role) return;
+  try {
+    const ref = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`,
+      { method: "POST", json: { role: r.role, notes: r.notes, controls: r.controls } });
+    toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
+  } catch (err) { toast(err.message, true); }
+}
+
 function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = null) {
   const cc = document.createElement("div");
   cc.className = `ref-card ${c.status === "REJECTED" ? "REJECTED" : ""}`;
@@ -2253,7 +2348,9 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
       ls.className = "ghost"; ls.textContent = "→ Light study";
       ls.title = "Derive a lighting-study board: this panel becomes the geometry anchor, and each new panel renders the same place under one approved atmosphere";
       ls.onclick = async () => {
-        if (!confirm(`Create a lighting study from ${c.candidate_id}?\n\nThis panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.`)) return;
+        if (!(await askConfirm(`Create a lighting study from ${c.candidate_id}`,
+          "This panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.",
+          "Create study"))) return;
         try {
           const study = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/lighting-study`, { method: "POST", json: {} });
           toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels — review it on the Breakdowns tab, trim any you don't want, then approve.`);
@@ -2271,17 +2368,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     const b = document.createElement("button");
     b.className = "ghost"; b.textContent = "→ Reference";
     b.title = "Promote this approved render into the reference library";
-    b.onclick = async () => {
-      const role = prompt("Reference role for this render:", "SCENE_REFERENCE");
-      if (role === null || !role.trim()) return;
-      const notes = prompt("Notes (e.g. which screenplay scene this anchors):", "") ?? "";
-      const controls = prompt("Controls (comma-separated, optional):", "") ?? "";
-      try {
-        const ref = await post(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`,
-          { role, notes, controls });
-        toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
-      } catch (err) { toast(err.message, true); }
-    };
+    b.onclick = () => promoteDialog(specId, c);
     actions.append(b);
   }
   if (c.kind !== "derived_palette") {
@@ -2306,7 +2393,9 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     const b = document.createElement("button");
     b.className = "danger"; b.textContent = "Reject";
     b.onclick = async () => {
-      const reason = prompt(`Reject ${c.candidate_id} — reason:`);
+      const reason = await askText(`Reject ${c.candidate_id}`, "Reason",
+        { hint: "recorded verbatim, carried into this panel's future prompts as rejection feedback",
+          confirmLabel: "Reject", danger: true });
       if (reason === null) return;
       try {
         await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "REJECTED", reason });
@@ -2319,7 +2408,9 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     b.className = "danger"; b.textContent = "Delete forever";
     b.title = "Permanently remove this rejected image and its record from disk";
     b.onclick = async () => {
-      if (!confirm(`Permanently delete ${c.candidate_id}? The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.`)) return;
+      if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
+        "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
+        "Delete forever", true))) return;
       try {
         await api(`/api/specs/${specId}/candidates/${c.candidate_id}`, { method: "DELETE" });
         toast(`${c.candidate_id} permanently deleted.`); refresh();
@@ -2577,7 +2668,9 @@ async function renderBoardPanels(specId) {
     });
     const purgeBtn = $("[data-f=purge]", card);
     if (purgeBtn) purgeBtn.onclick = async () => {
-      if (!confirm(`Permanently delete ${sheetRejected} rejected candidate image(s) for ${specId}? This cannot be undone.`)) return;
+      if (!(await askConfirm(`Delete ${sheetRejected} rejected take(s) forever`,
+        `Every rejected candidate image for ${specId} is removed from disk. Rejection reasons stay in the lessons list and rejection history. This cannot be undone.`,
+        "Delete forever", true))) return;
       try {
         const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
         toast(`${r.count} rejected candidate(s) permanently deleted.`);
@@ -2608,23 +2701,17 @@ async function renderBoardPanels(specId) {
       const ghost = $("[data-f=ghost-actions]", card);
 
       if (c.status !== "REJECTED") prim.append(mk("Reject", "danger", async () => {
-        const reason = prompt(`Reject ${c.candidate_id} — reason:`);
+        const reason = await askText(`Reject ${c.candidate_id}`, "Reason",
+          { hint: "recorded verbatim, carried into this panel's future prompts as rejection feedback",
+            confirmLabel: "Reject", danger: true });
         if (reason === null) return;
         try {
           await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "REJECTED", reason });
           toast(`${c.candidate_id} rejected.`); refresh();
         } catch (err) { toast(err.message, true); }
       }));
-      prim.append(mk("→ Reference", "ghost", async () => {
-        const role = prompt("Reference role for this render:", "SCENE_REFERENCE");
-        if (role === null || !role.trim()) return;
-        const notes = prompt("Notes (e.g. which screenplay scene this anchors):", "") ?? "";
-        const controls = prompt("Controls (comma-separated, optional):", "") ?? "";
-        try {
-          const ref = await post(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`, { role, notes, controls });
-          toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
-        } catch (err) { toast(err.message, true); }
-      }, c.status !== "APPROVED"
+      prim.append(mk("→ Reference", "ghost", () => promoteDialog(specId, c),
+        c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — only approved renders become canon anchors" }
         : { title: "Promote this approved render into the reference library" }));
       if (c.status !== "APPROVED") prim.append(mk("Approve panel", "primary", async () => {
@@ -2654,7 +2741,9 @@ async function renderBoardPanels(specId) {
           ? { disabled: true, title: "Approve this take first — crops enter the library as approved canon" }
           : { title: "Harvest a region of this image as a new reference with its own narrow role" }));
       ghost.append(mk("→ Light study", "ghost", async () => {
-        if (!confirm(`Create a lighting study from ${c.candidate_id}?\n\nThis panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.`)) return;
+        if (!(await askConfirm(`Create a lighting study from ${c.candidate_id}`,
+          "This panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.",
+          "Create study"))) return;
         try {
           const study = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/lighting-study`, { method: "POST", json: {} });
           toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels — review it on the Breakdowns tab, trim any you don't want, then approve.`);
@@ -2663,7 +2752,9 @@ async function renderBoardPanels(specId) {
         ? { disabled: true, title: "Approve this take first — the study locks this panel's geometry" }
         : { title: "Derive a lighting-study board: this panel becomes the geometry anchor, and each new panel renders the same place under one approved atmosphere" }));
       if (c.status === "REJECTED") ghost.append(mk("Delete forever", "danger", async () => {
-        if (!confirm(`Permanently delete ${c.candidate_id}? The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.`)) return;
+        if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
+          "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
+          "Delete forever", true))) return;
         try {
           await api(`/api/specs/${specId}/candidates/${c.candidate_id}`, { method: "DELETE" });
           delete roomSel.staged[p.id];
