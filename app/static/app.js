@@ -2263,13 +2263,56 @@ async function renderBoardPanels(specId) {
   function buildWorkbench(p) {
     const alloc = (spec.layout?.panels || []).find(x => x.id === p.id)?.allocation_percent;
     const panelCands = candidates.filter(c => c.panel_id === p.id).reverse();
+    const roomSel = boardRoomSel[specId];
+    roomSel.staged ??= {};
+    let staged = panelCands.find(c => c.candidate_id === roomSel.staged[p.id]) || panelCands[0] || null;
+    const role = p.composition_role === "hero" ? "HERO" : "STRIP";
+    const takeItems = panelCands.map(c => ({
+      src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
+      caption: `${c.candidate_id} — ${p.id} (${c.status}) ${c.width}×${c.height}`,
+    }));
+
+    const stagedHtml = !staged ? `
+      <div class="stage-shot empty"><span class="mini">No takes yet — set the model below and generate the first candidate.</span></div>` : `
+      <div class="stage-shot" title="Click to open at full size">
+        <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
+      </div>
+      <div class="shot-under">
+        <span class="shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
+        <span class="shot-actions" data-f="primary-actions"></span>
+      </div>
+      <div class="shot-ghost-row" data-f="ghost-actions"></div>
+      ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("")}
+      ${staged.status === "REJECTED" && staged.status_reason ? `<div class="meta" style="color:var(--bad)">rejected — ${esc(staged.status_reason)}</div>` : ""}
+      ${staged.model_notes || staged.render_prompt ? `<details class="meta"><summary>${staged.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(staged.render_prompt ? `RENDER PROMPT (user-edited):\n${staged.render_prompt}${staged.model_notes ? "\n\n" + staged.model_notes : ""}` : staged.model_notes)}</pre></details>` : ""}`;
+
+    const takesHtml = `
+      <div class="takes">
+        <div class="takes-head">
+          <span class="f-label">Takes · ${panelCands.length}</span>
+          <span class="hint">rejected takes stay as a record</span>
+        </div>
+        <div class="takes-row">
+          ${panelCands.map(c => `
+            <button class="take${staged && c.candidate_id === staged.candidate_id ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}"
+                    data-take="${esc(c.candidate_id)}"
+                    title="${esc(c.candidate_id)} (${esc(c.status)})${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
+              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="">
+              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}</span>
+            </button>`).join("")}
+        </div>
+      </div>`;
+
     const card = document.createElement("div");
     card.className = "panel";
     card.innerHTML = `
-      <h2>${esc(p.id)} — ${esc(p.title || p.purpose)} <span class="hint">${alloc ? alloc + "% of board" : ""}</span></h2>
+      <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
+        <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(staged.aspect_ratio || "")}` : ""}</span></h2>
       <p class="mini">${esc(p.purpose)}</p>
       <p class="mini">required: ${esc((p.required_objects || []).join(", ") || "—")}
         &nbsp;·&nbsp; forbidden: ${esc((p.forbidden_objects || []).join(", ") || "—")}</p>
+      ${stagedHtml}
+      ${takesHtml}
       <div class="spec-section">
         <h4>Style anchors <span class="hint">(art direction — attached to every generation automatically)</span></h4>
         <div class="mini" style="margin-bottom:10px">${styleAnchors.map(r =>
@@ -2320,8 +2363,7 @@ async function renderBoardPanels(specId) {
         </div>
       </div>
       <div data-f="busy"></div>
-      <div data-f="report"></div>
-      <div class="ref-grid" data-f="gallery" style="margin-top:12px"></div>`;
+      <div data-f="report"></div>`;
 
     const checkedRefs = () =>
       $$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids));
@@ -2433,14 +2475,100 @@ async function renderBoardPanels(specId) {
       }
     };
 
-    const gallery = $("[data-f=gallery]", card);
-    const candItems = panelCands.map(c => ({
-      src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
-      caption: `${c.candidate_id} — ${p.id} (${c.status}) ${c.width}×${c.height}`,
-    }));
-    panelCands.forEach((c, i) => {
-      gallery.append(renderCard(specId, c, () => renderBoardPanels(specId), candItems, i, checkedRefs));
+    // Takes filmstrip: clicking a thumb stages that candidate.
+    $$("[data-take]", card).forEach(btn => {
+      btn.onclick = () => {
+        roomSel.staged[p.id] = btn.dataset.take;
+        renderBoardPanels(specId);
+      };
     });
+
+    // Staged-candidate actions (plan v3 B4): primary = Approve panel (the
+    // screen's only amber) · Reject · → Reference; ghost secondary row =
+    // Repair region · Crop → reference · → Light study; Delete forever only
+    // when the staged take is REJECTED. Gates read as disabled state, never
+    // as a surprise error.
+    if (staged) {
+      const c = staged;
+      const refresh = () => renderBoardPanels(specId);
+      const post = (path, json) => api(path, { method: "POST", json });
+      $("[data-f=shot-img]", card).onclick = () =>
+        openLightbox(takeItems, panelCands.indexOf(c));
+      const mk = (label, cls, fn, opts = {}) => {
+        const b = document.createElement("button");
+        b.className = cls; b.textContent = label;
+        if (opts.title) b.title = opts.title;
+        if (opts.disabled) b.disabled = true;
+        b.onclick = fn;
+        return b;
+      };
+      const prim = $("[data-f=primary-actions]", card);
+      const ghost = $("[data-f=ghost-actions]", card);
+
+      if (c.status !== "REJECTED") prim.append(mk("Reject", "danger", async () => {
+        const reason = prompt(`Reject ${c.candidate_id} — reason:`);
+        if (reason === null) return;
+        try {
+          await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "REJECTED", reason });
+          toast(`${c.candidate_id} rejected.`); refresh();
+        } catch (err) { toast(err.message, true); }
+      }));
+      prim.append(mk("→ Reference", "ghost", async () => {
+        const role = prompt("Reference role for this render:", "SCENE_REFERENCE");
+        if (role === null || !role.trim()) return;
+        const notes = prompt("Notes (e.g. which screenplay scene this anchors):", "") ?? "";
+        const controls = prompt("Controls (comma-separated, optional):", "") ?? "";
+        try {
+          const ref = await post(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`, { role, notes, controls });
+          toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
+        } catch (err) { toast(err.message, true); }
+      }, c.status !== "APPROVED"
+        ? { disabled: true, title: "Approve this take first — only approved renders become canon anchors" }
+        : { title: "Promote this approved render into the reference library" }));
+      if (c.status !== "APPROVED") prim.append(mk("Approve panel", "primary", async () => {
+        try {
+          await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "APPROVED" });
+          toast(`${c.candidate_id} approved.`); refresh();
+        } catch (err) { toast(err.message, true); }
+      }));
+
+      if (c.kind !== "derived_palette") ghost.append(mk("Repair region", "ghost", () =>
+        openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
+          async (mask, instruction, provider) => {
+            const fd = new FormData();
+            fd.append("mask", mask, "mask.png");
+            fd.append("instruction", instruction);
+            fd.append("ref_ids", JSON.stringify(checkedRefs()));
+            const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/repair?provider=${encodeURIComponent(provider)}`,
+              { method: "POST", body: fd });
+            toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}. It joins the takes strip.`);
+            refresh();
+          }),
+        { title: "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region. The result is a new take; this one is untouched." }));
+      ghost.append(mk("Crop → reference", "ghost", () =>
+        cropToReference({ type: "candidate", spec_id: specId, id: c.candidate_id },
+          `/api/specs/${specId}/candidates/${c.candidate_id}/image`),
+        c.status !== "APPROVED"
+          ? { disabled: true, title: "Approve this take first — crops enter the library as approved canon" }
+          : { title: "Harvest a region of this image as a new reference with its own narrow role" }));
+      ghost.append(mk("→ Light study", "ghost", async () => {
+        if (!confirm(`Create a lighting study from ${c.candidate_id}?\n\nThis panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.`)) return;
+        try {
+          const study = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/lighting-study`, { method: "POST", json: {} });
+          toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels — review it on the Breakdowns tab, trim any you don't want, then approve.`);
+        } catch (err) { toast(err.message, true); }
+      }, c.status !== "APPROVED"
+        ? { disabled: true, title: "Approve this take first — the study locks this panel's geometry" }
+        : { title: "Derive a lighting-study board: this panel becomes the geometry anchor, and each new panel renders the same place under one approved atmosphere" }));
+      if (c.status === "REJECTED") ghost.append(mk("Delete forever", "danger", async () => {
+        if (!confirm(`Permanently delete ${c.candidate_id}? The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.`)) return;
+        try {
+          await api(`/api/specs/${specId}/candidates/${c.candidate_id}`, { method: "DELETE" });
+          delete roomSel.staged[p.id];
+          toast(`${c.candidate_id} permanently deleted.`); refresh();
+        } catch (err) { toast(err.message, true); }
+      }, { title: "Permanently remove this rejected image and its record from disk" }));
+    }
     return card;
   }
 
