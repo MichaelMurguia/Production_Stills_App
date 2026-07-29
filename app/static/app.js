@@ -1347,15 +1347,49 @@ async function renderWizard() {
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
     $("#style-bible").value = bible.text;
-    $("#style-status").textContent = bible.is_default
+    $("#style-status").innerHTML = bible.is_default
       ? "showing built-in default — save to make it yours"
-      : (bible.rev ? `REV ${bible.rev} — every future prompt uses this` : "");
+      : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> every future prompt uses this` : "");
+    return bible;
   };
+  // Step-state badges (plan v3 C13): each step's h2 states where it stands,
+  // from data already fetched or one cheap read. Existing badge classes only.
+  const wizardStepBadges = async () => {
+    const setB = (n, cls, text) => {
+      const h = $(`.panel.step[data-step="${n}"] h2`);
+      if (!h) return;
+      $(".step-badge", h)?.remove();
+      h.insertAdjacentHTML("beforeend",
+        ` <span class="badge ${cls} step-badge">${esc(text)}</span>`);
+    };
+    try {
+      const [refs, subjects, samples, bible] = await Promise.all([
+        api("/api/references"), api("/api/subjects"),
+        api("/api/wizard/samples").catch(() => []), api("/api/style-bible"),
+      ]);
+      const roles = ["BOARD_LAYOUT_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_RENDERING_STYLE"];
+      const set = roles.filter(role => refs.some(r =>
+        r.status === "APPROVED" && roleHead(r.role) === role)).length;
+      setB(1, set === 3 ? "APPROVED" : "PROVISIONAL", `${set} OF 3 ANCHOR ROLES SET`);
+      setB(2, wizAnalysis ? "APPROVED" : "LOCKED",
+        wizAnalysis ? `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES FOUND` : "NOT RUN");
+      const photos = subjects.reduce((n, s) => n + (s.ref_ids || []).length, 0);
+      setB(3, subjects.length ? "APPROVED" : "LOCKED",
+        subjects.length ? `${subjects.length} CARDS · ${photos} PHOTOS` : "NONE YET");
+      setB(5, bible.is_default ? "LOCKED" : "APPROVED",
+        bible.is_default ? "NOT DRAFTED" : `SAVED · REV ${bible.rev || 0}`);
+      setB(6, samples.length ? "APPROVED" : "LOCKED",
+        samples.length ? `${samples.length} SAMPLE${samples.length > 1 ? "S" : ""}`
+                       : "NEEDS A SAVED BIBLE");
+    } catch { /* badges are commentary — never block the wizard */ }
+  };
+  wizardStepBadges();
+
   await loadBibleEditor();
   $("#style-save").onclick = async () => {
     try {
       const r = await api("/api/style-bible", { method: "PUT", json: { text: $("#style-bible").value } });
-      $("#style-status").textContent = `REV ${r.rev} — saved; every future prompt uses this`;
+      $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
       toast("Art Direction Bible saved.");
     } catch (err) { toast(err.message, true); }
   };
