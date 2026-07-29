@@ -2801,81 +2801,100 @@ async function renderAssemblyFor(specId) {
   ]);
   host.innerHTML = "";
 
-  const approvedByPanel = {};
-  for (const c of candidates) {
-    if (c.status === "APPROVED") approvedByPanel[c.panel_id] = c.candidate_id;
-  }
-  const ready = spec.panels.every(p => approvedByPanel[p.id]);
-
   // The slot map makes the never-upscaled rule visible BEFORE a render is
-  // spent: exact assembler geometry, one verdict per slot (design mock 4b).
-  // Layout is presentation grammar, not canon — the variant picker rearranges
-  // how approved work hangs on the canvas and is recorded on the board record.
+  // spent: exact assembler geometry, one verdict per slot (Part A.4 canonical:
+  // ID chip top-left, verdict chip bottom-right, APP-DRAWN title block).
+  // Layout is presentation grammar, not canon — the variant chips rearrange
+  // how approved work hangs on the canvas and are recorded on the board.
+  const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
+                    TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE" };
   const slotHtml = sm => {
-    const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
-                      TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE" };
     const notReady = sm.slots.filter(s => s.status !== "OK");
+    const minY = Math.min(1, ...sm.slots.map(s => s.y));
     return `
       ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
         ${esc(notReady.map(s => `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
         — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
-      <div class="slot-caption"><span class="f-label">Slot map</span>
-        <span class="hint">true ${sm.canvas.width} × ${sm.canvas.height} canvas — all board typography is drawn by the app, never by the model</span></div>
       <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
+        <div class="slot apdrawn" style="left:1.7%;top:3%;width:96.6%;height:${Math.max(4, (minY - 0.05) * 100).toFixed(1)}%">
+          <span class="slot-id">${esc((spec.project || "").toUpperCase())} — ${esc((spec.subject || specId).toUpperCase())}</span>
+          <span class="slot-id">TITLE BLOCK · APP-DRAWN</span>
+        </div>
         ${sm.slots.map(s => `
           <div class="slot ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
                title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
-            <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}</span>
+            <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}</span>
             <span class="slot-verdict ${esc(s.status)}">${VERDICT[s.status]}</span>
-            ${s.status === "TOO_SMALL" ? `<span class="slot-dims">${s.candidate_width}×${s.candidate_height} INTO ${s.slot_width}×${s.slot_height}</span>` : ""}
           </div>`).join("")}
       </div>`;
   };
-  let slotMapHtml = "";
-  try {
-    slotMapHtml = slotHtml(await api(`/api/specs/${specId}/slot-map`));
-  } catch { /* the map is a preview; assembly still states its own errors */ }
+
+  let sm = null;
+  try { sm = await api(`/api/specs/${specId}/slot-map`); }
+  catch { /* the map is a preview; assembly still states its own errors */ }
 
   const isStudy = String(spec.board_type || "").toUpperCase() === "LIGHTING_STUDY";
-  const layoutOptions = `
-    <option value="default">Sheet allocation — largest leads</option>
-    <option value="grid">Grid — all panels equal</option>
-    ${spec.panels.map(p => `<option value="hero:${esc(p.id)}">Hero: ${esc(p.id)} — ${esc((p.title || p.purpose || "").slice(0, 40))}</option>`).join("")}`;
+  const variants = isStudy ? [] : [
+    { value: "default", label: "DEFAULT" },
+    { value: "grid", label: "GRID" },
+    ...spec.panels.map(p => ({ value: `hero:${p.id}`, label: `HERO ${p.id}` })),
+  ];
+  let variant = "default";
+  const boardsCount = boards.length;
 
   const asm = document.createElement("div");
   asm.className = "panel";
   asm.innerHTML = `
-    <h2>Assemble board <span class="hint">(composes the latest approved candidate of every panel onto a 4K canvas with board typography — no upscaling)</span></h2>
-    <div data-f="slot-wrap">${slotMapHtml}</div>
+    <div class="asm-head">
+      <div style="flex:1;min-width:0">
+        <p style="margin:0 0 6px"><span class="badge ${boardsCount ? "PROVISIONAL" : "LOCKED"}">${boardsCount ? `${boardsCount} BOARD${boardsCount > 1 ? "S" : ""} ASSEMBLED` : "NOT ASSEMBLED"}</span>
+          <span class="badge LOCKED" data-f="canvas-chip">3840 × 2160</span></p>
+        <div class="rail-sheet" style="font-size:16px">${esc(specId)}</div>
+        <p class="mini" style="margin:4px 0 0">${esc(spec.subject || "")} · ${spec.panels.length} slot${spec.panels.length > 1 ? "s" : ""}</p>
+      </div>
+      <button class="primary" id="asm-go" ${sm?.ready ? "" : "disabled"} title="${sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">Assemble 4K board</button>
+    </div>
+    <div class="slot-caption" style="margin-top:14px">
+      <span class="f-label">Slot map · true 4K canvas</span>
+      <span class="variant-chips" data-f="variants">
+        ${variants.map(v => `<button class="vchip${v.value === variant ? " on" : ""}" data-v="${esc(v.value)}">${esc(v.label)}</button>`).join("")}
+      </span>
+      <span class="hint">presentation only — recorded on the board, the locked sheet is never touched</span>
+    </div>
+    <div data-f="slot-wrap">${sm ? slotHtml(sm) : ""}</div>
     <div class="row">
-      ${isStudy ? "" : `<label class="mini" title="Presentation only — rearranges how the approved panels hang on the canvas. The sheet is untouched; the chosen layout is recorded on the board record, and the board still needs your approval.">Layout <select id="asm-layout">${layoutOptions}</select></label>`}
       <label class="mini" title="Pixel dimensions of the final assembled board. Panels are composed at native resolution — never upscaled — so every panel needs enough source resolution for its allocation.">Canvas <select id="asm-size">
         <option value="3840x2160" selected>3840 × 2160 (4K UHD)</option>
         <option value="4096x2304">4096 × 2304 (DCI-flavor wide)</option>
         <option value="4500x2400">4500 × 2400 (print-leaning)</option>
       </select></label>
-      <button class="primary" id="asm-go" ${ready ? "" : "disabled"}>Assemble 4K board</button>
-      ${ready ? "" : '<span class="mini">approve one candidate per panel to enable</span>'}
     </div>
     <div id="asm-busy"></div>
     <div class="ref-grid" id="asm-gallery" style="margin-top:12px"></div>`;
   host.append(asm);
 
-  const layoutSel = $("#asm-layout", asm);
-  if (layoutSel) {
-    layoutSel.onchange = async () => {
-      try {
-        const sm = await api(`/api/specs/${specId}/slot-map?variant=${encodeURIComponent(layoutSel.value)}`);
-        $("[data-f=slot-wrap]", asm).innerHTML = slotHtml(sm);
-      } catch (err) { toast(err.message, true); }
+  const refreshMap = async () => {
+    const [w, h] = $("#asm-size", asm).value.split("x").map(Number);
+    try {
+      sm = await api(`/api/specs/${specId}/slot-map?variant=${encodeURIComponent(variant)}&width=${w}&height=${h}`);
+      $("[data-f=slot-wrap]", asm).innerHTML = slotHtml(sm);
+      $("[data-f=canvas-chip]", asm).textContent = `${w} × ${h}`;
+      $("#asm-go", asm).disabled = !sm.ready;
+    } catch (err) { toast(err.message, true); }
+  };
+  $$(".vchip", asm).forEach(ch => {
+    ch.onclick = () => {
+      variant = ch.dataset.v;
+      $$(".vchip", asm).forEach(x => x.classList.toggle("on", x === ch));
+      refreshMap();
     };
-  }
+  });
+  $("#asm-size", asm).onchange = refreshMap;
 
   $("#asm-go", asm).onclick = async (e) => {
     const btn = e.target;
     btn.disabled = true; btn.textContent = "Assembling…";
     const [w, h] = $("#asm-size", asm).value.split("x").map(Number);
-    const variant = layoutSel ? layoutSel.value : "default";
     const busy = startBusy($("#asm-busy", asm),
       `Assembling ${w}×${h} board from approved panels…`,
       "composing panels and typography onto the canvas");

@@ -753,7 +753,7 @@ details.meta pre {
 
 /* UNCANONIZED — 2026-07-29 — assembly slot map: geometry + verdicts before
    a render is spent (mock 4b). Status colors report state only. */
-.slot-caption { margin: 4px 0 6px; }
+.slot-caption { margin: 4px 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .slot-alert {
   font-family: var(--mono); font-size: 12px; color: var(--bad);
   border: 1px solid var(--bad); border-left-width: 3px;
@@ -764,12 +764,26 @@ details.meta pre {
   border: 1px solid var(--line); margin-bottom: 14px;
 }
 .slot {
-  position: absolute; border: 1px solid var(--line); background: var(--panel);
-  padding: 6px 8px; display: flex; flex-direction: column; gap: 4px;
+  position: absolute; border: 1px solid var(--line); background: var(--bg2);
+  padding: 6px 8px; display: flex; flex-direction: column;
+  justify-content: space-between; align-items: flex-start; gap: 4px;
   overflow: hidden; min-width: 0;
 }
+.slot .slot-verdict { align-self: flex-end; }
 .slot.TOO_SMALL { border-color: var(--bad); background: rgba(205, 97, 85, .07); }
+.slot.TOO_SMALL .slot-id { color: var(--bad); }
 .slot.NO_CANDIDATE { border-style: dashed; background: transparent; }
+.slot.apdrawn { border-style: solid; flex-direction: row; align-items: center; justify-content: space-between; }
+.asm-head { display: flex; align-items: flex-start; gap: 18px; }
+.asm-head .primary { flex: none; }
+.variant-chips { display: inline-flex; gap: 6px; margin: 0 10px; }
+.vchip {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+  background: none; border: 1px solid var(--line); color: var(--ink-dim);
+  padding: 3px 10px; cursor: pointer;
+}
+.vchip:hover { border-color: var(--ink-faint); color: var(--ink); }
+.vchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .slot-id { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-dim); }
 .slot-verdict {
   font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
