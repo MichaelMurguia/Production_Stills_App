@@ -110,6 +110,84 @@ def _layout_rects(panels: list[dict], alloc: dict[str, float],
     return rects
 
 
+def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
+    """The board's slot geometry BEFORE any pixels are spent, with a verdict
+    per slot: OK, UNAPPROVED (candidates but none approved), TOO_SMALL
+    (approved render smaller than its slot in both dimensions — it would
+    need upscaling, which never happens), NO_CANDIDATE. Mirrors
+    assemble_board's exact geometry so the preview is honest."""
+    spec = store.get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+
+    approved = _latest_approved_by_panel(spec_id)
+    have: dict[str, dict] = {}
+    for c in generate.list_candidates(spec_id):
+        if c.get("candidate_id", "").startswith("CAND-"):
+            have[c["panel_id"]] = c
+
+    alloc = {lp["id"]: float(lp.get("allocation_percent", 0))
+             for lp in spec.get("layout", {}).get("panels", [])}
+
+    inner_x = MARGIN
+    inner_y = HEADER_H + MARGIN
+    inner_w = width - 2 * MARGIN
+    inner_h = height - inner_y - MARGIN
+    derived = [pid for pid in ("MATERIALS", "PALETTE") if pid in approved]
+    if derived:
+        inner_h -= max(220, int(inner_h * 0.16)) + GUTTER
+
+    btype = str(spec.get("board_type") or "LOCATION").upper()
+    panels = spec.get("panels", [])
+    if btype == "LIGHTING_STUDY":
+        rects = _grid_rects(panels, inner_x, inner_y, inner_w, inner_h)
+    else:
+        rects = _layout_rects(panels, alloc, inner_x, inner_y, inner_w, inner_h)
+
+    slots = []
+    for panel in panels:
+        pid = panel["id"]
+        rx, ry, rw, rh = rects[pid]
+        img_h = rh - LABEL_H
+        cand = approved.get(pid)
+        status = "NO_CANDIDATE"
+        cw = ch = None
+        cand_id = None
+        if cand:
+            cand_id = cand["candidate_id"]
+            cw = int(cand.get("width") or 0)
+            ch = int(cand.get("height") or 0)
+            status = "TOO_SMALL" if (cw < rw and ch < img_h) else "OK"
+        elif pid in have:
+            cand_id = have[pid]["candidate_id"]
+            status = "UNAPPROVED"
+        slots.append({
+            "panel_id": pid,
+            "title": panel.get("title") or panel.get("purpose", ""),
+            "x": rx / width, "y": ry / height,
+            "w": rw / width, "h": img_h / height,
+            "slot_width": rw, "slot_height": img_h,
+            "status": status,
+            "candidate_id": cand_id,
+            "candidate_width": cw, "candidate_height": ch,
+            "allocation_percent": alloc.get(pid),
+        })
+
+    not_ready = [s for s in slots if s["status"] != "OK"]
+    return {
+        "spec_id": spec_id,
+        "canvas": {"width": width, "height": height},
+        "locked": store.spec_locked(spec_id),
+        "board_type": btype,
+        "derived_strip": derived,
+        "slots": slots,
+        "ready": not not_ready,
+        "assemblable": all(s["status"] in ("OK", "TOO_SMALL") for s in slots),
+        "not_ready": [{"panel_id": s["panel_id"], "status": s["status"]}
+                      for s in not_ready],
+    }
+
+
 def assemble_board(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
     from common import stable_hash
 

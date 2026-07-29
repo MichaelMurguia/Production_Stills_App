@@ -184,3 +184,32 @@ fixes into v3:
 - [ ] Reference chip taxonomy mapping (§4.5) and reject/reinstate copy (§4.3).
 - [ ] Bible `REV` badge: add revision tracking or drop it (§3).
 - [ ] Correct Task 3's gate rule to the real validate rule (§5.1).
+
+---
+
+## 7. Buildability assessment (coding-agent follow-up, 2026-07-29)
+
+Michael asked which of the "non-existent feature" promises above are actually
+buildable. Answer: nearly all — the data is derivable from existing stores.
+**These are being implemented now** as read-only backend enablement plus
+minimal UI in the current four-stage nav, so plan v3 can treat them as
+existing capabilities rather than gaps:
+
+| Mock promise | Status | How |
+|---|---|---|
+| 1a BLOCKING rows (HOLD/GAP/SIZE) | **built** | computed server-side: required objects lacking PASS rows per draft sheet; required objects with no approved reference; approved candidates smaller than their 4K slot |
+| 1a RECENT feed | **built** | `GET /api/activity` over the existing flight-recorder log |
+| Stage-status sublines data | **built** | aggregation in `/api/state` (`stage_summary`) — nav band itself still awaits the §2 decision |
+| 4c `USED IN N RENDERS` | **built** | usage counts joined onto `/api/references` |
+| 2a Bible `REV n` | **built** | revision counter incremented on every bible save |
+| 1a/4d engine dots | **built** | key-configured state + persisted result of the last connection test; no passive polling, no fake "connected" |
+| 4b slot map with OK/UNAPPROVED/TOO SMALL | **built** | `GET /api/specs/{id}/slot-map` reusing the assembler's layout math; rendered before any render is spent |
+| 4a locations/coverage table | **built** | deterministic slugline parser over the screenplay text (PDF/Fountain/txt), scene counts, stated detail heuristic (description-line count) |
+| 4a citation re-check on replace | **built, report-only** | quoted strings in evidence sources are re-searched in the new draft; vanished quotes are *flagged* (dashboard blocker + per-sheet report). Specs are never auto-mutated — locked sheets are immutable by canon rule |
+| 4b "Change layout" | **not built** | blocked on a product ruling (edits a locked spec); options being discussed with Michael |
+
+Design implication for v3: the mocks' dashboard, slot map, and coverage table
+no longer need to be scoped down. The remaining open items are the ones that
+were always design decisions, not data problems: §2 (canonical nav), §1 (IA),
+§4.1 (third provider presentation), §4.3 (reject/reinstate copy), §4.9
+(action placement), and the Change-layout workflow.

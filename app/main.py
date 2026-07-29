@@ -7,7 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import activity, assemble, autofill, bible, generate, paths, store, wizard
+from . import activity, assemble, autofill, bible, generate, insights, paths, store, wizard
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -88,6 +88,8 @@ def api_state() -> dict:
                for r in refs):
         missing.append("Master Board #001 (BOARD_LAYOUT_STYLE) not approved in reference library")
 
+    blockers = insights.blocking()
+    summary = insights.stage_summary(blockers)
     return {
         "project": "The Beltminers",
         "screenplay": app_state.get("screenplay"),
@@ -100,8 +102,17 @@ def api_state() -> dict:
         "specs": specs,
         "prohibited_inventions": project_state.get("prohibited_inventions", []),
         "missing_dependencies": missing,
+        "blocking": blockers,
+        "stage_summary": summary,
+        "next": insights.next_verb(summary, blockers),
         "suggested_roles": store.SUGGESTED_ROLES,
     }
+
+
+@app.get("/api/activity")
+def api_activity(limit: int = 10) -> list[dict]:
+    """The flight recorder, phrased for humans — newest first."""
+    return insights.recent_activity(max(1, min(int(limit), 50)))
 
 
 # ----------------------------------------------------------------- screenplay
@@ -111,14 +122,42 @@ async def api_upload_screenplay(file: UploadFile = File(...)) -> dict:
     content = await file.read()
     if not content:
         raise HTTPException(422, "empty file")
-    return store.set_screenplay(file.filename or "screenplay.pdf", content)
+    record = store.set_screenplay(file.filename or "screenplay.pdf", content)
+    # Re-search every quoted evidence citation in the new draft. Report-only:
+    # specs are never auto-mutated — broken citations surface as blockers.
+    if store.list_specs():
+        try:
+            report = await run_in_threadpool(insights.citation_check)
+            record["citation_check"] = {
+                "quotes_checked": report.get("quotes_checked", 0),
+                "missing": len(report.get("missing", [])),
+            }
+        except Exception:
+            pass  # the upload must never fail because the audit hiccuped
+    return record
+
+
+@app.get("/api/screenplay/locations")
+def api_screenplay_locations() -> dict:
+    """Deterministic slugline coverage map — see insights.locations()."""
+    return insights.locations()
+
+
+@app.get("/api/screenplay/citation-report")
+def api_citation_report() -> dict:
+    return insights.load_citation_report() or {"available": False,
+                                               "missing": []}
 
 
 # ----------------------------------------------------------------- references
 
 @app.get("/api/references")
 def api_list_references() -> list[dict]:
-    return store.list_references()
+    refs = store.list_references()
+    usage = insights.reference_usage()
+    for r in refs:
+        r["used_in"] = usage.get(r["id"], 0)
+    return refs
 
 
 @app.post("/api/references")
@@ -261,7 +300,22 @@ def api_get_settings() -> dict:
     s = generate.load_settings()
     gkey = s.get("gemini_api_key", "")
     okey = s.get("openai_api_key", "")
+    genv = os.environ.get("GEMINI_API_KEY", "").strip()
     oenv = os.environ.get("OPENAI_API_KEY", "").strip()
+    tests = s.get("engine_tests", {})
+    # Honest status only: "configured" states where a key came from;
+    # "last_test" is the persisted outcome of the user's own Test click —
+    # never a fake CONNECTED.
+    gemini_src = "settings" if gkey else ("env" if genv else None)
+    openai_src = "settings" if okey else ("env" if oenv else None)
+    engines = {
+        "gemini": {"configured": bool(gemini_src), "source": gemini_src,
+                   "last_test": tests.get("gemini")},
+        "openai": {"configured": bool(openai_src), "source": openai_src,
+                   "last_test": tests.get("openai")},
+        "openai-chat": {"configured": bool(openai_src), "source": openai_src,
+                        "last_test": tests.get("openai-chat")},
+    }
     return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "gemini_api_key_set": bool(gkey),
             "gemini_api_key_hint": f"…{gkey[-4:]}" if gkey else None,
@@ -271,7 +325,8 @@ def api_get_settings() -> dict:
             "openai_model": generate.OPENAI_MODEL,
             "providers": {k: v["label"] for k, v in generate.PROVIDERS.items()},
             "default_provider": generate.DEFAULT_PROVIDER,
-            "preferred_provider": generate.preferred_provider()}
+            "preferred_provider": generate.preferred_provider(),
+            "engines": engines}
 
 
 @app.post("/api/settings")
@@ -290,15 +345,28 @@ async def api_save_settings(body: dict) -> dict:
     return api_get_settings()
 
 
+def _record_engine_test(provider: str, ok: bool, detail: str = "") -> None:
+    s = generate.load_settings()
+    tests = s.get("engine_tests", {})
+    tests[provider] = {"ok": ok, "at": store.utcnow(),
+                       **({"detail": detail[:200]} if detail else {})}
+    s["engine_tests"] = tests
+    generate.save_settings(s)
+
+
 @app.post("/api/settings/test")
 async def api_test_settings(body: dict = None) -> dict:
     provider = (body or {}).get("provider", generate.DEFAULT_PROVIDER)
     try:
-        return await run_in_threadpool(generate.test_connection, provider)
+        result = await run_in_threadpool(generate.test_connection, provider)
     except generate.GenerationError as e:
+        _record_engine_test(provider, False, str(e))
         raise HTTPException(422, str(e))
     except Exception as e:
+        _record_engine_test(provider, False, str(e))
         raise HTTPException(502, f"{provider} connection failed: {e}")
+    _record_engine_test(provider, True)
+    return result
 
 
 # --------------------------------------------------------------- generation
@@ -524,7 +592,8 @@ async def api_candidate_promote(spec_id: str, cand_id: str, body: dict) -> dict:
 @app.get("/api/style-bible")
 def api_get_style_bible() -> dict:
     return {"text": generate.load_style_bible(),
-            "is_default": not paths.BIBLE.exists()}
+            "is_default": not paths.BIBLE.exists(),
+            "rev": int(store.load_app_state().get("bible_rev", 0))}
 
 
 @app.put("/api/style-bible")
@@ -533,7 +602,10 @@ async def api_save_style_bible(body: dict) -> dict:
     if not text:
         raise HTTPException(422, "style bible cannot be empty")
     generate.save_style_bible(text + "\n")
-    return {"text": text + "\n", "is_default": False}
+    state = store.load_app_state()
+    state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
+    store.save_app_state(state)
+    return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
 
 
 @app.get("/api/bible/sections")
@@ -702,6 +774,16 @@ async def api_autofill_spec(body: dict) -> dict:
 
 
 # ------------------------------------------------------------------ assembly
+
+@app.get("/api/specs/{spec_id}/slot-map")
+def api_slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
+    """Slot geometry + per-slot readiness verdicts before any render is
+    spent — makes the never-upscaled rule visible in advance."""
+    try:
+        return assemble.slot_map(spec_id, width, height)
+    except KeyError as e:
+        raise _err(e)
+
 
 @app.post("/api/specs/{spec_id}/assemble")
 async def api_assemble(spec_id: str, body: dict) -> dict:
