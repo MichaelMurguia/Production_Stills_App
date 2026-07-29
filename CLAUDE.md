@@ -20,6 +20,40 @@ Two rules govern everything, both explained in full in that file:
 Do not introduce a CSS framework, new fonts, new accent colors, gradients,
 rounded corners, or emoji.
 
+### Keeping the design system current — you own this
+
+The user does not maintain these docs by hand. **You update them as part of the
+work**, in the same commit as the feature. Do not ask permission and do not defer
+it to a later pass.
+
+**Most features need no new pattern.** A panel, a table, a badge, a gated button
+— the design system already covers them. Reuse and ship.
+
+**When a feature genuinely needs a pattern the design system doesn't cover:**
+
+1. Build the smallest thing that works, using existing tokens only.
+2. Mark the CSS block `/* UNCANONIZED — <date> — <feature> */`.
+3. Append a row to the `## Uncanonized patterns` table in
+   `app/static/DESIGN_SYSTEM.md`: date, what it is, where it's used, why nothing
+   existing worked.
+4. Add a dated line to `## Changelog` at the bottom of that file.
+
+The uncanonized table is a to-do list for a designer, not a permanent home. When
+it reaches ~4 rows, tell the user in plain language that the UI has accumulated
+patterns worth a design review, and that re-attaching the project folder in
+Omelette will get them reviewed and folded in properly. Then keep working — do
+not block on it.
+
+**Also update `DESIGN_SYSTEM.md` when you:** add or reorder a pipeline stage
+(the nav band and its numbering are documented there), add a token, change a
+gate, or retire a pattern. Keep edits surgical — amend the relevant section, add
+a changelog line, and leave the rest alone.
+
+**Direction is one-way.** The design system is upstream of the code. When they
+disagree, the code is wrong. Never rewrite the design system to describe what the
+code drifted into — the only legitimate reasons to change it are a deliberate new
+pattern (logged as above) or an instruction from the user.
+
 ## Architecture
 
 - Flask app serving a **vanilla-JS single-page app** — no build step, no bundler,
