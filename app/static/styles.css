@@ -894,6 +894,19 @@ details.meta pre {
 }
 .carried { font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--bad); }
 
+/* reference library: filter chips + status counts + jurisdiction block */
+.ref-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ref-chips { display: inline-flex; gap: 6px; }
+.ref-counts { margin-left: auto; display: inline-flex; gap: 16px; }
+.stat { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-dim); display: inline-flex; align-items: center; gap: 6px; }
+.stat i { width: 8px; height: 8px; display: inline-block; }
+.stat.ok i { background: var(--ok); }
+.stat.hold i { background: var(--hold); }
+.stat.bad i { background: var(--bad); }
+.juris { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; line-height: 1.6; }
+.juris.ok { color: var(--ok); }
+.juris.bad { color: var(--bad); }
+
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
   .busy .busy-bar, .busy .spinner { animation: none; }

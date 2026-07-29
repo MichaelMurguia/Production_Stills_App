@@ -259,6 +259,10 @@ function roleHead(role) {
   return String(role || "").split("—")[0].replace(/[\s_-]+$/, "").trim().toUpperCase();
 }
 
+// Roles auto-attached to every render (BOARD_LAYOUT_STYLE governs assembly
+// only — it never enters a panel render).
+const AUTO_ATTACH_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"];
+
 /* --------------------------------------------------------------- lightbox */
 
 const lb = {
@@ -1369,8 +1373,32 @@ async function renderReferences() {
   grid.innerHTML = refs.length ? "" :
     `<div class="panel mini">No references yet. Start with a Board rendering style image — the painting-style anchor attached to every generation.</div>`;
 
-  const isStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"].includes(roleHead(r.role));
-  const newestFirst = refs.slice().reverse();
+  // Role → bucket mapping (plan v3 B5): STYLE = the three style-anchor
+  // families, SCENE = scene/geometry anchors, SUBJECT = everything else.
+  const STYLE_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"];
+  const SCENE_HEADS = ["SCENE_REFERENCE", "LOCATION_GEOMETRY"];
+  const bucketOf = r => STYLE_HEADS.includes(roleHead(r.role)) ? "STYLE"
+    : SCENE_HEADS.includes(roleHead(r.role)) ? "SCENE" : "SUBJECT";
+  const isStyle = r => bucketOf(r) === "STYLE";
+  const isAutoAttach = r => AUTO_ATTACH_HEADS.includes(roleHead(r.role));
+
+  const filter = renderReferences.filter ??= { bucket: "ALL" };
+  const counts = { ALL: refs.length, STYLE: 0, SUBJECT: 0, SCENE: 0 };
+  refs.forEach(r => { counts[bucketOf(r)] += 1; });
+  $("#ref-chips").innerHTML = ["ALL", "STYLE", "SUBJECT", "SCENE"].map(b =>
+    `<button class="vchip${filter.bucket === b ? " on" : ""}" data-b="${b}">${b} ${counts[b]}</button>`).join("");
+  $$("#ref-chips .vchip").forEach(ch => {
+    ch.onclick = () => { filter.bucket = ch.dataset.b; renderReferences(); };
+  });
+  const st = { APPROVED: 0, PROVISIONAL: 0, REJECTED: 0 };
+  refs.forEach(r => { st[r.status] = (st[r.status] || 0) + 1; });
+  $("#ref-counts").innerHTML = `
+    <span class="stat ok"><i></i>APPROVED ${st.APPROVED}</span>
+    <span class="stat hold"><i></i>PROVISIONAL ${st.PROVISIONAL}</span>
+    <span class="stat bad"><i></i>QUARANTINED ${st.REJECTED}</span>`;
+
+  const newestFirst = refs.slice().reverse()
+    .filter(r => filter.bucket === "ALL" || bucketOf(r) === filter.bucket);
   const ordered = [...newestFirst.filter(isStyle), ...newestFirst.filter(r => !isStyle(r))];
   const lbItems = ordered.map(r => ({
     src: `/api/references/${r.id}/image`,
@@ -1397,15 +1425,23 @@ async function renderReferences() {
     }
     const card = document.createElement("div");
     card.className = `ref-card ${r.status}`;
+    // The jurisdiction block: a role is a jurisdiction, shown as one —
+    // CONTROLS in --ok, NOT in --bad, both Courier (mock 4c).
+    const usage = r.status === "REJECTED"
+      ? `<div class="juris bad">REJECTED ${esc((r.rejected_at || r.added_at || "").slice(5, 10).replace("-", " "))}${r.status_reason ? ` — ${esc(r.status_reason.toUpperCase())}` : ""}</div>
+         <div class="meta">THE PIPELINE CANNOT ATTACH THIS</div>`
+      : isAutoAttach(r)
+        ? `<div class="meta">AUTO-ATTACHED · ALL RENDERS</div>`
+        : (r.used_in ? `<div class="meta">USED IN ${r.used_in} RENDER${r.used_in > 1 ? "S" : ""}</div>` : "");
     card.innerHTML = `
       <img src="/api/references/${r.id}/image?thumb=true" alt="${esc(r.id)}" loading="lazy">
       <div class="body">
         <div><span class="badge ${r.status}">${r.status}</span> <b>${esc(r.id)}</b></div>
         <div class="role">${esc(r.role)}</div>
-        <div class="meta">controls: ${esc(r.controls.join(", ") || "—")}</div>
-        <div class="meta">does not control: ${esc(r.does_not_control.join(", ") || "—")}</div>
+        <div class="juris ok">CONTROLS ${esc(r.controls.join(" · ") || "—")}</div>
+        <div class="juris bad">NOT ${esc(r.does_not_control.join(" · ") || "—")}</div>
         ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
-        <div class="meta">${r.used_in ? `used in ${r.used_in} render${r.used_in > 1 ? "s" : ""}` : "not used in a render yet"}</div>
+        ${usage}
       </div>
       <div class="actions"></div>`;
     $("img", card).onclick = () => openLightbox(lbItems, i);

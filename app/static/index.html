@@ -294,8 +294,16 @@
 <template id="tpl-references">
   <section class="view">
     <div class="panel">
+      <h2>Reference library</h2>
+      <p class="hint">Each image controls exactly one thing and nothing else. Approve to make it a canon anchor; rejecting quarantines it from the pipeline — Reinstate returns it to provisional review.</p>
+      <div class="ref-bar">
+        <span class="ref-chips" id="ref-chips"></span>
+        <span class="ref-counts" id="ref-counts"></span>
+      </div>
+    </div>
+    <div id="ref-grid" class="ref-grid"></div>
+    <div class="panel">
       <h2>Add reference</h2>
-      <p class="hint">A reference controls only the role you assign it. Approved references are the canon anchors attached to every future generation.</p>
       <form id="ref-form" class="grid-form">
         <label title="The reference image file itself. It is copied into the library; the original stays where it is.">Image <input type="file" id="ref-file" accept="image/*" required></label>
         <label title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">Role
@@ -308,7 +316,6 @@
         <button type="submit" class="primary">Add to library</button>
       </form>
     </div>
-    <div id="ref-grid" class="ref-grid"></div>
   </section>
 </template>
 
