@@ -455,6 +455,17 @@ async function updateBand() {
 /* -------------------------------------------------------------- dashboard */
 
 const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review" };
+const BLOCK_SUPPORT = {
+  HOLD: "Held rows on required objects block the lock — read each cited source, then pass or cut the row.",
+  GAP: "A missing input upstream stops generation downstream.",
+  SIZE: "Nothing is ever blown up — regenerate the panel at a larger size.",
+  CITE: "The current draft no longer contains quotes this sheet cites — review the flagged rows.",
+};
+
+// Machine IDs inside prose render in Courier (design system: data vs voice).
+const monoIds = safeText => safeText.replace(
+  /\b((?:CAND|REF|BOARD|OBJ)-\d+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|P\d{2})\b/g,
+  '<span class="mono-id">$1</span>');
 
 async function renderStatus() {
   useTemplate("tpl-status");
@@ -473,19 +484,23 @@ async function renderStatus() {
     ["Draft specs", specCounts.DRAFT + (specCounts.REVIEWED || 0)],
   ].map(([lbl, num]) => `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join("");
 
-  // The lead: the single next action — first blocker, or the next stage verb.
-  const next = state.next || { text: "Upload the screenplay", action: "dashboard" };
+  // The lead is a presentation of blocking[0] — never a second list. With
+  // nothing blocking, it carries the next stage verb instead.
+  const first = state.blocking[0];
+  const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
+  const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
   lead.innerHTML = `
     <div class="next-label">DO THIS NEXT</div>
     <div class="next-row">
-      <div class="next-text">${esc(next.text)}</div>
-      ${next.action !== "dashboard"
-        ? `<button class="primary" data-f="go">${esc(BLOCK_VERBS[(state.blocking[0] || {}).kind] || "Open")}</button>`
-        : ""}
+      <div style="flex:1;min-width:0">
+        <div class="next-text">${monoIds(esc(next.text))}</div>
+        <p class="next-support">${esc(first ? BLOCK_SUPPORT[first.kind] || "" :
+          "Everything upstream is satisfied.")}</p>
+      </div>
+      <button class="primary" data-f="go">${esc(first ? BLOCK_VERBS[first.kind] || "Open" : "Open")}</button>
     </div>`;
-  const go = $("[data-f=go]", lead);
-  if (go) go.onclick = () => showView(next.action);
+  $("[data-f=go]", lead).onclick = () => showView(action);
 
   // Everything that stops the next render, as structured rows (kind badge,
   // text, resolving jump). The panel hides entirely when nothing blocks.
@@ -497,11 +512,14 @@ async function renderStatus() {
       state.blocking.map((b, i) => `
         <div class="block-row">
           <span class="block-kind ${esc(b.kind)}">${esc(b.kind)}</span>
-          <span class="block-text" title="${esc(b.detail || "")}">${esc(b.text)}</span>
-          <button class="ghost" data-block="${i}">${esc(BLOCK_VERBS[b.kind] || "Open")}</button>
+          <span class="block-text" title="${esc(b.detail || "")}">${monoIds(esc(b.text))}</span>
+          <button class="block-act" data-block="${i}">${esc(BLOCK_VERBS[b.kind] || "Open")}</button>
         </div>`).join("");
     $$("[data-block]", blocking).forEach(btn => {
-      btn.onclick = () => showView(state.blocking[+btn.dataset.block].action || "dashboard");
+      btn.onclick = () => {
+        const a = state.blocking[+btn.dataset.block].action;
+        showView(a === "dashboard" ? "screenplay" : a || "status");
+      };
     });
   } else {
     blocking.classList.add("hidden");
@@ -511,7 +529,7 @@ async function renderStatus() {
     ? recent.map(e => `
         <div class="recent-row${e.kind === "error" ? " error" : ""}">
           <span class="recent-ts">${esc((e.ts || "").slice(11, 16))}</span>
-          <span class="recent-text">${esc(e.text)}</span>
+          <span class="recent-text">${monoIds(esc(e.text))}</span>
         </div>`).join("")
     : `<p class="mini">No activity recorded yet.</p>`;
 

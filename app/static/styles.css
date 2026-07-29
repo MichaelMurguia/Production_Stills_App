@@ -644,35 +644,47 @@ details.meta pre {
   padding: 10px 12px; margin: 8px 0 0; color: var(--ink-dim);
 }
 
-/* UNCANONIZED — 2026-07-29 — dashboard: DO THIS NEXT lead + blocking rows
-   (design mock 1a; tokens only) */
+/* Blocking rows + DO-THIS-NEXT lead — canonical (plan v3 Part A.1).
+   Row grid: badge (fixed 52px, bordered status color, never filled) ·
+   text · amber text action. The lead presents blocking[0], never a list. */
 .next-label {
   font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
   color: var(--accent); margin-bottom: 6px;
 }
-.next-row { display: flex; align-items: center; gap: 16px; }
-.next-text { flex: 1; font-size: 19px; font-weight: 600; color: var(--ink); min-width: 0; }
+.next-row { display: flex; align-items: center; gap: 18px; }
+.next-text { font-size: 21px; font-weight: 600; color: var(--ink); min-width: 0; }
+.next-text .mono-id { font-family: var(--mono); font-size: 19px; letter-spacing: .02em; }
+.next-support { margin: 6px 0 0; font-size: 13px; color: var(--ink-dim); max-width: 74ch; }
+.next-row .primary { flex: none; }
 .block-row {
   display: flex; align-items: center; gap: 12px;
   padding: 8px 0; border-top: 1px solid var(--line-soft);
 }
 .block-kind {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
-  border: 1px solid var(--line); padding: 2px 7px; flex: none;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  border: 1px solid var(--line); padding: 2px 0; flex: none;
+  width: 52px; text-align: center;
 }
 .block-kind.HOLD { color: var(--hold); border-color: var(--hold); }
 .block-kind.GAP, .block-kind.SIZE, .block-kind.CITE { color: var(--bad); border-color: var(--bad); }
 .block-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
-.block-row button { flex: none; }
+.block-text .mono-id { font-family: var(--mono); font-size: 12px; }
+.block-act {
+  flex: none; background: none; border: none; padding: 2px 4px;
+  font: inherit; font-size: 13px; color: var(--accent); cursor: pointer;
+}
+.block-act:hover { text-decoration: underline; }
 
-/* UNCANONIZED — 2026-07-29 — dashboard: recent activity feed (mock 1a) */
+/* Recent activity feed — canonical (plan v3 Part A.2): timestamp column is
+   the rhythm; no icons, no dots. IDs inside the text carry Courier. */
 .recent-row {
   display: flex; gap: 10px; padding: 5px 0;
-  border-top: 1px solid var(--line-soft); font-size: 12px;
+  border-top: 1px solid var(--line-soft); font-size: 13px;
 }
 .recent-row:first-child { border-top: none; }
 .recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none; }
 .recent-text { color: var(--ink-dim); min-width: 0; }
+.recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 12px; }
 .recent-row.error .recent-text { color: var(--bad); }
 
 /* UNCANONIZED — 2026-07-29 — screenplay location coverage table (mock 4a) */
