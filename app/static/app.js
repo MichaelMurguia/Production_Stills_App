@@ -2241,14 +2241,17 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
   return cc;
 }
 
+const boardRoomSel = {};  // per-sheet: which panel is on the stage, which take is shown
+
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec }, refs, candidates, appSettings] = await Promise.all([
+  const [{ spec }, refs, candidates, appSettings, slotMap] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
     api("/api/settings"),
+    api(`/api/specs/${specId}/slot-map`).catch(() => null),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
   const isAutoStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"]
@@ -2257,24 +2260,7 @@ async function renderBoardPanels(specId) {
   const approvedRefs = refs.filter(r => r.status === "APPROVED" && !isAutoStyle(r));
   host.innerHTML = "";
 
-  const rejected = candidates.filter(c => c.status === "REJECTED");
-  if (rejected.length) {
-    const purge = document.createElement("div");
-    purge.className = "panel mini";
-    purge.innerHTML = `<button class="danger" data-f="purge">Delete all ${rejected.length} rejected candidate${rejected.length > 1 ? "s" : ""} permanently</button>
-      <span class="hint">removes the image files from disk — rejection reasons stay in the lessons list and rejection history</span>`;
-    host.append(purge);
-    $("[data-f=purge]", purge).onclick = async () => {
-      if (!confirm(`Permanently delete ${rejected.length} rejected candidate image(s) for ${specId}? This cannot be undone.`)) return;
-      try {
-        const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
-        toast(`${r.count} rejected candidate(s) permanently deleted.`);
-        renderBoardPanels(specId);
-      } catch (err) { toast(err.message, true); }
-    };
-  }
-
-  for (const p of spec.panels) {
+  function buildWorkbench(p) {
     const alloc = (spec.layout?.panels || []).find(x => x.id === p.id)?.allocation_percent;
     const panelCands = candidates.filter(c => c.panel_id === p.id).reverse();
     const card = document.createElement("div");
@@ -2336,7 +2322,6 @@ async function renderBoardPanels(specId) {
       <div data-f="busy"></div>
       <div data-f="report"></div>
       <div class="ref-grid" data-f="gallery" style="margin-top:12px"></div>`;
-    host.append(card);
 
     const checkedRefs = () =>
       $$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids));
@@ -2456,6 +2441,7 @@ async function renderBoardPanels(specId) {
     panelCands.forEach((c, i) => {
       gallery.append(renderCard(specId, c, () => renderBoardPanels(specId), candItems, i, checkedRefs));
     });
+    return card;
   }
 
   // -------- derived panels: palette & materials from the board's own art ----
@@ -2463,6 +2449,8 @@ async function renderBoardPanels(specId) {
   const approvedPanelCands = candidates.filter(c =>
     c.status === "APPROVED" && !DERIVED_IDS.includes(c.panel_id) && c.kind !== "assembled_board");
   const derivedCands = candidates.filter(c => DERIVED_IDS.includes(c.panel_id)).reverse();
+
+  function buildDerived() {
   const der = document.createElement("div");
   der.className = "panel";
   der.innerHTML = `
@@ -2480,7 +2468,6 @@ async function renderBoardPanels(specId) {
     ${approvedPanelCands.length ? "" : '<p class="mini">Approve at least one panel candidate to enable derivation.</p>'}
     <div id="der-busy"></div>
     <div class="ref-grid" id="der-gallery" style="margin-top:12px"></div>`;
-  host.append(der);
 
   $("#der-palette", der).onclick = async (e) => {
     const btn = e.target;
@@ -2515,7 +2502,97 @@ async function renderBoardPanels(specId) {
   }));
   derivedCands.forEach((c, i) =>
     derGallery.append(renderCard(specId, c, () => renderBoardPanels(specId), derItems, i)));
+  return der;
+  }
 
+  // ---------------- the judging room: rail · stage · provenance (mock 3b) ---
+  const roomSel = boardRoomSel[specId] ??= {};
+  const pids = spec.panels.map(p => p.id);
+  if (roomSel.panel !== "__derived" && !pids.includes(roomSel.panel))
+    roomSel.panel = pids[0] || "__derived";
+
+  const slotStatus = {};
+  (slotMap?.slots || []).forEach(s => { slotStatus[s.panel_id] = s.status; });
+  const approvedCount = pids.filter(pid =>
+    candidates.some(c => c.panel_id === pid && c.status === "APPROVED")).length;
+
+  const railMark = pid => {
+    const st = slotStatus[pid];
+    const n = candidates.filter(c => c.panel_id === pid).length;
+    if (st === "TOO_SMALL") return '<span class="rail-mark bad">SIZE</span>';
+    if (st === "OK") return '<span class="rail-mark okdot" title="approved candidate ready"></span>';
+    if (n) return `<span class="rail-mark warn" title="${n} take(s), none approved">${n}</span>`;
+    return '<span class="rail-mark none">—</span>';
+  };
+  const latestThumb = pid => {
+    const last = candidates.filter(c => c.panel_id === pid).slice(-1)[0];
+    return last ? `<img src="/api/specs/${specId}/candidates/${last.candidate_id}/image" loading="lazy" alt="">` : "";
+  };
+
+  const rail = document.createElement("aside");
+  rail.className = "board-rail";
+  rail.innerHTML = `
+    <div class="rail-block">
+      <div class="rail-label">SHEET</div>
+      <div class="rail-sheet">${esc(specId)}</div>
+      <div class="rail-state"><i></i>LOCKED · CAN GENERATE</div>
+    </div>
+    <div class="rail-block">
+      <div class="rail-label">PANELS <span>${approvedCount}/${pids.length}</span></div>
+      ${spec.panels.map(p => `
+        <button class="rail-panel${roomSel.panel === p.id ? " sel" : ""}" data-pid="${esc(p.id)}"
+                title="${esc(p.title || p.purpose || "")}">
+          <span class="rail-thumb${latestThumb(p.id) ? "" : " empty"}">${latestThumb(p.id)}</span>
+          <span class="rail-pid">${esc(p.id)}</span>
+          ${railMark(p.id)}
+        </button>`).join("")}
+    </div>
+    <div class="rail-block rail-tail">
+      <div class="rail-label">DERIVED</div>
+      <button class="rail-panel${roomSel.panel === "__derived" ? " sel" : ""}" data-pid="__derived"
+              title="Palette and materials built FROM this board's approved panels">
+        <span class="rail-pid">PALETTE · MATERIALS</span>
+        <span class="rail-mark ${derivedCands.length ? "okdot" : "none"}">${derivedCands.length ? "" : "—"}</span>
+      </button>
+      <div class="rail-note">ASSEMBLY LIVES IN <button class="block-act" data-f="to-assembly" style="font-size:11px;font-family:var(--mono)">05 BOARDS</button></div>
+    </div>`;
+  $("[data-f=to-assembly]", rail).onclick = () => showView("assembly");
+  $$(".rail-panel", rail).forEach(btn => {
+    btn.onclick = () => {
+      roomSel.panel = btn.dataset.pid;
+      renderBoardPanels(specId);
+    };
+  });
+
+  const stage = document.createElement("div");
+  stage.className = "board-stage";
+  if (roomSel.panel === "__derived") {
+    stage.append(buildDerived());
+  } else {
+    stage.append(buildWorkbench(spec.panels.find(p => p.id === roomSel.panel)));
+  }
+
+  const rejected = candidates.filter(c => c.status === "REJECTED");
+  if (rejected.length) {
+    const purge = document.createElement("div");
+    purge.className = "panel mini";
+    purge.innerHTML = `<button class="danger" data-f="purge">Delete all ${rejected.length} rejected candidate${rejected.length > 1 ? "s" : ""} permanently</button>
+      <span class="hint">removes the image files from disk — rejection reasons stay in the lessons list and rejection history</span>`;
+    stage.append(purge);
+    $("[data-f=purge]", purge).onclick = async () => {
+      if (!confirm(`Permanently delete ${rejected.length} rejected candidate image(s) for ${specId}? This cannot be undone.`)) return;
+      try {
+        const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
+        toast(`${r.count} rejected candidate(s) permanently deleted.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    };
+  }
+
+  const room = document.createElement("div");
+  room.className = "board-room";
+  room.append(rail, stage);
+  host.append(room);
 }
 
 /* --------------------------------------------------- assembly (stage 05) */

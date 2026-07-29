@@ -781,6 +781,45 @@ details.meta pre {
 .slot-verdict.NO_CANDIDATE { color: var(--ink-faint); border-color: var(--line); }
 .slot-dims { font-family: var(--mono); font-size: 10px; color: var(--bad); }
 
+/* UNCANONIZED — 2026-07-29 — judging room layout (mock 3b): rail · stage ·
+   provenance as one flex row inside #board-panels. */
+.board-room { display: flex; gap: 20px; align-items: flex-start; }
+.board-rail { flex: 0 0 230px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.board-stage { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.board-side { flex: 0 0 300px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.rail-block {
+  background: var(--panel); border: 1px solid var(--line-soft); padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.rail-label {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+  color: var(--ink-faint); display: flex; justify-content: space-between;
+}
+.rail-sheet { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .02em; word-break: break-all; }
+.rail-state { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ok); display: flex; align-items: center; gap: 6px; }
+.rail-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.rail-panel {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; border-left: 2px solid transparent;
+  padding: 6px 6px 6px 8px; margin: 0 -6px; cursor: pointer; font: inherit;
+  color: var(--ink-dim); text-align: left;
+}
+.rail-panel:hover { background: var(--panel2); color: var(--ink); }
+.rail-panel.sel { background: var(--panel2); border-left-color: var(--accent); color: var(--ink); }
+.rail-thumb {
+  flex: none; width: 44px; height: 28px; background: var(--field);
+  border: 1px solid var(--line); overflow: hidden;
+}
+.rail-thumb.empty { border-style: dashed; }
+.rail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rail-pid { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-mark { flex: none; font-family: var(--mono); font-size: 10.5px; }
+.rail-mark.okdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.rail-mark.warn { color: var(--accent); }
+.rail-mark.bad { color: var(--bad); }
+.rail-mark.none { color: var(--ink-faint); }
+.rail-note { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
+
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
   .busy .busy-bar, .busy .spinner { animation: none; }
