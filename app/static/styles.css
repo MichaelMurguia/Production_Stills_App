@@ -858,6 +858,15 @@ details.meta pre {
 .take.rejected .take-label { color: var(--bad); }
 .take.shown .take-label { color: var(--accent); }
 
+/* generation bench: deliberately not amber — Approve panel keeps the budget */
+.bench-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+.bench-count { margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-faint); }
+.gen-go {
+  border-color: var(--ink-faint); color: var(--ink); font-weight: 600;
+  padding: 9px 18px;
+}
+.gen-go:hover { border-color: var(--ink); }
+
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
   .busy .busy-bar, .busy .spinner { animation: none; }

@@ -2286,11 +2286,13 @@ async function renderBoardPanels(specId) {
       ${staged.status === "REJECTED" && staged.status_reason ? `<div class="meta" style="color:var(--bad)">rejected — ${esc(staged.status_reason)}</div>` : ""}
       ${staged.model_notes || staged.render_prompt ? `<details class="meta"><summary>${staged.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(staged.render_prompt ? `RENDER PROMPT (user-edited):\n${staged.render_prompt}${staged.model_notes ? "\n\n" + staged.model_notes : ""}` : staged.model_notes)}</pre></details>` : ""}`;
 
+    const sheetRejected = candidates.filter(c => c.status === "REJECTED").length;
     const takesHtml = `
       <div class="takes">
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}</span>
           <span class="hint">rejected takes stay as a record</span>
+          ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
         <div class="takes-row">
           ${panelCands.map(c => `
@@ -2314,6 +2316,10 @@ async function renderBoardPanels(specId) {
       ${stagedHtml}
       ${takesHtml}
       <div class="spec-section">
+        <div class="bench-head">
+          <span class="f-label">Generate next take</span>
+          <span class="bench-count" data-f="ref-count"></span>
+        </div>
         <h4>Style anchors <span class="hint">(art direction — attached to every generation automatically)</span></h4>
         <div class="mini" style="margin-bottom:10px">${styleAnchors.map(r =>
           `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")
@@ -2341,7 +2347,6 @@ async function renderBoardPanels(specId) {
           }).join("") || '<span class="mini">no approved subject references yet — add them via the cast & subjects cards on Production Design</span>';
         })()}
         </div>
-        <div class="mini" data-f="ref-count" style="margin-top:6px"></div>
       </div>
       <div class="gen-row">
         <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses. All three get identical spec, style, and references.">
@@ -2359,7 +2364,7 @@ async function renderBoardPanels(specId) {
         <div class="gen-actions">
           <button class="ghost" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
           <button class="ghost" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
-          <button class="primary" data-f="generate">Generate candidate</button>
+          <button class="ghost gen-go" data-f="generate" title="Render the next take with the model, size, aspect, and references above — deliberately not amber; Approve panel keeps that budget">Generate candidate</button>
         </div>
       </div>
       <div data-f="busy"></div>
@@ -2374,10 +2379,9 @@ async function renderBoardPanels(specId) {
     const updateRefCount = () => {
       const n = checkedRefs().length;
       const total = n + styleAnchors.length;
-      refCount.textContent = n
-        ? `${n} subject image(s) + ${styleAnchors.length} style anchor(s) = ${total} attached` +
-          (total > 14 ? " — over the 14-image limit; uncheck a group" : "")
-        : "";
+      refCount.textContent =
+        `${n} SUBJECT + ${styleAnchors.length} STYLE = ${total} OF 14 ATTACHED` +
+        (total > 14 ? " — OVER LIMIT, UNCHECK A GROUP" : "");
       refCount.style.color = total > 14 ? "var(--bad)" : "";
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
@@ -2458,7 +2462,7 @@ async function renderBoardPanels(specId) {
           archived with the candidate. Works with any model in the dropdown.</p>
           <textarea data-f="prose-text" style="width:100%;min-height:240px;font-family:Consolas,monospace;font-size:12px"></textarea>
           <div class="row" style="margin-top:8px">
-            <button class="primary" data-f="generate-prose">Generate from this prose</button>
+            <button class="ghost gen-go" data-f="generate-prose">Generate from this prose</button>
             <button class="ghost" data-f="close-prose">Close</button>
           </div>`;
         report.append(box);
@@ -2482,6 +2486,15 @@ async function renderBoardPanels(specId) {
         renderBoardPanels(specId);
       };
     });
+    const purgeBtn = $("[data-f=purge]", card);
+    if (purgeBtn) purgeBtn.onclick = async () => {
+      if (!confirm(`Permanently delete ${sheetRejected} rejected candidate image(s) for ${specId}? This cannot be undone.`)) return;
+      try {
+        const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
+        toast(`${r.count} rejected candidate(s) permanently deleted.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    };
 
     // Staged-candidate actions (plan v3 B4): primary = Approve panel (the
     // screen's only amber) · Reject · → Reference; ghost secondary row =
@@ -2698,23 +2711,6 @@ async function renderBoardPanels(specId) {
     stage.append(buildDerived());
   } else {
     stage.append(buildWorkbench(spec.panels.find(p => p.id === roomSel.panel)));
-  }
-
-  const rejected = candidates.filter(c => c.status === "REJECTED");
-  if (rejected.length) {
-    const purge = document.createElement("div");
-    purge.className = "panel mini";
-    purge.innerHTML = `<button class="danger" data-f="purge">Delete all ${rejected.length} rejected candidate${rejected.length > 1 ? "s" : ""} permanently</button>
-      <span class="hint">removes the image files from disk — rejection reasons stay in the lessons list and rejection history</span>`;
-    stage.append(purge);
-    $("[data-f=purge]", purge).onclick = async () => {
-      if (!confirm(`Permanently delete ${rejected.length} rejected candidate image(s) for ${specId}? This cannot be undone.`)) return;
-      try {
-        const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
-        toast(`${r.count} rejected candidate(s) permanently deleted.`);
-        renderBoardPanels(specId);
-      } catch (err) { toast(err.message, true); }
-    };
   }
 
   const room = document.createElement("div");
