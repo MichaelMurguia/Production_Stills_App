@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screenboard Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="brand-title">SCREENBOARD STUDIO</span>
+    <span class="brand-sub">Your Movie Visualized</span>
+  </div>
+</header>
+
+<!-- The nav IS the pipeline. Numbered stages run left to right in the order the
+     work actually happens; Research and Settings sit apart because they are not
+     stages. app.js binds via closest("button[data-view]"), so the nested spans
+     and the reordering are both safe. -->
+<nav id="nav">
+  <button data-view="dashboard" class="active" title="Where the project stands: what is blocking the next render, the screenplay, and the standing prohibitions">
+    <span class="stage-n">01</span><span class="stage-l">Dashboard</span>
+  </button>
+  <button data-view="wizard" title="The visual concept: the wizard, the Art Direction Bible, style anchors, lessons learned">
+    <span class="stage-n">02</span><span class="stage-l">Production Design</span>
+  </button>
+  <button data-view="specs" title="Breakdown sheets: the script broken into each board's sets, dressing, props, and evidence">
+    <span class="stage-n">03</span><span class="stage-l">Breakdowns</span>
+  </button>
+  <button data-view="boards" title="The department wall: generate panels, review takes, assemble boards">
+    <span class="stage-n">04</span><span class="stage-l">Boards</span>
+  </button>
+  <span class="nav-gap"></span>
+  <button data-view="references" title="Gathered reference: lookbook style plates and subject research (cast, vehicles, props)">
+    <span class="stage-l">Research</span>
+  </button>
+  <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">
+    <span class="stage-l">Settings</span>
+  </button>
+</nav>
+
+<main id="main"></main>
+
+<div id="toast" class="toast hidden"></div>
+
+<div id="lightbox" class="lightbox hidden">
+  <button class="lb-btn lb-close" title="Close (Esc)">×</button>
+  <button class="lb-btn lb-prev" title="Previous (←)">‹</button>
+  <button class="lb-btn lb-next" title="Next (→)">›</button>
+  <div class="lb-stage"><img id="lb-img" alt=""></div>
+  <div class="lb-bar">
+    <span id="lb-caption"></span>
+    <span id="lb-zoom" class="lb-zoomstate" title="Click image to toggle 100% pixel view"></span>
+  </div>
+</div>
+
+<!-- Dashboard: what is blocking you leads at full width on the left; counts and
+     standing rules recede into a sidebar. Same four render targets as before
+     (#dash-cards, #dash-missing, #dash-prohibited, #dash-screenplay). -->
+<template id="tpl-dashboard">
+  <section class="view dash">
+    <div class="dash-main">
+      <div class="panel panel-lead" id="dash-missing"></div>
+      <div class="panel">
+        <h2>Screenplay <span class="hint">(everything downstream depends on this file)</span></h2>
+        <div id="dash-screenplay"></div>
+        <form id="screenplay-form" class="row">
+          <input type="file" id="screenplay-file" accept=".pdf,.fdx,.txt,.fountain" required>
+          <button type="submit" class="primary">Upload screenplay</button>
+        </form>
+      </div>
+    </div>
+    <aside class="dash-side">
+      <div class="cards" id="dash-cards"></div>
+      <div class="panel">
+        <h2>Prohibited inventions <span class="hint">(from rejection history — enforced on every board)</span></h2>
+        <ul id="dash-prohibited" class="taglist"></ul>
+      </div>
+    </aside>
+  </section>
+</template>
+
+<!-- Production Design: the six steps run in order and carry their step number in
+     the gutter. Reference documents (bible, lessons, keys) are parked at the
+     bottom, out of the step sequence — they are not steps. -->
+<template id="tpl-wizard">
+  <section class="view">
+    <div class="panel">
+      <h2>Production design — the visual concept</h2>
+      <p class="hint">Six steps produce your <b>Art Direction Bible</b> — the locked lookbook every render obeys. Work down the page; each step's output feeds the next.</p>
+      <div id="wiz-screenplay" class="mini"></div>
+    </div>
+
+    <div class="panel step" data-step="1">
+      <h2>Style reference images <span class="hint">(the three anchors of art direction)</span></h2>
+      <p class="hint">Three anchors, three jurisdictions. Every render studies these — and nothing else about the look is invented. Subject photos (cast, vehicles, props) are research, not style: add them in step 3.</p>
+      <div class="wiz-cols">
+        <div class="wiz-col" data-role="BOARD_LAYOUT_STYLE">
+          <div class="wiz-col-head">
+            <span class="f-label" title="How a finished BOARD is laid out — an example of a studio development wall / master board.">Board layout</span>
+            <span class="badge REJECTED" data-f="state">NONE</span>
+          </div>
+          <p class="hint">CONTROLS presentation grammar at assembly<br>NEVER enters a panel render</p>
+          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more images — they upload immediately as approved BOARD_LAYOUT_STYLE anchors.">
+          <div class="wiz-thumbs" data-f="list"></div>
+        </div>
+        <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
+          <div class="wiz-col-head">
+            <span class="f-label" title="How the film is photographed — stills whose light and contrast character you want.">Cinematography</span>
+            <span class="badge REJECTED" data-f="state">NONE</span>
+          </div>
+          <p class="hint">CONTROLS contrast, tonal depth, naturalism<br>NEVER a panel's hour or hue — upload dawn, dusk, night</p>
+          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more film stills — they upload immediately as approved CINEMATOGRAPHY_STYLE anchors.">
+          <div class="wiz-thumbs" data-f="list"></div>
+        </div>
+        <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
+          <div class="wiz-col-head">
+            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want.">Rendering</span>
+            <span class="badge REJECTED" data-f="state">NONE</span>
+          </div>
+          <p class="hint">CONTROLS medium, brushwork, finish<br>NEVER content</p>
+          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more artworks — they upload immediately as approved BOARD_RENDERING_STYLE anchors.">
+          <div class="wiz-thumbs" data-f="list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel step" data-step="2">
+      <h2>Read the screenplay</h2>
+      <p class="hint">The research model reads the whole screenplay and proposes the project's <b>design languages</b> — the distinct visual cultures of the film (factions, eras, technology families) that must each stay internally consistent and distinct. Confirm, rename, or drop them; each becomes a Bible section, selectable per board.</p>
+      <div class="row">
+        <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
+          <select id="wiz-provider">
+            <option value="gemini">Gemini (research pass)</option>
+            <option value="openai">OpenAI GPT-5.6</option>
+          </select>
+        </div>
+        <div class="gen-actions"><button id="wiz-analyze" class="primary">Analyze screenplay</button></div>
+      </div>
+      <div id="wiz-analyze-lock" class="mini" style="margin-top:8px"></div>
+      <div id="wiz-analyze-busy"></div>
+      <div id="wiz-analysis"></div>
+    </div>
+
+    <div class="panel step" data-step="3">
+      <h2>Cast &amp; key subjects <span class="hint">(who and what the film needs reference for)</span></h2>
+      <p class="hint">Step 2's analysis recommends subjects found in the screenplay as tags below — click one to add its title card. Upload reference photos into each card: every image becomes an approved reference with that card's role, e.g. <code>CHARACTER_LIKENESS — JOHN STANNER</code>.</p>
+      <div id="wiz-subj-tags" class="chips" style="margin-bottom:10px"></div>
+      <div class="row" style="margin-top:0">
+        <input type="text" id="wiz-subj-name" placeholder="add manually — name…" style="max-width:240px" title="Name of a character, vehicle, or prop not in the recommendations.">
+        <select id="wiz-subj-kind" style="max-width:150px" title="CHARACTER → likeness reference; VEHICLE → geometry reference; PROP → prop reference.">
+          <option>CHARACTER</option><option>VEHICLE</option><option>PROP</option>
+        </select>
+        <button class="ghost" id="wiz-subj-add">+ Add subject</button>
+      </div>
+      <div id="wiz-subj-grid" class="subj-grid"></div>
+    </div>
+
+    <div class="panel step" data-step="4">
+      <h2>Interview <span class="hint">(skip anything — blanks come back marked PROPOSED)</span></h2>
+      <div class="grid-form">
+        <label class="wide" title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="e.g. Ralph McQuarrie production paintings, Andor, Apollo-era NASA hardware"></label>
+        <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
+        <label title="Color palette and light bias — becomes the Lighting Language section.">Palette &amp; light <input type="text" id="wiz-palette" placeholder="e.g. warm earthy palette, morning light, restrained effects"></label>
+        <label class="wide" title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
+        <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
+      </div>
+    </div>
+
+    <div class="panel step" data-step="5">
+      <h2>Draft &amp; review</h2>
+      <div class="row" style="margin-top:0">
+        <button id="wiz-draft" class="primary">Draft Art Direction Bible</button>
+        <span class="hint">from screenplay + design languages + interview + attached reference photos</span>
+      </div>
+      <div id="wiz-draft-busy"></div>
+      <div id="wiz-bible-wrap" class="hidden">
+        <textarea id="wiz-bible" style="min-height:420px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
+        <div class="row">
+          <button id="wiz-save" class="primary">Save as project Art Direction Bible</button>
+          <span class="hint">replaces the current bible — every future prompt uses it immediately</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel step" data-step="6">
+      <h2>Model bake-off <span class="hint">(pick your default engine by looking, not guessing)</span></h2>
+      <p class="hint">Every engine renders the <b>same location from your screenplay</b> under your saved Bible and approved anchors — the exact conditions real panel generations run under. Recommended locations come from step 2.</p>
+      <div class="row" style="margin-top:0">
+        <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 screenplay analysis; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
+          <input type="text" id="wiz-sample-loc" list="wiz-sample-locs" placeholder="run the Step 2 analysis for suggestions, or type a location…">
+          <datalist id="wiz-sample-locs"></datalist>
+        </div>
+        <div class="gen-actions"><button class="primary" id="wiz-samples-go" title="Sends the identical brief (your Bible + style anchors + the chosen screenplay location) to every engine you have a key for — one 1K render each.">Generate a sample from every model</button></div>
+      </div>
+      <div id="wiz-samples-busy"></div>
+      <div class="wiz-cols" id="wiz-samples" style="margin-top:12px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Documents <span class="hint">(reference material, not steps)</span></h2>
+      <p class="hint">The locked art direction, the standing project rules, and the engine keys they run on.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Art Direction Bible <span class="hint">(the single source every prompt draws from)</span></h2>
+      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
+      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px"></textarea>
+      <div class="row">
+        <button class="primary" id="style-save">Save Art Direction Bible</button>
+        <span id="style-status" class="mini"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Lessons learned <span class="hint">(standing project-wide rules, added by hand)</span></h2>
+      <p class="hint">These go into every future render prompt across all boards. Rejection reasons do <b>not</b> land here automatically — they become REJECTION FEEDBACK on that specific panel's future prompts. Use this list for rules that should apply everywhere.</p>
+      <div id="lessons-list"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Engines &amp; API keys <span class="hint">(full forms in Settings)</span></h2>
+      <div class="row" style="margin-top:0">
+        <input type="password" id="wiz-gem-key" placeholder="Gemini API key…" style="max-width:250px" title="From aistudio.google.com. Stored only in data/settings.json on this machine.">
+        <button class="ghost" id="wiz-gem-save">Save</button>
+        <span id="wiz-gem-state" class="mini"></span>
+        <input type="password" id="wiz-oai-key" placeholder="OpenAI API key…" style="max-width:250px" title="From platform.openai.com (sk-proj-…). Stored only in data/settings.json on this machine.">
+        <button class="ghost" id="wiz-oai-save">Save</button>
+        <span id="wiz-oai-state" class="mini"></span>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-references">
+  <section class="view">
+    <div class="panel">
+      <h2>Add reference</h2>
+      <p class="hint">A reference controls only the role you assign it. Approved references are the canon anchors attached to every future generation.</p>
+      <form id="ref-form" class="grid-form">
+        <label title="The reference image file itself. It is copied into the library; the original stays where it is.">Image <input type="file" id="ref-file" accept="image/*" required></label>
+        <label title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">Role
+          <input type="text" id="ref-role" list="role-list" placeholder="e.g. CHARACTER_LIKENESS — JOHN" required>
+          <datalist id="role-list"></datalist>
+        </label>
+        <label title="Comma-separated aspects this image DOES govern within its role (e.g. face, hair, proportions). Spelled out in every prompt the reference is attached to.">Controls <input type="text" id="ref-controls" placeholder="comma-separated, e.g. face, hair, proportions"></label>
+        <label title="Comma-separated aspects this image must NOT influence (e.g. costume, lighting, camera angle) — stops the model copying things you only meant as context.">Does not control <input type="text" id="ref-nocontrols" placeholder="e.g. costume, lighting, camera angle"></label>
+        <label class="wide" title="Free-form provenance notes — where the image came from, which scene it anchors. For your records; not sent to the model.">Notes <input type="text" id="ref-notes" placeholder="optional"></label>
+        <button type="submit" class="primary">Add to library</button>
+      </form>
+    </div>
+    <div id="ref-grid" class="ref-grid"></div>
+  </section>
+</template>
+
+<template id="tpl-specs">
+  <section class="view">
+    <div class="panel panel-lead">
+      <h2>Script breakdown <span class="hint">(draft a breakdown sheet from the screenplay)</span></h2>
+      <p class="hint">Describe the board and the research pass reads the whole screenplay, extracts the sets, dressing, props, and evidence, and drafts the sheet — every claim cited, unknowns left honest. You review and edit before anything locks. Example: <i>"Charlie's cabin — the workshop scenes with the GT40"</i></p>
+      <form id="spec-auto-form" class="grid-form">
+        <label title="Unique ID for the new specification — CAPS_WITH_UNDERSCORES, versioned (e.g. CHARLIES_CABIN_V001). Used in filenames, prompts, and the audit trail; it cannot be renamed later.">Spec ID <input type="text" id="spec-auto-id" placeholder="CHARLIES_CABIN_V001" required></label>
+        <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+          <select id="spec-auto-mode">
+            <option value="CANON_EXTRACTION">CANON_EXTRACTION — official board, strict evidence</option>
+            <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION — pitch me options</option>
+          </select>
+        </label>
+        <label title="Which model reads the screenplay and drafts the specification. Gemini uses your Gemini key (fast research pass); OpenAI GPT-5.6 uses your OpenAI key. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review either way.">Model
+          <select id="spec-auto-provider">
+            <option value="gemini">Gemini (research pass)</option>
+            <option value="openai">OpenAI GPT-5.6</option>
+          </select>
+        </label>
+        <label class="wide" title="Plain-language description of the board you want (e.g. 'Charlie's cabin — the workshop scenes with the GT40'). The research pass reads the whole screenplay with this as its brief and drafts panels, objects, and cited evidence.">What is this board about?
+          <textarea id="spec-auto-prompt" placeholder="Auto-fill for Charlie's cabin…" required></textarea>
+        </label>
+        <div class="row">
+          <button type="submit" class="primary" id="spec-auto-go">Run breakdown</button>
+          <span id="spec-auto-status" class="mini"></span>
+        </div>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>Breakdown sheets</h2>
+      <table class="table" id="spec-table">
+        <thead><tr><th>ID</th><th>Subject</th><th>Mode</th><th>Panels</th><th>Status</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <form id="spec-new-form" class="row">
+        <input type="text" id="spec-new-id" placeholder="SPEC ID e.g. GENETICS_FACTION_BOARD_V001" required title="Unique ID for the new specification — CAPS_WITH_UNDERSCORES, versioned. Used in filenames, prompts, and the audit trail; it cannot be renamed later.">
+        <input type="text" id="spec-new-subject" placeholder="Subject" required title="What this board is about — a short human-readable name for the location, scene, prop, or character.">
+        <select id="spec-new-mode" title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">
+          <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+          <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+        </select>
+        <button type="submit" class="ghost">Create blank sheet</button>
+      </form>
+    </div>
+    <div id="spec-editor"></div>
+  </section>
+</template>
+
+<template id="tpl-boards">
+  <section class="view">
+    <div class="panel">
+      <h2>Generate panels</h2>
+      <p class="hint">Only signed-off (approved &amp; locked) breakdowns can generate. Every generation re-anchors to the approved references you attach — candidates are never canon until you approve them.</p>
+      <div class="row">
+        <label class="mini" title="Which signed-off breakdown to generate panels for. Drafts don't appear here — approve one on the Breakdowns tab first.">Breakdown&nbsp;
+          <select id="board-spec"></select>
+        </label>
+      </div>
+    </div>
+    <div id="board-panels"></div>
+  </section>
+</template>
+
+<template id="tpl-settings">
+  <section class="view">
+    <nav class="subnav" id="settings-subnav">
+      <button data-sub="api" class="active">API Keys</button>
+      <button data-sub="workflow">Workflow &amp; Instructions</button>
+      <button data-sub="faq">FAQ</button>
+    </nav>
+
+    <div data-subview="api">
+      <div class="panel">
+        <h2>Google Gemini API key</h2>
+        <div id="dash-keystate" class="mini"></div>
+        <form id="settings-form" class="row">
+          <input type="password" id="gemini-key" placeholder="Paste Gemini API key" style="max-width:420px">
+          <button type="submit" class="primary">Save key</button>
+          <button type="button" class="ghost" id="test-key">Test connection</button>
+          <span id="test-key-result" class="mini"></span>
+        </form>
+        <p class="hint">Powers image generation (gemini-3-pro-image) and screenplay auto-fill. Stored only in <code>data/settings.json</code> on this machine — it never leaves your PC except to call Google. Get a key at aistudio.google.com.</p>
+      </div>
+      <div class="panel">
+        <h2>Image generation</h2>
+        <div class="fgroup" style="max-width:360px" title="The default engine pre-selected in every Model dropdown (panel generation, derived materials). You can still override per generation.">
+          <span class="f-label">Preferred model</span>
+          <select id="pref-provider"></select>
+        </div>
+        <p class="hint" style="margin-top:10px">Saved immediately on change. Applies wherever a Model dropdown appears; each generation records which model actually ran.</p>
+      </div>
+      <div class="panel">
+        <h2>OpenAI API key</h2>
+        <div id="openai-keystate" class="mini"></div>
+        <form id="openai-settings-form" class="row">
+          <input type="password" id="openai-key" placeholder="Paste OpenAI API key" style="max-width:420px">
+          <button type="submit" class="primary">Save key</button>
+          <button type="button" class="ghost" id="test-openai-key">Test connection</button>
+          <span id="test-openai-key-result" class="mini"></span>
+        </form>
+        <p class="hint">Powers image generation with GPT Image 2 when you pick it as the model on the Boards tab. Stored only in <code>data/settings.json</code> on this machine — it never leaves your PC except to call OpenAI. Get a key at platform.openai.com (API billing is separate from ChatGPT Plus). Note: OpenAI flags output above 2560×1440 as experimental, so prefer Gemini for 4K renders.</p>
+      </div>
+    </div>
+
+    <div data-subview="workflow" class="hidden">
+      <div class="panel doc">
+        <h2>The workflow</h2>
+        <p>This app builds <b>canon-locked art direction boards</b>. The chain is:</p>
+        <p class="chain">Screenplay + References → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
+        <h3>1 — Load your sources (Dashboard / Research)</h3>
+        <p>Upload the current screenplay on the Dashboard. Add reference images in the Research tab and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor. Rejecting one quarantines the file so it can never be used again.</p>
+        <h3>2 — Write or auto-fill a Specification</h3>
+        <p>A specification is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Use <b>Auto-fill</b> to have the AI read the screenplay and draft the sheet; then edit. Validate runs the canon rule engine; Approve &amp; lock freezes the spec with a content hash.</p>
+        <h3>3 — Generate panels (Boards)</h3>
+        <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked spec and spells out each reference's role boundary. Results are <b>CANDIDATE — UNAPPROVED</b> until you say otherwise.</p>
+        <h3>4 — Assemble the board</h3>
+        <p>Once every panel has an approved candidate, <b>Assemble 4K board</b> composes them onto a true 4K canvas with board typography drawn by the app (never by the model). If a panel render is smaller than its slot it is centered unscaled and flagged — regenerate it larger; nothing is ever blown up.</p>
+        <h3>5 — Close the loop</h3>
+        <p>Approve the board, then <b>→ Reference</b> promotes it (or any approved panel) into the reference library — e.g. as a <code>SCENE_REFERENCE</code> anchoring that screenplay scene. Future generations attach it, so consistency tightens with every approval. That is how the system improves over time without drifting.</p>
+        <h3>Canon vs. Design Exploration</h3>
+        <p><b>CANON_EXTRACTION</b>: paint what the screenplay and approved canon already establish. Strict — nothing unsupported, max 2 weak inferences. For official boards.<br>
+        <b>DESIGN_EXPLORATION</b>: the screenplay is silent, pitch me options. Everything is proposed-not-canon until you approve a winner and promote it.</p>
+      </div>
+    </div>
+
+    <div data-subview="faq" class="hidden">
+      <div class="panel doc">
+        <h2>FAQ</h2>
+        <h3>Why can't I generate from my spec?</h3>
+        <p>Only <b>approved &amp; locked</b> specs can generate. Draft specs must pass Validate first (every panel needs required objects; every required object needs a PASS evidence row).</p>
+        <h3>Why is my evidence row on HOLD?</h3>
+        <p>Auto-fill marks weak inferences HOLD deliberately — the model is not allowed to promote its own guesses. Read the cited source; if you agree, set the row to PASS yourself (you are the evidence when you do — that's <code>USER_DIRECTED</code>). A spec can't pass validation with HOLD rows on required objects.</p>
+        <h3>Why did assembly warn about a panel?</h3>
+        <p>That panel's render is smaller than its slot on the 4K canvas. The app never upscales — regenerate that panel at a larger size (usually 4K) and re-approve it.</p>
+        <h3>What image sizes should I use?</h3>
+        <p>Iterate at 2K (cheaper, faster), regenerate final picks at 4K. Hero slots fill best with 4:3 or 3:2 aspect; the right-column strips suit 16:9 or 21:9.</p>
+        <h3>What happens when I reject something?</h3>
+        <p>Rejected references are physically quarantined — the pipeline cannot attach them again. Rejected candidates stay visible (dimmed) as a record. Rejection reasons are stored.</p>
+        <h3>Can a generated image become a reference?</h3>
+        <p>Yes — that's the point. Approve it, then <b>→ Reference</b> with a role (e.g. <code>SCENE_REFERENCE</code>). It enters the library pre-approved and anchors future work.</p>
+        <h3>Where is everything stored?</h3>
+        <p>Locally: <code>data/</code> holds references, screenplay, specs, boards, and your API key. <code>project_state/approval_log.md</code> is the running approval record. Nothing goes to any server except generation calls to Google.</p>
+        <h3>What does a generation cost?</h3>
+        <p>Each render is a paid Google API call, billed to your key — rejected candidates cost the same as approved ones, which is why validation runs before generation, not after.</p>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script src="/app.js"></script>
+</body>
+</html>

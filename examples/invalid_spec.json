@@ -1,0 +1,157 @@
+{
+  "specification_id": "GENETICS_CANON_TEST_V001",
+  "project": "The Beltminers",
+  "subject": "Genetics evidence-constrained board test",
+  "mode": "CANON_EXTRACTION",
+  "status": "APPROVED",
+  "canon_sources": [
+    {
+      "id": "USER_TEST_DIRECTION",
+      "type": "user_instruction",
+      "status": "APPROVED"
+    },
+    {
+      "id": "MASTER_BOARD_001",
+      "type": "presentation_grammar",
+      "status": "APPROVED"
+    }
+  ],
+  "source_exclusions": [
+    "Rejected faction boards"
+  ],
+  "forbidden_elements": [
+    "animals",
+    "flying craft",
+    "petroglyphs",
+    "faction symbols",
+    "DNA imagery"
+  ],
+  "canon_budget": {
+    "weak_inference_max": 2,
+    "unsupported_max": 1
+  },
+  "layout": {
+    "canvas": "wide cinematic production board",
+    "panels": [
+      {
+        "id": "P01",
+        "allocation_percent": 60
+      },
+      {
+        "id": "P02",
+        "allocation_percent": 25
+      },
+      {
+        "id": "P03",
+        "allocation_percent": 15
+      }
+    ]
+  },
+  "render_intent": "Painterly production-development board, warm neutral ground, strong hierarchy, visible brushwork, concise labels.",
+  "panels": [
+    {
+      "id": "P01",
+      "title": "Hero environment",
+      "purpose": "Establish towering non-human Genetics against red sandstone scale",
+      "required_objects": [
+        "red sandstone cliffs",
+        "towering Genetic figure"
+      ],
+      "forbidden_objects": [
+        "animals",
+        "flying craft",
+        "petroglyphs"
+      ],
+      "evidence": [
+        "USER_DIRECTED"
+      ],
+      "scale": "EXTREME_WIDE",
+      "composition_role": "hero environment"
+    },
+    {
+      "id": "P02",
+      "title": "Anatomy study",
+      "purpose": "Define non-human silhouette and proportions",
+      "required_objects": [
+        "full-body Genetic silhouette"
+      ],
+      "forbidden_objects": [
+        "DNA icon",
+        "invented clothing system"
+      ],
+      "evidence": [
+        "USER_DIRECTED"
+      ],
+      "scale": "FULL_BODY",
+      "composition_role": "asset study"
+    },
+    {
+      "id": "P03",
+      "title": "Materials and lighting",
+      "purpose": "Define only approved board presentation and environmental light",
+      "required_objects": [
+        "sandstone material study"
+      ],
+      "forbidden_objects": [
+        "faction insignia"
+      ],
+      "evidence": [
+        "USER_DIRECTED",
+        "VISUAL_CANON_LOCKED"
+      ],
+      "scale": "DETAIL",
+      "composition_role": "support strip"
+    }
+  ],
+  "evidence_ledger": [
+    {
+      "object_id": "OBJ-001",
+      "panel_id": "P01",
+      "object": "red sandstone cliffs",
+      "evidence_class": "USER_DIRECTED",
+      "source": "test direction",
+      "confidence": 1.0,
+      "status": "PASS",
+      "rationale": "explicit test requirement"
+    },
+    {
+      "object_id": "OBJ-002",
+      "panel_id": "P01",
+      "object": "towering Genetic figure",
+      "evidence_class": "USER_DIRECTED",
+      "source": "test direction",
+      "confidence": 1.0,
+      "status": "PASS",
+      "rationale": "explicit test requirement"
+    },
+    {
+      "object_id": "OBJ-003",
+      "panel_id": "P02",
+      "object": "full-body Genetic silhouette",
+      "evidence_class": "USER_DIRECTED",
+      "source": "test direction",
+      "confidence": 1.0,
+      "status": "PASS",
+      "rationale": "explicit test requirement"
+    },
+    {
+      "object_id": "OBJ-004",
+      "panel_id": "P03",
+      "object": "sandstone material study",
+      "evidence_class": "USER_DIRECTED",
+      "source": "test direction",
+      "confidence": 1.0,
+      "status": "PASS",
+      "rationale": "explicit test requirement"
+    },
+    {
+      "object_id": "BAD",
+      "panel_id": "P01",
+      "object": "flying transport",
+      "evidence_class": "UNSUPPORTED",
+      "source": "",
+      "confidence": 0,
+      "status": "PASS"
+    }
+  ]
+}
