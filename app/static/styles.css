@@ -159,6 +159,21 @@ nav#nav button.s-cur .stage-n { color: var(--accent); }
 nav#nav button.s-cur .stage-l { font-weight: 700; }
 nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
+/* UNCANONIZED — 2026-07-29 — C5 CANNOT-LOCK gate strip (mock 3a): amber
+   Courier label, one line per failing validate condition, jump link. */
+.gate-strip {
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  background: rgba(224, 163, 63, .06); padding: 9px 13px; margin: 4px 0 14px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.gate-row { display: flex; align-items: baseline; gap: 12px; }
+.gate-label {
+  flex: none; width: 96px; font-family: var(--mono); font-size: 11px;
+  letter-spacing: .1em; color: var(--accent); font-weight: 700;
+}
+.gate-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
+.gate-row .block-act { flex: none; }
+
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {
   font-family: var(--mono); font-size: 11px; letter-spacing: .14em;

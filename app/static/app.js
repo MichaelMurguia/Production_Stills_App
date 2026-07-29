@@ -1605,11 +1605,14 @@ async function openSpecEditor(specId) {
       ${spec.autofilled ? '<span class="badge PROVISIONAL">AUTO-FILLED — REVIEW BEFORE APPROVING</span>' : ""}
     </h3>
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
+    <div id="sp-gate"></div>
     ${(spec.unresolved_questions || []).length ? `
       <div class="report" style="margin-bottom:12px"><b>Unresolved design questions</b> — the screenplay does not answer these; decide them yourself or run a DESIGN_EXPLORATION board:
         <ul>${spec.unresolved_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>
       </div>` : ""}
-    <div class="grid-form">
+    <div class="spec-section" style="margin-top:14px;border-top:none;padding-top:0">
+      <h4>Identity <span class="hint">(what this sheet is)</span></h4>
+      <div class="grid-form">
       <label title="What this board is about — a short human-readable name for the location, scene, prop, or character (e.g. Charlie's Cabin and GT40 Workshop). It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
         <select id="sp-mode" ${locked ? "disabled" : ""}>
@@ -1623,6 +1626,11 @@ async function openSpecEditor(specId) {
         </select>
       </label>
       <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${locked ? "disabled" : ""}></label>
+      </div>
+    </div>
+    <div class="spec-section">
+      <h4>Setting <span class="hint">(the slugline — fields follow the board type)</span></h4>
+      <div class="grid-form">
       <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the slugline; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
         <select id="sp-intext" ${locked ? "disabled" : ""}>
           ${["", "INT", "EXT", "INT/EXT"].map(v => `<option value="${v}" ${(spec.setting?.int_ext || "") === v ? "selected" : ""}>${v || "—"}</option>`).join("")}
@@ -1635,12 +1643,18 @@ async function openSpecEditor(specId) {
       <label class="setf" data-setf="atmo" title="Optional weather / light character layered on the hour — one of the Bible's approved atmosphere studies (or your own words). DUSK is the hour; 'dusk and lanterns' is the atmosphere.">Atmosphere <input type="text" id="sp-atmo" list="atmo-list" placeholder="e.g. dusk and lanterns, storm approach…" value="${esc(spec.setting?.atmosphere || "")}" ${locked ? "disabled" : ""}>
         <datalist id="atmo-list">${(bible_catalog?.atmospheres || []).map(t => `<option value="${esc(t)}">`).join("")}</datalist>
       </label>
-      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${spec.canon_budget?.weak_inference_max ?? 2}" ${locked ? "disabled" : ""}></label>
+      </div>
+    </div>
+    <div class="spec-section">
+      <h4>Direction <span class="hint">(what the panels are told)</span></h4>
+      <div class="grid-form">
       <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${locked ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
       <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${locked ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
       <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects and the project lessons-learned into every render prompt.">Forbidden elements <span class="hint">(one per line — seeded from the rejection history on the dashboard)</span>
         <textarea id="sp-forbidden" ${locked ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
+      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${spec.canon_budget?.weak_inference_max ?? 2}" ${locked ? "disabled" : ""}></label>
+      </div>
     </div>
 
     ${bible_catalog?.exists ? `
@@ -1697,7 +1711,8 @@ async function openSpecEditor(specId) {
     </div>
     <div id="sp-report"></div>`;
   host.append(panel);
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 80,
+                    behavior: "smooth" });
 
   const allocById = {};
   (spec.layout?.panels || []).forEach(p => { allocById[p.id] = p.allocation_percent; });
@@ -1886,6 +1901,71 @@ REMOVE — marked for removal from the board.">
   (spec.panels || []).forEach(addPanelRow);
   (spec.evidence_ledger || []).forEach(addLedgerRow);
   updateSettingVis();
+
+  // The lock gate, run continuously from the DOM — the same rules approval
+  // enforces server-side (validate_spec.py), so CANNOT-LOCK is never a
+  // surprise on the button. Each failing condition gets its own line.
+  const gateHost = $("#sp-gate", panel);
+  const computeGate = () => {
+    if (locked) return;
+    const reasons = [];
+    const passSet = new Set($$(".ledger-row", ledgerHost)
+      .filter(r => $("[data-f=status]", r).value === "PASS")
+      .map(r => `${$("[data-f=panel_id]", r).value.trim().toUpperCase()}|` +
+                $("[data-f=object]", r).value.trim().toLowerCase()));
+    const gaps = [];
+    $$(".panel-card", panelsHost).forEach(pc => {
+      $$(".chip", pc).forEach(ch => {
+        if (!passSet.has(`${pc.dataset.pid}|${ch.dataset.obj.toLowerCase()}`))
+          gaps.push({ pid: pc.dataset.pid, obj: ch.dataset.obj });
+      });
+    });
+    if (gaps.length) reasons.push({
+      text: `${gaps.length} required object(s) lack a PASS evidence row — pass them or cut the object; the model can't promote its own guesses.`,
+      jump: gaps[0],
+    });
+    const panelCards = $$(".panel-card", panelsHost);
+    const alloc = $$("[data-f=alloc]", panelsHost).reduce((n, i) => n + (+i.value || 0), 0);
+    if (panelCards.length && (alloc < 99 || alloc > 101))
+      reasons.push({ text: `layout allocation totals ${alloc}% — panels must total 100%.` });
+    const noSrc = $$(".ledger-row", ledgerHost)
+      .filter(r => !$("[data-f=source]", r).value.trim()).length;
+    if (noSrc) reasons.push({
+      text: `${noSrc} evidence row(s) have no citation — every row needs a source.` });
+    const weakMax = +$("#sp-weak", panel).value || 0;
+    const weak = $$(".ledger-row", ledgerHost).filter(r =>
+      $("[data-f=evidence_class]", r).value === "WEAK_INFERENCE" &&
+      $("[data-f=status]", r).value === "PASS").length;
+    if (weak > weakMax) reasons.push({
+      text: `weak-inference budget exceeded — ${weak} PASS row(s) on weak evidence, ${weakMax} allowed.` });
+
+    const approveBtn = $("#sp-approve", panel);
+    if (approveBtn) approveBtn.disabled = !!reasons.length;
+    if (!reasons.length) { gateHost.innerHTML = ""; return; }
+    gateHost.innerHTML = `
+      <div class="gate-strip">
+        ${reasons.map((r, i) => `
+          <div class="gate-row">
+            ${i === 0 ? '<span class="gate-label">CANNOT LOCK</span>' : '<span class="gate-label gate-cont"></span>'}
+            <span class="gate-text">${esc(r.text)}</span>
+            ${r.jump ? '<button class="block-act" data-f="gate-jump">Jump to first ↓</button>' : ""}
+          </div>`).join("")}
+      </div>`;
+    const jump = $("[data-f=gate-jump]", gateHost);
+    if (jump) jump.onclick = () => {
+      const g = reasons.find(r => r.jump).jump;
+      const target = $$(".ledger-row", ledgerHost).find(r => rowMatches(r, g.pid, g.obj))
+        || $$(".panel-card", panelsHost).find(pc => pc.dataset.pid === g.pid) || panel;
+      window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80,
+                        behavior: "smooth" });
+    };
+  };
+  panel.addEventListener("input", computeGate);
+  panel.addEventListener("change", computeGate);
+  // Row/chip additions and removals are DOM mutations, not input events.
+  new MutationObserver(computeGate).observe(panelsHost, { childList: true, subtree: true });
+  new MutationObserver(computeGate).observe(ledgerHost, { childList: true });
+  computeGate();
 
   if (!locked) {
     $("#sp-add-panel", panel).onclick = () => addPanelRow();
