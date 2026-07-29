@@ -182,8 +182,10 @@ go-ahead.
   stop and report.
 - After each task, verify the feature inventory above still all works.
 
-Visual reference: Omelette design doc `Screenboard Redesign.dc.html`, screens
-`1a`, `2a`, `3a`, `3b`, `4a`, `4c`, `4d`. The generation bench, repair/crop
+Visual reference: `design_mocks/` in this repo — one PNG per screen:
+`1a-dashboard`, `2a-production-design`, `3a-breakdowns`, `3b-boards-judging`,
+`4a-screenplay`, `4b-board-assembly`, `4c-research`, `4d-settings`. Read the
+relevant PNG before starting its task. The generation bench, repair/crop
 overlays, derived panels, and light-study flow have no dedicated mockups — keep
 their existing internals and place them per this plan; ask the user for a
 mockup if a layout decision feels ambiguous.
