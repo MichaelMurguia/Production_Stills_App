@@ -2713,9 +2713,65 @@ async function renderBoardPanels(specId) {
     stage.append(buildWorkbench(spec.panels.find(p => p.id === roomSel.panel)));
   }
 
+  // Provenance rail (plan v3 C9): everything about the staged render, all
+  // Courier, from fields already on the candidate — no new data.
+  function buildSide(c, panelCands) {
+    const promptText = c.render_prompt
+      ? `RENDER PROMPT (user-edited):\n${c.render_prompt}` : (c.prompt || "");
+    const rejectedTakes = panelCands.filter(t =>
+      t.status === "REJECTED" && (t.status_reason || "").trim());
+    const el = document.createElement("aside");
+    el.className = "board-side";
+    el.innerHTML = `
+      <div class="rail-block">
+        <div class="rail-label">THIS RENDER</div>
+        <div class="fact"><span>MODEL</span><b>${esc(c.model || "—")}</b></div>
+        <div class="fact"><span>SIZE</span><b>${c.width} × ${c.height}</b></div>
+        <div class="fact"><span>RUN</span><b>${esc((c.created_at || "").slice(0, 16).replace("T", " "))}</b></div>
+        <div class="fact"><span>SPEC HASH</span><b>${esc((c.spec_hash || "").slice(0, 8) || "—")}</b></div>
+      </div>
+      <div class="rail-block">
+        <div class="rail-label">ANCHORED TO · ${(c.references || []).length}</div>
+        ${(c.references || []).map(r => `
+          <div class="anchor-row" title="${esc(r.role)}">
+            <span class="rail-thumb"><img src="/api/references/${esc(r.id)}/image?thumb=true" loading="lazy" alt="" onerror="this.remove()"></span>
+            <span class="anchor-meta"><b>${esc(roleHead(r.role))}</b><i>${esc(r.id)}</i></span>
+          </div>`).join("") || '<span class="mini">no references attached to this render</span>'}
+      </div>
+      ${promptText ? `
+      <div class="rail-block">
+        <div class="rail-label">COMPILED PROMPT <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button></div>
+        <pre class="side-prompt" data-f="ppre">${esc(promptText.slice(0, 340))}${promptText.length > 340 ? "…" : ""}</pre>
+      </div>` : ""}
+      ${rejectedTakes.length ? `
+      <div class="rail-block">
+        <div class="rail-label bad">CARRIED REJECTIONS · ${rejectedTakes.length}</div>
+        ${rejectedTakes.map(t => `<div class="carried">${esc(t.candidate_id)} — ${esc(t.status_reason.toUpperCase())}</div>`).join("")}
+      </div>` : ""}`;
+    const fullBtn = $("[data-f=full]", el);
+    if (fullBtn) {
+      let expanded = false;
+      fullBtn.onclick = () => {
+        expanded = !expanded;
+        $("[data-f=ppre]", el).textContent = expanded
+          ? promptText : promptText.slice(0, 340) + (promptText.length > 340 ? "…" : "");
+        fullBtn.textContent = expanded ? "Less" : "Full";
+      };
+    }
+    return el;
+  }
+
+  let side = null;
+  if (roomSel.panel !== "__derived") {
+    const pc = candidates.filter(c => c.panel_id === roomSel.panel).reverse();
+    const staged = pc.find(c => c.candidate_id === roomSel.staged?.[roomSel.panel]) || pc[0];
+    if (staged) side = buildSide(staged, pc);
+  }
+
   const room = document.createElement("div");
   room.className = "board-room";
   room.append(rail, stage);
+  if (side) room.append(side);
   host.append(room);
 }
 
