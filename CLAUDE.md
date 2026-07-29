@@ -56,8 +56,8 @@ pattern (logged as above) or an instruction from the user.
 
 ## Architecture
 
-- Flask app serving a **vanilla-JS single-page app** — no build step, no bundler,
-  no npm. Edit the source files directly.
+- FastAPI app (uvicorn, auto-reload) serving a **vanilla-JS single-page app** —
+  no build step, no bundler, no npm. Edit the source files directly.
 - `app/static/index.html` — shell, nav, and all view `<template>` elements.
 - `app/static/app.js` — all view rendering and behavior.
 - `app/static/styles.css` — the whole design system.
