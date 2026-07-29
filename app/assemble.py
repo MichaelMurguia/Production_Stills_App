@@ -82,10 +82,15 @@ def _grid_rects(panels: list[dict], x0: int, y0: int, w: int,
 
 
 def _layout_rects(panels: list[dict], alloc: dict[str, float],
-                  x0: int, y0: int, w: int, h: int) -> dict[str, tuple[int, int, int, int]]:
+                  x0: int, y0: int, w: int, h: int,
+                  hero_id: str | None = None) -> dict[str, tuple[int, int, int, int]]:
     """Hero panel takes the left region, remaining panels stack on the right
-    with heights proportional to their layout allocation."""
+    with heights proportional to their layout allocation. hero_id overrides
+    which panel leads — layout is presentation grammar, not canon."""
     ordered = sorted(panels, key=lambda p: -(alloc.get(p["id"], 0) or 0))
+    if hero_id:
+        ordered = ([p for p in ordered if p["id"] == hero_id]
+                   + [p for p in ordered if p["id"] != hero_id])
     rects: dict[str, tuple[int, int, int, int]] = {}
     if len(ordered) == 1:
         rects[ordered[0]["id"]] = (x0, y0, w, h)
@@ -110,7 +115,36 @@ def _layout_rects(panels: list[dict], alloc: dict[str, float],
     return rects
 
 
-def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
+def check_variant(spec: dict, variant: str | None) -> str:
+    """Layout variants are presentation grammar (director's 2026-07-29
+    ruling): they rearrange how approved work hangs on the canvas and are
+    recorded on the board record — the spec is never touched. 'default'
+    follows the sheet's allocation, 'grid' is the equal-comparison grammar,
+    'hero:<panel>' leads with that panel."""
+    v = (variant or "default").strip()
+    if v in ("default", "grid"):
+        return v
+    if v.startswith("hero:"):
+        pid = v[5:]
+        if any(p.get("id") == pid for p in spec.get("panels", [])):
+            return v
+        raise AssemblyError(f"unknown hero panel: {pid}")
+    raise AssemblyError(f"unknown layout variant: {v}")
+
+
+def _variant_rects(spec: dict, alloc: dict[str, float], variant: str,
+                   x0: int, y0: int, w: int,
+                   h: int) -> dict[str, tuple[int, int, int, int]]:
+    panels = spec.get("panels", [])
+    btype = str(spec.get("board_type") or "LOCATION").upper()
+    if btype == "LIGHTING_STUDY" or variant == "grid":
+        return _grid_rects(panels, x0, y0, w, h)
+    hero_id = variant[5:] if variant.startswith("hero:") else None
+    return _layout_rects(panels, alloc, x0, y0, w, h, hero_id)
+
+
+def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
+             variant: str | None = None) -> dict:
     """The board's slot geometry BEFORE any pixels are spent, with a verdict
     per slot: OK, UNAPPROVED (candidates but none approved), TOO_SMALL
     (approved render smaller than its slot in both dimensions — it would
@@ -119,6 +153,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
     spec = store.get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
+    variant = check_variant(spec, variant)
 
     approved = _latest_approved_by_panel(spec_id)
     have: dict[str, dict] = {}
@@ -139,10 +174,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
 
     btype = str(spec.get("board_type") or "LOCATION").upper()
     panels = spec.get("panels", [])
-    if btype == "LIGHTING_STUDY":
-        rects = _grid_rects(panels, inner_x, inner_y, inner_w, inner_h)
-    else:
-        rects = _layout_rects(panels, alloc, inner_x, inner_y, inner_w, inner_h)
+    rects = _variant_rects(spec, alloc, variant, inner_x, inner_y, inner_w, inner_h)
 
     slots = []
     for panel in panels:
@@ -179,6 +211,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
         "canvas": {"width": width, "height": height},
         "locked": store.spec_locked(spec_id),
         "board_type": btype,
+        "layout_variant": variant,
         "derived_strip": derived,
         "slots": slots,
         "ready": not not_ready,
@@ -188,7 +221,8 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
     }
 
 
-def assemble_board(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
+def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
+                   variant: str | None = None) -> dict:
     from common import stable_hash
 
     spec = store.get_spec(spec_id)
@@ -196,6 +230,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
         raise KeyError(spec_id)
     if not store.spec_locked(spec_id):
         raise AssemblyError(f"{spec_id} is not approved; only locked specs can assemble.")
+    variant = check_variant(spec, variant)
 
     approved = _latest_approved_by_panel(spec_id)
     missing = [p["id"] for p in spec.get("panels", []) if p["id"] not in approved]
@@ -236,11 +271,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
         strip_h = max(220, int(inner_h * 0.16))
         inner_h -= strip_h + GUTTER
 
-    btype = str(spec.get("board_type") or "LOCATION").upper()
-    if btype == "LIGHTING_STUDY":
-        rects = _grid_rects(spec["panels"], inner_x, inner_y, inner_w, inner_h)
-    else:
-        rects = _layout_rects(spec["panels"], alloc, inner_x, inner_y, inner_w, inner_h)
+    rects = _variant_rects(spec, alloc, variant, inner_x, inner_y, inner_w, inner_h)
 
     warnings = []
     used: dict[str, str] = {}
@@ -323,6 +354,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
         "status": "CANDIDATE",
         "width": width,
         "height": height,
+        "layout_variant": variant,
         "panels_used": used,
         "warnings": warnings,
         "created_at": store.utcnow(),

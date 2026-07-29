@@ -776,13 +776,17 @@ async def api_autofill_spec(body: dict) -> dict:
 # ------------------------------------------------------------------ assembly
 
 @app.get("/api/specs/{spec_id}/slot-map")
-def api_slot_map(spec_id: str, width: int = 3840, height: int = 2160) -> dict:
+def api_slot_map(spec_id: str, width: int = 3840, height: int = 2160,
+                 variant: str = "default") -> dict:
     """Slot geometry + per-slot readiness verdicts before any render is
-    spent — makes the never-upscaled rule visible in advance."""
+    spent — makes the never-upscaled rule visible in advance. `variant`
+    previews a presentation layout: default | grid | hero:<panel>."""
     try:
-        return assemble.slot_map(spec_id, width, height)
+        return assemble.slot_map(spec_id, width, height, variant)
     except KeyError as e:
         raise _err(e)
+    except assemble.AssemblyError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/specs/{spec_id}/assemble")
@@ -790,7 +794,8 @@ async def api_assemble(spec_id: str, body: dict) -> dict:
     try:
         return await run_in_threadpool(
             assemble.assemble_board, spec_id,
-            int(body.get("width", 3840)), int(body.get("height", 2160)))
+            int(body.get("width", 3840)), int(body.get("height", 2160)),
+            body.get("variant", "default"))
     except KeyError as e:
         raise _err(e)
     except assemble.AssemblyError as e:

@@ -206,7 +206,7 @@ existing capabilities rather than gaps:
 | 4b slot map with OK/UNAPPROVED/TOO SMALL | **built** | `GET /api/specs/{id}/slot-map` reusing the assembler's layout math; rendered before any render is spent |
 | 4a locations/coverage table | **built** | deterministic slugline parser over the screenplay text (PDF/Fountain/txt), scene counts, stated detail heuristic (description-line count) |
 | 4a citation re-check on replace | **built, report-only** | quoted strings in evidence sources are re-searched in the new draft; vanished quotes are *flagged* (dashboard blocker + per-sheet report). Specs are never auto-mutated — locked sheets are immutable by canon rule |
-| 4b "Change layout" | **not built** | blocked on a product ruling (edits a locked spec); options being discussed with Michael |
+| 4b "Change layout" | **built** | director's ruling 2026-07-29: layout is presentation grammar, not canon. Assembly offers variants (sheet allocation / equal grid / hero:<panel>); the slot map previews them live; the chosen variant is recorded on the board record, which still requires approval. The locked sheet is never touched. |
 
 Design implication for v3: the mocks' dashboard, slot map, and coverage table
 no longer need to be scoped down. The remaining open items are the ones that

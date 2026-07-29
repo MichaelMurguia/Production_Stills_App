@@ -1870,7 +1870,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
   cc.className = `ref-card ${c.status === "REJECTED" ? "REJECTED" : ""}`;
   const label = c.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : c.status;
   const meta = c.kind === "assembled_board"
-    ? `${c.width}×${c.height} 4K board · panels: ${esc(Object.values(c.panels_used || {}).join(", "))}`
+    ? `${c.width}×${c.height} 4K board${c.layout_variant && c.layout_variant !== "default" ? ` · ${esc(c.layout_variant)} layout` : ""} · panels: ${esc(Object.values(c.panels_used || {}).join(", "))}`
     : `${c.width}×${c.height} · ${esc(c.image_size || "")} ${esc(c.aspect_ratio || "")} · ${esc(c.model || "")} · refs: ${esc((c.references || []).map(r => r.id).join(", ") || "none")}`;
   cc.innerHTML = `
     <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="${esc(c.candidate_id)}">
@@ -2266,13 +2266,13 @@ async function renderBoardPanels(specId) {
 
   // The slot map makes the never-upscaled rule visible BEFORE a render is
   // spent: exact assembler geometry, one verdict per slot (design mock 4b).
-  let slotMapHtml = "";
-  try {
-    const sm = await api(`/api/specs/${specId}/slot-map`);
+  // Layout is presentation grammar, not canon — the variant picker rearranges
+  // how approved work hangs on the canvas and is recorded on the board record.
+  const slotHtml = sm => {
     const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
                       TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE" };
     const notReady = sm.slots.filter(s => s.status !== "OK");
-    slotMapHtml = `
+    return `
       ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
         ${esc(notReady.map(s => `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
         — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
@@ -2287,14 +2287,25 @@ async function renderBoardPanels(specId) {
             ${s.status === "TOO_SMALL" ? `<span class="slot-dims">${s.candidate_width}×${s.candidate_height} INTO ${s.slot_width}×${s.slot_height}</span>` : ""}
           </div>`).join("")}
       </div>`;
+  };
+  let slotMapHtml = "";
+  try {
+    slotMapHtml = slotHtml(await api(`/api/specs/${specId}/slot-map`));
   } catch { /* the map is a preview; assembly still states its own errors */ }
+
+  const isStudy = String(spec.board_type || "").toUpperCase() === "LIGHTING_STUDY";
+  const layoutOptions = `
+    <option value="default">Sheet allocation — largest leads</option>
+    <option value="grid">Grid — all panels equal</option>
+    ${spec.panels.map(p => `<option value="hero:${esc(p.id)}">Hero: ${esc(p.id)} — ${esc((p.title || p.purpose || "").slice(0, 40))}</option>`).join("")}`;
 
   const asm = document.createElement("div");
   asm.className = "panel";
   asm.innerHTML = `
     <h2>Assemble board <span class="hint">(composes the latest approved candidate of every panel onto a 4K canvas with board typography — no upscaling)</span></h2>
-    ${slotMapHtml}
+    <div data-f="slot-wrap">${slotMapHtml}</div>
     <div class="row">
+      ${isStudy ? "" : `<label class="mini" title="Presentation only — rearranges how the approved panels hang on the canvas. The sheet is untouched; the chosen layout is recorded on the board record, and the board still needs your approval.">Layout <select id="asm-layout">${layoutOptions}</select></label>`}
       <label class="mini" title="Pixel dimensions of the final assembled board. Panels are composed at native resolution — never upscaled — so every panel needs enough source resolution for its allocation.">Canvas <select id="asm-size">
         <option value="3840x2160" selected>3840 × 2160 (4K UHD)</option>
         <option value="4096x2304">4096 × 2304 (DCI-flavor wide)</option>
@@ -2307,16 +2318,27 @@ async function renderBoardPanels(specId) {
     <div class="ref-grid" id="asm-gallery" style="margin-top:12px"></div>`;
   host.append(asm);
 
+  const layoutSel = $("#asm-layout", asm);
+  if (layoutSel) {
+    layoutSel.onchange = async () => {
+      try {
+        const sm = await api(`/api/specs/${specId}/slot-map?variant=${encodeURIComponent(layoutSel.value)}`);
+        $("[data-f=slot-wrap]", asm).innerHTML = slotHtml(sm);
+      } catch (err) { toast(err.message, true); }
+    };
+  }
+
   $("#asm-go", asm).onclick = async (e) => {
     const btn = e.target;
     btn.disabled = true; btn.textContent = "Assembling…";
     const [w, h] = $("#asm-size", asm).value.split("x").map(Number);
+    const variant = layoutSel ? layoutSel.value : "default";
     const busy = startBusy($("#asm-busy", asm),
       `Assembling ${w}×${h} board from approved panels…`,
       "composing panels and typography onto the canvas");
     try {
-      const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h } });
-      toast(`${b.candidate_id} assembled (${b.width}×${b.height}) — BOARD CANDIDATE, unapproved.`);
+      const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h, variant } });
+      toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout) — BOARD CANDIDATE, unapproved.`);
       renderBoardPanels(specId);
     } catch (err) {
       busy.done();
