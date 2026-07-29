@@ -139,13 +139,13 @@ nav#nav .stage-l {
   font-size: 12.5px; font-weight: 600; letter-spacing: .08em;
   text-transform: uppercase;
 }
-nav#nav .here {
+nav#nav .here-chip {
   display: none; flex: none;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
   background: var(--accent); color: var(--accent-ink);
   padding: 1px 6px; font-weight: 700;
 }
-nav#nav button.here .here { display: inline-block; }
+nav#nav button.here .here-chip { display: inline-block; }
 nav#nav .stage-sub {
   font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -687,20 +687,54 @@ details.meta pre {
 .recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 12px; }
 .recent-row.error .recent-text { color: var(--bad); }
 
-/* UNCANONIZED — 2026-07-29 — screenplay location coverage table (mock 4a) */
+/* Location coverage table + canonical meter (plan v3 Part A.3): 4 segments
+   11×4px, 3px gap; filled = --ok; a single amber first segment = thin. */
 .loc-head { margin: 16px 0 4px; }
 .loc-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 44px 64px minmax(0, 220px);
+  display: grid; grid-template-columns: minmax(0, 1fr) 48px 64px minmax(0, 230px);
   gap: 10px; align-items: center; padding: 6px 0;
   border-top: 1px solid var(--line-soft);
+}
+.loc-headrow span {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint);
 }
 .loc-slug { font-family: var(--mono); font-size: 12.5px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .loc-scenes { font-family: var(--mono); font-size: 12.5px; color: var(--ink-dim); text-align: right; }
 .loc-meter { display: inline-flex; gap: 3px; }
-.loc-meter i { width: 12px; height: 4px; background: var(--line); }
+.loc-meter i { width: 11px; height: 4px; background: var(--line-soft); }
 .loc-meter i.on { background: var(--ok); }
-.loc-sheet { font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loc-draft { justify-self: start; padding: 3px 10px; font-size: 12px; }
+.loc-meter.thin i.on { background: var(--accent); }
+.loc-sheet { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.loc-open {
+  background: none; border: none; padding: 0; font-family: var(--mono);
+  font-size: 11.5px; color: var(--ink-faint); cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.loc-open:hover { color: var(--ink); text-decoration: underline; }
+.loc-open.held { color: var(--accent); }
+.loc-draft { justify-self: start; font-family: var(--mono); font-size: 12px; }
+
+/* UNCANONIZED — 2026-07-29 — C3 fact rows (screenplay file card + downstream
+   counts; the 4a right column). Label faint Courier left, value Courier right. */
+.scr-file { font-family: var(--mono); font-weight: 700; font-size: 14px; letter-spacing: .02em; margin: 4px 0 10px; }
+.fact {
+  display: flex; justify-content: space-between; gap: 12px; padding: 4px 0;
+  font-family: var(--mono); font-size: 11.5px;
+}
+.fact span { color: var(--ink-faint); letter-spacing: .08em; }
+.fact b { color: var(--ink-dim); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fact-head {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+  color: var(--ink-faint); margin: 18px 0 4px; padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.dsrow {
+  display: flex; justify-content: space-between; gap: 12px; padding: 5px 0;
+  border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-dim);
+}
+.dsrow:first-of-type { border-top: none; }
+.dsrow b { font-family: var(--mono); color: var(--ink); font-weight: 700; }
 
 /* UNCANONIZED — 2026-07-29 — assembly slot map: geometry + verdicts before
    a render is spent (mock 4b). Status colors report state only. */

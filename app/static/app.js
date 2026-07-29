@@ -538,15 +538,68 @@ async function renderStatus() {
     `<li class="mini">none recorded</li>`;
 }
 
+function openSheet(specId) {
+  activeView = "specs";
+  $$("#tools-nav button").forEach(b => b.classList.remove("active"));
+  updateBand();
+  renderSpecs(specId);
+}
+
 async function renderScreenplay() {
   useTemplate("tpl-screenplay");
-  const state = await api("/api/state");
+  const [state, analysis, citations] = await Promise.all([
+    api("/api/state"),
+    api("/api/wizard/analysis").catch(() => ({})),
+    api("/api/screenplay/citation-report").catch(() => ({ missing: [] })),
+  ]);
 
-  $("#dash-screenplay").innerHTML = state.screenplay
-    ? `<p><span class="badge APPROVED">CURRENT</span> ${esc(state.screenplay.file)}
-       <span class="mini">(${(state.screenplay.size / 1048576).toFixed(2)} MB, uploaded ${esc(state.screenplay.uploaded_at)})</span></p>`
-    : `<p class="mini">No screenplay uploaded yet.</p>`;
-  if (state.screenplay) renderLocations();
+  const sp = state.screenplay;
+  if (sp) {
+    const up = (sp.uploaded_at || "").slice(0, 16).replace("T", " ");
+    $("#dash-screenplay").innerHTML = `
+      <p style="margin-top:0"><span class="badge APPROVED">CURRENT</span></p>
+      <p class="scr-file">${esc(sp.file)}</p>
+      <div class="fact"><span>SIZE</span><b>${(sp.size / 1048576).toFixed(2)} MB</b></div>
+      <div class="fact"><span>SHA256</span><b>${esc((sp.sha256 || "").slice(0, 8))}</b></div>
+      <div class="fact"><span>UPLOADED</span><b>${esc(up)}</b></div>
+      <div class="fact" data-f="read"><span>READ</span><b>—</b></div>`;
+  } else {
+    $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
+  }
+
+  // Downstream counts: everything hanging off this file. Cited evidence rows
+  // are summed from the sheets themselves (a handful of small fetches).
+  const specMetas = state.specs || [];
+  const fullSpecs = await Promise.all(specMetas.map(s =>
+    api(`/api/specs/${s.specification_id}`).catch(() => null)));
+  const citedRows = fullSpecs.filter(Boolean).reduce((n, r) =>
+    n + ((r.spec.evidence_ledger || []).length), 0);
+  const langs = (analysis.design_worlds || []).length;
+  $("#scr-downstream").innerHTML = sp ? `
+    <div class="fact-head">DOWNSTREAM OF THIS FILE</div>
+    <div class="dsrow"><span>Design languages</span><b>${langs}</b></div>
+    <div class="dsrow"><span>Breakdown sheets</span><b>${specMetas.length}</b></div>
+    <div class="dsrow"><span>Cited evidence rows</span><b>${citedRows}</b></div>
+    <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>` : "";
+
+  if (sp) renderLocations(state, langs);
+
+  // Citation report — report-only by canon rule: broken citations are
+  // presented for the director's review, never auto-resolved.
+  const missing = citations.missing || [];
+  const cit = $("#scr-citations");
+  if (missing.length) {
+    cit.classList.remove("hidden");
+    cit.innerHTML = `
+      <h2>Broken citations — ${missing.length} <span class="hint">quotes these sheets cite that the current draft no longer contains — nothing is changed automatically; review each row on its sheet</span></h2>
+      ${missing.map(m => `
+        <div class="block-row">
+          <span class="block-kind CITE">CITE</span>
+          <span class="block-text"><span class="mono-id">${esc(m.spec_id)}</span> ${esc(m.panel_id)}/${esc(m.object_id)} — ${esc(m.object)} · <span class="mini">"${esc(m.quote.slice(0, 90))}${m.quote.length > 90 ? "…" : ""}"</span></span>
+          <button class="block-act" data-spec="${esc(m.spec_id)}">Review</button>
+        </div>`).join("")}`;
+    $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
+  }
 
   $("#screenplay-form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -558,14 +611,14 @@ async function renderScreenplay() {
       const rec = await api("/api/screenplay", { method: "POST", body: fd });
       const cc = rec.citation_check;
       toast(cc && cc.missing
-        ? `Screenplay uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; see Blocking.`
-        : "Screenplay uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
+        ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
+        : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
       showView("screenplay");
     } catch (err) { toast(err.message, true); }
   });
 }
 
-async function renderLocations() {
+async function renderLocations(state = null, langs = 0) {
   const host = $("#dash-locations");
   if (!host) return;
   let data;
@@ -575,27 +628,54 @@ async function renderLocations() {
     host.innerHTML = `<p class="mini">${esc(data.reason || "location map unavailable")}</p>`;
     return;
   }
-  const rows = data.locations.slice(0, 12);
-  const meter = d => `<span class="loc-meter" title="how much the script describes — thin coverage spends inference budget faster">`
+  const readFact = $("[data-f=read] b");
+  if (readFact) readFact.textContent =
+    `${langs} LANGUAGE${langs === 1 ? "" : "S"} · ${data.locations.length} LOCS`;
+
+  // Canonical coverage meter (plan v3 Part A.3): 4 segments; filled = --ok;
+  // a single amber first segment means thin — inference will be spent here.
+  const meter = d => `<span class="loc-meter${d === 1 ? " thin" : ""}" title="how much the script describes — thin coverage spends inference budget faster">`
     + [1, 2, 3, 4].map(i => `<i class="${i <= d ? "on" : ""}"></i>`).join("") + `</span>`;
+
+  const heldBySpec = {};
+  for (const b of (state?.blocking || [])) {
+    if (b.kind === "HOLD" && b.spec_id) {
+      const m = b.text.match(/^(\d+)/);
+      heldBySpec[b.spec_id] = m ? +m[1] : 1;
+    }
+  }
+  const sheetCell = l => {
+    if (!l.sheet) return `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Draft a sheet</button>`;
+    const held = heldBySpec[l.sheet.spec_id];
+    return `<span class="loc-sheet">
+      <span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span>
+      <button class="loc-open${held ? " held" : ""}" data-open="${esc(l.sheet.spec_id)}">${held ? `${held} held row${held > 1 ? "s" : ""}` : "Open sheet"}</button>
+    </span>`;
+  };
+
+  const rows = data.locations.slice(0, 12);
   host.innerHTML = `
-    <div class="loc-head"><span class="f-label">What the script gave us</span>
-      <span class="hint">${data.locations.length} locations · ${data.scene_count} scenes · sorted by scene count — detail is a line-count heuristic, not a model's opinion</span></div>
+    <div class="loc-head">
+      <span class="f-label">Locations · ${data.locations.length}</span>
+      <span class="hint">${data.scene_count} scenes · sorted by scene count</span></div>
+    <div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>
     ${rows.map(l => `
       <div class="loc-row">
         <span class="loc-slug">${esc(l.int_ext)}. ${esc(l.location)}</span>
         <span class="loc-scenes">${l.scenes}</span>
         ${meter(l.detail)}
-        ${l.sheet
-          ? `<span class="loc-sheet"><span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span> ${esc(l.sheet.spec_id)}</span>`
-          : `<button class="ghost loc-draft" data-loc="${esc(l.location)}">Draft a sheet</button>`}
+        ${sheetCell(l)}
       </div>`).join("")}
-    ${data.locations.length > rows.length ? `<p class="mini">+ ${data.locations.length - rows.length} more location(s) with fewer scenes</p>` : ""}`;
+    ${data.locations.length > rows.length ? `<p class="mini">+ ${data.locations.length - rows.length} more location(s) with fewer scenes</p>` : ""}
+    <p class="mini"><span class="f-label" style="font-size:10px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`;
   $$(".loc-draft", host).forEach(btn => {
     btn.onclick = () => {
       sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
       showView("specs");
     };
+  });
+  $$("[data-open]", host).forEach(btn => {
+    btn.onclick = () => openSheet(btn.dataset.open);
   });
 }
 
@@ -2477,4 +2557,5 @@ async function renderAssemblyFor(specId) {
 /* ------------------------------------------------------------------ start */
 
 initLightbox();
-showView("status");
+// Deep-link support: #screenplay, #boards, … land on that view directly.
+showView(views[location.hash.slice(1)] ? location.hash.slice(1) : "status");
