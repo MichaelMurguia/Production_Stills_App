@@ -781,13 +781,6 @@ details.meta pre {
   border: 1px solid var(--bad); border-left-width: 3px;
   background: rgba(205, 97, 85, .07); padding: 8px 12px; margin: 10px 0 12px;
 }
-/* UNCANONIZED — 2026-07-30 — placeholder hatch (user note, from mock 4b):
-   empty image areas carry the design's subtle diagonal stripe. */
-.slot, .stage-shot.empty, .rail-thumb.empty, .take-spin {
-  background-image: repeating-linear-gradient(45deg,
-    rgba(236, 238, 240, .045), rgba(236, 238, 240, .045) 1px,
-    transparent 1px, transparent 9px);
-}
 .slotmap {
   position: relative; width: 100%; background: var(--field);
   border: 1px solid var(--line); margin-bottom: 14px;
@@ -1049,6 +1042,18 @@ details.meta pre {
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
   margin: 0; max-height: 70vh; overflow-y: auto;
   background: var(--field); border: 1px solid var(--line-soft); padding: 14px 16px;
+}
+
+/* UNCANONIZED — 2026-07-30 — placeholder hatch (user note, from mock 4b):
+   empty image areas carry the design's diagonal stripe. HELP WANTED from
+   Claude Design: the treatment needs a proper spec (weight, spacing, angle,
+   per-surface opacity). NOTE this rule must stay LAST in the component
+   cascade — component `background:` shorthands reset background-image, which
+   silently defeated the first placement of this rule. */
+.slot, .stage-shot.empty, .rail-thumb.empty, .take-spin {
+  background-image: repeating-linear-gradient(45deg,
+    rgba(236, 238, 240, .05), rgba(236, 238, 240, .05) 1px,
+    transparent 1px, transparent 9px);
 }
 
 /* =============================================================== scrollbars
