@@ -175,6 +175,17 @@ Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
 ghost actions. Rows separated by `--line-soft` top borders; no
 cards-within-cards.
 
+**Vocabulary picker** (`roleDialog()`, `.role-suggest/.role-preview`). For
+finite, load-bearing vocabularies (roles, and any future controlled names).
+Suggestion chips above the field harvest existing app values — clicking
+fills the field and the chip never stays selected; free text remains
+possible but reuse is the easy path. Multi-select facet chips use
+`.vchip.set` (ink on `--panel2`), never amber — amber selection fill is
+reserved for single-choice chips (variant, filter). A passive Courier
+`WILL BE STORED AS` preview (label faint, value dim, no field chrome) shows
+the normalized value only when it differs from the input. Notes and other
+provenance prose stay free text.
+
 **Reading view** (`.modal.prompt-full`). The app dialog at
 `min(900px, 94vw)` holding one scrollable Courier document on `--field`,
 an identity line above it (Courier faint — what the document is), Copy +
@@ -253,7 +264,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-30 | Role picker (`.role-suggest/.role-preview`, `roleDialog()`) | Promote dialog, crop dialog; the Research intake row uses its select+datalist variant | the role vocabulary is finite and load-bearing, and every sensible title already exists in an app list (groups, cast cards, screenplay locations) — a blank text field invited drift ("GT40" vs "GT 40" fragmenting groups); free text stays possible but reuse is the easy path. User refinements pending design pass: preview restyled as passive faint text ("WILL BE STORED AS …", no field chrome); controls facets are per-family toggle chips over the free-text field; notes stay free text (provenance prose) |
+| — | *(none — the role picker was canonized as the vocabulary picker by review 2026-07-30b)* | | |
 
 ---
 
@@ -262,6 +273,8 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — Vocabulary picker canonized: suggestion chips stateless,
+  facet toggles `.vchip.set` (never amber), conditional stored-as preview.
 - **2026-07-30** — Design review: intake row, registry rows, and reading
   view canonized (with role prefix, test-state coloring, identity line);
   pipeline size cap surfaced on the Size select; custom engines stay out of

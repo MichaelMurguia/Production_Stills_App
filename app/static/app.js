@@ -473,8 +473,10 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
       if (!host || ctlIdx < 0) return;
       const input = $(`[data-mf="${ctlIdx}"]`, ov);
       const current = input.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+      // Multi-select facets are .set, never .on — amber fill is reserved
+      // for single-choice chips (design review 2026-07-30b).
       host.innerHTML = (CONTROL_SUGGESTIONS[headSel.value] || []).map(cName =>
-        `<button type="button" class="vchip${current.includes(cName) ? " on" : ""}" data-ctl="${cName}">${cName}</button>`).join("");
+        `<button type="button" class="vchip${current.includes(cName) ? " set" : ""}" data-ctl="${cName}">${cName}</button>`).join("");
       $$("[data-ctl]", host).forEach(b => {
         b.onclick = () => {
           const tokens = input.value.split(",").map(s => s.trim()).filter(Boolean);
@@ -496,14 +498,22 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
         b.onclick = () => { titleIn.value = b.dataset.fill; sync(); };
       });
       syncCtlChips();
-      $("[data-rf=preview]", ov).textContent = assembled();
+      syncPreview();
+    };
+    // The preview earns its place only when it differs from what was typed —
+    // a preview that repeats the input is noise (design review 2026-07-30b).
+    const syncPreview = () => {
+      const show = famOf().titled && titleIn.value.trim();
+      const pv = $("[data-rf=preview]", ov);
+      pv.classList.toggle("hidden", !show);
+      pv.textContent = show ? assembled() : "";
     };
     if (ctlIdx >= 0) $(`[data-mf="${ctlIdx}"]`, ov)?.addEventListener("input", syncCtlChips);
     titleIn.addEventListener("input", () => {
       const pos = titleIn.selectionStart;
       titleIn.value = titleIn.value.toUpperCase();
       titleIn.setSelectionRange(pos, pos);
-      $("[data-rf=preview]", ov).textContent = assembled();
+      syncPreview();
     });
     headSel.addEventListener("change", sync);
     sync();

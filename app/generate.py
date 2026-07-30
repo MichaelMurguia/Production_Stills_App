@@ -1209,7 +1209,14 @@ same light, same palette, same paint handling — at full output resolution.
 This is a re-performance for resolution, not a variation: add no objects,
 remove none, reinterpret nothing. Where the small source could not hold
 detail, render that detail truthfully within the forms it already shows —
-never invent new content to fill space."""
+never invent new content to fill space.
+
+DAMAGE IS NOT CONTENT: the source is a small, generation-degraded file. Its
+compression noise, speckle, white dot sparkle, crackle, embossed or
+fingerprint-like repetition, and any dense repeating micro-pattern are file
+damage — do NOT reproduce them. Repaint those regions as clean, coherent,
+readable surfaces: ground reads as ground, grass as grass, in large value
+shapes. Texture only where it states material, scale, or wear."""
 
 
 def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
