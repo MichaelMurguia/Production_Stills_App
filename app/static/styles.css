@@ -551,9 +551,14 @@ input[title], select[title], textarea[title] { cursor: auto; }
 }
 .chip button { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 14px; padding: 0 1px; line-height: 1; }
 .chip button:hover { color: var(--ink); }
-.chip-add { display: flex; gap: 6px; }
-.chip-add input { flex: 1; }
-.chip-add button { white-space: nowrap; font-size: 12.5px; padding: 7px 12px; }
+/* UNCANONIZED — 2026-07-30 — object intake row (user bug: the input was
+   starved to zero width by the subjects select's intrinsic size). Full-width
+   row beneath the required/forbidden columns; the input is the widest thing
+   in it, like the Forbidden field above. */
+.chip-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip-add input { flex: 2 1 280px; min-width: 240px; }
+.chip-add select { flex: 1 1 200px; min-width: 0; max-width: 340px; }
+.chip-add button { flex: none; white-space: nowrap; font-size: 12.5px; padding: 7px 12px; }
 .chip.open { color: var(--ink); border-color: var(--ink-faint); background: var(--panel2); }
 .chip.has-ref { border-color: var(--ok); color: var(--ink); }
 .chip.has-ref::before { content: "\2713"; color: var(--ok); font-weight: 700; margin-right: 1px; }

@@ -2360,22 +2360,22 @@ async function openSpecEditor(specId) {
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
           <span class="f-label">Required objects</span>
           <div class="chips" data-f="chips"></div>
-          ${locked ? "" : `
-          <div class="chip-add">
-            <input type="text" data-f="req-new" placeholder="add a required object…">
-            <button type="button" class="ghost" data-f="req-add" title="Add this required object (also creates its evidence-ledger row)">+ Object</button>
-            ${subjects.length ? `
-            <select data-f="subj-pick" title="Add a cast member or key subject from the Production Design collection as a required object. Green chips have reference material ready to attach at generation.">
-              <option value="">+ cast &amp; subjects…</option>
-              ${subjects.map(s => `<option value="${esc(s.name)}">${esc(s.name)} (${esc(s.kind)}${(s.ref_ids || []).length ? ` · ${s.ref_ids.length} ref` : " · no ref"})</option>`).join("")}
-            </select>` : ""}
-          </div>`}
         </div>
         <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements and project lessons in the prompt.">
           <span class="f-label">Forbidden objects</span>
           <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${locked ? "disabled" : ""}>
         </div>
-      </div>`;
+      </div>
+      ${locked ? "" : `
+      <div class="chip-add">
+        <input type="text" data-f="req-new" placeholder="add a required object — it also gets its evidence-ledger row…">
+        <button type="button" class="ghost" data-f="req-add" title="Add this required object (also creates its evidence-ledger row)">+ Object</button>
+        ${subjects.length ? `
+        <select data-f="subj-pick" title="Add a cast member or key subject from the Production Design collection as a required object. Green chips have reference material ready to attach at generation.">
+          <option value="">+ cast &amp; subjects…</option>
+          ${subjects.map(s => `<option value="${esc(s.name)}">${esc(s.name)} (${esc(s.kind)}${(s.ref_ids || []).length ? ` · ${s.ref_ids.length} ref` : " · no ref"})</option>`).join("")}
+        </select>` : ""}
+      </div>`}`;
 
     const chips = $("[data-f=chips]", row);
     const addChip = (obj, syncLedger) => {
