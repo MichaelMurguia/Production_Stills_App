@@ -253,7 +253,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-30 | Role picker (`.role-suggest/.role-preview`, `roleDialog()`) | Promote dialog, crop dialog; the Research intake row uses its select+datalist variant | the role vocabulary is finite and load-bearing, and every sensible title already exists in an app list (groups, cast cards, screenplay locations) — a blank text field invited drift ("GT40" vs "GT 40" fragmenting groups); free text stays possible but reuse is the easy path |
+| 2026-07-30 | Role picker (`.role-suggest/.role-preview`, `roleDialog()`) | Promote dialog, crop dialog; the Research intake row uses its select+datalist variant | the role vocabulary is finite and load-bearing, and every sensible title already exists in an app list (groups, cast cards, screenplay locations) — a blank text field invited drift ("GT40" vs "GT 40" fragmenting groups); free text stays possible but reuse is the easy path. User refinements pending design pass: preview restyled as passive faint text ("WILL BE STORED AS …", no field chrome); controls facets are per-family toggle chips over the free-text field; notes stay free text (provenance prose) |
 
 ---
 

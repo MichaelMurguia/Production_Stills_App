@@ -976,11 +976,14 @@ details.meta pre {
    select + sourced click-to-fill title suggestions + assembled preview. */
 .role-suggest { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .role-suggest .vchip { font-size: 10px; }
+/* NON-CANON (user note 2026-07-30, pending design pass): the preview must
+   read as a passive fact, not an input — faint grey text on the dialog
+   ground, no field chrome. */
 .role-preview {
-  font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
-  color: var(--ink); background: var(--field); border: 1px solid var(--line-soft);
-  padding: 7px 10px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  color: var(--ink-faint); padding: 2px 0;
 }
+.role-preview::before { content: "WILL BE STORED AS  "; font-size: 9.5px; letter-spacing: .12em; }
 /* Reading view — canonical (design review 2026-07-30): one scrollable
    Courier document with an identity line; prompts, logs, raw JSON. */
 .modal.prompt-full { width: min(900px, 94vw); }

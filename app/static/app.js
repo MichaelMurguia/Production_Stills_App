@@ -372,6 +372,17 @@ const ROLE_FAMILIES = [
   { head: "BOARD_LAYOUT_STYLE", desc: "board assembly grammar — never enters a panel render", kind: "style", titled: false },
 ];
 
+// Controls facets are semi-finite per family: seeded as toggle chips,
+// free-typing stays possible for odd cases. Notes stay free text — they
+// are provenance prose, not vocabulary.
+const CONTROL_SUGGESTIONS = {
+  CHARACTER_LIKENESS: ["face", "hair", "build", "age"],
+  VEHICLE_GEOMETRY: ["proportions", "panels", "stance", "details"],
+  PROP_REFERENCE: ["form", "scale", "materials"],
+  SCENE_REFERENCE: ["composition", "content", "light", "palette"],
+  LOCATION_GEOMETRY: ["geometry", "layout", "camera"],
+};
+
 let _roleCtx = null;  // {refs, subjects, locations} — fetched once per session view
 async function roleContext() {
   if (_roleCtx) return _roleCtx;
@@ -438,6 +449,7 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
         ${fields.map((f, i) => `
           <label class="modal-field">${esc(f.label)}
             <input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">
+            ${f.name === "controls" ? `<span class="role-suggest" data-rf="ctl-chips"></span>` : ""}
             ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
           </label>`).join("")}
         <div class="role-preview" data-rf="preview"></div>
@@ -455,6 +467,24 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
       const t = titleIn.value.trim();
       return fam.titled && t ? `${headSel.value} — ${t}` : headSel.value;
     };
+    const ctlIdx = fields.findIndex(f => f.name === "controls");
+    const syncCtlChips = () => {
+      const host = $("[data-rf=ctl-chips]", ov);
+      if (!host || ctlIdx < 0) return;
+      const input = $(`[data-mf="${ctlIdx}"]`, ov);
+      const current = input.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+      host.innerHTML = (CONTROL_SUGGESTIONS[headSel.value] || []).map(cName =>
+        `<button type="button" class="vchip${current.includes(cName) ? " on" : ""}" data-ctl="${cName}">${cName}</button>`).join("");
+      $$("[data-ctl]", host).forEach(b => {
+        b.onclick = () => {
+          const tokens = input.value.split(",").map(s => s.trim()).filter(Boolean);
+          const i = tokens.findIndex(t => t.toLowerCase() === b.dataset.ctl);
+          if (i >= 0) tokens.splice(i, 1); else tokens.push(b.dataset.ctl);
+          input.value = tokens.join(", ");
+          syncCtlChips();
+        };
+      });
+    };
     const sync = () => {
       const fam = famOf();
       $("[data-rf=title-wrap]", ov).classList.toggle("hidden", !fam.titled);
@@ -465,8 +495,10 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
       $$("[data-fill]", ov).forEach(b => {
         b.onclick = () => { titleIn.value = b.dataset.fill; sync(); };
       });
+      syncCtlChips();
       $("[data-rf=preview]", ov).textContent = assembled();
     };
+    if (ctlIdx >= 0) $(`[data-mf="${ctlIdx}"]`, ov)?.addEventListener("input", syncCtlChips);
     titleIn.addEventListener("input", () => {
       const pos = titleIn.selectionStart;
       titleIn.value = titleIn.value.toUpperCase();
