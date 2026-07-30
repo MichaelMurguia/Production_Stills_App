@@ -2358,7 +2358,10 @@ REMOVE — marked for removal from the board.">
 /* ----------------------------------------------------------------- boards */
 
 const IMAGE_SIZES = ["1K", "2K", "4K"];
-const ASPECTS = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"];
+// Aspect catalog comes from settings (film-format names + per-engine
+// support); this is only the offline fallback if the payload is missing.
+const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"]
+  .map(id => ({ id, label: id, value: (([w, h]) => w / h)(id.split(":").map(Number)), engines: [] }));
 const BOARD_TYPES = [
   { value: "SCENE", label: "SCENE — one screenplay scene, slugline-bound" },
   { value: "LOCATION", label: "LOCATION — a place across times" },
@@ -2590,7 +2593,7 @@ async function renderBoardPanels(specId) {
     card.className = "panel";
     card.innerHTML = `
       <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
-        <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(staged.aspect_ratio || "")}` : ""}</span></h2>
+        <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(((appSettings.aspects || []).find(x => x.id === staged.aspect_ratio) || {}).label || staged.aspect_ratio || "")}` : ""}</span></h2>
       <p class="mini">${esc(p.purpose)}</p>
       <p class="mini">required: ${esc((p.required_objects || []).join(", ") || "—")}
         &nbsp;·&nbsp; forbidden: ${esc((p.forbidden_objects || []).join(", ") || "—")}</p>
@@ -2638,9 +2641,10 @@ async function renderBoardPanels(specId) {
           <span class="f-label">Size</span>
           <select data-f="size">${IMAGE_SIZES.map(s => `<option ${s === "2K" ? "selected" : ""}>${s}</option>`).join("")}</select>
         </div>
-        <div class="fgroup" title="Width-to-height shape of the panel image (16:9 wide, 21:9 ultrawide, 1:1 square, 9:16 tall…). Match it to the panel's role in the board layout.">
+        <div class="fgroup" title="Width-to-height shape of the panel image. Film formats carry their names (CinemaScope 2.55:1, Scope 2.39:1, VistaVision 3:2, Academy 1.37:1). Ratios the selected engine cannot genuinely render are greyed — Gemini has a fixed set, the ChatGPT pipeline only 1:1 / 3:2 / 2:3, GPT Image 2 and custom engines render everything. Nothing is ever approximated.">
           <span class="f-label">Aspect</span>
-          <select data-f="aspect">${ASPECTS.map(a => `<option ${a === "16:9" ? "selected" : ""}>${a}</option>`).join("")}</select>
+          <select data-f="aspect">${(appSettings.aspects || ASPECT_FALLBACK).map(a =>
+            `<option value="${esc(a.id)}" ${a.id === "16:9" ? "selected" : ""}>${esc(a.label)}</option>`).join("")}</select>
         </div>
         <div class="gen-actions">
           <button class="ghost" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
@@ -2667,6 +2671,33 @@ async function renderBoardPanels(specId) {
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
+
+    // Ratios grey per the selected engine's real contract; switching models
+    // snaps an unsupported selection to the nearest ratio and says so.
+    const aspects = appSettings.aspects || ASPECT_FALLBACK;
+    const aspectById = Object.fromEntries(aspects.map(a => [a.id, a]));
+    const modelSel = $("[data-f=model]", card);
+    const aspectSel = $("[data-f=aspect]", card);
+    const supportsRatio = (a, prov) => !a.engines.length || a.engines.includes(prov);
+    const syncAspects = (quiet) => {
+      const prov = modelSel.value;
+      $$("option", aspectSel).forEach(o => {
+        const a = aspectById[o.value];
+        o.disabled = a ? !supportsRatio(a, prov) : false;
+      });
+      const cur = aspectById[aspectSel.value];
+      if (cur && !supportsRatio(cur, prov)) {
+        const usable = aspects.filter(a => supportsRatio(a, prov));
+        if (usable.length) {
+          const nearest = usable.reduce((b, a) =>
+            Math.abs(a.value - cur.value) < Math.abs(b.value - cur.value) ? a : b);
+          aspectSel.value = nearest.id;
+          if (!quiet) toast(`${cur.label} isn't available on ${modelSel.options[modelSel.selectedIndex].text} — snapped to ${nearest.label}, the nearest shape it can genuinely render.`);
+        }
+      }
+    };
+    modelSel.addEventListener("change", () => syncAspects(false));
+    syncAspects(true);
 
     $("[data-f=preview]", card).onclick = async () => {
       try {

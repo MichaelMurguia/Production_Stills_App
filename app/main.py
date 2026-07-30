@@ -332,6 +332,7 @@ def api_get_settings() -> dict:
             "model": generate.MODEL,
             "openai_model": generate.OPENAI_MODEL,
             "providers": {k: v["label"] for k, v in generate.all_providers().items()},
+            "aspects": generate.aspect_catalog(),
             "custom_engines": customs,
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),

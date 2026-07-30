@@ -54,8 +54,59 @@ DEFAULT_BOARD_TYPE = "LOCATION"  # legacy specs predate types; they behaved as l
 TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"]
 
 IMAGE_SIZES = {"1K", "2K", "4K"}
-ASPECT_RATIOS = {"21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"}
+
+# Aspect catalog — the single source of truth for every ratio the app
+# offers. `id` is the exact string stored on candidate records; film
+# formats carry their names into the dropdowns. Per-engine support follows
+# each API's real contract: Gemini accepts a fixed enum; the OpenAI Images
+# API takes arbitrary pixel dimensions (so GPT Image 2 and custom engines
+# render everything); the ChatGPT pipeline's image tool has exactly three
+# presets — it never silently approximates anymore.
+ASPECT_CATALOG = [
+    {"id": "2.55:1", "label": "CinemaScope (1953) — 2.55:1"},
+    {"id": "2.39:1", "label": "Scope — 2.39:1"},
+    {"id": "21:9",   "label": "21:9 — ultrawide"},
+    {"id": "16:9",   "label": "16:9 — HD"},
+    {"id": "3:2",    "label": "VistaVision — 3:2"},
+    {"id": "1.37:1", "label": "Academy — 1.37:1"},
+    {"id": "4:3",    "label": "4:3"},
+    {"id": "1:1",    "label": "1:1 — square"},
+    {"id": "3:4",    "label": "3:4"},
+    {"id": "2:3",    "label": "2:3"},
+    {"id": "9:16",   "label": "9:16 — tall"},
+]
+ASPECT_RATIOS = {a["id"] for a in ASPECT_CATALOG}
+GEMINI_RATIOS = {"21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4",
+                 "2:3", "9:16"}  # the API's fixed enum
+CHAT_RATIOS = {"1:1", "3:2", "2:3"}  # the image tool's three true presets
+
 MAX_REFERENCE_IMAGES = 14
+
+
+def aspect_value(aspect_ratio: str) -> float:
+    w, h = (float(x) for x in aspect_ratio.split(":"))
+    return w / h
+
+
+def aspect_catalog() -> list[dict]:
+    """Catalog rows with decimal value and the provider ids that can
+    genuinely render each ratio — the UI greys the rest."""
+    providers = all_providers()
+    out = []
+    for a in ASPECT_CATALOG:
+        engines = []
+        for pid in providers:
+            if pid == "gemini":
+                ok = a["id"] in GEMINI_RATIOS
+            elif pid == "openai-chat":
+                ok = a["id"] in CHAT_RATIOS
+            else:  # openai + custom engines: arbitrary pixel sizes
+                ok = True
+            if ok:
+                engines.append(pid)
+        out.append({**a, "value": round(aspect_value(a["id"]), 4),
+                    "engines": engines})
+    return out
 
 CANDIDATE_STATUSES = {"CANDIDATE", "APPROVED", "REJECTED"}
 
@@ -596,7 +647,7 @@ _OPENAI_AREA = {"1K": 1024 * 1024, "2K": 2048 * 2048, "4K": 3840 * 2160}
 
 def openai_size(image_size: str, aspect_ratio: str) -> str:
     import math
-    ar_w, ar_h = (int(x) for x in aspect_ratio.split(":"))
+    ar_w, ar_h = (float(x) for x in aspect_ratio.split(":"))  # 2.55:1 is legal
     area = _OPENAI_AREA[image_size]
     w = math.sqrt(area * ar_w / ar_h)
     if w > 3840:
@@ -1037,8 +1088,10 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         contents: list = [prompt, src_im, guide_im]
         contents += [Image.open(p) for p in ref_paths]
         cfg = {"response_modalities": ["TEXT", "IMAGE"]}
+        # Gemini's ImageConfig only accepts its own enum — a film-format
+        # source (e.g. 2.55:1 from GPT Image 2) repairs without a size hint.
         if src.get("image_size") in IMAGE_SIZES \
-                and src.get("aspect_ratio") in ASPECT_RATIOS:
+                and src.get("aspect_ratio") in GEMINI_RATIOS:
             cfg["image_config"] = types.ImageConfig(
                 aspect_ratio=src["aspect_ratio"],
                 image_size=src["image_size"])
@@ -1125,6 +1178,16 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     providers = all_providers()
     if provider not in providers:
         raise GenerationError(f"provider must be one of {sorted(providers)}")
+    # Ratios are enforced per engine's real contract — never approximated.
+    if provider == "gemini" and aspect_ratio not in GEMINI_RATIOS:
+        raise GenerationError(
+            f"Gemini cannot render {aspect_ratio} — its API accepts a fixed "
+            "set of ratios. Use GPT Image 2 or a custom engine for film formats.")
+    if provider == "openai-chat" and aspect_ratio not in CHAT_RATIOS:
+        raise GenerationError(
+            f"The ChatGPT pipeline cannot render {aspect_ratio} — its image "
+            "tool has three preset sizes (1:1, 3:2, 2:3). Pick one of those "
+            "or a direct engine.")
 
     spec, panel, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
     prompt = compile_panel_prompt(spec, panel, refs)
