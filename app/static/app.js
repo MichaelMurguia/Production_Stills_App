@@ -1894,7 +1894,7 @@ async function renderReferences() {
     const group = isStyle(r) ? "style" : "subject";
     if (group !== lastGroup) {
       groupHeader(
-        group === "style" ? "Lookbook — style anchors" : "Research — subject references",
+        group === "style" ? "Lookbook — style anchors" : "Subjects & scenes — what things are",
         group === "style"
           ? "how it is painted and photographed — applies to everything; rendering/cinematography styles attach to every generation automatically"
           : "what things are — likenesses, geometry, props, environments; attached per panel");

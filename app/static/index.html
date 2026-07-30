@@ -19,7 +19,7 @@
     <span class="engine-dots" id="engine-dots" title="Engine credentials — filled green: key saved here · blue: environment variable · hollow: none"></span>
     <nav class="tools" id="tools-nav">
       <button data-view="status" class="active" title="Where the project stands: the next action, everything blocking, and recent activity">Status</button>
-      <button data-view="references" title="Gathered reference: lookbook style plates and subject research (cast, vehicles, props)">Research</button>
+      <button data-view="references" title="The one reference library: style anchors, cast &amp; subjects, scene anchors — everything a render can anchor to">Reference</button>
       <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">Settings</button>
     </nav>
   </div>
@@ -472,8 +472,8 @@
         <h2>The workflow</h2>
         <p>This app builds <b>canon-locked art direction boards</b>. The chain is:</p>
         <p class="chain">Screenplay + References → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
-        <h3>1 — Load your sources (01 Screenplay / Research)</h3>
-        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. Add reference images on the Research page and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
+        <h3>1 — Load your sources (01 Screenplay / Reference)</h3>
+        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. Add reference images on the Reference page and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
         <h3>2 — Write or auto-fill a breakdown sheet (03 Breakdowns)</h3>
         <p>A breakdown sheet is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the sheet; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the sheet with a content hash.</p>
         <h3>3 — Generate and judge takes (04 Panels)</h3>
