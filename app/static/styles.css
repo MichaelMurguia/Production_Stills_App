@@ -872,6 +872,23 @@ details.meta pre {
 }
 .take.rejected .take-label { color: var(--bad); }
 .take.shown .take-label { color: var(--accent); }
+.take.approved { border-color: var(--ok); }
+.take.approved .take-label { color: var(--ok); }
+.take.shown.approved { border-color: var(--accent); }  /* staged wins the frame; the label stays green */
+.take.shown.approved .take-label { color: var(--ok); }
+
+/* pending tile: an in-flight render holds its place in the strip */
+.take.pending { border-style: dashed; cursor: default; }
+.take-spin {
+  height: 70px; display: flex; align-items: center; justify-content: center;
+  background: var(--field);
+}
+.take-spin i {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2.5px solid var(--line); border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .take-spin i { animation: none; } }
 
 /* generation bench: deliberately not amber — Approve panel keeps the budget */
 .bench-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }

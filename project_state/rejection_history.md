@@ -26,3 +26,9 @@ Known recurring rejected inventions:
 - 2026-07-30T01:59:53+00:00 — CAND-0027 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not a GT40
 - 2026-07-30T01:59:57+00:00 — CAND-0028 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
 - 2026-07-30T02:00:07+00:00 — CAND-0029 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not Authentic GT40
+- 2026-07-30T05:17:06+00:00 — CAND-0041 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: artifacts in the re-render.
+- 2026-07-30T05:18:21+00:00 — CAND-0039 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
+- 2026-07-30T05:18:29+00:00 — CAND-0022 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: This cabin is too large. It should be smaller - cozy. Just enough room for living quarters and a garage shot attached. Set in the edge of a forest more trees, but showing the mountains and meadows in the back. 
+- 2026-07-30T05:18:29+00:00 — CAND-0025 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
+- 2026-07-30T05:18:29+00:00 — CAND-0033 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
+- 2026-07-30T05:18:29+00:00 — CAND-0038 (CHARLIES_CABIN_V001/PALETTE, palette-sampler (no AI — colors measured from approved panels)) permanently deleted. Reason: Need more panels for more color - will do once I have more panels.

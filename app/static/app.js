@@ -2757,6 +2757,30 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
 
 const boardRoomSel = {};  // per-sheet: which panel is on the stage, which take is shown
 
+// In-flight renders show as pending tiles in the takes filmstrip — closing
+// the repair screen (or navigating within the room) never loses sight of a
+// render that is still painting.
+let _pendingSeq = 0;
+const pendingTakes = {};  // specId → panelId → [{id, label}]
+const pendingTileHtml = t => `
+  <span class="take pending" data-pend="${t.id}" title="Painting now — the take appears here when the engine finishes (30–120s)">
+    <span class="take-spin"><i></i></span>
+    <span class="take-label">${esc(t.label)}</span>
+  </span>`;
+function addPendingTake(specId, panelId, label) {
+  const t = { id: ++_pendingSeq, label };
+  ((pendingTakes[specId] ??= {})[panelId] ??= []).push(t);
+  // Splice into the live strip (full refreshes rebuild it from the registry) —
+  // no room re-render, so busy indicators and button locks stay alive.
+  $(".takes-row")?.insertAdjacentHTML("afterbegin", pendingTileHtml(t));
+  return t.id;
+}
+function removePendingTake(specId, panelId, id) {
+  const list = pendingTakes[specId]?.[panelId];
+  if (list) pendingTakes[specId][panelId] = list.filter(t => t.id !== id);
+  $(`[data-pend="${id}"]`)?.remove();
+}
+
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
@@ -2802,20 +2826,22 @@ async function renderBoardPanels(specId) {
       ${staged.model_notes || staged.render_prompt ? `<details class="meta"><summary>${staged.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(staged.render_prompt ? `RENDER PROMPT (user-edited):\n${staged.render_prompt}${staged.model_notes ? "\n\n" + staged.model_notes : ""}` : staged.model_notes)}</pre></details>` : ""}`;
 
     const sheetRejected = candidates.filter(c => c.status === "REJECTED").length;
+    const pending = pendingTakes[specId]?.[p.id] || [];
     const takesHtml = `
       <div class="takes">
         <div class="takes-head">
-          <span class="f-label">Takes · ${panelCands.length}</span>
+          <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
           <span class="hint">rejected takes stay as a record</span>
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
         <div class="takes-row">
+          ${pending.map(pendingTileHtml).join("")}
           ${panelCands.map(c => `
-            <button class="take${staged && c.candidate_id === staged.candidate_id ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}"
+            <button class="take${staged && c.candidate_id === staged.candidate_id ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
               <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="">
-              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}</span>
+              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : c.status === "APPROVED" ? " APPROVED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}</span>
             </button>`).join("")}
         </div>
       </div>`;
@@ -2956,8 +2982,9 @@ async function renderBoardPanels(specId) {
       const busy = startBusy(busyHost,
         `Generating ${p.id} with ${modelLabel} — ${size} ${aspect}` +
         `${renderPrompt ? " from your edited prose" : ""}…`,
-        "typically 30–120 seconds; the result appears in the gallery below",
+        "typically 30–120 seconds; the take appears in the strip above",
         () => ctrl.abort());
+      const pendId = addPendingTake(specId, p.id, `PAINTING — NEW TAKE · ${size}`);
       try {
         const cand = await api(`/api/specs/${specId}/panels/${p.id}/generate`, {
           method: "POST",
@@ -2983,6 +3010,8 @@ async function renderBoardPanels(specId) {
         toast(err.message, true);
         report.innerHTML = `<div class="report fail"><b>Generation failed</b> — ${esc(err.message)}
           <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
+      } finally {
+        removePendingTake(specId, p.id, pendId);
       }
     };
 
@@ -3128,32 +3157,40 @@ async function renderBoardPanels(specId) {
           const busy = startBusy($("[data-f=shot-busy]", card),
             `Painting the full-size take from ${c.candidate_id} — ${size} on ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
             "30–120 seconds; the new take will land in the strip and take the stage");
+          const pendId = addPendingTake(specId, p.id, `PAINTING — FULL-SIZE OF ${c.candidate_id}`);
           try {
             const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/rerender`,
               { method: "POST", json: { image_size: size, provider: prov } });
             toast(`${rec.candidate_id} — full-size take ready (${rec.width}×${rec.height}). Now staged; judge it against ${c.candidate_id}.`);
             roomSel.staged[p.id] = rec.candidate_id;  // show the result, immediately
-            refresh();
+            if ($("#board-panels")) await renderBoardPanels(specId);
           } catch (err) {
             busy.done();
             lockable.forEach(b => { b.disabled = false; });
             toast(err.message, true);
+          } finally {
+            removePendingTake(specId, p.id, pendId);
           }
         };
       }, { title: "Make a NEW take: repaint this exact image at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated). This take stays untouched." }));
       if (c.kind !== "derived_palette") ghost.append(mk("Repair region", "ghost", () =>
         openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
           async (mask, instruction, provider) => {
-            const fd = new FormData();
-            fd.append("mask", mask, "mask.png");
-            fd.append("instruction", instruction);
-            fd.append("ref_ids", JSON.stringify(checkedRefs()));
-            const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/repair?provider=${encodeURIComponent(provider)}`,
-              { method: "POST", body: fd });
-            toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}. It joins the takes strip.`);
-            refresh();
+            const pendId = addPendingTake(specId, p.id, `PAINTING — REPAIR OF ${c.candidate_id}`);
+            try {
+              const fd = new FormData();
+              fd.append("mask", mask, "mask.png");
+              fd.append("instruction", instruction);
+              fd.append("ref_ids", JSON.stringify(checkedRefs()));
+              const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/repair?provider=${encodeURIComponent(provider)}`,
+                { method: "POST", body: fd });
+              toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}. It joins the takes strip.`);
+              if ($("#board-panels")) await renderBoardPanels(specId);
+            } finally {
+              removePendingTake(specId, p.id, pendId);
+            }
           }),
-        { title: "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region. The result is a new take; this one is untouched." }));
+        { title: "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region — the app composites the patch, so nothing outside your paint can change. The result is a new take; this one is untouched. You can close the paint screen while it renders — a pending tile holds its place in the strip." }));
       ghost.append(mk("Crop → reference", "ghost", () =>
         cropToReference({ type: "candidate", spec_id: specId, id: c.candidate_id },
           `/api/specs/${specId}/candidates/${c.candidate_id}/image`),
