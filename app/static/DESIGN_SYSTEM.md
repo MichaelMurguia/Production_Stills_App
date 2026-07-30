@@ -133,6 +133,36 @@ label, one line per failing validate condition (the *server's* rules: PASS
 gaps, allocation, citations, weak budget), "Jump to first ↓" as a text
 action. Approve & lock disabled while it shows.
 
+**Lock strip** (`.gate-strip.lock-strip`). The gate strip vocabulary in grey
+(`--line` left border, Courier `--ink-dim` LOCKED label) stating why editing
+is off, with the resolving actions inline (Create revision / Unlock & edit).
+Amber gate = "cannot proceed forward"; grey lock = "cannot edit backward."
+Any state that hides controls must surface one of the two.
+
+**Placeholder hatch** (`.hatch` / `.hatch-deep`). 2px ink stripe, 11px
+period, 45°: `.hatch` (3.5%) on `--bg2` surfaces (empty slots, empty rail
+thumbs) and over the TOO-SMALL red tint (the stripe stays ink — border and
+label carry the state); `.hatch-deep` (5%) on `--field` surfaces (empty
+stage shot, pending spin area). Hatch means "an image belongs here and
+isn't here" — never on populated surfaces, never behind body text. Applied
+by class only, and the rules stay LAST in the component cascade —
+`background:` shorthands reset `background-image`.
+
+**Finder list** (`.loc-search/.loc-scroll/.scene-row`). A Courier search
+field over a `--field` scrollable list (max-height, global scrollbar);
+parent rows expand to children; every row ends in its one verb (Draft a
+sheet / Open sheet). Row anatomy follows registry rows: Courier identity
+left, facts middle, ghost/text action right. Reuse for any >30-item
+findable list; below ~30, the coverage-table pattern is enough.
+
+**Pending take tile + take state tags** (`.take.pending/.take-spin`).
+In-flight work holds its place: a pending tile sits in the filmstrip with
+the `.busy` spinner vocabulary (honoring `prefers-reduced-motion`) and
+survives closing whatever screen launched it. State reads at a glance in
+the strip: approved = `--ok` border + label; promoted = `· REF` suffix on
+the tile and a `REFERENCE · REF-xxxx` bordered badge on the stage (status
+color border, never filled — the verdict-chip grammar).
+
 ---
 
 ## Copy
@@ -162,12 +192,15 @@ Prose was ~3:1 over interface by area in v1. Rules:
 
 `.badge.LOCKED` is deliberately grey: locked is a fact, not an action.
 
-**Intake row** (`.ref-add`). High-frequency entry into the list/library
-directly above it. Max 6 fields; placeholders name fields, tooltips explain
-them; only the one field a first-timer can't guess gets a Courier
-`--ink-faint` ghost prefix (dropped under 1100px). The submit is ghost — an
-intake row never spends the screen's amber. Anything needing explanation
-beyond a tooltip belongs in a dialog instead.
+**Intake row** (`.ref-add`, `.chip-add`). High-frequency entry into the
+list/library directly above it. Max 6 fields; placeholders name fields,
+tooltips explain them; only the one field a first-timer can't guess gets a
+Courier `--ink-faint` ghost prefix (dropped under 1100px). The submit is
+ghost — an intake row never spends the screen's amber. An intake row is
+always a full-width row of its own — never placed inside a column of a
+wider grid, where a sibling's intrinsic size can starve the input; the text
+input is the widest element, selects are capped. Anything needing
+explanation beyond a tooltip belongs in a dialog instead.
 
 **Registry rows** (`.eng-row`). User-registered externals (engines, any
 future integrations): sans name · Courier facts (ellipsize the middle) ·
@@ -264,11 +297,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-30 | Pending take tile (`.take.pending/.take-spin`) + take state tags (approved green border/label, `· REF` suffix, `REFERENCE · REF-xxxx` badge on stage) | Judging room filmstrip + stage | in-flight renders needed a visible placeholder that survives closing the paint screen; approval and promotion state needed to read at a glance in the strip |
-| 2026-07-30 | Scene browser (`.loc-search/.loc-scroll/.scene-row`) | Screenplay stage | user request: all 252 scenes findable — search field over a scrollable list, locations expand to their scenes, each scene draftable; no existing pattern combined search + expandable rows |
-| 2026-07-30 | Placeholder hatch (subtle 45° stripe on `.slot`, empty stage shot, empty rail thumb, pending spin area) | Slot map + empty image areas | user note from mock 4b: empty image panels carry the design's diagonal stripe; flat `--bg2` read as unstyled. **HELP WANTED, Claude Design**: the treatment needs your spec — weight, spacing, angle, and per-surface opacity (it must read on `--bg2`, `--field`, and the TOO-SMALL red tint); current values (1px ink at 5% every 9px, 45°) are a coder's guess the user reports as rendering poorly. Mechanics note: the rule must stay LAST in the component cascade — `background:` shorthands reset `background-image` and silently defeated the first placement |
-| 2026-07-30 | Lock strip (`.gate-strip.lock-strip`) | Spec editor, locked sheets | user-reported as a bug: on a locked sheet the add-object controls silently don't render, which reads as broken — the gate must be readable as state. Grey gate-strip variant stating LOCKED with inline Create revision / Unlock & edit actions |
-| 2026-07-30 | Object intake row (full-width `.chip-add` beneath the required/forbidden columns) | Spec editor panel cards | user bug: inside the two-col grid the add-object input was starved to zero width by the subjects select's intrinsic size — you couldn't see what you typed. Now a full-width row; input widest (like the Forbidden field), select capped, wraps on narrow screens |
+| — | *(none — the five 2026-07-30 patterns were canonized by review c)* | | |
 
 ---
 
@@ -277,6 +306,10 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — Review c: placeholder hatch specced by eye (2px/11px 45°,
+  3.5% on --bg2 / 5% on --field, class-applied); pending tiles, take tags,
+  finder list, lock strip canonized; object intake row folded into the
+  intake-row rule.
 - **2026-07-30** — Feature batch pending design review (see uncanonized
   table): pending take tiles, take state tags, scene browser, placeholder
   hatch. Presentation rulings the designer should know: boards now

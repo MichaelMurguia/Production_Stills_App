@@ -173,10 +173,9 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 }
 .gate-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
 .gate-row .block-act { flex: none; }
-/* UNCANONIZED — 2026-07-30 — lock strip (user-reported: on a locked sheet
-   the add-object controls silently don't render, which reads as broken —
-   the gate must be readable as state). Grey variant of the gate strip with
-   inline resolve actions. */
+/* Lock strip — canonical (2026-07-30c): the gate strip vocabulary in grey.
+   Amber gate = "cannot proceed forward"; grey lock = "cannot edit backward."
+   Any state that hides controls must surface one of the two. */
 .gate-strip.lock-strip {
   border-left-color: var(--line); background: var(--panel2);
   flex-direction: row; align-items: baseline; gap: 12px;
@@ -551,10 +550,9 @@ input[title], select[title], textarea[title] { cursor: auto; }
 }
 .chip button { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 14px; padding: 0 1px; line-height: 1; }
 .chip button:hover { color: var(--ink); }
-/* UNCANONIZED — 2026-07-30 — object intake row (user bug: the input was
-   starved to zero width by the subjects select's intrinsic size). Full-width
-   row beneath the required/forbidden columns; the input is the widest thing
-   in it, like the Forbidden field above. */
+/* Object intake row — per intake-row canon (2026-07-30c): an intake row is
+   always a full-width row of its own, never inside a column of a wider grid
+   where a sibling's intrinsic size can starve the input. */
 .chip-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .chip-add input { flex: 2 1 280px; min-width: 240px; }
 .chip-add select { flex: 1 1 200px; min-width: 0; max-width: 340px; }
@@ -745,8 +743,9 @@ details.meta pre {
 .loc-open:hover { color: var(--ink); text-decoration: underline; }
 .loc-open.held { color: var(--accent); }
 .loc-draft { justify-self: start; font-family: var(--mono); font-size: 12px; }
-/* UNCANONIZED — 2026-07-30 — scene browser (search + expandable location
-   rows + per-scene rows with draft actions) */
+/* Finder list — canonical (2026-07-30c): Courier search over a scrollable
+   list, parent rows expand to children, every row ends in its one verb.
+   For any >30-item findable list. */
 .loc-search { max-width: 380px; margin: 8px 0 4px; padding: 7px 11px; font-size: 12.5px; }
 .loc-scroll { max-height: 460px; overflow-y: auto; }
 .scene-row {
@@ -903,8 +902,8 @@ details.meta pre {
 .take.shown.approved { border-color: var(--accent); }  /* staged wins the frame; the label stays green */
 .take.shown.approved .take-label { color: var(--ok); }
 
-/* UNCANONIZED — 2026-07-30 — pending take tile (in-flight render holds its
-   place in the strip) + take state tags (approved green, REF suffix) */
+/* Pending take tile + take state tags — canonical (2026-07-30c): in-flight
+   work holds its place; state reads at a glance in the strip. */
 .take.pending { border-style: dashed; cursor: default; }
 .take-spin {
   height: 70px; display: flex; align-items: center; justify-content: center;
@@ -1049,17 +1048,17 @@ details.meta pre {
   background: var(--field); border: 1px solid var(--line-soft); padding: 14px 16px;
 }
 
-/* UNCANONIZED — 2026-07-30 — placeholder hatch (user note, from mock 4b):
-   empty image areas carry the design's diagonal stripe. HELP WANTED from
-   Claude Design: the treatment needs a proper spec (weight, spacing, angle,
-   per-surface opacity). NOTE this rule must stay LAST in the component
-   cascade — component `background:` shorthands reset background-image, which
-   silently defeated the first placement of this rule. */
-.slot, .stage-shot.empty, .rail-thumb.empty, .take-spin {
-  background-image: repeating-linear-gradient(45deg,
-    rgba(236, 238, 240, .05), rgba(236, 238, 240, .05) 1px,
-    transparent 1px, transparent 9px);
-}
+/* Placeholder hatch — canonical (design review 2026-07-30c): 2px stripe,
+   11px period, 45°, ink-colored; .hatch (3.5%) on --bg2 surfaces and the
+   TOO-SMALL tint, .hatch-deep (5%) on --field surfaces. Hatch means "an
+   image belongs here and isn't here" — never on populated surfaces, never
+   behind body text. Applied by class so this footgun lives in one place:
+   the rules MUST stay last in the component cascade — `background:`
+   shorthands reset background-image. */
+.hatch { background-image: repeating-linear-gradient(45deg,
+  rgba(236, 238, 240, .035) 0 2px, transparent 2px 11px); }
+.hatch-deep { background-image: repeating-linear-gradient(45deg,
+  rgba(236, 238, 240, .05) 0 2px, transparent 2px 11px); }
 
 /* =============================================================== scrollbars
    Scrollbars are chrome, not content: flat, square, track invisible against
