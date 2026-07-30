@@ -59,3 +59,10 @@ No production board approvals have been recorded in this source package.
 - 2026-07-30T12:53:40+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 UNLOCKED for editing — approval of 2026-07-30T12:51:34+00:00 (hash 5b67691a51205a19…) is void; existing candidates keep the hash they were generated against.
 - 2026-07-30T12:59:01+00:00 — SPECIFICATION OBJPROBE_V001 permanently deleted; 0 candidate record(s) and 0 image(s) removed.
 - 2026-07-30T13:27:00+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 approved and locked (hash 30c1a6f34680949f…).
+- 2026-07-30T13:38:34+00:00 — REFERENCE REF-0036 (Resistance_Research.png) approved as SCENE_REFERENCE — RESISTANCE BASE. Controls: buildings, location, layout.
+- 2026-07-30T13:40:19+00:00 — REFERENCE REF-0037 (f0cb195cc834d0e32a57687bc46d9524.jpg) approved as VEHICLE_GEOMETRY — GRM LIGHT TRUCK. Controls: shape, geometry, style.
+- 2026-07-30T13:40:59+00:00 — REFERENCE REF-0038 (fe89411dd511ac9678a16abb65f34384.jpg) approved as VEHICLE_GEOMETRY — GRM HEAVY TRUCK. Controls: shape, geometry, style.
+- 2026-07-30T13:43:53+00:00 — REFERENCE REF-0040 (l71duof.jpg) approved as VEHICLE_GEOMETRY — GRM HOVER JET. Controls: shape, color.
+- 2026-07-30T13:44:52+00:00 — REFERENCE REF-0041 (16a0b0bf851e8bcc49e4bac20f329f87.jpg) approved as PROP_REFERENCE — EXOSKELETON. Controls: unspecified.
+- 2026-07-30T13:47:17+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 UNLOCKED for editing — approval of 2026-07-30T13:27:00+00:00 (hash 30c1a6f34680949f…) is void; existing candidates keep the hash they were generated against.
+- 2026-07-30T14:25:20+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 approved and locked (hash 30c1a6f34680949f…).

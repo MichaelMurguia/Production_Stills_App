@@ -1048,17 +1048,16 @@ details.meta pre {
   background: var(--field); border: 1px solid var(--line-soft); padding: 14px 16px;
 }
 
-/* Placeholder hatch — canonical (design review 2026-07-30c): 2px stripe,
-   11px period, 45°, ink-colored; .hatch (3.5%) on --bg2 surfaces and the
-   TOO-SMALL tint, .hatch-deep (5%) on --field surfaces. Hatch means "an
-   image belongs here and isn't here" — never on populated surfaces, never
-   behind body text. Applied by class so this footgun lives in one place:
-   the rules MUST stay last in the component cascade — `background:`
-   shorthands reset background-image. */
-.hatch { background-image: repeating-linear-gradient(45deg,
-  rgba(236, 238, 240, .035) 0 2px, transparent 2px 11px); }
-.hatch-deep { background-image: repeating-linear-gradient(45deg,
-  rgba(236, 238, 240, .05) 0 2px, transparent 2px 11px); }
+/* Placeholder bands — canonical (user ruling HATCH_CORRECTION 2026-07-30,
+   supersedes review c §1): opaque two-tone 135° bands, no thin lines, no
+   translucent ink — the Board Assembly band stripe everywhere. Band tones
+   are deliberate near-surface pairs, not new greys. Hatch means "an image
+   belongs here and isn't here" — never on populated surfaces, never behind
+   body text. Applied by class; rules MUST stay last in the component
+   cascade (background: shorthand resets). */
+.hatch { background: repeating-linear-gradient(135deg, #21252a 0 7px, #1c1f23 7px 14px); }       /* standard blocks ≥60px */
+.hatch-fine { background: repeating-linear-gradient(135deg, #21252a 0 5px, #1c1f23 5px 10px); }  /* thumbs < 60px */
+.hatch-bad { background: repeating-linear-gradient(135deg, #211b1b 0 7px, #1b1717 7px 14px); }   /* TOO-SMALL / error surfaces */
 
 /* =============================================================== scrollbars
    Scrollbars are chrome, not content: flat, square, track invisible against

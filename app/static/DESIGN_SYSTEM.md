@@ -139,14 +139,15 @@ is off, with the resolving actions inline (Create revision / Unlock & edit).
 Amber gate = "cannot proceed forward"; grey lock = "cannot edit backward."
 Any state that hides controls must surface one of the two.
 
-**Placeholder hatch** (`.hatch` / `.hatch-deep`). 2px ink stripe, 11px
-period, 45°: `.hatch` (3.5%) on `--bg2` surfaces (empty slots, empty rail
-thumbs) and over the TOO-SMALL red tint (the stripe stays ink — border and
-label carry the state); `.hatch-deep` (5%) on `--field` surfaces (empty
-stage shot, pending spin area). Hatch means "an image belongs here and
-isn't here" — never on populated surfaces, never behind body text. Applied
-by class only, and the rules stay LAST in the component cascade —
-`background:` shorthands reset `background-image`.
+**Placeholder bands** (`.hatch` / `.hatch-fine` / `.hatch-bad`). Opaque
+two-tone 135° bands — the Board Assembly stripe everywhere; no thin lines,
+no translucent ink. `.hatch` 7/14px for blocks ≥ 60px tall; `.hatch-fine`
+5/10px for smaller thumbs; `.hatch-bad` the red-shifted pair for TOO-SMALL
+and error surfaces (with the `--bad` border — border and label carry the
+state). Band tones are deliberate near-surface pairs, not new greys. Hatch
+means "an image belongs here and isn't here" — never on populated surfaces,
+never behind body text. Applied by class only; the rules stay LAST in the
+component cascade — `background:` shorthands reset the image.
 
 **Finder list** (`.loc-search/.loc-scroll/.scene-row`). A Courier search
 field over a `--field` scrollable list (max-height, global scrollbar);
@@ -306,6 +307,9 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — Placeholder hatch superseded by user ruling: opaque
+  two-tone 135° bands (assembly-style), 7/14px standard, 5/10px fine,
+  red-shifted pair for error surfaces.
 - **2026-07-30** — Review c: placeholder hatch specced by eye (2px/11px 45°,
   3.5% on --bg2 / 5% on --field, class-applied); pending tiles, take tags,
   finder list, lock strip canonized; object intake row folded into the

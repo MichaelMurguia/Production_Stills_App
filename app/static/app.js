@@ -2864,7 +2864,7 @@ let _pendingSeq = 0;
 const pendingTakes = {};  // specId → panelId → [{id, label}]
 const pendingTileHtml = t => `
   <span class="take pending" data-pend="${t.id}" title="Painting now — the take appears here when the engine finishes (30–120s)">
-    <span class="take-spin hatch-deep"><i></i></span>
+    <span class="take-spin hatch"><i></i></span>
     <span class="take-label">${esc(t.label)}</span>
   </span>`;
 function addPendingTake(specId, panelId, label) {
@@ -2917,7 +2917,7 @@ async function renderBoardPanels(specId) {
 
     const stagedRef = staged ? promotedRefOf(staged) : null;
     const stagedHtml = !staged ? `
-      <div class="stage-shot empty hatch-deep"><span class="mini">No takes yet — set the model below and generate the first candidate.</span></div>` : `
+      <div class="stage-shot empty hatch"><span class="mini">No takes yet — set the model below and generate the first candidate.</span></div>` : `
       <div class="stage-shot" title="Click to open at full size">
         <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
       </div>
@@ -3430,7 +3430,7 @@ async function renderBoardPanels(specId) {
       ${spec.panels.map(p => `
         <button class="rail-panel${roomSel.panel === p.id ? " sel" : ""}" data-pid="${esc(p.id)}"
                 title="${esc(p.title || p.purpose || "")}">
-          <span class="rail-thumb${latestThumb(p.id) ? "" : " empty hatch"}">${latestThumb(p.id)}</span>
+          <span class="rail-thumb${latestThumb(p.id) ? "" : " empty hatch-fine"}">${latestThumb(p.id)}</span>
           <span class="rail-pid">${esc(p.id)}</span>
           ${railMark(p.id)}
         </button>`).join("")}
@@ -3579,7 +3579,7 @@ async function renderAssemblyFor(specId) {
           <span class="slot-id">TITLE BLOCK · APP-DRAWN</span>
         </div>
         ${sm.slots.map(s => `
-          <div class="slot hatch ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
+          <div class="slot ${s.status === "TOO_SMALL" ? "hatch-bad" : "hatch"} ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
                title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
             <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}</span>
             <span class="slot-verdict ${esc(s.status)}">${VERDICT[s.status]}</span>
