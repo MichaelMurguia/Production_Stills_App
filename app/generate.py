@@ -402,6 +402,15 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         "PANEL PURPOSE",
         panel.get("purpose", ""),
         "",
+        "DETAIL BUDGET",
+        ("Hero panel: full rendering attention on the primary subject; "
+         "secondary surfaces and ground cover simplify. Readable forms first — "
+         "texture only where it states material, scale, wear, or manufacture."
+         if panel.get("composition_role") == "hero" else
+         "Supporting panel: medium detail. Simplify secondary surfaces and "
+         "ground cover into large value shapes; never let texture become the "
+         "subject."),
+        "",
         _style_context(spec, panel),
         "",
         "BOARD-SPECIFIC TREATMENT",
@@ -658,6 +667,17 @@ def openai_size(image_size: str, aspect_ratio: str) -> str:
         w = h * ar_w / ar_h
     w, h = (max(256, round(x / 16) * 16) for x in (w, h))
     return f"{w}x{h}"
+
+
+def legal_openai_size(width: int, height: int) -> str:
+    """Snap arbitrary pixel dimensions onto the Images API's legal grid
+    (edges ×16, longest edge ≤3840, area ≤8,294,400) without changing the
+    aspect — used so repairs can request their source's own resolution."""
+    import math
+    w, h = float(width), float(height)
+    scale = min(3840 / max(w, h), math.sqrt(8_294_400 / (w * h)), 1.0)
+    w, h = w * scale, h * scale
+    return f"{max(256, round(w / 16) * 16)}x{max(256, round(h / 16) * 16)}"
 
 
 def _render_openai(prompt: str, ref_paths: list[Path],
@@ -1021,6 +1041,7 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
 
     src_im = guide_im = None
     with Image.open(io.BytesIO(mask_png)) as m, Image.open(src_path) as s:
+        src_w, src_h = s.size
         if m.size != s.size:
             raise GenerationError(
                 f"mask is {m.size[0]}x{m.size[1]} but the image is "
@@ -1121,10 +1142,15 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         files = [src_path.open("rb")]
         files += [p.open("rb") for p in ref_paths]
         try:
+            # Request the source's own resolution: without a size the
+            # provider returns its ~1.6MP default, so every repair pass was
+            # silently downscaling AND re-encoding the whole canvas — the
+            # compounding texture-mush artifact of chained repairs.
             response = client.images.edit(
                 model=OPENAI_MODEL, image=files if len(files) > 1 else files[0],
                 mask=("mask.png", mask_png, "image/png"),
-                prompt=prompt, quality="high")
+                prompt=prompt, quality="high",
+                size=legal_openai_size(src_w, src_h))
         except Exception as e:
             raise GenerationError(f"region repair failed: {e}") from e
         finally:
@@ -1138,6 +1164,12 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     with Image.open(out_path) as im:
         width, height = im.size
 
+    warnings = []
+    if width < src_w or height < src_h:
+        warnings.append(
+            f"repair returned {width}x{height} from a {src_w}x{src_h} source — "
+            "resolution lost in the re-encode; regenerate at full size for finals")
+
     spec = store.get_spec(spec_id) or {}
     record = {
         "candidate_id": new_id,
@@ -1149,6 +1181,7 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         "status": "CANDIDATE",
         "provider": provider,
         "model": model_used,
+        "warnings": warnings,
         "image_size": src.get("image_size", "-"),
         "aspect_ratio": src.get("aspect_ratio", "-"),
         "width": width, "height": height,

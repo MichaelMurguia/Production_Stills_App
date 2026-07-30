@@ -31,10 +31,14 @@ The world must feel designed for production, not designed for marketing.
 ### Required
 
 - Painterly production concept art
-- Visible brushwork
+- Brushwork supports large readable forms — do not simulate brush texture
+  across every surface; favor shape readability over surface texture
+- Large value grouping over local detail
 - Strong silhouette design
 - Cinematic value grouping
 - Practical material logic
+- Materials read at production-board viewing distance: value, edge quality,
+  and color before texture — no microscopic surface variation
 - Real-world construction logic
 - Restrained visual effects
 - Clear production-design intent
@@ -52,7 +56,19 @@ The world must feel designed for production, not designed for marketing.
 - Repeated three-quarter views
 - Repeated medium-grey panels
 - Excessive visual noise
+- Dense repetitive micro-texture: dot fields, repeated curved strokes,
+  embossed or fingerprint-like patterning
 - Giant portal rings unless explicitly present in the screenplay
+
+### Texture budget
+
+Texture exists only to communicate material, scale, wear, or manufacture.
+
+- Every object reads as an object first; texture supports form and must
+  never become the subject.
+- Do not texture empty surfaces simply to increase visual richness.
+- If texture competes with silhouette, remove texture. If texture obscures
+  form, simplify.
 
 ---
 
