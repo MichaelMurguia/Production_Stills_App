@@ -2786,6 +2786,7 @@ async function renderBoardPanels(specId) {
         <span class="shot-actions" data-f="primary-actions"></span>
       </div>
       <div class="shot-ghost-row" data-f="ghost-actions"></div>
+      <div data-f="shot-busy"></div>
       ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("")}
       ${staged.status === "REJECTED" && staged.status_reason ? `<div class="meta" style="color:var(--bad)">rejected — ${esc(staged.status_reason)}</div>` : ""}
       ${staged.model_notes || staged.render_prompt ? `<details class="meta"><summary>${staged.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(staged.render_prompt ? `RENDER PROMPT (user-edited):\n${staged.render_prompt}${staged.model_notes ? "\n\n" + staged.model_notes : ""}` : staged.model_notes)}</pre></details>` : ""}`;
@@ -3080,13 +3081,13 @@ async function renderBoardPanels(specId) {
       // Re-performance for resolution (never interpolation): the take
       // anchors itself; a locked reproduce-exactly instruction renders it
       // at full size. The answer to a good take trapped in a small file.
-      if (c.kind !== "derived_palette") ghost.append(mk("Re-render full size", "ghost", () => {
+      if (c.kind !== "derived_palette") ghost.append(mk("→ Full-size take", "ghost", () => {
         const ov = document.createElement("div");
         ov.className = "modal-scrim";
         ov.innerHTML = `
           <div class="modal" role="dialog" aria-modal="true">
-            <div class="modal-title">Re-render ${esc(c.candidate_id)} at full size</div>
-            <p class="modal-body">The engine repaints this exact take at the chosen size, anchored to itself — detail is re-synthesized, never interpolated. Expect faithful, not pixel-identical; judge it in the takes strip. Current: ${c.width}×${c.height}.</p>
+            <div class="modal-title">New full-size take from ${esc(c.candidate_id)}</div>
+            <p class="modal-body">What happens: the engine repaints this exact take at the chosen size, anchored to itself — detail is re-synthesized, never interpolated. A NEW take appears in the takes strip and is staged for judging; ${esc(c.candidate_id)} (${c.width}×${c.height}) is untouched. Takes 30–120 seconds. Expect faithful, not pixel-identical.</p>
             <label class="modal-field">Size
               <select data-rr="size"><option>4K</option><option>2K</option></select>
             </label>
@@ -3109,20 +3110,27 @@ async function renderBoardPanels(specId) {
           const size = $("[data-rr=size]", ov).value;
           const prov = $("[data-rr=prov]", ov).value;
           doneRr();
-          const busy = startBusy($("[data-f=busy]", card),
-            `Re-rendering ${c.candidate_id} at ${size} with ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
-            "typically 30–120 seconds; the full-size take lands in the takes strip");
+          // Progress lives right under the action that started it, and every
+          // staged action locks while the engine paints (only the ones that
+          // were live — gate-disabled buttons stay gated on error).
+          const lockable = $$("button", prim).concat($$("button", ghost)).filter(b => !b.disabled);
+          lockable.forEach(b => { b.disabled = true; });
+          const busy = startBusy($("[data-f=shot-busy]", card),
+            `Painting the full-size take from ${c.candidate_id} — ${size} on ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
+            "30–120 seconds; the new take will land in the strip and take the stage");
           try {
             const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/rerender`,
               { method: "POST", json: { image_size: size, provider: prov } });
-            toast(`${rec.candidate_id} — re-rendered at ${rec.width}×${rec.height}.`);
+            toast(`${rec.candidate_id} — full-size take ready (${rec.width}×${rec.height}). Now staged; judge it against ${c.candidate_id}.`);
+            roomSel.staged[p.id] = rec.candidate_id;  // show the result, immediately
             refresh();
           } catch (err) {
             busy.done();
+            lockable.forEach(b => { b.disabled = false; });
             toast(err.message, true);
           }
         };
-      }, { title: "Repaint this exact take at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated)" }));
+      }, { title: "Make a NEW take: repaint this exact image at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated). This take stays untouched." }));
       if (c.kind !== "derived_palette") ghost.append(mk("Repair region", "ghost", () =>
         openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
           async (mask, instruction, provider) => {
