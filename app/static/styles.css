@@ -729,6 +729,8 @@ details.meta pre {
 .loc-open:hover { color: var(--ink); text-decoration: underline; }
 .loc-open.held { color: var(--accent); }
 .loc-draft { justify-self: start; font-family: var(--mono); font-size: 12px; }
+/* UNCANONIZED — 2026-07-30 — scene browser (search + expandable location
+   rows + per-scene rows with draft actions) */
 .loc-search { max-width: 380px; margin: 8px 0 4px; padding: 7px 11px; font-size: 12.5px; }
 .loc-scroll { max-height: 460px; overflow-y: auto; }
 .scene-row {
@@ -767,6 +769,13 @@ details.meta pre {
   font-family: var(--mono); font-size: 12px; color: var(--bad);
   border: 1px solid var(--bad); border-left-width: 3px;
   background: rgba(205, 97, 85, .07); padding: 8px 12px; margin: 10px 0 12px;
+}
+/* UNCANONIZED — 2026-07-30 — placeholder hatch (user note, from mock 4b):
+   empty image areas carry the design's subtle diagonal stripe. */
+.slot, .stage-shot.empty, .rail-thumb.empty, .take-spin {
+  background-image: repeating-linear-gradient(45deg,
+    rgba(236, 238, 240, .045), rgba(236, 238, 240, .045) 1px,
+    transparent 1px, transparent 9px);
 }
 .slotmap {
   position: relative; width: 100%; background: var(--field);
@@ -885,7 +894,8 @@ details.meta pre {
 .take.shown.approved { border-color: var(--accent); }  /* staged wins the frame; the label stays green */
 .take.shown.approved .take-label { color: var(--ok); }
 
-/* pending tile: an in-flight render holds its place in the strip */
+/* UNCANONIZED — 2026-07-30 — pending take tile (in-flight render holds its
+   place in the strip) + take state tags (approved green, REF suffix) */
 .take.pending { border-style: dashed; cursor: default; }
 .take-spin {
   height: 70px; display: flex; align-items: center; justify-content: center;

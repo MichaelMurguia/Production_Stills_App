@@ -264,7 +264,9 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| — | *(none — the role picker was canonized as the vocabulary picker by review 2026-07-30b)* | | |
+| 2026-07-30 | Pending take tile (`.take.pending/.take-spin`) + take state tags (approved green border/label, `· REF` suffix, `REFERENCE · REF-xxxx` badge on stage) | Judging room filmstrip + stage | in-flight renders needed a visible placeholder that survives closing the paint screen; approval and promotion state needed to read at a glance in the strip |
+| 2026-07-30 | Scene browser (`.loc-search/.loc-scroll/.scene-row`) | Screenplay stage | user request: all 252 scenes findable — search field over a scrollable list, locations expand to their scenes, each scene draftable; no existing pattern combined search + expandable rows |
+| 2026-07-30 | Placeholder hatch (subtle 45° stripe on `.slot`, empty stage shot, empty rail thumb, pending spin area) | Slot map + empty image areas | user note from mock 4b: empty image panels carry the design's diagonal stripe; flat `--bg2` read as unstyled |
 
 ---
 
@@ -273,6 +275,15 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — Feature batch pending design review (see uncanonized
+  table): pending take tiles, take state tags, scene browser, placeholder
+  hatch. Presentation rulings the designer should know: boards now
+  COVER-CROP takes to fill their slots (originals one click away; too-small
+  takes letterbox and flag — slot-map TOO SMALL is now either-dimension);
+  board grammars seed blank sheets (panel count + allocation only, per
+  board type); promoted takes carry their reference id; sheet IDs enforce
+  CAPS as typed; the screenplay stage gained Read-the-screenplay (reading
+  view) and the scene browser.
 - **2026-07-30** — Vocabulary picker canonized: suggestion chips stateless,
   facet toggles `.vchip.set` (never amber), conditional stored-as preview.
 - **2026-07-30** — Design review: intake row, registry rows, and reading
