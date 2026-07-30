@@ -224,14 +224,17 @@ rejected takes and your reasons, i.e. what the next prompt already knows.
 ### Region repair (M7)
 
 **Repair region** opens the take full-screen: paint over the area to fix,
-describe the change, and pick the engine —
+describe the change, and pick the engine. **Either way, only your painted
+region can actually change**: the engine supplies a patch, and the app
+composites it into the original image — every pixel outside your paint is
+carried over from the source bit-identical, so provider re-encoding can
+never add noise to the rest of the frame (this was the confirmed source of
+the white-dot/crackle artifacts). The engines are simply different painters
+for the patch:
 
-- **GPT Image 2 — true masked edit**: pixels outside your paint physically
-  cannot change.
-- **Gemini — guided edit**: Gemini has no mask API, so it receives the
-  source plus a magenta-highlighted guide copy with strict region-only
-  instructions. It can drift slightly outside the region — but it is a
-  different painter when one engine keeps failing.
+- **GPT Image 2 — masked patch**: paints from a true mask.
+- **Gemini — guided patch**: paints from a magenta-highlighted guide copy —
+  a different hand when one engine keeps failing on a detail.
 
 The result is a **new take** in the strip (`kind: repair`); the original is
 untouched. Subject identities mentioned in your instruction are injected

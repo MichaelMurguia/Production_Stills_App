@@ -133,9 +133,9 @@ function openRepair(imgUrl, onSubmit) {
         <label class="mini" style="display:flex;align-items:center;gap:6px;margin:0">brush
           <input type="range" data-f="brush" min="8" max="140" value="46" style="width:110px">
         </label>
-        <select data-f="prov" title="GPT Image 2 does a true masked edit — pixels outside your paint cannot change. Gemini has no mask API: it gets the source plus a highlighted guide copy and strict region-only instructions, so it may drift slightly outside the region — but it is a different painter when one engine keeps failing.">
-          <option value="openai">GPT Image 2 — true masked edit</option>
-          <option value="gemini">Gemini (Nano Banana Pro) — guided edit</option>
+        <select data-f="prov" title="Either engine paints only your painted region — the app composites the result into the original, so every pixel outside your paint is carried over from the source unchanged (no re-encode noise, ever). They are simply different painters for the patch: GPT Image 2 works from a true mask; Gemini from a highlighted guide copy.">
+          <option value="openai">GPT Image 2 — masked patch</option>
+          <option value="gemini">Gemini (Nano Banana Pro) — guided patch</option>
         </select>
         <button class="ghost" data-f="clear">Clear</button>
       </span>

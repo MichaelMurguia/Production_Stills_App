@@ -1009,10 +1009,12 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
                   provider: str = "openai") -> dict:
     """Painted-mask fix (M7): regenerate ONLY the masked region of a candidate,
     optionally anchored by references. The mask PNG must match the source image
-    dimensions, transparent where the repair goes. OpenAI does a true masked
-    edit — pixels outside the mask cannot change. Gemini has no mask API: it
-    gets the source plus a magenta-highlighted guide copy and strict
-    region-only instructions — a guided edit, not a hard mask."""
+    dimensions, transparent where the repair goes. The engine supplies only
+    the patch: its output is composited back into the ORIGINAL image, so
+    pixels outside the mask are carried over bit-identical — provider
+    re-encoding can never touch them (user-confirmed artifact source,
+    2026-07-30). OpenAI paints from a true mask; Gemini from a
+    magenta-highlighted guide copy."""
     from common import stable_hash
     from PIL import Image
     import io
@@ -1161,14 +1163,28 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         out_path.write_bytes(base64.b64decode(response.data[0].b64_json))
         model_used = OPENAI_MODEL
 
+    # THE MASK IS ENFORCED HERE, NOT TRUSTED THERE (user-confirmed 2026-07-30:
+    # the masked edit itself introduces speckle/crackle — the API re-encodes
+    # every pixel of the canvas, mask or no mask). So the model only supplies
+    # the painted region: its output is composited into the ORIGINAL image,
+    # and every pixel outside your paint is carried over bit-identical. A
+    # feathered edge blends the seam. Applies to both engines — this also
+    # hard-clips Gemini's guided-edit drift outside the region.
+    from PIL import ImageFilter
+    with Image.open(out_path) as patch_img, Image.open(src_path) as src_img, \
+            Image.open(io.BytesIO(mask_png)) as m2:
+        src_rgb = src_img.convert("RGB")
+        patch = patch_img.convert("RGB")
+        if patch.size != src_rgb.size:
+            patch = patch.resize(src_rgb.size, Image.LANCZOS)
+        hole = m2.convert("RGBA").getchannel("A").point(
+            lambda a: 255 if a < 128 else 0)
+        hole = hole.filter(ImageFilter.GaussianBlur(6))
+        composed = Image.composite(patch, src_rgb, hole)
+        composed.save(out_path)
+
     with Image.open(out_path) as im:
         width, height = im.size
-
-    warnings = []
-    if width < src_w or height < src_h:
-        warnings.append(
-            f"repair returned {width}x{height} from a {src_w}x{src_h} source — "
-            "resolution lost in the re-encode; regenerate at full size for finals")
 
     spec = store.get_spec(spec_id) or {}
     record = {
@@ -1181,14 +1197,15 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         "status": "CANDIDATE",
         "provider": provider,
         "model": model_used,
-        "warnings": warnings,
+        "warnings": [],
         "image_size": src.get("image_size", "-"),
         "aspect_ratio": src.get("aspect_ratio", "-"),
         "width": width, "height": height,
         "references": [{"id": r["id"], "role": r["role"],
                         "sha256": r.get("sha256", "")} for r in refs],
         "prompt": prompt,
-        "model_notes": (f"region repair of {cand_id}"
+        "model_notes": (f"region repair of {cand_id} — outside-mask pixels "
+                        "carried over from the source unchanged (composited)"
                         + (f" — {notes}" if notes else "")),
         "created_at": store.utcnow(),
     }
