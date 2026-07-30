@@ -253,7 +253,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| — | *(none — the 2026-07-29 patterns were canonized by the 2026-07-30 design review)* | | |
+| 2026-07-30 | Role picker (`.role-suggest/.role-preview`, `roleDialog()`) | Promote dialog, crop dialog; the Research intake row uses its select+datalist variant | the role vocabulary is finite and load-bearing, and every sensible title already exists in an app list (groups, cast cards, screenplay locations) — a blank text field invited drift ("GT40" vs "GT 40" fragmenting groups); free text stays possible but reuse is the easy path |
 
 ---
 

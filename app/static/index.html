@@ -299,9 +299,11 @@
       <form id="ref-form" class="ref-add">
         <input type="file" id="ref-file" accept="image/*" required
           title="The reference image file itself. It is copied into the library; the original stays where it is.">
-        <span class="intake-prefix" title="The one field you can't guess — see the input's tooltip">ROLE</span><input type="text" id="ref-role" list="role-list" placeholder="e.g. CHARACTER_LIKENESS — JOHN" required
-          title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">
-        <datalist id="role-list"></datalist>
+        <span class="intake-prefix" title="The one field you can't guess — see the selects' tooltips">ROLE</span><select id="ref-role-head"
+          title="The single narrow job this image does. STYLE roles are art direction, auto-attached to every generation. SUBJECT roles anchor what things are, attached per panel. A reference controls nothing outside its role."></select>
+        <input type="text" id="ref-role-title" list="ref-title-list" placeholder="title — e.g. GT40"
+          title="Name it after the subject or object so panels pre-check it, and so the image joins the existing group with the same title. Suggestions come from your cast cards, screenplay locations, and existing groups. Style roles take no title.">
+        <datalist id="ref-title-list"></datalist>
         <input type="text" id="ref-controls" placeholder="controls…"
           title="Comma-separated aspects this image DOES govern within its role (e.g. face, hair, proportions). Spelled out in every prompt the reference is attached to.">
         <input type="text" id="ref-nocontrols" placeholder="not…"

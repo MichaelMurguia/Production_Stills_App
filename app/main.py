@@ -584,6 +584,35 @@ async def api_repair_region(spec_id: str, cand_id: str,
         raise HTTPException(502, f"region repair failed: {e}")
 
 
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/rerender")
+async def api_rerender(spec_id: str, cand_id: str, body: dict) -> dict:
+    """Re-performance for resolution: the take anchors itself, rendered at
+    the requested size. Never interpolation — the no-upscaling rule stands."""
+    try:
+        return await run_in_threadpool(
+            generate.rerender_full, spec_id, cand_id,
+            body.get("image_size", "4K"), body.get("provider", "openai"))
+    except KeyError as e:
+        raise _err(e)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"re-render failed: {e}")
+
+
+@app.post("/api/subjects/{sid}/link")
+async def api_link_subject_ref(sid: str, body: dict) -> dict:
+    """Link an EXISTING reference to a subject card, so library anchors and
+    card mosaics stay one view of the same canon."""
+    ref_id = str(body.get("ref_id", "")).strip()
+    if store.get_reference(ref_id) is None:
+        raise HTTPException(404, f"unknown reference: {ref_id}")
+    try:
+        return store.link_subject_ref(sid, ref_id)
+    except KeyError as e:
+        raise _err(e)
+
+
 @app.post("/api/specs/{spec_id}/candidates/purge-rejected")
 def api_purge_rejected(spec_id: str) -> dict:
     try:

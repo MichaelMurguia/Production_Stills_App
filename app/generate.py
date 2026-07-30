@@ -1197,6 +1197,126 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     return record
 
 
+def nearest_catalog_aspect(width: int, height: int) -> str:
+    value = width / max(1, height)
+    return min(ASPECT_CATALOG,
+               key=lambda a: abs(aspect_value(a["id"]) - value))["id"]
+
+
+RERENDER_PROMPT = """FULL-FIDELITY RE-RENDER of an approved production take.
+Reproduce the attached source image EXACTLY — same composition, same contents,
+same light, same palette, same paint handling — at full output resolution.
+This is a re-performance for resolution, not a variation: add no objects,
+remove none, reinterpret nothing. Where the small source could not hold
+detail, render that detail truthfully within the forms it already shows —
+never invent new content to fill space."""
+
+
+def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
+                  provider: str = "openai") -> dict:
+    """Re-performance for resolution: the take is fed to the engine as its
+    own sole anchor with a locked reproduce-exactly instruction and rendered
+    at the requested size. Detail is re-synthesized, never interpolated —
+    this is the sanctioned answer to a good take trapped at low resolution
+    (the no-upscaling rule stands). Lineage recorded as kind: rerender."""
+    from common import stable_hash
+    from PIL import Image
+
+    if provider not in ("gemini", "openai"):
+        raise GenerationError("re-render supports gemini or openai — the "
+                              "source image is the only anchor either gets")
+    if image_size not in IMAGE_SIZES:
+        raise GenerationError(f"image_size must be one of {sorted(IMAGE_SIZES)}")
+    src = get_candidate(spec_id, cand_id)
+    if src is None:
+        raise KeyError(cand_id)
+    src_path = candidate_image_path(spec_id, cand_id)
+    if src_path is None:
+        raise GenerationError(f"image file missing for {cand_id}")
+    with Image.open(src_path) as im:
+        src_w, src_h = im.size
+    aspect = nearest_catalog_aspect(src_w, src_h)
+
+    new_id = _new_candidate_id()
+    d = _spec_board_dir(spec_id)
+    out_path = d / f"{new_id}.png"
+    notes = ""
+
+    if provider == "openai":
+        import base64
+        client = _openai_client()
+        with src_path.open("rb") as f:
+            try:
+                response = client.images.edit(
+                    model=OPENAI_MODEL, image=f, prompt=RERENDER_PROMPT,
+                    quality="high", size=openai_size(image_size, aspect))
+            except Exception as e:
+                raise GenerationError(f"re-render failed: {e}") from e
+        if not getattr(response, "data", None) or not response.data[0].b64_json:
+            raise GenerationError("OpenAI returned no image for the re-render.")
+        out_path.write_bytes(base64.b64decode(response.data[0].b64_json))
+        model_used = OPENAI_MODEL
+    else:
+        from google.genai import types
+        with Image.open(src_path) as s:
+            src_im = s.convert("RGB")
+        cfg = {"response_modalities": ["TEXT", "IMAGE"]}
+        if aspect in GEMINI_RATIOS:
+            cfg["image_config"] = types.ImageConfig(
+                aspect_ratio=aspect, image_size=image_size)
+        try:
+            response = _client().models.generate_content(
+                model=MODEL, contents=[RERENDER_PROMPT, src_im],
+                config=types.GenerateContentConfig(**cfg))
+        except Exception as e:
+            raise GenerationError(f"re-render failed: {e}") from e
+        image_part, note_text = None, []
+        for part in (response.parts or []):
+            if getattr(part, "text", None):
+                note_text.append(part.text)
+            elif part.as_image() is not None:
+                image_part = part.as_image()
+        if image_part is None:
+            raise GenerationError("Gemini returned no image for the re-render. "
+                                  + (" ".join(note_text)[:500] or ""))
+        image_part.save(out_path)
+        notes = " ".join(note_text)[:2000]
+        model_used = MODEL
+
+    with Image.open(out_path) as im:
+        width, height = im.size
+    warnings = []
+    if width <= src_w and height <= src_h:
+        warnings.append(
+            f"re-render returned {width}x{height} — no larger than the "
+            f"{src_w}x{src_h} source; try the other engine or 4K")
+
+    spec = store.get_spec(spec_id) or {}
+    record = {
+        "candidate_id": new_id,
+        "specification_id": spec_id,
+        "spec_hash": stable_hash(spec) if spec else src.get("spec_hash", ""),
+        "panel_id": src.get("panel_id", ""),
+        "kind": "rerender",
+        "rerendered_from": cand_id,
+        "status": "CANDIDATE",
+        "provider": provider,
+        "model": model_used,
+        "image_size": image_size,
+        "aspect_ratio": aspect,
+        "width": width, "height": height,
+        "warnings": warnings,
+        "references": [],
+        "prompt": RERENDER_PROMPT,
+        "model_notes": (f"full-fidelity re-render of {cand_id} "
+                        f"({src_w}x{src_h} source)" + (f" — {notes}" if notes else "")),
+        "created_at": store.utcnow(),
+    }
+    (d / f"{new_id}.json").write_text(
+        json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return record
+
+
 def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
                    image_size: str = "2K", aspect_ratio: str = "16:9",
                    provider: str = DEFAULT_PROVIDER,

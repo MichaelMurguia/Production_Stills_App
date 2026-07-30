@@ -254,6 +254,10 @@ def _friendly_event(e: dict) -> dict | None:
         return {"ts": e["ts"], "kind": "ok",
                 "text": f"Region repair from {cid} on {sid}"
                         + (f" ({prov})" if prov else "")}
+    if p.endswith("/rerender"):
+        return {"ts": e["ts"], "kind": "ok",
+                "text": f"Full-resolution re-render of {cid} on {sid} "
+                        f"({body.get('provider', '')}/{body.get('image_size', '')})"}
     if p.endswith("/status") and cid:
         st = str(body.get("status", "")).upper()
         reason = str(body.get("reason", "")).strip()

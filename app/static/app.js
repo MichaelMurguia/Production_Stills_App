@@ -251,13 +251,16 @@ function openRepair(imgUrl, onSubmit) {
 
 async function cropToReference(source, imgUrl) {
   openCropper(imgUrl, async (rect) => {
-    const role = await askText("Crop → reference", "Role — what does this cell control?",
-      { value: "PROP_REFERENCE", confirmLabel: "Create reference",
-        hint: "the crop enters the library approved, with this single jurisdiction" });
-    if (role === null || !role.trim()) return;
+    const r = await roleDialog({
+      title: "Crop → reference",
+      body: "The crop enters the library approved, with this single jurisdiction.",
+      prefillHead: "PROP_REFERENCE",
+      confirmLabel: "Create reference",
+    });
+    if (r === null || !r.role) return;
     try {
       const ref = await api("/api/references/crop", {
-        method: "POST", json: { source, rect, role: role.trim() } });
+        method: "POST", json: { source, rect, role: r.role } });
       toast(`${ref.id} created from crop — approved as ${ref.role}.`);
     } catch (err) { toast(err.message, true); }
   });
@@ -353,6 +356,146 @@ function promptOverlay(title, text, identity = "") {
   $("[data-mf=copy]", ov).onclick = () => copyText(text);
   $("[data-mf=ok]", ov).onclick = done;
   $("[data-mf=ok]", ov).focus();
+}
+
+/* Role picker (planning session 2026-07-30): the role vocabulary is finite
+   and load-bearing, and every title the user could want already exists in a
+   list the app maintains — so the picker offers both instead of a blank box. */
+const ROLE_FAMILIES = [
+  { head: "SCENE_REFERENCE", desc: "anchors a whole scene or composition — what promotion usually creates", kind: "scene", titled: true },
+  { head: "LOCATION_GEOMETRY", desc: "a place's geometry and camera, light excluded — light studies anchor to these", kind: "scene", titled: true },
+  { head: "CHARACTER_LIKENESS", desc: "a named character's face and build — never costume or lighting", kind: "CHARACTER", titled: true },
+  { head: "VEHICLE_GEOMETRY", desc: "exact vehicle geometry", kind: "VEHICLE", titled: true },
+  { head: "PROP_REFERENCE", desc: "a prop or device", kind: "PROP", titled: true },
+  { head: "BOARD_RENDERING_STYLE", desc: "how panels are painted — auto-attached to every render, style only", kind: "style", titled: false },
+  { head: "CINEMATOGRAPHY_STYLE", desc: "light and contrast character — auto-attached to every render", kind: "style", titled: false },
+  { head: "BOARD_LAYOUT_STYLE", desc: "board assembly grammar — never enters a panel render", kind: "style", titled: false },
+];
+
+let _roleCtx = null;  // {refs, subjects, locations} — fetched once per session view
+async function roleContext() {
+  if (_roleCtx) return _roleCtx;
+  const [refs, subjects, locs] = await Promise.all([
+    api("/api/references").catch(() => []),
+    api("/api/subjects").catch(() => []),
+    api("/api/screenplay/locations").catch(() => ({ locations: [] })),
+  ]);
+  return _roleCtx = { refs, subjects, locations: (locs.locations || []).map(l => l.location) };
+}
+
+// Suggestions per family: existing groups first (same title = same bench
+// checkbox), then canonical names from cast cards / screenplay locations.
+function titleSuggestions(head, ctx, extras = []) {
+  const fam = ROLE_FAMILIES.find(f => f.head === head);
+  const out = [];
+  const seen = new Set();
+  const add = (value, note) => {
+    const v = String(value || "").trim().toUpperCase();
+    if (v && !seen.has(v)) { seen.add(v); out.push({ value: v, note }); }
+  };
+  const groups = {};
+  for (const r of ctx.refs) {
+    if (roleHead(r.role) !== head) continue;
+    const suffix = String(r.role).split("—")[1]?.trim();
+    if (suffix) groups[suffix.toUpperCase()] = (groups[suffix.toUpperCase()] || 0) + 1;
+  }
+  Object.entries(groups).forEach(([t, n]) =>
+    add(t, `joins existing group (${n} image${n > 1 ? "s" : ""})`));
+  extras.forEach(x => add(x, "from this panel"));
+  if (fam && ["CHARACTER", "VEHICLE", "PROP"].includes(fam.kind)) {
+    ctx.subjects.filter(s => s.kind === fam.kind)
+      .forEach(s => add(s.name, "from cast & subjects"));
+  }
+  if (fam && fam.kind === "scene") {
+    ctx.locations.slice(0, 10).forEach(l => add(l, "from the screenplay"));
+  }
+  return out.slice(0, 10);
+}
+
+/* The role dialog: family dropdown with plain-language jobs, title with
+   click-to-fill sourced suggestions, live uppercase, assembled preview.
+   Resolves {role, title, ...extra field values} or null. */
+function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
+                      prefillTitle = "", extras = [], fields = [],
+                      confirmLabel = "Confirm" }) {
+  return new Promise(async resolve => {
+    const ctx = await roleContext();
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-title">${esc(title)}</div>
+        ${body ? `<p class="modal-body">${esc(body)}</p>` : ""}
+        <label class="modal-field">Role — the single job this image does
+          <select data-rf="head">
+            ${ROLE_FAMILIES.map(f => `<option value="${f.head}" ${f.head === prefillHead ? "selected" : ""} title="${esc(f.desc)}">${f.head} — ${esc(f.desc.split("—")[0].trim())}</option>`).join("")}
+          </select>
+        </label>
+        <label class="modal-field" data-rf="title-wrap">Title
+          <input type="text" data-rf="title" value="${esc(prefillTitle.toUpperCase())}" placeholder="name it after the subject or object so panels pre-check it">
+          <span class="role-suggest" data-rf="suggest"></span>
+        </label>
+        ${fields.map((f, i) => `
+          <label class="modal-field">${esc(f.label)}
+            <input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">
+            ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
+          </label>`).join("")}
+        <div class="role-preview" data-rf="preview"></div>
+        <div class="modal-actions">
+          <button class="ghost" data-mf="cancel">Cancel</button>
+          <button class="primary" data-mf="ok">${esc(confirmLabel)}</button>
+        </div>
+      </div>`;
+    document.body.append(ov);
+    const headSel = $("[data-rf=head]", ov);
+    const titleIn = $("[data-rf=title]", ov);
+    const famOf = () => ROLE_FAMILIES.find(f => f.head === headSel.value);
+    const assembled = () => {
+      const fam = famOf();
+      const t = titleIn.value.trim();
+      return fam.titled && t ? `${headSel.value} — ${t}` : headSel.value;
+    };
+    const sync = () => {
+      const fam = famOf();
+      $("[data-rf=title-wrap]", ov).classList.toggle("hidden", !fam.titled);
+      $("[data-rf=suggest]", ov).innerHTML = fam.titled
+        ? titleSuggestions(headSel.value, ctx, extras).map(s =>
+            `<button type="button" class="vchip" data-fill="${esc(s.value)}" title="${esc(s.note)}">${esc(s.value)}</button>`).join("")
+        : "";
+      $$("[data-fill]", ov).forEach(b => {
+        b.onclick = () => { titleIn.value = b.dataset.fill; sync(); };
+      });
+      $("[data-rf=preview]", ov).textContent = assembled();
+    };
+    titleIn.addEventListener("input", () => {
+      const pos = titleIn.selectionStart;
+      titleIn.value = titleIn.value.toUpperCase();
+      titleIn.setSelectionRange(pos, pos);
+      $("[data-rf=preview]", ov).textContent = assembled();
+    });
+    headSel.addEventListener("change", sync);
+    sync();
+    const done = val => { window.removeEventListener("keydown", onKey, true); ov.remove(); resolve(val); };
+    const collect = () => {
+      const fam = famOf();
+      if (fam.titled && !titleIn.value.trim()) { titleIn.focus(); return undefined; }
+      const out = { role: assembled(), title: titleIn.value.trim() };
+      fields.forEach((f, i) => { out[f.name] = $(`[data-mf="${i}"]`, ov).value.trim(); });
+      return out;
+    };
+    const onKey = e => {
+      if (e.key === "Escape") { e.stopPropagation(); done(null); }
+      else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        const v = collect(); if (v !== undefined) done(v);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
+    $("[data-mf=cancel]", ov).onclick = () => done(null);
+    $("[data-mf=ok]", ov).onclick = () => { const v = collect(); if (v !== undefined) done(v); };
+    (famOf().titled ? titleIn : $("[data-mf=ok]", ov)).focus();
+  });
 }
 
 const askText = async (title, label, opts = {}) => {
@@ -492,6 +635,7 @@ function useTemplate(id) {
 
 async function showView(name) {
   activeView = name;
+  _roleCtx = null;  // suggestion sources refresh per navigation
   $$("#tools-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   updateBand();  // fire and forget — the band must never block the view
   try { await views[name](); }
@@ -1568,17 +1712,41 @@ async function renderWizard() {
 
 async function renderReferences() {
   useTemplate("tpl-references");
-  const state = await api("/api/state");
-  $("#role-list").innerHTML =
-    state.suggested_roles.map(r => `<option value="${esc(r)}">`).join("");
+  _roleCtx = null;  // fresh groups after every library change
+
+  // Intake role: family select + sourced title datalist (role picker rules).
+  const headSel = $("#ref-role-head");
+  const titleIn = $("#ref-role-title");
+  headSel.innerHTML = ROLE_FAMILIES.map(f =>
+    `<option value="${f.head}" title="${esc(f.desc)}">${f.head}</option>`).join("");
+  const syncIntake = async () => {
+    const fam = ROLE_FAMILIES.find(f => f.head === headSel.value);
+    titleIn.disabled = !fam.titled;
+    titleIn.placeholder = fam.titled ? "title — e.g. GT40" : "style roles take no title";
+    if (fam.titled) {
+      const ctx = await roleContext();
+      $("#ref-title-list").innerHTML = titleSuggestions(headSel.value, ctx)
+        .map(s => `<option value="${esc(s.value)}" label="${esc(s.note)}">`).join("");
+    }
+  };
+  headSel.addEventListener("change", syncIntake);
+  titleIn.addEventListener("input", () => {
+    const pos = titleIn.selectionStart;
+    titleIn.value = titleIn.value.toUpperCase();
+    titleIn.setSelectionRange(pos, pos);
+  });
+  syncIntake();
 
   $("#ref-form").addEventListener("submit", async e => {
     e.preventDefault();
     const file = $("#ref-file").files[0];
     if (!file) return;
+    const fam = ROLE_FAMILIES.find(f => f.head === headSel.value);
+    if (fam.titled && !titleIn.value.trim()) { titleIn.focus(); return; }
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("role", $("#ref-role").value);
+    fd.append("role", fam.titled && titleIn.value.trim()
+      ? `${headSel.value} — ${titleIn.value.trim()}` : headSel.value);
     fd.append("controls", $("#ref-controls").value);
     fd.append("does_not_control", $("#ref-nocontrols").value);
     fd.append("notes", $("#ref-notes").value);
@@ -2394,15 +2562,22 @@ async function renderBoards() {
   }
 }
 
-// Promote an approved render into the reference library — one dialog, three
-// fields (was three browser prompts in a row).
+// Promote an approved render into the reference library. The dialog knows
+// where the take came from: role prefilled, title suggested from the panel
+// context and its required objects — most promotions are confirm-and-done.
 async function promoteDialog(specId, c) {
-  const r = await modal({
+  let panel = null;
+  try { panel = (await api(`/api/specs/${specId}`)).spec.panels
+    .find(p => p.id === c.panel_id) || null; } catch { /* prefill only */ }
+  const prefillTitle = [c.panel_id, panel?.title || panel?.purpose || ""]
+    .filter(Boolean).join(" ").replace(/[^\w\s-]/g, "").trim().slice(0, 48);
+  const r = await roleDialog({
     title: `Promote ${c.candidate_id} to reference`,
-    body: "The render enters the library approved — a canon anchor future generations attach to.",
+    body: "The render enters the library approved — a canon anchor future generations attach to. Same title = same group on the generation bench.",
+    prefillHead: "SCENE_REFERENCE",
+    prefillTitle,
+    extras: panel ? (panel.required_objects || []).slice(0, 4) : [],
     fields: [
-      { name: "role", label: "Role", value: "SCENE_REFERENCE",
-        hint: "the single jurisdiction this anchor controls" },
       { name: "notes", label: "Notes", placeholder: "e.g. which screenplay scene this anchors" },
       { name: "controls", label: "Controls", placeholder: "comma-separated, optional" },
     ],
@@ -2413,6 +2588,16 @@ async function promoteDialog(specId, c) {
     const ref = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`,
       { method: "POST", json: { role: r.role, notes: r.notes, controls: r.controls } });
     toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
+    // If the title names a cast/subject card, link the reference to it so
+    // the card mosaic and the library stay one view of the same canon.
+    try {
+      const subjects = await api("/api/subjects");
+      const match = subjects.find(s => s.name.toUpperCase() === r.title.toUpperCase());
+      if (match) {
+        await api(`/api/subjects/${match.id}/link`, { method: "POST", json: { ref_id: ref.id } });
+        toast(`${ref.id} also linked to ${match.name}'s card.`);
+      }
+    } catch { /* the promotion itself already succeeded */ }
   } catch (err) { toast(err.message, true); }
 }
 
@@ -2860,6 +3045,52 @@ async function renderBoardPanels(specId) {
         } catch (err) { toast(err.message, true); }
       }));
 
+      // Re-performance for resolution (never interpolation): the take
+      // anchors itself; a locked reproduce-exactly instruction renders it
+      // at full size. The answer to a good take trapped in a small file.
+      if (c.kind !== "derived_palette") ghost.append(mk("Re-render full size", "ghost", () => {
+        const ov = document.createElement("div");
+        ov.className = "modal-scrim";
+        ov.innerHTML = `
+          <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-title">Re-render ${esc(c.candidate_id)} at full size</div>
+            <p class="modal-body">The engine repaints this exact take at the chosen size, anchored to itself — detail is re-synthesized, never interpolated. Expect faithful, not pixel-identical; judge it in the takes strip. Current: ${c.width}×${c.height}.</p>
+            <label class="modal-field">Size
+              <select data-rr="size"><option>4K</option><option>2K</option></select>
+            </label>
+            <label class="modal-field">Engine
+              <select data-rr="prov">
+                <option value="gemini">Gemini (Nano Banana Pro) — native 4K</option>
+                <option value="openai">GPT Image 2 (direct)</option>
+              </select>
+            </label>
+            <div class="modal-actions">
+              <button class="ghost" data-rr="cancel">Cancel</button>
+              <button class="primary" data-rr="go">Re-render</button>
+            </div>
+          </div>`;
+        document.body.append(ov);
+        const doneRr = () => ov.remove();
+        $("[data-rr=cancel]", ov).onclick = doneRr;
+        ov.addEventListener("mousedown", ev => { if (ev.target === ov) doneRr(); });
+        $("[data-rr=go]", ov).onclick = async () => {
+          const size = $("[data-rr=size]", ov).value;
+          const prov = $("[data-rr=prov]", ov).value;
+          doneRr();
+          const busy = startBusy($("[data-f=busy]", card),
+            `Re-rendering ${c.candidate_id} at ${size} with ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
+            "typically 30–120 seconds; the full-size take lands in the takes strip");
+          try {
+            const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/rerender`,
+              { method: "POST", json: { image_size: size, provider: prov } });
+            toast(`${rec.candidate_id} — re-rendered at ${rec.width}×${rec.height}.`);
+            refresh();
+          } catch (err) {
+            busy.done();
+            toast(err.message, true);
+          }
+        };
+      }, { title: "Repaint this exact take at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated)" }));
       if (c.kind !== "derived_palette") ghost.append(mk("Repair region", "ghost", () =>
         openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
           async (mask, instruction, provider) => {
