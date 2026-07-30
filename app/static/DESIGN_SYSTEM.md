@@ -162,6 +162,21 @@ Prose was ~3:1 over interface by area in v1. Rules:
 
 `.badge.LOCKED` is deliberately grey: locked is a fact, not an action.
 
+## Scrollbars
+
+Scrollbars are chrome, not content. The global rules in `styles.css` cover
+every scroll container — never restyle one locally.
+
+- Thin (10px), square, thumb inset 2px so it reads as a 6px bar.
+- Track invisible; the thumb is `--line`, `--ink-faint` on hover. No amber,
+  no status colors — a scrollbar is never a signal.
+- Overlays (`.lightbox`, `.cropper`) use `--line-soft` so the thumb doesn't
+  glow against near-black.
+- New scroll containers (rails, filmstrips, code blocks) inherit this
+  automatically. If a thumb is invisible against a custom surface, fix the
+  surface color, not the scrollbar.
+- `overflow: auto`, not `scroll` — no dead tracks on content that fits.
+
 Rejected reference cards dim the **image only** (`.ref-card.REJECTED img`). Never
 dim the card — the rejection reason is the entire payload of a rejected card.
 
@@ -218,7 +233,9 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| — | *(none — the 2026-07-29 patterns were canonized into the sections above by plan v3 Part A)* | | |
+| 2026-07-29 | Compact intake row (`.ref-add`) | Research — add reference at top | user asked for a one-line form; `.grid-form` is a 2-col page block, too heavy for an intake bar |
+| 2026-07-29 | Custom engine rows (`.eng-row`) | Settings — Your engines | list of user-owned engines with facts + test + remove; no existing row carried name · Courier facts · actions |
+| 2026-07-29 | Prompt reading view (`.modal.prompt-full`) | Provenance rail — Expand | detached full-screen read of a long compiled prompt with Copy; the rail pre and the dialog fields both cap too small |
 
 ---
 
@@ -227,6 +244,14 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-29** — First live-use findings pass: scrollbar amendment applied;
+  repair overlay gains Esc + "Close — render continues"; Research intake
+  compacted to a top row (uncanonized); custom user engines added to Settings
+  (uncanonized rows) and every Model dropdown went dynamic; provenance prompt
+  gains Copy / Expand reading view (uncanonized); ChatGPT-pipeline size
+  400 fixed (tool presets only). See design_handoff/FEATURE_INVENTORY.md.
+- **2026-07-29** — Scrollbar treatment added (thin, square, track invisible,
+  thumb --line → --ink-faint on hover).
 - **2026-07-29** — Plan v3 built (C1–C14): five-stage band with live
   sublines + engine dots; Status/Screenplay/Assembly views split out; the
   judging room (rail · stage · provenance); canonical blocking rows, recent

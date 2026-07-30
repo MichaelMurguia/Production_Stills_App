@@ -199,8 +199,15 @@ function openRepair(imgUrl, onSubmit) {
   $("[data-f=clear]", ov).onclick = () => { strokes = []; redraw(); update(); };
   instr.addEventListener("input", update);
 
-  const close = () => { window.removeEventListener("resize", sizeCanvas); ov.remove(); };
-  $("[data-f=cancel]", ov).onclick = close;
+  const close = () => {
+    window.removeEventListener("resize", sizeCanvas);
+    document.removeEventListener("keydown", onEsc);
+    ov.remove();
+  };
+  const onEsc = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onEsc);
+  const cancelBtn = $("[data-f=cancel]", ov);
+  cancelBtn.onclick = close;
   goBtn.onclick = async () => {
     // Mask at natural resolution: opaque everywhere, transparent where painted.
     const m = document.createElement("canvas");
@@ -220,10 +227,14 @@ function openRepair(imgUrl, onSubmit) {
     }
     const blob = await new Promise(res => m.toBlob(res, "image/png"));
     goBtn.disabled = true;
+    // The render runs server-side either way — closing this screen doesn't
+    // cancel it, so say so and let the user leave.
+    cancelBtn.textContent = "Close — render continues";
+    cancelBtn.title = "The repair keeps painting in the background; the new take lands in the takes strip when it finishes.";
     const prov = $("[data-f=prov]", ov);
     const busy = startBusy($("[data-f=busy]", ov),
       `Repairing the painted region with ${prov.options[prov.selectedIndex].text}…`,
-      "typically 30–120 seconds; the result lands in the gallery as a new candidate");
+      "typically 30–120 seconds — Close or Esc to leave; the result still lands in the takes strip");
     try {
       await onSubmit(blob, instr.value.trim(), prov.value);
       busy.done();
@@ -231,6 +242,8 @@ function openRepair(imgUrl, onSubmit) {
     } catch (err) {
       busy.done();
       toast(err.message, true);
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.title = "";
       goBtn.disabled = false;
     }
   };
@@ -307,6 +320,38 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
 }
 const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
   (await modal({ title, body, confirmLabel, danger })) !== null;
+async function copyText(text, what = "Prompt") {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${what} copied to the clipboard.`);
+  } catch {
+    toast("Clipboard unavailable — select the text and copy manually.", true);
+  }
+}
+
+// Detached full-screen reading view for long machine text (compiled prompts).
+function promptOverlay(title, text) {
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  ov.innerHTML = `
+    <div class="modal prompt-full" role="dialog" aria-modal="true">
+      <div class="modal-title">${esc(title)}</div>
+      <pre class="prompt-full-pre">${esc(text)}</pre>
+      <div class="modal-actions">
+        <button class="ghost" data-mf="copy">Copy</button>
+        <button class="primary" data-mf="ok">Close</button>
+      </div>
+    </div>`;
+  document.body.append(ov);
+  const done = () => { window.removeEventListener("keydown", onKey, true); ov.remove(); };
+  const onKey = e => { if (e.key === "Escape") { e.stopPropagation(); done(); } };
+  window.addEventListener("keydown", onKey, true);
+  ov.addEventListener("mousedown", e => { if (e.target === ov) done(); });
+  $("[data-mf=copy]", ov).onclick = () => copyText(text);
+  $("[data-mf=ok]", ov).onclick = done;
+  $("[data-mf=ok]", ov).focus();
+}
+
 const askText = async (title, label, opts = {}) => {
   const r = await modal({
     title, body: opts.body || "",
@@ -752,11 +797,67 @@ async function renderSettings() {
 
   const settings = await api("/api/settings");
 
-  // Default engine as a three-chip toggle (B3) — saved immediately.
+  // User-added engines: list, test, remove, add (OpenAI Images API contract).
+  const customs = settings.custom_engines || [];
+  $("#custom-engines").innerHTML = customs.length ? customs.map(e => `
+    <div class="eng-row" data-eid="${esc(e.id)}">
+      <span class="eng-row-name">${esc(e.label)}</span>
+      <span class="eng-row-meta">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}</span>
+      <span class="eng-row-test" data-f="eng-test-out">${(() => {
+        const t = (settings.engines || {})[`custom:${e.id}`]?.last_test;
+        return t ? `LAST TEST — ${t.ok ? "PASS" : "FAIL"} ${esc((t.at || "").slice(0, 16).replace("T", " "))}` : "";
+      })()}</span>
+      <button class="ghost" data-f="eng-test">Test</button>
+      <button class="danger" data-f="eng-del">Remove</button>
+    </div>`).join("")
+    : `<p class="mini">none yet — add one and it joins every Model dropdown</p>`;
+  $$("#custom-engines .eng-row").forEach(row => {
+    const eid = row.dataset.eid;
+    $("[data-f=eng-test]", row).onclick = async (ev) => {
+      ev.target.disabled = true;
+      $("[data-f=eng-test-out]", row).textContent = "TESTING…";
+      try {
+        const r = await api("/api/settings/test", { method: "POST", json: { provider: `custom:${eid}` } });
+        toast(`${eid} connection OK — ${r.model}`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    };
+    $("[data-f=eng-del]", row).onclick = async () => {
+      if (!(await askConfirm(`Remove engine ${eid}`,
+        "Its key is deleted from settings and it leaves every Model dropdown. Candidates it generated keep their records.",
+        "Remove", true))) return;
+      try {
+        await api(`/api/settings/engines/${encodeURIComponent(eid)}`, { method: "DELETE" });
+        toast(`${eid} removed.`);
+        renderSettings();
+      } catch (err) { toast(err.message, true); }
+    };
+  });
+  $("#eng-add").onclick = async () => {
+    const r = await modal({
+      title: "Add your own image engine",
+      body: "The endpoint must speak the OpenAI Images API (images.generate / images.edit). The key is stored in data/settings.json and leaves this machine only to call this endpoint.",
+      fields: [
+        { name: "label", label: "Name", placeholder: "e.g. xAI Grok Image, Together, local SDXL" },
+        { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
+        { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
+        { name: "api_key", label: "API key" },
+      ],
+      confirmLabel: "Add engine",
+    });
+    if (r === null) return;
+    try {
+      await api("/api/settings/engines", { method: "POST", json: r });
+      toast(`${r.label} added — it now appears in every Model dropdown.`);
+      renderSettings();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  // Default engine chips — built-ins get short names, customs their label.
   const PREF_LABELS = { gemini: "GEMINI", openai: "GPT IMAGE 2", "openai-chat": "PIPELINE" };
   const prefChips = $("#pref-chips");
   prefChips.innerHTML = Object.keys(settings.providers).map(v =>
-    `<button class="vchip${v === settings.preferred_provider ? " on" : ""}" data-v="${esc(v)}">${esc(PREF_LABELS[v] || v.toUpperCase())}</button>`).join("");
+    `<button class="vchip${v === settings.preferred_provider ? " on" : ""}" data-v="${esc(v)}">${esc(PREF_LABELS[v] || settings.providers[v].toUpperCase().slice(0, 18))}</button>`).join("");
   $$(".vchip", prefChips).forEach(ch => {
     ch.onclick = async () => {
       try {
@@ -2267,11 +2368,11 @@ const BOARD_TYPES = [
 ];
 const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"];
 
-const MODEL_PROVIDERS = [
-  { value: "gemini", label: "Gemini (Nano Banana Pro)" },
-  { value: "openai", label: "GPT Image 2 (direct)" },
-  { value: "openai-chat", label: "ChatGPT pipeline (GPT-5.6 + image)" },
-];
+// Engine options come from settings (built-ins plus user-added custom
+// engines) so every Model dropdown stays in sync with Settings.
+const providerOptions = (settings, selected) =>
+  Object.entries(settings.providers || {}).map(([v, label]) =>
+    `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(label)}</option>`).join("");
 
 async function renderBoards() {
   useTemplate("tpl-boards");
@@ -2529,9 +2630,9 @@ async function renderBoardPanels(specId) {
         </div>
       </div>
       <div class="gen-row">
-        <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses. All three get identical spec, style, and references.">
+        <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses; its image tool only accepts preset sizes, so pipeline output caps near 1.5K whatever Size says. All engines get identical spec, style, and references.">
           <span class="f-label">Model</span>
-          <select data-f="model">${MODEL_PROVIDERS.map(m => `<option value="${m.value}" ${m.value === prefProvider ? "selected" : ""}>${m.label}</option>`).join("")}</select>
+          <select data-f="model">${providerOptions(appSettings, prefProvider)}</select>
         </div>
         <div class="fgroup" title="Output resolution class: 1K for quick drafts, 2K for review candidates, 4K for finals. Always native resolution — never upscaled. (OpenAI flags output above 2560×1440 as experimental; prefer Gemini for 4K.)">
           <span class="f-label">Size</span>
@@ -2779,7 +2880,7 @@ async function renderBoardPanels(specId) {
     <div class="gen-row" style="border-top:none;padding-top:0;margin-top:0">
       <div class="fgroup" title="Which model paints the materials strip. The palette needs no model — it is measured, not generated.">
         <span class="f-label">Model (materials)</span>
-        <select id="der-model">${MODEL_PROVIDERS.map(m => `<option value="${m.value}" ${m.value === prefProvider ? "selected" : ""}>${m.label}</option>`).join("")}</select>
+        <select id="der-model">${providerOptions(appSettings, prefProvider)}</select>
       </div>
       <div class="gen-actions">
         <button class="ghost" id="der-palette" ${approvedPanelCands.length ? "" : "disabled"} title="Deterministic: dominant colors sampled straight from the approved panels' pixels — a measurement, no AI, no drift">Derive palette</button>
@@ -2920,7 +3021,13 @@ async function renderBoardPanels(specId) {
       </div>
       ${promptText ? `
       <div class="rail-block">
-        <div class="rail-label">COMPILED PROMPT <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button></div>
+        <div class="rail-label">COMPILED PROMPT
+          <span style="display:inline-flex;gap:10px">
+            <button class="block-act" data-f="copy" style="font-size:11px;padding:0" title="Copy the full prompt to the clipboard">Copy</button>
+            <button class="block-act" data-f="detach" style="font-size:11px;padding:0" title="Open the full prompt in a reading view">Expand</button>
+            <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button>
+          </span>
+        </div>
         <pre class="side-prompt" data-f="ppre">${esc(promptText.slice(0, 340))}${promptText.length > 340 ? "…" : ""}</pre>
       </div>` : ""}
       ${rejectedTakes.length ? `
@@ -2937,6 +3044,9 @@ async function renderBoardPanels(specId) {
           ? promptText : promptText.slice(0, 340) + (promptText.length > 340 ? "…" : "");
         fullBtn.textContent = expanded ? "Less" : "Full";
       };
+      $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
+      $("[data-f=detach]", el).onclick = () =>
+        promptOverlay(`COMPILED PROMPT — ${c.candidate_id}`, promptText);
     }
     return el;
   }

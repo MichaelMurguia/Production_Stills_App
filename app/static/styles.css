@@ -896,6 +896,13 @@ details.meta pre {
 .carried { font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--bad); }
 
 /* reference library: filter chips + status counts + jurisdiction block */
+/* UNCANONIZED — 2026-07-29 — compact add-reference row (user request):
+   one-line intake form; explanations live in the title tooltips. */
+.ref-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 12px; }
+.ref-add input[type="text"] { flex: 1 1 130px; min-width: 0; padding: 7px 10px; font-size: 12.5px; }
+.ref-add #ref-role { flex: 2 1 220px; }
+.ref-add button { flex: none; }
 .ref-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .ref-chips { display: inline-flex; gap: 6px; }
 .ref-counts { margin-left: auto; display: inline-flex; gap: 16px; }
@@ -920,6 +927,19 @@ details.meta pre {
   background: var(--line-soft); border: 1px solid var(--line-soft); margin-top: 20px;
 }
 .facts-row > div { background: var(--panel); padding: 16px 18px; }
+/* UNCANONIZED — 2026-07-29 — custom engine rows (user request: bring your
+   own image API). Name · Courier facts · last test · actions. */
+.eng-row {
+  display: flex; align-items: center; gap: 14px; padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.eng-row-name { font-weight: 600; flex: none; }
+.eng-row-meta {
+  flex: 1; min-width: 0; font-family: var(--mono); font-size: 11px;
+  color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.eng-row-test { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+.eng-row button { flex: none; font-size: 12px; padding: 4px 12px; }
 
 /* App dialog — canonical (plan v3 C15): --panel2 on a --bg scrim, quiet
    Courier title, labeled fields, one primary/danger confirm + ghost cancel.
@@ -942,6 +962,34 @@ details.meta pre {
 .modal-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.modal.prompt-full { width: min(900px, 94vw); }
+.prompt-full-pre {
+  font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
+  margin: 0; max-height: 70vh; overflow-y: auto;
+  background: var(--field); border: 1px solid var(--line-soft); padding: 14px 16px;
+}
+
+/* =============================================================== scrollbars
+   Scrollbars are chrome, not content: flat, square, track invisible against
+   its surface, thumb one line-tone that brightens only under the pointer.
+   Amber never appears here — a scrollbar is not a signal. */
+* {
+  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-color: var(--line) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 2px solid transparent;               /* inset the thumb to 6px */
+  background-clip: padding-box;
+  border-radius: 0;                            /* square, like everything */
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--ink-faint); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+/* Dark overlays (lightbox, cropper) get a dimmer thumb so it doesn't glow */
+.lightbox ::-webkit-scrollbar-thumb, .cropper ::-webkit-scrollbar-thumb { background-color: var(--line-soft); background-clip: padding-box; }
 
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {

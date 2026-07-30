@@ -296,26 +296,26 @@
     <div class="panel">
       <h2>Reference library</h2>
       <p class="hint">Each image controls exactly one thing and nothing else. Approve to make it a canon anchor; rejecting quarantines it from the pipeline — Reinstate returns it to provisional review.</p>
+      <form id="ref-form" class="ref-add">
+        <input type="file" id="ref-file" accept="image/*" required
+          title="The reference image file itself. It is copied into the library; the original stays where it is.">
+        <input type="text" id="ref-role" list="role-list" placeholder="role — e.g. CHARACTER_LIKENESS — JOHN" required
+          title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">
+        <datalist id="role-list"></datalist>
+        <input type="text" id="ref-controls" placeholder="controls…"
+          title="Comma-separated aspects this image DOES govern within its role (e.g. face, hair, proportions). Spelled out in every prompt the reference is attached to.">
+        <input type="text" id="ref-nocontrols" placeholder="not…"
+          title="Comma-separated aspects this image must NOT influence (e.g. costume, lighting, camera angle) — stops the model copying things you only meant as context.">
+        <input type="text" id="ref-notes" placeholder="notes"
+          title="Free-form provenance notes — where the image came from, which scene it anchors. For your records; not sent to the model.">
+        <button type="submit" class="primary">+ Add reference</button>
+      </form>
       <div class="ref-bar">
         <span class="ref-chips" id="ref-chips"></span>
         <span class="ref-counts" id="ref-counts"></span>
       </div>
     </div>
     <div id="ref-grid" class="ref-grid"></div>
-    <div class="panel">
-      <h2>Add reference</h2>
-      <form id="ref-form" class="grid-form">
-        <label title="The reference image file itself. It is copied into the library; the original stays where it is.">Image <input type="file" id="ref-file" accept="image/*" required></label>
-        <label title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">Role
-          <input type="text" id="ref-role" list="role-list" placeholder="e.g. CHARACTER_LIKENESS — JOHN" required>
-          <datalist id="role-list"></datalist>
-        </label>
-        <label title="Comma-separated aspects this image DOES govern within its role (e.g. face, hair, proportions). Spelled out in every prompt the reference is attached to.">Controls <input type="text" id="ref-controls" placeholder="comma-separated, e.g. face, hair, proportions"></label>
-        <label title="Comma-separated aspects this image must NOT influence (e.g. costume, lighting, camera angle) — stops the model copying things you only meant as context.">Does not control <input type="text" id="ref-nocontrols" placeholder="e.g. costume, lighting, camera angle"></label>
-        <label class="wide" title="Free-form provenance notes — where the image came from, which scene it anchors. For your records; not sent to the model.">Notes <input type="text" id="ref-notes" placeholder="optional"></label>
-        <button type="submit" class="primary">Add to library</button>
-      </form>
-    </div>
   </section>
 </template>
 
@@ -435,6 +435,14 @@
           <span class="badge PROVISIONAL">USES OPENAI KEY</span>
         </div>
         <p class="hint" style="margin-bottom:0">GPT-5.6 first rewrites the compiled spec into render prose under zero-invention rules, then calls the same image model ChatGPT uses. No separate credential — it runs on the OpenAI key above.</p>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <div class="eng-head">
+          <div><h3 style="margin:0">Your engines</h3>
+            <p class="hint" style="margin:4px 0 0">bring your own image generation API — the endpoint must speak the OpenAI Images API (base URL + model + key); it then appears in every Model dropdown</p></div>
+          <button class="ghost" id="eng-add">+ Add engine</button>
+        </div>
+        <div id="custom-engines"></div>
       </div>
       <div class="panel" style="margin-top:20px">
         <div class="eng-head">

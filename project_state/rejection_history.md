@@ -21,3 +21,8 @@ Known recurring rejected inventions:
 - 2026-07-29T04:00:30+00:00 — CAND-0019 (CHARLIES_CABIN_V001/P01, gpt-image-2) permanently deleted. Reason: The GT40 does not look like a GT40 even though it had reference. 
 - 2026-07-29T04:00:36+00:00 — CAND-0018 (CHARLIES_CABIN_V001/P01, gemini-3-pro-image) permanently deleted. Reason: Did not capture the rendering style approved.
 - 2026-07-29T04:27:21+00:00 — CAND-0026 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
+- 2026-07-30T01:59:37+00:00 — CAND-0023 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not a real GT40 Mk2
+- 2026-07-30T01:59:46+00:00 — CAND-0024 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not a real GT40 MK2
+- 2026-07-30T01:59:53+00:00 — CAND-0027 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not a GT40
+- 2026-07-30T01:59:57+00:00 — CAND-0028 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: —
+- 2026-07-30T02:00:07+00:00 — CAND-0029 (CHARLIES_CABIN_V001/P02, gpt-image-2) permanently deleted. Reason: Not Authentic GT40
