@@ -385,7 +385,7 @@
 <template id="tpl-settings">
   <section class="view">
     <nav class="subnav" id="settings-subnav">
-      <button data-sub="api" class="active">API Keys</button>
+      <button data-sub="api" class="active">Engines &amp; keys</button>
       <button data-sub="workflow">Workflow &amp; Instructions</button>
       <button data-sub="faq">FAQ</button>
     </nav>
@@ -461,14 +461,14 @@
         <h2>The workflow</h2>
         <p>This app builds <b>canon-locked art direction boards</b>. The chain is:</p>
         <p class="chain">Screenplay + References → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
-        <h3>1 — Load your sources (Dashboard / Research)</h3>
-        <p>Upload the current screenplay on the Dashboard. Add reference images in the Research tab and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor. Rejecting one quarantines the file so it can never be used again.</p>
-        <h3>2 — Write or auto-fill a Specification</h3>
-        <p>A specification is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Use <b>Auto-fill</b> to have the AI read the screenplay and draft the sheet; then edit. Validate runs the canon rule engine; Approve &amp; lock freezes the spec with a content hash.</p>
-        <h3>3 — Generate panels (Boards)</h3>
-        <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked spec and spells out each reference's role boundary. Results are <b>CANDIDATE — UNAPPROVED</b> until you say otherwise.</p>
-        <h3>4 — Assemble the board</h3>
-        <p>Once every panel has an approved candidate, <b>Assemble 4K board</b> composes them onto a true 4K canvas with board typography drawn by the app (never by the model). If a panel render is smaller than its slot it is centered unscaled and flagged — regenerate it larger; nothing is ever blown up.</p>
+        <h3>1 — Load your sources (01 Screenplay / Research)</h3>
+        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. Add reference images on the Research page and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
+        <h3>2 — Write or auto-fill a breakdown sheet (03 Breakdowns)</h3>
+        <p>A breakdown sheet is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the sheet; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the sheet with a content hash.</p>
+        <h3>3 — Generate and judge takes (04 Panels)</h3>
+        <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked sheet and spells out each reference's role boundary. Takes land in the filmstrip as <b>CANDIDATE — UNAPPROVED</b> until you judge them; reject with a specific reason and it feeds the panel's future prompts. Repair region fixes a painted area with your choice of engine.</p>
+        <h3>4 — Assemble the board (05 Boards)</h3>
+        <p>The slot map shows the exact canvas geometry and a verdict per slot before you spend anything. Once every slot reads OK, <b>Assemble 4K board</b> composes the approved takes onto a true 4K canvas with board typography drawn by the app (never by the model). Layout variants (default / grid / hero) are presentation only — recorded on the board, the locked sheet untouched. Nothing is ever blown up.</p>
         <h3>5 — Close the loop</h3>
         <p>Approve the board, then <b>→ Reference</b> promotes it (or any approved panel) into the reference library — e.g. as a <code>SCENE_REFERENCE</code> anchoring that screenplay scene. Future generations attach it, so consistency tightens with every approval. That is how the system improves over time without drifting.</p>
         <h3>Canon vs. Design Exploration</h3>
@@ -480,10 +480,12 @@
     <div data-subview="faq" class="hidden">
       <div class="panel doc">
         <h2>FAQ</h2>
-        <h3>Why can't I generate from my spec?</h3>
-        <p>Only <b>approved &amp; locked</b> specs can generate. Draft specs must pass Validate first (every panel needs required objects; every required object needs a PASS evidence row).</p>
+        <h3>Why can't I generate from my sheet?</h3>
+        <p>Only <b>approved &amp; locked</b> sheets can generate. The CANNOT-LOCK strip on the sheet lists exactly what approval would refuse — every required object needs a PASS evidence row, allocation must total 100%, every row needs a citation.</p>
         <h3>Why is my evidence row on HOLD?</h3>
-        <p>Auto-fill marks weak inferences HOLD deliberately — the model is not allowed to promote its own guesses. Read the cited source; if you agree, set the row to PASS yourself (you are the evidence when you do — that's <code>USER_DIRECTED</code>). A spec can't pass validation with HOLD rows on required objects.</p>
+        <p>Auto-fill marks weak inferences HOLD deliberately — the model is not allowed to promote its own guesses. Read the cited source; if you agree, set the row to PASS yourself (you are the evidence when you do — that's <code>USER_DIRECTED</code>). A sheet can't lock with HOLD rows on required objects.</p>
+        <h3>What happens when I replace the screenplay?</h3>
+        <p>Approved work is never invalidated. Every quoted citation on every sheet is re-searched in the new draft; quotes that vanish surface as CITE blockers on Status and in the Broken Citations panel on stage 01 — for your review, never auto-corrected.</p>
         <h3>Why did assembly warn about a panel?</h3>
         <p>That panel's render is smaller than its slot on the 4K canvas. The app never upscales — regenerate that panel at a larger size (usually 4K) and re-approve it.</p>
         <h3>What image sizes should I use?</h3>
@@ -495,7 +497,7 @@
         <h3>Where is everything stored?</h3>
         <p>Locally: <code>data/</code> holds references, screenplay, specs, boards, and your API key. <code>project_state/approval_log.md</code> is the running approval record. Nothing goes to any server except generation calls to Google.</p>
         <h3>What does a generation cost?</h3>
-        <p>Each render is a paid Google API call, billed to your key — rejected candidates cost the same as approved ones, which is why validation runs before generation, not after.</p>
+        <p>Each render is a paid API call to the engine you picked, billed to your key — rejected takes cost the same as approved ones, which is why validation runs before generation and the slot map shows readiness before assembly.</p>
       </div>
     </div>
   </section>

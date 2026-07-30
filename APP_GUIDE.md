@@ -1,29 +1,42 @@
-# Beltminer Production Stills — App Guide
+# Screenboard Studio — App Guide
 
 A standalone local app for building canon-locked art direction boards for a
 screenplay. The engine is project-agnostic — **The Beltminers** is the proving
 project. Everything runs and stays on your machine; the browser is just the screen.
 
-## Tabs — the art department, left to right
+> **The full walkthrough lives in [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)**
+> — screens, concepts, recipes, and FAQ, current to the 2026-07-29 five-stage
+> UI. This file is the operator's reference: setup, milestones, engines, and
+> the canon rules.
 
-**Dashboard** (status) → **Production Design** (the visual concept: wizard,
-Art Direction Bible/lookbook, style anchors, lessons) → **Research** (gathered
-reference: lookbook style plates + subject research) → **Breakdowns** (the
-script broken into per-board breakdown sheets) → **Boards** (the department
-wall) → **Settings** (keys and machinery). You are the Production Designer;
-the app is your art department.
+## The pipeline band — five stages plus three tools
 
-## New project setup (Production Design tab)
+The navigation band IS the pipeline, in work order:
+
+**01 Screenplay** (the root dependency: file, per-location coverage map,
+citation health) → **02 Prod. Design** (the visual concept: wizard, Art
+Direction Bible, style anchors, lessons) → **03 Breakdowns** (the script
+broken into per-board breakdown sheets) → **04 Panels** (the judging room:
+generate takes, review, approve) → **05 Boards** (assembly: slot map, layout
+variants, finished 4K boards). Each stage cell carries a live status subline
+and a progress-colored top border.
+
+In the header: **Status** (the landing page — DO THIS NEXT, everything
+blocking, recent activity) · **Research** (the reference library) ·
+**Settings** (engines and keys). You are the Production Designer; the app is
+your art department.
+
+## New project setup (Prod. Design stage)
 
 For a fresh screenplay, the **Setup** wizard establishes art direction:
-1. Upload the screenplay (Dashboard).
+1. Upload the screenplay (stage 01).
 2. **Style reference images** — three columns, one per style anchor: *Art
    board layout style* (how the finished board is laid out), *Cinematography
    style* (how the film is photographed — upload a spread of stills), and
    *Rendering style* (how panels are painted). Files upload on selection,
    approved with the matching role; each column shows its images with per-image
    delete and a use-in-draft toggle. Subject reference photos (actors,
-   vehicles, props) belong on the References tab.
+   vehicles, props) belong on the Research page.
 3. **Analyze screenplay** — the research model proposes the project's *design languages* (factions / cultures / technology families); confirm, rename, or drop.
    It also recommends **cast & key subjects** (characters, vehicles, props) as
    tags: click one and it becomes a title card — name, role epithets, and terse
@@ -48,31 +61,36 @@ an explicit selection.
 Double-click **`run.bat`** (or run `python -m app` from this folder).
 Your browser opens at `http://127.0.0.1:8765`. Close the console window to stop the app.
 
-## Current status (M1–M2)
+## Current status
 
 | Milestone | Status |
 |---|---|
 | M1 — Project skeleton, screenplay import, reference library with roles and approval | ✅ Built |
-| M2 — Specification editor backed by the canon validators | ✅ Built |
-| M3 — Panel generation (Gemini / Nano Banana Pro **or** OpenAI GPT Image 2, selectable per generation) | ✅ Built — needs a Google Gemini and/or OpenAI API key |
-| M4 — Automated image audit (Claude vision) | Planned — needs Anthropic API key |
-| M5 — 4K board assembly + typography + derived strips (slugline header, lighting-study grid, no upscaling) | ✅ Built |
-| M6 — Revision / regression workflow | Planned |
-| M7 — Region repair (paint a mask on any candidate, describe the change, regenerate just that region; engine selectable — GPT Image 2 true masked edit, or Gemini guided edit via a highlighted guide copy; result is a new candidate) | ✅ Built |
-| M8 — Activity log debrief (the app records all actions/rejections/errors to `data/activity_log.jsonl`; Claude reads it on request and recommends improvements) | ✅ Recorder built |
+| M2 — Specification editor backed by the canon validators (+ continuous CANNOT-LOCK gate) | ✅ Built |
+| M3 — Panel generation (Gemini / GPT Image 2 / ChatGPT pipeline, selectable per generation) | ✅ Built — needs a Google Gemini and/or OpenAI API key |
+| M4 — Automated image audit (Claude vision) | Deliberately skipped — the director is the audit; revisit only as drift comparison |
+| M5 — 4K board assembly + typography + derived strips + slot map + layout variants (no upscaling) | ✅ Built |
+| M6 — Revision workflow (Create revision, Unlock & edit with canon guards, journaled) | ✅ Built |
+| M7 — Region repair (paint a mask, describe the change, pick the engine — GPT Image 2 true masked edit or Gemini guided edit; result is a new take) | ✅ Built |
+| M8 — Activity log + debrief surfaces (`data/activity_log.jsonl` flight recorder; Recent feed, blockers, stage summary in-app; Claude reads the log on request) | ✅ Built |
+| 2026-07-29 — Plan v3 UI (five-stage band, judging room, screenplay coverage + citation re-check, canonical design system, in-app dialogs) | ✅ Built |
 
 ## The workflow
 
-1. **Dashboard** — shows missing dependencies, reference/spec counts, and the
-   prohibited-inventions list (seeded from the rejection history). Upload the
-   current screenplay here.
-2. **References** — upload reference images and assign each a *narrow role*
+1. **Status / Screenplay** — Status leads with DO THIS NEXT and the blocking
+   list (HOLD/GAP/SIZE/CITE rows with resolving jumps) plus the recent-
+   activity feed; the Screenplay stage holds the file, the per-location
+   coverage map, and the citation re-check. Upload drafts on stage 01 —
+   cited quotes are re-searched on every replace and breaks surface as CITE
+   blockers, never as silent edits.
+2. **Research** — upload reference images and assign each a *narrow role*
    (e.g. `CHARACTER_LIKENESS — JOHN`, `VEHICLE_GEOMETRY — GT40 REAR`,
    `BOARD_LAYOUT_STYLE` for Master Board #001). A reference controls only what
    its role says it controls. Approve a reference to make it a canon anchor;
    reject it and the file is physically quarantined so it can never be attached
    to a generation again.
-3. **Specifications** — create a Production Generation Specification per board:
+3. **Breakdowns** — create a breakdown sheet (Production Generation
+   Specification) per board:
    panels (purpose, required/forbidden objects, layout %), forbidden elements,
    and the object-level evidence ledger. **Validate** runs the same
    deterministic canon checks as `scripts/validate_spec.py` and
@@ -122,7 +140,7 @@ canon; reject it first if you truly mean to destroy it.
 
 Rejected candidate cards have a **Delete forever** button, and when a board has
 any rejected candidates a **Delete all rejected** button appears at the top of
-the Boards view. Deletion is permanent (image + record removed from disk) and
+the takes filmstrip in the judging room. Deletion is permanent (image + record removed from disk) and
 only allowed for REJECTED candidates — reject first, then delete. Each deletion
 is logged to `project_state/rejection_history.md`, and rejection reasons stay in
 the lessons-learned list, so the institutional memory outlives the file.
@@ -150,7 +168,7 @@ approved atmosphere studies.
 
 ### Derived panels & harvesting
 
-- **Derive palette** (Boards tab, per board): dominant colors sampled straight
+- **Derive palette** (judging room rail → DERIVED): dominant colors sampled straight
   from the board's approved panels' pixels — a measurement, not a generation;
   zero drift by construction. Lands as a PALETTE candidate for approval.
 - **Derive materials**: a generated close-up materials strip whose only allowed
@@ -176,7 +194,7 @@ approved atmosphere studies.
 ### Where render style comes from
 
 `context/01_ART_DIRECTION_BIBLE.md` is the single authoritative source of
-rendering language (editable under Settings → Art Direction Bible). The prompt
+rendering language (editable on the Prod. Design page). The prompt
 compiler injects the sections that apply to each panel: Visual Identity,
 Rendering Language, Lighting Language, and Character Presentation always;
 faction design + material language (Resistance / GRM / Beltminer) when the
