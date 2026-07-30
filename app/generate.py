@@ -19,6 +19,36 @@ PROVIDERS = {
 }
 DEFAULT_PROVIDER = "gemini"
 
+
+def custom_engines() -> list[dict]:
+    """User-added image engines (Settings → Engines & keys). The contract:
+    the endpoint must speak the OpenAI Images API (images.generate /
+    images.edit) at its base_url with the given key and model. Stored in
+    data/settings.json under custom_engines."""
+    out = []
+    for e in load_settings().get("custom_engines", []):
+        if e.get("id") and e.get("api_key") and e.get("model"):
+            out.append(e)
+    return out
+
+
+def all_providers() -> dict:
+    """Built-in engines plus every user-added one (ids 'custom:<id>')."""
+    providers = dict(PROVIDERS)
+    for e in custom_engines():
+        providers[f"custom:{e['id']}"] = {
+            "model": e["model"], "label": e.get("label") or e["id"],
+            "custom": True}
+    return providers
+
+
+def _custom_engine(provider: str) -> dict:
+    eng = next((e for e in custom_engines()
+                if f"custom:{e['id']}" == provider), None)
+    if eng is None:
+        raise GenerationError(f"unknown custom engine: {provider}")
+    return eng
+
 BOARD_TYPES = {"SCENE", "LOCATION", "ASSET", "LIGHTING_STUDY", "MASTER"}
 DEFAULT_BOARD_TYPE = "LOCATION"  # legacy specs predate types; they behaved as location boards
 TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"]
@@ -163,8 +193,22 @@ def _openai_client(timeout_s: float = 300.0):
 
 
 def test_connection(provider: str = DEFAULT_PROVIDER) -> dict:
-    if provider not in PROVIDERS:
+    if provider not in all_providers():
         raise GenerationError(f"unknown provider: {provider}")
+    if provider.startswith("custom:"):
+        from openai import OpenAI
+        eng = _custom_engine(provider)
+        client = OpenAI(api_key=eng["api_key"], base_url=eng["base_url"],
+                        timeout=20.0)
+        try:
+            model = client.models.retrieve(eng["model"])
+            got = getattr(model, "id", eng["model"])
+        except Exception:
+            # Not every OpenAI-compatible server implements /models —
+            # reaching it and being authorized is the meaningful part.
+            client.models.list()
+            got = eng["model"]
+        return {"ok": True, "provider": provider, "model": got}
     if provider in ("openai", "openai-chat"):
         client = _openai_client(timeout_s=20.0)
         want = OPENAI_MODEL if provider == "openai" else OPENAI_CHAT_MODEL
@@ -595,6 +639,46 @@ def _render_openai(prompt: str, ref_paths: list[Path],
     return getattr(response.data[0], "revised_prompt", "") or ""
 
 
+def _render_custom(provider: str, prompt: str, ref_paths: list[Path],
+                   image_size: str, aspect_ratio: str, out_path: Path) -> str:
+    """User-added engine: OpenAI Images API contract at the engine's
+    base_url. References attach via images.edit when present; servers that
+    return URLs instead of base64 are handled. Provider errors surface
+    verbatim — the app can't paper over a third party."""
+    import base64
+    from openai import OpenAI
+
+    eng = _custom_engine(provider)
+    client = OpenAI(api_key=eng["api_key"], base_url=eng["base_url"])
+    size = openai_size(image_size, aspect_ratio)
+    name = eng.get("label") or eng["id"]
+    try:
+        if ref_paths:
+            files = [p.open("rb") for p in ref_paths]
+            try:
+                response = client.images.edit(
+                    model=eng["model"], image=files if len(files) > 1 else files[0],
+                    prompt=prompt, size=size)
+            finally:
+                for f in files:
+                    f.close()
+        else:
+            response = client.images.generate(
+                model=eng["model"], prompt=prompt, size=size)
+    except Exception as e:
+        raise GenerationError(f"{name} generation failed: {e}") from e
+
+    data = getattr(response, "data", None)
+    if data and getattr(data[0], "b64_json", None):
+        out_path.write_bytes(base64.b64decode(data[0].b64_json))
+    elif data and getattr(data[0], "url", None):
+        import urllib.request
+        out_path.write_bytes(urllib.request.urlopen(data[0].url).read())
+    else:
+        raise GenerationError(f"{name} returned no image.")
+    return getattr(data[0], "revised_prompt", "") or ""
+
+
 # The rewriter gets one job: turn the spec into vivid render prose. The spec's
 # canon constraints must survive the rewrite verbatim in effect, so the
 # instruction pins invention to zero — same rule the spec itself states.
@@ -663,7 +747,7 @@ def _chat_model() -> str:
 
 def preferred_provider() -> str:
     p = load_settings().get("preferred_provider", "")
-    return p if p in PROVIDERS else DEFAULT_PROVIDER
+    return p if p in all_providers() else DEFAULT_PROVIDER
 
 
 def draft_render_prose(spec_id: str, panel_id: str, ref_ids: list[str]) -> dict:
@@ -685,6 +769,23 @@ def draft_render_prose(spec_id: str, panel_id: str, ref_ids: list[str]) -> dict:
     return {"prose": text, "chat_model": chat_model}
 
 
+def _chat_tool_size(aspect_ratio: str) -> str:
+    """The Responses API image_generation tool accepts ONLY 1024x1024,
+    1024x1536, 1536x1024, or auto — arbitrary pixel sizes 400 with
+    invalid_value. Pick by orientation; the pipeline therefore caps near
+    1.5K regardless of the Size selection — use a direct engine for
+    larger renders."""
+    try:
+        w, h = (int(x) for x in aspect_ratio.split(":"))
+    except (ValueError, AttributeError):
+        return "auto"
+    if w > h:
+        return "1536x1024"
+    if h > w:
+        return "1024x1536"
+    return "1024x1024"
+
+
 def _render_openai_chat(prompt: str, ref_paths: list[Path],
                         image_size: str, aspect_ratio: str, out_path: Path,
                         verbatim: bool = False) -> str:
@@ -692,7 +793,7 @@ def _render_openai_chat(prompt: str, ref_paths: list[Path],
     import mimetypes
 
     client = _openai_client()
-    size = openai_size(image_size, aspect_ratio)
+    size = _chat_tool_size(aspect_ratio)
     chat_model = _chat_model()
 
     instructions = _VERBATIM_INSTRUCTIONS if verbatim else _rewriter_instructions()
@@ -1021,8 +1122,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         raise GenerationError(f"image_size must be one of {sorted(IMAGE_SIZES)}")
     if aspect_ratio not in ASPECT_RATIOS:
         raise GenerationError(f"aspect_ratio must be one of {sorted(ASPECT_RATIOS)}")
-    if provider not in PROVIDERS:
-        raise GenerationError(f"provider must be one of {sorted(PROVIDERS)}")
+    providers = all_providers()
+    if provider not in providers:
+        raise GenerationError(f"provider must be one of {sorted(providers)}")
 
     spec, panel, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
     prompt = compile_panel_prompt(spec, panel, refs)
@@ -1040,6 +1142,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # A user-edited prompt is final copy: skip the rewrite, render it as-is.
         notes = _render_openai_chat(override or prompt, ref_paths, image_size,
                                     aspect_ratio, img_path, verbatim=bool(override))
+    elif provider.startswith("custom:"):
+        notes = _render_custom(provider, override or prompt, ref_paths,
+                               image_size, aspect_ratio, img_path)
     else:
         render = _render_openai if provider == "openai" else _render_gemini
         notes = render(override or prompt, ref_paths, image_size, aspect_ratio, img_path)
@@ -1053,7 +1158,7 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         "panel_id": panel_id,
         "status": "CANDIDATE",
         "provider": provider,
-        "model": PROVIDERS[provider]["model"],
+        "model": providers[provider]["model"],
         "image_size": image_size,
         "aspect_ratio": aspect_ratio,
         "width": width,
@@ -1216,8 +1321,9 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
     from common import stable_hash
     from PIL import Image
 
-    if provider not in PROVIDERS:
-        raise GenerationError(f"provider must be one of {sorted(PROVIDERS)}")
+    providers = all_providers()
+    if provider not in providers:
+        raise GenerationError(f"provider must be one of {sorted(providers)}")
     sources = _approved_panel_candidates(spec_id)
     if not sources:
         raise GenerationError(
@@ -1268,6 +1374,8 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
                                     verbatim=True)
     elif provider == "openai":
         notes = _render_openai(prompt, src_paths, image_size, "21:9", img_path)
+    elif provider.startswith("custom:"):
+        notes = _render_custom(provider, prompt, src_paths, image_size, "21:9", img_path)
     else:
         notes = _render_gemini(prompt, src_paths, image_size, "21:9", img_path)
     with Image.open(img_path) as im:
@@ -1281,7 +1389,7 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
         "kind": "derived_materials",
         "status": "CANDIDATE",
         "provider": provider,
-        "model": PROVIDERS[provider]["model"],
+        "model": providers[provider]["model"],
         "image_size": image_size, "aspect_ratio": "21:9",
         "width": width, "height": height,
         "references": [{"id": c["candidate_id"], "role": "MATERIAL_SOURCE",

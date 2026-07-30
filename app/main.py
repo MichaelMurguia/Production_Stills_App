@@ -316,6 +316,14 @@ def api_get_settings() -> dict:
         "openai-chat": {"configured": bool(openai_src), "source": openai_src,
                         "last_test": tests.get("openai-chat")},
     }
+    customs = []
+    for e in generate.custom_engines():
+        pid = f"custom:{e['id']}"
+        engines[pid] = {"configured": True, "source": "settings",
+                        "last_test": tests.get(pid)}
+        customs.append({"id": e["id"], "label": e.get("label") or e["id"],
+                        "model": e["model"], "base_url": e.get("base_url", ""),
+                        "key_hint": f"…{e['api_key'][-4:]}"})
     return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "gemini_api_key_set": bool(gkey),
             "gemini_api_key_hint": f"…{gkey[-4:]}" if gkey else None,
@@ -323,7 +331,8 @@ def api_get_settings() -> dict:
             "openai_api_key_hint": f"…{okey[-4:]}" if okey else None,
             "model": generate.MODEL,
             "openai_model": generate.OPENAI_MODEL,
-            "providers": {k: v["label"] for k, v in generate.PROVIDERS.items()},
+            "providers": {k: v["label"] for k, v in generate.all_providers().items()},
+            "custom_engines": customs,
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),
             "engines": engines}
@@ -338,9 +347,48 @@ async def api_save_settings(body: dict) -> dict:
         s["openai_api_key"] = str(body["openai_api_key"]).strip()
     if "preferred_provider" in body:
         p = str(body["preferred_provider"]).strip()
-        if p not in generate.PROVIDERS:
+        if p not in generate.all_providers():
             raise HTTPException(422, f"unknown provider: {p}")
         s["preferred_provider"] = p
+    generate.save_settings(s)
+    return api_get_settings()
+
+
+@app.post("/api/settings/engines")
+async def api_add_engine(body: dict) -> dict:
+    """Add a user-owned image engine. Contract: the endpoint must speak the
+    OpenAI Images API (images.generate / images.edit) at base_url."""
+    import re as _re
+    label = str(body.get("label", "")).strip()
+    base_url = str(body.get("base_url", "")).strip()
+    model = str(body.get("model", "")).strip()
+    api_key = str(body.get("api_key", "")).strip()
+    if not (label and base_url and model and api_key):
+        raise HTTPException(422, "label, base_url, model, and api_key are all required")
+    if not base_url.startswith(("http://", "https://")):
+        raise HTTPException(422, "base_url must start with http:// or https://")
+    eid = _re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "engine"
+    s = generate.load_settings()
+    engines = s.get("custom_engines", [])
+    if any(e.get("id") == eid for e in engines):
+        raise HTTPException(409, f"an engine named '{eid}' already exists — remove it first")
+    engines.append({"id": eid, "label": label, "base_url": base_url,
+                    "model": model, "api_key": api_key})
+    s["custom_engines"] = engines
+    generate.save_settings(s)
+    return api_get_settings()
+
+
+@app.delete("/api/settings/engines/{eid}")
+def api_delete_engine(eid: str) -> dict:
+    s = generate.load_settings()
+    engines = s.get("custom_engines", [])
+    if not any(e.get("id") == eid for e in engines):
+        raise HTTPException(404, f"no custom engine '{eid}'")
+    s["custom_engines"] = [e for e in engines if e.get("id") != eid]
+    if s.get("preferred_provider") == f"custom:{eid}":
+        s["preferred_provider"] = generate.DEFAULT_PROVIDER
+    s.get("engine_tests", {}).pop(f"custom:{eid}", None)
     generate.save_settings(s)
     return api_get_settings()
 
