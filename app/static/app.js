@@ -2142,6 +2142,13 @@ async function openSpecEditor(specId) {
       ${spec.autofilled ? '<span class="badge PROVISIONAL">AUTO-FILLED — REVIEW BEFORE APPROVING</span>' : ""}
     </h3>
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
+    ${locked ? `
+    <div class="gate-strip lock-strip">
+      <span class="gate-label" style="color:var(--ink-dim)">LOCKED</span>
+      <span class="gate-text">Approved and read-only — objects, panels, and the ledger cannot change here. To edit:</span>
+      <button class="block-act" data-f="lock-revise">Create revision</button>
+      <button class="block-act" data-f="lock-unlock">Unlock &amp; edit</button>
+    </div>` : ""}
     <div id="sp-gate"></div>
     ${(spec.unresolved_questions || []).length ? `
       <div class="report" style="margin-bottom:12px"><b>Unresolved design questions</b> — the screenplay does not answer these; decide them yourself or run a DESIGN_EXPLORATION board:
@@ -2637,14 +2644,16 @@ REMOVE — marked for removal from the board.">
       } catch (err) { toast(err.message, true); }
     };
   } else {
-    $("#sp-revise", panel).onclick = async () => {
+    const doRevise = async () => {
       try {
         const clone = await api(`/api/specs/${specId}/revise`, { method: "POST" });
         toast(`Revision ${clone.specification_id} created.`);
         renderSpecs(clone.specification_id);
       } catch (err) { toast(err.message, true); }
     };
-    $("#sp-unlock", panel).onclick = async () => {
+    $("#sp-revise", panel).onclick = doRevise;
+    $("[data-f=lock-revise]", panel).onclick = doRevise;
+    const doUnlock = async () => {
       if (!(await askConfirm(`Unlock ${specId} for editing`,
         "This VOIDS its approval (journaled in the approval log) and returns it to DRAFT — it disappears from Panels until you approve it again, and re-approving mints a new spec hash. Unapproved candidates keep the hash they were generated against.\n\nRefused automatically if any APPROVED candidate or board depends on this sheet — approved canon can never change out from under what it was approved against.\n\nTo keep the approved version as history instead, use Create revision.",
         "Unlock & edit", true))) return;
@@ -2654,6 +2663,8 @@ REMOVE — marked for removal from the board.">
         renderSpecs(specId);
       } catch (err) { toast(err.message, true); }
     };
+    $("#sp-unlock", panel).onclick = doUnlock;
+    $("[data-f=lock-unlock]", panel).onclick = doUnlock;
   }
 }
 

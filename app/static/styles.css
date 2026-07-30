@@ -173,6 +173,17 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 }
 .gate-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
 .gate-row .block-act { flex: none; }
+/* UNCANONIZED — 2026-07-30 — lock strip (user-reported: on a locked sheet
+   the add-object controls silently don't render, which reads as broken —
+   the gate must be readable as state). Grey variant of the gate strip with
+   inline resolve actions. */
+.gate-strip.lock-strip {
+  border-left-color: var(--line); background: var(--panel2);
+  flex-direction: row; align-items: baseline; gap: 12px;
+}
+.lock-strip .gate-text { flex: none; }
+.lock-strip .block-act { color: var(--ink); }
+.lock-strip .block-act:hover { text-decoration: underline; }
 
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {

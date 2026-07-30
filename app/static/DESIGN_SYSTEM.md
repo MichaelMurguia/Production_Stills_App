@@ -267,6 +267,7 @@ rows are then deleted.
 | 2026-07-30 | Pending take tile (`.take.pending/.take-spin`) + take state tags (approved green border/label, `· REF` suffix, `REFERENCE · REF-xxxx` badge on stage) | Judging room filmstrip + stage | in-flight renders needed a visible placeholder that survives closing the paint screen; approval and promotion state needed to read at a glance in the strip |
 | 2026-07-30 | Scene browser (`.loc-search/.loc-scroll/.scene-row`) | Screenplay stage | user request: all 252 scenes findable — search field over a scrollable list, locations expand to their scenes, each scene draftable; no existing pattern combined search + expandable rows |
 | 2026-07-30 | Placeholder hatch (subtle 45° stripe on `.slot`, empty stage shot, empty rail thumb, pending spin area) | Slot map + empty image areas | user note from mock 4b: empty image panels carry the design's diagonal stripe; flat `--bg2` read as unstyled |
+| 2026-07-30 | Lock strip (`.gate-strip.lock-strip`) | Spec editor, locked sheets | user-reported as a bug: on a locked sheet the add-object controls silently don't render, which reads as broken — the gate must be readable as state. Grey gate-strip variant stating LOCKED with inline Create revision / Unlock & edit actions |
 
 ---
 

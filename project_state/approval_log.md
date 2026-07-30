@@ -55,3 +55,6 @@ No production board approvals have been recorded in this source package.
 - 2026-07-30T11:53:22+00:00 — SPECIFICATION KYRA_FIGHTS_GRM_BOARD_V001 UNLOCKED for editing — approval of 2026-07-30T05:28:43+00:00 (hash c1c5fcf8939b8e96…) is void; existing candidates keep the hash they were generated against.
 - 2026-07-30T11:56:36+00:00 — SPECIFICATION KYRA_FIGHTS_GRM_BOARD_V001 permanently deleted; 1 candidate record(s) and 1 image(s) removed.
 - 2026-07-30T12:34:21+00:00 — SPECIFICATION TEMPLATE_TEST_V001 permanently deleted; 0 candidate record(s) and 0 image(s) removed.
+- 2026-07-30T12:51:34+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 approved and locked (hash 5b67691a51205a19…).
+- 2026-07-30T12:53:40+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 UNLOCKED for editing — approval of 2026-07-30T12:51:34+00:00 (hash 5b67691a51205a19…) is void; existing candidates keep the hash they were generated against.
+- 2026-07-30T12:59:01+00:00 — SPECIFICATION OBJPROBE_V001 permanently deleted; 0 candidate record(s) and 0 image(s) removed.
