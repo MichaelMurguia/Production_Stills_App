@@ -162,6 +162,26 @@ Prose was ~3:1 over interface by area in v1. Rules:
 
 `.badge.LOCKED` is deliberately grey: locked is a fact, not an action.
 
+**Intake row** (`.ref-add`). High-frequency entry into the list/library
+directly above it. Max 6 fields; placeholders name fields, tooltips explain
+them; only the one field a first-timer can't guess gets a Courier
+`--ink-faint` ghost prefix (dropped under 1100px). The submit is ghost — an
+intake row never spends the screen's amber. Anything needing explanation
+beyond a tooltip belongs in a dialog instead.
+
+**Registry rows** (`.eng-row`). User-registered externals (engines, any
+future integrations): sans name · Courier facts (ellipsize the middle) ·
+Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
+ghost actions. Rows separated by `--line-soft` top borders; no
+cards-within-cards.
+
+**Reading view** (`.modal.prompt-full`). The app dialog at
+`min(900px, 94vw)` holding one scrollable Courier document on `--field`,
+an identity line above it (Courier faint — what the document is), Copy +
+Close. Copy feedback via toast with the character count. Use it for any
+machine document too long for a rail — prompts, logs, raw JSON. Never for
+forms.
+
 ## Scrollbars
 
 Scrollbars are chrome, not content. The global rules in `styles.css` cover
@@ -233,9 +253,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-29 | Compact intake row (`.ref-add`) | Research — add reference at top | user asked for a one-line form; `.grid-form` is a 2-col page block, too heavy for an intake bar |
-| 2026-07-29 | Custom engine rows (`.eng-row`) | Settings — Your engines | list of user-owned engines with facts + test + remove; no existing row carried name · Courier facts · actions |
-| 2026-07-29 | Prompt reading view (`.modal.prompt-full`) | Provenance rail — Expand | detached full-screen read of a long compiled prompt with Copy; the rail pre and the dialog fields both cap too small |
+| — | *(none — the 2026-07-29 patterns were canonized by the 2026-07-30 design review)* | | |
 
 ---
 
@@ -244,6 +262,13 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — Design review: intake row, registry rows, and reading
+  view canonized (with role prefix, test-state coloring, identity line);
+  pipeline size cap surfaced on the Size select; custom engines stay out of
+  repair by ruling. Aspect catalog shipped the same day: film-format names
+  (CinemaScope 2.55:1, Scope 2.39:1, VistaVision 3:2, Academy 1.37:1),
+  labels "Name — ratio", unsupported ratios disabled per engine, snap on
+  model change — the pipeline no longer silently approximates.
 - **2026-07-29** — First live-use findings pass: scrollbar amendment applied;
   repair overlay gains Esc + "Close — render continues"; Research intake
   compacted to a top row (uncanonized); custom user engines added to Settings

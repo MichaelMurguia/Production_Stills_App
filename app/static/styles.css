@@ -896,13 +896,20 @@ details.meta pre {
 .carried { font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--bad); }
 
 /* reference library: filter chips + status counts + jurisdiction block */
-/* UNCANONIZED — 2026-07-29 — compact add-reference row (user request):
-   one-line intake form; explanations live in the title tooltips. */
+/* Intake row — canonical (design review 2026-07-30): one-line entry into
+   the library above it; placeholders name fields, tooltips explain them;
+   only the un-guessable field gets a ghost prefix; the submit is ghost —
+   an intake row never spends the screen's amber. */
 .ref-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 12px; }
 .ref-add input[type="text"] { flex: 1 1 130px; min-width: 0; padding: 7px 10px; font-size: 12.5px; }
 .ref-add #ref-role { flex: 2 1 220px; }
 .ref-add button { flex: none; }
+.intake-prefix {
+  flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint); margin-right: -2px;
+}
+@media (max-width: 1100px) { .intake-prefix { display: none; } }
 .ref-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .ref-chips { display: inline-flex; gap: 6px; }
 .ref-counts { margin-left: auto; display: inline-flex; gap: 16px; }
@@ -927,8 +934,9 @@ details.meta pre {
   background: var(--line-soft); border: 1px solid var(--line-soft); margin-top: 20px;
 }
 .facts-row > div { background: var(--panel); padding: 16px 18px; }
-/* UNCANONIZED — 2026-07-29 — custom engine rows (user request: bring your
-   own image API). Name · Courier facts · last test · actions. */
+/* Registry rows — canonical (design review 2026-07-30): user-registered
+   externals; sans name · Courier facts (ellipsized) · Courier test-state
+   (verdict word colored, date faint) · ghost actions; --line-soft splits. */
 .eng-row {
   display: flex; align-items: center; gap: 14px; padding: 9px 0;
   border-top: 1px solid var(--line-soft);
@@ -939,6 +947,8 @@ details.meta pre {
   color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .eng-row-test { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+.eng-row-test .ok { color: var(--ok); }
+.eng-row-test .bad { color: var(--bad); }
 .eng-row button { flex: none; font-size: 12px; padding: 4px 12px; }
 
 /* App dialog — canonical (plan v3 C15): --panel2 on a --bg scrim, quiet
@@ -962,7 +972,14 @@ details.meta pre {
 .modal-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+/* Reading view — canonical (design review 2026-07-30): one scrollable
+   Courier document with an identity line; prompts, logs, raw JSON. */
 .modal.prompt-full { width: min(900px, 94vw); }
+.reading-id {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+  color: var(--ink-faint);
+}
+.size-cap { display: block; margin: 5px 0 0; }
 .prompt-full-pre {
   font-family: var(--mono); font-size: 12px; line-height: 1.6;
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;

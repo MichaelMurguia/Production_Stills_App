@@ -323,19 +323,22 @@ const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false)
 async function copyText(text, what = "Prompt") {
   try {
     await navigator.clipboard.writeText(text);
-    toast(`${what} copied to the clipboard.`);
+    toast(`${what} copied — ${text.length.toLocaleString()} chars.`);
   } catch {
     toast("Clipboard unavailable — select the text and copy manually.", true);
   }
 }
 
-// Detached full-screen reading view for long machine text (compiled prompts).
-function promptOverlay(title, text) {
+// Reading view (canonical, design review 2026-07-30): the app dialog holding
+// one scrollable Courier document with an identity line — a copied prompt
+// must not lose its context. For prompts, logs, raw JSON; never for forms.
+function promptOverlay(title, text, identity = "") {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   ov.innerHTML = `
     <div class="modal prompt-full" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
+      ${identity ? `<div class="reading-id">${esc(identity)}</div>` : ""}
       <pre class="prompt-full-pre">${esc(text)}</pre>
       <div class="modal-actions">
         <button class="ghost" data-mf="copy">Copy</button>
@@ -805,7 +808,7 @@ async function renderSettings() {
       <span class="eng-row-meta">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}</span>
       <span class="eng-row-test" data-f="eng-test-out">${(() => {
         const t = (settings.engines || {})[`custom:${e.id}`]?.last_test;
-        return t ? `LAST TEST — ${t.ok ? "PASS" : "FAIL"} ${esc((t.at || "").slice(0, 16).replace("T", " "))}` : "";
+        return t ? `LAST TEST — <span class="${t.ok ? "ok" : "bad"}">${t.ok ? "PASS" : "FAIL"}</span> ${esc((t.at || "").slice(0, 16).replace("T", " "))}` : "";
       })()}</span>
       <button class="ghost" data-f="eng-test">Test</button>
       <button class="danger" data-f="eng-del">Remove</button>
@@ -2640,6 +2643,7 @@ async function renderBoardPanels(specId) {
         <div class="fgroup" title="Output resolution class: 1K for quick drafts, 2K for review candidates, 4K for finals. Always native resolution — never upscaled. (OpenAI flags output above 2560×1440 as experimental; prefer Gemini for 4K.)">
           <span class="f-label">Size</span>
           <select data-f="size">${IMAGE_SIZES.map(s => `<option ${s === "2K" ? "selected" : ""}>${s}</option>`).join("")}</select>
+          <span class="eng-note warn size-cap hidden" data-f="size-cap">PIPELINE CAP — RENDERS AT ≈1.5K PRESET</span>
         </div>
         <div class="fgroup" title="Width-to-height shape of the panel image. Film formats carry their names (CinemaScope 2.55:1, Scope 2.39:1, VistaVision 3:2, Academy 1.37:1). Ratios the selected engine cannot genuinely render are greyed — Gemini has a fixed set, the ChatGPT pipeline only 1:1 / 3:2 / 2:3, GPT Image 2 and custom engines render everything. Nothing is ever approximated.">
           <span class="f-label">Aspect</span>
@@ -2681,6 +2685,9 @@ async function renderBoardPanels(specId) {
     const supportsRatio = (a, prov) => !a.engines.length || a.engines.includes(prov);
     const syncAspects = (quiet) => {
       const prov = modelSel.value;
+      // A tooltip is invisible at the moment of choice: the size cap is a
+      // quiet standing fact whenever the pipeline is the selected engine.
+      $("[data-f=size-cap]", card).classList.toggle("hidden", prov !== "openai-chat");
       $$("option", aspectSel).forEach(o => {
         const a = aspectById[o.value];
         o.disabled = a ? !supportsRatio(a, prov) : false;
@@ -3076,8 +3083,10 @@ async function renderBoardPanels(specId) {
         fullBtn.textContent = expanded ? "Less" : "Full";
       };
       $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
-      $("[data-f=detach]", el).onclick = () =>
-        promptOverlay(`COMPILED PROMPT — ${c.candidate_id}`, promptText);
+      $("[data-f=detach]", el).onclick = () => promptOverlay(
+        "COMPILED PROMPT", promptText,
+        [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),
+         c.image_size].filter(Boolean).join(" · "));
     }
     return el;
   }

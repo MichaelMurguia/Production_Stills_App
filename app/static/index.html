@@ -299,7 +299,7 @@
       <form id="ref-form" class="ref-add">
         <input type="file" id="ref-file" accept="image/*" required
           title="The reference image file itself. It is copied into the library; the original stays where it is.">
-        <input type="text" id="ref-role" list="role-list" placeholder="role — e.g. CHARACTER_LIKENESS — JOHN" required
+        <span class="intake-prefix" title="The one field you can't guess — see the input's tooltip">ROLE</span><input type="text" id="ref-role" list="role-list" placeholder="e.g. CHARACTER_LIKENESS — JOHN" required
           title="The single narrow job this image does. STYLE roles (BOARD_RENDERING_STYLE — the painting; CINEMATOGRAPHY_STYLE — light/palette/atmosphere) are art direction, auto-attached to every generation. SUBJECT roles (CHARACTER_LIKENESS — JOHN, VEHICLE_GEOMETRY — GT40 REAR, …) anchor what things are, attached per panel. A reference controls nothing outside its role.">
         <datalist id="role-list"></datalist>
         <input type="text" id="ref-controls" placeholder="controls…"
@@ -308,7 +308,7 @@
           title="Comma-separated aspects this image must NOT influence (e.g. costume, lighting, camera angle) — stops the model copying things you only meant as context.">
         <input type="text" id="ref-notes" placeholder="notes"
           title="Free-form provenance notes — where the image came from, which scene it anchors. For your records; not sent to the model.">
-        <button type="submit" class="primary">+ Add reference</button>
+        <button type="submit" class="ghost">+ Add reference</button>
       </form>
       <div class="ref-bar">
         <span class="ref-chips" id="ref-chips"></span>
