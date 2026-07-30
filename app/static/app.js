@@ -854,7 +854,18 @@ async function renderScreenplay() {
       <div class="fact"><span>SIZE</span><b>${(sp.size / 1048576).toFixed(2)} MB</b></div>
       <div class="fact"><span>SHA256</span><b>${esc((sp.sha256 || "").slice(0, 8))}</b></div>
       <div class="fact"><span>UPLOADED</span><b>${esc(up)}</b></div>
-      <div class="fact" data-f="read"><span>READ</span><b>—</b></div>`;
+      <div class="fact" data-f="read"><span>READ</span><b>—</b></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" data-f="read-script" title="Open the extracted text of the current draft in the reading view">Read the screenplay</button>
+      </div>`;
+    $("[data-f=read-script]").onclick = async () => {
+      try {
+        const r = await api("/api/screenplay/text");
+        if (!r.available) { toast("No extractable text — image-only PDF?", true); return; }
+        promptOverlay("SCREENPLAY — CURRENT DRAFT", r.text,
+          `${sp.file} · ${(sp.sha256 || "").slice(0, 8)}`);
+      } catch (err) { toast(err.message, true); }
+    };
   } else {
     $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
   }
@@ -945,30 +956,65 @@ async function renderLocations(state = null, langs = 0) {
     </span>`;
   };
 
-  const rows = data.locations.slice(0, 12);
+  // Scrollable, searchable, expandable: every location, every scene under
+  // it, each scene draftable as its own SCENE breakdown.
+  const expanded = new Set();
+  const drawList = (q = "") => {
+    const needle = q.trim().toUpperCase();
+    const rows = data.locations.filter(l =>
+      !needle || l.location.includes(needle) ||
+      (l.scene_list || []).some(s => s.heading.toUpperCase().includes(needle)));
+    $("[data-f=loc-list]", host).innerHTML =
+      rows.map(l => {
+        const open = expanded.has(l.location) ||
+          (needle && !l.location.includes(needle));  // scene-only hits auto-expand
+        const sceneRows = open ? (l.scene_list || [])
+          .filter(s => !needle || s.heading.toUpperCase().includes(needle) || l.location.includes(needle))
+          .map((s, i) => `
+            <div class="scene-row">
+              <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
+              <button class="block-act loc-draft" data-loc="${esc(s.heading)}">Draft a sheet</button>
+            </div>`).join("") : "";
+        return `
+          <div class="loc-row" data-exp="${esc(l.location)}" style="cursor:pointer" title="click to ${open ? "collapse" : "list"} this location's scenes">
+            <span class="loc-slug">${open ? "▾" : "▸"} ${esc(l.int_ext)}. ${esc(l.location)}</span>
+            <span class="loc-scenes">${l.scenes}</span>
+            ${meter(l.detail)}
+            ${sheetCell(l)}
+          </div>${sceneRows}`;
+      }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`;
+
+    $$("[data-exp]", host).forEach(row => {
+      row.onclick = (e) => {
+        if (e.target.closest("button")) return;  // actions win over expand
+        const key = row.dataset.exp;
+        expanded.has(key) ? expanded.delete(key) : expanded.add(key);
+        drawList($("[data-f=loc-search]", host).value);
+      };
+    });
+    $$(".loc-draft", host).forEach(btn => {
+      btn.onclick = () => {
+        sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
+        showView("specs");
+      };
+    });
+    $$("[data-open]", host).forEach(btn => {
+      btn.onclick = () => openSheet(btn.dataset.open);
+    });
+  };
+
   host.innerHTML = `
     <div class="loc-head">
       <span class="f-label">Locations · ${data.locations.length}</span>
-      <span class="hint">${data.scene_count} scenes · sorted by scene count</span></div>
-    <div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>
-    ${rows.map(l => `
-      <div class="loc-row">
-        <span class="loc-slug">${esc(l.int_ext)}. ${esc(l.location)}</span>
-        <span class="loc-scenes">${l.scenes}</span>
-        ${meter(l.detail)}
-        ${sheetCell(l)}
-      </div>`).join("")}
-    ${data.locations.length > rows.length ? `<p class="mini">+ ${data.locations.length - rows.length} more location(s) with fewer scenes</p>` : ""}
+      <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>
+    <input type="text" data-f="loc-search" class="loc-search" placeholder="search locations and scenes…">
+    <div class="loc-scroll">
+      <div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>
+      <div data-f="loc-list"></div>
+    </div>
     <p class="mini"><span class="f-label" style="font-size:10px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`;
-  $$(".loc-draft", host).forEach(btn => {
-    btn.onclick = () => {
-      sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
-      showView("specs");
-    };
-  });
-  $$("[data-open]", host).forEach(btn => {
-    btn.onclick = () => openSheet(btn.dataset.open);
-  });
+  $("[data-f=loc-search]", host).addEventListener("input", e => drawList(e.target.value));
+  drawList();
 }
 
 /* --------------------------------------------------------------- settings */
@@ -1952,7 +1998,25 @@ async function renderSpecs(openId = null) {
     }
   };
   persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt", "spec-auto-mode", "spec-auto-provider"]);
-  persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode"]);
+  persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode", "spec-new-btype"]);
+
+  // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
+  // underscores.
+  for (const idSel of ["#spec-auto-id", "#spec-new-id"]) {
+    const el = $(idSel);
+    if (el) el.addEventListener("input", () => {
+      const pos = el.selectionStart;
+      el.value = el.value.toUpperCase().replace(/ /g, "_");
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  // Blank sheets seed their board grammar (panel count + allocations only).
+  const btypeSel = $("#spec-new-btype");
+  if (btypeSel && !btypeSel.options.length) {
+    btypeSel.innerHTML = BOARD_TYPES.map(t =>
+      `<option value="${t.value}">${esc(t.value)}</option>`).join("");
+  }
 
   // Arriving from the dashboard's location map: seed the draft subject.
   const locHint = sessionStorage.getItem("draftLocationHint");
@@ -2005,6 +2069,7 @@ async function renderSpecs(openId = null) {
           specification_id: $("#spec-new-id").value,
           subject: $("#spec-new-subject").value,
           mode: $("#spec-new-mode").value,
+          board_type: $("#spec-new-btype")?.value || "LOCATION",
         },
       });
       toast(`${spec.specification_id} created.`);
@@ -2204,7 +2269,31 @@ async function openSpecEditor(specId) {
     $$(".ptod-wrap", panel).forEach(el =>
       el.classList.toggle("hidden", !["LOCATION", "LIGHTING_STUDY"].includes(t)));
   };
-  $("#sp-btype", panel).onchange = updateSettingVis;
+  $("#sp-btype", panel).onchange = async () => {
+    updateSettingVis();
+    if (locked) return;
+    // Re-template on type change, but ONLY a sheet that is still empty —
+    // a panel with any purpose, object, or ledger row is user content.
+    const untouched =
+      $$("[data-f=purpose]", panelsHost).every(i => !i.value.trim()) &&
+      !$$(".chip", panelsHost).length && !ledgerHost.children.length;
+    if (!untouched) return;
+    const t = $("#sp-btype", panel).value;
+    try {
+      const tmpl = (await api("/api/settings")).board_templates?.[t];
+      if (!tmpl) return;
+      if (!(await askConfirm(`Apply the ${t} board grammar?`,
+        `The empty panels are replaced by the ${t} template: ${tmpl.length} panel${tmpl.length > 1 ? "s" : ""} (hero ${tmpl[0]}%${tmpl.length > 1 ? ` + supports ${tmpl.slice(1).join("/")}%` : ""}). Structure only — purposes and objects stay yours to write.`,
+        "Apply grammar"))) return;
+      panelsHost.innerHTML = "";
+      tmpl.forEach((a, i) => {
+        const pid = `P${String(i + 1).padStart(2, "0")}`;
+        allocById[pid] = a;
+        addPanelRow({ id: pid, title: i === 0 ? "Hero" : `Support ${i}`,
+                      composition_role: i === 0 ? "hero" : "support" });
+      });
+    } catch (err) { toast(err.message, true); }
+  };
 
   function nextPanelId() {
     const used = $$(".panel-card[data-pid]", panelsHost).map(r => r.dataset.pid);
@@ -2810,6 +2899,12 @@ async function renderBoardPanels(specId) {
       caption: `${c.candidate_id} — ${p.id} (${c.status}) ${c.width}×${c.height}`,
     }));
 
+    // A promoted take carries its reference id — back-linked on promote,
+    // with a legacy fallback matching the promotion note.
+    const promotedRefOf = c => c.promoted_ref ||
+      refs.find(r => (r.notes || "").includes(`promoted from ${c.candidate_id} of`))?.id || null;
+
+    const stagedRef = staged ? promotedRefOf(staged) : null;
     const stagedHtml = !staged ? `
       <div class="stage-shot empty"><span class="mini">No takes yet — set the model below and generate the first candidate.</span></div>` : `
       <div class="stage-shot" title="Click to open at full size">
@@ -2817,6 +2912,7 @@ async function renderBoardPanels(specId) {
       </div>
       <div class="shot-under">
         <span class="shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
+        ${stagedRef ? `<span class="badge LOCKED" title="This take was promoted into the reference library — it anchors future generations">REFERENCE · ${esc(stagedRef)}</span>` : ""}
         <span class="shot-actions" data-f="primary-actions"></span>
       </div>
       <div class="shot-ghost-row" data-f="ghost-actions"></div>
@@ -2836,13 +2932,16 @@ async function renderBoardPanels(specId) {
         </div>
         <div class="takes-row">
           ${pending.map(pendingTileHtml).join("")}
-          ${panelCands.map(c => `
+          ${panelCands.map(c => {
+            const pr = promotedRefOf(c);
+            return `
             <button class="take${staged && c.candidate_id === staged.candidate_id ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
-                    title="${esc(c.candidate_id)} (${esc(c.status)})${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
+                    title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
               <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="">
-              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : c.status === "APPROVED" ? " APPROVED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}</span>
-            </button>`).join("")}
+              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : c.status === "APPROVED" ? " APPROVED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}${pr ? " · REF" : ""}</span>
+            </button>`;
+          }).join("")}
         </div>
       </div>`;
 

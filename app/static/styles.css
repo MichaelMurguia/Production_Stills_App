@@ -729,6 +729,14 @@ details.meta pre {
 .loc-open:hover { color: var(--ink); text-decoration: underline; }
 .loc-open.held { color: var(--accent); }
 .loc-draft { justify-self: start; font-family: var(--mono); font-size: 12px; }
+.loc-search { max-width: 380px; margin: 8px 0 4px; padding: 7px 11px; font-size: 12.5px; }
+.loc-scroll { max-height: 460px; overflow-y: auto; }
+.scene-row {
+  display: flex; align-items: center; gap: 12px; padding: 4px 0 4px 26px;
+  border-top: 1px dashed var(--line-soft);
+}
+.scene-row .loc-slug { flex: 1; font-size: 11.5px; }
+.scene-row .loc-draft { flex: none; font-size: 11px; }
 
 /* Fact rows — canonical (mocks 4a/4d): label faint Courier left, value
    Courier right; the vocabulary for any machine-facts card. */

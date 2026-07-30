@@ -436,17 +436,56 @@ def spec_locked(spec_id: str) -> bool:
     return spec_id in _load_locks()
 
 
-def new_spec(spec_id: str, subject: str, mode: str) -> dict:
+# Board grammars (director's ruling 2026-07-30): a template is panel COUNT
+# and ALLOCATION structure only — never camera views, never content. The
+# board may crop images to fit its layout; originals stay one click away.
+# (Board-type names mirror generate.BOARD_TYPES.)
+BOARD_TEMPLATES = {
+    "SCENE": [50, 25, 25],
+    "LOCATION": [50, 25, 25],
+    "ASSET": [60, 20, 20],
+    "LIGHTING_STUDY": [25, 25, 25, 25],
+    "MASTER": [55, 15, 15, 15],
+}
+
+
+def template_panels(board_type: str) -> tuple[list[dict], list[dict]]:
+    """Structural panels for a fresh sheet: neutral titles, empty purposes
+    (the lock gate keeps them honest), hero-weighted allocations."""
+    allocs = BOARD_TEMPLATES.get(board_type, BOARD_TEMPLATES["LOCATION"])
+    panels, layout = [], []
+    for i, a in enumerate(allocs, 1):
+        pid = f"P{i:02d}"
+        panels.append({
+            "id": pid,
+            "title": "Hero" if i == 1 else f"Support {i - 1}",
+            "purpose": "",
+            "required_objects": [],
+            "forbidden_objects": [],
+            "evidence": ["USER_DIRECTED"],
+            "scale": "WIDE" if i == 1 else "MEDIUM",
+            "composition_role": "hero" if i == 1 else "support",
+        })
+        layout.append({"id": pid, "allocation_percent": a})
+    return panels, layout
+
+
+def new_spec(spec_id: str, subject: str, mode: str,
+             board_type: str = "LOCATION") -> dict:
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise ValueError(f"invalid mode: {mode}")
+    if board_type not in BOARD_TEMPLATES:
+        raise ValueError(f"invalid board type: {board_type}")
     p = _spec_path(spec_id)
     if p.exists():
         raise FileExistsError(f"specification already exists: {spec_id}")
+    panels, layout_panels = template_panels(board_type)
     spec = {
         "specification_id": spec_id,
         "project": "The Beltminers",
         "subject": subject,
         "mode": mode,
+        "board_type": board_type,
         "status": "DRAFT",
         "revision": 1,
         "canon_sources": [
@@ -460,20 +499,11 @@ def new_spec(spec_id: str, subject: str, mode: str) -> dict:
         },
         "layout": {
             "canvas": "wide cinematic production board",
-            "panels": [{"id": "P01", "allocation_percent": 100}],
+            "panels": layout_panels,
         },
         "render_intent": ("Painterly production-development board, warm neutral "
                           "ground, strong hierarchy, visible brushwork, concise labels."),
-        "panels": [{
-            "id": "P01",
-            "title": "Hero panel",
-            "purpose": "Define the primary production question",
-            "required_objects": [],
-            "forbidden_objects": [],
-            "evidence": ["USER_DIRECTED"],
-            "scale": "WIDE",
-            "composition_role": "hero",
-        }],
+        "panels": panels,
         "evidence_ledger": [],
     }
     _atomic_write_json(p, spec)

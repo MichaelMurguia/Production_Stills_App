@@ -362,6 +362,7 @@
           <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
           <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
         </select>
+        <select id="spec-new-btype" title="The board type seeds the sheet with its board grammar — panel count and allocations only (hero + supports), never content. Change it later and an untouched sheet re-templates on request."></select>
         <button type="submit" class="ghost">Create blank sheet</button>
       </form>
     </div>
@@ -478,7 +479,7 @@
         <h3>3 — Generate and judge takes (04 Panels)</h3>
         <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked sheet and spells out each reference's role boundary. Takes land in the filmstrip as <b>CANDIDATE — UNAPPROVED</b> until you judge them; reject with a specific reason and it feeds the panel's future prompts. Repair region fixes a painted area with your choice of engine.</p>
         <h3>4 — Assemble the board (05 Boards)</h3>
-        <p>The slot map shows the exact canvas geometry and a verdict per slot before you spend anything. Once every slot reads OK, <b>Assemble 4K board</b> composes the approved takes onto a true 4K canvas with board typography drawn by the app (never by the model). Layout variants (default / grid / hero) are presentation only — recorded on the board, the locked sheet untouched. Nothing is ever blown up.</p>
+        <p>The slot map shows the exact canvas geometry and a verdict per slot before you spend anything. Once every slot reads OK, <b>Assemble 4K board</b> composes the approved takes onto a true 4K canvas with board typography drawn by the app (never by the model). Slots crop images to fit the layout — the originals stay one click away in the judging room. Layout variants (default / grid / hero) are presentation only — recorded on the board, the locked sheet untouched. Nothing is ever blown up: a take too small to fill its slot is letterboxed and flagged instead.</p>
         <h3>5 — Close the loop</h3>
         <p>Approve the board, then <b>→ Reference</b> promotes it (or any approved panel) into the reference library — e.g. as a <code>SCENE_REFERENCE</code> anchoring that screenplay scene. Future generations attach it, so consistency tightens with every approval. That is how the system improves over time without drifting.</p>
         <h3>Canon vs. Design Exploration</h3>
@@ -497,7 +498,7 @@
         <h3>What happens when I replace the screenplay?</h3>
         <p>Approved work is never invalidated. Every quoted citation on every sheet is re-searched in the new draft; quotes that vanish surface as CITE blockers on Status and in the Broken Citations panel on stage 01 — for your review, never auto-corrected.</p>
         <h3>Why did assembly warn about a panel?</h3>
-        <p>That panel's render is smaller than its slot on the 4K canvas. The app never upscales — regenerate that panel at a larger size (usually 4K) and re-approve it.</p>
+        <p>That panel's render cannot fill its slot on the 4K canvas at native size. The app never upscales — it letterboxes and flags instead. Regenerate that panel at a larger size (usually 4K), or use → Full-size take, and re-approve it.</p>
         <h3>What image sizes should I use?</h3>
         <p>Iterate at 2K (cheaper, faster), regenerate final picks at 4K. Hero slots fill best with 4:3 or 3:2 aspect; the right-column strips suit 16:9 or 21:9.</p>
         <h3>What happens when I reject something?</h3>

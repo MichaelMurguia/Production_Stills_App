@@ -1418,6 +1418,17 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     return record
 
 
+def mark_promoted(spec_id: str, cand_id: str, ref_id: str) -> None:
+    """Back-link a promoted take to the reference it became, so the judging
+    room can badge it."""
+    record = get_candidate(spec_id, cand_id)
+    if record is None:
+        return
+    record["promoted_ref"] = ref_id
+    (paths.BOARDS_DIR / spec_id / f"{cand_id}.json").write_text(
+        json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def delete_candidate(spec_id: str, cand_id: str) -> dict:
     """Permanently delete a rejected candidate's image and record. Guarded:
     only REJECTED candidates can be deleted — reject first, then delete. The

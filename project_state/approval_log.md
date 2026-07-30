@@ -51,3 +51,7 @@ No production board approvals have been recorded in this source package.
 - 2026-07-30T05:18:03+00:00 — REFERENCE REF-0034 (CAND-0040 (CHARLIES_CABIN_V001).png) approved as SCENE_REFERENCE — P02 SHACK IN THE MEADOW. Controls: composition, content, palette.
 - 2026-07-30T05:22:17+00:00 — PANEL CANDIDATE CAND-0042 (CHARLIES_CABIN_V001 / P02) approved. Spec hash b24a1d9920bf3968…
 - 2026-07-30T05:22:44+00:00 — REFERENCE REF-0035 (CAND-0042 (CHARLIES_CABIN_V001).png) approved as SCENE_REFERENCE — P02 SHACK IN THE MEADOW. Controls: composition, content, light, palette.
+- 2026-07-30T05:28:43+00:00 — SPECIFICATION KYRA_FIGHTS_GRM_BOARD_V001 approved and locked (hash c1c5fcf8939b8e96…).
+- 2026-07-30T11:53:22+00:00 — SPECIFICATION KYRA_FIGHTS_GRM_BOARD_V001 UNLOCKED for editing — approval of 2026-07-30T05:28:43+00:00 (hash c1c5fcf8939b8e96…) is void; existing candidates keep the hash they were generated against.
+- 2026-07-30T11:56:36+00:00 — SPECIFICATION KYRA_FIGHTS_GRM_BOARD_V001 permanently deleted; 1 candidate record(s) and 1 image(s) removed.
+- 2026-07-30T12:34:21+00:00 — SPECIFICATION TEMPLATE_TEST_V001 permanently deleted; 0 candidate record(s) and 0 image(s) removed.

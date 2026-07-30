@@ -412,7 +412,7 @@ def locations() -> dict:
         place = _strip_time_tail(place)
         if not place:
             continue
-        scenes.append({"line": i,
+        scenes.append({"line": i, "heading": s,
                        "int_ext": m.group(1).replace(".", "").upper(),
                        "location": place})
     for idx, sc in enumerate(scenes):
@@ -423,10 +423,11 @@ def locations() -> dict:
     for sc in scenes:
         g = groups.setdefault(sc["location"], {
             "location": sc["location"], "int_ext": set(),
-            "scenes": 0, "body_lines": 0})
+            "scenes": 0, "body_lines": 0, "scene_list": []})
         g["int_ext"].add(sc["int_ext"])
         g["scenes"] += 1
         g["body_lines"] += sc["body"]
+        g["scene_list"].append({"heading": sc["heading"], "line": sc["line"]})
 
     # Sheet match: a spec covers a location when either name contains the
     # other (apostrophes/dashes folded — PDFs and specs disagree on curly
@@ -462,6 +463,7 @@ def locations() -> dict:
             "scenes": g["scenes"],
             "body_lines": g["body_lines"],
             "detail": detail,
+            "scene_list": g["scene_list"],
             "sheet": ({"spec_id": match["spec_id"], "locked": match["locked"],
                        "status": match["status"]} if match else None),
         })

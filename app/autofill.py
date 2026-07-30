@@ -68,6 +68,10 @@ GOVERNING RULES — these are absolute:
   in unresolved_questions instead of guessing.
 - Do not force generic board categories. Panels must be driven by available evidence: if the
   screenplay supports 2 panels, return 2 panels, not 5.
+- Board grammar (structure, never content): the first panel is the HERO — the board's
+  central question, largest allocation (~50; ~60 for ASSET boards); remaining panels are
+  supporting strips splitting the rest. Evidence rules the COUNT; this grammar rules the
+  SHAPE.
 - Mode for this board: {mode}.
 - Known prohibited inventions for this project (never include): {", ".join(prohibited) or "none recorded"}.
 
@@ -139,10 +143,18 @@ def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
 
     total = sum(lp["allocation_percent"] for lp in layout_panels)
     if not (99.0 <= total <= 101.0):
-        even = round(100.0 / len(layout_panels), 2)
-        for lp in layout_panels:
-            lp["allocation_percent"] = even
-        layout_panels[0]["allocation_percent"] += round(100.0 - even * len(layout_panels), 2)
+        # Fallback is hero-weighted, not even: the first panel is the board's
+        # central question (board grammar, 2026-07-30).
+        if len(layout_panels) == 1:
+            layout_panels[0]["allocation_percent"] = 100.0
+        else:
+            hero = 60.0 if str(draft.get("board_type", "")).strip().upper() == "ASSET" else 50.0
+            rest = round((100.0 - hero) / (len(layout_panels) - 1), 2)
+            layout_panels[0]["allocation_percent"] = hero
+            for lp in layout_panels[1:]:
+                lp["allocation_percent"] = rest
+            layout_panels[0]["allocation_percent"] += round(
+                100.0 - hero - rest * (len(layout_panels) - 1), 2)
 
     panel_ids = {p["id"] for p in panels}
     ledger = []

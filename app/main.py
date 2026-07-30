@@ -143,6 +143,13 @@ def api_screenplay_locations() -> dict:
     return insights.locations()
 
 
+@app.get("/api/screenplay/text")
+def api_screenplay_text() -> dict:
+    """The current draft's extracted text, for the in-app reading view."""
+    text = insights.screenplay_text()
+    return {"available": bool(text.strip()), "text": text}
+
+
 @app.get("/api/screenplay/citation-report")
 def api_citation_report() -> dict:
     return insights.load_citation_report() or {"available": False,
@@ -224,7 +231,8 @@ async def api_new_spec(body: dict) -> dict:
     try:
         return store.new_spec(body["specification_id"].strip(),
                               body.get("subject", "").strip(),
-                              body.get("mode", "CANON_EXTRACTION"))
+                              body.get("mode", "CANON_EXTRACTION"),
+                              body.get("board_type", "LOCATION"))
     except (KeyError, ValueError, FileExistsError) as e:
         raise _err(e)
 
@@ -333,6 +341,7 @@ def api_get_settings() -> dict:
             "openai_model": generate.OPENAI_MODEL,
             "providers": {k: v["label"] for k, v in generate.all_providers().items()},
             "aspects": generate.aspect_catalog(),
+            "board_templates": store.BOARD_TEMPLATES,
             "custom_engines": customs,
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),
@@ -662,6 +671,7 @@ async def api_candidate_promote(spec_id: str, cand_id: str, body: dict) -> dict:
         split(body.get("controls")), split(body.get("does_not_control")),
         body.get("notes", f"promoted from {cand_id} of {spec_id}"))
     ref = store.set_reference_status(ref["id"], "APPROVED")
+    generate.mark_promoted(spec_id, cand_id, ref["id"])
     return ref
 
 

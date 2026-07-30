@@ -189,7 +189,9 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
             cand_id = cand["candidate_id"]
             cw = int(cand.get("width") or 0)
             ch = int(cand.get("height") or 0)
-            status = "TOO_SMALL" if (cw < rw and ch < img_h) else "OK"
+            # Cover-crop policy: filling the slot needs BOTH dimensions at
+            # native size — a shortfall in either means letterboxing.
+            status = "TOO_SMALL" if (cw < rw or ch < img_h) else "OK"
         elif pid in have:
             cand_id = have[pid]["candidate_id"]
             status = "UNAPPROVED"
@@ -288,16 +290,29 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
         draw.rectangle([rx, ry, rx + rw, ry + img_h], fill=PANEL_BG)
         with Image.open(img_path) as im:
             im = im.convert("RGB")
-            # No upscaling, ever: scale factor is capped at 1.0. A panel render
-            # smaller than its slot is centered and flagged for regeneration.
-            scale = min(rw / im.width, img_h / im.height, 1.0)
-            if scale < 1.0:
-                im = im.resize((max(1, int(im.width * scale)),
-                                max(1, int(im.height * scale))), Image.LANCZOS)
-            elif rw > im.width and img_h > im.height:
+            orig_w, orig_h = im.size
+            # Cover-crop (director's ruling 2026-07-30): the board may crop
+            # images to fill its layout — scale DOWN to cover the slot, crop
+            # the overflow, center. Originals stay one click away in the app.
+            # No upscaling, ever: if covering would need a scale above 1.0,
+            # fall back to letterbox and flag for regeneration.
+            cover = max(rw / im.width, img_h / im.height)
+            if cover <= 1.0:
+                nw = max(rw, round(im.width * cover))
+                nh = max(img_h, round(im.height * cover))
+                im = im.resize((nw, nh), Image.LANCZOS)
+                left = (nw - rw) // 2
+                top = (nh - img_h) // 2
+                im = im.crop((left, top, left + rw, top + img_h))
+            else:
+                fit = min(rw / im.width, img_h / im.height, 1.0)
+                if fit < 1.0:
+                    im = im.resize((max(1, int(im.width * fit)),
+                                    max(1, int(im.height * fit))), Image.LANCZOS)
                 warnings.append(
-                    f"{pid}: {cand['candidate_id']} ({im.width}x{im.height}) is smaller than "
-                    f"its {rw}x{img_h} slot — regenerate at a larger size for full quality")
+                    f"{pid}: {cand['candidate_id']} ({orig_w}x{orig_h}) cannot fill "
+                    f"its {rw}x{img_h} slot without upscaling — letterboxed; "
+                    "regenerate at a larger size for full quality")
             ox = rx + (rw - im.width) // 2
             oy = ry + (img_h - im.height) // 2
             board.paste(im, (ox, oy))
