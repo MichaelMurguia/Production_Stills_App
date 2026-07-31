@@ -1544,14 +1544,47 @@ async function renderWizard() {
     const host = $("#wiz-analysis");
     if (!analysis) { host.innerHTML = ""; return; }
     const worlds = analysis.design_worlds || [];
+    // The reveal strip (plan P1 / R1): the read presents as a summary, not a
+    // wall. Counts link to their sections; segments render only when their
+    // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
+    const proposedN = worlds.filter(w => w.status === "PROPOSED").length;
+    const envN = (analysis.environments || []).length;
+    const qN = (analysis.unresolved || []).length;
+    const answeredN = Object.values(analysis.question_answers || {})
+      .filter(x => x && x.answer).length;
+    const seg = (goto, n, label, suffix = "") =>
+      `<a class="reveal-count" data-goto="${goto}"><b>${n}</b> ${label}${suffix}</a>`;
+    const counts = [
+      seg("langs", worlds.length, `DESIGN LANGUAGE${worlds.length === 1 ? "" : "S"}`,
+        proposedN ? ` <span class="seg-proposed">· ${proposedN} PROPOSED</span>` : ""),
+      envN ? seg("envs", envN, `ENVIRONMENT${envN === 1 ? "" : "S"}`) : "",
+      seg("locs", (analysis.key_locations || []).length, "LOCATIONS"),
+      seg("subjects", (analysis.subjects || []).length, "SUBJECTS"),
+      seg("questions", qN, "OPEN QUESTIONS",
+        answeredN ? ` <span class="seg-faint">· ${answeredN} ANSWERED</span>` : ""),
+    ].filter(Boolean).join("");
     host.innerHTML = `
-      ${analysis.logline ? `<div class="report" style="margin-top:14px"><b>Logline:</b> ${esc(analysis.logline)}</div>` : ""}
-      <div class="fgroup" style="margin-top:14px"><span class="f-label">Design languages — click one to review or edit</span>
+      <div class="reveal-strip">
+        <div class="reveal-kicker">THE READ FOUND</div>
+        <div class="reveal-counts">${counts}</div>
+        ${analysis.logline ? `<p class="reveal-logline"><b>Logline</b> — ${esc(analysis.logline)}</p>` : ""}
+      </div>
+      <div class="fgroup" id="wiz-langs-sec" style="margin-top:14px"><span class="f-label">Design languages — click one to review or edit</span>
         <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
         <div id="wiz-worlds"></div>
       </div>
-      ${(analysis.key_locations || []).length ? `<p class="mini" style="margin-top:10px"><b>Recurring locations:</b> ${esc(analysis.key_locations.join(" · "))}</p>` : ""}
-      ${(analysis.unresolved || []).length ? `<p class="mini"><b>Open visual questions:</b> ${esc(analysis.unresolved.join(" · "))}</p>` : ""}`;
+      ${(analysis.key_locations || []).length ? `<p class="mini" id="wiz-locs-sec" style="margin-top:10px"><b>Recurring locations:</b> ${esc(analysis.key_locations.join(" · "))}</p>` : ""}
+      ${(analysis.unresolved || []).length ? `<p class="mini" id="wiz-questions-sec"><b>Open visual questions:</b> ${esc(analysis.unresolved.join(" · "))}</p>` : ""}`;
+    const GOTO = {
+      langs: () => $("#wiz-langs-sec"), envs: () => $("#wiz-envs-sec"),
+      locs: () => $("#wiz-locs-sec"), questions: () => $("#wiz-questions-sec"),
+      subjects: () => $('.panel.step[data-step="3"]'),
+    };
+    $$(".reveal-count", host).forEach(a => a.onclick = () => {
+      const el = GOTO[a.dataset.goto]?.();
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80,
+                                behavior: "smooth" });
+    });
     const tagHost = $("#wiz-world-tags", host);
     const wHost = $("#wiz-worlds", host);
     if (!worlds.length) tagHost.innerHTML = `<span class="mini">none — every board will use only the global sections of the Bible</span>`;

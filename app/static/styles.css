@@ -691,6 +691,20 @@ label.check {
 .uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
 .uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
 
+/* Reveal strip (mock 6a) — plan P1/R1. The read's summary as the wizard's
+   one lead: the panel-lead vocabulary (amber left border, --panel2, amber
+   Courier kicker) applied inside step 2. Counts are text links to their
+   sections; the logline closes the strip. */
+.reveal-strip { background: var(--panel2); border-left: 3px solid var(--accent); padding: 12px 16px; margin-top: 14px; }
+.reveal-kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; color: var(--accent); margin-bottom: 8px; }
+.reveal-counts { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+.reveal-count { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--ink-dim); cursor: pointer; }
+.reveal-count b { color: var(--ink); font-size: 13px; }
+.reveal-count:hover { text-decoration: underline; text-underline-offset: 3px; }
+.reveal-count .seg-proposed { color: var(--hold); }
+.reveal-count .seg-faint { color: var(--ink-faint); }
+.reveal-logline { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-dim); max-width: 74ch; }
+
 /* Object suggestion chips (mock 5c) — plan D5, the vocabulary-picker
    grammar reaching the last door. Solid vchip = harvested from the
    library (exact title guarantees the match); dashed = scene-paragraph
