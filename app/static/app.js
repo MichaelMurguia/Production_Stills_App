@@ -920,6 +920,37 @@ async function renderScreenplay() {
   });
 }
 
+// One finder-list scaffold (plan P4/R2): the screenplay coverage table and
+// the wizard's read-locations list render through this single code path —
+// Courier search over a scrolling row host, plus the shared verbs (Draft a
+// sheet prefills the breakdown prompt; Open sheet jumps to it).
+function buildLocFinder(host, cfg) {
+  host.innerHTML = `
+    ${cfg.head || ""}
+    <input type="text" data-f="loc-search" class="loc-search" placeholder="${cfg.placeholder || "search locations…"}">
+    <div class="loc-scroll"${cfg.maxHeight ? ` style="max-height:${cfg.maxHeight}px"` : ""}>
+      ${cfg.headRow || ""}
+      <div data-f="loc-list"></div>
+    </div>
+    ${cfg.footer || ""}`;
+  const draw = () => {
+    const q = $("[data-f=loc-search]", host).value;
+    $("[data-f=loc-list]", host).innerHTML = cfg.rows(q.trim().toUpperCase(), q);
+    $$(".loc-draft", host).forEach(btn => {
+      btn.onclick = () => {
+        sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
+        showView("specs");
+      };
+    });
+    $$("[data-open]", host).forEach(btn => {
+      btn.onclick = () => openSheet(btn.dataset.open);
+    });
+    cfg.onDraw?.(draw);
+  };
+  $("[data-f=loc-search]", host).addEventListener("input", draw);
+  draw();
+}
+
 async function renderLocations(state = null, langs = 0) {
   const host = $("#dash-locations");
   if (!host) return;
@@ -958,18 +989,22 @@ async function renderLocations(state = null, langs = 0) {
   // Scrollable, searchable, expandable: every location, every scene under
   // it, each scene draftable as its own SCENE breakdown.
   const expanded = new Set();
-  const drawList = (q = "") => {
-    const needle = q.trim().toUpperCase();
-    const rows = data.locations.filter(l =>
+  buildLocFinder(host, {
+    head: `<div class="loc-head">
+      <span class="f-label">Locations · ${data.locations.length}</span>
+      <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>`,
+    headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
+    placeholder: "search locations and scenes…",
+    footer: `<p class="mini"><span class="f-label" style="font-size:10px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
+    rows: (needle, q) => data.locations.filter(l =>
       !needle || l.location.includes(needle) ||
-      (l.scene_list || []).some(s => s.heading.toUpperCase().includes(needle)));
-    $("[data-f=loc-list]", host).innerHTML =
-      rows.map(l => {
+      (l.scene_list || []).some(s => s.heading.toUpperCase().includes(needle)))
+      .map(l => {
         const open = expanded.has(l.location) ||
           (needle && !l.location.includes(needle));  // scene-only hits auto-expand
         const sceneRows = open ? (l.scene_list || [])
           .filter(s => !needle || s.heading.toUpperCase().includes(needle) || l.location.includes(needle))
-          .map((s, i) => `
+          .map(s => `
             <div class="scene-row">
               <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
               <button class="block-act loc-draft" data-loc="${esc(s.heading)}">Draft a sheet</button>
@@ -981,39 +1016,18 @@ async function renderLocations(state = null, langs = 0) {
             ${meter(l.detail)}
             ${sheetCell(l)}
           </div>${sceneRows}`;
-      }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`;
-
-    $$("[data-exp]", host).forEach(row => {
-      row.onclick = (e) => {
-        if (e.target.closest("button")) return;  // actions win over expand
-        const key = row.dataset.exp;
-        expanded.has(key) ? expanded.delete(key) : expanded.add(key);
-        drawList($("[data-f=loc-search]", host).value);
-      };
-    });
-    $$(".loc-draft", host).forEach(btn => {
-      btn.onclick = () => {
-        sessionStorage.setItem("draftLocationHint", btn.dataset.loc);
-        showView("specs");
-      };
-    });
-    $$("[data-open]", host).forEach(btn => {
-      btn.onclick = () => openSheet(btn.dataset.open);
-    });
-  };
-
-  host.innerHTML = `
-    <div class="loc-head">
-      <span class="f-label">Locations · ${data.locations.length}</span>
-      <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>
-    <input type="text" data-f="loc-search" class="loc-search" placeholder="search locations and scenes…">
-    <div class="loc-scroll">
-      <div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>
-      <div data-f="loc-list"></div>
-    </div>
-    <p class="mini"><span class="f-label" style="font-size:10px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`;
-  $("[data-f=loc-search]", host).addEventListener("input", e => drawList(e.target.value));
-  drawList();
+      }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+    onDraw: draw => {
+      $$("[data-exp]", host).forEach(row => {
+        row.onclick = (e) => {
+          if (e.target.closest("button")) return;  // actions win over expand
+          const key = row.dataset.exp;
+          expanded.has(key) ? expanded.delete(key) : expanded.add(key);
+          draw();
+        };
+      });
+    },
+  });
 }
 
 /* --------------------------------------------------------------- settings */
@@ -1579,6 +1593,54 @@ async function renderWizard() {
 
   const expandedWorlds = new Set();
   let qShowAll = false;
+
+  // ---- read locations as a finder list (plan P4 / R2) ----
+  // Flat, screenplay order, rendered through the shared buildLocFinder code
+  // path. Sheet state uses the coverage table's own match semantics:
+  // normalized whole-word containment either direction against the slugline
+  // groups, then the group's server-computed sheet match is inherited.
+  let wizCov;
+  const normLoc = s => String(s).replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+    .replace(/[—–−]/g, "-").replace(/\s+/g, " ").toLowerCase().trim();
+  const wordIn = (needle, hay) => !!needle && new RegExp(
+    `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
+  const renderWizLocs = async () => {
+    const secHost = $("#wiz-locs-sec");
+    const keyLocs = getAnalysis()?.key_locations || [];
+    if (!secHost || !keyLocs.length) return;
+    if (wizCov === undefined) {
+      try { wizCov = await api("/api/screenplay/locations"); } catch { wizCov = null; }
+      if (!$("#wiz-locs-sec")) return;  // view moved on while fetching
+    }
+    const groups = wizCov?.available ? wizCov.locations : [];
+    const matchOf = name => {
+      const n = normLoc(name);
+      return groups.find(g => {
+        const gl = normLoc(g.location);
+        return wordIn(gl, n) || wordIn(n, gl);
+      }) || null;
+    };
+    buildLocFinder(secHost, {
+      head: `<div class="loc-head"><span class="f-label">Locations — ${keyLocs.length}</span>
+        <span class="hint">from the read · screenplay order</span></div>`,
+      placeholder: "find a location…",
+      maxHeight: 340,
+      rows: (needle, q) => keyLocs
+        .filter(n => !needle || n.toUpperCase().includes(needle))
+        .map(n => {
+          const m = matchOf(n);
+          return `
+          <div class="loc-row wiz-loc-row">
+            <span class="loc-slug" title="${esc(n)}">${esc(n)}</span>
+            <span class="loc-state">${m?.sheet ? `SHEET — ${esc(m.sheet.spec_id)}` : "NO SHEET"}</span>
+            ${m?.sheet
+              ? `<button class="loc-open" data-open="${esc(m.sheet.spec_id)}">Open sheet</button>`
+              : `<button class="block-act loc-draft" data-loc="${esc(n)}">Draft a sheet</button>`}
+          </div>`;
+        }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+    });
+  };
+
   const renderWorlds = () => {
     const analysis = getAnalysis();
     const host = $("#wiz-analysis");
@@ -1613,7 +1675,7 @@ async function renderWizard() {
         <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
         <div id="wiz-worlds"></div>
       </div>
-      ${(analysis.key_locations || []).length ? `<p class="mini" id="wiz-locs-sec" style="margin-top:10px"><b>Recurring locations:</b> ${esc(analysis.key_locations.join(" · "))}</p>` : ""}
+      ${(analysis.key_locations || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
         <div class="uncast-label">OPEN QUESTIONS — ${answeredN} ANSWERED OF ${qN}</div>
         <p class="mini">The read couldn't settle these. Answers are appended to the interview and honored by the Bible draft.</p>
@@ -1775,6 +1837,8 @@ async function renderWizard() {
         qHost.append(more);
       }
     }
+
+    renderWizLocs();
   };
 
   $("#wiz-analyze").onclick = async (e) => {
