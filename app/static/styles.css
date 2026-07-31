@@ -699,6 +699,18 @@ label.check {
 .chip.more { border-style: dashed; color: var(--ink-faint); }
 .chip .suffix { color: var(--ink-faint); font-size: 9.5px; margin-left: 2px; }
 
+/* PROPOSED chip state (mock 6a) — plan P5/Gap 5. Dashed = not yet real
+   (the vocabulary-picker family); --hold carries awaiting-review. A
+   confirmed chip is exactly the plain chip — no badge, no color. */
+.chip.proposed { border-style: dashed; border-color: var(--hold); color: var(--hold); }
+.chip.proposed .prop-tail { color: var(--hold); font-size: 10.5px; }
+.chip.proposed .prop-act {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  color: var(--hold); text-decoration: underline; text-underline-offset: 2px;
+}
+.chip.proposed .prop-act:hover { color: var(--ink); }
+
 /* Reveal strip (mock 6a) — plan P1/R1. The read's summary as the wizard's
    one lead: the panel-lead vocabulary (amber left border, --panel2, amber
    Courier kicker) applied inside step 2. Counts are text links to their

@@ -807,15 +807,29 @@ def api_put_wizard_analysis(body: dict) -> dict:
 
 @app.post("/api/wizard/analyze")
 async def api_wizard_analyze(body: dict) -> dict:
+    provider = body.get("provider", "gemini")
     try:
-        analysis = await run_in_threadpool(
-            wizard.analyze_screenplay, body.get("provider", "gemini"))
+        analysis = await run_in_threadpool(wizard.analyze_screenplay, provider)
     except autofill.AutofillError as e:
         raise HTTPException(422, str(e))
     except generate.GenerationError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"screenplay analysis failed: {e}")
+    # Re-run merge: confirmed languages/environments and answered questions
+    # survive; the fresh read's new finds arrive PROPOSED (Gap 5 rulings).
+    analysis = wizard.merge_analysis(store.load_wizard_analysis() or {}, analysis)
+    # Faction self-check — one extra cheap pass. Its failure degrades
+    # silently to the main result; the read itself is already valid.
+    try:
+        proposed = await run_in_threadpool(
+            wizard.faction_self_check, analysis, provider)
+        have = {str(w.get("name", "")).casefold()
+                for w in analysis.get("design_worlds", [])}
+        analysis.setdefault("design_worlds", []).extend(
+            m for m in proposed if m["name"].casefold() not in have)
+    except Exception:
+        pass
     analysis["analyzed_at"] = store.utcnow()
     analysis["screenplay"] = (store.load_app_state().get("screenplay") or {}).get("file", "")
     store.save_wizard_analysis(analysis)

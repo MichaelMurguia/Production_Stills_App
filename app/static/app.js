@@ -1583,7 +1583,7 @@ async function renderWizard() {
       <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",
-        "Re-running replaces the design languages and subject recommendations with a fresh read. The current analysis is kept until the re-run succeeds.",
+        "Re-running the read keeps everything you've confirmed — design languages, environments, and their location assignments survive by name. New finds arrive as PROPOSED for your review. Answered questions and cast subjects are never touched.",
         "Unlock"))) return;
       $("#wiz-provider").disabled = false;
       $("#wiz-analyze").classList.remove("hidden");
@@ -1696,12 +1696,41 @@ async function renderWizard() {
     if (!worlds.length) tagHost.innerHTML = `<span class="mini">none — every board will use only the global sections of the Bible</span>`;
     worlds.forEach((w, i) => {
       const open = expandedWorlds.has(i);
+      const proposed = w.status === "PROPOSED";
       const chip = document.createElement("span");
-      chip.className = "chip" + (open ? " open" : "");
+      chip.className = "chip" + (open ? " open" : "") + (proposed ? " proposed" : "");
       chip.style.cursor = "pointer";
-      chip.textContent = w.name || "(unnamed)";
+      // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
+      // CONFIRM / DROP in place. Confirmation is the default state — a
+      // confirmed chip is exactly the plain chip, no badge.
+      if (proposed) {
+        chip.innerHTML = `${esc(w.name || "(unnamed)")}<span class="prop-tail"> · PROPOSED — </span>` +
+          `<button class="prop-act" data-f="confirm" title="Keep this design language — it becomes a Bible section on the next draft.">CONFIRM</button>` +
+          `<span class="prop-tail"> / </span>` +
+          `<button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button>`;
+        $("[data-f=confirm]", chip).onclick = e => {
+          e.stopPropagation();
+          const a = getAnalysis();
+          delete a.design_worlds[i].status;
+          saveAnalysis(a);
+          renderWorlds();
+          toast(`${w.name} confirmed — it becomes a Bible section on the next draft.`);
+        };
+        $("[data-f=drop]", chip).onclick = e => {
+          e.stopPropagation();
+          const a = getAnalysis();
+          a.design_worlds.splice(i, 1);
+          saveAnalysis(a);
+          expandedWorlds.clear();
+          renderWorlds();
+          toast(`"${w.name}" dropped — re-running the read can propose it again.`);
+        };
+      } else {
+        chip.textContent = w.name || "(unnamed)";
+      }
       chip.title = `${w.description || ""}\nClick to ${open ? "collapse" : "expand"}.`;
-      chip.onclick = () => {
+      chip.onclick = e => {
+        if (e.target.closest(".prop-act")) return;
         open ? expandedWorlds.delete(i) : expandedWorlds.add(i);
         renderWorlds();
       };
@@ -1723,6 +1752,8 @@ async function renderWizard() {
       $("[data-f=edit]", rows[rows.length - 1])?.click();
     };
     tagHost.append(addChip);
+    if (proposedN) tagHost.insertAdjacentHTML("afterend",
+      `<p class="mini">The self-check found ${proposedN === 1 ? "a named group" : `${proposedN} named groups`} no language covers. Confirming writes its Bible section; the read never adds one itself.</p>`);
     worlds.forEach((w, i) => {
       if (!expandedWorlds.has(i)) return;
       const row = document.createElement("div");
@@ -1757,6 +1788,9 @@ async function renderWizard() {
           description: $("[data-f=notes]", row).value.trim(),
           keywords: $("[data-f=keywords]", row).value.split(",").map(s => s.trim()).filter(Boolean),
         };
+        // Editing-and-saving a proposed world is an implicit confirm
+        // (Gap 5 ruling §1) — flip the visual immediately.
+        if (a.design_worlds[i].status === "PROPOSED") delete a.design_worlds[i].status;
         saveAnalysis(a);
         toast(`${a.design_worlds[i].name} saved.`);
         renderWorlds();
@@ -1869,7 +1903,10 @@ async function renderWizard() {
       "Drafting the Art Direction Bible from screenplay, worlds, interview, and reference photos…",
       "this is the big one — a few minutes is normal");
     try {
+      // PROPOSED worlds stay out of the draft — confirming is what writes a
+      // Bible section (Gap 5 ruling §1).
       const chosenWorlds = (getAnalysis()?.design_worlds || [])
+        .filter(w => w.status !== "PROPOSED")
         .map(w => ({
           name: (w.name || "").trim(),
           notes: (w.description || "").trim(),

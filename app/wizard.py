@@ -54,6 +54,80 @@ def analyze_screenplay(provider: str = "gemini") -> dict:
     return result
 
 
+def merge_analysis(prior: dict, fresh: dict) -> dict:
+    """Re-run semantics (Gap 5, approved rulings): everything the user has
+    confirmed survives by name — design languages and environments keep
+    their notes, keywords, and location assignments; the fresh read's finds
+    that don't match a confirmed name arrive as PROPOSED; answered questions
+    carry over untouched. A first run (no prior analysis) returns the fresh
+    read as-is — its worlds stand as confirmed by default (confirmation is
+    the default state, not a badge)."""
+    if not prior:
+        return fresh
+    out = dict(fresh)
+    for field in ("design_worlds", "environments"):
+        if field not in fresh and field not in prior:
+            continue
+        kept = [w for w in (prior.get(field) or [])
+                if w.get("name") and w.get("status") != "PROPOSED"]
+        have = {str(w["name"]).casefold() for w in kept}
+        for w in (fresh.get(field) or []):
+            name = str(w.get("name", "")).casefold()
+            if name and name not in have:
+                kept.append({**w, "status": "PROPOSED"})
+                have.add(name)
+        out[field] = kept
+    if prior.get("question_answers"):
+        out["question_answers"] = prior["question_answers"]
+    return out
+
+
+def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
+    """Gap 5's second pass: one cheap re-read hunting for named groups no
+    design language covers. The covered list is the analysis worlds PLUS the
+    Bible's current language sections — the Bible can hold confirmed
+    languages the analysis never emitted. Returns uncovered groups as
+    PROPOSED worlds; the model never adds a language itself."""
+    from . import bible
+
+    covered = [str(w.get("name", "")) for w in analysis.get("design_worlds", [])
+               if w.get("name")]
+    for n in bible.design_language_names():
+        if n not in covered:
+            covered.append(n)
+    doc, mime = autofill._screenplay_bytes()
+    instructions = (
+        "You are auditing a screenplay read for missed visual cultures. List "
+        "every named faction, order, culture, corporation, or recurring group "
+        "in the attached screenplay. For each, decide which of these design "
+        "languages covers it:\n"
+        + "\n".join(f"- {n}" for n in covered)
+        + "\n\nReturn ONLY a JSON object with exactly this shape:\n"
+          '{"missing": [\n'
+          '  {"name": "a group with its own visual identity that NONE of the '
+          'design languages above covers",\n'
+          '   "description": "1-2 sentences on what it is and what defines its look",\n'
+          '   "keywords": ["lowercase", "trigger", "words"]}\n'
+          "]}\n"
+          "missing must contain only groups with a distinct visual identity "
+          "that no listed language covers. Do not re-litigate, rename, or "
+          'include the listed languages. If everything is covered, return '
+          '{"missing": []}.')
+    draft_fn = autofill._draft_openai if provider == "openai" else autofill._draft_gemini
+    result, _model = draft_fn(doc, mime, instructions)
+    known = {c.casefold() for c in covered}
+    out = []
+    for m in result.get("missing", []):
+        name = str(m.get("name", "")).strip() if isinstance(m, dict) else ""
+        if not name or name.casefold() in known:
+            continue
+        out.append({"name": name,
+                    "description": str(m.get("description", "")),
+                    "keywords": [str(k) for k in (m.get("keywords") or [])],
+                    "status": "PROPOSED", "source": "self-check"})
+    return out
+
+
 def _bible_instructions(answers: dict) -> str:
     worlds = answers.get("worlds") or []
     world_lines = "\n".join(
