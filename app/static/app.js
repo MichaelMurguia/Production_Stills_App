@@ -1427,10 +1427,15 @@ async function renderWizard() {
   // A door into the Reference SUBJECTS shelf: the uncast block lists what
   // the screenplay read found, grouped by kind. Casting a chip creates the
   // library card and opens its photo chooser.
+  const uncastExpanded = new Set();
   const renderSubjectTags = () => {
     const host = $("#wiz-subj-tags");
     api("/api/subjects").then(existing => {
       const fresh = uncastRecommendations(existing);
+      const label = $(".uncast-label");
+      if (label) label.textContent = fresh.length
+        ? `FOUND IN THE SCREENPLAY — ${fresh.length} UNCAST`
+        : "FOUND IN THE SCREENPLAY — UNCAST";
       if (!fresh.length) {
         const ran = !!JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
         host.innerHTML = `<span class="mini">${ran
@@ -1438,29 +1443,43 @@ async function renderWizard() {
         return;
       }
       host.innerHTML = "";
+      const CAP = 8;
+      const castOne = r => api("/api/subjects", { method: "POST", json: {
+        name: r.name, kind: r.kind || "CHARACTER",
+        subtitle: r.subtitle || "", traits: r.traits || [],
+        source: "screenplay analysis" } });
+      const refreshAll = async () => {
+        renderSubjectTags();
+        await renderSubjectGrid();
+        wizardStepBadges();
+      };
       for (const kind of ["CHARACTER", "VEHICLE", "PROP"]) {
+        // TODO(prominence): when the extraction emits mention counts, split
+        // PRINCIPALS/SUPPORTING here. Until then rows keep payload order —
+        // the read lists principals first in practice; never re-sort.
         const recs = fresh.filter(r => (r.kind || "CHARACTER").toUpperCase() === kind);
         if (!recs.length) continue;
+        const open = uncastExpanded.has(kind);
+        const shown = open ? recs : recs.slice(0, CAP);
         const row = document.createElement("div");
         row.className = "uncast-row";
-        row.innerHTML = `<span class="uncast-kind">${kind}S</span><span class="chips" data-f="chips"></span>`;
+        row.innerHTML = `<span class="uncast-kind">${kind}S</span><span class="chips" data-f="chips"></span>
+          <button class="ghost uncast-bulk" data-f="bulk"
+            title="Casts each of these with the single-cast path — cards appear in the library ready for photos.">${
+            recs.length <= CAP ? `Cast these ${recs.length}` : `Cast first ${CAP}`}</button>`;
         const chips = $("[data-f=chips]", row);
-        for (const r of recs) {
+        for (const r of shown) {
           const chip = document.createElement("span");
           chip.className = "chip";
           chip.title = `${r.subtitle ? r.subtitle + "\n" : ""}Cast this subject — creates its card in the library.`;
           chip.style.cursor = "pointer";
-          chip.textContent = `+ ${r.name}`;
+          const n = r.mentions ?? r.prominence;
+          chip.innerHTML = `+ ${esc(r.name)}${n ? ` <span class="suffix">·${n}</span>` : ""}`;
           chip.onclick = async () => {
             try {
-              const subj = await api("/api/subjects", { method: "POST", json: {
-                name: r.name, kind: r.kind || "CHARACTER",
-                subtitle: r.subtitle || "", traits: r.traits || [],
-                source: "screenplay analysis" } });
+              const subj = await castOne(r);
               toast(`${r.name} cast — add its reference photos.`);
-              renderSubjectTags();
-              await renderSubjectGrid();
-              wizardStepBadges();
+              await refreshAll();
               // The next action is always adding reference photos — open the
               // chooser for the new card immediately.
               $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
@@ -1468,6 +1487,26 @@ async function renderWizard() {
           };
           chips.append(chip);
         }
+        if (recs.length > CAP || open) {
+          const more = document.createElement("span");
+          more.className = "chip more";
+          more.style.cursor = "pointer";
+          more.textContent = open ? "▴ fewer" : `▾ ${recs.length - CAP} more`;
+          more.onclick = () => {
+            open ? uncastExpanded.delete(kind) : uncastExpanded.add(kind);
+            renderSubjectTags();
+          };
+          chips.append(more);
+        }
+        $("[data-f=bulk]", row).onclick = async e => {
+          e.target.disabled = true;
+          let ok = 0, failed = 0;
+          for (const r of recs.slice(0, CAP)) {
+            try { await castOne(r); ok++; } catch { failed++; }
+          }
+          toast(`${ok} cast${failed ? ` — ${failed} failed` : ""}.`, !!failed);
+          refreshAll();
+        };
         host.append(row);
       }
     });

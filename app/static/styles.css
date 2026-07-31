@@ -692,6 +692,12 @@ label.check {
 .uncast-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
 .uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
 .uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
+/* Uncast triage (mock 6b) — plan P3/R4: rows cap at 8 chips behind a dashed
+   "more" expander; one ghost bulk-cast per row, right-aligned. */
+.uncast-row .chips { flex: 1 1 auto; min-width: 0; }
+.uncast-bulk { flex: none; margin-left: auto; font-size: 11.5px; padding: 4px 10px; white-space: nowrap; }
+.chip.more { border-style: dashed; color: var(--ink-faint); }
+.chip .suffix { color: var(--ink-faint); font-size: 9.5px; margin-left: 2px; }
 
 /* Reveal strip (mock 6a) — plan P1/R1. The read's summary as the wizard's
    one lead: the panel-lead vocabulary (amber left border, --panel2, amber
