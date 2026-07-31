@@ -335,12 +335,18 @@ def _style_context(spec: dict, panel: dict) -> str:
         " ".join(panel.get("forbidden_objects", [])),
     ])
     # Explicit per-spec selection is the governed path; absent fields fall
-    # back to keyword inference inside render_context. Environments never
-    # infer — a sheet without one carries none, and a panel's own
-    # environment overrides the sheet's for that panel only.
+    # back to keyword inference inside render_context. A panel's own scope
+    # (design_languages / environment) overrides the sheet's for that panel
+    # only. Environments never infer — no scope means none carried.
+    if panel.get("design_languages"):
+        languages = panel["design_languages"]
+    elif "design_languages" in spec:
+        languages = spec["design_languages"]
+    else:
+        languages = None
     return bible.render_context(
         haystack,
-        spec.get("design_languages") if "design_languages" in spec else None,
+        languages,
         spec.get("scene_lessons") if "scene_lessons" in spec else None,
         environments=([panel["environment"]] if panel.get("environment")
                       else spec.get("environments") or []),

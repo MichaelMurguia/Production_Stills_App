@@ -3033,6 +3033,14 @@ async function openSpecEditor(specId) {
           <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${locked ? "disabled" : ""}>
         </div>
       </div>
+      ${bible_catalog?.exists && bible_catalog.design_languages.length ? `
+      <div class="fgroup" title="Design languages for THIS panel — its prompt carries these instead of the sheet's scope, so one panel can live in a different visual culture (e.g. a GRM interior on a frontier board). No chip set = the sheet's scope applies. The panel's environment override sits in the header row.">
+        <span class="f-label">Panel design languages — sheet scope unless set</span>
+        <div class="chips" style="margin-top:4px">
+          ${bible_catalog.design_languages.map(n =>
+            `<button type="button" class="vchip${(p.design_languages || []).includes(n) ? " set" : ""}" data-plang="${esc(n)}" ${locked ? "disabled" : ""}>${esc(n)}</button>`).join("")}
+        </div>
+      </div>` : ""}
       ${locked ? "" : `
       <div class="obj-suggest" data-f="suggest"></div>
       <div class="chip-add">
@@ -3068,6 +3076,10 @@ async function openSpecEditor(specId) {
       if (syncLedger) ensureLedgerRow(row.dataset.pid, obj);
     };
     (p.required_objects || []).forEach(o => addChip(String(o), false));
+    // Per-panel language facets (vchip.set grammar — multi-select, never
+    // amber). Toggling is presentation only until the sheet is saved.
+    if (!locked) $$("[data-plang]", row).forEach(ch =>
+      ch.onclick = () => ch.classList.toggle("set"));
 
     if (!locked) {
       const inp = $("[data-f=req-new]", row);
@@ -3286,6 +3298,9 @@ REMOVE — marked for removal from the board.">
         composition_role: out.panels.length === 0 ? "hero" : "support",
         time_of_day: v("ptod"),
         ...(v("penv") ? { environment: v("penv") } : {}),
+        ...($$(".vchip.set[data-plang]", row).length
+          ? { design_languages: $$(".vchip.set[data-plang]", row).map(c => c.dataset.plang) }
+          : {}),
       });
       layoutPanels.push({ id, allocation_percent: parseFloat(v("alloc")) || 0 });
     }

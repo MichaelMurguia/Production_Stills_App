@@ -366,6 +366,7 @@ rows are then deleted.
 | 2026-07-31 | Finder-row verb divergence: "Create Breakdown" (user-directed) instead of the canonical "Draft a sheet" | Production Design step-2 locations list only; the screenplay coverage table still says "Draft a sheet" | User instruction; the two hosts of the shared finder now carry different verbs for the same action — designer should pick one vocabulary |
 | 2026-07-31 | "Derive from screenplay" ghost button beside a card's Keywords field (deterministic scan fills the editable field) | Design-language cards, wizard step 2 | No canon for a field-level derive/fill affordance; built from ghost-button + gated-disabled vocabulary, no new CSS |
 | 2026-07-31 | Per-panel environment select in the panel-card head (user-directed) — overrides the sheet's one-per-sheet environment for that panel's prompt | Spec editor panel cards | Diverges from the ruled "one per sheet" scope model (mock 6c); mirrors the per-panel light select's grammar. Designer should rule on override presentation and how the carry line reflects it |
+| 2026-07-31 | Per-panel design-language facet row (user-directed) — `.vchip.set` chips on the panel card; any set overrides the sheet's language scope for that panel's prompt | Spec editor panel cards | Sheet scope was the only language granularity; a mixed-culture panel (e.g. GRM interior on a frontier board) had no home. Reuses the facet-chip grammar, but the sheet-vs-panel scope model and the carry line's story need a design ruling together with the environment override row above |
 
 ---
 
@@ -374,11 +375,12 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
-- **2026-07-31** — Three user-directed changes logged as uncanonized (see
+- **2026-07-31** — Four user-directed changes logged as uncanonized (see
   table): the Production Design locations verb became "Create Breakdown"
   (diverging from the canonical finder verb pair), design-language cards
   gained a "Derive from screenplay" keywords button, and panel cards
-  gained a per-panel environment override select.
+  gained per-panel environment and design-language overrides. The table
+  is at the review threshold.
 - **2026-07-31** — Stage-02 rebuild (PRODUCTION_DESIGN_PLAN P1–P9): the
   read presents as a reveal (strip with linking counts, answerable open
   questions, capped uncast triage with per-row bulk cast, locations as a
