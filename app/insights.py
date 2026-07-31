@@ -387,6 +387,51 @@ def screenplay_text() -> str:
     return text
 
 
+_KW_STOPWORDS = frozenset("""the and for with that this from into their there
+then than have has had was were are is be been being not but they them she her
+his him hers its itself out off over under about after before while when where
+what who whom which why how all any both each few more most other some such
+only own same very can could will would just don should now you your yours our
+ours we us as at by in of on to up an a or if do does did so no nor too again
+once here down further against between through during above below because
+until unless around toward towards onto upon like one two three back looks
+looking look looked sees see seen comes come came goes go went gets get got
+takes take took turns turn turned pulls pull pulled moves move moved still
+away behind toward front inside outside something nothing everything someone
+everyone another away then there day night morning evening dawn dusk moment
+beat int ext cut angle close pov scene continued cont sfx vfx voice
+continuous""".split())
+
+
+def derive_keywords(name: str, limit: int = 20) -> dict:
+    """Deterministic trigger-word derivation for a design language: find
+    every mention of the name's words in the screenplay and rank the
+    vocabulary that travels with them (±12-word windows, stopwords and
+    screenplay furniture dropped, must recur). No model — same contract as
+    the slugline parse. The name's own words lead the list; the UI leaves
+    the result editable before anything is saved."""
+    text = screenplay_text()
+    if not text.strip():
+        return {"available": False, "hits": 0, "keywords": []}
+    name_tokens = [w for w in re.findall(r"[a-z0-9]+", name.lower())
+                   if len(w) >= 3 and w not in _KW_STOPWORDS]
+    if not name_tokens:
+        return {"available": True, "hits": 0, "keywords": []}
+    tokens = re.findall(r"[a-z0-9]+", text.lower())
+    wanted = set(name_tokens)
+    hits = [i for i, t in enumerate(tokens) if t in wanted]
+    from collections import Counter
+    near = Counter()
+    for i in hits:
+        for t in tokens[max(0, i - 12): i + 13]:
+            if len(t) >= 3 and not t.isdigit() \
+                    and t not in _KW_STOPWORDS and t not in wanted:
+                near[t] += 1
+    ranked = [w for w, c in near.most_common() if c >= 2]
+    return {"available": True, "hits": len(hits),
+            "keywords": (name_tokens + ranked)[:limit]}
+
+
 def locations() -> dict:
     """Slugline coverage map: every location the screenplay names, scene
     count, and a stated detail heuristic (non-empty lines inside its scenes —

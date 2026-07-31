@@ -1848,11 +1848,40 @@ async function renderWizard() {
         <div class="fgroup"><span class="f-label">What defines its look</span>
           <input type="text" data-f="notes" value="${esc(w.description || "")}" disabled></div>
         <div class="fgroup" title="Lowercase trigger words used to auto-match this design language to board content."><span class="f-label">Keywords</span>
-          <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled></div>`;
+          <div style="display:flex;gap:8px">
+            <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled style="flex:1;min-width:0">
+            <button class="ghost" data-f="derive" disabled style="flex:none">Derive from screenplay</button>
+          </div></div>`;
       const editBtn = $("[data-f=edit]", row);
+      const nameInput = $("[data-f=name]", row);
+      const deriveBtn = $("[data-f=derive]", row);
+      // Derive is gated on a name, and the gate reads as state: the button
+      // stays visible-disabled with its unmet condition in the tooltip.
+      const syncDerive = () => {
+        const named = !!nameInput.value.trim();
+        deriveBtn.disabled = nameInput.disabled || !named;
+        deriveBtn.title = named
+          ? "Scan the screenplay for mentions of this name and fill up to 20 trigger words that travel with them. Deterministic — no model call; review before saving."
+          : "Enter a name first — the scan looks for its words in the screenplay.";
+      };
+      syncDerive();
+      nameInput.addEventListener("input", syncDerive);
+      deriveBtn.onclick = async () => {
+        const name = nameInput.value.trim();
+        deriveBtn.disabled = true;
+        try {
+          const r = await api(`/api/screenplay/keywords?name=${encodeURIComponent(name)}`);
+          if (!r.available) return toast("No screenplay text to scan — upload the screenplay first.", true);
+          if (!r.hits) return toast(`The screenplay never mentions "${name}" — nothing to derive.`, true);
+          $("[data-f=keywords]", row).value = r.keywords.join(", ");
+          toast(`${r.keywords.length} keywords from ${r.hits} mentions — review, then Save.`);
+        } catch (err) { toast(err.message, true); }
+        finally { syncDerive(); }
+      };
       editBtn.onclick = () => {
         if (editBtn.textContent === "Edit") {
           $$("input[data-f]", row).forEach(x => x.disabled = false);
+          syncDerive();
           editBtn.textContent = "Save";
           editBtn.className = "primary";
           $("[data-f=name]", row).focus();

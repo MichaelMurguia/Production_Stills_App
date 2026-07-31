@@ -164,6 +164,15 @@ def api_screenplay_file():
                         content_disposition_type="inline")
 
 
+@app.get("/api/screenplay/keywords")
+def api_screenplay_keywords(name: str = "") -> dict:
+    """Trigger words for a design language, derived deterministically from
+    the screenplay — see insights.derive_keywords()."""
+    if not name.strip():
+        raise HTTPException(422, "name is required")
+    return insights.derive_keywords(name.strip())
+
+
 @app.get("/api/screenplay/citation-report")
 def api_citation_report() -> dict:
     return insights.load_citation_report() or {"available": False,
