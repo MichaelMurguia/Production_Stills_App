@@ -172,6 +172,19 @@ chip creates the card in the library. The wizard owns the moment and the
 gate (step badge `n CAST · m UNCAST`, `--hold` while uncast > 0); the
 library owns the data.
 
+**The read reveal** (`.reveal-strip` + step-2 order, mock 6a). A completed
+screenplay read presents as a summary, not a wall. The strip is the lead
+treatment inside the step (amber left border, `--panel2`, Courier amber
+kicker `THE READ FOUND`): Courier counts that link to their sections
+(segments render only when their data exists — never `0 ENVIRONMENTS`),
+logline beneath. Then in order: language chips, environment cards, the
+locations finder (grouped under `.loc-group` headers by the read's verbatim
+environment assignments when they exist, flat otherwise — the coverage
+table and the wizard list share one `buildLocFinder` code path), and open
+questions as answerable rows (`.q-row` — ledger border box, `--ok` left
+border when answered, deferred rows dim their text only). Answers persist
+in the analysis payload and append to the interview at draft time.
+
 **Pending take tile + take state tags** (`.take.pending/.take-spin`).
 In-flight work holds its place: a pending tile sits in the filmstrip with
 the `.busy` spinner vocabulary (honoring `prefers-reduced-motion`) and
@@ -231,6 +244,21 @@ dashed-border cards with a `Cast this subject` ghost button. In the
 wizard the facts line ends with a `VIEW IN REFERENCE` text link
 (`.text-act` — Courier bold, ink, never amber).
 
+**Environment card** (`.env-card`, wizard step 2 — mock 6a). Registry-card
+family: Courier bold name · sans notes (palette / light / atmosphere) ·
+Courier facts line (`n LOCATIONS`). While proposed: dashed `--hold` border
+and a `· PROPOSED — CONFIRM / DROP` facts line; edit-and-save is an
+implicit confirm. Environments live in the Bible as `###` entries under
+the `## Environments` container (the level-3 mechanism, like materials and
+lessons) — never as top-level sections, which the parser reads as design
+languages. A sheet carries at most one; its block injects between
+languages and lessons, and the sheet's own atmosphere wins overlaps.
+
+**Scope carry line** (`.scope-carry`, spec editor — mock 6c). The scope
+block's live receipt: quiet Courier on `--field` stating what the prompt
+will carry, in injection order (`RENDERING LANGUAGE (ALWAYS) · <languages>
+· ENV: <NAME> · n SCENE LESSONS`). A receipt, never an action — no amber.
+
 **Registry rows** (`.eng-row`). User-registered externals (engines, any
 future integrations): sans name · Courier facts (ellipsize the middle) ·
 Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
@@ -251,7 +279,11 @@ provenance* (`.obj-suggest`, object intake): groups under Courier faint
 labels naming what picking one means — solid `.vchip` = harvested from
 the library, the exact title guarantees the match (faint `· SCENE` /
 `· GEOMETRY` suffixes); dashed `.vchip.loose` = a scene-paragraph noun
-that will need evidence like any free-typed value.
+that will need evidence like any free-typed value. The same dashed = not-yet-real
+grammar carries the governed-vocabulary **PROPOSED state** (`.chip.proposed`,
+design languages and environments): dashed `--hold` border and text, suffixed
+`· PROPOSED — CONFIRM / DROP` acting in place. Confirmation is the default
+state — a confirmed entry is the plain chip/card, no badge, no color.
 
 **Reading view** (`.modal.prompt-full`). The app dialog at
 `min(900px, 94vw)` holding one scrollable Courier document on `--field`,
@@ -340,6 +372,19 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-31** — Stage-02 rebuild (PRODUCTION_DESIGN_PLAN P1–P9): the
+  read presents as a reveal (strip with linking counts, answerable open
+  questions, capped uncast triage with per-row bulk cast, locations as a
+  finder list on the shared `buildLocFinder` code path); Gap 5 landed
+  (CONFIRMED/PROPOSED worlds, merge-on-rerun preserving confirmations and
+  answers, faction self-check that never adds a language itself); Gap 6
+  landed (environments as a first-class axis — extraction with verbatim
+  slugline assignment, `## Environments` level-3 Bible container, one
+  environment per sheet injected between languages and lessons, grouped
+  finder + coverage table, `PROMPT WILL CARRY` receipt). New canon: read
+  reveal (Layout), environment card + scope carry line (Components),
+  PROPOSED chip state (vocabulary picker); `.text-act` widened to the
+  global text-action; step badges cover all six wizard steps.
 - **2026-07-30** — One-library restructure (ONE_LIBRARY_PLAN D1–D6):
   Research renamed REFERENCE; the view became three shelves ordered by
   ride-along (STYLE / SUBJECTS / SCENES) with intake behind + Add

@@ -1582,6 +1582,7 @@ async function renderWizard() {
     wizAnalysis = a;
     localStorage.setItem("wizardAnalysis", JSON.stringify(a));
     api("/api/wizard/analysis", { method: "PUT", json: a }).catch(() => {});
+    wizardStepBadges();  // confirmations/drops move the step-2 badge
   };
 
   const renderAnalyzeLock = () => {
@@ -2123,8 +2124,20 @@ async function renderWizard() {
       const set = roles.filter(role => refs.some(r =>
         r.status === "APPROVED" && roleHead(r.role) === role)).length;
       setB(1, set === 3 ? "APPROVED" : "PROVISIONAL", `${set} OF 3 ANCHOR ROLES SET`);
-      setB(2, wizAnalysis ? "APPROVED" : "LOCKED",
-        wizAnalysis ? `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES FOUND` : "NOT RUN");
+      // Step 2 reflects review debt: proposed languages AND environments
+      // hold the badge at PROVISIONAL until confirmed or dropped (plan P9).
+      const proposedN =
+        (wizAnalysis?.design_worlds || []).filter(w => w.status === "PROPOSED").length +
+        (wizAnalysis?.environments || []).filter(e => e.status === "PROPOSED").length;
+      setB(2, !wizAnalysis ? "LOCKED" : proposedN ? "PROVISIONAL" : "APPROVED",
+        !wizAnalysis ? "NOT RUN"
+          : `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES`
+            + (proposedN ? ` · ${proposedN} PROPOSED` : " FOUND"));
+      // Step 4 counts the interview itself (mock 2a) — answered = non-blank.
+      const ivFields = ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"];
+      const ivDone = ivFields.filter(id => $(id)?.value.trim()).length;
+      setB(4, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
+        `${ivDone} OF ${ivFields.length} ANSWERED`);
       // Cast the film: --hold border while anything stays uncast, --ok when
       // the whole read is cast (plan D4; existing badge classes carry it).
       const uncastN = uncastRecommendations(subjects).length;
@@ -2140,6 +2153,8 @@ async function renderWizard() {
     } catch { /* badges are commentary — never block the wizard */ }
   };
   wizardStepBadges();
+  for (const id of ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"])
+    $(id)?.addEventListener("change", () => wizardStepBadges());
 
   await loadBibleEditor();
   $("#style-save").onclick = async () => {

@@ -112,11 +112,17 @@ render obeys. Each step's header badge states where it stands.
 
 1. **Style reference images** — the three anchors, one column per role, each
    stating its jurisdiction (`CONTROLS … / NEVER …`). Files upload approved.
-2. **Read the screenplay** — the research model proposes the project's
-   **design languages** (distinct visual cultures: factions, eras,
-   technology families). Confirm, rename, or drop; each becomes a Bible
-   section selectable per sheet. The analysis locks after a successful run;
-   unlock to re-read.
+2. **Read the screenplay** — the read presents as a reveal: a summary strip
+   (counts link to their sections), then the project's **design languages**
+   (distinct visual cultures: factions, eras, technology families) and
+   **environments** (the physical worlds panels live in — palette, light,
+   atmosphere; locations group under them). A second self-check pass hunts
+   for named factions no language covers — its finds arrive as `PROPOSED`
+   (dashed chips/cards) for you to CONFIRM or DROP; nothing enters the
+   Bible unconfirmed. Open questions are answerable rows — answers ride
+   into the Bible draft with the interview. The analysis locks after a
+   successful run; re-running keeps everything you've confirmed and never
+   touches answered questions or cast subjects.
 3. **Cast the film** — the door into the library's SUBJECTS shelf. The
    screenplay read proposes uncast characters, vehicles, and props; casting
    one creates its card in Reference and carries the screenplay's identity
@@ -131,9 +137,13 @@ render obeys. Each step's header badge states where it stands.
 6. **Model bake-off** — the same brief to every engine; pick a default.
 
 The Bible is data-driven: any non-system `##` section is a design language;
-a `Keywords:` line sets its auto-match triggers. Sheets carry an explicit
-**Art direction scope** (checkboxes) choosing which design languages and
-scene lessons apply — keyword inference is only the fallback. The Bible's
+a `Keywords:` line sets its auto-match triggers. Environments live as `###`
+entries under the `## Environments` section. Sheets carry an explicit
+**Art direction scope** choosing which design languages and scene lessons
+apply — keyword inference is only the fallback — plus **one environment**
+per sheet (a board lives somewhere; its entry injects between languages and
+lessons, and the sheet's own ATMOSPHERE wins where they overlap). The
+`PROMPT WILL CARRY` line under the scope is the live receipt. The Bible's
 Drift Prevention Rule is enforced on the prose rewriter, which acts as the
 Art Direction Guardian.
 
