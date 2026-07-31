@@ -861,16 +861,10 @@ async function renderScreenplay() {
       <div class="fact"><span>UPLOADED</span><b>${esc(up)}</b></div>
       <div class="fact" data-f="read"><span>READ</span><b>—</b></div>
       <div class="row" style="margin-top:10px">
-        <button class="ghost" data-f="read-script" title="Open the extracted text of the current draft in the reading view">Read the screenplay</button>
+        <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — the app itself works from the extracted text">Read the screenplay</button>
       </div>`;
-    $("[data-f=read-script]").onclick = async () => {
-      try {
-        const r = await api("/api/screenplay/text");
-        if (!r.available) { toast("No extractable text — image-only PDF?", true); return; }
-        promptOverlay("SCREENPLAY — CURRENT DRAFT", r.text,
-          `${sp.file} · ${(sp.sha256 || "").slice(0, 8)}`);
-      } catch (err) { toast(err.message, true); }
-    };
+    $("[data-f=read-script]").onclick = () =>
+      window.open("/api/screenplay/file", "_blank");
   } else {
     $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
   }

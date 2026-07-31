@@ -150,6 +150,20 @@ def api_screenplay_text() -> dict:
     return {"available": bool(text.strip()), "text": text}
 
 
+@app.get("/api/screenplay/file")
+def api_screenplay_file():
+    """The original uploaded file, served inline for the user to read.
+    The pipeline never consumes this — models get the extracted text."""
+    rec = store.load_app_state().get("screenplay")
+    if not rec:
+        raise HTTPException(404, "no screenplay uploaded")
+    p = paths.SCREENPLAY_DIR / rec["file"]
+    if not p.exists():
+        raise HTTPException(404, f"screenplay file missing on disk: {rec['file']}")
+    return FileResponse(p, filename=rec["file"],
+                        content_disposition_type="inline")
+
+
 @app.get("/api/screenplay/citation-report")
 def api_citation_report() -> dict:
     return insights.load_citation_report() or {"available": False,
