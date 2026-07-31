@@ -883,6 +883,15 @@ details.meta pre {
 .env-facts .prop-act:hover { color: var(--ink); }
 .env-facts.prop-tail { color: var(--hold); }
 .env-empty { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); padding: 6px 0; }
+
+/* PROMPT WILL CARRY (mock 6c) — plan P8: the scope block's live receipt,
+   quiet Courier on the inset field surface. */
+.scope-carry {
+  margin-top: 10px; padding: 7px 11px; border: 1px solid var(--line-soft);
+  background: var(--field); font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .06em; color: var(--ink-dim);
+}
+.scope-carry:empty { display: none; }
 .loc-state {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
   color: var(--ink-faint); text-align: right; overflow: hidden;

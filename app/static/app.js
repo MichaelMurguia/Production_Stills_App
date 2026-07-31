@@ -2701,6 +2701,25 @@ async function openSpecEditor(specId) {
   };
   const host = $("#spec-editor");
   host.innerHTML = "";
+  // Environment scope (plan P8, mock 6c). Options come from the Bible's
+  // Environments section; analysis-only names stay selectable but say so —
+  // the gate readable before it's hit (their entry lands on the next
+  // Bible draft). The suggestion is the read's own verbatim location
+  // assignment, never a fuzzy guess.
+  const wizA = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+  const envNotes = Object.fromEntries((wizA?.environments || [])
+    .filter(e => e.name).map(e => [String(e.name), e.notes || ""]));
+  const envAssigned = Object.fromEntries((wizA?.environments || [])
+    .filter(e => e.name)
+    .flatMap(e => (e.locations || []).map(l => [String(l).toLowerCase(), e.name])));
+  const envOptions = [...(bible_catalog?.environments || [])];
+  for (const n of Object.keys(envNotes))
+    if (!envOptions.some(o => o.toLowerCase() === n.toLowerCase())) envOptions.push(n);
+  const specLoc = String((spec.setting || {}).location || "").toLowerCase().trim();
+  const envInferred = !specLoc ? "" : envAssigned[specLoc]
+    || Object.entries(envAssigned).find(([l]) => l.includes(specLoc) || specLoc.includes(l))?.[1]
+    || "";
+  const envCurrent = spec.environments?.[0] ?? envInferred;
   const panel = document.createElement("div");
   panel.className = "panel spec-editor";
   panel.innerHTML = `
@@ -2780,6 +2799,15 @@ async function openSpecEditor(specId) {
             return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${locked ? "disabled" : ""}> ${esc(n)}</label>`;
           }).join("") || '<span class="mini">none defined in the Bible</span>'}</div>
         </div>
+        <div class="fgroup" title="The physical world this board lives in. Its Bible entry (palette, light, atmosphere) is injected between the design languages and the scene lessons.">
+          <span class="f-label">Environment</span>
+          <select id="sp-environment" ${locked ? "disabled" : ""}>
+            <option value="">— none —</option>
+            ${envOptions.map(n => `<option value="${esc(n)}"${envCurrent && envCurrent.toLowerCase() === n.toLowerCase() ? " selected" : ""}>${esc(n)}${envNotes[n] ? ` — ${esc(envNotes[n].slice(0, 44))}` : ""}${(bible_catalog.environments || []).includes(n) ? "" : " (not in Bible yet)"}</option>`).join("")}
+          </select>
+          <p class="mini" style="margin:6px 0 0">One per sheet — a board lives somewhere.${!spec.environments && envCurrent ? ` Inferred ${esc(envCurrent)} from the location; change it if the read guessed wrong.` : ""}</p>
+          <p class="mini" style="margin:4px 0 0">Environment sets the biome's palette and light. ATMOSPHERE is this sheet's weather and mood — it wins where they overlap.</p>
+        </div>
         <div class="fgroup" title="Scene-locked lessons are the Bible's accumulated rules for specific scenes/subjects. Check the ones that apply to this board.">
           <span class="f-label">Scene lessons</span>
           <div id="sp-lessons">${bible_catalog.scene_lessons.map(n => {
@@ -2788,6 +2816,7 @@ async function openSpecEditor(specId) {
           }).join("") || '<span class="mini">none recorded yet</span>'}</div>
         </div>
       </div>
+      <div class="scope-carry" id="sp-carry"></div>
       ${spec.design_languages ? "" : '<p class="mini" style="margin:8px 0 0">Pre-checked from keyword inference — save the spec to make this selection explicit and governed.</p>'}
     </div>` : ""}
 
@@ -2825,6 +2854,25 @@ async function openSpecEditor(specId) {
   host.append(panel);
   window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 80,
                     behavior: "smooth" });
+
+  // PROMPT WILL CARRY (mock 6c): the scope's live receipt, in injection
+  // order — rendering language, languages, environment, lessons.
+  const updateCarry = () => {
+    const carry = $("#sp-carry", panel);
+    if (!carry) return;
+    const langs = $$("#sp-design input:checked", panel).map(x => x.value);
+    const env = $("#sp-environment", panel)?.value;
+    const nl = $$("#sp-lessons input:checked", panel).length;
+    carry.textContent = ["PROMPT WILL CARRY — RENDERING LANGUAGE (ALWAYS)",
+      ...langs.map(l => l.toUpperCase()),
+      ...(env ? [`ENV: ${env.toUpperCase()}`] : []),
+      ...(nl ? [`${nl} SCENE LESSON${nl === 1 ? "" : "S"}`] : [])].join(" · ");
+  };
+  if ($("#sp-carry", panel)) {
+    updateCarry();
+    for (const id of ["#sp-design", "#sp-lessons", "#sp-environment"])
+      $(id, panel)?.addEventListener("change", updateCarry);
+  }
 
   const allocById = {};
   (spec.layout?.panels || []).forEach(p => { allocById[p.id] = p.allocation_percent; });
@@ -3159,6 +3207,8 @@ REMOVE — marked for removal from the board.">
     if ($("#sp-design", panel)) {
       out.design_languages = $$("#sp-design input:checked", panel).map(x => x.value);
       out.scene_lessons = $$("#sp-lessons input:checked", panel).map(x => x.value);
+      const envSel = $("#sp-environment", panel);
+      if (envSel) out.environments = envSel.value ? [envSel.value] : [];
     }
     out.canon_budget = {
       weak_inference_max: parseInt($("#sp-weak", panel).value || "0", 10),
