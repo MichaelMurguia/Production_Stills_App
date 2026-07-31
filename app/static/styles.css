@@ -691,6 +691,17 @@ label.check {
 .uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
 .uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
 
+/* Object suggestion chips (mock 5c) — plan D5, the vocabulary-picker
+   grammar reaching the last door. Solid vchip = harvested from the
+   library (exact title guarantees the match); dashed = scene-paragraph
+   noun that will need evidence. Stateless, never amber. */
+.obj-suggest { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px; }
+.obj-suggest:empty { display: none; }
+.suggest-group .chips { margin-top: 4px; }
+.suggest-label { font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
+.vchip.loose { border-style: dashed; }
+.vchip .suffix { color: var(--ink-faint); font-size: 9.5px; margin-left: 4px; }
+
 /* ============================================== boards: subject ref groups */
 .ref-groups { display: flex; flex-wrap: wrap; gap: 8px; }
 .ref-group {

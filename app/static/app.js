@@ -2259,6 +2259,43 @@ async function openSpecEditor(specId) {
     });
     return ref ? `${ref.id} (${ref.role})` : null;
   };
+
+  // The library's vocabulary for the object picker (plan D5, mock 5c):
+  // existing reference group titles first, then cast card names with photos.
+  // Every entry here is guaranteed to match refInfoFor — same strings.
+  const librarySuggestions = () => {
+    const seen = new Set();
+    const out = [];
+    const add = (title, suffix) => {
+      const k = title.toUpperCase();
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      out.push({ title: k, suffix });
+    };
+    for (const r of approvedRefs) {
+      const suffix = String(r.role).split("—")[1]?.trim();
+      if (!suffix) continue;
+      const head = roleHead(r.role);
+      add(suffix, head === "SCENE_REFERENCE" ? "SCENE"
+        : head === "LOCATION_GEOMETRY" ? "GEOMETRY" : "");
+    }
+    subjects.filter(s => (s.ref_ids || []).length).forEach(s => add(s.name, ""));
+    return out;
+  };
+
+  // Scene-paragraph nouns, the dumb way (plan D5): runs of two-plus
+  // capitalized words minus leading stopwords — no NLP, no new endpoint.
+  const sceneNouns = text => {
+    const stop = new Set(["The", "A", "An", "It", "In", "On", "At", "And",
+      "But", "Then", "This", "That", "Its", "His", "Her", "Their", "Int", "Ext"]);
+    const out = [];
+    for (const m of String(text || "").matchAll(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/g)) {
+      const words = m[0].split(/\s+/);
+      while (words.length && stop.has(words[0])) words.shift();
+      if (words.length >= 2) out.push(words.join(" "));
+    }
+    return [...new Set(out)];
+  };
   const host = $("#spec-editor");
   host.innerHTML = "";
   const panel = document.createElement("div");
@@ -2495,8 +2532,9 @@ async function openSpecEditor(specId) {
         </div>
       </div>
       ${locked ? "" : `
+      <div class="obj-suggest" data-f="suggest"></div>
       <div class="chip-add">
-        <input type="text" data-f="req-new" placeholder="add a required object — it also gets its evidence-ledger row…">
+        <input type="text" data-f="req-new" placeholder="or type an object — it also gets its evidence-ledger row…">
         <button type="button" class="ghost" data-f="req-add" title="Add this required object (also creates its evidence-ledger row)">+ Object</button>
         ${subjects.length ? `
         <select data-f="subj-pick" title="Add a cast member or key subject from the Production Design collection as a required object. Green chips have reference material ready to attach at generation.">
@@ -2506,6 +2544,7 @@ async function openSpecEditor(specId) {
       </div>`}`;
 
     const chips = $("[data-f=chips]", row);
+    let syncSuggest = () => {};  // assigned below when the row is editable
     const addChip = (obj, syncLedger) => {
       const chip = document.createElement("span");
       chip.className = "chip";
@@ -2520,7 +2559,7 @@ async function openSpecEditor(specId) {
         const x = document.createElement("button");
         x.type = "button"; x.textContent = "×";
         x.title = "Remove this required object (also removes its matching evidence row)";
-        x.onclick = () => { chip.remove(); dropLedgerRows(row.dataset.pid, obj); };
+        x.onclick = () => { chip.remove(); dropLedgerRows(row.dataset.pid, obj); syncSuggest(); };
         chip.append(x);
       }
       chips.append(chip);
@@ -2536,6 +2575,7 @@ async function openSpecEditor(specId) {
         if (!v) return;
         if ($$(".chip", chips).some(c => c.dataset.obj.toLowerCase() === v.toLowerCase())) return;
         addChip(v, true);
+        syncSuggest();
         inp.focus();
       };
       $("[data-f=req-add]", row).onclick = doAdd;
@@ -2549,8 +2589,40 @@ async function openSpecEditor(specId) {
         if (!v) return;
         if ($$(".chip", chips).some(c => c.dataset.obj.toLowerCase() === v.toLowerCase())) return;
         addChip(v, true);
+        syncSuggest();
       });
       $("[data-f=del-panel]", row).onclick = () => row.remove();
+
+      // Suggestion chips (plan D5, mock 5c) — the vocabulary-picker grammar:
+      // stateless, never amber. Solid border = in the library, the exact
+      // title guarantees the match; dashed = a scene-paragraph noun that
+      // will need evidence like any free-typed object.
+      const suggestHost = $("[data-f=suggest]", row);
+      syncSuggest = () => {
+        const have = new Set($$(".chip", chips).map(c => c.dataset.obj.toUpperCase()));
+        const lib = librarySuggestions().filter(s => !have.has(s.title));
+        const libTitles = new Set(lib.map(s => s.title));
+        const scene = sceneNouns($("#sp-scene", panel)?.value)
+          .filter(t => !have.has(t.toUpperCase()) && !libTitles.has(t.toUpperCase()))
+          .slice(0, 8);
+        suggestHost.innerHTML = (lib.length ? `
+          <div class="suggest-group">
+            <div class="suggest-label">IN THE LIBRARY — PICKING ONE GUARANTEES THE MATCH</div>
+            <div class="chips">${lib.map(s =>
+              `<button type="button" class="vchip" data-add="${esc(s.title)}" title="Adds the object with this exact title — the reference group attaches at generation">+ ${esc(s.title)}${
+                s.suffix ? `<span class="suffix">· ${s.suffix}</span>` : ""}</button>`).join("")}</div>
+          </div>` : "") + (scene.length ? `
+          <div class="suggest-group">
+            <div class="suggest-label">IN THE SCENE PARAGRAPH — WILL NEED EVIDENCE</div>
+            <div class="chips">${scene.map(t =>
+              `<button type="button" class="vchip loose" data-add="${esc(t)}" title="A noun from this sheet's scene paragraph — added un-matched, like free-typing it">+ ${esc(t)}</button>`).join("")}</div>
+          </div>` : "");
+        $$("[data-add]", suggestHost).forEach(b => {
+          b.onclick = () => { addChip(b.dataset.add, true); syncSuggest(); };
+        });
+      };
+      $("#sp-scene", panel)?.addEventListener("input", syncSuggest);
+      syncSuggest();
     }
     panelsHost.append(row);
     updateSettingVis();
