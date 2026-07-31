@@ -91,7 +91,7 @@ header {
   background: var(--line); margin-right: 16px; vertical-align: -2px;
 }
 
-/* Header tools + engine dots: Status/Research/Settings are tools, not
+/* Header tools + engine dots: Status/Reference/Settings are tools, not
    stages — text links right of the brand; dots state credentials only. */
 .head-right { display: flex; align-items: center; gap: 22px; }
 .engine-dots { display: flex; gap: 16px; }

@@ -57,7 +57,7 @@ Core vocabulary:
 
 **Header** — project name, two **engine dots** (credentials only: filled
 green = key saved, blue = environment variable, hollow = none; never a fake
-"connected"), and the three tools: **Status · Research · Settings**.
+"connected"), and the three tools: **Status · Reference · Settings**.
 
 **The band** — five stages, each cell showing a live status subline
 ("2 locked · 1 draft", "11 approved of 26"). The top border tells you where
@@ -117,9 +117,12 @@ render obeys. Each step's header badge states where it stands.
    technology families). Confirm, rename, or drop; each becomes a Bible
    section selectable per sheet. The analysis locks after a successful run;
    unlock to re-read.
-3. **Cast & key subjects** — recommended subjects become title cards (name,
-   epithets, traits from the script). Photos uploaded into a card enter the
-   library approved under the card's role (e.g. `VEHICLE_GEOMETRY — GT40`).
+3. **Cast the film** — the door into the library's SUBJECTS shelf. The
+   screenplay read proposes uncast characters, vehicles, and props; casting
+   one creates its card in Reference and carries the screenplay's identity
+   text into every prompt it appears in. Photos uploaded into a card enter
+   the library approved under the card's role (e.g. `VEHICLE_GEOMETRY —
+   GT40`). The step badge reads `n CAST · m UNCAST`.
 4. **Interview** — touchstones, medium, palette, never-list. Blanks come
    back marked (PROPOSED).
 5. **Draft & review** — the model writes the Bible in the app's section
@@ -268,13 +271,24 @@ drift; **Derive materials** — a generated close-up strip whose only allowed
 sources are the board's own approved panels. Both land as candidates; both
 can join the board as a bottom strip.
 
-## 9. Research — the reference library
+## 9. Reference — one library, three shelves
 
-Filter chips: `ALL · STYLE · SUBJECT · SCENE` with counts; status counts on
-the right. Each card states its jurisdiction as one block — `CONTROLS face ·
-hair · build` in green, `NOT costume · light · lens` in red — plus usage:
-`AUTO-ATTACHED · ALL RENDERS` for style anchors, `USED IN n RENDERS`
-otherwise.
+There is **one reference library**, organized by *when an image rides
+along*, not how it arrived:
+
+- **STYLE** — rides along on every render, automatically.
+- **SUBJECTS** — rides along when its subject appears on a panel. The cast
+  cards ARE this shelf; Production Design step 3 ("Cast the film") is the
+  door that fills it. Uncast screenplay proposals appear here as dashed
+  cards until you cast them.
+- **SCENES** — rides along when a board covers its scene: promoted takes,
+  light studies, environment crops.
+
+A search field filters every shelf; status counts sit top-right; **+ Add
+reference** opens the intake dialog. Each reference card states its
+jurisdiction as one block — `CONTROLS face · hair · build` in green, `NOT
+costume · light · lens` in red — plus usage: `AUTO-ATTACHED · ALL RENDERS`
+for style anchors, `USED IN n RENDERS` otherwise.
 
 Approve → canon anchor. **Reject quarantines the file from the pipeline**
 (it physically moves to quarantine and can never be attached) — and

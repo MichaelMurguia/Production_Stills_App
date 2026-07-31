@@ -62,7 +62,7 @@ where low contrast is the signal.
 ## Layout patterns
 
 **Pipeline band.** `nav#nav` is the product's spine: numbered stages 01–04 in
-work order, then `.nav-gap`, then off-pipeline tools (Research, Settings). A new
+work order, then `.nav-gap`, then off-pipeline tools (Reference, Settings). A new
 *stage* gets a number and joins the band in sequence. A new *tool* goes right of
 the gap. Stage cells use `minmax(0,1fr)` tracks and their labels are
 `white-space: nowrap` — a long label must be shortened, never allowed to inflate
@@ -90,7 +90,7 @@ number, label, a live Courier subline from `stage_summary`, and a top border
 stating progress: `--ok` complete, `--accent` current (the viewed stage, else
 the work frontier — exactly one amber in the chrome), `--bad` blocked,
 `--line` unreached. `HERE` chip marks the viewed stage only. Tools (Status ·
-Research · Settings) live in the header with the engine credential dots.
+Reference · Settings) live in the header with the engine credential dots.
 
 **Judging room** (`.board-room` = `.board-rail` 230px · `.board-stage` ·
 `.board-side` 300px). Rail: sheet block, panel list with latest-take thumbs
@@ -156,6 +156,22 @@ sheet / Open sheet). Row anatomy follows registry rows: Courier identity
 left, facts middle, ghost/text action right. Reuse for any >30-item
 findable list; below ~30, the coverage-table pattern is enough.
 
+**One reference library** (`.shelf`, the Reference view). There is ONE
+library ("Research" was renamed REFERENCE), on three shelf sections
+ordered by *when an image rides along*, not how it arrived: STYLE (every
+render, automatically) · SUBJECTS (when its subject appears on a panel —
+subject cards ARE this shelf) · SCENES (when a board covers its scene).
+Shelf header (`.shelf-head`): Courier bold shelf name · faint Courier
+ride-along line (`RIDES ALONG — …`) · right-aligned Courier counts
+(`.shelf-count`). Intake lives behind `+ Add reference` (the role
+dialog); the search field uses the finder-list vocabulary and filters
+every shelf. Production Design step 3 ("Cast the film", `.uncast-block`)
+is a *door* into SUBJECTS: extraction proposals grouped CHARACTERS /
+VEHICLES / PROPS under Courier faint fixed-width row labels; casting a
+chip creates the card in the library. The wizard owns the moment and the
+gate (step badge `n CAST · m UNCAST`, `--hold` while uncast > 0); the
+library owns the data.
+
 **Pending take tile + take state tags** (`.take.pending/.take-spin`).
 In-flight work holds its place: a pending tile sits in the filmstrip with
 the `.busy` spinner vocabulary (honoring `prefers-reduced-motion`) and
@@ -203,6 +219,18 @@ wider grid, where a sibling's intrinsic size can starve the input; the text
 input is the widest element, selects are capped. Anything needing
 explanation beyond a tooltip belongs in a dialog instead.
 
+**Subject card** (`.subj-card`, built once by `buildSubjectCard` — one
+component, two hosts: the SUBJECTS shelf and wizard step 3). Anatomy:
+Courier bold name · bordered grey kind badge (`.kind-badge`) ·
+CAST/UNCAST badge (`.cast-badge`, `--ok`/`--hold` border, never filled)
+· editable identity text (sans 12px `--ink-dim`; click to edit — it
+rides in every prompt the subject appears in) · photo mosaic with a `+`
+drop slot (`.subj-slot`) · Courier facts line (`n PHOTOS · ROLE — NAME ·
+USED IN n RENDERS`, `.subj-facts`). Uncast recommendations are
+dashed-border cards with a `Cast this subject` ghost button. In the
+wizard the facts line ends with a `VIEW IN REFERENCE` text link
+(`.text-act` — Courier bold, ink, never amber).
+
 **Registry rows** (`.eng-row`). User-registered externals (engines, any
 future integrations): sans name · Courier facts (ellipsize the middle) ·
 Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
@@ -218,7 +246,12 @@ possible but reuse is the easy path. Multi-select facet chips use
 reserved for single-choice chips (variant, filter). A passive Courier
 `WILL BE STORED AS` preview (label faint, value dim, no field chrome) shows
 the normalized value only when it differs from the input. Notes and other
-provenance prose stay free text.
+provenance prose stay free text. Suggestion chips can be *grouped by
+provenance* (`.obj-suggest`, object intake): groups under Courier faint
+labels naming what picking one means — solid `.vchip` = harvested from
+the library, the exact title guarantees the match (faint `· SCENE` /
+`· GEOMETRY` suffixes); dashed `.vchip.loose` = a scene-paragraph noun
+that will need evidence like any free-typed value.
 
 **Reading view** (`.modal.prompt-full`). The app dialog at
 `min(900px, 94vw)` holding one scrollable Courier document on `--field`,
@@ -307,6 +340,16 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-30** — One-library restructure (ONE_LIBRARY_PLAN D1–D6):
+  Research renamed REFERENCE; the view became three shelves ordered by
+  ride-along (STYLE / SUBJECTS / SCENES) with intake behind + Add
+  reference; subject cards became the SUBJECTS shelf (one component, two
+  hosts) with kind + CAST/UNCAST badges and editable identity text;
+  wizard step 3 became "Cast the film" — a door into the shelf with
+  grouped uncast proposals; object intake gained provenance-grouped
+  suggestion chips (library / scene-paragraph). One-library model added
+  to Layout patterns; subject card to Components; vocabulary picker
+  amended with grouped suggestion chips.
 - **2026-07-30** — Placeholder hatch superseded by user ruling: opaque
   two-tone 135° bands (assembly-style), 7/14px standard, 5/10px fine,
   red-shifted pair for error surfaces.

@@ -66,3 +66,4 @@ No production board approvals have been recorded in this source package.
 - 2026-07-30T13:44:52+00:00 — REFERENCE REF-0041 (16a0b0bf851e8bcc49e4bac20f329f87.jpg) approved as PROP_REFERENCE — EXOSKELETON. Controls: unspecified.
 - 2026-07-30T13:47:17+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 UNLOCKED for editing — approval of 2026-07-30T13:27:00+00:00 (hash 30c1a6f34680949f…) is void; existing candidates keep the hash they were generated against.
 - 2026-07-30T14:25:20+00:00 — SPECIFICATION KYRA_GRM_FIGHT_v001 approved and locked (hash 30c1a6f34680949f…).
+- 2026-07-31T05:04:37+00:00 — REFERENCE REF-0042 (CAND-0042 (CHARLIES_CABIN_V001).png) approved as SCENE_REFERENCE — P02 SHACK IN THE MEADOW. Controls: content.

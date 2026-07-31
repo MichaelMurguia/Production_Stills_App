@@ -28,7 +28,7 @@
 <!-- The band IS the pipeline: five numbered stages in work order, each with a
      live status subline. Top-border color states progress (--ok complete,
      --accent current, --bad blocked, --line not reached); the HERE chip marks
-     the viewed stage. Status/Research/Settings are tools, not stages — they
+     the viewed stage. Status/Reference/Settings are tools, not stages — they
      live in the header. app.js binds via closest("button[data-view]"). -->
 <nav id="nav">
   <button data-view="screenplay" title="Stage 01 — the root dependency: the screenplay file, what it gave us per location, and citation health">
@@ -465,9 +465,9 @@
       <div class="panel doc">
         <h2>The workflow</h2>
         <p>This app builds <b>canon-locked art direction boards</b>. The chain is:</p>
-        <p class="chain">Screenplay + References → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
+        <p class="chain">Screenplay → Cast &amp; anchors (REFERENCE) → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
         <h3>1 — Load your sources (01 Screenplay / Reference)</h3>
-        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. Add reference images on the Reference page and give each a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
+        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. There is <b>one reference library</b> (Reference), on three shelves by when an image rides along: STYLE (every render, automatically), SUBJECTS (when its subject appears on a panel — cast the film in Production Design step 3 to fill it), SCENES (when a board covers its scene). Every image has a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
         <h3>2 — Write or auto-fill a breakdown sheet (03 Breakdowns)</h3>
         <p>A breakdown sheet is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the sheet; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the sheet with a content hash.</p>
         <h3>3 — Generate and judge takes (04 Panels)</h3>
