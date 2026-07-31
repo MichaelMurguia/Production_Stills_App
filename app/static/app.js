@@ -2154,6 +2154,22 @@ async function renderSpecs(openId = null) {
     if (promptEl && !promptEl.value.trim()) promptEl.value = locHint;
   }
 
+  // Spec IDs must match the backend's [A-Za-z0-9._-] and by convention are
+  // CAPS_WITH_UNDERSCORES. The tooltip states this, but a tooltip is invisible
+  // at the moment of choice — the field itself turns whatever is typed into a
+  // legal ID as it is typed ("Charlie's cabin v1" → CHARLIES_CABIN_V1).
+  const slugSpecId = raw => raw.toUpperCase().replace(/\s+/g, "_")
+    .replace(/[^A-Z0-9._-]/g, "").replace(/_{2,}/g, "_");
+  const bindSpecIdField = el => el && el.addEventListener("input", () => {
+    const slug = slugSpecId(el.value);
+    if (slug === el.value) return;
+    const caret = slugSpecId(el.value.slice(0, el.selectionStart)).length;
+    el.value = slug;
+    el.setSelectionRange(caret, caret);
+  });
+  bindSpecIdField($("#spec-auto-id"));
+  bindSpecIdField($("#spec-new-id"));
+
   $("#spec-auto-form").addEventListener("submit", async e => {
     e.preventDefault();
     const btn = $("#spec-auto-go"), status = $("#spec-auto-status");
@@ -2166,7 +2182,7 @@ async function renderSpecs(openId = null) {
       const spec = await api("/api/specs/autofill", {
         method: "POST",
         json: {
-          specification_id: $("#spec-auto-id").value,
+          specification_id: slugSpecId($("#spec-auto-id").value),
           prompt: $("#spec-auto-prompt").value,
           mode: $("#spec-auto-mode").value,
           provider: $("#spec-auto-provider").value,
@@ -2194,7 +2210,7 @@ async function renderSpecs(openId = null) {
       const spec = await api("/api/specs", {
         method: "POST",
         json: {
-          specification_id: $("#spec-new-id").value,
+          specification_id: slugSpecId($("#spec-new-id").value),
           subject: $("#spec-new-subject").value,
           mode: $("#spec-new-mode").value,
           board_type: $("#spec-new-btype")?.value || "LOCATION",
