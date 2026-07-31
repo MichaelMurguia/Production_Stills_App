@@ -996,10 +996,11 @@ async function renderLocations(state = null, langs = 0) {
     headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
     placeholder: "search locations and scenes…",
     footer: `<p class="mini"><span class="f-label" style="font-size:10px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
-    rows: (needle, q) => data.locations.filter(l =>
-      !needle || l.location.includes(needle) ||
-      (l.scene_list || []).some(s => s.heading.toUpperCase().includes(needle)))
-      .map(l => {
+    rows: (needle, q) => {
+      const list = data.locations.filter(l =>
+        !needle || l.location.includes(needle) ||
+        (l.scene_list || []).some(s => s.heading.toUpperCase().includes(needle)));
+      const rowHtml = l => {
         const open = expanded.has(l.location) ||
           (needle && !l.location.includes(needle));  // scene-only hits auto-expand
         const sceneRows = open ? (l.scene_list || [])
@@ -1016,7 +1017,24 @@ async function renderLocations(state = null, langs = 0) {
             ${meter(l.detail)}
             ${sheetCell(l)}
           </div>${sceneRows}`;
-      }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+      };
+      const empty = `<p class="mini">nothing matches "${esc(q)}"</p>`;
+      // Environment grouping (plan P7): the read's verbatim slugline
+      // assignments — the same buckets as the wizard's finder list, zero
+      // fuzzy matching. No environments = the flat table it always was.
+      const envs = (JSON.parse(localStorage.getItem("wizardAnalysis") || "null")
+        ?.environments || []).filter(e => (e.name || "").trim());
+      if (!envs.length) return list.map(rowHtml).join("") || empty;
+      const assignedTo = {};
+      envs.forEach(e => (e.locations || []).forEach(l => { assignedTo[l] = e.name; }));
+      const buckets = [
+        ...envs.map(e => ({ name: e.name, rows: list.filter(l => assignedTo[l.location] === e.name) })),
+        { name: "UNASSIGNED", rows: list.filter(l => !assignedTo[l.location]) },
+      ].filter(b => b.rows.length);
+      return buckets.map(b =>
+        `<div class="loc-group">${esc(b.name.toUpperCase())} — ${b.rows.length}</div>`
+        + b.rows.map(rowHtml).join("")).join("") || empty;
+    },
     onDraw: draw => {
       $$("[data-exp]", host).forEach(row => {
         row.onclick = (e) => {
@@ -1604,15 +1622,78 @@ async function renderWizard() {
     .replace(/[—–−]/g, "-").replace(/\s+/g, " ").toLowerCase().trim();
   const wordIn = (needle, hay) => !!needle && new RegExp(
     `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
+  const wizLocRow = (name, sheet, extraCell = "") => `
+    <div class="loc-row wiz-loc-row${extraCell ? " grouped" : ""}">
+      <span class="loc-slug" title="${esc(name)}">${esc(name)}</span>
+      ${extraCell}
+      <span class="loc-state">${sheet ? `SHEET — ${esc(sheet.spec_id)}` : "NO SHEET"}</span>
+      ${sheet
+        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open sheet</button>`
+        : `<button class="block-act loc-draft" data-loc="${esc(name)}">Draft a sheet</button>`}
+    </div>`;
   const renderWizLocs = async () => {
     const secHost = $("#wiz-locs-sec");
+    if (!secHost) return;
     const keyLocs = getAnalysis()?.key_locations || [];
-    if (!secHost || !keyLocs.length) return;
+    const envs = (getAnalysis()?.environments || []).filter(e => (e.name || "").trim());
+    if (!keyLocs.length && !envs.length) return;
     if (wizCov === undefined) {
       try { wizCov = await api("/api/screenplay/locations"); } catch { wizCov = null; }
       if (!$("#wiz-locs-sec")) return;  // view moved on while fetching
     }
     const groups = wizCov?.available ? wizCov.locations : [];
+
+    if (envs.length) {
+      // Grouped (plan P7): rows are the slugline locations, grouped by the
+      // read's verbatim assignments — zero fuzzy matching. Anything the
+      // read didn't place lands under UNASSIGNED; every row can reassign
+      // through the analysis save path.
+      const byLoc = Object.fromEntries(groups.map(g => [g.location, g]));
+      const assignedTo = {};
+      envs.forEach(e => (e.locations || []).forEach(l => { assignedTo[l] = e.name; }));
+      const grouped = envs.map(e => ({ name: e.name, locs: e.locations || [] }));
+      const unassigned = groups.map(g => g.location).filter(l => !assignedTo[l]);
+      if (unassigned.length) grouped.push({ name: "UNASSIGNED", locs: unassigned });
+      const total = grouped.reduce((n, g) => n + g.locs.length, 0);
+      const envNames = envs.map(e => e.name);
+      buildLocFinder(secHost, {
+        head: `<div class="loc-head"><span class="f-label">Locations — ${total}</span>
+          <span class="hint">grouped by environment · reassign any row — saved immediately</span></div>`,
+        placeholder: "find a location…",
+        maxHeight: 340,
+        rows: (needle, q) => grouped.map(g => {
+          const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
+          if (!locs.length) return "";
+          return `<div class="loc-group">${esc(g.name.toUpperCase())} — ${locs.length}</div>`
+            + locs.map(n => wizLocRow(n, byLoc[n]?.sheet, `
+              <select class="loc-reassign" data-loc="${esc(n)}" title="Move this location to another environment — saved to the analysis immediately.">
+                ${["UNASSIGNED", ...envNames].map(en =>
+                  `<option${(assignedTo[n] || "UNASSIGNED") === en ? " selected" : ""}>${esc(en)}</option>`).join("")}
+              </select>`)).join("");
+        }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+        onDraw: () => {
+          $$(".loc-reassign", secHost).forEach(sel => sel.onchange = () => {
+            const loc = sel.dataset.loc, to = sel.value;
+            const a = getAnalysis();
+            (a.environments || []).forEach(e => {
+              e.locations = (e.locations || []).filter(l => l !== loc);
+            });
+            if (to !== "UNASSIGNED") {
+              const e = (a.environments || []).find(x => x.name === to);
+              if (e) e.locations = [...(e.locations || []), loc];
+            }
+            saveAnalysis(a);
+            toast(`${loc} → ${to === "UNASSIGNED" ? "unassigned" : to}.`);
+            renderWorlds();
+          });
+        },
+      });
+      return;
+    }
+
+    // Flat (plan P4): key_locations in screenplay order. Sheet state uses
+    // the coverage table's match semantics against the slugline groups and
+    // inherits the group's server-computed sheet.
     const matchOf = name => {
       const n = normLoc(name);
       return groups.find(g => {
@@ -1627,17 +1708,8 @@ async function renderWizard() {
       maxHeight: 340,
       rows: (needle, q) => keyLocs
         .filter(n => !needle || n.toUpperCase().includes(needle))
-        .map(n => {
-          const m = matchOf(n);
-          return `
-          <div class="loc-row wiz-loc-row">
-            <span class="loc-slug" title="${esc(n)}">${esc(n)}</span>
-            <span class="loc-state">${m?.sheet ? `SHEET — ${esc(m.sheet.spec_id)}` : "NO SHEET"}</span>
-            ${m?.sheet
-              ? `<button class="loc-open" data-open="${esc(m.sheet.spec_id)}">Open sheet</button>`
-              : `<button class="block-act loc-draft" data-loc="${esc(n)}">Draft a sheet</button>`}
-          </div>`;
-        }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+        .map(n => wizLocRow(n, matchOf(n)?.sheet))
+        .join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
     });
   };
 
@@ -1675,7 +1747,11 @@ async function renderWizard() {
         <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
         <div id="wiz-worlds"></div>
       </div>
-      ${(analysis.key_locations || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
+      <div id="wiz-envs-sec" style="margin-top:16px">
+        <div class="uncast-label">ENVIRONMENTS — WHAT WORLD IS THIS IN?</div>
+        <div id="wiz-envs"></div>
+      </div>
+      ${(analysis.key_locations || []).length || (analysis.environments || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
         <div class="uncast-label">OPEN QUESTIONS — ${answeredN} ANSWERED OF ${qN}</div>
         <p class="mini">The read couldn't settle these. Answers are appended to the interview and honored by the Bible draft.</p>
@@ -1870,6 +1946,73 @@ async function renderWizard() {
         more.onclick = () => { qShowAll = !qShowAll; renderWorlds(); };
         qHost.append(more);
       }
+    }
+
+    // ---- environment cards (mock 6a) — plan P7 / Gap 6 ----
+    // Same governance as languages: PROPOSED until confirmed, edit-and-save
+    // implicitly confirms, and a manual + Environment door.
+    const envHost = $("#wiz-envs", host);
+    if (envHost) {
+      const envs = analysis.environments || [];
+      envHost.innerHTML = `
+        ${envs.length ? `<div class="env-grid"></div>`
+          : `<div class="env-empty">NO ENVIRONMENTS IN THIS READ — RE-RUN TO EXTRACT THEM</div>`}
+        <div class="row" style="margin-top:8px">
+          <input type="text" data-f="env-name" placeholder="add manually — name…" style="max-width:200px" title="An environment the read missed — the biome or world panels live in, e.g. FOREST.">
+          <input type="text" data-f="env-notes" placeholder="palette, light, atmosphere…" style="max-width:320px" title="One line on what this world looks like — becomes its Bible entry on the next draft.">
+          <button class="ghost" data-f="env-add">+ Environment</button>
+        </div>`;
+      const patchEnvs = (fn) => {
+        const a = getAnalysis();
+        a.environments = a.environments || [];
+        fn(a.environments);
+        saveAnalysis(a);
+        renderWorlds();
+      };
+      const grid = $(".env-grid", envHost);
+      if (grid) envs.forEach((env, i) => {
+        const proposed = env.status === "PROPOSED";
+        const card = document.createElement("div");
+        card.className = "env-card" + (proposed ? " proposed" : "");
+        card.innerHTML = `
+          <div class="env-name">${esc(env.name || "(unnamed)")}</div>
+          <p class="env-notes">${esc(env.notes || "")}</p>
+          <div class="env-facts">${(env.locations || []).length} LOCATIONS
+            <button class="text-act" data-f="edit" style="float:right">Edit</button></div>
+          ${proposed ? `<div class="env-facts prop-tail" style="margin-top:4px">· PROPOSED —
+            <button class="prop-act" data-f="confirm" title="Keep this environment — it becomes a Bible entry on the next draft.">CONFIRM</button> /
+            <button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button></div>` : ""}`;
+        $("[data-f=edit]", card).onclick = () => {
+          card.innerHTML = `
+            <input type="text" data-f="name" value="${esc(env.name || "")}" style="margin-bottom:6px" title="Environment name — its Bible entry heading.">
+            <input type="text" data-f="notes" value="${esc(env.notes || "")}" placeholder="palette, light, atmosphere…" style="margin-bottom:6px">
+            <button class="primary" data-f="save">Save</button>`;
+          $("[data-f=save]", card).onclick = () => patchEnvs(list => {
+            list[i] = { ...list[i],
+              name: $("[data-f=name]", card).value.trim() || env.name,
+              notes: $("[data-f=notes]", card).value.trim() };
+            // Editing-and-saving a proposed environment = implicit confirm.
+            if (list[i].status === "PROPOSED") delete list[i].status;
+          });
+        };
+        $("[data-f=confirm]", card)?.addEventListener("click", () => {
+          patchEnvs(list => { delete list[i].status; });
+          toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);
+        });
+        $("[data-f=drop]", card)?.addEventListener("click", () => {
+          patchEnvs(list => list.splice(i, 1));
+          toast(`"${env.name}" dropped — re-running the read can propose it again.`);
+        });
+        grid.append(card);
+      });
+      $("[data-f=env-add]", envHost).onclick = () => {
+        const name = $("[data-f=env-name]", envHost).value.trim().toUpperCase();
+        if (!name) return toast("Give the environment a name first.", true);
+        patchEnvs(list => list.push({
+          name, notes: $("[data-f=env-notes]", envHost).value.trim(),
+          keywords: [], locations: [] }));
+        toast(`${name} added — assign its locations below.`);
+      };
     }
 
     renderWizLocs();
