@@ -4312,12 +4312,16 @@ async function renderAssemblyFor(specId) {
   catch { /* the map is a preview; assembly still states its own errors */ }
 
   const isStudy = String(spec.board_type || "").toUpperCase() === "LIGHTING_STUDY";
+  // "Aspect" is the default grammar (director's ruling 2026-07-31): slots
+  // derive from the takes' own aspect ratios; "Allocation" is the old
+  // sheet-allocation hero grammar, kept selectable.
   const variants = isStudy ? [] : [
-    { value: "default", label: "DEFAULT" },
+    { value: "aspect", label: "ASPECT" },
+    { value: "allocation", label: "ALLOCATION" },
     { value: "grid", label: "GRID" },
     ...spec.panels.map(p => ({ value: `hero:${p.id}`, label: `HERO ${p.id}` })),
   ];
-  let variant = "default";
+  let variant = "aspect";
   const boardsCount = boards.length;
 
   const asm = document.createElement("div");

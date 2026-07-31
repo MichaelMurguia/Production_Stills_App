@@ -375,6 +375,12 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-31** — Board layout grammar (director's ruling): "Aspect" is
+  the new default variant — slot geometry derives from the takes' own
+  aspect ratios (justified rows, aspect first, scale second, crop last,
+  residual crop uniform and minimal); the old sheet-allocation hero
+  grammar stays selectable as "Allocation". Variant chip vocabulary
+  unchanged otherwise.
 - **2026-07-31** — Four user-directed changes logged as uncanonized (see
   table): the Production Design locations verb became "Create Breakdown"
   (diverging from the canonical finder verb pair), design-language cards

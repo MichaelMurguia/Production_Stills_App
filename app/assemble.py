@@ -115,14 +115,76 @@ def _layout_rects(panels: list[dict], alloc: dict[str, float],
     return rects
 
 
+def _aspect_rects(panels: list[dict], aspects: dict[str, float],
+                  x0: int, y0: int, w: int,
+                  h: int) -> dict[str, tuple[int, int, int, int]]:
+    """Aspect-first layout (director's ruling 2026-07-31): slot geometry
+    derives from the takes' OWN aspect ratios — justified rows in panel
+    order, like a photo wall. Priority order: aspect ratio first, scale
+    second, crop last. Every contiguous partition of the panels into rows
+    is scored; within a row, native aspects fix the widths, and the
+    partition whose natural stacked height best fills the canvas wins.
+    The residual mismatch (canvas height / natural height) is the ONLY
+    aspect deviation, it is uniform across every panel, and the cover-crop
+    step absorbs it — so the crop is as small as the canvas allows."""
+    import math
+    n = len(panels)
+    if n == 0:
+        return {}
+    a = [max(0.1, min(10.0, aspects.get(p["id"]) or 16 / 9)) for p in panels]
+
+    best = None  # (cost, rows, f)
+    for bits in range(1 << (n - 1)):
+        rows, start = [], 0
+        for i in range(n - 1):
+            if bits >> i & 1:
+                rows.append(range(start, i + 1))
+                start = i + 1
+        rows.append(range(start, n))
+        k = len(rows)
+        avail = h - GUTTER * (k - 1) - LABEL_H * k
+        if avail <= 0:
+            continue
+        natural = sum((w - GUTTER * (len(r) - 1)) / sum(a[i] for i in r)
+                      for r in rows)
+        f = avail / natural
+        # |log f| is the uniform crop each panel pays; the tiny row-count
+        # term only breaks ties toward calmer walls.
+        cost = abs(math.log(f)) + 0.01 * k
+        if best is None or cost < best[0]:
+            best = (cost, rows, f)
+
+    _, rows, f = best
+    rects: dict[str, tuple[int, int, int, int]] = {}
+    y = float(y0)
+    for r in rows:
+        wr = w - GUTTER * (len(r) - 1)
+        sum_a = sum(a[i] for i in r)
+        row_h = (wr / sum_a) * f
+        x = float(x0)
+        for j, i in enumerate(r):
+            wi = wr * (a[i] / sum_a)
+            if j == len(r) - 1:
+                wi = x0 + w - x  # absorb rounding drift
+            rects[panels[i]["id"]] = (round(x), round(y), round(wi),
+                                      round(row_h) + LABEL_H)
+            x += wi + GUTTER
+        y += row_h + LABEL_H + GUTTER
+    return rects
+
+
 def check_variant(spec: dict, variant: str | None) -> str:
     """Layout variants are presentation grammar (director's 2026-07-29
     ruling): they rearrange how approved work hangs on the canvas and are
-    recorded on the board record — the spec is never touched. 'default'
-    follows the sheet's allocation, 'grid' is the equal-comparison grammar,
-    'hero:<panel>' leads with that panel."""
+    recorded on the board record — the spec is never touched. 'aspect'
+    (the default since 2026-07-31) lays slots out at the takes' own aspect
+    ratios; 'allocation' is the sheet-allocation hero grammar that was the
+    old default; 'grid' is the equal-comparison grammar; 'hero:<panel>'
+    leads with that panel."""
     v = (variant or "default").strip()
-    if v in ("default", "grid"):
+    if v == "default":
+        return "aspect"
+    if v in ("aspect", "allocation", "grid"):
         return v
     if v.startswith("hero:"):
         pid = v[5:]
@@ -132,13 +194,16 @@ def check_variant(spec: dict, variant: str | None) -> str:
     raise AssemblyError(f"unknown layout variant: {v}")
 
 
-def _variant_rects(spec: dict, alloc: dict[str, float], variant: str,
+def _variant_rects(spec: dict, alloc: dict[str, float],
+                   aspects: dict[str, float], variant: str,
                    x0: int, y0: int, w: int,
                    h: int) -> dict[str, tuple[int, int, int, int]]:
     panels = spec.get("panels", [])
     btype = str(spec.get("board_type") or "LOCATION").upper()
     if btype == "LIGHTING_STUDY" or variant == "grid":
         return _grid_rects(panels, x0, y0, w, h)
+    if variant == "aspect":
+        return _aspect_rects(panels, aspects, x0, y0, w, h)
     hero_id = variant[5:] if variant.startswith("hero:") else None
     return _layout_rects(panels, alloc, x0, y0, w, h, hero_id)
 
@@ -163,6 +228,11 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
 
     alloc = {lp["id"]: float(lp.get("allocation_percent", 0))
              for lp in spec.get("layout", {}).get("panels", [])}
+    # The aspect variant reads each panel's take geometry — approved take
+    # first, else the latest take, else 16:9 until one exists.
+    aspects = {pid: int(c["width"]) / int(c["height"])
+               for pid, c in {**have, **approved}.items()
+               if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
     inner_x = MARGIN
     inner_y = HEADER_H + MARGIN
@@ -174,7 +244,8 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
 
     btype = str(spec.get("board_type") or "LOCATION").upper()
     panels = spec.get("panels", [])
-    rects = _variant_rects(spec, alloc, variant, inner_x, inner_y, inner_w, inner_h)
+    rects = _variant_rects(spec, alloc, aspects, variant,
+                           inner_x, inner_y, inner_w, inner_h)
 
     slots = []
     for panel in panels:
@@ -243,6 +314,9 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
 
     alloc = {lp["id"]: float(lp.get("allocation_percent", 0))
              for lp in spec.get("layout", {}).get("panels", [])}
+    aspects = {pid: int(c["width"]) / int(c["height"])
+               for pid, c in approved.items()
+               if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
     board = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(board)
@@ -273,7 +347,8 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
         strip_h = max(220, int(inner_h * 0.16))
         inner_h -= strip_h + GUTTER
 
-    rects = _variant_rects(spec, alloc, variant, inner_x, inner_y, inner_w, inner_h)
+    rects = _variant_rects(spec, alloc, aspects, variant,
+                           inner_x, inner_y, inner_w, inner_h)
 
     warnings = []
     used: dict[str, str] = {}
