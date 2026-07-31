@@ -201,16 +201,22 @@
       <div id="wiz-analysis"></div>
     </div>
 
+    <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf —
+         the extraction proposes uncast subjects; casting creates the card
+         in the library. The wizard owns the moment; the library owns the data. -->
     <div class="panel step" data-step="3">
-      <h2>Cast &amp; key subjects <span class="hint">(who and what the film needs reference for)</span></h2>
-      <p class="hint">Step 2's analysis recommends subjects found in the screenplay as tags below — click one to add its title card. Upload reference photos into each card: every image becomes an approved reference with that card's role, e.g. <code>CHARACTER_LIKENESS — JOHN STANNER</code>.</p>
-      <div id="wiz-subj-tags" class="chips" style="margin-bottom:10px"></div>
-      <div class="row" style="margin-top:0">
-        <input type="text" id="wiz-subj-name" placeholder="add manually — name…" style="max-width:240px" title="Name of a character, vehicle, or prop not in the recommendations.">
-        <select id="wiz-subj-kind" style="max-width:150px" title="CHARACTER → likeness reference; VEHICLE → geometry reference; PROP → prop reference.">
-          <option>CHARACTER</option><option>VEHICLE</option><option>PROP</option>
-        </select>
-        <button class="ghost" id="wiz-subj-add">+ Add subject</button>
+      <h2>Cast the film <span class="hint">(cards live in Reference / SUBJECTS — this step is the door)</span></h2>
+      <p class="hint">The screenplay read found these. Casting one creates its card in the library and carries the screenplay's identity text into every prompt it appears in. Upload photos into the card — they enter the library already approved, grouped under this exact name.</p>
+      <div class="uncast-block">
+        <div class="uncast-label">FOUND IN THE SCREENPLAY — UNCAST</div>
+        <div id="wiz-subj-tags"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="wiz-subj-name" placeholder="add manually — name…" style="max-width:240px" title="Name of a character, vehicle, or prop the screenplay read missed.">
+          <select id="wiz-subj-kind" style="max-width:150px" title="CHARACTER → likeness reference; VEHICLE → geometry reference; PROP → prop reference.">
+            <option>CHARACTER</option><option>VEHICLE</option><option>PROP</option>
+          </select>
+          <button class="ghost" id="wiz-subj-add">+ Cast</button>
+        </div>
       </div>
       <div id="wiz-subj-grid" class="subj-grid"></div>
     </div>

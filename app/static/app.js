@@ -1429,39 +1429,52 @@ async function renderWizard() {
     });
   }
 
-  // ---- cast & key subjects (Step 3) ----
+  // ---- Cast the film (Step 3, mock 5b) ----
+  // A door into the Reference SUBJECTS shelf: the uncast block lists what
+  // the screenplay read found, grouped by kind. Casting a chip creates the
+  // library card and opens its photo chooser.
   const renderSubjectTags = () => {
     const host = $("#wiz-subj-tags");
-    const analysis = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
-    const recs = analysis?.subjects || [];
     api("/api/subjects").then(existing => {
-      const have = new Set(existing.map(s => s.name.toLowerCase()));
-      const fresh = recs.filter(r => r.name && !have.has(String(r.name).toLowerCase()));
-      host.innerHTML = fresh.length
-        ? `<span class="f-label" style="margin-right:6px">Recommended from the screenplay:</span>`
-        : (recs.length ? `<span class="mini">all recommendations added</span>`
-                       : `<span class="mini">run Step 2 to get recommendations</span>`);
-      for (const r of fresh) {
-        const chip = document.createElement("span");
-        chip.className = "chip";
-        chip.title = `${r.kind || "CHARACTER"} — ${r.subtitle || ""}\nClick to add this title card.`;
-        chip.style.cursor = "pointer";
-        chip.textContent = `+ ${r.name}`;
-        chip.onclick = async () => {
-          try {
-            const subj = await api("/api/subjects", { method: "POST", json: {
-              name: r.name, kind: r.kind || "CHARACTER",
-              subtitle: r.subtitle || "", traits: r.traits || [],
-              source: "screenplay analysis" } });
-            toast(`${r.name} added — choose its reference photos.`);
-            renderSubjectTags();
-            await renderSubjectGrid();
-            // The next action is always adding reference photos — open the
-            // chooser for the new card immediately.
-            $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
-          } catch (err) { toast(err.message, true); }
-        };
-        host.append(chip);
+      const fresh = uncastRecommendations(existing);
+      if (!fresh.length) {
+        const ran = !!JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+        host.innerHTML = `<span class="mini">${ran
+          ? "everything the read found is cast" : "run Step 2 to get casting proposals"}</span>`;
+        return;
+      }
+      host.innerHTML = "";
+      for (const kind of ["CHARACTER", "VEHICLE", "PROP"]) {
+        const recs = fresh.filter(r => (r.kind || "CHARACTER").toUpperCase() === kind);
+        if (!recs.length) continue;
+        const row = document.createElement("div");
+        row.className = "uncast-row";
+        row.innerHTML = `<span class="uncast-kind">${kind}S</span><span class="chips" data-f="chips"></span>`;
+        const chips = $("[data-f=chips]", row);
+        for (const r of recs) {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.title = `${r.subtitle ? r.subtitle + "\n" : ""}Cast this subject — creates its card in the library.`;
+          chip.style.cursor = "pointer";
+          chip.textContent = `+ ${r.name}`;
+          chip.onclick = async () => {
+            try {
+              const subj = await api("/api/subjects", { method: "POST", json: {
+                name: r.name, kind: r.kind || "CHARACTER",
+                subtitle: r.subtitle || "", traits: r.traits || [],
+                source: "screenplay analysis" } });
+              toast(`${r.name} cast — add its reference photos.`);
+              renderSubjectTags();
+              await renderSubjectGrid();
+              wizardStepBadges();
+              // The next action is always adding reference photos — open the
+              // chooser for the new card immediately.
+              $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
+            } catch (err) { toast(err.message, true); }
+          };
+          chips.append(chip);
+        }
+        host.append(row);
       }
     });
   };
@@ -1475,7 +1488,8 @@ async function renderWizard() {
       `<p class="mini" style="grid-column:1/-1">No subjects yet — click a recommended tag above or add one manually.</p>`;
     for (const s of subjects)
       grid.append(buildSubjectCard(s, refs,
-        () => { renderSubjectTags(); renderSubjectGrid(); }));
+        () => { renderSubjectTags(); renderSubjectGrid(); wizardStepBadges(); },
+        { viewLink: true }));
   };
 
   $("#wiz-subj-add").onclick = async () => {
@@ -1485,9 +1499,10 @@ async function renderWizard() {
       const subj = await api("/api/subjects", { method: "POST", json: {
         name, kind: $("#wiz-subj-kind").value, source: "manual" } });
       $("#wiz-subj-name").value = "";
-      toast(`${name} added — choose its reference photos.`);
+      toast(`${name} cast — add its reference photos.`);
       renderSubjectTags();
       await renderSubjectGrid();
+      wizardStepBadges();
       $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
     } catch (err) { toast(err.message, true); }
   };
@@ -1723,9 +1738,13 @@ async function renderWizard() {
       setB(1, set === 3 ? "APPROVED" : "PROVISIONAL", `${set} OF 3 ANCHOR ROLES SET`);
       setB(2, wizAnalysis ? "APPROVED" : "LOCKED",
         wizAnalysis ? `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES FOUND` : "NOT RUN");
-      const photos = subjects.reduce((n, s) => n + (s.ref_ids || []).length, 0);
-      setB(3, subjects.length ? "APPROVED" : "LOCKED",
-        subjects.length ? `${subjects.length} CARDS · ${photos} PHOTOS` : "NONE YET");
+      // Cast the film: --hold border while anything stays uncast, --ok when
+      // the whole read is cast (plan D4; existing badge classes carry it).
+      const uncastN = uncastRecommendations(subjects).length;
+      setB(3, !subjects.length && !uncastN ? "LOCKED"
+        : uncastN ? "PROVISIONAL" : "APPROVED",
+        !subjects.length && !uncastN ? "NONE YET"
+        : `${subjects.length} CAST · ${uncastN} UNCAST`);
       setB(5, bible.is_default ? "LOCKED" : "APPROVED",
         bible.is_default ? "NOT DRAFTED" : `SAVED · REV ${bible.rev || 0}`);
       setB(6, samples.length ? "APPROVED" : "LOCKED",

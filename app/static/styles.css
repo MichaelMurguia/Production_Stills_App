@@ -683,6 +683,14 @@ label.check {
 }
 .subj-facts .text-act:hover { color: var(--ink); text-decoration: underline; }
 
+/* Cast-the-film uncast block (mock 5b) — plan D4. Proposal chips grouped
+   by kind, Courier faint row labels at fixed width; the manual cast row
+   closes the block. */
+.uncast-block { border: 1px solid var(--line-soft); padding: 12px 14px; }
+.uncast-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
+.uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
+.uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
+
 /* ============================================== boards: subject ref groups */
 .ref-groups { display: flex; flex-wrap: wrap; gap: 8px; }
 .ref-group {
