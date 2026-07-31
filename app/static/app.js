@@ -1630,7 +1630,7 @@ async function renderWizard() {
       <span class="loc-state">${sheet ? `SHEET — ${esc(sheet.spec_id)}` : "NO SHEET"}</span>
       ${sheet
         ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open sheet</button>`
-        : `<button class="block-act loc-draft" data-loc="${esc(name)}">Draft a sheet</button>`}
+        : `<button class="block-act loc-draft" data-loc="${esc(name)}">Create Breakdown</button>`}
     </div>`;
   const renderWizLocs = async () => {
     const secHost = $("#wiz-locs-sec");
