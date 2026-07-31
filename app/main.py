@@ -41,12 +41,19 @@ async def activity_middleware(request: Request, call_next):
             except json.JSONDecodeError:
                 body_summary = {"raw_bytes": len(raw)}
 
+    # Endpoints that parse multipart forms can surface their fields here via
+    # request.state.activity (e.g. the repair instruction) — the middleware
+    # can't read a multipart body without consuming the upload stream.
+    def enrich(summary):
+        extra = request.scope.get("state", {}).get("activity")
+        return {**(summary or {}), **extra} if extra else summary
+
     t0 = _time.perf_counter()
     try:
         response = await call_next(req)
     except Exception as e:
         activity.log({"method": request.method, "path": request.url.path,
-                      "body": body_summary, "status": 500, "error": str(e)[:500],
+                      "body": enrich(body_summary), "status": 500, "error": str(e)[:500],
                       "ms": round((_time.perf_counter() - t0) * 1000)})
         raise
     ms = round((_time.perf_counter() - t0) * 1000)
@@ -60,7 +67,7 @@ async def activity_middleware(request: Request, call_next):
                             headers=dict(response.headers),
                             media_type=response.media_type)
     activity.log({"method": request.method, "path": request.url.path,
-                  "body": body_summary, "status": response.status_code,
+                  "body": enrich(body_summary), "status": response.status_code,
                   **({"error": detail} if detail else {}), "ms": ms})
     return response
 
@@ -592,7 +599,7 @@ async def api_crop_reference(body: dict) -> dict:
 
 
 @app.post("/api/specs/{spec_id}/candidates/{cand_id}/repair")
-async def api_repair_region(spec_id: str, cand_id: str,
+async def api_repair_region(request: Request, spec_id: str, cand_id: str,
                             mask: UploadFile = File(...),
                             instruction: str = Form(...),
                             ref_ids: str = Form("[]"),
@@ -603,6 +610,9 @@ async def api_repair_region(spec_id: str, cand_id: str,
             raise ValueError
     except ValueError:
         raise HTTPException(422, "ref_ids must be a JSON list")
+    # Flight recorder: the repair prompt belongs in the log (the middleware
+    # only sees the multipart byte count).
+    request.state.activity = {"instruction": instruction, "ref_ids": ids}
     try:
         mask_bytes = await mask.read()
         return await run_in_threadpool(
