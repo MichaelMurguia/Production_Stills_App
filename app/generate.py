@@ -335,11 +335,13 @@ def _style_context(spec: dict, panel: dict) -> str:
         " ".join(panel.get("forbidden_objects", [])),
     ])
     # Explicit per-spec selection is the governed path; absent fields fall
-    # back to keyword inference inside render_context.
+    # back to keyword inference inside render_context. Environments never
+    # infer — a sheet without one carries none.
     return bible.render_context(
         haystack,
         spec.get("design_languages") if "design_languages" in spec else None,
         spec.get("scene_lessons") if "scene_lessons" in spec else None,
+        environments=spec.get("environments") or [],
     ) or load_style_bible().strip()
 
 
@@ -1707,6 +1709,10 @@ def create_lighting_study(spec_id: str, cand_id: str,
     if "design_languages" in parent:
         study["design_languages"] = list(parent["design_languages"])
         study["scene_lessons"] = list(parent.get("scene_lessons", []))
+    # A study lives in its parent's world — environments inherit alongside
+    # languages (plan P8).
+    if parent.get("environments"):
+        study["environments"] = list(parent["environments"])
     panels, layout = [], []
     share = round(100.0 / len(atmos), 2)
     for i, a in enumerate(atmos, 1):

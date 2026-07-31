@@ -1917,8 +1917,12 @@ async function renderWizard() {
       const qaLines = (getAnalysis()?.unresolved || [])
         .filter(q => getAnalysis()?.question_answers?.[q]?.answer)
         .map(q => `Q: ${q} / A: ${getAnalysis().question_answers[q].answer}`);
+      const chosenEnvs = (getAnalysis()?.environments || [])
+        .filter(e => e.status !== "PROPOSED" && (e.name || "").trim())
+        .map(e => ({ name: e.name.trim(), notes: (e.notes || "").trim() }));
       const answers = {
         worlds: chosenWorlds,
+        environments: chosenEnvs,
         touchstones: $("#wiz-touchstones").value.trim(),
         medium: $("#wiz-medium").value.trim(),
         palette: $("#wiz-palette").value.trim(),

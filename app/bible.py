@@ -36,12 +36,17 @@ GLOBAL_SECTIONS = [
 
 MATERIALS_SECTION = "Core Material Language"
 SCENE_LESSONS_SECTION = "Current Locked Scene-Specific Lessons"
+# Environments ride the level-3 mechanism (### entries under this container,
+# like materials and lessons) — a top-level section would be swallowed by
+# the every-other-##-is-a-design-language rule. Gap 6, Correction 2.
+ENVIRONMENTS_SECTION = "Environments"
 
 SYSTEM_SECTIONS = set(GLOBAL_SECTIONS) | {
     "Status",
     "Technology Families",          # container heading, no body of its own
     "Design Languages",             # alternative container heading
     MATERIALS_SECTION,
+    ENVIRONMENTS_SECTION,
     "Composition Rules",
     "Production Board Presentation",
     SCENE_LESSONS_SECTION,
@@ -131,9 +136,12 @@ def sections_catalog() -> dict:
     sections = parse_sections(text)
     lessons = [t for t, b in parse_sections(
         sections.get(SCENE_LESSONS_SECTION, ""), level=3).items() if b.strip()]
+    environments = [t for t, b in parse_sections(
+        sections.get(ENVIRONMENTS_SECTION, ""), level=3).items() if b.strip()]
     return {
         "exists": bool(text.strip()),
         "design_languages": design_language_names(sections),
+        "environments": environments,
         "scene_lessons": lessons,
         "atmospheres": atmospheres(),
     }
@@ -168,12 +176,16 @@ def _block(title: str, body: str) -> str:
 
 def render_context(haystack: str,
                    design_languages: list[str] | None = None,
-                   scene_lessons: list[str] | None = None) -> str:
+                   scene_lessons: list[str] | None = None,
+                   environments: list[str] | None = None) -> str:
     """Assemble the bible subset for one panel.
 
     `design_languages` / `scene_lessons`: explicit selections from the spec
     (the governed path). None means fall back to keyword inference against
-    `haystack` (the panel's searchable text)."""
+    `haystack` (the panel's searchable text). `environments` is explicit
+    only — no inference; a sheet without one simply carries none. Its block
+    lands between languages and lessons, before the prompt's SETTING lines,
+    so the sheet's own atmosphere wins ties (Gap 6 ruling §3)."""
     text = load_text()
     if not text:
         return ""
@@ -203,6 +215,12 @@ def render_context(haystack: str,
             body = f"{body}\n\nMaterials:\n{mat}" if body else mat
         if body:
             parts.append(_block(f"{name} — design language", body))
+
+    envs = parse_sections(sections.get(ENVIRONMENTS_SECTION, ""), level=3)
+    for name in (environments or []):
+        body = next((b for t, b in envs.items() if t.lower() == name.lower()), "")
+        if body:
+            parts.append(_block(f"{name} — environment", body))
 
     lessons = parse_sections(sections.get(SCENE_LESSONS_SECTION, ""), level=3)
     for title in scene_lessons:

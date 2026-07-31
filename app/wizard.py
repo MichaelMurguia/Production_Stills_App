@@ -29,12 +29,24 @@ ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
      "traits": ["terse production-note fragments, e.g.", "40s. Lean. Hard-edged.",
                 "Former pilot.", "Carries a rifle.", "Lives simply."]}
   ],
+  "environments": [
+    {"name": "UPPERCASE biome/world name, e.g. FOREST, DESERT, ORBITAL / STATION",
+     "notes": "one line — the palette, light, and atmosphere of this world",
+     "keywords": ["lowercase", "trigger", "words"],
+     "locations": ["entries copied VERBATIM from the LOCATION LIST"]}
+  ],
   "key_locations": ["recurring locations that boards will likely depict"],
   "unresolved": ["visual questions the screenplay leaves open"]
 }
 Identify 2-5 design languages ("design_worlds" in the JSON) — distinct visual
 cultures that each need their own design language (protagonist world,
 antagonist institutions, exotic technology, etc.).
+Identify 2-6 environments — the physical worlds panels live in (forest,
+desert, asteroid surface, station interior). Environments are not factions:
+a faction's outpost in forest vs. desert shares its culture but not its
+palette, light, or atmosphere. If a LOCATION LIST is provided below, assign
+each of its entries to exactly ONE environment, copied verbatim — never
+invent, merge, or rephrase a listed location.
 List every subject the art department needs visual reference for: main
 and supporting characters, hero vehicles, key props. Subtitles and traits are
 clipped production-note prose drawn ONLY from what the screenplay states or
@@ -44,10 +56,19 @@ do not invent."""
 
 def analyze_screenplay(provider: str = "gemini") -> dict:
     doc, mime = autofill._screenplay_bytes()
+    # Environment membership is ASSIGNMENT, not generation (Gap 6 ruling):
+    # the model picks from the deterministic slugline parse, so the coverage
+    # table and finder list group with zero fuzzy matching downstream.
+    from . import insights
+    slugs = [l["location"] for l in
+             insights.locations().get("locations", [])]
+    loc_note = ("\n\nLOCATION LIST — the screenplay's slugline locations. "
+                "Assign each to exactly one environment, copied verbatim:\n"
+                + "\n".join(f"- {s}" for s in slugs)) if slugs else ""
     instructions = (
         "You are the production designer's research assistant. Read the attached "
         "screenplay and identify the visual worlds a film art department would "
-        "need to design.\n\n" + ANALYZE_SCHEMA_NOTE)
+        "need to design.\n\n" + ANALYZE_SCHEMA_NOTE + loc_note)
     draft_fn = autofill._draft_openai if provider == "openai" else autofill._draft_gemini
     result, model = draft_fn(doc, mime, instructions)
     result["model"] = model
@@ -134,6 +155,9 @@ def _bible_instructions(answers: dict) -> str:
         f"- {w.get('name', '?')}: {w.get('notes') or w.get('description') or ''}"
         f" (keywords: {', '.join(w.get('keywords', []) or [])})"
         for w in worlds)
+    envs = answers.get("environments") or []
+    env_lines = "\n".join(
+        f"- {e.get('name', '?')}: {e.get('notes') or ''}" for e in envs)
     refs_note = ""
     if answers.get("reference_roles"):
         refs_note = ("\nATTACHED REFERENCE PHOTOS — study them; each controls only "
@@ -154,6 +178,10 @@ DIRECTOR'S ANSWERS
 
 DESIGN LANGUAGES (one ## section each, in this order — first is the default world):
 {world_lines or '- derive 2-4 from the screenplay'}
+
+ENVIRONMENTS (one ### entry each under '## Environments' — the physical worlds
+panels live in; palette, light, and atmosphere only, never culture):
+{env_lines or '- none identified — omit the Environments section entirely'}
 {refs_note}
 
 OUTPUT FORMAT — return ONLY markdown in EXACTLY this section structure
@@ -182,6 +210,14 @@ Keywords: <comma-separated lowercase trigger words>
 
 ## <World 2 name>
 (same shape, for each world)
+
+## Environments
+
+### <Environment 1 name>
+(bullets — the palette, light, and atmosphere of this world)
+
+### <Environment 2 name>
+(same shape, for each environment; omit the whole section if none were listed)
 
 ## Core Material Language
 ### <World 1 name>
