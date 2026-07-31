@@ -1539,6 +1539,7 @@ async function renderWizard() {
   };
 
   const expandedWorlds = new Set();
+  let qShowAll = false;
   const renderWorlds = () => {
     const analysis = getAnalysis();
     const host = $("#wiz-analysis");
@@ -1550,8 +1551,8 @@ async function renderWizard() {
     const proposedN = worlds.filter(w => w.status === "PROPOSED").length;
     const envN = (analysis.environments || []).length;
     const qN = (analysis.unresolved || []).length;
-    const answeredN = Object.values(analysis.question_answers || {})
-      .filter(x => x && x.answer).length;
+    const answeredN = (analysis.unresolved || [])
+      .filter(q => analysis.question_answers?.[q]?.answer).length;
     const seg = (goto, n, label, suffix = "") =>
       `<a class="reveal-count" data-goto="${goto}"><b>${n}</b> ${label}${suffix}</a>`;
     const counts = [
@@ -1574,7 +1575,11 @@ async function renderWizard() {
         <div id="wiz-worlds"></div>
       </div>
       ${(analysis.key_locations || []).length ? `<p class="mini" id="wiz-locs-sec" style="margin-top:10px"><b>Recurring locations:</b> ${esc(analysis.key_locations.join(" · "))}</p>` : ""}
-      ${(analysis.unresolved || []).length ? `<p class="mini" id="wiz-questions-sec"><b>Open visual questions:</b> ${esc(analysis.unresolved.join(" · "))}</p>` : ""}`;
+      ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
+        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} ANSWERED OF ${qN}</div>
+        <p class="mini">The read couldn't settle these. Answers are appended to the interview and honored by the Bible draft.</p>
+        <div id="wiz-questions"></div>
+      </div>` : ""}`;
     const GOTO = {
       langs: () => $("#wiz-langs-sec"), envs: () => $("#wiz-envs-sec"),
       locs: () => $("#wiz-locs-sec"), questions: () => $("#wiz-questions-sec"),
@@ -1668,6 +1673,69 @@ async function renderWizard() {
       };
       wHost.append(row);
     });
+
+    // ---- open questions as the interview (plan P2 / R3) ----
+    // One answerable row per question; state lives in the analysis payload
+    // (question_answers, keyed by question text) via the existing save path.
+    const qHost = $("#wiz-questions", host);
+    if (qHost) {
+      const qs = analysis.unresolved || [];
+      const Q_CAP = 5;
+      const shown = qShowAll ? qs : qs.slice(0, Q_CAP);
+      shown.forEach(q => {
+        const st = (analysis.question_answers || {})[q] || {};
+        const i = qs.indexOf(q);
+        const row = document.createElement("div");
+        row.className = "q-row" + (st.answer ? " answered" : "") + (st.deferred ? " deferred" : "");
+        row.innerHTML = `
+          <span class="q-idx">Q${String(i + 1).padStart(2, "0")}</span>
+          <div class="q-main">
+            <p class="q-text">${esc(q)}</p>
+            ${st.answer ? `<p class="q-answer">A — ${esc(st.answer)}</p>` : ""}
+          </div>
+          <span class="q-actions">
+            ${st.answer
+              ? `<button class="text-act" data-f="answer">Edit</button>`
+              : `<button class="ghost" data-f="answer">Answer</button>
+                 <button class="text-act" data-f="defer">${st.deferred ? "Reconsider" : "Decide later"}</button>`}
+          </span>`;
+        const patch = updates => {
+          const a = getAnalysis();
+          a.question_answers = a.question_answers || {};
+          a.question_answers[q] = { ...(a.question_answers[q] || {}), ...updates };
+          saveAnalysis(a);
+          renderWorlds();
+        };
+        $("[data-f=answer]", row).onclick = () => {
+          const main = $(".q-main", row);
+          if ($("input", main)) return;
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = st.answer || "";
+          input.placeholder = "your answer — Enter saves, Esc cancels";
+          input.title = "Appended to the interview as a Q/A pair and honored by the Bible draft.";
+          main.append(input);
+          input.focus();
+          input.onkeydown = e => {
+            if (e.key === "Escape") renderWorlds();
+            if (e.key !== "Enter") return;
+            const v = input.value.trim();
+            patch({ answer: v, deferred: false });
+            if (v) toast("Answer saved — it rides into the Bible draft.");
+          };
+        };
+        const defer = $("[data-f=defer]", row);
+        if (defer) defer.onclick = () => patch({ deferred: !st.deferred });
+        qHost.append(row);
+      });
+      if (qs.length > shown.length || qShowAll) {
+        const more = document.createElement("button");
+        more.className = "text-act q-more";
+        more.textContent = qShowAll ? "▴ show fewer" : `▾ ${qs.length - shown.length} more`;
+        more.onclick = () => { qShowAll = !qShowAll; renderWorlds(); };
+        qHost.append(more);
+      }
+    }
   };
 
   $("#wiz-analyze").onclick = async (e) => {
@@ -1704,13 +1772,18 @@ async function renderWizard() {
           notes: (w.description || "").trim(),
           keywords: w.keywords || [],
         })).filter(w => w.name);
+      // Answered step-2 questions ride into the notes field the drafter
+      // already reads — no new payload field (plan P2 / R3).
+      const qaLines = (getAnalysis()?.unresolved || [])
+        .filter(q => getAnalysis()?.question_answers?.[q]?.answer)
+        .map(q => `Q: ${q} / A: ${getAnalysis().question_answers[q].answer}`);
       const answers = {
         worlds: chosenWorlds,
         touchstones: $("#wiz-touchstones").value.trim(),
         medium: $("#wiz-medium").value.trim(),
         palette: $("#wiz-palette").value.trim(),
         never: $("#wiz-never").value.trim(),
-        notes: $("#wiz-notes").value.trim(),
+        notes: [$("#wiz-notes").value.trim(), ...qaLines].filter(Boolean).join("\n"),
         ref_ids: $$(".wiz-ref-use:checked").map(x => x.value),
       };
       const r = await api("/api/wizard/draft-bible", {
