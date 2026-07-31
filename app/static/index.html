@@ -291,33 +291,21 @@
   </section>
 </template>
 
+<!-- Reference: ONE library, three shelves, sorted by when an image rides
+     along (mock 5a). Subject cards ARE the middle shelf. -->
 <template id="tpl-references">
   <section class="view">
     <div class="panel">
-      <h2>Reference library</h2>
-      <p class="hint">Each image controls exactly one thing and nothing else. Approve to make it a canon anchor; rejecting quarantines it from the pipeline — Reinstate returns it to provisional review.</p>
-      <form id="ref-form" class="ref-add">
-        <input type="file" id="ref-file" accept="image/*" required
-          title="The reference image file itself. It is copied into the library; the original stays where it is.">
-        <span class="intake-prefix" title="The one field you can't guess — see the selects' tooltips">ROLE</span><select id="ref-role-head"
-          title="The single narrow job this image does. STYLE roles are art direction, auto-attached to every generation. SUBJECT roles anchor what things are, attached per panel. A reference controls nothing outside its role."></select>
-        <input type="text" id="ref-role-title" list="ref-title-list" placeholder="title — e.g. GT40"
-          title="Name it after the subject or object so panels pre-check it, and so the image joins the existing group with the same title. Suggestions come from your cast cards, screenplay locations, and existing groups. Style roles take no title.">
-        <datalist id="ref-title-list"></datalist>
-        <input type="text" id="ref-controls" placeholder="controls…"
-          title="Comma-separated aspects this image DOES govern within its role (e.g. face, hair, proportions). Spelled out in every prompt the reference is attached to.">
-        <input type="text" id="ref-nocontrols" placeholder="not…"
-          title="Comma-separated aspects this image must NOT influence (e.g. costume, lighting, camera angle) — stops the model copying things you only meant as context.">
-        <input type="text" id="ref-notes" placeholder="notes"
-          title="Free-form provenance notes — where the image came from, which scene it anchors. For your records; not sent to the model.">
-        <button type="submit" class="ghost">+ Add reference</button>
-      </form>
+      <div class="stage-kicker">THE LIBRARY</div>
+      <h3 class="stage-headline">Everything a render can anchor to</h3>
+      <p class="hint">Three shelves, sorted by when an image rides along. Approve to make something canon; rejecting quarantines it — Reinstate brings it back.</p>
       <div class="ref-bar">
-        <span class="ref-chips" id="ref-chips"></span>
+        <input type="text" id="ref-search" class="loc-search" style="margin:0" placeholder="find in library…" title="Filters every shelf — matches IDs, roles, titles, notes, and subject names">
+        <button class="ghost" id="ref-add-btn" title="Add an image to the library — one image, one job">+ Add reference</button>
         <span class="ref-counts" id="ref-counts"></span>
       </div>
     </div>
-    <div id="ref-grid" class="ref-grid"></div>
+    <div id="ref-shelves"></div>
   </section>
 </template>
 

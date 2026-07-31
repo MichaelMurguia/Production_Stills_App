@@ -448,7 +448,9 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
         </label>
         ${fields.map((f, i) => `
           <label class="modal-field">${esc(f.label)}
-            <input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">
+            ${f.type === "file"
+              ? `<input type="file" data-mf="${i}" accept="image/*">`
+              : `<input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">`}
             ${f.name === "controls" ? `<span class="role-suggest" data-rf="ctl-chips"></span>` : ""}
             ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
           </label>`).join("")}
@@ -522,7 +524,10 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
       const fam = famOf();
       if (fam.titled && !titleIn.value.trim()) { titleIn.focus(); return undefined; }
       const out = { role: assembled(), title: titleIn.value.trim() };
-      fields.forEach((f, i) => { out[f.name] = $(`[data-mf="${i}"]`, ov).value.trim(); });
+      fields.forEach((f, i) => {
+        const el = $(`[data-mf="${i}"]`, ov);
+        out[f.name] = f.type === "file" ? (el.files[0] || null) : el.value.trim();
+      });
       return out;
     };
     const onKey = e => {
@@ -1798,177 +1803,181 @@ async function renderWizard() {
 
 /* ------------------------------------------------------------- references */
 
+// Role → shelf mapping: STYLE rides on every render; SCENES ride when a
+// board covers their scene; SUBJECTS ride when their subject is on a panel.
+const STYLE_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"];
+const SCENE_HEADS = ["SCENE_REFERENCE", "LOCATION_GEOMETRY"];
+const bucketOfRef = r => STYLE_HEADS.includes(roleHead(r.role)) ? "STYLE"
+  : SCENE_HEADS.includes(roleHead(r.role)) ? "SCENE" : "SUBJECT";
+
+// One ref-card, used by every shelf (anatomy per mock 4c).
+function buildRefCard(r, lbItems, i) {
+  const isAutoAttach = AUTO_ATTACH_HEADS.includes(roleHead(r.role));
+  const card = document.createElement("div");
+  card.className = `ref-card ${r.status}`;
+  const usage = r.status === "REJECTED"
+    ? `<div class="juris bad">REJECTED ${esc((r.rejected_at || r.added_at || "").slice(5, 10).replace("-", " "))}${r.status_reason ? ` — ${esc(r.status_reason.toUpperCase())}` : ""}</div>
+       <div class="meta">THE PIPELINE CANNOT ATTACH THIS</div>`
+    : isAutoAttach
+      ? `<div class="meta">AUTO-ATTACHED · ALL RENDERS</div>`
+      : (r.used_in ? `<div class="meta">USED IN ${r.used_in} RENDER${r.used_in > 1 ? "S" : ""}</div>` : "");
+  card.innerHTML = `
+    <img src="/api/references/${r.id}/image?thumb=true" alt="${esc(r.id)}" loading="lazy">
+    <div class="body">
+      <div><span class="badge ${r.status}">${r.status}</span> <b>${esc(r.id)}</b></div>
+      <div class="role">${esc(r.role)}</div>
+      <div class="juris ok">CONTROLS ${esc(r.controls.join(" · ") || "—")}</div>
+      <div class="juris bad">NOT ${esc(r.does_not_control.join(" · ") || "—")}</div>
+      ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
+      ${usage}
+    </div>
+    <div class="actions"></div>`;
+  $("img", card).onclick = () => openLightbox(lbItems, i);
+  const actions = $(".actions", card);
+  if (r.status !== "APPROVED") {
+    const b = document.createElement("button");
+    b.className = "primary"; b.textContent = "Approve";
+    b.onclick = () => setRefStatus(r.id, "APPROVED");
+    actions.append(b);
+  } else {
+    const cr = document.createElement("button");
+    cr.className = "ghost"; cr.textContent = "Crop";
+    cr.title = "Harvest a region of this image (e.g. one cell of a master board) as a new reference with its own narrow role";
+    cr.onclick = () => cropToReference(
+      { type: "reference", id: r.id }, `/api/references/${r.id}/image`);
+    actions.append(cr);
+  }
+  if (r.status !== "REJECTED") {
+    const b = document.createElement("button");
+    b.className = "danger"; b.textContent = "Reject";
+    b.onclick = async () => {
+      const reason = await askText(`Reject ${r.id}`, "Reason",
+        { hint: "recorded on the card and in the rejection history; the file is quarantined from the pipeline — Reinstate undoes it",
+          confirmLabel: "Reject", danger: true });
+      if (reason !== null) setRefStatus(r.id, "REJECTED", reason);
+    };
+    actions.append(b);
+  } else {
+    const b = document.createElement("button");
+    b.className = "ghost"; b.textContent = "Reinstate as provisional";
+    b.onclick = () => setRefStatus(r.id, "PROVISIONAL");
+    actions.append(b);
+  }
+  const del = document.createElement("button");
+  del.className = "danger"; del.textContent = "Delete";
+  del.title = "Permanently delete this image and its record — journaled in the approval log";
+  del.onclick = async () => {
+    if (!(await askConfirm(`Delete ${r.id} forever`,
+      `${r.role}\nRemoved from the library and from future generations — past candidates keep their own records. This cannot be undone.`,
+      "Delete forever", true))) return;
+    try {
+      await api(`/api/references/${r.id}`, { method: "DELETE" });
+      toast(`${r.id} permanently deleted.`);
+      renderReferences();
+    } catch (err) { toast(err.message, true); }
+  };
+  actions.append(del);
+  return card;
+}
+
+// Adding to the library is a dialog now (the intake row moved behind the
+// button per ONE_LIBRARY_PLAN D2) — the vocabulary picker plus a file field.
+async function addReferenceDialog() {
+  const r = await roleDialog({
+    title: "Add reference",
+    body: "One image, one job. It enters the library provisional; approve it to make it a canon anchor.",
+    prefillHead: "CHARACTER_LIKENESS",
+    fields: [
+      { name: "file", label: "Image", type: "file" },
+      { name: "controls", label: "Controls", placeholder: "comma-separated — or click the chips" },
+      { name: "does_not_control", label: "Does not control", placeholder: "e.g. costume, lighting, camera angle" },
+      { name: "notes", label: "Notes", placeholder: "provenance — where it came from, what it anchors" },
+    ],
+    confirmLabel: "Add to library",
+  });
+  if (r === null) return;
+  if (!r.file) { toast("Pick an image file.", true); return; }
+  const fd = new FormData();
+  fd.append("file", r.file);
+  fd.append("role", r.role);
+  fd.append("controls", r.controls || "");
+  fd.append("does_not_control", r.does_not_control || "");
+  fd.append("notes", r.notes || "");
+  try {
+    const ref = await api("/api/references", { method: "POST", body: fd });
+    toast(`${ref.id} added as ${ref.role} (provisional).`);
+    renderReferences();
+  } catch (err) { toast(err.message, true); }
+}
+
+const SHELVES = [
+  { key: "STYLE", name: "STYLE", ride: "RIDES ALONG — EVERY RENDER, AUTOMATICALLY",
+    note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
+  { key: "SUBJECT", name: "SUBJECTS", ride: "RIDES ALONG — WHEN ITS SUBJECT APPEARS ON A PANEL",
+    note: "cast in Production Design step 3 — same cards, this is where they live",
+    count: n => `${n.total} IMAGE${n.total === 1 ? "" : "S"}` },
+  { key: "SCENE", name: "SCENES", ride: "RIDES ALONG — WHEN A BOARD COVERS ITS SCENE",
+    note: "promoted takes, light studies, crops of environments",
+    count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"}` },
+];
+
 async function renderReferences() {
   useTemplate("tpl-references");
   _roleCtx = null;  // fresh groups after every library change
-
-  // Intake role: family select + sourced title datalist (role picker rules).
-  const headSel = $("#ref-role-head");
-  const titleIn = $("#ref-role-title");
-  headSel.innerHTML = ROLE_FAMILIES.map(f =>
-    `<option value="${f.head}" title="${esc(f.desc)}">${f.head}</option>`).join("");
-  const syncIntake = async () => {
-    const fam = ROLE_FAMILIES.find(f => f.head === headSel.value);
-    titleIn.disabled = !fam.titled;
-    titleIn.placeholder = fam.titled ? "title — e.g. GT40" : "style roles take no title";
-    if (fam.titled) {
-      const ctx = await roleContext();
-      $("#ref-title-list").innerHTML = titleSuggestions(headSel.value, ctx)
-        .map(s => `<option value="${esc(s.value)}" label="${esc(s.note)}">`).join("");
-    }
-  };
-  headSel.addEventListener("change", syncIntake);
-  titleIn.addEventListener("input", () => {
-    const pos = titleIn.selectionStart;
-    titleIn.value = titleIn.value.toUpperCase();
-    titleIn.setSelectionRange(pos, pos);
-  });
-  syncIntake();
-
-  $("#ref-form").addEventListener("submit", async e => {
-    e.preventDefault();
-    const file = $("#ref-file").files[0];
-    if (!file) return;
-    const fam = ROLE_FAMILIES.find(f => f.head === headSel.value);
-    if (fam.titled && !titleIn.value.trim()) { titleIn.focus(); return; }
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("role", fam.titled && titleIn.value.trim()
-      ? `${headSel.value} — ${titleIn.value.trim()}` : headSel.value);
-    fd.append("controls", $("#ref-controls").value);
-    fd.append("does_not_control", $("#ref-nocontrols").value);
-    fd.append("notes", $("#ref-notes").value);
-    try {
-      const ref = await api("/api/references", { method: "POST", body: fd });
-      toast(`${ref.id} added as ${ref.role} (provisional).`);
-      renderReferences();
-    } catch (err) { toast(err.message, true); }
-  });
-
   const refs = await api("/api/references");
-  const grid = $("#ref-grid");
-  grid.innerHTML = refs.length ? "" :
-    `<div class="panel mini">No references yet. Start with a Board rendering style image — the painting-style anchor attached to every generation.</div>`;
 
-  // Role → bucket mapping (plan v3 B5): STYLE = the three style-anchor
-  // families, SCENE = scene/geometry anchors, SUBJECT = everything else.
-  const STYLE_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"];
-  const SCENE_HEADS = ["SCENE_REFERENCE", "LOCATION_GEOMETRY"];
-  const bucketOf = r => STYLE_HEADS.includes(roleHead(r.role)) ? "STYLE"
-    : SCENE_HEADS.includes(roleHead(r.role)) ? "SCENE" : "SUBJECT";
-  const isStyle = r => bucketOf(r) === "STYLE";
-  const isAutoAttach = r => AUTO_ATTACH_HEADS.includes(roleHead(r.role));
-
-  const filter = renderReferences.filter ??= { bucket: "ALL" };
-  const counts = { ALL: refs.length, STYLE: 0, SUBJECT: 0, SCENE: 0 };
-  refs.forEach(r => { counts[bucketOf(r)] += 1; });
-  $("#ref-chips").innerHTML = ["ALL", "STYLE", "SUBJECT", "SCENE"].map(b =>
-    `<button class="vchip${filter.bucket === b ? " on" : ""}" data-b="${b}">${b} ${counts[b]}</button>`).join("");
-  $$("#ref-chips .vchip").forEach(ch => {
-    ch.onclick = () => { filter.bucket = ch.dataset.b; renderReferences(); };
-  });
   const st = { APPROVED: 0, PROVISIONAL: 0, REJECTED: 0 };
   refs.forEach(r => { st[r.status] = (st[r.status] || 0) + 1; });
   $("#ref-counts").innerHTML = `
-    <span class="stat ok"><i></i>APPROVED ${st.APPROVED}</span>
-    <span class="stat hold"><i></i>PROVISIONAL ${st.PROVISIONAL}</span>
-    <span class="stat bad"><i></i>QUARANTINED ${st.REJECTED}</span>`;
+    <span class="stat ok"><i></i>${st.APPROVED} APPROVED</span>
+    <span class="stat hold"><i></i>${st.PROVISIONAL} PROVISIONAL</span>
+    <span class="stat bad"><i></i>${st.REJECTED} QUARANTINED</span>`;
 
-  const newestFirst = refs.slice().reverse()
-    .filter(r => filter.bucket === "ALL" || bucketOf(r) === filter.bucket);
-  const ordered = [...newestFirst.filter(isStyle), ...newestFirst.filter(r => !isStyle(r))];
-  const lbItems = ordered.map(r => ({
-    src: `/api/references/${r.id}/image`,
-    caption: `${r.id} — ${r.role} (${r.status})`,
-  }));
+  $("#ref-add-btn").onclick = addReferenceDialog;
 
-  let lastGroup = null;
-  const groupHeader = (label, hint) => {
-    const h = document.createElement("div");
-    h.style.gridColumn = "1 / -1";
-    h.innerHTML = `<span class="f-label">${esc(label)}</span> <span class="hint">${esc(hint)}</span>`;
-    grid.append(h);
+  const q = renderReferences.q ??= { v: "" };
+  const search = $("#ref-search");
+  search.value = q.v;
+  search.addEventListener("input", () => { q.v = search.value; drawShelves(); });
+
+  const matches = r => {
+    const needle = q.v.trim().toUpperCase();
+    if (!needle) return true;
+    return [r.id, r.role, r.notes || "", (r.controls || []).join(" ")]
+      .some(x => String(x).toUpperCase().includes(needle));
   };
 
-  ordered.forEach((r, i) => {
-    const group = isStyle(r) ? "style" : "subject";
-    if (group !== lastGroup) {
-      groupHeader(
-        group === "style" ? "Lookbook — style anchors" : "Subjects & scenes — what things are",
-        group === "style"
-          ? "how it is painted and photographed — applies to everything; rendering/cinematography styles attach to every generation automatically"
-          : "what things are — likenesses, geometry, props, environments; attached per panel");
-      lastGroup = group;
+  const drawShelves = () => {
+    const host = $("#ref-shelves");
+    host.innerHTML = "";
+    for (const shelf of SHELVES) {
+      const shelfRefs = refs.slice().reverse()
+        .filter(r => bucketOfRef(r) === shelf.key && matches(r));
+      const roleCount = new Set(shelfRefs.map(r => roleHead(r.role))).size;
+      const section = document.createElement("div");
+      section.className = "shelf";
+      section.innerHTML = `
+        <div class="shelf-head">
+          <span class="shelf-name">${shelf.name}</span>
+          <span class="shelf-ride">${esc(shelf.ride)}</span>
+          ${shelf.note ? `<span class="hint">${esc(shelf.note)}</span>` : ""}
+          <span class="shelf-count">${shelf.count({ total: shelfRefs.length, roles: roleCount })}</span>
+        </div>
+        <div class="ref-grid" data-f="shelf-grid"></div>`;
+      const grid = $("[data-f=shelf-grid]", section);
+      const lbItems = shelfRefs.map(r => ({
+        src: `/api/references/${r.id}/image`,
+        caption: `${r.id} — ${r.role} (${r.status})`,
+      }));
+      if (!shelfRefs.length) {
+        grid.innerHTML = `<p class="mini" style="grid-column:1/-1">${q.v ? "nothing on this shelf matches" : "nothing on this shelf yet"}</p>`;
+      } else {
+        shelfRefs.forEach((r, i) => grid.append(buildRefCard(r, lbItems, i)));
+      }
+      host.append(section);
     }
-    const card = document.createElement("div");
-    card.className = `ref-card ${r.status}`;
-    // The jurisdiction block: a role is a jurisdiction, shown as one —
-    // CONTROLS in --ok, NOT in --bad, both Courier (mock 4c).
-    const usage = r.status === "REJECTED"
-      ? `<div class="juris bad">REJECTED ${esc((r.rejected_at || r.added_at || "").slice(5, 10).replace("-", " "))}${r.status_reason ? ` — ${esc(r.status_reason.toUpperCase())}` : ""}</div>
-         <div class="meta">THE PIPELINE CANNOT ATTACH THIS</div>`
-      : isAutoAttach(r)
-        ? `<div class="meta">AUTO-ATTACHED · ALL RENDERS</div>`
-        : (r.used_in ? `<div class="meta">USED IN ${r.used_in} RENDER${r.used_in > 1 ? "S" : ""}</div>` : "");
-    card.innerHTML = `
-      <img src="/api/references/${r.id}/image?thumb=true" alt="${esc(r.id)}" loading="lazy">
-      <div class="body">
-        <div><span class="badge ${r.status}">${r.status}</span> <b>${esc(r.id)}</b></div>
-        <div class="role">${esc(r.role)}</div>
-        <div class="juris ok">CONTROLS ${esc(r.controls.join(" · ") || "—")}</div>
-        <div class="juris bad">NOT ${esc(r.does_not_control.join(" · ") || "—")}</div>
-        ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
-        ${usage}
-      </div>
-      <div class="actions"></div>`;
-    $("img", card).onclick = () => openLightbox(lbItems, i);
-    const actions = $(".actions", card);
-
-    if (r.status !== "APPROVED") {
-      const b = document.createElement("button");
-      b.className = "primary"; b.textContent = "Approve";
-      b.onclick = () => setRefStatus(r.id, "APPROVED");
-      actions.append(b);
-    } else {
-      const cr = document.createElement("button");
-      cr.className = "ghost"; cr.textContent = "Crop";
-      cr.title = "Harvest a region of this image (e.g. one cell of a master board) as a new reference with its own narrow role";
-      cr.onclick = () => cropToReference(
-        { type: "reference", id: r.id }, `/api/references/${r.id}/image`);
-      actions.append(cr);
-    }
-    if (r.status !== "REJECTED") {
-      const b = document.createElement("button");
-      b.className = "danger"; b.textContent = "Reject";
-      b.onclick = async () => {
-        const reason = await askText(`Reject ${r.id}`, "Reason",
-          { hint: "recorded on the card and in the rejection history; the file is quarantined from the pipeline — Reinstate undoes it",
-            confirmLabel: "Reject", danger: true });
-        if (reason !== null) setRefStatus(r.id, "REJECTED", reason);
-      };
-      actions.append(b);
-    } else {
-      const b = document.createElement("button");
-      b.className = "ghost"; b.textContent = "Reinstate as provisional";
-      b.onclick = () => setRefStatus(r.id, "PROVISIONAL");
-      actions.append(b);
-    }
-    const del = document.createElement("button");
-    del.className = "danger"; del.textContent = "Delete";
-    del.title = "Permanently delete this image and its record — journaled in the approval log";
-    del.onclick = async () => {
-      if (!(await askConfirm(`Delete ${r.id} forever`,
-        `${r.role}\nRemoved from the library and from future generations — past candidates keep their own records. This cannot be undone.`,
-        "Delete forever", true))) return;
-      try {
-        await api(`/api/references/${r.id}`, { method: "DELETE" });
-        toast(`${r.id} permanently deleted.`);
-        renderReferences();
-      } catch (err) { toast(err.message, true); }
-    };
-    actions.append(del);
-    grid.append(card);
-  });
+  };
+  drawShelves();
 }
 
 async function setRefStatus(id, status, reason = "") {
