@@ -1466,72 +1466,17 @@ async function renderWizard() {
     });
   };
 
+  // The card component lives with the SUBJECTS shelf (buildSubjectCard) —
+  // this grid is just its second host (one component, two hosts; plan D3).
   const renderSubjectGrid = async () => {
     const grid = $("#wiz-subj-grid");
     const [subjects, refs] = await Promise.all([api("/api/subjects"), api("/api/references")]);
-    const refById = Object.fromEntries(refs.map(r => [r.id, r]));
     grid.innerHTML = subjects.length ? "" :
       `<p class="mini" style="grid-column:1/-1">No subjects yet — click a recommended tag above or add one manually.</p>`;
-    for (const s of subjects) {
-      const imgs = (s.ref_ids || []).map(id => refById[id]).filter(Boolean)
-        .filter(r => r.status !== "REJECTED");
-      const lbItems = imgs.map(r => ({
-        src: `/api/references/${r.id}/image`, caption: `${s.name} — ${r.id}` }));
-      const card = document.createElement("div");
-      card.className = "subj-card";
-      card.dataset.sid = s.id;
-      card.innerHTML = `
-        <div class="subj-head">
-          <span class="subj-name">${esc(s.name.toUpperCase())}</span>
-          <span class="subj-sub">— ${esc(s.subtitle || s.kind)}</span>
-          <span class="badge ${imgs.length ? "APPROVED" : "PROVISIONAL"}" style="margin-left:auto">${imgs.length ? `${imgs.length} REF` : "NO REF"}</span>
-          <button class="danger" data-f="del" title="Remove this title card (its reference images stay in the library)">×</button>
-        </div>
-        <div class="subj-imgs" data-f="imgs"></div>
-        <div class="subj-traits mini">${esc((s.traits || []).join(" "))}</div>
-        <label class="subj-add" title="Upload reference photos into this card — each becomes an approved ${esc(store_role(s.kind))} — ${esc(s.name.toUpperCase())} reference.">
-          + Add reference photos <input type="file" accept="image/*" multiple data-f="up" class="hidden">
-        </label>`;
-      const imgHost = $("[data-f=imgs]", card);
-      imgs.forEach((r, i) => {
-        const wrap = document.createElement("span");
-        wrap.className = "subj-img";
-        wrap.innerHTML = `<img src="/api/references/${esc(r.id)}/image?thumb=1" loading="lazy" alt="${esc(r.id)}">
-          <button class="danger" title="Permanently delete ${esc(r.id)}">×</button>`;
-        $("img", wrap).onclick = () => openLightbox(lbItems, i);
-        $("button", wrap).onclick = async () => {
-          if (!(await askConfirm(`Delete ${r.id} forever`,
-            "This cannot be undone.", "Delete forever", true))) return;
-          try {
-            await api(`/api/references/${r.id}`, { method: "DELETE" });
-            toast(`${r.id} deleted.`); renderSubjectGrid();
-          } catch (err) { toast(err.message, true); }
-        };
-        imgHost.append(wrap);
-      });
-      $("[data-f=up]", card).addEventListener("change", async (e) => {
-        try {
-          for (const f of e.target.files) {
-            const fd = new FormData();
-            fd.append("file", f);
-            await api(`/api/subjects/${s.id}/reference`, { method: "POST", body: fd });
-          }
-          toast(`${e.target.files.length} reference(s) added to ${s.name}.`);
-          renderSubjectGrid();
-        } catch (err) { toast(err.message, true); }
-      });
-      $("[data-f=del]", card).onclick = async () => {
-        if (!(await askConfirm(`Remove ${s.name}'s title card`,
-          "Its reference images stay in the library.", "Remove card", true))) return;
-        try {
-          await api(`/api/subjects/${s.id}`, { method: "DELETE" });
-          toast(`${s.name} removed.`); renderSubjectTags(); renderSubjectGrid();
-        } catch (err) { toast(err.message, true); }
-      };
-      grid.append(card);
-    }
+    for (const s of subjects)
+      grid.append(buildSubjectCard(s, refs,
+        () => { renderSubjectTags(); renderSubjectGrid(); }));
   };
-  const store_role = k => ({ CHARACTER: "CHARACTER_LIKENESS", VEHICLE: "VEHICLE_GEOMETRY", PROP: "PROP_REFERENCE" }[k] || "REFERENCE");
 
   $("#wiz-subj-add").onclick = async () => {
     const name = $("#wiz-subj-name").value.trim();
@@ -1880,6 +1825,130 @@ function buildRefCard(r, lbItems, i) {
   return card;
 }
 
+/* ---------------------------------------------- subject cards (the shelf) */
+
+const SUBJECT_ROLE_OF = {
+  CHARACTER: "CHARACTER_LIKENESS", VEHICLE: "VEHICLE_GEOMETRY", PROP: "PROP_REFERENCE" };
+
+// Screenplay-read recommendations not yet cast — shared by the SUBJECTS
+// shelf and wizard step 3 (casting is a door into the same shelf).
+function uncastRecommendations(subjects) {
+  const analysis = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+  const have = new Set(subjects.map(s => s.name.toLowerCase()));
+  return (analysis?.subjects || [])
+    .filter(r => r.name && !have.has(String(r.name).toLowerCase()));
+}
+
+// One subject card, two hosts (SUBJECTS shelf + wizard step 3). Anatomy per
+// mock 5a: Courier name · bordered kind badge · CAST badge · editable
+// identity text · photo mosaic with a + drop slot · Courier facts line.
+function buildSubjectCard(s, refs, onChange, opts = {}) {
+  const refById = Object.fromEntries(refs.map(r => [r.id, r]));
+  const imgs = (s.ref_ids || []).map(id => refById[id]).filter(Boolean)
+    .filter(r => r.status !== "REJECTED");
+  const lbItems = imgs.map(r => ({
+    src: `/api/references/${r.id}/image`, caption: `${s.name} — ${r.id}` }));
+  const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
+  const used = imgs.reduce((n, r) => Math.max(n, r.used_in || 0), 0);
+  const card = document.createElement("div");
+  card.className = "subj-card";
+  card.dataset.sid = s.id;
+  card.innerHTML = `
+    <div class="subj-head">
+      <span class="subj-name">${esc(s.name.toUpperCase())}</span>
+      <span class="kind-badge">${esc(s.kind)}</span>
+      <span class="cast-badge cast">CAST</span>
+      <button class="danger" data-f="del" title="Remove this title card (its reference images stay in the library)">×</button>
+    </div>
+    <div class="subj-identity" data-f="identity" title="Identity text — rides in every prompt this subject appears in. Click to edit.">${
+      s.subtitle ? esc(s.subtitle) : `<span class="mini">add identity text — it rides in every prompt</span>`}</div>
+    ${(s.traits || []).length ? `<div class="subj-traits mini">${esc(s.traits.join(" "))}</div>` : ""}
+    <div class="subj-imgs" data-f="imgs"><label class="subj-slot" title="Upload reference photos into this card — each becomes an approved ${esc(role)} — ${esc(s.name.toUpperCase())} reference, grouped under this exact name.">+<input type="file" accept="image/*" multiple data-f="up" class="hidden"></label></div>
+    <div class="subj-facts">${imgs.length} PHOTO${imgs.length === 1 ? "" : "S"} · ${esc(role)} — ${esc(s.name.toUpperCase())}${
+      used ? ` · USED IN ${used} RENDER${used === 1 ? "" : "S"}` : ""}${
+      opts.viewLink ? ` · <button type="button" class="text-act" data-f="view">VIEW IN REFERENCE</button>` : ""}</div>`;
+  const imgHost = $("[data-f=imgs]", card);
+  const slot = $(".subj-slot", card);
+  imgs.forEach((r, i) => {
+    const wrap = document.createElement("span");
+    wrap.className = "subj-img";
+    wrap.innerHTML = `<img src="/api/references/${esc(r.id)}/image?thumb=1" loading="lazy" alt="${esc(r.id)}">
+      <button title="Permanently delete ${esc(r.id)}">×</button>`;
+    $("img", wrap).onclick = () => openLightbox(lbItems, i);
+    $("button", wrap).onclick = async () => {
+      if (!(await askConfirm(`Delete ${r.id} forever`,
+        "This cannot be undone.", "Delete forever", true))) return;
+      try {
+        await api(`/api/references/${r.id}`, { method: "DELETE" });
+        toast(`${r.id} deleted.`);
+        onChange?.();
+      } catch (err) { toast(err.message, true); }
+    };
+    imgHost.insertBefore(wrap, slot);
+  });
+  $("[data-f=up]", card).addEventListener("change", async e => {
+    try {
+      for (const f of e.target.files) {
+        const fd = new FormData();
+        fd.append("file", f);
+        await api(`/api/subjects/${s.id}/reference`, { method: "POST", body: fd });
+      }
+      toast(`${e.target.files.length} reference(s) added to ${s.name}.`);
+      onChange?.();
+    } catch (err) { toast(err.message, true); }
+  });
+  $("[data-f=identity]", card).onclick = async () => {
+    const v = await askText(`Identity — ${s.name.toUpperCase()}`, "Identity text",
+      { value: s.subtitle || "",
+        hint: "one line of who or what this is — it rides in every prompt this subject appears in",
+        confirmLabel: "Save" });
+    if (v === null || v === (s.subtitle || "")) return;
+    try {
+      await api(`/api/subjects/${s.id}`, { method: "PUT", json: { subtitle: v } });
+      toast(`${s.name} identity updated.`);
+      onChange?.();
+    } catch (err) { toast(err.message, true); }
+  };
+  $("[data-f=del]", card).onclick = async () => {
+    if (!(await askConfirm(`Remove ${s.name}'s title card`,
+      "Its reference images stay in the library.", "Remove card", true))) return;
+    try {
+      await api(`/api/subjects/${s.id}`, { method: "DELETE" });
+      toast(`${s.name} removed.`);
+      onChange?.();
+    } catch (err) { toast(err.message, true); }
+  };
+  if (opts.viewLink) $("[data-f=view]", card).onclick = () => showView("references");
+  return card;
+}
+
+// An uncast recommendation: dashed card, no photos yet — casting it creates
+// the library card (the only write path, same as the wizard's).
+function buildUncastCard(rec, onChange) {
+  const card = document.createElement("div");
+  card.className = "subj-card uncast";
+  card.innerHTML = `
+    <div class="subj-head">
+      <span class="subj-name">${esc(String(rec.name || "").toUpperCase())}</span>
+      <span class="kind-badge">${esc(rec.kind || "CHARACTER")}</span>
+      <span class="cast-badge uncast">UNCAST</span>
+    </div>
+    <div class="subj-identity">${esc(rec.subtitle
+      || "Found by the screenplay read — no card yet. Casting it creates the card and carries its screenplay identity into prompts.")}</div>
+    <div><button type="button" class="ghost" data-f="cast">Cast this subject</button></div>`;
+  $("[data-f=cast]", card).onclick = async () => {
+    try {
+      await api("/api/subjects", { method: "POST", json: {
+        name: rec.name, kind: rec.kind || "CHARACTER",
+        subtitle: rec.subtitle || "", traits: rec.traits || [],
+        source: "screenplay analysis" } });
+      toast(`${rec.name} cast — its card is in the library.`);
+      onChange?.();
+    } catch (err) { toast(err.message, true); }
+  };
+  return card;
+}
+
 // Adding to the library is a dialog now (the intake row moved behind the
 // button per ONE_LIBRARY_PLAN D2) — the vocabulary picker plus a file field.
 async function addReferenceDialog() {
@@ -1915,7 +1984,7 @@ const SHELVES = [
     note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
   { key: "SUBJECT", name: "SUBJECTS", ride: "RIDES ALONG — WHEN ITS SUBJECT APPEARS ON A PANEL",
     note: "cast in Production Design step 3 — same cards, this is where they live",
-    count: n => `${n.total} IMAGE${n.total === 1 ? "" : "S"}` },
+    count: n => `${n.cast} CAST · ${n.uncast} UNCAST` },
   { key: "SCENE", name: "SCENES", ride: "RIDES ALONG — WHEN A BOARD COVERS ITS SCENE",
     note: "promoted takes, light studies, crops of environments",
     count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"}` },
@@ -1924,7 +1993,8 @@ const SHELVES = [
 async function renderReferences() {
   useTemplate("tpl-references");
   _roleCtx = null;  // fresh groups after every library change
-  const refs = await api("/api/references");
+  const [refs, subjects] = await Promise.all([
+    api("/api/references"), api("/api/subjects")]);
 
   const st = { APPROVED: 0, PROVISIONAL: 0, REJECTED: 0 };
   refs.forEach(r => { st[r.status] = (st[r.status] || 0) + 1; });
@@ -1946,34 +2016,64 @@ async function renderReferences() {
     return [r.id, r.role, r.notes || "", (r.controls || []).join(" ")]
       .some(x => String(x).toUpperCase().includes(needle));
   };
+  const matchesSubj = s => {
+    const needle = q.v.trim().toUpperCase();
+    if (!needle) return true;
+    return [s.name, s.kind || "", s.subtitle || "", (s.traits || []).join(" ")]
+      .some(x => String(x).toUpperCase().includes(needle));
+  };
 
   const drawShelves = () => {
     const host = $("#ref-shelves");
     host.innerHTML = "";
     for (const shelf of SHELVES) {
-      const shelfRefs = refs.slice().reverse()
-        .filter(r => bucketOfRef(r) === shelf.key && matches(r));
-      const roleCount = new Set(shelfRefs.map(r => roleHead(r.role))).size;
       const section = document.createElement("div");
       section.className = "shelf";
+      let countText, fill;
+      if (shelf.key === "SUBJECT") {
+        // Subject cards ARE this shelf. Subject-role refs not linked to a
+        // card — and quarantined ones the mosaic hides — keep the ref-card
+        // presentation so their governance stays visible.
+        const cast = subjects.filter(matchesSubj);
+        const uncast = uncastRecommendations(subjects).filter(matchesSubj);
+        const linked = new Set(subjects.flatMap(s => s.ref_ids || []));
+        const loose = refs.slice().reverse().filter(r =>
+          bucketOfRef(r) === "SUBJECT" && matches(r) &&
+          (!linked.has(r.id) || r.status === "REJECTED"));
+        countText = shelf.count({ cast: cast.length, uncast: uncast.length });
+        fill = grid => {
+          grid.classList.add("subj-grid");
+          cast.forEach(s => grid.append(buildSubjectCard(s, refs, renderReferences)));
+          uncast.forEach(rec => grid.append(buildUncastCard(rec, renderReferences)));
+          const lb = loose.map(r => ({
+            src: `/api/references/${r.id}/image`,
+            caption: `${r.id} — ${r.role} (${r.status})` }));
+          loose.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
+        };
+      } else {
+        const shelfRefs = refs.slice().reverse()
+          .filter(r => bucketOfRef(r) === shelf.key && matches(r));
+        const roleCount = new Set(shelfRefs.map(r => roleHead(r.role))).size;
+        countText = shelf.count({ total: shelfRefs.length, roles: roleCount });
+        fill = grid => {
+          const lb = shelfRefs.map(r => ({
+            src: `/api/references/${r.id}/image`,
+            caption: `${r.id} — ${r.role} (${r.status})` }));
+          shelfRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
+        };
+      }
       section.innerHTML = `
         <div class="shelf-head">
           <span class="shelf-name">${shelf.name}</span>
           <span class="shelf-ride">${esc(shelf.ride)}</span>
           ${shelf.note ? `<span class="hint">${esc(shelf.note)}</span>` : ""}
-          <span class="shelf-count">${shelf.count({ total: shelfRefs.length, roles: roleCount })}</span>
+          <span class="shelf-count">${countText}</span>
         </div>
         <div class="ref-grid" data-f="shelf-grid"></div>`;
       const grid = $("[data-f=shelf-grid]", section);
-      const lbItems = shelfRefs.map(r => ({
-        src: `/api/references/${r.id}/image`,
-        caption: `${r.id} — ${r.role} (${r.status})`,
-      }));
-      if (!shelfRefs.length) {
+      fill(grid);
+      if (!grid.children.length)
         grid.innerHTML = `<p class="mini" style="grid-column:1/-1">${q.v ? "nothing on this shelf matches" : "nothing on this shelf yet"}</p>`;
-      } else {
-        shelfRefs.forEach((r, i) => grid.append(buildRefCard(r, lbItems, i)));
-      }
       host.append(section);
     }
   };

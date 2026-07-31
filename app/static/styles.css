@@ -653,6 +653,36 @@ label.check {
 }
 .subj-add:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Subject card v2 — one component, two hosts (SUBJECTS shelf + wizard
+   step 3), plan D3. Kind badge bordered grey; CAST/UNCAST bordered in
+   --ok/--hold, never filled; identity text is editable prose; the + slot
+   rides inside the mosaic; Courier facts line closes the card. */
+.kind-badge, .cast-badge {
+  flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  padding: 2px 7px; border: 1px solid var(--line); color: var(--ink-dim);
+}
+.cast-badge { margin-left: auto; }
+.cast-badge.cast { border-color: var(--ok); color: var(--ok); }
+.cast-badge.uncast { border-color: var(--hold); color: var(--hold); }
+.subj-card.uncast { border-style: dashed; }
+.subj-identity { font-family: var(--sans); font-size: 12px; color: var(--ink-dim); line-height: 1.5; cursor: pointer; }
+.subj-identity:hover { color: var(--ink); }
+.subj-card.uncast .subj-identity { cursor: default; }
+.subj-card.uncast .subj-identity:hover { color: var(--ink-dim); }
+.subj-slot {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--line); color: var(--ink-dim);
+  cursor: pointer; font-size: 14px;
+}
+.subj-slot:hover { border-color: var(--ink-faint); color: var(--ink); }
+.subj-facts { font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em; color: var(--ink-faint); }
+.subj-facts .text-act {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
+  color: var(--ink-dim); font-weight: 700;
+}
+.subj-facts .text-act:hover { color: var(--ink); text-decoration: underline; }
+
 /* ============================================== boards: subject ref groups */
 .ref-groups { display: flex; flex-wrap: wrap; gap: 8px; }
 .ref-group {
