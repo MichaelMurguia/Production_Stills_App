@@ -892,6 +892,8 @@ details.meta pre {
   letter-spacing: .06em; color: var(--ink-dim);
 }
 .scope-carry:empty { display: none; }
+/* UNCANONIZED — 2026-07-31 — per-panel environment override select */
+.penv-wrap select { max-width: 150px; }
 .loc-state {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
   color: var(--ink-faint); text-align: right; overflow: hidden;

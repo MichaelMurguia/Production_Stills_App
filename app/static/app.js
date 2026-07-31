@@ -3006,6 +3006,13 @@ async function openSpecEditor(specId) {
             </optgroup>
           </select>
         </span>
+        <span class="alloc penv-wrap" title="World for THIS panel — overrides the sheet's Environment in this panel's prompt only. Leave on sheet env for boards that live in one place; master boards spanning worlds set it per panel.">
+          <select data-f="penv" ${locked ? "disabled" : ""}>
+            <option value="">— sheet env —</option>
+            ${[...new Set([...envOptions, ...(p.environment ? [p.environment] : [])])].map(n =>
+              `<option value="${esc(n)}"${(p.environment || "") === n ? " selected" : ""}>${esc(n)}</option>`).join("")}
+          </select>
+        </span>
         <span class="alloc" title="Share of the assembled board this panel occupies, in percent. All panels together should total 100.">
           <input type="number" data-f="alloc" placeholder="—" min="1" max="100" value="${esc(allocById[p.id] ?? "")}" ${locked ? "disabled" : ""}>
           <span class="unit">%</span>
@@ -3278,6 +3285,7 @@ REMOVE — marked for removal from the board.">
         scale: "WIDE",
         composition_role: out.panels.length === 0 ? "hero" : "support",
         time_of_day: v("ptod"),
+        ...(v("penv") ? { environment: v("penv") } : {}),
       });
       layoutPanels.push({ id, allocation_percent: parseFloat(v("alloc")) || 0 });
     }

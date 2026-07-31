@@ -336,12 +336,14 @@ def _style_context(spec: dict, panel: dict) -> str:
     ])
     # Explicit per-spec selection is the governed path; absent fields fall
     # back to keyword inference inside render_context. Environments never
-    # infer — a sheet without one carries none.
+    # infer — a sheet without one carries none, and a panel's own
+    # environment overrides the sheet's for that panel only.
     return bible.render_context(
         haystack,
         spec.get("design_languages") if "design_languages" in spec else None,
         spec.get("scene_lessons") if "scene_lessons" in spec else None,
-        environments=spec.get("environments") or [],
+        environments=([panel["environment"]] if panel.get("environment")
+                      else spec.get("environments") or []),
     ) or load_style_bible().strip()
 
 
