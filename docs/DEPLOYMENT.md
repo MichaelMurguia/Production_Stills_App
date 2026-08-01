@@ -70,7 +70,7 @@ serve internal data from the storefront.
 | `DOWNLOAD_FILE` | Optional override for the release zip path |
 | `RAILWAY_API_TOKEN` | Railway API token the provisioner uses to create tenant services (see provisioning setup) |
 | `RAILWAY_PROJECT_ID` | Railway project that holds tenant workspaces (recommend a dedicated "screenboard-tenants" project) |
-| `RAILWAY_ENVIRONMENT_ID` | Environment id inside that project (usually `production`'s id) |
+| `RAILWAY_ENVIRONMENT_ID` | OPTIONAL — auto-resolved ("production" by name, else the only environment); set only to override |
 | `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |
 | `TENANT_BRANCH` | Branch tenants deploy (default `main`) |
 
@@ -79,7 +79,7 @@ serve internal data from the storefront.
 | `SESSION_SECRET` | Long random value signing account-session cookies. Unset → per-boot secret (sessions reset each deploy) — set in production |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | "Continue with Google" (OIDC). Create at console.cloud.google.com → Credentials → OAuth client (web) with redirect URI `https://www.screenboardstudio.com/auth/google/callback`. Unset → the button hides; magic links still work |
 
-All five provisioning variables are optional: while unset, cloud purchases
+All provisioning variables are optional: while unset, cloud purchases
 queue as PENDING workspaces with the condition stated on the row — nothing
 crashes, and the success page honestly says the workspace is being
 prepared. The SMTP and export variables are likewise optional gates.

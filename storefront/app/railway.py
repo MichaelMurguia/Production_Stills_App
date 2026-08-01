@@ -23,6 +23,31 @@ class RailwayError(RuntimeError):
     pass
 
 
+_env_id_cache = ""
+
+
+def environment_id() -> str:
+    """The tenants environment: the configured id when given, else resolved
+    once from the API — "production" by name, or the project's only
+    environment. Nobody should have to dig an id out of Railway's UI."""
+    global _env_id_cache
+    if settings.RAILWAY_ENVIRONMENT_ID:
+        return settings.RAILWAY_ENVIRONMENT_ID
+    if _env_id_cache:
+        return _env_id_cache
+    data = _gql(
+        """query($projectId: String!) {
+             environments(projectId: $projectId) {
+               edges { node { id name } } } }""",
+        {"projectId": settings.RAILWAY_PROJECT_ID})
+    nodes = [e["node"] for e in data["environments"]["edges"]]
+    if not nodes:
+        raise RailwayError("the tenants project has no environments")
+    chosen = next((n for n in nodes if n["name"] == "production"), nodes[0])
+    _env_id_cache = chosen["id"]
+    return _env_id_cache
+
+
 def _gql(query: str, variables: dict) -> dict:
     req = urllib.request.Request(
         settings.RAILWAY_API_URL,
@@ -61,7 +86,7 @@ def set_start_command(service_id: str, start_command: str) -> None:
                     $input: ServiceInstanceUpdateInput!) {
              serviceInstanceUpdate(environmentId: $environmentId,
                                    serviceId: $serviceId, input: $input) }""",
-        {"environmentId": settings.RAILWAY_ENVIRONMENT_ID,
+        {"environmentId": environment_id(),
          "serviceId": service_id,
          "input": {"startCommand": start_command}})
 
@@ -72,7 +97,7 @@ def upsert_variables(service_id: str, variables: dict[str, str]) -> None:
              variableCollectionUpsert(input: $input) }""",
         {"input": {
             "projectId": settings.RAILWAY_PROJECT_ID,
-            "environmentId": settings.RAILWAY_ENVIRONMENT_ID,
+            "environmentId": environment_id(),
             "serviceId": service_id,
             "variables": variables,
         }})
@@ -84,7 +109,7 @@ def create_volume(service_id: str, mount_path: str) -> str:
              volumeCreate(input: $input) { id } }""",
         {"input": {
             "projectId": settings.RAILWAY_PROJECT_ID,
-            "environmentId": settings.RAILWAY_ENVIRONMENT_ID,
+            "environmentId": environment_id(),
             "serviceId": service_id,
             "mountPath": mount_path,
         }})
@@ -97,7 +122,7 @@ def create_domain(service_id: str) -> str:
         """mutation($input: ServiceDomainCreateInput!) {
              serviceDomainCreate(input: $input) { domain } }""",
         {"input": {
-            "environmentId": settings.RAILWAY_ENVIRONMENT_ID,
+            "environmentId": environment_id(),
             "serviceId": service_id,
         }})
     return data["serviceDomainCreate"]["domain"]
@@ -109,7 +134,7 @@ def redeploy(service_id: str) -> None:
         """mutation($environmentId: String!, $serviceId: String!) {
              serviceInstanceRedeploy(environmentId: $environmentId,
                                      serviceId: $serviceId) }""",
-        {"environmentId": settings.RAILWAY_ENVIRONMENT_ID,
+        {"environmentId": environment_id(),
          "serviceId": service_id})
 
 

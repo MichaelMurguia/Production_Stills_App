@@ -34,7 +34,8 @@ TENANT_BRANCH = os.environ.get("TENANT_BRANCH", "main")
 
 
 def railway_configured() -> bool:
-    return bool(RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID and RAILWAY_ENVIRONMENT_ID)
+    # ENVIRONMENT_ID is optional — the client resolves "production" itself.
+    return bool(RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID)
 
 
 # --- Transactional mail (license recovery) --------------------------------
