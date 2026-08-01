@@ -522,6 +522,33 @@ def recover(request: Request, email: str = Form("")):
         "mail_ready": True, "sent": True})
 
 
+@app.get("/admin/wildcard")
+def admin_wildcard(token: str = "", attach: str = ""):
+    """One-time ops tool for the wildcard tenant router: list the Railway
+    project's services, and with ?attach=<service_id> attach
+    *.TENANT_DOMAIN_BASE to that service (the storefront), returning the
+    DNS records Railway wants. Replaces hunting through Railway's UI.
+    Gated exactly like /admin/export; harmlessly idempotent — Railway
+    rejects a duplicate attach with a stated error."""
+    if not settings.ADMIN_EXPORT_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
+        raise HTTPException(404)
+    if not (settings.railway_configured() and settings.TENANT_DOMAIN_BASE):
+        raise HTTPException(503, "railway or TENANT_DOMAIN_BASE not configured")
+    from . import railway
+    out: dict = {"base": settings.TENANT_DOMAIN_BASE}
+    try:
+        out["services"] = railway.list_services()
+        if attach:
+            out["attached"] = f"*.{settings.TENANT_DOMAIN_BASE}"
+            out["dns_records"] = railway.create_custom_domain_records(
+                attach, f"*.{settings.TENANT_DOMAIN_BASE}")
+    except railway.RailwayError as e:
+        out["error"] = str(e)
+    return out
+
+
 @app.get("/admin/export")
 def admin_export(token: str = ""):
     """Entitlement-data backup: purchases, licenses, workspaces as JSON.

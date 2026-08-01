@@ -183,6 +183,37 @@ def list_custom_domains(service_id: str) -> list[dict]:
     return (data.get("domains") or {}).get("customDomains") or []
 
 
+def list_services() -> list[dict]:
+    """All services in the project — {id, name}. Ops tooling: lets the
+    wildcard-attach endpoint find the storefront service by name instead
+    of anyone digging ids out of Railway's UI."""
+    data = _gql(
+        """query($projectId: String!) {
+             project(id: $projectId) {
+               services { edges { node { id name } } } } }""",
+        {"projectId": project_id()})
+    return [e["node"] for e in
+            ((data.get("project") or {}).get("services") or {}).get("edges", [])]
+
+
+def create_custom_domain_records(service_id: str, domain: str) -> list[dict]:
+    """Attach a domain and return EVERY DNS record Railway asks for
+    (wildcards need both the CNAME and an _acme-challenge record for the
+    certificate). Each record: {hostlabel, requiredValue}."""
+    data = _gql(
+        """mutation($input: CustomDomainCreateInput!) {
+             customDomainCreate(input: $input) {
+               id domain status { dnsRecords { hostlabel requiredValue } } } }""",
+        {"input": {
+            "projectId": project_id(),
+            "environmentId": environment_id(),
+            "serviceId": service_id,
+            "domain": domain,
+        }})
+    return (((data.get("customDomainCreate") or {}).get("status") or {})
+            .get("dnsRecords") or [])
+
+
 def service_domains(service_id: str) -> list[str]:
     """The service's *.up.railway.app hostnames — the always-reliable door."""
     data = _gql(

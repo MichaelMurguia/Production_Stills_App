@@ -87,6 +87,17 @@ class RecoveryTests(unittest.TestCase):
         self.assertTrue(any(p["stripe_session_id"] == "cs_exp_1"
                             for p in data["purchases"]))
 
+    def test_wildcard_tool_gated_like_export(self):
+        settings.ADMIN_EXPORT_TOKEN = ""
+        self.assertEqual(self.client.get("/admin/wildcard").status_code, 404)
+        settings.ADMIN_EXPORT_TOKEN = "s3cret-export"
+        self.assertEqual(
+            self.client.get("/admin/wildcard?token=wrong").status_code, 404)
+        # right token but Railway/base unconfigured → a stated 503, not a
+        # crash and not a silent 200
+        r = self.client.get("/admin/wildcard?token=s3cret-export")
+        self.assertEqual(r.status_code, 503)
+
 
 if __name__ == "__main__":
     unittest.main()
