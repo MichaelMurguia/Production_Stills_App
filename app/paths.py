@@ -61,15 +61,16 @@ def set_project(slug: str) -> None:
 
 
 def list_projects() -> list[dict]:
-    """The legacy root project (always present) plus every directory under
-    HOME/projects/. Names come from each project's project.json, falling
-    back to the slug."""
-    import json as _json
-    out = [{"slug": "", "name": _project_name(HOME, "Main project")}]
-    if PROJECTS_DIR.exists():
-        for d in sorted(PROJECTS_DIR.iterdir()):
-            if d.is_dir():
-                out.append({"slug": d.name, "name": _project_name(d, d.name)})
+    """Every directory under HOME/projects/, plus the legacy root project —
+    which is listed only while it has content (a data/ dir), is active, or
+    no named project exists yet. A migrated install therefore shows only
+    its named projects; a fresh one still starts with 'Main project'."""
+    named = ([d for d in sorted(PROJECTS_DIR.iterdir()) if d.is_dir()]
+             if PROJECTS_DIR.exists() else [])
+    out = []
+    if (HOME / "data").exists() or ACTIVE_PROJECT == "" or not named:
+        out.append({"slug": "", "name": _project_name(HOME, "Main project")})
+    out += [{"slug": d.name, "name": _project_name(d, d.name)} for d in named]
     for p in out:
         p["active"] = p["slug"] == ACTIVE_PROJECT
     return out

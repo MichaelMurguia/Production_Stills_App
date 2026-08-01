@@ -101,6 +101,24 @@ condition beside it, and link to where it gets resolved.
 Renders are never upscaled. If a panel is smaller than its slot, flag it and
 require regeneration.
 
+## Testing — you own this
+
+Two suites, both green before any push:
+
+- **Product app:** `python -m unittest discover -s tests -v` at repo root —
+  unit tests (bible section model, re-run merge, board layout, size rules,
+  keyword derivation, project paths) plus functional API tests via
+  TestClient (auth gate, projects lifecycle) against a throwaway home.
+- **Storefront:** `cd storefront && python -m unittest discover -s tests -v`
+  — fulfillment idempotency, Stripe-shaped objects, provisioning.
+
+**Every new feature or bug fix updates or extends the unit and functional
+tests for what it touched, in the same commit.** A bug that reached
+production gets a regression test that reproduces it before the fix. Tests
+never touch the real install — redirect `app.paths` to a temp home (see
+`tests/test_app_api.py`) and inject fakes for external services (see
+`storefront/tests/test_provisioner.py`).
+
 ## Changes
 
 Functionality is not to change as part of design or styling work. Keep existing

@@ -137,10 +137,14 @@ destructive requires introducing Alembic first.
 - **Storefront locally:** `cd storefront && uvicorn app.main:app --port
   8100 --reload`. SQLite, checkout gated unless Stripe env vars are set.
   Webhooks locally: `stripe listen --forward-to localhost:8100/stripe/webhook`.
-- **Tests:** `cd storefront && python -m unittest discover -s tests -v`
-  (fulfillment idempotency + Stripe-shaped objects). Run before any push
-  that touches `storefront/app/`. Product-app tests: `python -m unittest
-  discover -s tests -v` at repo root.
+- **Tests — both suites green before any push** (see CLAUDE.md § Testing;
+  every feature updates its tests in the same commit):
+  `cd storefront && python -m unittest discover -s tests -v` (fulfillment
+  idempotency, Stripe-shaped objects, provisioning) and
+  `python -m unittest discover -s tests -v` at repo root (bible model,
+  merge semantics, board layout, size rules, keyword derivation, project
+  paths, and TestClient functional passes over the auth gate and projects
+  lifecycle).
 - **Deploy = push to `main`.** Railway builds `storefront/` only (root
   directory setting). Confirm with `/healthz` that the new rev is serving.
   Rollback: redeploy a previous deployment in the Railway dashboard.

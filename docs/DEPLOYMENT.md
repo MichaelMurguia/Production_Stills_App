@@ -118,8 +118,12 @@ root:
 git archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
 ```
 
-The zip must never include `data/` (user canon, screenplay, API keys) or
-`project_state/`.
+The zip must never include user canon: `data/`, `project_state/`,
+`projects/`, `settings.json`, or `context/01_ART_DIRECTION_BIBLE.md` — all
+of these are untracked/gitignored (2026-07-31), so neither the zip nor
+tenant deploy images can contain Beltminer work; cloud workspaces start
+empty and fill only from their own volume. **Restage the zip after every
+release of `app/` features** — a stale zip silently ships old product.
 
 ## Local development
 
