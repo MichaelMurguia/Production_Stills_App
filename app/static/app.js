@@ -4785,33 +4785,15 @@ async function renderAssemblyFor(specId) {
   };
 })();
 
-// Screenboard rename (user request 2026-08-01): the pencil beside the name
-// swaps it for an input; Enter saves to the active project, Esc cancels.
-$("#brand-rename").onclick = () => {
-  const sub = $("#brand-project");
-  if (sub.querySelector("input")) return;
-  const current = sub.textContent.trim();
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = /untitled/i.test(current) ? "" : current;
-  input.placeholder = "name this production…";
-  input.className = "brand-edit";
-  sub.textContent = "";
-  sub.append(input);
-  input.focus();
-  input.onkeydown = async e => {
-    if (e.key === "Escape") { sub.textContent = current; return; }
-    if (e.key !== "Enter") return;
-    const name = input.value.trim();
-    if (!name) return toast("Give the production a name first.", true);
-    try {
-      const r = await api("/api/projects/rename", { method: "POST", json: { name } });
-      sub.textContent = r.name.toUpperCase();
-      toast(`Production named "${r.name}".`)
-    } catch (err) { toast(err.message, true); }
-  };
-  input.onblur = () => { if (sub.querySelector("input")) sub.textContent = current; };
-};
+// Header rename (PRODUCTIONS_PLAN M5): the canonical inline rename —
+// the same helper as the library cards. The pencil reveals on hover but
+// stays in the accessibility tree for keyboard and touch.
+$("#brand-rename").onclick = () =>
+  inlineRename($("#brand-project"), async name => {
+    const r = await api("/api/projects/rename", { method: "POST", json: { name } });
+    toast(`Production named "${r.name}".`);
+    return r.name.toUpperCase();
+  });
 
 initLightbox();
 // Deep-link support: #screenplay, #boards, … land on that view directly.

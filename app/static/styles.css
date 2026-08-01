@@ -1264,7 +1264,10 @@ details.meta pre {
 
 /* UNCANONIZED — 2026-08-01 — screenboard rename pencil (user-directed):
    first icon in the product; inline SVG, currentColor, faint→ink hover. */
-.brand-rename { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--ink-faint); vertical-align: middle; margin-left: 6px; }
+.brand-rename { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--ink-faint); vertical-align: middle; margin-left: 6px; opacity: 0; transition: opacity .15s; }
+/* A5: the pencil reveals on hover of the label but never leaves the
+   accessibility tree — keyboard focus reveals it too. */
+.brand:hover .brand-rename, .brand-rename:focus-visible { opacity: 1; }
 .brand-rename:hover { color: var(--ink); }
 .brand-edit { background: var(--field); border: 1px solid var(--line); color: var(--ink); font-family: var(--mono); font-size: 11px; padding: 3px 8px; width: 220px; }
 
