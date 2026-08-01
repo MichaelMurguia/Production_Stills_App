@@ -242,6 +242,22 @@ def redeploy(service_id: str) -> None:
          "serviceId": service_id})
 
 
+def list_deployments(service_id: str, limit: int = 3) -> list[dict]:
+    """Most recent deployments for a service — {id, status, createdAt,
+    meta}. Ops visibility: shows whether a fleet update actually queued a
+    build, what commit it took, and whether it failed."""
+    data = _gql(
+        """query($input: DeploymentListInput!, $first: Int!) {
+             deployments(input: $input, first: $first) {
+               edges { node { id status createdAt meta } } } }""",
+        {"input": {"projectId": project_id(),
+                   "environmentId": environment_id(),
+                   "serviceId": service_id},
+         "first": limit})
+    return [e["node"] for e in
+            (data.get("deployments") or {}).get("edges", [])]
+
+
 def deploy_latest(service_id: str) -> None:
     """Build and deploy the service from the CURRENT head of its connected
     repo — the fleet-update primitive ("updates land the day they ship").

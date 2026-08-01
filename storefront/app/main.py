@@ -562,15 +562,29 @@ def admin_reconcile(token: str = ""):
 
 
 @app.get("/admin/tenants/update")
-def admin_update_tenants(token: str = ""):
+def admin_update_tenants(token: str = "", status: int = 0):
     """Fleet update: rebuild every ACTIVE tenant studio from the current
     repo head. Same gate as /admin/export. Run after each product release
     (see DEPLOYMENT.md runbook) — the cloud edition promises updates land
-    the day they ship."""
+    the day they ship. ?status=1 lists recent deployments per studio
+    instead of triggering anything."""
     if not settings.ADMIN_EXPORT_TOKEN:
         raise HTTPException(404)
     if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
         raise HTTPException(404)
+    if status:
+        from sqlalchemy import select as _sel
+        from . import railway
+        out = {}
+        with db.session() as s:
+            for ws in s.scalars(_sel(db.Workspace).where(
+                    db.Workspace.status == "ACTIVE")).all():
+                try:
+                    out[ws.subdomain or ws.railway_service_id] = (
+                        railway.list_deployments(ws.railway_service_id))
+                except railway.RailwayError as e:
+                    out[ws.subdomain or ws.railway_service_id] = str(e)
+        return out
     return provisioner.update_tenants()
 
 
