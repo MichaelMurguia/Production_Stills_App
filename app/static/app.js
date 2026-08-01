@@ -1053,6 +1053,37 @@ async function renderLocations(state = null, langs = 0) {
 async function renderSettings() {
   useTemplate("tpl-settings");
 
+  // ---- projects (save/load — user request 2026-07-31) ----
+  // Registry-row grammar; switching reloads so every view re-reads the
+  // newly active project. '' is the legacy root layout.
+  const renderProjects = async () => {
+    const pr = await api("/api/projects");
+    $("#proj-list").innerHTML = pr.projects.map(p => `
+      <div class="eng-row">
+        <span style="font-weight:600">${esc(p.name)}</span>
+        <span class="eng-facts">${p.slug ? esc(p.slug) : "root layout"}</span>
+        ${p.active ? '<span class="badge APPROVED">ACTIVE</span>'
+          : `<button class="ghost" data-slug="${esc(p.slug)}" title="Switch to this project — the current one keeps everything and stays listed here.">Open</button>`}
+      </div>`).join("");
+    $$("#proj-list [data-slug]").forEach(b => b.onclick = async () => {
+      try {
+        await api("/api/projects/activate", { method: "POST", json: { slug: b.dataset.slug } });
+        location.reload();
+      } catch (err) { toast(err.message, true); }
+    });
+  };
+  $("#proj-new").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#proj-name").value.trim();
+    if (!name) return toast("Give the project a name first.", true);
+    try {
+      await api("/api/projects", { method: "POST", json: { name } });
+      toast(`${name} created — switching…`);
+      location.reload();
+    } catch (err) { toast(err.message, true); }
+  });
+  renderProjects();
+
   $("#settings-subnav").addEventListener("click", e => {
     const btn = e.target.closest("button[data-sub]");
     if (!btn) return;

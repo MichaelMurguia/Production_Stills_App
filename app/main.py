@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hmac
 import json
+import os
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, Response)
 from fastapi.staticfiles import StaticFiles
 
 from . import activity, assemble, autofill, bible, generate, insights, paths, store, wizard
@@ -12,6 +15,122 @@ from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
 paths.ensure_dirs()
+
+# ---------------------------------------------------- cloud workspace gate
+# Set SCREENBOARD_ACCESS_TOKEN and the whole app sits behind a login that
+# accepts exactly that token (hosted tenants get theirs at purchase).
+# Unset — every standalone install — none of this exists and the app stays
+# fully offline-capable.
+ACCESS_TOKEN = os.environ.get("SCREENBOARD_ACCESS_TOKEN", "")
+_AUTH_EXEMPT = {"/login", "/api/login", "/api/healthz", "/styles.css", "/favicon.ico"}
+
+_LOGIN_HTML = """<!doctype html>
+<html><head><meta charset="utf-8"><title>Screenboard Studio — workspace login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/styles.css"></head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+<div class="panel" style="width:min(460px,92vw)">
+  <h2>Workspace access</h2>
+  <p class="hint">This is a private Screenboard Studio workspace. Paste the
+  access token from your order confirmation to enter.</p>
+  <form id="f" class="row" style="margin-top:12px">
+    <input type="password" id="tok" placeholder="workspace access token" style="flex:1" autofocus>
+    <button class="primary">Enter</button>
+  </form>
+  <p class="mini hidden" id="err" style="color:var(--bad);margin-top:8px">That token doesn't match this workspace.</p>
+</div>
+<script>
+document.getElementById("f").onsubmit = async e => {
+  e.preventDefault();
+  const r = await fetch("/api/login", { method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: document.getElementById("tok").value.trim() }) });
+  if (r.ok) location.href = "/";
+  else document.getElementById("err").classList.remove("hidden");
+};
+</script></body></html>"""
+
+
+@app.middleware("http")
+async def workspace_auth(request: Request, call_next):
+    if not ACCESS_TOKEN or request.url.path in _AUTH_EXEMPT:
+        return await call_next(request)
+    if hmac.compare_digest(request.cookies.get("sb_session", ""), ACCESS_TOKEN):
+        return await call_next(request)
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "workspace login required"}, status_code=401)
+    return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/login")
+def login_page():
+    if not ACCESS_TOKEN:
+        return RedirectResponse("/", status_code=303)
+    return HTMLResponse(_LOGIN_HTML)
+
+
+@app.post("/api/login")
+def api_login(body: dict, request: Request):
+    if not ACCESS_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(str(body.get("token", "")), ACCESS_TOKEN):
+        raise HTTPException(401, "wrong token")
+    resp = JSONResponse({"ok": True})
+    resp.set_cookie("sb_session", ACCESS_TOKEN, max_age=30 * 24 * 3600,
+                    httponly=True, samesite="lax",
+                    secure=request.url.scheme == "https")
+    return resp
+
+
+@app.get("/api/healthz")
+def api_healthz():
+    """Liveness + serving revision — the provisioner's readiness probe."""
+    return {"ok": True, "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12]}
+
+
+# ------------------------------------------------------------------ projects
+# One install holds many projects, each a full home (data/, project_state/,
+# context/). Settings (API keys) are install-level and follow the user.
+# The '' slug is the legacy root layout every existing install already has.
+
+@app.get("/api/projects")
+def api_list_projects() -> dict:
+    return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
+
+
+def _switch_project(slug: str) -> None:
+    paths.set_project(slug)
+    paths.save_active_project(slug)
+    paths.ensure_dirs()
+    insights._text_cache.clear()  # screenplay cache is per-project
+
+
+@app.post("/api/projects")
+def api_create_project(body: dict) -> dict:
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(422, "give the project a name")
+    slug = "".join(c if c.isalnum() or c in "._-" else "-" for c in name).strip("-_.").lower()
+    if not slug:
+        raise HTTPException(422, "the name needs at least one letter or digit")
+    if (paths.PROJECTS_DIR / slug).exists():
+        raise HTTPException(409, f"project already exists: {slug}")
+    d = paths.PROJECTS_DIR / slug
+    d.mkdir(parents=True)
+    (d / "project.json").write_text(
+        json.dumps({"name": name, "created_at": store.utcnow()}, indent=2) + "\n",
+        encoding="utf-8")
+    _switch_project(slug)
+    return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
+
+
+@app.post("/api/projects/activate")
+def api_activate_project(body: dict) -> dict:
+    slug = str(body.get("slug", ""))
+    if slug and not (paths.PROJECTS_DIR / slug).is_dir():
+        raise HTTPException(404, f"unknown project: {slug}")
+    _switch_project(slug)
+    return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
 
 
 @app.middleware("http")

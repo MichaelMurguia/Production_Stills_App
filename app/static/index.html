@@ -390,6 +390,14 @@
 
     <div data-subview="api">
       <div class="panel" style="margin-bottom:20px">
+        <h2>Projects <span class="hint">(each project is its own screenplay, bible, references, and boards — engines and keys are shared)</span></h2>
+        <div id="proj-list"></div>
+        <form id="proj-new" class="row" style="margin-top:10px">
+          <input type="text" id="proj-name" placeholder="new project name…" style="max-width:320px" title="Creates an empty project and switches to it — the current project keeps everything; switch back any time.">
+          <button class="ghost">+ Project</button>
+        </form>
+      </div>
+      <div class="panel" style="margin-bottom:20px">
         <h2>Engines &amp; keys</h2>
         <p class="hint">Keys are written to <code>data/settings.json</code> on this machine and leave it only to call the provider you gave them to. Gemini keys come from aistudio.google.com; OpenAI keys from platform.openai.com (API billing is separate from ChatGPT Plus).</p>
       </div>

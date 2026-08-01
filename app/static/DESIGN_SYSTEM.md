@@ -368,6 +368,8 @@ rows are then deleted.
 | 2026-07-31 | Per-panel environment select in the panel-card head (user-directed) — overrides the sheet's one-per-sheet environment for that panel's prompt | Spec editor panel cards | Diverges from the ruled "one per sheet" scope model (mock 6c); mirrors the per-panel light select's grammar. Designer should rule on override presentation and how the carry line reflects it |
 | 2026-07-31 | Per-panel design-language facet row (user-directed) — `.vchip.set` chips on the panel card; any set overrides the sheet's language scope for that panel's prompt | Spec editor panel cards | Sheet scope was the only language granularity; a mixed-culture panel (e.g. GRM interior on a frontier board) had no home. Reuses the facet-chip grammar, but the sheet-vs-panel scope model and the carry line's story need a design ruling together with the environment override row above |
 | 2026-07-31 | Assembly stage lands on a completed-boards grid; clicking a board replaces the grid with one full-width board card (`.board-solo`, contained image) with the judge actions, `← All boards` to return | Board assembly view | User-directed view restructure — no canon for a grid→solo drill-in on this stage; reuses ref-card anatomy. Designer should rule on the drill-in pattern and how the bench and gallery share the stage |
+| 2026-07-31 | Workspace login page (cloud auth, user-directed): standalone centered `.panel` with password field + one primary, served at `/login` only when `SCREENBOARD_ACCESS_TOKEN` is set; inline body styles for centering | Cloud-hosted workspaces (never standalone installs) | The app never had an auth surface; no canon for a login/gate page. Built from panel + hint + primary vocabulary; designer should canonize the entry-gate page pattern |
+| 2026-07-31 | Projects panel in Settings (user-directed save/load): registry rows (name · slug · ACTIVE badge / Open ghost) + intake row `+ Project`; switching reloads the app | Settings → Engines & keys subview | Multi-project is a new product concept; reuses registry-row + intake-row grammar but the switcher's home (Settings vs header) and the active-project presentation need a design ruling |
 
 ---
 
@@ -376,6 +378,11 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-07-31** — Cloud/product split (director's ruling): the app gained
+  an env-gated workspace login (`SCREENBOARD_ACCESS_TOKEN`; standalone
+  installs unaffected) and a Projects panel in Settings (multi-project
+  save/load; engines and keys stay install-level). Both logged as
+  uncanonized — the auth surface and the switcher need design rulings.
 - **2026-07-31** — Board layout grammar (director's ruling): "Aspect" is
   the new default variant — slot geometry derives from the takes' own
   aspect ratios (justified rows, aspect first, scale second, crop last,

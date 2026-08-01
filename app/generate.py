@@ -208,16 +208,22 @@ def project_negatives() -> list[str]:
 # ------------------------------------------------------------------ settings
 
 def load_settings() -> dict:
-    p = paths.DATA / "settings.json"
-    if not p.exists():
-        return {}
-    return json.loads(p.read_text(encoding="utf-8"))
+    """Settings (API keys, engines, preferences) are INSTALL-level — they
+    follow the user across projects. Pre-multi-project installs kept them
+    in data/settings.json; that copy is read until the first save moves
+    them to the install home."""
+    if paths.SETTINGS.exists():
+        return json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
+    legacy = paths.HOME / "data" / "settings.json"  # pre-multi-project home
+    if legacy.exists():
+        return json.loads(legacy.read_text(encoding="utf-8"))
+    return {}
 
 
 def save_settings(settings: dict) -> None:
     paths.ensure_dirs()
-    p = paths.DATA / "settings.json"
-    p.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    paths.SETTINGS.write_text(json.dumps(settings, indent=2) + "\n",
+                              encoding="utf-8")
 
 
 def _client(timeout_ms: int = 300_000):
