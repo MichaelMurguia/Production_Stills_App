@@ -121,6 +121,13 @@ reader is.
   promoted REF-0042) with its real carried rejection quoted; the case-file
   header reads 2 nights · 6 takes · 1 approved exterior. Layout, copy
   structure and all five concept footnotes follow the mock.
+- **2026-08-01** — Non-canon: the tenant router's stated pages. Unclaimed
+  studio hosts get "NO STUDIO AT THIS ADDRESS — CLAIM A NAME AT
+  SCREENBOARDSTUDIO.COM" (amber link); an unreachable tenant gets "YOUR
+  STUDIO DID NOT ANSWER — IT MAY BE REDEPLOYING." Centered Courier on
+  --bg, built from tokens in `tenant_proxy.py` (inline — no template).
+  Review copy/placement; consider whether these deserve the full store
+  chrome. Awaiting design review.
 - **2026-08-01** — Non-canon: reliable-door workspace buttons. On /account
   and /success, "Open your workspace" links the branded address only once
   it provably serves (`domain_live`); until then it links the always-working
