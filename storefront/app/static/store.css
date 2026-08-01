@@ -156,3 +156,9 @@ body {
 .head-avatar { width: 28px; height: 28px; border: 1px solid var(--line); display: block; object-fit: cover; background: var(--panel); }
 .head-email { color: var(--ink-dim); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .head-account:hover .head-email { color: var(--ink); }
+
+/* Token disclosure (2026-08-01): the happy path never shows a credential. */
+.token-reveal { margin-top: 22px; }
+.token-reveal summary { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); cursor: pointer; }
+.token-reveal summary:hover { color: var(--ink-dim); }
+.token-reveal[open] { border: 1px solid var(--line-soft); padding: 12px 16px; }

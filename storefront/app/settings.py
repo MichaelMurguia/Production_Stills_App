@@ -33,6 +33,10 @@ RAILWAY_PROJECT_TOKEN = os.environ.get("RAILWAY_PROJECT_TOKEN", "")
 RAILWAY_API_URL = os.environ.get("RAILWAY_API_URL", "https://backboard.railway.com/graphql/v2")
 RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "")
 RAILWAY_ENVIRONMENT_ID = os.environ.get("RAILWAY_ENVIRONMENT_ID", "")
+# When set (e.g. "app.screenboardstudio.com"), tenants get
+# studio-<n>.<base> custom domains instead of *.up.railway.app — needs the
+# one-time wildcard CNAME described in docs/DEPLOYMENT.md.
+TENANT_DOMAIN_BASE = os.environ.get("TENANT_DOMAIN_BASE", "").strip(".")
 TENANT_REPO = os.environ.get("TENANT_REPO", "MichaelMurguia/Production_Stills_App")
 TENANT_BRANCH = os.environ.get("TENANT_BRANCH", "main")
 

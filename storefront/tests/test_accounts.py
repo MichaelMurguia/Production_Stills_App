@@ -148,3 +148,50 @@ class SuccessStatusTests(unittest.TestCase):
         self.assertNotIn("token", str(r).lower(), "status carries state only")
         r = self.client.get("/success/status?session_id=unknown").json()
         self.assertEqual(r["workspace"], "NONE")
+
+
+class CustomDomainTests(unittest.TestCase):
+    def tearDown(self):
+        settings.TENANT_DOMAIN_BASE = ""
+        settings.RAILWAY_PROJECT_TOKEN = ""
+
+    def test_active_workspace_upgrades_to_custom_domain(self):
+        import types as _t
+        from app import db as _db, provisioner
+        from sqlalchemy import select as _sel
+        cloud = _t.SimpleNamespace(
+            id="cs_dom_1", metadata=StripeLike(plan="cloud-personal"),
+            mode="subscription", customer_details=StripeLike(email="d@example.com"),
+            customer="cus", subscription="sub_dom_1")
+        p = _fulfill(cloud)
+        settings.RAILWAY_PROJECT_TOKEN = "ptok"
+
+        class FakeRailway:
+            def __init__(self):
+                self.domains = []
+            def create_service(self, name): return "svc-d"
+            def create_volume(self, sid, mp): return "vol-d"
+            def upsert_variables(self, sid, v): pass
+            def set_start_command(self, sid, c): pass
+            def create_domain(self, sid): return "tenant-d.up.railway.app"
+            def redeploy(self, sid): pass
+            def delete_service(self, sid): pass
+            def create_custom_domain(self, sid, domain):
+                self.domains.append(domain)
+                return "edge.railway.app"
+
+        fake = FakeRailway()
+        provisioner.reconcile(railway=fake)  # no base yet → railway URL
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            self.assertEqual(ws.url, "https://tenant-d.up.railway.app")
+        settings.TENANT_DOMAIN_BASE = "app.screenboardstudio.com"
+        provisioner.reconcile(railway=fake)  # standing upgrade for ACTIVE
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            self.assertEqual(ws.url, f"https://studio-{ws.purchase_id}.app.screenboardstudio.com")
+            self.assertIn("edge.railway.app", ws.detail)
+        provisioner.reconcile(railway=fake)  # idempotent
+        self.assertEqual(len(fake.domains), 1)

@@ -74,6 +74,7 @@ serve internal data from the storefront.
 | `RAILWAY_ENVIRONMENT_ID` | OPTIONAL — auto-resolved ("production" by name, else the only environment); set only to override |
 | `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |
 | `TENANT_BRANCH` | Branch tenants deploy (default `main`) |
+| `TENANT_DOMAIN_BASE` | e.g. `app.screenboardstudio.com` — tenants get `studio-<n>.<base>` custom domains instead of `*.up.railway.app`. One-time DNS: a wildcard CNAME `*.<base>` pointing at the Railway edge target (the first attach records it on the workspace row detail). Reconcile upgrades already-ACTIVE workspaces automatically; the railway.app URL keeps working throughout |
 
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Transactional mail for `/recover` AND magic-link sign-in (any SMTP endpoint — Resend/Postmark/SES). Unset → both state the gate |
 | `ADMIN_EXPORT_TOKEN` | Long random value enabling `GET /admin/export?token=…` (entitlement backup). Unset → the endpoint 404s |

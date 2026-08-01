@@ -60,9 +60,39 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
         railway.redeploy(ws.railway_service_id)
         ws.status = "ACTIVE"
         ws.detail = ""
+        s.commit()
+        _ensure_custom_domain(s, ws, purchase, railway)
+        return
     except Exception as e:
         ws.status = "FAILED"
         ws.detail = str(e)[:600]
+    s.commit()
+
+
+def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
+                          railway) -> None:
+    """Upgrade the workspace to studio-<n>.<TENANT_DOMAIN_BASE> when the
+    base is configured. Non-fatal by design: an ACTIVE workspace never
+    regresses over a domain problem — the railway.app URL keeps working
+    and the issue lands in detail."""
+    base = settings.TENANT_DOMAIN_BASE
+    if not base or not ws.railway_service_id:
+        return
+    domain = f"studio-{purchase.id}.{base}"
+    if ws.url == f"https://{domain}":
+        return
+    try:
+        dns_target = railway.create_custom_domain(ws.railway_service_id, domain)
+        ws.url = f"https://{domain}"
+        ws.detail = (f"custom domain attached; wildcard *.{base} must point "
+                     f"at {dns_target}" if dns_target else "")
+    except Exception as e:
+        detail = str(e)
+        if "already" in detail.lower():  # attached on a prior run — done
+            ws.url = f"https://{domain}"
+            ws.detail = ""
+        else:
+            ws.detail = f"custom domain pending: {detail[:400]}"
     s.commit()
 
 
@@ -96,6 +126,11 @@ def reconcile(railway=railway_client) -> dict:
                     continue
                 _provision(s, ws, purchase, railway)
                 out["provisioned" if ws.status == "ACTIVE" else "failed"] += 1
+            elif purchase.status == "PAID" and ws.status == "ACTIVE":
+                # Standing upgrades for live workspaces (e.g. a custom
+                # domain base configured after they were built).
+                if settings.railway_configured():
+                    _ensure_custom_domain(s, ws, purchase, railway)
             elif purchase.status == "CANCELED" and ws.status in ("ACTIVE", "FAILED", "PENDING"):
                 if ws.railway_service_id and settings.railway_configured():
                     _revoke(s, ws, railway)

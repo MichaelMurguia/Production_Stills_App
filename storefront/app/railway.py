@@ -153,6 +153,25 @@ def create_domain(service_id: str) -> str:
     return data["serviceDomainCreate"]["domain"]
 
 
+def create_custom_domain(service_id: str, domain: str) -> str:
+    """Attach a custom domain (e.g. studio-4.app.screenboardstudio.com).
+    Returns any DNS target Railway reports so ops can verify the wildcard
+    record; TLS issues automatically once DNS resolves."""
+    data = _gql(
+        """mutation($input: CustomDomainCreateInput!) {
+             customDomainCreate(input: $input) {
+               id domain status { dnsRecords { requiredValue } } } }""",
+        {"input": {
+            "projectId": project_id(),
+            "environmentId": environment_id(),
+            "serviceId": service_id,
+            "domain": domain,
+        }})
+    recs = (((data.get("customDomainCreate") or {}).get("status") or {})
+            .get("dnsRecords") or [])
+    return recs[0].get("requiredValue", "") if recs else ""
+
+
 def redeploy(service_id: str) -> None:
     """Redeploy so variables set after the initial build take effect."""
     _gql(

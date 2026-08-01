@@ -51,13 +51,19 @@
     registered to <span class="mono">{{ purchase.email }}</span>.</p>
     {% if purchase.workspace and purchase.workspace.status == "ACTIVE" %}
     <div class="license-box">
-      <p class="license-label">WORKSPACE URL</p>
+      <p class="license-label">YOUR STUDIO</p>
       <p class="license-token">{{ purchase.workspace.url }}</p>
     </div>
     <a class="btn btn-primary" target="_blank" rel="noopener"
        href="{{ purchase.workspace.url }}/login#{{ purchase.workspace.access_token }}">Open your workspace</a>
     <p class="hero-sub" style="margin-top:14px">Opens in a new tab, already
-    signed in.</p>
+    signed in &mdash; nothing to copy.</p>
+    <details class="token-reveal">
+      <summary>ADVANCED &mdash; SHOW ACCESS TOKEN</summary>
+      <p class="hero-sub">Only for signing in manually at the studio's own
+      login page.</p>
+      <p class="license-token">{{ purchase.workspace.access_token }}</p>
+    </details>
     {% else %}
     <p class="hero-sub">Your workspace is being prepared — check back here in
     a few minutes.</p>
