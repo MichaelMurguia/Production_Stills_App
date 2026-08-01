@@ -43,3 +43,40 @@ jobs:
       - name: Boot check (import crashes surface here, not in production)
         working-directory: storefront
         run: python -c "from app.main import app; print('storefront imports clean')"
+
+  # Post-deploy verification (main only): Railway deploys every push to
+  # main, so after the suites pass we wait for /healthz to serve THIS
+  # commit, then probe the public pages. A red job here = the site is down
+  # or serving the wrong revision — roll back in the Railway dashboard.
+  # GitHub emails the pusher on failure; that is the alert channel.
+  # NOTE: assumes Railway has no watch-path filter (default). If watch
+  # paths are ever configured, docs-only pushes would fail this job — the
+  # rev check must then be relaxed to a 200-only probe.
+  verify-deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [storefront]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Railway to serve this commit (10 min budget)
+        run: |
+          REV="${GITHUB_SHA:0:12}"
+          last=""
+          for i in $(seq 1 60); do
+            last=$(curl -s --max-time 10 https://www.screenboardstudio.com/healthz || true)
+            if echo "$last" | grep -q "$REV"; then
+              echo "serving $REV after ~$((i * 10))s"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::deploy never served $REV within 10 minutes (healthz: $last)"
+          exit 1
+      - name: Probe public pages
+        run: |
+          fail=0
+          for u in "" terms privacy recover; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://www.screenboardstudio.com/$u")
+            echo "/$u -> $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          exit $fail

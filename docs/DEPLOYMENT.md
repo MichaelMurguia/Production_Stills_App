@@ -98,11 +98,19 @@ losing them means losing the record of who owns what. Two layers:
 
 ## CI
 
-`.github/workflows/ci.yml` runs both suites on every push and PR. Railway
-deploys `main` on push regardless (it cannot wait for CI) — so the standing
-rule is: suites green locally before pushing to `main`, and a red X on
-`main` means roll back (Railway dashboard → previous deployment) or fix
-forward immediately.
+`.github/workflows/ci.yml` runs both suites on every push and PR — in
+isolated per-surface environments with a storefront boot-import check (the
+2026-08-01 502 was a dependency masked by a shared install; isolation makes
+that class turn red in CI). Railway deploys `main` on push regardless (it
+cannot wait for CI) — so the standing rule is: suites green locally before
+pushing to `main`, and a red X on `main` means roll back (Railway
+dashboard → previous deployment) or fix forward immediately.
+
+**Every deploy is verified automatically:** the `verify-deploy` job (main
+pushes only) waits up to 10 minutes for `/healthz` to serve the pushed
+commit, then probes `/`, `/terms`, `/privacy`, `/recover`. A red
+`verify-deploy` means the site is down or serving a stale revision —
+GitHub emails the pusher; roll back first, diagnose second.
 
 Secrets live ONLY in Railway variables and local shells. Never in the repo,
 never in `data/settings.json` (that file is for the internal app's
