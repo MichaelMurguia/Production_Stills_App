@@ -68,6 +68,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/specs").status_code, 200,
                          "the session cookie must open the API")
 
+    def test_ui_never_runs_stale(self):
+        # Regression (2026-08-01): a hosted studio kept serving an old
+        # app.js from browser cache after the server updated. Every UI
+        # response must demand revalidation; API responses are untouched.
+        appmain.ACCESS_TOKEN = ""
+        for path in ("/", "/styles.css", "/app.js"):
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertEqual(r.headers.get("cache-control"), "no-cache", path)
+        api = self.client.get("/api/healthz")
+        self.assertNotEqual(api.headers.get("cache-control"), "no-cache")
+
     def test_no_token_means_no_gate(self):
         appmain.ACCESS_TOKEN = ""
         self.assertEqual(self.client.get("/api/specs").status_code, 200)

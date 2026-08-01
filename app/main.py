@@ -82,6 +82,13 @@ async def security_headers(request: Request, call_next):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    if not request.url.path.startswith("/api/"):
+        # The UI must never run stale: without this, browsers heuristically
+        # cache app.js/styles.css and a hosted studio can keep an old build
+        # after the server updates (observed live 2026-08-01). no-cache
+        # forces an ETag revalidation per load — a 304 when unchanged, the
+        # new file the moment a release lands.
+        resp.headers.setdefault("Cache-Control", "no-cache")
     return resp
 
 
