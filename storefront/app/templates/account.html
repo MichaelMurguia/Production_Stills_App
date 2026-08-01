@@ -31,12 +31,13 @@
     {% if tenant_base %}
     {% if named %}<p class="hero-sub mono" style="margin-top:12px;color:var(--ok)">STUDIO RENAMED &mdash; THE NEW ADDRESS GOES LIVE IN A MINUTE AND REPLACES THE OLD ONE.</p>{% endif %}
     {% if name_error %}<p class="hero-sub mono" style="margin-top:12px;color:var(--bad)">{{ name_error.upper() }}</p>{% endif %}
-    <form method="post" action="/studio/name" class="recover-form" style="margin-top:12px">
+    <form method="post" action="/studio/name" class="recover-form studio-name-form" style="margin-top:12px">
       <input type="hidden" name="workspace_id" value="{{ p.workspace.id }}">
       <input type="text" name="name" placeholder="name your studio…"
-             value="{{ p.workspace.subdomain }}" title="Becomes your studio's address — lowercase letters, digits, hyphens.">
+             value="{{ p.workspace.subdomain }}" title="Type anything — the address form appears below as you type.">
       <button class="btn btn-secondary" type="submit">Claim name</button>
     </form>
+    <p class="name-preview mono" aria-live="polite"></p>
     <p class="hero-sub" style="margin-top:8px">Your studio's address is
     <span class="mono">{{ p.workspace.subdomain or "yourname" }}.{{ tenant_base }}</span></p>
     {% endif %}

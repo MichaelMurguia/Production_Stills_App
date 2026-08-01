@@ -424,7 +424,8 @@ def account_page(request: Request, name_error: str = "", named: int = 0):
         "purchase": None, "missed": False, "purchases": purchases,
         "email": email, "tenant_base": settings.TENANT_DOMAIN_BASE,
         "name_error": name_error[:120], "named": named,
-        "versions": [v for v, _ in available_versions()]})
+        "versions": [v for v, _ in available_versions()],
+        "reserved_names": sorted(provisioner.RESERVED_SUBDOMAINS)})
 
 
 @app.post("/account")

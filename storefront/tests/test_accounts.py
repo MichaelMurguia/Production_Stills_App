@@ -284,6 +284,11 @@ class StudioNamingTests(unittest.TestCase):
                                data={"workspace_id": wid, "name": "www"},
                                follow_redirects=False)
         self.assertIn("name_error", bad.headers["location"])
+        # realtime preview ships to the page: normalizer + reserved list
+        page = self.client.get("/account")
+        self.assertIn("name-preview", page.text)
+        self.assertIn('"www"', page.text)  # reserved list reaches the client
+        self.assertIn("WILL BE", page.text)
 
         self.client.post("/auth/logout")
         self._signin("stranger-n@example.com")
