@@ -90,7 +90,24 @@ number, label, a live Courier subline from `stage_summary`, and a top border
 stating progress: `--ok` complete, `--accent` current (the viewed stage, else
 the work frontier — exactly one amber in the chrome), `--bad` blocked,
 `--line` unreached. `HERE` chip marks the viewed stage only. Tools (Status ·
-Reference · Settings) live in the header with the engine credential dots.
+Reference · Productions · Settings) live in the header with the engine
+credential dots.
+
+**Cursor band vs reach band — both are canon; do not "fix" one into the
+other** (PRODUCTIONS_PLAN A7). The nav band is a *cursor*: where the user
+is standing right now. A production card's band (`.prod-band`) is a
+*reach* indicator: what this production has ever achieved. Same four
+colors, different mapping:
+
+| | Nav band (cursor) | Card band (reach) |
+|---|---|---|
+| `--ok` | stage complete | production has **ever** completed this stage |
+| `--accent` | the stage you are on | *not used — a card has no cursor* |
+| `--bad` | stage carries a blocker | any of this production's sheets is blocked here |
+| `--line` | not reached | never reached |
+
+A production may legally read green through 05 with 03 in red — it has
+boarded work and one blocked breakdown right now.
 
 **Judging room** (`.board-room` = `.board-rail` 230px · `.board-stage` ·
 `.board-side` 300px). Rail: sheet block, panel list with latest-take thumbs
@@ -302,7 +319,35 @@ Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
 ghost actions. Rows separated by `--line-soft` top borders; no
 cards-within-cards. A registry row's Courier facts may carry a care state
 (`BACKED UP <date>` / `NEVER BACKED UP`) — faint, never a badge; not-yet-done
-is not a failure (review 2026-08-01 §8).
+is not a failure (review 2026-08-01 §8). Care escalates by age but never
+blocks (PRODUCTIONS_PLAN A4): under 14 days `--ink-faint`; 14–29 days the
+same text in `--hold`; at 30+ days the text goes `--bad` and the row's
+first action becomes `Back up now` with a `--bad-line` border; `NEVER
+BACKED UP` stays faint. Backup age never enters the blocking list and is
+never eligible for DO-THIS-NEXT; the Status view's ADVISORY divider may
+carry one row for the active production only, at 30+ days.
+
+**Inline rename** (PRODUCTIONS_PLAN A5, canonical — `inlineRename()` in
+app.js, `.inline-rename` input). A label the user owns is renamed in
+place: the label becomes an input at the same position and type size,
+pre-filled and selected; Enter commits, Esc reverts, blur commits. Never
+a dialog, never a separate edit screen. The affordance is a `✎` that
+appears on hover of the label — always present for keyboard/touch (do
+not gate it on hover alone in the accessibility tree). One helper serves
+every host: the header production name and the library cards.
+
+**Production card** (`.prod-card`, the Screenboard Library). Anatomy, top
+to bottom: sans-bold name + Courier amber `OPEN` marker on the open card
+(3px `--accent` left border, `--panel2` fill — never a badge; open is
+navigation state, not approval) + Courier slug right · 5-cell reach band
+(see Layout patterns) · Courier counts row (`n SCENES · n PANELS · n
+BOARDS · n REFS`, or `NO SCREENPLAY YET`) · `DO THIS NEXT` block (Courier
+amber kicker + one sentence, computed per production by the same rule as
+the Status blocking list; `ALL STAGES CLEAR` in `--ink-faint` when
+nothing waits — no verb, no amber) · footer: care line left (escalation
+per Registry rows), ghost actions right (`Back up`/`Back up now` ·
+`Open` · `Rename` · `⋯` menu holding Duplicate and typed-name-confirmed
+Delete via the app modal).
 
 **Derive affordance** (review 2026-08-01 §2). A ghost button at the field's
 label row that deterministically fills an editable field from data the app
@@ -423,7 +468,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-01 | Screenboard rename pencil (user-directed): inline SVG icon beside the header brand-sub swaps the name for an input; Enter saves via /api/projects/rename | Header, all views | FIRST ICON IN THE PRODUCT — no icon vocabulary exists in canon; designer must rule on icons at all, and on header-inline editing |
+| *(empty — the 2026-08-01 Productions pass canonized the rename pencil into Inline rename, Components)* | | | |
 
 ---
 
@@ -432,6 +477,11 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-01** — Productions pass: projects renamed "production" in copy
+  and moved out of Settings into their own view as cards with reach bands
+  and per-production DO-THIS-NEXT; ACTIVE badge retired for the open-state
+  vocabulary; inline rename canonized; backup age escalates as care, never
+  as a blocker; first-run and empty-Boards states state the path.
 - **2026-07-31** — Cloud/product split (director's ruling): the app gained
   an env-gated workspace login (`SCREENBOARD_ACCESS_TOKEN`; standalone
   installs unaffected) and a Projects panel in Settings (multi-project
