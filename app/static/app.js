@@ -797,6 +797,12 @@ const BLOCK_SUPPORT = {
   CITE: "The current draft no longer contains quotes this sheet cites — review the flagged rows.",
 };
 
+// Gate stated before it is hit (user ruling 2026-08-01): a breakdown draws
+// its rendering language, environments and subjects from the bible, so
+// Create Breakdown never appears before Production Design is complete —
+// a de-emphasized tag states the unmet condition instead.
+const PD_LOCK_TAG = `<span class="pd-lock mono" title="Breakdowns draw their rendering language, environments and subjects from the Art Direction Bible — complete Production Design first.">COMPLETE PRODUCTION DESIGN</span>`;
+
 // Machine IDs inside prose render in Courier (design system: data vs voice).
 const monoIds = safeText => safeText.replace(
   /\b((?:CAND|REF|BOARD|OBJ)-\d+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|P\d{2})\b/g,
@@ -1084,8 +1090,11 @@ async function renderLocations(state = null, langs = 0) {
       heldBySpec[b.spec_id] = m ? +m[1] : 1;
     }
   }
+  const pdReady = !!state?.stage_summary?.production_design?.bible_saved;
   const sheetCell = l => {
-    if (!l.sheet) return `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create Breakdown</button>`;
+    if (!l.sheet) return pdReady
+      ? `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create Breakdown</button>`
+      : PD_LOCK_TAG;
     const held = heldBySpec[l.sheet.spec_id];
     return `<span class="loc-sheet">
       <span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span>
@@ -1115,7 +1124,7 @@ async function renderLocations(state = null, langs = 0) {
           .map(s => `
             <div class="scene-row">
               <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
-              <button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create Breakdown</button>
+              ${pdReady ? `<button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create Breakdown</button>` : PD_LOCK_TAG}
             </div>`).join("") : "";
         return `
           <div class="loc-row" data-exp="${esc(l.location)}" style="cursor:pointer" title="click to ${open ? "collapse" : "list"} this location's scenes">
@@ -1883,7 +1892,9 @@ async function renderWizard() {
       <span class="loc-state">${sheet ? `SHEET — ${esc(sheet.spec_id)}` : "NO SHEET"}</span>
       ${sheet
         ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open Breakdown</button>`
-        : `<button class="block-act loc-draft" data-loc="${esc(name)}">Create Breakdown</button>`}
+        : state.stage_summary?.production_design?.bible_saved
+          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Create Breakdown</button>`
+          : PD_LOCK_TAG}
     </div>`;
   const renderWizLocs = async () => {
     const secHost = $("#wiz-locs-sec");
@@ -2795,6 +2806,45 @@ async function setRefStatus(id, status, reason = "") {
 
 async function renderSpecs(openId = null) {
   useTemplate("tpl-specs");
+
+  // The stage locks until Production Design is complete (user ruling
+  // 2026-08-01): a breakdown draws its rendering language, environments
+  // and subjects from the bible — opened early it would have nothing to
+  // draw from. Server enforces the same gate on creation (423).
+  try {
+    const gateState = await api("/api/state");
+    if (!gateState.stage_summary?.production_design?.bible_saved) {
+      $("#main").innerHTML = `
+        <section class="view"><div class="panel boards-empty">
+          <div>
+            <div class="fact-head">STAGE LOCKED</div>
+            <h2 class="be-title">Breakdowns unlock after<br>Production Design.</h2>
+            <p class="be-para">A breakdown sheet draws its rendering
+            language, environments and subjects from the Art Direction
+            Bible. Until the bible is saved there is nothing for a sheet
+            to draw from.</p>
+            <button class="primary" id="pd-go">Open Production Design</button>
+            <div class="be-note mono">RUN THE SCRIPT SCENE SCAN, THEN SAVE THE BIBLE &mdash; THIS STAGE UNLOCKS ITSELF</div>
+          </div>
+          <div class="path-box">
+            <div class="fact-head">THE PATH FROM HERE</div>
+            ${[
+              { label: "SCREENPLAY READ", done: !!gateState.screenplay },
+              { label: "SCRIPT SCENE SCAN", done: !!gateState.stage_summary?.production_design?.bible_rev },
+              { label: "SAVE THE BIBLE", done: false },
+              { label: "CREATE BREAKDOWNS", done: false },
+            ].map((s, i, arr) => {
+              const cur = arr.findIndex(x => !x.done);
+              return `<div class="path-row mono ${s.done ? "done" : i === cur ? "cur" : ""}">
+                <span class="path-mark">${s.done ? "✓" : i === cur ? "→" : "·"}</span>
+                <span>${esc(s.label)}</span></div>`;
+            }).join("")}
+          </div>
+        </div></section>`;
+      $("#pd-go").onclick = () => showView("wizard");
+      return;
+    }
+  } catch { /* state unavailable — let the stage render; the server gate holds */ }
 
   // Work-in-progress survives re-renders, errors, and tab switches: both forms
   // auto-save to localStorage on every keystroke and restore here; the

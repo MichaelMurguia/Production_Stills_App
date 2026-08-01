@@ -117,40 +117,20 @@ class GenerationError(Exception):
 
 # --------------------------------------------------------------- style bible
 
-DEFAULT_STYLE_BIBLE = """VISUAL STYLE — locked art direction for every render:
-Loose production painting. Painterly concept art with clearly visible brush strokes.
-Feature-film art department development work: the language of ILM production
-development boards and Ralph McQuarrie production paintings; the grounded realism
-of Andor and Rogue One; Apollo-era NASA hardware; practical mining and aviation
-equipment.
-Large value shapes and cinematic value grouping. Strong silhouette design.
-Readable from twenty feet away.
-Warm earthy palette unless the subject dictates otherwise. Morning light preferred.
-Practical material logic and real-world construction logic.
-Worn, maintained, human-built environments — repaired, not abandoned. Everything
-has a purpose; nothing decorative without function.
-Restrained visual effects.
-
-NEVER:
-Glossy promotional key art. Photoreal rendering. Photobash or collage appearance.
-Over-rendered digital illustration. Anime influence. Fantasy costuming.
-Decorative complexity without function. Generic futuristic interfaces.
-Junkyard, hoarder, or scrap-heap aesthetics — these environments are maintained
-by people who repair everything and waste nothing.
-"""
-
-
 def load_style_bible() -> str:
-    """The Art Direction Bible is the single source of truth. The legacy
-    data/style_bible.md condensation is only a fallback if the bible file
-    is missing."""
+    """The Art Direction Bible is the single source of truth; the legacy
+    data/style_bible.md condensation is a per-project fallback. There is
+    deliberately NO template default (director's ruling 2026-08-01):
+    every production's rendering style is set by its own Cinematography
+    and Rendering content — an empty return is a stated upstream gap,
+    never silently painted over with another film's art direction."""
     text = bible.load_text()
     if text:
         return text
     p = paths.DATA / "style_bible.md"
     if p.exists():
         return p.read_text(encoding="utf-8")
-    return DEFAULT_STYLE_BIBLE
+    return ""
 
 
 def save_style_bible(text: str) -> None:
@@ -350,13 +330,20 @@ def _style_context(spec: dict, panel: dict) -> str:
         languages = spec["design_languages"]
     else:
         languages = None
-    return bible.render_context(
+    language = bible.render_context(
         haystack,
         languages,
         spec.get("scene_lessons") if "scene_lessons" in spec else None,
         environments=([panel["environment"]] if panel.get("environment")
                       else spec.get("environments") or []),
     ) or load_style_bible().strip()
+    if not language:
+        # Backstop behind the breakdown gate: never render without the
+        # production's own art direction, never substitute a template's.
+        raise GenerationError(
+            "no rendering language — save the Art Direction Bible "
+            "(Production Design) before rendering")
+    return language
 
 
 def _setting_lines(spec: dict, panel: dict) -> list[str]:
@@ -957,13 +944,17 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     subject = (subject or "").strip()
     style_refs = store.auto_style_references()
     ref_paths = _reference_image_paths(style_refs)
+    language = bible.render_context("") or load_style_bible().strip()
+    if not language:
+        raise GenerationError("no rendering language — save the Art "
+                              "Direction Bible before running a style probe")
     parts = [
         "STYLE SAMPLE PROBE — engine selection test",
         "",
         "Render ONE image demonstrating how you interpret this project's locked "
         "art direction.",
         "",
-        bible.render_context("") or load_style_bible().strip(),
+        language,
         "",
         "SUBJECT",
         (f"A location from this screenplay: {subject}.\n"

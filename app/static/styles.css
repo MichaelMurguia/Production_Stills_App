@@ -1400,3 +1400,10 @@ details.meta pre {
 /* ratified changes (PRODUCTIONS_PASS_RATIFIED 2026-08-01) */
 .prod-next-clear { font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); }
 .asm-none { margin-bottom: 12px; letter-spacing: .08em; color: var(--ink-faint); }
+
+/* production-design gate tag (user ruling 2026-08-01): the stated,
+   de-emphasized stand-in where Create Breakdown will appear. */
+.pd-lock {
+  font-size: 9px; letter-spacing: .1em; color: var(--ink-faint);
+  border: 1px dashed var(--line); padding: 2px 8px; white-space: nowrap;
+}

@@ -670,8 +670,20 @@ def api_list_specs() -> list[dict]:
     return store.list_specs()
 
 
+def _require_production_design() -> None:
+    """Breakdowns draw their rendering language, environments and subjects
+    from the Art Direction Bible — without it a sheet has nothing to draw
+    from. 423: the resource is locked by an unmet upstream condition (the
+    UI states this gate before it is ever hit)."""
+    if not bible.load_text().strip():
+        raise HTTPException(423, "production design incomplete — save the "
+                                 "Art Direction Bible before drafting "
+                                 "breakdowns")
+
+
 @app.post("/api/specs")
 async def api_new_spec(body: dict) -> dict:
+    _require_production_design()
     try:
         return store.new_spec(body["specification_id"].strip(),
                               body.get("subject", "").strip(),
@@ -1310,6 +1322,7 @@ async def api_remove_lesson(body: dict) -> dict:
 
 @app.post("/api/specs/autofill")
 async def api_autofill_spec(body: dict) -> dict:
+    _require_production_design()
     try:
         return await run_in_threadpool(
             autofill.autofill_spec,

@@ -186,8 +186,8 @@
     </div>
 
     <div class="panel step" data-step="2">
-      <h2>Read the screenplay</h2>
-      <p class="hint">The research model reads the whole screenplay and proposes the project's <b>design languages</b> — the distinct visual cultures of the film (factions, eras, technology families) that must each stay internally consistent and distinct. Confirm, rename, or drop them; each becomes a Bible section, selectable per board.</p>
+      <h2>Script Scene Scan</h2>
+      <p class="hint">The research model scans every scene of the screenplay and returns the film's raw material for design: its <b>design languages</b> — the distinct visual cultures (factions, eras, technology families) that must each stay internally consistent — plus environments, key locations and open questions. Confirm, rename, or drop what it proposes; each language becomes a Bible section, selectable per board.</p>
       <div class="row">
         <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
           <select id="wiz-provider">
@@ -195,7 +195,7 @@
             <option value="openai">OpenAI GPT-5.6</option>
           </select>
         </div>
-        <div class="gen-actions"><button id="wiz-analyze" class="primary">Analyze screenplay</button></div>
+        <div class="gen-actions"><button id="wiz-analyze" class="primary">Run the Scene Scan</button></div>
       </div>
       <div id="wiz-analyze-lock" class="mini" style="margin-top:8px"></div>
       <div id="wiz-analyze-busy"></div>
@@ -254,8 +254,8 @@
       <h2>Model bake-off <span class="hint">(pick your default engine by looking, not guessing)</span></h2>
       <p class="hint">Every engine renders the <b>same location from your screenplay</b> under your saved Bible and approved anchors — the exact conditions real panel generations run under. Recommended locations come from step 2.</p>
       <div class="row" style="margin-top:0">
-        <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 screenplay analysis; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
-          <input type="text" id="wiz-sample-loc" list="wiz-sample-locs" placeholder="run the Step 2 analysis for suggestions, or type a location…">
+        <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 Script Scene Scan; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
+          <input type="text" id="wiz-sample-loc" list="wiz-sample-locs" placeholder="run the Step 2 Scene Scan for suggestions, or type a location…">
           <datalist id="wiz-sample-locs"></datalist>
         </div>
         <div class="gen-actions"><button class="primary" id="wiz-samples-go" title="Sends the identical brief (your Bible + style anchors + the chosen screenplay location) to every engine you have a key for — one 1K render each.">Generate a sample from every model</button></div>

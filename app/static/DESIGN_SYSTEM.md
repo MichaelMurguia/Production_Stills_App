@@ -494,6 +494,8 @@ rows are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
+| 2026-08-01 | Production-design gate (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved; the Breakdowns stage locks whole (STAGE LOCKED + path box, reusing the stated-path family) and the server refuses creation with 423 | Location finders (Screenplay + wizard), Breakdowns stage | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment and the locked-stage layout |
+| 2026-08-01 | "Script Scene Scan" (user naming): the Production Design step 2 read is named Script Scene Scan ("Run the Scene Scan") so the second read of the screenplay states what it returns | Wizard step 2 | Pure copy — review naming only |
 
 ---
 
@@ -502,6 +504,12 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-01** — Director's ruling: the template default art direction
+  (DEFAULT_STYLE_BIBLE — the Beltminers-flavored VISUAL STYLE block) is
+  deleted. Every production's rendering style comes only from its own
+  bible (Cinematography and Rendering); with no bible the style text is
+  empty and rendering is gated, never silently painted with another
+  film's look. Breakdowns gate on the bible for the same reason.
 - **2026-08-01** — Productions pass ratified: nav order, single amber
   fill, additive rename slug, duplicate/delete gates, reach-band panel
   semantics confirmed as built; "Wrapped" replaced with truthful

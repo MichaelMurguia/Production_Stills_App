@@ -103,6 +103,31 @@ class ApiTests(unittest.TestCase):
         bad = self.client.post("/api/projects", json={"name": "   "})
         self.assertEqual(bad.status_code, 422)
 
+    def test_breakdowns_gated_on_production_design(self):
+        # User ruling 2026-08-01: no bible, no breakdowns — stated as 423,
+        # enforced on both creation paths, cleared by saving the bible.
+        r = self.client.post("/api/specs", json={"specification_id": "TEST_SHEET_V001",
+                                                 "subject": "A test"})
+        self.assertEqual(r.status_code, 423)
+        self.assertIn("Art Direction Bible", r.json()["detail"])
+        r = self.client.post("/api/specs/autofill",
+                             json={"specification_id": "TEST_SHEET_V001",
+                                   "prompt": "x"})
+        self.assertEqual(r.status_code, 423)
+        self.client.put("/api/style-bible",
+                        json={"text": "## Cinematography\npainterly"})
+        r = self.client.post("/api/specs", json={"specification_id": "TEST_SHEET_V001",
+                                                 "subject": "A test"})
+        self.assertEqual(r.status_code, 200, r.text)
+
+    def test_no_template_art_direction(self):
+        # Director's ruling 2026-08-01: with no bible, the app never
+        # substitutes another film's art direction — the style text is
+        # empty, a stated gap, not a Beltminers-flavored default.
+        r = self.client.get("/api/style-bible").json()
+        self.assertEqual(r["text"], "")
+        self.assertNotIn("McQuarrie", r["text"])
+
     def test_first_run_states_itself_then_clears(self):
         # PRODUCTIONS_PLAN M6: a fresh install reports first_run so the UI
         # opens on "Name the show"; creating a production clears it.
