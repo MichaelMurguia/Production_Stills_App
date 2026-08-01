@@ -186,12 +186,83 @@ class CustomDomainTests(unittest.TestCase):
             ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
                 _db.Purchase.stripe_session_id == "cs_dom_1"))
             self.assertEqual(ws.url, "https://tenant-d.up.railway.app")
-        settings.TENANT_DOMAIN_BASE = "app.screenboardstudio.com"
+        settings.TENANT_DOMAIN_BASE = "screenboardstudio.com"
         provisioner.reconcile(railway=fake)  # standing upgrade for ACTIVE
         with _db.session() as s:
             ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
                 _db.Purchase.stripe_session_id == "cs_dom_1"))
-            self.assertEqual(ws.url, f"https://studio-{ws.purchase_id}.app.screenboardstudio.com")
+            self.assertTrue(ws.subdomain, "an unclaimed studio gets a slug")
+            self.assertNotIn("studio-", ws.subdomain,
+                             "the slug must never leak the purchase number")
+            self.assertEqual(ws.url, f"https://{ws.subdomain}.screenboardstudio.com")
             self.assertIn("edge.railway.app", ws.detail)
         provisioner.reconcile(railway=fake)  # idempotent
         self.assertEqual(len(fake.domains), 1)
+
+
+class StudioNamingTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        self.sent = []
+        self._send = mailer.send
+        self._host, self._from = settings.SMTP_HOST, settings.SMTP_FROM
+        settings.SMTP_HOST, settings.SMTP_FROM = "smtp.test", "care@test"
+        mailer.send = lambda to, subject, body: self.sent.append((to, body))
+        settings.SESSION_SECRET = "test-secret"
+        settings.TENANT_DOMAIN_BASE = "screenboardstudio.com"
+
+    def tearDown(self):
+        mailer.send = self._send
+        settings.SMTP_HOST, settings.SMTP_FROM = self._host, self._from
+        settings.SESSION_SECRET = ""
+        settings.TENANT_DOMAIN_BASE = ""
+
+    def test_validation_rules(self):
+        from app import provisioner
+        self.assertTrue(provisioner.valid_subdomain("overlandbound"))
+        self.assertTrue(provisioner.valid_subdomain("my-studio-2"))
+        for bad in ("www", "admin", "-lead", "trail-", "UPPER", "a",
+                    "has_underscore", "dot.name", ""):
+            self.assertFalse(provisioner.valid_subdomain(bad), bad)
+
+    def _signin(self, email):
+        import re as _re
+        self.client.post("/auth/email", data={"email": email, "mode": "signin"})
+        link = _re.search(r"/auth/verify\?token=[\w-]+", self.sent[-1][1]).group(0)
+        self.client.get(link)
+
+    def test_owner_claims_and_strangers_cannot(self):
+        import types as _t
+        from app import db as _db
+        from sqlalchemy import select as _sel
+        cloud = _t.SimpleNamespace(
+            id="cs_name_1", metadata=StripeLike(plan="cloud-personal"),
+            mode="subscription",
+            customer_details=StripeLike(email="owner-n@example.com"),
+            customer="cus", subscription="sub_name_1")
+        p = _fulfill(cloud)
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).where(
+                _db.Workspace.purchase_id == p.id))
+            wid = ws.id
+
+        self._signin("owner-n@example.com")
+        r = self.client.post("/studio/name",
+                             data={"workspace_id": wid, "name": "Overland-Bound"},
+                             follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("named=1", r.headers["location"])
+        with _db.session() as s:
+            self.assertEqual(s.get(_db.Workspace, wid).subdomain, "overland-bound")
+
+        bad = self.client.post("/studio/name",
+                               data={"workspace_id": wid, "name": "www"},
+                               follow_redirects=False)
+        self.assertIn("name_error", bad.headers["location"])
+
+        self.client.post("/auth/logout")
+        self._signin("stranger-n@example.com")
+        r = self.client.post("/studio/name",
+                             data={"workspace_id": wid, "name": "steal"},
+                             follow_redirects=False)
+        self.assertEqual(r.status_code, 404)

@@ -13,11 +13,59 @@ PENDING with the condition stated).
 """
 from __future__ import annotations
 
+import re
+import secrets
+
 from sqlalchemy import select
 
 from . import db, railway as railway_client, settings
 
 MOUNT_PATH = "/workspace"
+
+# --- studio naming --------------------------------------------------------
+# A studio's subdomain is buyer-claimed (the Slack model); until claimed it
+# carries a random two-word slug — never the bare purchase number, which
+# would publish the customer count in certificate-transparency logs.
+
+RESERVED_SUBDOMAINS = {
+    "www", "api", "app", "apps", "mail", "smtp", "imap", "admin", "store",
+    "shop", "status", "docs", "help", "support", "blog", "cdn", "static",
+    "assets", "studio", "studios", "screenboard", "billing", "account",
+    "accounts", "auth", "login", "signup", "download", "downloads", "dev",
+    "staging", "test", "demo", "ftp", "ns1", "ns2",
+}
+
+_ADJ = ("amber", "brass", "cedar", "cobalt", "copper", "crimson", "ember",
+        "flint", "gilded", "granite", "indigo", "iron", "ivory", "jade",
+        "lunar", "mesa", "noble", "ochre", "onyx", "opal", "quartz", "raven",
+        "saffron", "sable", "silver", "slate", "solar", "sterling", "stone",
+        "summit", "timber", "topaz", "umber", "velvet", "walnut", "winter")
+_NOUN = ("anvil", "atlas", "banner", "beacon", "canyon", "circuit", "comet",
+         "compass", "crane", "delta", "engine", "falcon", "forge", "frame",
+         "gantry", "hangar", "kestrel", "lantern", "ledger", "loom",
+         "meadow", "orbit", "otter", "panther", "pillar", "prairie",
+         "quarry", "ridge", "rocket", "saddle", "signal", "spur", "vault",
+         "willow", "wren")
+
+_SUBDOMAIN_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])\Z")
+
+
+def valid_subdomain(name: str) -> bool:
+    return bool(_SUBDOMAIN_RE.fullmatch(name)) and name not in RESERVED_SUBDOMAINS
+
+
+def random_subdomain(s) -> str:
+    """An unclaimed studio's slug: adjective-noun, digits appended only on
+    collision. Checked against the table so it is unique at assignment."""
+    for _ in range(64):
+        slug = f"{secrets.choice(_ADJ)}-{secrets.choice(_NOUN)}"
+        if _ != 0:
+            slug += f"-{secrets.randbelow(90) + 10}"
+        taken = s.scalar(select(db.Workspace).where(
+            db.Workspace.subdomain == slug))
+        if not taken and slug not in RESERVED_SUBDOMAINS:
+            return slug
+    return f"studio-{secrets.token_hex(4)}"
 START_COMMAND = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 NOT_CONFIGURED = ("Railway provisioning is not configured — set "
                   "RAILWAY_PROJECT_TOKEN (from the tenants project's "
@@ -30,6 +78,7 @@ def ensure_workspace_row(s, purchase: db.Purchase) -> db.Workspace:
         db.Workspace.purchase_id == purchase.id))
     if ws is None:
         ws = db.Workspace(purchase_id=purchase.id,
+                          subdomain=random_subdomain(s),
                           detail="" if settings.railway_configured()
                           else NOT_CONFIGURED)
         s.add(ws)
@@ -78,7 +127,10 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
     base = settings.TENANT_DOMAIN_BASE
     if not base or not ws.railway_service_id:
         return
-    domain = f"studio-{purchase.id}.{base}"
+    if not ws.subdomain:  # pre-naming workspaces get their slug here
+        ws.subdomain = random_subdomain(s)
+        s.commit()
+    domain = f"{ws.subdomain}.{base}"
     if ws.url == f"https://{domain}":
         return
     try:

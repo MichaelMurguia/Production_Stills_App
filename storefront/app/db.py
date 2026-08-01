@@ -64,6 +64,9 @@ class Workspace(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     purchase_id: Mapped[int] = mapped_column(ForeignKey("purchases.id"), unique=True)
     status: Mapped[str] = mapped_column(String(16), default="PENDING")
+    # The studio's subdomain label. Uniqueness is enforced in the app (a DB
+    # unique constraint would break on pre-claim '' rows).
+    subdomain: Mapped[str] = mapped_column(String(63), default="")
     access_token: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
     railway_service_id: Mapped[str] = mapped_column(String(64), default="")
     railway_volume_id: Mapped[str] = mapped_column(String(64), default="")
@@ -113,7 +116,8 @@ def init_db() -> None:
     # create_all never adds columns to tables that already exist; patch the
     # known additive columns so early deployments upgrade in place.
     for ddl in ("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''",
-                "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''"):
+                "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''",
+                "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''"):
         try:
             with engine.begin() as conn:
                 conn.execute(text(ddl))

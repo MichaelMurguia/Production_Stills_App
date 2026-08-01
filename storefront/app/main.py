@@ -341,8 +341,43 @@ def auth_logout():
     return resp
 
 
+@app.post("/studio/name")
+def name_studio(request: Request, background: BackgroundTasks,
+                workspace_id: int = Form(0), name: str = Form("")):
+    """Claim or rename a studio's subdomain. Owner-only (signed-in email
+    must match the purchase); the old address keeps answering — Railway
+    serves every domain ever attached, so bookmarks never break."""
+    from urllib.parse import quote
+    email = request.state.account_email
+    if not email:
+        return RedirectResponse("/signin", status_code=303)
+    name = name.strip().lower()
+    err = ""
+    if not provisioner.valid_subdomain(name):
+        err = ("names are 2-63 characters: lowercase letters, digits, and "
+               "hyphens (not first or last)" if name not in
+               provisioner.RESERVED_SUBDOMAINS else "that name is reserved")
+    with db.session() as s:
+        ws = s.get(db.Workspace, workspace_id)
+        if not ws or ws.purchase.email != email:
+            raise HTTPException(404)
+        if not err and ws.subdomain != name:
+            clash = s.scalar(select(db.Workspace).where(
+                db.Workspace.subdomain == name, db.Workspace.id != ws.id))
+            if clash:
+                err = "that name is taken"
+            else:
+                ws.subdomain = name
+                s.commit()
+    if err:
+        return RedirectResponse(f"/account?name_error={quote(err)}",
+                                status_code=303)
+    background.add_task(provisioner.reconcile)
+    return RedirectResponse("/account?named=1", status_code=303)
+
+
 @app.get("/account")
-def account_page(request: Request):
+def account_page(request: Request, name_error: str = "", named: int = 0):
     email = request.state.account_email
     if not email:
         return templates.TemplateResponse(request, "account.html", {
@@ -354,12 +389,13 @@ def account_page(request: Request):
             if p.license:
                 _ = p.license.token
             if p.workspace:
-                _ = (p.workspace.status, p.workspace.url,
-                     p.workspace.access_token)
+                _ = (p.workspace.id, p.workspace.status, p.workspace.url,
+                     p.workspace.access_token, p.workspace.subdomain)
         s.expunge_all()
     return templates.TemplateResponse(request, "account.html", {
         "purchase": None, "missed": False, "purchases": purchases,
-        "email": email})
+        "email": email, "tenant_base": settings.TENANT_DOMAIN_BASE,
+        "name_error": name_error[:120], "named": named})
 
 
 @app.post("/account")
