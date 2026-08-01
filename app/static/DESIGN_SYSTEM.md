@@ -493,7 +493,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-01 | Screenplay-stage upload state (bug fix): with no screenplay the main column becomes the upload ("Upload the screenplay" + form) and the side Replace panel hides — arriving from Status's Add found a headline over nothing | Screenplay view | Built from canon (stated-path empty state family) — review copy/placement only |
+| 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
 
 ---
 

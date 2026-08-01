@@ -828,17 +828,35 @@ async function renderStatus() {
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
-  lead.innerHTML = `
-    <div class="next-label">DO THIS NEXT</div>
-    <div class="next-row">
-      <div style="flex:1;min-width:0">
-        <div class="next-text">${monoIds(esc(next.text))}</div>
-        <p class="next-support">${esc(first ? BLOCK_SUPPORT[first.kind] || "" :
-          "Everything upstream is satisfied.")}</p>
-      </div>
-      <button class="primary" data-f="go">${esc(first ? BLOCK_VERBS[first.kind] || "Open" : "Open")}</button>
-    </div>`;
-  $("[data-f=go]", lead).onclick = () => showView(action);
+  if (!state.screenplay) {
+    // The verb IS the form (user ruling 2026-08-01): never a button whose
+    // only job is to reach another button. The upload happens right here;
+    // the side column and the blocking list stay untouched.
+    lead.innerHTML = `
+      <div class="next-label">DO THIS NEXT</div>
+      <div class="next-text">Upload the screenplay</div>
+      <p class="next-support">The read starts here: every location, cast
+      member, design language and open question comes out of this one
+      file. Nothing downstream unlocks without it.</p>
+      <form id="status-screenplay-form" class="row" style="margin-top:10px">
+        <input type="file" accept=".pdf,.fdx,.txt,.fountain" required>
+        <button type="submit" class="primary">Upload &amp; start the read</button>
+      </form>
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
+    bindScreenplayUpload($("#status-screenplay-form"));
+  } else {
+    lead.innerHTML = `
+      <div class="next-label">DO THIS NEXT</div>
+      <div class="next-row">
+        <div style="flex:1;min-width:0">
+          <div class="next-text">${monoIds(esc(next.text))}</div>
+          <p class="next-support">${esc(first ? BLOCK_SUPPORT[first.kind] || "" :
+            "Everything upstream is satisfied.")}</p>
+        </div>
+        <button class="primary" data-f="go">${esc(first ? BLOCK_VERBS[first.kind] || "Open" : "Open")}</button>
+      </div>`;
+    $("[data-f=go]", lead).onclick = () => showView(action);
+  }
 
   // Everything that stops the next render, as structured rows (kind badge,
   // text, resolving jump). The panel hides entirely when nothing blocks.
@@ -902,23 +920,6 @@ async function renderScreenplay() {
 
   const sp = state.screenplay;
 
-  // Shared upload path — bound to whichever form is on screen.
-  const bindUpload = form => form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const file = $('input[type="file"]', form).files[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append("file", file);
-    try {
-      const rec = await api("/api/screenplay", { method: "POST", body: fd });
-      const cc = rec.citation_check;
-      toast(cc && cc.missing
-        ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
-        : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
-      showView("screenplay");
-    } catch (err) { toast(err.message, true); }
-  });
-
   if (!sp) {
     // No screenplay is not a blank page (bug 2026-08-01: arriving here
     // from Status's Add button found a headline over nothing and an
@@ -936,7 +937,7 @@ async function renderScreenplay() {
         <button type="submit" class="primary">Upload &amp; start the read</button>
       </form>
       <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
-    bindUpload($("#screenplay-form-main"));
+    bindScreenplayUpload($("#screenplay-form-main"));
     $("#screenplay-form").closest(".panel").classList.add("hidden");
   }
 
@@ -992,7 +993,28 @@ async function renderScreenplay() {
     $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
   }
 
-  bindUpload($("#screenplay-form"));
+  bindScreenplayUpload($("#screenplay-form"));
+}
+
+// One upload path for every screenplay form (Status lead, the stage's
+// empty state, and Replace). Success lands on the Screenplay stage to
+// show what the read found.
+function bindScreenplayUpload(form) {
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const file = $('input[type="file"]', form).files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const rec = await api("/api/screenplay", { method: "POST", body: fd });
+      const cc = rec.citation_check;
+      toast(cc && cc.missing
+        ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
+        : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
+      showView("screenplay");
+    } catch (err) { toast(err.message, true); }
+  });
 }
 
 // One finder-list scaffold (plan P4/R2): the screenplay coverage table and
