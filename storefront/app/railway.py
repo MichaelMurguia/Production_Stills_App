@@ -74,7 +74,11 @@ def _gql(query: str, variables: dict) -> dict:
     req = urllib.request.Request(
         settings.RAILWAY_API_URL,
         data=json.dumps({"query": query, "variables": variables}).encode(),
-        headers={"Content-Type": "application/json", **auth_headers})
+        headers={"Content-Type": "application/json",
+                 # Cloudflare 403s the default Python-urllib agent (verified
+                 # 2026-08-01: same request, 200 with a real UA, 403 without).
+                 "User-Agent": "screenboard-provisioner/1.0",
+                 **auth_headers})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             out = json.loads(r.read().decode())
