@@ -353,8 +353,11 @@ the button.
 
 ## Uncanonized patterns
 
-New UI that needed a pattern this document doesn't cover. Built with existing
-tokens, marked `/* UNCANONIZED — date — feature */` in the CSS, and logged here.
+**Every new feature lands here until Claude Design reviews it** (rule of
+2026-07-31) — genuinely new patterns AND pure-reuse features alike; the
+latter noted "built from canon — review placement/copy only". New patterns
+are additionally built with existing tokens and marked
+`/* UNCANONIZED — date — feature */` in the CSS.
 
 This table is a to-do list, not a home. At ~4 rows, tell the user the UI has
 accumulated patterns worth a design review — re-attaching the project folder in

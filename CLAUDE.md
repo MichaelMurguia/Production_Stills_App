@@ -29,14 +29,22 @@ it to a later pass.
 **Most features need no new pattern.** A panel, a table, a badge, a gated button
 — the design system already covers them. Reuse and ship.
 
-**When a feature genuinely needs a pattern the design system doesn't cover:**
+**Every new feature is non-canon until Claude Design reviews it.** Whatever a
+feature's UI is made of — a genuinely new pattern or pure reuse of canon
+vocabulary — append a row for it to the `## Uncanonized patterns` table in
+`app/static/DESIGN_SYSTEM.md` in the same commit: date, what it is, where it's
+used, and what the designer should rule on (for pure-reuse features, note
+"built from canon — review placement/copy only"). This applies to features from
+design-handoff plans and user-directed changes alike; only the designer's
+review, on the next Omelette round-trip, moves a feature from that table into
+canon.
+
+**When a feature genuinely needs a pattern the design system doesn't cover,
+additionally:**
 
 1. Build the smallest thing that works, using existing tokens only.
 2. Mark the CSS block `/* UNCANONIZED — <date> — <feature> */`.
-3. Append a row to the `## Uncanonized patterns` table in
-   `app/static/DESIGN_SYSTEM.md`: date, what it is, where it's used, why nothing
-   existing worked.
-4. Add a dated line to `## Changelog` at the bottom of that file.
+3. Add a dated line to `## Changelog` at the bottom of that file.
 
 The uncanonized table is a to-do list for a designer, not a permanent home. When
 it reaches ~4 rows, tell the user in plain language that the UI has accumulated
