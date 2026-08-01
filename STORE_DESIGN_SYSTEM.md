@@ -73,10 +73,30 @@ set dressing, picture vehicle, prop, atmosphere, continuity, concept
 board, panel, plate. Never "AI art", "prompt", "generation" in sales copy
 — the buyer is a production, not a prompter. "Render" is fine.
 
-### 8. Amber budget per page
-Two amber elements maximum in the static layout (typically the hero CTA and
-the recommended plan's Buy), plus one moving amber state (the active stage
-rule). Count it before shipping.
+### 8. Amber has four sanctioned roles on the store — and only four
+
+**This rule deliberately differs from the product app's.** In the app, amber
+is scarce because the user is working and needs one obvious next action; the
+app's "section titles do NOT get amber" is correct *there* and does not apply
+here. The store is a document that has to be skimmed, and its amber is the
+reader's index. Do not carry the app's amber rule across, and do not strip
+amber from the store mocks to satisfy it.
+
+| Role | What it is | Cap |
+|---|---|---|
+| **Fill** | Solid `--accent` background, `--accent-ink` text. The action you want taken. | **1–2 per page.** Hero CTA; the recommended plan's Buy. Never two side by side. |
+| **Kicker** | Courier, ~10–11px, `.2em+` tracking, uppercase. Names the section or step you are in. | **One per section**, on the section's own kicker or step label — not on its `<h2>`, which stays `--ink`. |
+| **Highlight** | `rgba(224,163,63,.16)` background on inline text. | **Only to show the software reading something** — extracted phrases in a breakdown, a scanning state. Never for emphasis in prose. |
+| **State** | Border/text on the one active item in a rail, stepper or tab set. | **One active item per control.** |
+
+Everything else — body copy, headings, facts, borders, badges, secondary
+buttons — is ink or a status color. Before shipping, count the **fills**;
+the other three roles are structural and self-limiting.
+
+Also note: a green/blue/red footnote label (`THE GATE`, `WHAT HOLD MEANS`)
+is a **status** kicker, not an amber one. Use the status color when the
+label names a state the software enforces, amber when it names where the
+reader is.
 
 ---
 
@@ -85,9 +105,17 @@ rule). Count it before shipping.
 - **2026-08-01** — Storefront system established with the homepage rebuild:
   the Wall hero, Standalone/Cloud trait-list pricing, filmstrip, and the
   five-stage pipeline dissolve.
+- **2026-08-01** — §8 rewritten. The original "two amber elements maximum"
+  described neither mock (the homepage runs 13 amber elements, /pipeline 19)
+  and would have forced Claude Code to either gut the approved design or
+  ignore the design system on its first commit. Replaced with the four-role
+  taxonomy — fill / kicker / highlight / state — which is the system the
+  approved pages actually use. Only fills are capped.
+- **2026-08-01** — `/pipeline` added: the long walk (five stages, sticky
+  rail, per-stage gate footnotes) followed by the case file.
 - **2026-08-01** — Non-canon: reliable-door workspace buttons. On /account
-  and /success, the "Open your workspace" button links the branded address
-  only once it provably serves (`domain_live`); until then it links the
-  always-working railway address with a small mono note ("… IS PROVISIONING
-  — THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE"). Reuses existing
-  `hero-sub mono` styling; no new tokens. Awaiting design review.
+  and /success, "Open your workspace" links the branded address only once
+  it provably serves (`domain_live`); until then it links the always-working
+  railway address with a small mono note ("… IS PROVISIONING — THIS BUTTON
+  USES THE RELIABLE ADDRESS MEANWHILE"). Reuses `hero-sub mono`; no new
+  tokens. Awaiting design review.

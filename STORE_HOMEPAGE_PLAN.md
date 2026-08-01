@@ -116,8 +116,11 @@ CSS changes broke. Do not restructure them — their redesign is a later pass.
 ## Ground rules
 
 Tokens only (the store palette is in `STORE_DESIGN_SYSTEM.md`); square
-corners; Archivo for hierarchy, Courier for machine data; amber appears
-exactly twice on the page (hero CTA, standalone Buy) plus the active stage
-rule. No frameworks, no new fonts, no emoji, no gradients except the hero
-scrim. Every animation sits behind `prefers-reduced-motion`. Keep `/`
-serving 200 for CI.
+corners; Archivo for hierarchy, Courier for machine data. Amber follows the
+four-role rule in `STORE_DESIGN_SYSTEM.md` §8 — on this page that means
+**two fills** (hero CTA, standalone Buy), one Courier kicker per section,
+inline highlights only in the breakdown pane, and one active dissolve step.
+Match the mock; do not apply the product app's stricter amber rule here.
+No frameworks, no new fonts, no emoji, no gradients except the hero scrim.
+Every animation sits behind `prefers-reduced-motion`. Keep `/` serving 200
+for CI.
