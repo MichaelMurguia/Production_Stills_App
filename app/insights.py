@@ -209,7 +209,9 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
 
 def next_verb(summary: dict, blockers: list[dict]) -> dict:
     """The single next action when nothing is blocking — a screen with no
-    verb is not finished (DESIGN_SYSTEM copy rule)."""
+    verb is not finished (DESIGN_SYSTEM copy rule). Advisory rows (CARE)
+    are never promoted to the lead (design review 2026-08-01 §9)."""
+    blockers = [b for b in blockers if b.get("kind") != "CARE"]
     if blockers:
         b = blockers[0]
         return {"text": b["text"], "action": b.get("action", "dashboard")}

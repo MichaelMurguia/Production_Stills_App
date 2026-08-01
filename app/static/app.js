@@ -732,8 +732,9 @@ async function updateBand() {
   };
   const BLOCK_STAGE = { dashboard: "screenplay", references: "wizard", wizard: "wizard",
                         specs: "specs", boards: "boards" };
-  const blocked = new Set((state.blocking || []).map(b =>
-    b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs"));
+  const blocked = new Set((state.blocking || [])
+    .filter(b => b.kind !== "CARE")  // advisories never mark a stage blocked
+    .map(b => b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs"));
   const frontier = STAGE_ORDER.find(s => !complete[s]) || "assembly";
 
   for (const stage of STAGE_ORDER) {
@@ -781,9 +782,12 @@ async function renderStatus() {
     ["Draft specs", specCounts.DRAFT + (specCounts.REVIEWED || 0)],
   ].map(([lbl, num]) => `<div class="card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join("");
 
-  // The lead is a presentation of blocking[0] — never a second list. With
-  // nothing blocking, it carries the next stage verb instead.
-  const first = state.blocking[0];
+  // The lead is a presentation of the first BLOCKER — advisories are never
+  // promoted (review 2026-08-01 §9). With nothing blocking, it carries the
+  // next stage verb instead.
+  const blockers = state.blocking.filter(b => b.kind !== "CARE");
+  const advisories = state.blocking.filter(b => b.kind === "CARE");
+  const first = blockers[0];
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
@@ -804,14 +808,23 @@ async function renderStatus() {
   const blocking = $("#dash-missing");
   if (state.blocking.length) {
     blocking.classList.remove("hidden");
-    blocking.innerHTML =
-      `<h2>Blocking — ${state.blocking.length} <span class="hint">everything that stops the next render</span></h2>` +
-      state.blocking.map((b, i) => `
+    const row = b => {
+      const i = state.blocking.indexOf(b);
+      return `
         <div class="block-row">
           <span class="block-kind ${esc(b.kind)}">${esc(b.kind)}</span>
           <span class="block-text" title="${esc(b.detail || "")}">${monoIds(esc(b.text))}</span>
           <button class="block-act" data-block="${i}">${esc(BLOCK_VERBS[b.kind] || "Open")}</button>
-        </div>`).join("");
+        </div>`;
+    };
+    blocking.innerHTML =
+      (blockers.length
+        ? `<h2>Blocking — ${blockers.length} <span class="hint">everything that stops the next render</span></h2>`
+          + blockers.map(row).join("")
+        : `<h2>Advisory <span class="hint">care of existing work — nothing blocks the next render</span></h2>`)
+      + (advisories.length && blockers.length
+        ? `<div class="advisory-label">ADVISORY</div>` : "")
+      + advisories.map(row).join("");
     $$("[data-block]", blocking).forEach(btn => {
       btn.onclick = () => {
         const a = state.blocking[+btn.dataset.block].action;
