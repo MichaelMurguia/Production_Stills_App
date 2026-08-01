@@ -147,7 +147,15 @@ def api_list_projects() -> dict:
     for p in projects:
         p["last_backup_at"] = backup.last_backup_at(p["slug"])
         p["days_since_backup"] = backup.days_since_backup(p["slug"])
-    return {"active": paths.ACTIVE_PROJECT, "projects": projects}
+    # First run (PRODUCTIONS_PLAN M6): nothing named, nothing in the root
+    # layout — the app opens on "Name the show you're working on."
+    first_run = (not any(p["slug"] for p in projects)
+                 and paths.ACTIVE_PROJECT == ""
+                 and not store.load_app_state().get("screenplay")
+                 and not store.list_specs()
+                 and not store.list_references())
+    return {"active": paths.ACTIVE_PROJECT, "projects": projects,
+            "first_run": first_run}
 
 
 @app.get("/api/projects/backup")

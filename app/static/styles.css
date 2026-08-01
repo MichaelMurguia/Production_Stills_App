@@ -1377,3 +1377,22 @@ details.meta pre {
 .pm-div { border-top: 1px solid var(--line-soft); margin-top: 4px; }
 .proj-menu .pm-new { display: block; width: 100%; text-align: left; padding: 8px 10px; color: var(--accent); }
 .pm-foot { padding: 8px 10px; border-top: 1px solid var(--line-soft); font-size: 8.5px; letter-spacing: .08em; color: var(--ink-faint); max-width: 30ch; }
+
+/* the two dead ends, closed (PRODUCTIONS_PLAN M6) */
+.firstrun { display: flex; justify-content: center; padding: 64px 24px; }
+.firstrun-panel { max-width: 560px; width: 100%; padding: 34px 38px; }
+.firstrun-title { font-size: 30px; font-weight: 700; letter-spacing: -.01em; line-height: 1.12; margin: 10px 0 12px; }
+.firstrun-para { color: var(--ink-dim); font-size: 13.5px; margin-bottom: 18px; }
+.firstrun-div { border-top: 1px solid var(--line-soft); margin: 22px 0 16px; }
+
+.boards-empty { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: start; }
+.be-title { font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.12; margin: 8px 0 10px; }
+.be-para { color: var(--ink-dim); font-size: 13.5px; max-width: 46ch; margin-bottom: 16px; }
+.be-note { margin-top: 8px; font-size: 9px; letter-spacing: .12em; color: var(--ink-faint); }
+.path-box { background: var(--bg2); border: 1px solid var(--line-soft); padding: 16px 18px; }
+.path-row { display: flex; gap: 10px; font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); padding: 4px 0; }
+.path-row.done { color: var(--ink-dim); }
+.path-row.done .path-mark { color: var(--ok); }
+.path-row.cur { color: var(--ink); }
+.path-row.cur .path-mark { color: var(--accent); }
+@media (max-width: 900px) { .boards-empty { grid-template-columns: 1fr; } }

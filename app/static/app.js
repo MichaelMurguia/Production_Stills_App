@@ -4519,8 +4519,43 @@ async function renderAssembly() {
 
   const host = $("#assembly-host");
   if (!specs.length) {
-    host.innerHTML =
-      `<div class="panel mini">No signed-off breakdowns yet. Approve one on the Breakdowns tab first.</div>`;
+    // PRODUCTIONS_PLAN M6: the dead end states the path. A board's life
+    // starts three stages earlier — say so, with where you stand.
+    let ss = {};
+    try { ss = (await api("/api/state")).stage_summary || {}; } catch { /* stateless fallback */ }
+    const pd = ss.production_design || {}, bd = ss.breakdowns || {},
+          pn = ss.panels || {}, bo = ss.boards || {};
+    const steps = [
+      { label: "SCREENPLAY READ", done: !!ss.screenplay },
+      { label: `BIBLE SAVED${pd.bible_rev ? ` · REV ${pd.bible_rev}` : ""}`, done: !!pd.bible_saved },
+      { label: "PICK A LOCATION", done: (bd.locked || 0) + (bd.drafts || 0) > 0 },
+      { label: "DRAFT & LOCK THE BREAKDOWN", done: (bd.locked || 0) > 0 },
+      { label: "RENDER AND APPROVE PANELS", done: (pn.approved || 0) > 0 },
+      { label: "ASSEMBLE THE BOARD", done: (bo.assembled || 0) > 0 },
+    ];
+    const cur = steps.findIndex(s => !s.done);
+    host.innerHTML = `
+      <div class="boards-empty">
+        <div>
+          <div class="fact-head">NO BOARDS YET</div>
+          <h2 class="be-title">A board starts life<br>as a breakdown.</h2>
+          <p class="be-para">Boards are assembled from approved panels, and
+          panels can only be rendered from a locked breakdown. Pick the
+          location you want to see and the app will draft its breakdown
+          for you.</p>
+          <button class="primary" id="be-create">Create a breakdown</button>
+          <div class="be-note mono">OPENS PRODUCTION DESIGN &rarr; LOCATIONS</div>
+        </div>
+        <div class="path-box">
+          <div class="fact-head">THE PATH FROM HERE</div>
+          ${steps.map((s, i) => `
+            <div class="path-row mono ${s.done ? "done" : i === cur ? "cur" : ""}">
+              <span class="path-mark">${s.done ? "✓" : i === cur ? "→" : "·"}</span>
+              <span>${esc(s.label)}</span>
+            </div>`).join("")}
+        </div>
+      </div>`;
+    $("#be-create").onclick = () => showView("wizard");
     return;
   }
 
@@ -4796,5 +4831,41 @@ $("#brand-rename").onclick = () =>
   });
 
 initLightbox();
-// Deep-link support: #screenplay, #boards, … land on that view directly.
-showView(views[location.hash.slice(1)] ? location.hash.slice(1) : "status");
+
+// First run (PRODUCTIONS_PLAN M6): with no productions and nothing in the
+// root layout, the app opens on naming the show — the pipeline band waits
+// until there is a production to stand in.
+async function boot() {
+  let first = false;
+  try { first = (await api("/api/projects")).first_run; } catch { /* boot anyway */ }
+  if (!first) {
+    // Deep-link support: #screenplay, #boards, … land on that view directly.
+    showView(views[location.hash.slice(1)] ? location.hash.slice(1) : "status");
+    return;
+  }
+  $("#nav").classList.add("hidden");
+  useTemplate("tpl-firstrun");
+  $("#firstrun-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#firstrun-name").value.trim();
+    if (!name) return toast("Give the production a name first.", true);
+    try {
+      await api("/api/projects", { method: "POST", json: { name } });
+      location.reload();
+    } catch (err) { toast(err.message, true); }
+  });
+  $("#firstrun-restore").onclick = () => $("#firstrun-zip").click();
+  $("#firstrun-zip").addEventListener("change", async () => {
+    const f = $("#firstrun-zip").files[0];
+    if (!f) return;
+    const fd = new FormData();
+    fd.append("file", f);
+    try {
+      const r = await api("/api/projects/restore", { method: "POST", body: fd });
+      await api("/api/projects/activate", { method: "POST", json: { slug: r.slug } });
+      location.reload();
+    } catch (err) { toast(err.message, true); }
+  });
+  $("#firstrun-name").focus();
+}
+boot();

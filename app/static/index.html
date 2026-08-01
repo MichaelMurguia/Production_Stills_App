@@ -381,6 +381,28 @@
   </section>
 </template>
 
+<template id="tpl-firstrun">
+  <section class="firstrun">
+    <div class="panel firstrun-panel">
+      <div class="fact-head">FIRST RUN &mdash; NO PRODUCTIONS YET</div>
+      <h1 class="firstrun-title">Name the show<br>you're working on.</h1>
+      <p class="firstrun-para">A production holds one screenplay and
+      everything the art department builds from it. You can add more later
+      and switch between them from the header.</p>
+      <form id="firstrun-form" class="row">
+        <input type="text" id="firstrun-name" placeholder="e.g. The Beltminers" style="flex:1">
+        <button class="primary">Create production</button>
+      </form>
+      <div class="firstrun-div"></div>
+      <div class="row" style="align-items:center;gap:12px">
+        <span class="fact-head" style="margin:0">ALREADY HAVE A BACKUP ZIP?</span>
+        <button class="ghost" id="firstrun-restore">Restore a production</button>
+        <input type="file" id="firstrun-zip" accept=".zip" class="hidden">
+      </div>
+    </div>
+  </section>
+</template>
+
 <template id="tpl-projects">
   <section class="view">
     <div class="lib-head">

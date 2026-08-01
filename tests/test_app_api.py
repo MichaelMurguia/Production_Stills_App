@@ -103,6 +103,15 @@ class ApiTests(unittest.TestCase):
         bad = self.client.post("/api/projects", json={"name": "   "})
         self.assertEqual(bad.status_code, 422)
 
+    def test_first_run_states_itself_then_clears(self):
+        # PRODUCTIONS_PLAN M6: a fresh install reports first_run so the UI
+        # opens on "Name the show"; creating a production clears it.
+        r = self.client.get("/api/projects").json()
+        self.assertTrue(r["first_run"])
+        self.client.post("/api/projects", json={"name": "First Show"})
+        r = self.client.get("/api/projects").json()
+        self.assertFalse(r["first_run"])
+
     def test_library_summary_reach_and_next(self):
         # PRODUCTIONS_PLAN M3: one row per production, each with reach,
         # counts, and its own next verb — computed without disturbing the
