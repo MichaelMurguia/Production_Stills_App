@@ -24,9 +24,10 @@
       <p class="license-label">WORKSPACE URL</p>
       <p class="license-token">{{ purchase.workspace.url }}</p>
     </div>
-    <a class="btn btn-primary" href="{{ purchase.workspace.url }}">Open your workspace</a>
-    <p class="hero-sub" style="margin-top:14px">Use this same token to log in
-    there.</p>
+    <a class="btn btn-primary" target="_blank" rel="noopener"
+       href="{{ purchase.workspace.url }}/login#{{ purchase.workspace.access_token }}">Open your workspace</a>
+    <p class="hero-sub" style="margin-top:14px">Opens in a new tab, already
+    signed in.</p>
     {% else %}
     <p class="hero-sub">Your workspace is being prepared — check back here in
     a few minutes.</p>

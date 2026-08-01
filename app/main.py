@@ -41,14 +41,24 @@ _LOGIN_HTML = """<!doctype html>
   <p class="mini hidden" id="err" style="color:var(--bad);margin-top:8px">That token doesn't match this workspace.</p>
 </div>
 <script>
-document.getElementById("f").onsubmit = async e => {
-  e.preventDefault();
+const attempt = async token => {
   const r = await fetch("/api/login", { method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: document.getElementById("tok").value.trim() }) });
-  if (r.ok) location.href = "/";
+    body: JSON.stringify({ token }) });
+  if (r.ok) location.replace("/");
   else document.getElementById("err").classList.remove("hidden");
 };
+document.getElementById("f").onsubmit = e => {
+  e.preventDefault();
+  attempt(document.getElementById("tok").value.trim());
+};
+// Storefront handoff: /login#<token> signs in without a paste. The
+// fragment never reaches any server or log; strip it immediately.
+if (location.hash.length > 1) {
+  const t = decodeURIComponent(location.hash.slice(1));
+  history.replaceState(null, "", "/login");
+  attempt(t);
+}
 </script></body></html>"""
 
 
