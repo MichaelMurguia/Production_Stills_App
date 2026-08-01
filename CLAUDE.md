@@ -73,10 +73,13 @@ of them so styling and behavior stay decoupled.
 The repo holds **two apps**. `app/` is the internal production tool and is
 never deployed. `storefront/` is the public sales site (the app itself is the
 product — download license + cloud subscription via Stripe), deployed on
-Railway with Root Directory `storefront`. The full operational reference is
-`docs/DEPLOYMENT.md` — read it before touching `storefront/`, Stripe, Railway
-config, or release packaging, and update it in the same commit as any such
-change (`agents/14_devops_engineer.md` defines the role).
+Railway with Root Directory `storefront`. Two references govern this, split by concern:
+`docs/WEBAPP_GUIDE.md` (how the system works, development requirements,
+tests — read before changing `storefront/` code; `agents/15_webapp_engineer.md`
+defines the role) and `docs/DEPLOYMENT.md` (hosting, Stripe, env vars,
+runbook — read before touching infra; `agents/14_devops_engineer.md`).
+Update the governing doc in the same commit as any such change. Storefront
+tests: `cd storefront && python -m unittest discover -s tests`.
 
 Hard boundary: no imports across `app/` ↔ `storefront/`; nothing from
 `data/` or `project_state/` is ever served publicly or packaged into a
