@@ -15,3 +15,6 @@ projects/
 context/01_ART_DIRECTION_BIBLE.md
 project_state/
 settings.json
+
+# design-drop staging (copied into storefront/app/static/img)
+storefront_img/
