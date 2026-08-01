@@ -1,7 +1,10 @@
-# CI — both test suites on every push and PR. Railway deploys main on push
-# regardless (it cannot wait for CI), so the discipline is: a red X here
-# means roll back or fix forward IMMEDIATELY; never push to main without
-# green local suites (CLAUDE.md § Testing).
+# CI — both test suites on every push and PR, each in its OWN environment
+# so a dependency missing from one requirements file cannot be masked by
+# the other (that masking shipped a 502: Form() without python-multipart
+# in storefront/requirements.txt). Railway deploys main on push regardless
+# (it cannot wait for CI) — a red X on main means roll back or fix forward
+# IMMEDIATELY; never push main without green local suites (CLAUDE.md §
+# Testing).
 name: ci
 
 on:
@@ -9,19 +12,34 @@ on:
   pull_request:
 
 jobs:
-  tests:
+  app:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
+      - name: Install product-app dependencies only
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -r storefront/requirements.txt httpx
+          pip install -r requirements.txt httpx
       - name: Product app suite
         run: python -m unittest discover -s tests -v
-      - name: Storefront suite
+
+  storefront:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install storefront dependencies only
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r storefront/requirements.txt httpx
+      - name: Storefront suite (isolated deps — catches missing requirements)
         working-directory: storefront
         run: python -m unittest discover -s tests -v
+      - name: Boot check (import crashes surface here, not in production)
+        working-directory: storefront
+        run: python -c "from app.main import app; print('storefront imports clean')"
