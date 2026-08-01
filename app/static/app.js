@@ -1897,11 +1897,11 @@ async function renderWizard() {
           <input type="text" data-f="name" value="${esc(w.name || "")}" disabled title="Section name in the Bible — one design language per visual culture."></div>
         <div class="fgroup"><span class="f-label">What defines its look</span>
           <input type="text" data-f="notes" value="${esc(w.description || "")}" disabled></div>
-        <div class="fgroup" title="Lowercase trigger words used to auto-match this design language to board content."><span class="f-label">Keywords</span>
-          <div style="display:flex;gap:8px">
-            <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled style="flex:1;min-width:0">
-            <button class="ghost" data-f="derive" disabled style="flex:none">Derive from screenplay</button>
-          </div></div>`;
+        <div class="fgroup" title="Lowercase trigger words used to auto-match this design language to board content.">
+          <span class="f-label" style="display:flex;align-items:center;gap:10px">Keywords
+            <button class="ghost" data-f="derive" disabled style="margin-left:auto;font-size:11px;padding:3px 9px">Derive from screenplay</button>
+          </span>
+          <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled></div>`;
       const editBtn = $("[data-f=edit]", row);
       const nameInput = $("[data-f=name]", row);
       const deriveBtn = $("[data-f=derive]", row);
@@ -2814,6 +2814,7 @@ async function openSpecEditor(specId) {
     || Object.entries(envAssigned).find(([l]) => l.includes(specLoc) || specLoc.includes(l))?.[1]
     || "";
   const envCurrent = spec.environments?.[0] ?? envInferred;
+  let updateCarry = () => {};  // real implementation assigned after markup
   const panel = document.createElement("div");
   panel.className = "panel spec-editor";
   panel.innerHTML = `
@@ -2949,18 +2950,39 @@ async function openSpecEditor(specId) {
   window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 80,
                     behavior: "smooth" });
 
-  // PROMPT WILL CARRY (mock 6c): the scope's live receipt, in injection
-  // order — rendering language, languages, environment, lessons.
-  const updateCarry = () => {
+  // The scope receipt (review 2026-08-01 §3+4): one line while every panel
+  // inherits; with exceptions it tells the truth in two parts — the board's
+  // baseline, then one override line per diverging panel. Also refreshes
+  // every inheriting panel's quiet SCOPE line.
+  updateCarry = () => {
     const carry = $("#sp-carry", panel);
     if (!carry) return;
-    const langs = $$("#sp-design input:checked", panel).map(x => x.value);
+    const langs = $$("#sp-design input:checked", panel).map(x => x.value.toUpperCase());
     const env = $("#sp-environment", panel)?.value;
     const nl = $$("#sp-lessons input:checked", panel).length;
-    carry.textContent = ["PROMPT WILL CARRY — RENDERING LANGUAGE (ALWAYS)",
-      ...langs.map(l => l.toUpperCase()),
+    const baseline = [...langs,
       ...(env ? [`ENV: ${env.toUpperCase()}`] : []),
-      ...(nl ? [`${nl} SCENE LESSON${nl === 1 ? "" : "S"}`] : [])].join(" · ");
+      ...(nl ? [`${nl} SCENE LESSON${nl === 1 ? "" : "S"}`] : [])];
+    const overrides = [];
+    for (const row of $$(".panel-card", panelsHost)) {
+      const pid = row.dataset.pid;
+      if (!pid) continue;
+      const ovLangs = $$(".vchip.set[data-plang]", row).map(c => c.dataset.plang.toUpperCase());
+      const ovEnv = $("[data-f=penv]", row)?.value;
+      if (ovLangs.length || ovEnv)
+        overrides.push(`${pid} OVERRIDES — ${[...ovLangs,
+          ...(ovEnv ? [`ENV: ${ovEnv.toUpperCase()}`] : [])].join(" · ")}`);
+    }
+    const head = overrides.length ? "BOARD CARRIES" : "PROMPT WILL CARRY";
+    carry.innerHTML = [
+      `<div>${esc([`${head} — RENDERING LANGUAGE (ALWAYS)`, ...baseline].join(" · "))}</div>`,
+      ...overrides.map(o => `<div class="carry-ovr">${esc(o)}</div>`),
+    ].join("");
+    const inherit = ["RENDERING LANGUAGE", ...langs,
+      ...(env ? [`ENV: ${env.toUpperCase()}`] : [])].join(" · ");
+    $$(".pscope-line", panel).forEach(el => {
+      el.textContent = `SCOPE — INHERITS BOARD · ${inherit}`;
+    });
   };
   if ($("#sp-carry", panel)) {
     updateCarry();
@@ -3056,13 +3078,7 @@ async function openSpecEditor(specId) {
             </optgroup>
           </select>
         </span>
-        <span class="alloc penv-wrap" title="World for THIS panel — overrides the sheet's Environment in this panel's prompt only. Leave on sheet env for boards that live in one place; master boards spanning worlds set it per panel.">
-          <select data-f="penv" ${locked ? "disabled" : ""}>
-            <option value="">— sheet env —</option>
-            ${[...new Set([...envOptions, ...(p.environment ? [p.environment] : [])])].map(n =>
-              `<option value="${esc(n)}"${(p.environment || "") === n ? " selected" : ""}>${esc(n)}</option>`).join("")}
-          </select>
-        </span>
+        <span class="scope-flag hidden" data-f="scope-flag" title="This panel deliberately diverges from the board's scope — see its override below.">SCOPE OVERRIDE</span>
         <span class="alloc" title="Share of the assembled board this panel occupies, in percent. All panels together should total 100.">
           <input type="number" data-f="alloc" placeholder="—" min="1" max="100" value="${esc(allocById[p.id] ?? "")}" ${locked ? "disabled" : ""}>
           <span class="unit">%</span>
@@ -3083,14 +3099,7 @@ async function openSpecEditor(specId) {
           <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${locked ? "disabled" : ""}>
         </div>
       </div>
-      ${bible_catalog?.exists && bible_catalog.design_languages.length ? `
-      <div class="fgroup" title="Design languages for THIS panel — its prompt carries these instead of the sheet's scope, so one panel can live in a different visual culture (e.g. a GRM interior on a frontier board). No chip set = the sheet's scope applies. The panel's environment override sits in the header row.">
-        <span class="f-label">Panel design languages — sheet scope unless set</span>
-        <div class="chips" style="margin-top:4px">
-          ${bible_catalog.design_languages.map(n =>
-            `<button type="button" class="vchip${(p.design_languages || []).includes(n) ? " set" : ""}" data-plang="${esc(n)}" ${locked ? "disabled" : ""}>${esc(n)}</button>`).join("")}
-        </div>
-      </div>` : ""}
+      ${bible_catalog?.exists ? `<div class="pscope" data-f="pscope"></div>` : ""}
       ${locked ? "" : `
       <div class="obj-suggest" data-f="suggest"></div>
       <div class="chip-add">
@@ -3126,10 +3135,56 @@ async function openSpecEditor(specId) {
       if (syncLedger) ensureLedgerRow(row.dataset.pid, obj);
     };
     (p.required_objects || []).forEach(o => addChip(String(o), false));
-    // Per-panel language facets (vchip.set grammar — multi-select, never
-    // amber). Toggling is presentation only until the sheet is saved.
-    if (!locked) $$("[data-plang]", row).forEach(ch =>
-      ch.onclick = () => ch.classList.toggle("set"));
+
+    // Scope inheritance (design review 2026-08-01 §3+4): the sheet is the
+    // baseline; a panel either quietly states that it inherits, or
+    // declares an exception — visible as one, reversible to inheritance.
+    const pscopeHost = $("[data-f=pscope]", row);
+    if (pscopeHost) {
+      let overriding = !!((p.design_languages || []).length || p.environment);
+      const renderPScope = () => {
+        $("[data-f=scope-flag]", row).classList.toggle("hidden", !overriding);
+        pscopeHost.classList.toggle("ovr", overriding);
+        if (!overriding) {
+          pscopeHost.innerHTML = `
+            <span class="pscope-line"></span>
+            ${locked ? "" : `<button class="text-act" data-f="ovr" title="Give this panel its own design languages and environment — a declared exception to the board's scope.">Override</button>`}`;
+          const b = $("[data-f=ovr]", pscopeHost);
+          if (b) b.onclick = () => { overriding = true; renderPScope(); };
+        } else {
+          pscopeHost.innerHTML = `
+            <div class="fgroup" title="This panel's own visual cultures — its prompt carries these instead of the board's languages.">
+              <span class="f-label" style="display:flex;align-items:center;gap:10px">Panel design languages
+                ${locked ? "" : `<button class="text-act" data-f="revert" style="margin-left:auto" title="Clear the exception — this panel goes back to inheriting the board's scope.">Revert to board</button>`}</span>
+              <div class="chips" style="margin-top:4px">
+                ${bible_catalog.design_languages.map(n =>
+                  `<button type="button" class="vchip${(p.design_languages || []).includes(n) ? " set" : ""}" data-plang="${esc(n)}" ${locked ? "disabled" : ""}>${esc(n)}</button>`).join("")}
+              </div>
+            </div>
+            <div class="fgroup" title="The one place THIS panel lives — replaces the board's environment in this panel's prompt.">
+              <span class="f-label">Panel environment</span>
+              <select data-f="penv" ${locked ? "disabled" : ""}>
+                <option value="">— board's environment —</option>
+                ${[...new Set([...envOptions, ...(p.environment ? [p.environment] : [])])].map(n =>
+                  `<option value="${esc(n)}"${(p.environment || "") === n ? " selected" : ""}>${esc(n)}</option>`).join("")}
+              </select>
+            </div>`;
+          if (!locked) {
+            $$("[data-plang]", pscopeHost).forEach(ch =>
+              ch.onclick = () => { ch.classList.toggle("set"); updateCarry(); });
+            $("[data-f=penv]", pscopeHost).onchange = updateCarry;
+            $("[data-f=revert]", pscopeHost).onclick = () => {
+              p.design_languages = [];
+              p.environment = "";
+              overriding = false;
+              renderPScope();
+            };
+          }
+        }
+        updateCarry();
+      };
+      renderPScope();
+    }
 
     if (!locked) {
       const inp = $("[data-f=req-new]", row);
@@ -3347,7 +3402,10 @@ REMOVE — marked for removal from the board.">
         scale: "WIDE",
         composition_role: out.panels.length === 0 ? "hero" : "support",
         time_of_day: v("ptod"),
-        ...(v("penv") ? { environment: v("penv") } : {}),
+        // An exception exists only when something is chosen — empty
+        // override controls collapse back to inheritance (review §3+4).
+        ...($("[data-f=penv]", row)?.value
+          ? { environment: $("[data-f=penv]", row).value } : {}),
         ...($$(".vchip.set[data-plang]", row).length
           ? { design_languages: $$(".vchip.set[data-plang]", row).map(c => c.dataset.plang) }
           : {}),

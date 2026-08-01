@@ -893,8 +893,18 @@ details.meta pre {
   letter-spacing: .06em; color: var(--ink-dim);
 }
 .scope-carry:empty { display: none; }
-/* UNCANONIZED — 2026-07-31 — per-panel environment override select */
-.penv-wrap select { max-width: 150px; }
+/* Scope inheritance (canonized 2026-08-01): panels quietly state
+   inheritance or declare a visible, reversible exception. */
+.pscope { margin-top: 10px; display: flex; align-items: center; gap: 14px; }
+.pscope.ovr { display: block; }
+.pscope.ovr .fgroup { margin-top: 8px; }
+.pscope-line { font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em; color: var(--ink-faint); }
+.scope-flag {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  color: var(--hold); border: 1px solid var(--hold); padding: 1px 7px; flex: none;
+}
+.pscope select { max-width: 260px; }
+.carry-ovr { color: var(--ink-dim); margin-top: 3px; }
 
 /* UNCANONIZED — 2026-07-31 — selected completed board replaces the grid:
    same ref-card anatomy, wall-sized contained image. */
