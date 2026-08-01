@@ -1138,7 +1138,7 @@ async function renderProjectsView() {
         <div class="prod-counts">${esc(p.counts || "")}</div>
         <div>
           <div class="prod-next-k ${clear ? "clear" : ""}">${esc(p.next?.kicker || "DO THIS NEXT")}</div>
-          <div class="prod-next">${monoIds(esc(p.next?.text || ""))}</div>
+          <div class="prod-next ${clear ? "prod-next-clear mono" : ""}">${monoIds(esc(p.next?.text || ""))}</div>
         </div>
         <div class="prod-foot">
           <span class="prod-care mono ${care.cls}">${esc(care.text)}</span>
@@ -4571,13 +4571,17 @@ async function renderAssembly() {
     .sort((a, b) => String(b.candidate_id).localeCompare(String(a.candidate_id)));
 
   if (!all.length) {
+    // C2 (ratified 2026-08-01): the middle state gets one line, not the
+    // checklist — the picker and bench already state the path by being
+    // present. The line disappears the moment a board exists.
+    const note = `<div class="mini mono asm-none">NO BOARDS YET &mdash; APPROVE EVERY PANEL IN A SHEET, THEN ASSEMBLE</div>`;
     if (specs.length === 1) {
       sel.value = specs[0].specification_id;
-      renderAssemblyFor(sel.value);
+      await renderAssemblyFor(sel.value);
+      host.insertAdjacentHTML("afterbegin", note);
       return;
     }
-    host.innerHTML =
-      `<div class="panel mini">No boards assembled yet — pick a sheet above to open its assembly bench.</div>`;
+    host.innerHTML = note;
     return;
   }
 

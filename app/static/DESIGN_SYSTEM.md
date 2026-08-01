@@ -132,6 +132,21 @@ kind `CARE`) render below an `ADVISORY` divider with a faint kind badge
 (`--ink-faint`, never `--warn`), are never counted as blockers, and are
 never promoted to the lead (review 2026-08-01 §9).
 
+**Stated-path empty states** (PRODUCTIONS_PLAN M6 + ratified C2). A dead
+end states the path to the outcome the user came for. The Boards stage
+with no signed-off breakdowns gets the full treatment: headline ("A board
+starts life as a breakdown."), one paragraph, the primary verb (`Create a
+breakdown`, with a Courier line naming where it opens), and THE PATH FROM
+HERE — six steps, `✓` done in `--ok`, `→` current in `--accent`, the rest
+faint. The *middle* state (locked sheets, no boards yet) gets exactly one
+Courier `--ink-faint` line above the bench — `NO BOARDS YET — APPROVE
+EVERY PANEL IN A SHEET, THEN ASSEMBLE` — because the picker and bench
+already state the path by being present; a checklist there would be
+nagging. The line disappears the moment a board exists. First run (no
+productions, empty root) is the same pattern at app scale: one centered
+panel, "Name the show you're working on.", create + restore, the pipeline
+band hidden until there is a production to stand in.
+
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
 Courier `--ink` (`monoIds()`). No icons, no dots — the timestamp column is
@@ -344,7 +359,10 @@ navigation state, not approval) + Courier slug right · 5-cell reach band
 BOARDS · n REFS`, or `NO SCREENPLAY YET`) · `DO THIS NEXT` block (Courier
 amber kicker + one sentence, computed per production by the same rule as
 the Status blocking list; `ALL STAGES CLEAR` in `--ink-faint` when
-nothing waits — no verb, no amber) · footer: care line left (escalation
+nothing waits — no verb, no amber; its line reads `NOTHING WAITING ·
+LAST ACTIVITY <d MMM>` in Courier `--ink-faint` — never "Wrapped", which
+asserts a production state the app cannot know (ratified 2026-08-01; the
+switcher's all-clear preview is `CLEAR · n BOARDS` for the same reason)) · footer: care line left (escalation
 per Registry rows), ghost actions right (`Back up`/`Back up now` ·
 `Open` · `Rename` · `⋯` menu holding Duplicate and typed-name-confirmed
 Delete via the app modal).
@@ -440,6 +458,13 @@ the button.
 - [ ] Screen still has exactly one obvious next verb?
 - [ ] New grid tracks use `minmax(0,1fr)`?
 
+**Precedence: written rule > mock.** When a plan's prose and its mock
+disagree, the prose wins and the deviation is reported in the response
+document — never silently reconciled either way. Worked example (ratified
+2026-08-01): mock 10a filled two buttons amber; the "one primary action"
+rule held, `Open` shipped ghost, and the ruling confirmed the mock was
+wrong.
+
 ---
 
 ## Do not
@@ -477,6 +502,10 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-01** — Productions pass ratified: nav order, single amber
+  fill, additive rename slug, duplicate/delete gates, reach-band panel
+  semantics confirmed as built; "Wrapped" replaced with truthful
+  last-activity phrasing; Boards middle state gets a one-line path.
 - **2026-08-01** — Productions pass: projects renamed "production" in copy
   and moved out of Settings into their own view as cards with reach bands
   and per-production DO-THIS-NEXT; ACTIVE badge retired for the open-state

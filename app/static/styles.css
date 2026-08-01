@@ -1396,3 +1396,7 @@ details.meta pre {
 .path-row.cur { color: var(--ink); }
 .path-row.cur .path-mark { color: var(--accent); }
 @media (max-width: 900px) { .boards-empty { grid-template-columns: 1fr; } }
+
+/* ratified changes (PRODUCTIONS_PASS_RATIFIED 2026-08-01) */
+.prod-next-clear { font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); }
+.asm-none { margin-bottom: 12px; letter-spacing: .08em; color: var(--ink-faint); }

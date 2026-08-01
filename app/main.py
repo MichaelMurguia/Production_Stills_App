@@ -297,21 +297,27 @@ def _production_row(p: dict) -> dict:
     elif bd["locked"] + bd["drafts"] == 0:
         nxt = {"kicker": "DO THIS NEXT", "text": "Pick a location and create its breakdown"}
     else:
+        # C1 (ratified 2026-08-01): never say "Wrapped" — the app does not
+        # know principal photography finished. State only what it knows.
         last = ""
         try:
             lines = activity._log_path().read_text(encoding="utf-8").splitlines()
             if lines:
-                last = str(json.loads(lines[-1]).get("ts", ""))[:10]
+                import datetime as _dt
+                d = _dt.date.fromisoformat(
+                    str(json.loads(lines[-1]).get("ts", ""))[:10])
+                last = f"{d.day} {d.strftime('%b').upper()}"
         except Exception:
             pass
-        nxt = {"kicker": "ALL STAGES CLEAR",
-               "text": f"Wrapped {last} — nothing waiting" if last else "Nothing waiting"}
+        nxt = {"kicker": "ALL STAGES CLEAR", "clear": True,
+               "text": f"NOTHING WAITING · LAST ACTIVITY {last}" if last
+                       else "NOTHING WAITING"}
 
     # The switcher's one-line state preview (M4): where the production
     # stands, so switching is an informed move.
     holds = sum(1 for b in real if b.get("kind") == "HOLD")
     if nxt["kicker"] == "ALL STAGES CLEAR" and bo["assembled"]:
-        preview = f"WRAPPED · {bo['assembled']} BOARD{'S' if bo['assembled'] != 1 else ''}"
+        preview = f"CLEAR · {bo['assembled']} BOARD{'S' if bo['assembled'] != 1 else ''}"
     else:
         keys = [k for k, _ in _REACH_STAGES]
         stage_no = next((i + 1 for i, r in enumerate(reach) if r["state"] == "bad"),
