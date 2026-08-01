@@ -51,18 +51,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Staged release zip must match HEAD
+      - name: Staged release must match HEAD at the current VERSION
         run: |
-          git -c core.autocrlf=false archive -o /tmp/fresh.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
-          mkdir /tmp/fresh /tmp/staged
+          V=$(cat VERSION | tr -d '[:space:]')
+          git -c core.autocrlf=false archive -o /tmp/fresh.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md VERSION
+          mkdir /tmp/fresh /tmp/canon /tmp/ver
           unzip -q /tmp/fresh.zip -d /tmp/fresh
-          unzip -q storefront/releases/screenboard-studio.zip -d /tmp/staged
-          if ! diff -r /tmp/fresh /tmp/staged > /tmp/zipdiff.txt 2>&1; then
-            echo "::error::storefront/releases/screenboard-studio.zip is STALE — restage and push: git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md"
+          if [ ! -f "storefront/releases/screenboard-studio-$V.zip" ]; then
+            echo "::error::no staged release for VERSION $V — run: python scripts/stage_release.py (after committing) and push the zips"
+            exit 1
+          fi
+          unzip -q "storefront/releases/screenboard-studio-$V.zip" -d /tmp/ver
+          if ! diff -r /tmp/fresh /tmp/ver > /tmp/zipdiff.txt 2>&1; then
+            echo "::error::app/ changed after version $V was staged — versioned releases are immutable: bump VERSION, commit, run python scripts/stage_release.py, push"
             head -40 /tmp/zipdiff.txt
             exit 1
           fi
-          echo "release zip matches HEAD"
+          unzip -q storefront/releases/screenboard-studio.zip -d /tmp/canon
+          if ! diff -r /tmp/fresh /tmp/canon > /tmp/zipdiff2.txt 2>&1; then
+            echo "::error::canonical screenboard-studio.zip is not the current release — run: python scripts/stage_release.py and push"
+            head -40 /tmp/zipdiff2.txt
+            exit 1
+          fi
+          echo "release $V staged, immutable, and canonical"
 
   # Post-deploy verification (main only): Railway deploys every push to
   # main, so after the suites pass we wait for /healthz to serve THIS

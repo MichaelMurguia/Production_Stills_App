@@ -38,7 +38,7 @@ publicly or packaged into a release.**
 | `GET /` | Landing + pricing. Plans whose price ID is unset render as disabled buttons with the condition stated. |
 | `GET /checkout/{plan}` | Creates a Stripe Checkout session, 303-redirects to Stripe. Plan slugs: `download-personal`, `download-business`, `cloud-personal`, `cloud-business`. |
 | `GET /success?session_id=` | Retrieves the session from Stripe; if paid, fulfills (idempotent) and shows license token / subscription confirmation. |
-| `GET /download/{token}` | Serves the release zip if the token belongs to a PAID purchase; 404 unknown token, 503 missing artifact. |
+| `GET /download/{token}` | Serves the CURRENT release for a PAID token; `?version=` serves any staged past version (resolved only through the file registry). 404 unknown token/version, 503 missing artifact. |
 | `POST /stripe/webhook` | Signature-verified. `checkout.session.completed` → fulfill; `customer.subscription.deleted` → mark purchase CANCELED. |
 | `GET /healthz` | `{ok, rev}` — the git commit currently serving. First stop when asking "did my deploy land?" |
 | `GET`/`POST /recover` | License recovery. Anti-enumeration by construction: identical response either way; details only ever mail to the owning address. SMTP unset → stated gate. |

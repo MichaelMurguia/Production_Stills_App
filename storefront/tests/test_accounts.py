@@ -266,3 +266,39 @@ class StudioNamingTests(unittest.TestCase):
                              data={"workspace_id": wid, "name": "steal"},
                              follow_redirects=False)
         self.assertEqual(r.status_code, 404)
+
+
+class VersionTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile as _tf
+        from pathlib import Path as _P
+        self.client = TestClient(app)
+        self.tmp = _P(_tf.mkdtemp(prefix="sb-rel-"))
+        self._df = settings.DOWNLOAD_FILE
+        settings.DOWNLOAD_FILE = self.tmp / "screenboard-studio.zip"
+        for name in ("screenboard-studio-2026.08.01.zip",
+                     "screenboard-studio-2026.07.30.zip",
+                     "screenboard-studio.zip"):
+            (self.tmp / name).write_bytes(b"PK\x05\x06" + b"\0" * 18)
+
+    def tearDown(self):
+        settings.DOWNLOAD_FILE = self._df
+
+    def test_versions_sort_newest_first(self):
+        from app.main import available_versions
+        self.assertEqual([v for v, _ in available_versions()],
+                         ["2026.08.01", "2026.07.30"])
+
+    def test_download_serves_latest_and_named_versions(self):
+        p = _fulfill(dl_session("cs_ver_1", "ver@example.com"))
+        tok = p.license.token
+        latest = self.client.get(f"/download/{tok}")
+        self.assertEqual(latest.status_code, 200)
+        self.assertIn("2026.08.01", latest.headers["content-disposition"])
+        old = self.client.get(f"/download/{tok}?version=2026.07.30")
+        self.assertEqual(old.status_code, 200)
+        self.assertIn("2026.07.30", old.headers["content-disposition"])
+        self.assertEqual(self.client.get(
+            f"/download/{tok}?version=../../etc/passwd").status_code, 404)
+        self.assertEqual(self.client.get(
+            f"/download/{tok}?version=9.9.9").status_code, 404)

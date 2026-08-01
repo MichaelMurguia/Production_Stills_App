@@ -13,7 +13,15 @@
     {% if p.kind == "download" and p.license %}
     <p class="license-label">DOWNLOAD {{ (p.tier or "personal")|upper }} · {{ "ACTIVE" if p.status == "PAID" else p.status }}</p>
     <p class="license-token">{{ p.license.token }}</p>
-    <p style="margin-top:12px"><a class="btn btn-primary" href="/download/{{ p.license.token }}">Download Screenboard Studio</a></p>
+    <p style="margin-top:12px"><a class="btn btn-primary" href="/download/{{ p.license.token }}">Download Screenboard Studio{% if versions %} {{ versions[0] }}{% endif %}</a></p>
+    {% if versions and versions|length > 1 %}
+    <details class="token-reveal">
+      <summary>ALL VERSIONS</summary>
+      {% for v in versions %}
+      <p class="license-token" style="margin-top:6px"><a href="/download/{{ p.license.token }}?version={{ v }}">{{ v }}</a>{% if loop.first %} <span class="mono" style="color:var(--ink-faint)">— CURRENT</span>{% endif %}</p>
+      {% endfor %}
+    </details>
+    {% endif %}
     {% elif p.kind == "cloud" %}
     <p class="license-label">CLOUD {{ (p.tier or "personal")|upper }} · {{ "ACTIVE" if p.status == "PAID" else p.status }}</p>
     {% if p.workspace and p.workspace.status == "ACTIVE" and p.status == "PAID" %}

@@ -120,8 +120,13 @@ def api_login(body: dict, request: Request):
 
 @app.get("/api/healthz")
 def api_healthz():
-    """Liveness + serving revision — the provisioner's readiness probe."""
-    return {"ok": True, "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12]}
+    """Liveness, serving revision, and product version — the provisioner's
+    readiness probe and the future update-notice's source of truth."""
+    ver = paths.ROOT / "VERSION"
+    return {"ok": True,
+            "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12],
+            "version": ver.read_text(encoding="utf-8").strip()
+                       if ver.exists() else "dev"}
 
 
 # ------------------------------------------------------------------ projects

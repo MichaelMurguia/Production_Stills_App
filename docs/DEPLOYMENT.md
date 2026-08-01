@@ -147,12 +147,15 @@ migration.
 
 ## Release artifact
 
-`/download/<token>` serves `storefront/releases/screenboard-studio.zip`
-(missing file → 503, never a broken download). Package a release from repo
-root:
+Releases are VERSIONED (CalVer, the `VERSION` file at repo root):
+`/download/<token>` serves the newest `screenboard-studio-<v>.zip`; any past
+version stays available via `?version=` and the account page's ALL VERSIONS
+list. Versioned zips are IMMUTABLE — changing `app/` after staging a version
+turns CI red until VERSION is bumped and restaged. Package a release from
+repo root (bump VERSION, commit, then):
 
 ```
-git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
+python scripts/stage_release.py
 ```
 
 The zip must never include user canon: `data/`, `project_state/`,

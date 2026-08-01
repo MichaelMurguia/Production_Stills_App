@@ -223,18 +223,46 @@ def success_status(session_id: str = ""):
         return {"workspace": ws.status if ws else "PENDING"}
 
 
+def available_versions() -> list[tuple[str, Path]]:
+    """Every staged versioned release, newest first. Versions are parsed
+    from filenames (screenboard-studio-<v>.zip) — the directory IS the
+    registry; versioned zips are immutable by CI rule."""
+    import re as _re
+    out = []
+    for f in settings.DOWNLOAD_FILE.parent.glob("screenboard-studio-*.zip"):
+        m = _re.fullmatch(r"screenboard-studio-([0-9][0-9A-Za-z.\-]*)\.zip", f.name)
+        if m:
+            out.append((m.group(1), f))
+    def key(item):
+        return [int(x) if x.isdigit() else x
+                for x in _re.split(r"[.\-]", item[0])]
+    return sorted(out, key=key, reverse=True)
+
+
 @app.get("/download/{token}")
-def download(token: str):
+def download(token: str, version: str = ""):
+    """The current release by default; any past version via ?version=.
+    Versions resolve only through the staged-file registry — never from
+    the raw parameter — so the token gate stays the only door."""
     with db.session() as s:
         lic = s.scalar(select(db.License).where(db.License.token == token))
         if not lic or lic.purchase.status != "PAID":
             raise HTTPException(404)
-        if not settings.DOWNLOAD_FILE.exists():
-            raise HTTPException(503, "Release artifact is not staged on the server yet")
         lic.downloads_used += 1
         s.commit()
-    return FileResponse(settings.DOWNLOAD_FILE, filename=settings.DOWNLOAD_FILE.name,
-                        media_type="application/zip")
+    versions = available_versions()
+    if version:
+        match = next((f for v, f in versions if v == version), None)
+        if match is None:
+            raise HTTPException(404, "no such version")
+        path = match
+    elif versions:
+        path = versions[0][1]
+    else:
+        path = settings.DOWNLOAD_FILE
+    if not path.exists():
+        raise HTTPException(503, "Release artifact is not staged on the server yet")
+    return FileResponse(path, filename=path.name, media_type="application/zip")
 
 
 @app.get("/terms")
@@ -395,7 +423,8 @@ def account_page(request: Request, name_error: str = "", named: int = 0):
     return templates.TemplateResponse(request, "account.html", {
         "purchase": None, "missed": False, "purchases": purchases,
         "email": email, "tenant_base": settings.TENANT_DOMAIN_BASE,
-        "name_error": name_error[:120], "named": named})
+        "name_error": name_error[:120], "named": named,
+        "versions": [v for v, _ in available_versions()]})
 
 
 @app.post("/account")

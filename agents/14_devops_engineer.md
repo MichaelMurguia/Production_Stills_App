@@ -14,10 +14,9 @@ volumes per the retention decision.
 
 `docs/DEPLOYMENT.md` kept current with every infrastructure, commerce, or
 tenant-operations change, in the same commit as the change. After any
-release of `app/` features, restage the release zip
-(`git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app
-requirements.txt run.bat README.md INSTALL.md`) — a stale zip silently
-ships old product.
+release of `app/` features: bump `VERSION` (CalVer), commit, run
+`python scripts/stage_release.py`, and push the zips — CI enforces both
+freshness and version immutability.
 
 ## Rule
 
