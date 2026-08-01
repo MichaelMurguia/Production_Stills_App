@@ -145,8 +145,8 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
         ws.subdomain = random_subdomain(s)
         s.commit()
     domain = f"{ws.subdomain}.{base}"
-    if ws.url == f"https://{domain}":
-        return
+    if ws.url == f"https://{domain}" and _domain_serves(domain):
+        return  # branded, attached, and actually answering — done
     try:
         # SWAP, never accumulate: Railway caps custom domains per service,
         # so superseded ones are deleted before the new attach. The
