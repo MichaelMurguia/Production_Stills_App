@@ -911,8 +911,8 @@ details.meta pre {
 .pscope select { max-width: 260px; }
 .carry-ovr { color: var(--ink-dim); margin-top: 3px; }
 
-/* UNCANONIZED — 2026-07-31 — selected completed board replaces the grid:
-   same ref-card anatomy, wall-sized contained image. */
+/* Gallery drill-in (canonized 2026-08-01): the selected finished board
+   replaces the grid — same card anatomy, contained image, never cropped. */
 .ref-card.board-solo img { height: auto; max-height: 72vh; object-fit: contain; }
 .loc-state {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;

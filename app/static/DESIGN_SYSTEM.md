@@ -109,7 +109,11 @@ rows split by `--line-soft` top borders, action is an amber text link-button
 (`.block-act`), not a bordered button. The DO-THIS-NEXT lead is blocking[0]
 promoted into `.panel-lead` — Courier amber kicker, one-line verb headline
 (Archivo 600 21px), one supporting sentence max, primary button right. It is
-a presentation of the first blocker, never a second list.
+a presentation of the first blocker, never a second list. Blocking rows
+report what stops the next render. Advisory rows (care of existing work,
+kind `CARE`) render below an `ADVISORY` divider with a faint kind badge
+(`--ink-faint`, never `--warn`), are never counted as blockers, and are
+never promoted to the lead (review 2026-08-01 §9).
 
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
@@ -151,8 +155,9 @@ component cascade — `background:` shorthands reset the image.
 
 **Finder list** (`.loc-search/.loc-scroll/.scene-row`). A Courier search
 field over a `--field` scrollable list (max-height, global scrollbar);
-parent rows expand to children; every row ends in its one verb (Draft a
-sheet / Open sheet). Row anatomy follows registry rows: Courier identity
+parent rows expand to children; every row ends in its one verb (Create
+Breakdown / Open Breakdown — the product's own vocabulary, ruled
+2026-08-01). Row anatomy follows registry rows: Courier identity
 left, facts middle, ghost/text action right. Reuse for any >30-item
 findable list; below ~30, the coverage-table pattern is enough.
 
@@ -184,6 +189,37 @@ table and the wizard list share one `buildLocFinder` code path), and open
 questions as answerable rows (`.q-row` — ledger border box, `--ok` left
 border when answered, deferred rows dim their text only). Answers persist
 in the analysis payload and append to the interview at draft time.
+
+**Scope inheritance** (spec editor panels — review 2026-08-01 §3+4). Sheet
+scope is the board's baseline and applies to every panel. A panel may
+declare an exception for design languages and environment — opt-in, visible,
+reversible. Inheriting panels state it in one quiet Courier `.pscope-line`
+(`SCOPE — INHERITS BOARD · …`, live against the board's scope) with a ghost
+`Override` text action — never an empty control that looks unset. Overriding
+reveals the facet chips and environment select in place with `Revert to
+board`; the panel head gains a Courier `--hold` bordered `SCOPE OVERRIDE`
+chip (proposed-state family). The `.scope-carry` receipt splits when any
+panel overrides: `BOARD CARRIES — …` plus one `Pnn OVERRIDES — …` line per
+diverging panel (`.carry-ovr`, `--ink-dim`); unchanged otherwise. A panel's
+environment is exactly one (the sheet's is one-per-board); languages stay
+multi-select. Locking freezes overrides with the rest of the scope.
+
+**Gallery drill-in** (Board assembly — review 2026-08-01 §5). A stage that
+holds many finished artifacts opens on a grid of them; selecting one
+replaces the grid with a single contained full-width card carrying that
+artifact's judge actions, and a `← All boards` text action returns. The
+contained image never crops — finished work is judged whole, unlike takes,
+which cover-crop into slots. The bench/picker above the grid persists in
+both states, so producing more never requires leaving the drill-in. Same
+shape as the judging room (many small, one big) — keep the two consistent.
+
+**Entry gate** (`.gate-page` — review 2026-08-01 §6). A standalone centered
+`.panel` (~380px) on `--bg` holding the wordmark, one field, one `.primary`,
+and at most one line of `.hint`. No nav band, no header tools, no brand-sub
+project name — there is no project context before auth. Errors render as
+the field's own state (`input.bad`) plus one `--bad` line, never a toast.
+The gate is the only screen allowed to be vertically centered; the
+centering lives in `.gate-page`, never inline.
 
 **Pending take tile + take state tags** (`.take.pending/.take-spin`).
 In-flight work holds its place: a pending tile sits in the filmstrip with
@@ -251,7 +287,8 @@ and a `· PROPOSED — CONFIRM / DROP` facts line; edit-and-save is an
 implicit confirm. Environments live in the Bible as `###` entries under
 the `## Environments` container (the level-3 mechanism, like materials and
 lessons) — never as top-level sections, which the parser reads as design
-languages. A sheet carries at most one; its block injects between
+languages. A sheet carries at most one; a panel may override it with exactly one of
+its own (scope inheritance, review 2026-08-01). Its block injects between
 languages and lessons, and the sheet's own atmosphere wins overlaps.
 
 **Scope carry line** (`.scope-carry`, spec editor — mock 6c). The scope
@@ -263,7 +300,27 @@ will carry, in injection order (`RENDERING LANGUAGE (ALWAYS) · <languages>
 future integrations): sans name · Courier facts (ellipsize the middle) ·
 Courier test-state (verdict word in `--ok`/`--bad`, date stays faint) ·
 ghost actions. Rows separated by `--line-soft` top borders; no
-cards-within-cards.
+cards-within-cards. A registry row's Courier facts may carry a care state
+(`BACKED UP <date>` / `NEVER BACKED UP`) — faint, never a badge; not-yet-done
+is not a failure (review 2026-08-01 §8).
+
+**Derive affordance** (review 2026-08-01 §2). A ghost button at the field's
+label row that deterministically fills an editable field from data the app
+already has ("Derive from screenplay"). Never amber (not the region's
+primary action), never a spinner — it must be instant; if it can't be, it
+is a generation and belongs on a primary button with the `.busy`
+vocabulary. Disabled with the reason stated when its source is missing.
+The filled value is ordinary editable content; the button carries no state
+and does not mark the field as derived.
+
+**Project switcher** (`.brand-switch` / `.proj-menu` — review 2026-08-01
+§7). Switching projects is navigation and lives on the header project name:
+same Courier treatment plus a `▾` and hover border, opening a compact menu
+of Courier project names (active marked with the `.cast-badge` grammar —
+bordered `--ok`, never filled) ending in one `Manage projects…` text action
+to Settings. Settings keeps the registry (rows + intake + backup), titled
+`Projects — this install` — projects are per-install content while
+engines/keys are install-level configuration.
 
 **Vocabulary picker** (`roleDialog()`, `.role-suggest/.role-preview`). For
 finite, load-bearing vocabularies (roles, and any future controlled names).
@@ -366,16 +423,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-07-31 | Finder-row verb divergence: "Create Breakdown" (user-directed) instead of the canonical "Draft a sheet" | Production Design step-2 locations list only; the screenplay coverage table still says "Draft a sheet" | User instruction; the two hosts of the shared finder now carry different verbs for the same action — designer should pick one vocabulary |
-| 2026-07-31 | "Derive from screenplay" ghost button beside a card's Keywords field (deterministic scan fills the editable field) | Design-language cards, wizard step 2 | No canon for a field-level derive/fill affordance; built from ghost-button + gated-disabled vocabulary, no new CSS |
-| 2026-07-31 | Per-panel environment select in the panel-card head (user-directed) — overrides the sheet's one-per-sheet environment for that panel's prompt | Spec editor panel cards | Diverges from the ruled "one per sheet" scope model (mock 6c); mirrors the per-panel light select's grammar. Designer should rule on override presentation and how the carry line reflects it |
-| 2026-07-31 | Per-panel design-language facet row (user-directed) — `.vchip.set` chips on the panel card; any set overrides the sheet's language scope for that panel's prompt | Spec editor panel cards | Sheet scope was the only language granularity; a mixed-culture panel (e.g. GRM interior on a frontier board) had no home. Reuses the facet-chip grammar, but the sheet-vs-panel scope model and the carry line's story need a design ruling together with the environment override row above |
-| 2026-07-31 | Assembly stage lands on a completed-boards grid; clicking a board replaces the grid with one full-width board card (`.board-solo`, contained image) with the judge actions, `← All boards` to return | Board assembly view | User-directed view restructure — no canon for a grid→solo drill-in on this stage; reuses ref-card anatomy. Designer should rule on the drill-in pattern and how the bench and gallery share the stage |
 | 2026-08-01 | Screenboard rename pencil (user-directed): inline SVG icon beside the header brand-sub swaps the name for an input; Enter saves via /api/projects/rename | Header, all views | FIRST ICON IN THE PRODUCT — no icon vocabulary exists in canon; designer must rule on icons at all, and on header-inline editing |
-| 2026-07-31 | Workspace login page (cloud auth, user-directed): standalone centered `.panel` with password field + one primary, served at `/login` only when `SCREENBOARD_ACCESS_TOKEN` is set; inline body styles for centering | Cloud-hosted workspaces (never standalone installs) | The app never had an auth surface; no canon for a login/gate page. Built from panel + hint + primary vocabulary; designer should canonize the entry-gate page pattern |
-| 2026-07-31 | Projects panel in Settings (user-directed save/load): registry rows (name · slug · ACTIVE badge / Open ghost) + intake row `+ Project`; switching reloads the app | Settings → Engines & keys subview | Multi-project is a new product concept; reuses registry-row + intake-row grammar but the switcher's home (Settings vs header) and the active-project presentation need a design ruling |
-| 2026-07-31 | Backup controls (user-directed safeguard): per-project Backup ghost + Courier `BACKED UP <date> / NEVER BACKED UP` fact in the project rows; Restore-backup intake row (file input) | Settings → Projects panel | Built from canon (registry rows, intake row) — review placement/copy only, together with the Projects panel row above |
-| 2026-07-31 | CARE blocking-row kind (backup reminder): `--warn` bordered kind badge, advisory row appended last in the blocker feed, verb "Backup" | Dashboard blocking rows | Blocking rows had only failure kinds (HOLD/GAP/SIZE/CITE); an advisory care-of-work kind is new vocabulary — designer should rule on advisory vs blocking presentation |
 
 ---
 
