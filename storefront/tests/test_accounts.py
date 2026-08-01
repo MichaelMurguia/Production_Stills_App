@@ -206,6 +206,10 @@ class CustomDomainTests(unittest.TestCase):
                              "the slug must never leak the purchase number")
             self.assertEqual(ws.url, f"https://{ws.subdomain}.screenboardstudio.com")
             self.assertIn("edge.railway.app", ws.detail)
+            # The reliable door survives the branded upgrade, and the
+            # branded door only unlocks once the probe says it serves.
+            self.assertEqual(ws.railway_url, "https://tenant-d.up.railway.app")
+            self.assertEqual(ws.domain_live, 1)
         provisioner.reconcile(railway=fake)  # idempotent
         self.assertEqual(len(fake.domains), 1)
         # renaming SWAPS the custom domain (Railway caps them per service)
@@ -286,7 +290,7 @@ class StudioNamingTests(unittest.TestCase):
         self.assertIn("name_error", bad.headers["location"])
         # realtime preview ships to the page: normalizer + reserved list
         page = self.client.get("/account")
-        self.assertIn("name-preview", page.text)
+        self.assertIn("studio-name-form", page.text)
         self.assertIn('"www"', page.text)  # reserved list reaches the client
         self.assertIn("WILL BE", page.text)
 

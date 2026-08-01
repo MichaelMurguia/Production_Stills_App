@@ -186,7 +186,8 @@ def _detach_loaded(s, purchase: db.Purchase) -> None:
         _ = purchase.license.token
     if purchase.workspace:
         _ = (purchase.workspace.status, purchase.workspace.url,
-             purchase.workspace.access_token)
+             purchase.workspace.access_token,
+             purchase.workspace.railway_url, purchase.workspace.domain_live)
     s.expunge_all()
 
 
@@ -418,7 +419,8 @@ def account_page(request: Request, name_error: str = "", named: int = 0):
                 _ = p.license.token
             if p.workspace:
                 _ = (p.workspace.id, p.workspace.status, p.workspace.url,
-                     p.workspace.access_token, p.workspace.subdomain)
+                     p.workspace.access_token, p.workspace.subdomain,
+                     p.workspace.railway_url, p.workspace.domain_live)
         s.expunge_all()
     return templates.TemplateResponse(request, "account.html", {
         "purchase": None, "missed": False, "purchases": purchases,
@@ -536,7 +538,7 @@ def admin_export(token: str = ""):
             "licenses": [row(l, ("id", "purchase_id", "token",
                                  "downloads_used", "created_at"))
                          for l in s.scalars(select(db.License)).all()],
-            "workspaces": [row(w, ("id", "purchase_id", "status", "subdomain", "access_token",
+            "workspaces": [row(w, ("id", "purchase_id", "status", "subdomain", "railway_url", "domain_live", "access_token",
                                    "railway_service_id", "railway_volume_id",
                                    "url", "detail", "created_at"))
                            for w in s.scalars(select(db.Workspace)).all()],

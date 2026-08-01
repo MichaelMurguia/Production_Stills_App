@@ -69,6 +69,8 @@ class Workspace(Base):
     subdomain: Mapped[str] = mapped_column(String(63), default="")
     access_token: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
     railway_service_id: Mapped[str] = mapped_column(String(64), default="")
+    railway_url: Mapped[str] = mapped_column(String(255), default="")
+    domain_live: Mapped[int] = mapped_column(Integer, default=0)
     railway_volume_id: Mapped[str] = mapped_column(String(64), default="")
     url: Mapped[str] = mapped_column(String(255), default="")
     detail: Mapped[str] = mapped_column(String(600), default="")
@@ -117,7 +119,9 @@ def init_db() -> None:
     # known additive columns so early deployments upgrade in place.
     for ddl in ("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''",
                 "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''",
-                "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''"):
+                "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''",
+                "ALTER TABLE workspaces ADD COLUMN railway_url VARCHAR(255) DEFAULT ''",
+                "ALTER TABLE workspaces ADD COLUMN domain_live INTEGER DEFAULT 0"):
         try:
             with engine.begin() as conn:
                 conn.execute(text(ddl))

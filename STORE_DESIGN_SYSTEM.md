@@ -85,3 +85,9 @@ rule). Count it before shipping.
 - **2026-08-01** — Storefront system established with the homepage rebuild:
   the Wall hero, Standalone/Cloud trait-list pricing, filmstrip, and the
   five-stage pipeline dissolve.
+- **2026-08-01** — Non-canon: reliable-door workspace buttons. On /account
+  and /success, the "Open your workspace" button links the branded address
+  only once it provably serves (`domain_live`); until then it links the
+  always-working railway address with a small mono note ("… IS PROVISIONING
+  — THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE"). Reuses existing
+  `hero-sub mono` styling; no new tokens. Awaiting design review.

@@ -106,6 +106,8 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
         railway.set_start_command(ws.railway_service_id, START_COMMAND)
         if not ws.url:
             ws.url = f"https://{railway.create_domain(ws.railway_service_id)}"
+        if not ws.railway_url:
+            ws.railway_url = ws.url
         railway.redeploy(ws.railway_service_id)
         ws.status = "ACTIVE"
         ws.detail = ""
@@ -211,7 +213,23 @@ def reconcile(railway=railway_client) -> dict:
                 # Standing upgrades for live workspaces (e.g. a custom
                 # domain base configured after they were built).
                 if settings.railway_configured():
+                    if not ws.railway_url:
+                        try:  # backfill the reliable door for older rows
+                            doors = railway.service_domains(ws.railway_service_id)
+                            if doors:
+                                ws.railway_url = f"https://{doors[0]}"
+                                s.commit()
+                        except Exception:
+                            pass
                     _ensure_custom_domain(s, ws, purchase, railway)
+                    # Doors must open before they are offered: the branded
+                    # address unlocks in the UI only once it provably
+                    # serves. Probe is read-only — never a re-attach.
+                    if (not ws.domain_live and ws.url
+                            and ws.url != ws.railway_url
+                            and _domain_serves(ws.url.replace("https://", ""))):
+                        ws.domain_live = 1
+                        s.commit()
             elif purchase.status == "CANCELED" and ws.status in ("ACTIVE", "FAILED", "PENDING"):
                 if ws.railway_service_id and settings.railway_configured():
                     _revoke(s, ws, railway)

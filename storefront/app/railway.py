@@ -183,6 +183,19 @@ def list_custom_domains(service_id: str) -> list[dict]:
     return (data.get("domains") or {}).get("customDomains") or []
 
 
+def service_domains(service_id: str) -> list[str]:
+    """The service's *.up.railway.app hostnames — the always-reliable door."""
+    data = _gql(
+        """query($projectId: String!, $environmentId: String!, $serviceId: String!) {
+             domains(projectId: $projectId, environmentId: $environmentId,
+                     serviceId: $serviceId) {
+               serviceDomains { domain } } }""",
+        {"projectId": project_id(), "environmentId": environment_id(),
+         "serviceId": service_id})
+    return [d["domain"] for d in
+            ((data.get("domains") or {}).get("serviceDomains") or [])]
+
+
 def delete_custom_domain(domain_id: str) -> None:
     _gql("""mutation($id: String!) { customDomainDelete(id: $id) }""",
          {"id": domain_id})
