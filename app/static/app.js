@@ -901,6 +901,45 @@ async function renderScreenplay() {
   ]);
 
   const sp = state.screenplay;
+
+  // Shared upload path — bound to whichever form is on screen.
+  const bindUpload = form => form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const file = $('input[type="file"]', form).files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const rec = await api("/api/screenplay", { method: "POST", body: fd });
+      const cc = rec.citation_check;
+      toast(cc && cc.missing
+        ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
+        : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
+      showView("screenplay");
+    } catch (err) { toast(err.message, true); }
+  });
+
+  if (!sp) {
+    // No screenplay is not a blank page (bug 2026-08-01: arriving here
+    // from Status's Add button found a headline over nothing and an
+    // upload buried in a side panel called "Replace"). The main column
+    // becomes the upload, and Replace hides — nothing exists to replace.
+    const mainPanel = $("#dash-locations").closest(".panel");
+    mainPanel.innerHTML = `
+      <div class="stage-kicker">STAGE 01 OF 5</div>
+      <h3 class="stage-headline">Upload the screenplay</h3>
+      <p class="hint">The read starts here: every location, cast member,
+      design language and open question comes out of this one file.
+      Nothing downstream unlocks without it.</p>
+      <form id="screenplay-form-main" class="row">
+        <input type="file" accept=".pdf,.fdx,.txt,.fountain" required>
+        <button type="submit" class="primary">Upload &amp; start the read</button>
+      </form>
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
+    bindUpload($("#screenplay-form-main"));
+    $("#screenplay-form").closest(".panel").classList.add("hidden");
+  }
+
   if (sp) {
     const up = (sp.uploaded_at || "").slice(0, 16).replace("T", " ");
     $("#dash-screenplay").innerHTML = `
@@ -953,21 +992,7 @@ async function renderScreenplay() {
     $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
   }
 
-  $("#screenplay-form").addEventListener("submit", async e => {
-    e.preventDefault();
-    const file = $("#screenplay-file").files[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append("file", file);
-    try {
-      const rec = await api("/api/screenplay", { method: "POST", body: fd });
-      const cc = rec.citation_check;
-      toast(cc && cc.missing
-        ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
-        : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
-      showView("screenplay");
-    } catch (err) { toast(err.message, true); }
-  });
+  bindUpload($("#screenplay-form"));
 }
 
 // One finder-list scaffold (plan P4/R2): the screenplay coverage table and

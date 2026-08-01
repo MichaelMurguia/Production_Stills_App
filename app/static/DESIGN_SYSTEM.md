@@ -493,7 +493,7 @@ rows are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| *(empty — the 2026-08-01 Productions pass canonized the rename pencil into Inline rename, Components)* | | | |
+| 2026-08-01 | Screenplay-stage upload state (bug fix): with no screenplay the main column becomes the upload ("Upload the screenplay" + form) and the side Replace panel hides — arriving from Status's Add found a headline over nothing | Screenplay view | Built from canon (stated-path empty state family) — review copy/placement only |
 
 ---
 
