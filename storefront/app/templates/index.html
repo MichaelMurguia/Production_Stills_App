@@ -1,99 +1,296 @@
 {% extends "base.html" %}
+{% block title %}Screenboard Studio — Your Movie Visualized{% endblock %}
+{% block main_attrs %}{% endblock %}
 {% block content %}
 
-<section class="hero">
-  <h1>Production stills your screenplay already approved.</h1>
-  <p class="hero-sub">Screenboard Studio turns a screenplay into an art-direction
-  bible, breakdown sheets, and rendered story boards &mdash; with every image
-  anchored to canon references you approved, and every stage gated on the one
-  before it. No drift, no upscaling, no orphan art.</p>
-</section>
-
-<section class="pipeline-strip" aria-label="Pipeline">
-  <div class="pipe-cell"><span class="pipe-num">01</span> Screenplay</div>
-  <div class="pipe-cell"><span class="pipe-num">02</span> Art bible</div>
-  <div class="pipe-cell"><span class="pipe-num">03</span> Breakdown sheets</div>
-  <div class="pipe-cell"><span class="pipe-num">04</span> Panels</div>
-  <div class="pipe-cell"><span class="pipe-num">05</span> Boards</div>
-</section>
-
-<section class="features">
-  <div class="feature">
-    <h2>Canon-locked generation</h2>
-    <p>Character likenesses, vehicle geometry, and environment layouts come from
-    a reference library you approve. Panels are generated against those anchors
-    &mdash; a face stays the same face across every board.</p>
+<!-- S2 — The Wall: hero copy on a scrim over three drifting columns of
+     real Beltminers panels. Copy never moves; the wall does. -->
+<section class="wall" id="gallery">
+  <div class="wall-cols" aria-hidden="true">
+    <div class="wall-col wall-a">
+      <img src="/static/img/p01.png" alt=""><img src="/static/img/p02.png" alt="">
+      <img src="/static/img/p03.png" alt=""><img src="/static/img/p04.png" alt="">
+    </div>
+    <div class="wall-col wall-b">
+      <img src="/static/img/p05.png" alt=""><img src="/static/img/p06.png" alt="">
+      <img src="/static/img/p07.png" alt=""><img src="/static/img/p08.png" alt="">
+    </div>
+    <div class="wall-col wall-c">
+      <img src="/static/img/p09.png" alt=""><img src="/static/img/p10.png" alt="">
+      <img src="/static/img/p11.png" alt=""><img src="/static/img/p12.png" alt="">
+    </div>
   </div>
-  <div class="feature">
-    <h2>Gates, not surprises</h2>
-    <p>Only a locked breakdown sheet can generate panels. A board needs every
-    panel approved. Each gate is visible before you hit it, with the unmet
-    condition stated beside the control.</p>
-  </div>
-  <div class="feature">
-    <h2>Native resolution, always</h2>
-    <p>Renders are never upscaled. If a panel comes back smaller than its slot,
-    it is flagged and regenerated &mdash; boards ship at true 4K.</p>
-  </div>
-</section>
-
-{% if not all_ready %}
-<div class="notice">
-  <span class="notice-badge">SETUP</span>
-  Checkout is not fully live yet &mdash; Stripe keys or price IDs are missing
-  on this deployment. Unconfigured plans render disabled below.
-</div>
-{% endif %}
-
-{# Prices shown here must match the Stripe price objects — update both
-   together (see docs/DEPLOYMENT.md). #}
-<section class="pricing">
-  <div class="price-card price-lead">
-    <p class="price-kind">DOWNLOAD</p>
-    <h2>Own it</h2>
-    <p class="price-desc">The full application, self-hosted on your machine.
-    Your screenplay and references never leave your studio. Bring your own
-    render-engine API keys.</p>
-    <p class="price-terms">one-time license &middot; instant download &middot; runs on your hardware</p>
+  <div class="wall-scrim"></div>
+  <div class="wrap wall-copy">
+    <p class="kicker">PRODUCTION DESIGN &middot; CONTINUITY &middot; ART DIRECTION</p>
+    <h1>Your Movie Visualized</h1>
+    <p class="wall-sub mono">CAST &middot; LOCATIONS &middot; OBJECTS &middot; SCENES &middot; DESIGN LANGUAGES</p>
+    <p class="wall-para">Screenboard Studio gives a production its art
+    department: it reads the script, builds an art direction bible, breaks
+    each scene down by element, and renders concept boards where every frame
+    is anchored to references and style you approve.</p>
     <div class="btn-row">
-      {% if ready['download-personal'] %}
-      <a class="btn btn-primary" href="/checkout/download-personal">Personal &mdash; $119</a>
-      {% else %}
-      <span class="btn btn-disabled" aria-disabled="true">Personal &mdash; $119</span>
-      {% endif %}
-      {% if ready['download-business'] %}
-      <a class="btn btn-secondary" href="/checkout/download-business">Business &mdash; $249.99</a>
-      {% else %}
-      <span class="btn btn-disabled" aria-disabled="true">Business &mdash; $249.99</span>
+      <a class="btn btn-primary" href="#pricing">Start a production</a>
+      <a class="btn btn-secondary" href="#pipeline">See the pipeline</a>
+    </div>
+    <p class="provenance mono">SHOWN &mdash; THE BELTMINERS &middot; 1 BOARD &middot; 7 APPROVED PANELS</p>
+  </div>
+</section>
+
+<!-- Figure band -->
+<section class="figband" aria-label="Product facts">
+  <div class="fig"><span class="fig-num">3840&times;2160</span><span class="fig-lbl mono">DELIVERED NATIVE &middot; NEVER UPRESSED</span></div>
+  <div class="fig"><span class="fig-num">100%</span><span class="fig-lbl mono">OF ELEMENTS CITE THE SCRIPT</span></div>
+  <div class="fig"><span class="fig-num">0</span><span class="fig-lbl mono">UNAPPROVED DESIGN CHOICES</span></div>
+  <div class="fig"><span class="fig-num">5</span><span class="fig-lbl mono">GATED STAGES, SCRIPT TO BOARD</span></div>
+</section>
+
+<!-- S3 — Pricing: two editions, honest trait lists. Standalone carries the
+     section's only amber (top rule + Buy). -->
+<section class="wrap editions-wrap" id="pricing">
+  <div class="editions-head">
+    <div>
+      <p class="kicker-dim mono">PRICING</p>
+      <h2 class="editions-title">Standalone App or Cloud-Based</h2>
+    </div>
+    <p class="editions-note">Identical pipeline and identical output. The
+    difference is where the work lives and who keeps the lights on.</p>
+  </div>
+
+  {% if not all_ready %}
+  <div class="notice">
+    <span class="notice-badge">SETUP</span>
+    Checkout is not fully live yet &mdash; Stripe keys or price IDs are
+    missing on this deployment. Unconfigured plans render disabled below.
+  </div>
+  {% endif %}
+
+  <div class="editions">
+    <div class="edition edition-lead">
+      <p class="edition-kind mono"><span class="ek-name">STANDALONE APP</span> BUY ONCE &middot; OWN IT</p>
+      <h3>Runs on your machine</h3>
+      <p class="edition-para">Install it on the art department's workstation.
+      The screenplay, the reference library, and every render stay on your
+      drive &mdash; nothing is uploaded to us, ever.</p>
+      <ul class="traits mono">
+        <li class="t-yes">SCRIPT + ART NEVER LEAVE THE BUILDING</li>
+        <li class="t-yes">WORKS AIR-GAPPED AFTER INSTALL</li>
+        <li class="t-yes">YOUR OWN RENDER-ENGINE KEYS, BILLED DIRECT</li>
+        <li class="t-yes">NO SUBSCRIPTION &mdash; THE VERSION IS YOURS</li>
+        <li class="t-no">YOU RUN THE HARDWARE AND THE UPDATES</li>
+      </ul>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE ARTIST &middot; ONE MACHINE</span></div>
+        <span class="sku-price mono">$119</span>
+        {% if ready["download-personal"] %}<a class="btn btn-primary sku-btn" href="/checkout/download-personal">Buy</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
+      </div>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Business</span><span class="sku-sub mono">PRODUCTION USE INSIDE A COMPANY</span></div>
+        <span class="sku-price mono">$249.99</span>
+        {% if ready["download-business"] %}<a class="btn btn-secondary sku-btn" href="/checkout/download-business">Buy</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
+      </div>
+      {% if not (ready["download-personal"] and ready["download-business"]) %}
+      <p class="gate-line mono">UNAVAILABLE &mdash; CHECKOUT NOT CONFIGURED</p>
       {% endif %}
     </div>
-    {% if not (ready['download-personal'] and ready['download-business']) %}
-    <p class="gate-note">Unavailable &mdash; checkout not configured</p>
-    {% endif %}
-  </div>
-  <div class="price-card">
-    <p class="price-kind">CLOUD</p>
-    <h2>Subscribe</h2>
-    <p class="price-desc">Hosted Screenboard Studio &mdash; same pipeline, zero
-    setup, updates land automatically. Cancel any time from the billing
-    portal.</p>
-    <p class="price-terms">monthly subscription &middot; hosted workspace</p>
-    <div class="btn-row">
-      {% if ready['cloud-personal'] %}
-      <a class="btn btn-secondary" href="/checkout/cloud-personal">Personal &mdash; $9.99/mo</a>
-      {% else %}
-      <span class="btn btn-disabled" aria-disabled="true">Personal &mdash; $9.99/mo</span>
-      {% endif %}
-      {% if ready['cloud-business'] %}
-      <a class="btn btn-secondary" href="/checkout/cloud-business">Business &mdash; $29.99/mo</a>
-      {% else %}
-      <span class="btn btn-disabled" aria-disabled="true">Business &mdash; $29.99/mo</span>
+
+    <div class="edition">
+      <p class="edition-kind mono"><span class="ek-name">CLOUD-BASED</span> MONTHLY &middot; CANCEL ANY TIME</p>
+      <h3>Hosted Online Studio</h3>
+      <p class="edition-para">Your production gets a private workspace at
+      <span class="mono">yourfilm.screenboardstudio.com</span>. Nothing to
+      install &mdash; open a browser on set, in the office, or in a hotel.</p>
+      <ul class="traits mono">
+        <li class="t-yes">NOTHING TO INSTALL OR MAINTAIN</li>
+        <li class="t-yes">UPDATES LAND THE DAY THEY SHIP</li>
+        <li class="t-yes">REACHABLE FROM ANY MACHINE ON THE SHOW</li>
+        <li class="t-yes">BACKED UP OFF YOUR HARDWARE</li>
+        <li class="t-no">WORK LIVES ON OUR SERVERS, NOT YOUR DRIVE</li>
+      </ul>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE WORKSPACE &middot; ONE SEAT</span></div>
+        <span class="sku-price mono">$9.99<span class="per">/mo</span></span>
+        {% if ready["cloud-personal"] %}<a class="btn btn-secondary sku-btn" href="/checkout/cloud-personal">Subscribe</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Subscribe</span>{% endif %}
+      </div>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Business</span><span class="sku-sub mono">THE ART DEPARTMENT, ONE PRODUCTION</span></div>
+        <span class="sku-price mono">$29.99<span class="per">/mo</span></span>
+        {% if ready["cloud-business"] %}<a class="btn btn-secondary sku-btn" href="/checkout/cloud-business">Subscribe</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Subscribe</span>{% endif %}
+      </div>
+      {% if not (ready["cloud-personal"] and ready["cloud-business"]) %}
+      <p class="gate-line mono">UNAVAILABLE &mdash; CHECKOUT NOT CONFIGURED</p>
       {% endif %}
     </div>
-    {% if not (ready['cloud-personal'] and ready['cloud-business']) %}
-    <p class="gate-note">Unavailable &mdash; checkout not configured</p>
-    {% endif %}
+  </div>
+  <p class="editions-foot mono">NO PASSWORDS &mdash; SIGN IN WITH GOOGLE OR A
+  MAILED LINK &middot; BOTH EDITIONS RENDER THROUGH YOUR OWN ENGINE KEYS</p>
+</section>
+
+<!-- S4 — Filmstrip: decorative marquee of real panels. -->
+<section class="stripband" aria-hidden="true">
+  <p class="strip-label mono wrap">ONE PRODUCTION &middot; ONE REFERENCE LIBRARY &middot; EVERY FRAME ON MODEL</p>
+  <div class="strip">
+    <div class="strip-row">
+      <img src="/static/img/p13.png" alt="" loading="lazy"><img src="/static/img/p02.png" alt="" loading="lazy">
+      <img src="/static/img/p14.png" alt="" loading="lazy"><img src="/static/img/p07.png" alt="" loading="lazy">
+      <img src="/static/img/p15.png" alt="" loading="lazy"><img src="/static/img/p11.png" alt="" loading="lazy">
+      <img src="/static/img/p13.png" alt="" loading="lazy"><img src="/static/img/p02.png" alt="" loading="lazy">
+      <img src="/static/img/p14.png" alt="" loading="lazy"><img src="/static/img/p07.png" alt="" loading="lazy">
+      <img src="/static/img/p15.png" alt="" loading="lazy"><img src="/static/img/p11.png" alt="" loading="lazy">
+    </div>
   </div>
 </section>
+
+<!-- S5 — The pipeline dissolve: five stages, five real artifacts. -->
+<section class="wrap dissolve" id="pipeline">
+  <p class="kicker">SCRIPT TO BOARD, IN FIVE STAGES</p>
+  <h2 class="dis-title">Nothing gets drawn until the department has agreed on it.</h2>
+  <p class="dis-sub">You set canon content, cinematography, board rendering
+  style and design languages.</p>
+
+  <div class="dis-grid">
+    <div class="dis-stages" id="dis-stages">
+      <button class="dis-stage" data-i="0">
+        <span class="dis-k mono">01 &mdash; SCREENPLAY</span>
+        <span class="dis-d">The draft is read in full &mdash; every location,
+        faction and character it names, and every question it leaves open.</span>
+      </button>
+      <button class="dis-stage" data-i="1">
+        <span class="dis-k mono">02 &mdash; PRODUCTION DESIGN</span>
+        <span class="dis-d">Style plates, design languages and environments
+        become one art direction bible the whole department works from.</span>
+      </button>
+      <button class="dis-stage" data-i="2">
+        <span class="dis-k mono">03 &mdash; BREAKDOWN</span>
+        <span class="dis-d">Each scene is broken down by element &mdash; set,
+        dressing, props, picture vehicles &mdash; with the line of script that
+        permits it.</span>
+      </button>
+      <button class="dis-stage" data-i="3">
+        <span class="dis-k mono">04 &mdash; PANELS</span>
+        <span class="dis-d">Concept panels render against the approved
+        references, then get judged full-size, one at a time.</span>
+      </button>
+      <button class="dis-stage" data-i="4">
+        <span class="dis-k mono">05 &mdash; BOARD</span>
+        <span class="dis-d">Approved panels compose onto a true 4K
+        presentation board, titled and captioned by the app.</span>
+      </button>
+    </div>
+
+    <div class="dis-right">
+      <div class="dis-stage-box">
+        <div class="dis-pane" data-p="0">
+          <div class="doc mono">
+            <div class="doc-head"><span>BELTMINER_SUMMER_25.PDF</span><span>SCENE 14 &middot; p.44</span></div>
+            <div class="doc-body">
+              <p class="scr-slug">EXT. CHARLIE'S CABIN - DUSK</p>
+              <p class="scr-act">A shack framed from salvage timber. Solar panels<br>
+              lean against the porch rail. Inside the open bay,<br>
+              something long and low waits under a canvas tarp.</p>
+              <p class="scr-act">Asteroids drift across the darkening sky.</p>
+              <p class="scr-char">CHARLIE</p>
+              <p class="scr-dlg">You gonna stand there all night,<br>
+              or you gonna help me get her<br>running?</p>
+            </div>
+          </div>
+        </div>
+        <div class="dis-pane" data-p="1">
+          <div class="doc mono">
+            <div class="doc-head"><span>ART DIRECTION BIBLE &middot; CINEMATOGRAPHY</span><span>LOOKBOOK</span></div>
+            <div class="doc-body">
+              <p class="juris"><span class="j-ok">CONTROLS</span> contrast &middot; tonal depth &middot; naturalism</p>
+              <p class="juris"><span class="j-bad">NEVER</span> a panel's hour or hue</p>
+              <div class="plates">
+                <figure><img src="/static/img/ref-0009.jpg" alt="" loading="lazy"><figcaption>REF-0009 <span class="inuse">IN USE</span></figcaption></figure>
+                <figure><img src="/static/img/ref-0010.jpg" alt="" loading="lazy"><figcaption>REF-0010 <span class="inuse">IN USE</span></figcaption></figure>
+                <figure><img src="/static/img/ref-0011.jpg" alt="" loading="lazy"><figcaption>REF-0011 <span class="inuse">IN USE</span></figcaption></figure>
+              </div>
+              <p class="doc-foot">THE BIBLE ALSO SETS &mdash; RENDERING MEDIUM &middot; MATERIALS &middot; LIGHTING &middot; COMPOSITION &middot; DESIGN LANGUAGES</p>
+            </div>
+          </div>
+        </div>
+        <div class="dis-pane" data-p="2">
+          <div class="doc mono breakdown">
+            <div class="doc-head"><span>SCENE 14 &middot; EXT. CHARLIE'S CABIN</span><span>BREAKDOWN</span></div>
+            <div class="bd-cols">
+              <div class="bd-script">
+                <p>A <mark>shack framed from salvage timber</mark>.
+                <mark>Solar panels</mark> lean against the porch rail.
+                Inside the open bay, <mark>something long and low</mark>
+                waits under a <mark>canvas tarp</mark>.</p>
+              </div>
+              <div class="bd-sheet">
+                <div class="bd-row bd-head"><span>ID</span><span>ELEMENT</span><span>CATEGORY</span><span>EVIDENCE</span></div>
+                <div class="bd-row"><span>OBJ-001</span><span>salvage-timber shack</span><span>SET</span><span class="ev-pass">PASS</span></div>
+                <div class="bd-row"><span>OBJ-002</span><span>solar panels</span><span>SET DRESSING</span><span class="ev-pass">PASS</span></div>
+                <div class="bd-row"><span>OBJ-003</span><span>the GT40</span><span>PICTURE VEHICLE</span><span class="ev-pass">PASS</span></div>
+                <div class="bd-row"><span>OBJ-004</span><span>canvas tarp</span><span>PROP</span><span class="ev-pass">PASS</span></div>
+                <div class="bd-row"><span>OBJ-005</span><span>drifting asteroids</span><span>ATMOSPHERE</span><span class="ev-pass">PASS</span></div>
+                <div class="bd-row"><span>OBJ-006</span><span>workshop hoist</span><span>SET DRESSING</span><span class="ev-hold">HOLD</span></div>
+                <p class="bd-forbidden">FORBIDDEN &mdash; modern vehicles &middot; glossy surfaces &middot; readable text</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dis-pane" data-p="3">
+          <img class="pane-img" src="/static/img/p04.png" alt="" loading="lazy">
+          <p class="pane-facts mono">P02 &middot; 2736&times;1536 &middot; 6 ANCHORS &middot; <span class="ev-pass">APPROVED</span></p>
+        </div>
+        <div class="dis-pane" data-p="4">
+          <img class="pane-img contain" src="/static/img/board-0001.png" alt="" loading="lazy">
+          <p class="pane-facts mono">BOARD-0001 &middot; 3840&times;2160 &middot; TYPOGRAPHY DRAWN BY THE APP, NEVER THE MODEL</p>
+        </div>
+      </div>
+      <div class="dis-ticks" id="dis-ticks" aria-hidden="true">
+        <span class="tick" data-i="0"></span><span class="tick" data-i="1"></span>
+        <span class="tick" data-i="2"></span><span class="tick" data-i="3"></span>
+        <span class="tick" data-i="4"></span>
+      </div>
+      <p class="dis-caption mono" id="dis-caption">SCENE 14 &middot; CHARLIE'S CABIN</p>
+    </div>
+  </div>
+  <p class="dis-foot mono">CLICK A STAGE &mdash; OR WATCH IT RUN</p>
+</section>
+
+<script>
+(() => {
+  const captions = [
+    "SCENE 14 · CHARLIE'S CABIN",
+    "CINEMATOGRAPHY · 3 PLATES IN USE",
+    "6 ELEMENTS · 5 PASS · 1 HOLD",
+    "PANEL P02 · JUDGED FULL-SIZE",
+    "BOARD-0001 · TRUE 4K",
+  ];
+  const stages = [...document.querySelectorAll(".dis-stage")];
+  const panes = [...document.querySelectorAll(".dis-pane")];
+  const ticks = [...document.querySelectorAll(".tick")];
+  const caption = document.getElementById("dis-caption");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let current = 0, timer = null;
+  const setActive = i => {
+    current = i;
+    stages.forEach((s, j) => s.classList.toggle("on", j === i));
+    panes.forEach((p, j) => p.classList.toggle("on", j === i));
+    ticks.forEach((t, j) => t.classList.toggle("on", j === i));
+    caption.textContent = captions[i];
+  };
+  const arm = () => {
+    if (reduced) return;               // no auto-advance under reduced motion
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => setActive((current + 1) % 5), 5200);
+  };
+  [...stages, ...ticks].forEach(el => el.addEventListener("click", () => {
+    setActive(+el.dataset.i);
+    arm();                             // re-arm from zero on interaction
+  }));
+  setActive(0);
+  arm();
+})();
+</script>
 
 {% endblock %}

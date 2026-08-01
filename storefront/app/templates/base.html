@@ -17,7 +17,11 @@
       <p class="wordmark">Screenboard Studio</p>
     </a>
     <div class="head-side">
-      <p class="head-meta">screenplay &rarr; bible &rarr; sheets &rarr; panels &rarr; boards</p>
+      <nav class="head-links-nav" aria-label="Site">
+        <a href="/#pipeline">The pipeline</a>
+        <a href="/#gallery">Gallery</a>
+        <a href="/#pricing">Pricing</a>
+      </nav>
       {% if request.state.account_email %}
       <a class="head-account" href="/account" title="Your purchases">
         <img class="head-avatar" src="{{ request.state.account_avatar }}" alt="" referrerpolicy="no-referrer">
@@ -32,7 +36,7 @@
     </div>
   </div>
 </header>
-<main class="wrap">
+<main{% block main_attrs %} class="wrap"{% endblock %}>
 {% block content %}{% endblock %}
 </main>
 <footer class="site-foot">

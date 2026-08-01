@@ -92,9 +92,10 @@ tests: `cd storefront && python -m unittest discover -s tests`.
 Hard boundary: no imports across `app/` ↔ `storefront/`; nothing from
 `data/` or `project_state/` is ever served publicly or packaged into a
 release zip; secrets live only in Railway variables and local shells, never
-in the repo. The storefront mirrors the design language (tokens are copied
-into `storefront/app/static/store.css`) but is a separate surface — it does
-not add rows to DESIGN_SYSTEM.md's Uncanonized table.
+in the repo. Store UI must follow `STORE_DESIGN_SYSTEM.md` (its own binding system:
+imagery-as-argument, motion rules, trait-list pricing, stated gates,
+profession vocabulary, a two-amber page budget). It is a separate surface —
+it does not add rows to the app DESIGN_SYSTEM.md's Uncanonized table.
 
 ## Product model
 
