@@ -26,6 +26,10 @@ DOWNLOAD_FILE = Path(os.environ.get("DOWNLOAD_FILE", ROOT / "releases" / "screen
 # All empty until the operator grants them; the provisioner treats missing
 # config as a stated gate — workspaces queue as PENDING, nothing crashes.
 RAILWAY_API_TOKEN = os.environ.get("RAILWAY_API_TOKEN", "")
+# Preferred: a PROJECT token from the tenants project (Settings → Tokens).
+# Scoped to that project only, and the client resolves project/environment
+# ids from it — one variable configures everything.
+RAILWAY_PROJECT_TOKEN = os.environ.get("RAILWAY_PROJECT_TOKEN", "")
 RAILWAY_API_URL = os.environ.get("RAILWAY_API_URL", "https://backboard.railway.com/graphql/v2")
 RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "")
 RAILWAY_ENVIRONMENT_ID = os.environ.get("RAILWAY_ENVIRONMENT_ID", "")
@@ -34,8 +38,7 @@ TENANT_BRANCH = os.environ.get("TENANT_BRANCH", "main")
 
 
 def railway_configured() -> bool:
-    # ENVIRONMENT_ID is optional — the client resolves "production" itself.
-    return bool(RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID)
+    return bool(RAILWAY_PROJECT_TOKEN or (RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID))
 
 
 # --- Transactional mail (license recovery) --------------------------------

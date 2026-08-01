@@ -23,37 +23,58 @@ class RailwayError(RuntimeError):
     pass
 
 
-_env_id_cache = ""
+_ctx_cache: dict = {}
+
+
+def _project_ctx() -> tuple[str, str]:
+    """(project_id, environment_id). With a project token both come from
+    the token itself (query { projectToken }); with an account token the
+    project id is configured and the environment resolves to "production"
+    (or the only one). Nobody digs ids out of Railway's UI."""
+    if _ctx_cache:
+        return _ctx_cache["project"], _ctx_cache["environment"]
+    if settings.RAILWAY_PROJECT_TOKEN:
+        data = _gql("query { projectToken { projectId environmentId } }", {})
+        tok = data.get("projectToken") or {}
+        if not tok.get("projectId"):
+            raise RailwayError("project token did not resolve to a project")
+        _ctx_cache.update(project=tok["projectId"],
+                          environment=tok["environmentId"])
+    else:
+        project = settings.RAILWAY_PROJECT_ID
+        env = settings.RAILWAY_ENVIRONMENT_ID
+        if not env:
+            data = _gql(
+                """query($projectId: String!) {
+                     environments(projectId: $projectId) {
+                       edges { node { id name } } } }""",
+                {"projectId": project})
+            nodes = [e["node"] for e in data["environments"]["edges"]]
+            if not nodes:
+                raise RailwayError("the tenants project has no environments")
+            env = next((n["id"] for n in nodes if n["name"] == "production"),
+                       nodes[0]["id"])
+        _ctx_cache.update(project=project, environment=env)
+    return _ctx_cache["project"], _ctx_cache["environment"]
+
+
+def project_id() -> str:
+    return _project_ctx()[0]
 
 
 def environment_id() -> str:
-    """The tenants environment: the configured id when given, else resolved
-    once from the API — "production" by name, or the project's only
-    environment. Nobody should have to dig an id out of Railway's UI."""
-    global _env_id_cache
-    if settings.RAILWAY_ENVIRONMENT_ID:
-        return settings.RAILWAY_ENVIRONMENT_ID
-    if _env_id_cache:
-        return _env_id_cache
-    data = _gql(
-        """query($projectId: String!) {
-             environments(projectId: $projectId) {
-               edges { node { id name } } } }""",
-        {"projectId": settings.RAILWAY_PROJECT_ID})
-    nodes = [e["node"] for e in data["environments"]["edges"]]
-    if not nodes:
-        raise RailwayError("the tenants project has no environments")
-    chosen = next((n for n in nodes if n["name"] == "production"), nodes[0])
-    _env_id_cache = chosen["id"]
-    return _env_id_cache
+    return _project_ctx()[1]
 
 
 def _gql(query: str, variables: dict) -> dict:
+    if settings.RAILWAY_PROJECT_TOKEN:
+        auth_headers = {"Project-Access-Token": settings.RAILWAY_PROJECT_TOKEN}
+    else:
+        auth_headers = {"Authorization": f"Bearer {settings.RAILWAY_API_TOKEN}"}
     req = urllib.request.Request(
         settings.RAILWAY_API_URL,
         data=json.dumps({"query": query, "variables": variables}).encode(),
-        headers={"Content-Type": "application/json",
-                 "Authorization": f"Bearer {settings.RAILWAY_API_TOKEN}"})
+        headers={"Content-Type": "application/json", **auth_headers})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             out = json.loads(r.read().decode())
@@ -72,7 +93,7 @@ def create_service(name: str) -> str:
         """mutation($input: ServiceCreateInput!) {
              serviceCreate(input: $input) { id } }""",
         {"input": {
-            "projectId": settings.RAILWAY_PROJECT_ID,
+            "projectId": project_id(),
             "name": name,
             "source": {"repo": settings.TENANT_REPO},
             "branch": settings.TENANT_BRANCH,
@@ -96,7 +117,7 @@ def upsert_variables(service_id: str, variables: dict[str, str]) -> None:
         """mutation($input: VariableCollectionUpsertInput!) {
              variableCollectionUpsert(input: $input) }""",
         {"input": {
-            "projectId": settings.RAILWAY_PROJECT_ID,
+            "projectId": project_id(),
             "environmentId": environment_id(),
             "serviceId": service_id,
             "variables": variables,
@@ -108,7 +129,7 @@ def create_volume(service_id: str, mount_path: str) -> str:
         """mutation($input: VolumeCreateInput!) {
              volumeCreate(input: $input) { id } }""",
         {"input": {
-            "projectId": settings.RAILWAY_PROJECT_ID,
+            "projectId": project_id(),
             "environmentId": environment_id(),
             "serviceId": service_id,
             "mountPath": mount_path,

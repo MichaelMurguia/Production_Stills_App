@@ -68,7 +68,8 @@ serve internal data from the storefront.
 | `BASE_URL` | Public URL of the storefront, no trailing slash |
 | `DATABASE_URL` | Injected by Railway Postgres; local default SQLite |
 | `DOWNLOAD_FILE` | Optional override for the release zip path |
-| `RAILWAY_API_TOKEN` | Railway API token the provisioner uses to create tenant services (see provisioning setup) |
+| `RAILWAY_PROJECT_TOKEN` | PREFERRED — a project token from the tenants project (Settings → Tokens). Scoped to that project only; project/environment ids resolve from it, so nothing else is needed |
+| `RAILWAY_API_TOKEN` | Alternative: account token (Bearer auth); requires `RAILWAY_PROJECT_ID` too |
 | `RAILWAY_PROJECT_ID` | Railway project that holds tenant workspaces (recommend a dedicated "screenboard-tenants" project) |
 | `RAILWAY_ENVIRONMENT_ID` | OPTIONAL — auto-resolved ("production" by name, else the only environment); set only to override |
 | `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |

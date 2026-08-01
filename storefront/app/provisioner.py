@@ -20,7 +20,8 @@ from . import db, railway as railway_client, settings
 MOUNT_PATH = "/workspace"
 START_COMMAND = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 NOT_CONFIGURED = ("Railway provisioning is not configured — set "
-                  "RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID")
+                  "RAILWAY_PROJECT_TOKEN (from the tenants project's "
+                  "Settings → Tokens)")
 
 
 def ensure_workspace_row(s, purchase: db.Purchase) -> db.Workspace:
