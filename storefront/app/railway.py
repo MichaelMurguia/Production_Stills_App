@@ -258,21 +258,30 @@ def list_deployments(service_id: str, limit: int = 3) -> list[dict]:
             (data.get("deployments") or {}).get("edges", [])]
 
 
-def deploy_latest(service_id: str) -> None:
-    """Build and deploy the service from the CURRENT head of its connected
-    repo — the fleet-update primitive ("updates land the day they ship").
-    serviceInstanceRedeploy reuses the existing build, so it cannot move a
-    tenant to a new commit; serviceInstanceDeploy builds fresh. Falls back
-    to redeploy if Railway ever drops the mutation."""
-    try:
+def deploy_latest(service_id: str, commit_sha: str = "") -> None:
+    """Build and deploy the service at commit_sha — the fleet-update
+    primitive ("updates land the day they ship"). Without an explicit
+    sha, Railway rebuilds the commit the service is PINNED to (observed
+    live 2026-08-01: a fleet update 'succeeded' by rebuilding the
+    day-one commit), so the caller passes the released sha — normally
+    the storefront's own RAILWAY_GIT_COMMIT_SHA, since storefront and
+    tenants deploy from the same repo and branch."""
+    variables: dict = {"environmentId": environment_id(),
+                       "serviceId": service_id}
+    if commit_sha:
         _gql(
-            """mutation($environmentId: String!, $serviceId: String!) {
+            """mutation($environmentId: String!, $serviceId: String!,
+                        $commitSha: String) {
                  serviceInstanceDeploy(environmentId: $environmentId,
-                                       serviceId: $serviceId) }""",
-            {"environmentId": environment_id(),
-             "serviceId": service_id})
-    except RailwayError:
-        redeploy(service_id)
+                                       serviceId: $serviceId,
+                                       commitSha: $commitSha) }""",
+            {**variables, "commitSha": commit_sha})
+        return
+    _gql(
+        """mutation($environmentId: String!, $serviceId: String!) {
+             serviceInstanceDeploy(environmentId: $environmentId,
+                                   serviceId: $serviceId) }""",
+        variables)
 
 
 def delete_service(service_id: str) -> None:

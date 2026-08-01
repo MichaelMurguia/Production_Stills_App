@@ -181,7 +181,9 @@ def update_tenants(railway=railway_client) -> dict:
     services otherwise stay frozen on the build they were provisioned
     with. Per-service failures are recorded, never raised; a studio that
     misses an update catches it on the next run."""
-    out = {"updated": [], "failed": []}
+    import os
+    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
+    out = {"updated": [], "failed": [], "commit": sha}
     if not settings.railway_configured():
         return out
     with db.session() as s:
@@ -191,7 +193,7 @@ def update_tenants(railway=railway_client) -> dict:
             if not ws.railway_service_id:
                 continue
             try:
-                railway.deploy_latest(ws.railway_service_id)
+                railway.deploy_latest(ws.railway_service_id, sha)
                 out["updated"].append(ws.subdomain or ws.railway_service_id)
             except Exception as e:
                 ws.detail = f"update failed, will retry: {str(e)[:400]}"

@@ -77,8 +77,9 @@ class FakeRailway:
     def delete_service(self, service_id):
         self._hit("delete_service")
 
-    def deploy_latest(self, service_id):
+    def deploy_latest(self, service_id, commit_sha=""):
         self._hit("deploy_latest")
+        self.last_deploy_sha = commit_sha
 
 
 def configure_railway(on=True):
