@@ -62,7 +62,7 @@ serve internal data from the storefront.
 | `STRIPE_SECRET_KEY` | Stripe API key (test key until launch) |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for the webhook endpoint |
 | `STRIPE_PRICE_DOWNLOAD_PERSONAL` | Price ID, one-time, "Screenboard Studio Download Personal" ($119) |
-| `STRIPE_PRICE_DOWNLOAD_BUSINESS` | Price ID, one-time, "Screenboard Studio Downloadable Business" ($249.99) |
+| `STRIPE_PRICE_DOWNLOAD_BUSINESS` | Price ID, one-time, "Screenboard Studio Download Business" ($249.99) |
 | `STRIPE_PRICE_CLOUD_PERSONAL` | Price ID, monthly, "Screenboard Studio Cloud Personal" ($9.99/mo) |
 | `STRIPE_PRICE_CLOUD_BUSINESS` | Price ID, monthly, "Screenboard Studio Cloud Business" ($29.99/mo) |
 | `BASE_URL` | Public URL of the storefront, no trailing slash |
