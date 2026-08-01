@@ -44,6 +44,26 @@ jobs:
         working-directory: storefront
         run: python -c "from app.main import app; print('storefront imports clean')"
 
+  # A stale release zip silently sells old product: regenerate the archive
+  # from HEAD and require the staged zip's contents to match, file by file.
+  # Red here = run the restage command in the error message and push.
+  release-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Staged release zip must match HEAD
+        run: |
+          git archive -o /tmp/fresh.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
+          mkdir /tmp/fresh /tmp/staged
+          unzip -q /tmp/fresh.zip -d /tmp/fresh
+          unzip -q storefront/releases/screenboard-studio.zip -d /tmp/staged
+          if ! diff -r /tmp/fresh /tmp/staged > /tmp/zipdiff.txt 2>&1; then
+            echo "::error::storefront/releases/screenboard-studio.zip is STALE — restage and push: git archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md"
+            head -40 /tmp/zipdiff.txt
+            exit 1
+          fi
+          echo "release zip matches HEAD"
+
   # Post-deploy verification (main only): Railway deploys every push to
   # main, so after the suites pass we wait for /healthz to serve THIS
   # commit, then probe the public pages. A red job here = the site is down

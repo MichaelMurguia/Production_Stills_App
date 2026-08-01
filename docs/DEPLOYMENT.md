@@ -160,7 +160,9 @@ The zip must never include user canon: `data/`, `project_state/`,
 of these are untracked/gitignored (2026-07-31), so neither the zip nor
 tenant deploy images can contain Beltminer work; cloud workspaces start
 empty and fill only from their own volume. **Restage the zip after every
-release of `app/` features** — a stale zip silently ships old product.
+release of `app/` features** — a stale zip silently ships old product; the
+CI `release-zip` job enforces this by diffing the staged zip against HEAD
+and going red with the restage command when they drift.
 
 ## Local development
 
