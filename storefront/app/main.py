@@ -104,15 +104,22 @@ def _fulfill(checkout_session) -> db.Purchase:
 
 @app.get("/success")
 def success(request: Request, session_id: str = ""):
-    if not session_id:
-        return RedirectResponse("/")
-    checkout_session = stripe.checkout.Session.retrieve(session_id)
-    if checkout_session.payment_status not in ("paid", "no_payment_required"):
+    # TEMP DIAGNOSTIC — remove after sandbox debugging: surfaces the traceback
+    # instead of a bare 500 so the failure is visible without log access.
+    try:
+        if not session_id:
+            return RedirectResponse("/")
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
+        if checkout_session.payment_status not in ("paid", "no_payment_required"):
+            return templates.TemplateResponse(request, "success.html",
+                                              {"state": "PENDING", "purchase": None})
+        purchase = _fulfill(checkout_session)
         return templates.TemplateResponse(request, "success.html",
-                                          {"state": "PENDING", "purchase": None})
-    purchase = _fulfill(checkout_session)
-    return templates.TemplateResponse(request, "success.html",
-                                      {"state": "PAID", "purchase": purchase})
+                                          {"state": "PAID", "purchase": purchase})
+    except Exception:
+        import traceback
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(traceback.format_exc(), status_code=500)
 
 
 @app.get("/download/{token}")
