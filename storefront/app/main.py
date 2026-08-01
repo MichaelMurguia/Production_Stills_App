@@ -117,6 +117,12 @@ def index(request: Request):
     })
 
 
+@app.get("/pipeline")
+def pipeline(request: Request):
+    """The method page — static marketing, no data dependencies."""
+    return templates.TemplateResponse(request, "pipeline.html", {})
+
+
 @app.get("/checkout/{plan}")
 def checkout(plan: str):
     if plan not in PLANS:

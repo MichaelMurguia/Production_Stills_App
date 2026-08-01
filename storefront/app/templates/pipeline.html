@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}The pipeline — Screenboard Studio{% endblock %}
+{% block main_attrs %}{% endblock %}
+{% block content %}
+
+<!-- /pipeline (STORE_PIPELINE_PLAN 2026-08-01). Every artifact and number
+     on this page is from the real Beltminers production record — where the
+     design mock's placeholder figures disagreed with the record, the
+     record won (STORE_DESIGN_SYSTEM §6: keep the numbers true). -->
+
+<section class="pl-hero">
+  <div class="wrap pl-hero-row">
+    <div>
+      <p class="kicker">THE METHOD</p>
+      <h1>How a screenplay<br>becomes a board.</h1>
+      <p class="pl-hero-sub">Five stages, each gated on the one before it.
+      Every artifact below came out of a real production of
+      <em>The Beltminers</em> &mdash; nothing on this page is a diagram.</p>
+    </div>
+    <p class="pl-hero-figs mono">124 PAGES READ<br>6 DESIGN LANGUAGES<br>7 PANELS APPROVED<br>1 BOARD ASSEMBLED</p>
+  </div>
+</section>
+
+<div class="wrap pl-walk">
+  <nav class="pl-rail" aria-label="On this page">
+    <div class="pl-rail-inner">
+      <p class="pl-rail-head mono">ON THIS PAGE</p>
+      <a class="pl-rail-item mono" href="#s1" data-s="s1">01 SCREENPLAY</a>
+      <a class="pl-rail-item mono" href="#s2" data-s="s2">02 PROD. DESIGN</a>
+      <a class="pl-rail-item mono" href="#s3" data-s="s3">03 BREAKDOWN</a>
+      <a class="pl-rail-item mono" href="#s4" data-s="s4">04 PANELS</a>
+      <a class="pl-rail-item mono" href="#s5" data-s="s5">05 BOARD</a>
+      <div class="pl-rail-div"></div>
+      <a class="pl-rail-item mono" href="#casefile" data-s="casefile">CASE FILE</a>
+    </div>
+  </nav>
+
+  <div class="pl-stages">
+
+    <!-- 01 — Screenplay -->
+    <section class="pl-stage" id="s1">
+      <div class="pl-head">
+        <span class="pl-num mono">01</span>
+        <div>
+          <h2>Screenplay</h2>
+          <p class="pl-para">The draft is read end to end &mdash; not skimmed
+          for keywords. It comes back with the film's design languages, its
+          environments, its locations, its cast, and an honest list of what
+          the script never settles.</p>
+        </div>
+      </div>
+      <div class="pl-art pl-split">
+        <div class="pl-doc mono">
+          <p class="scr-slug">EXT. CHARLIE'S CABIN - DUSK</p>
+          <p class="scr-act">A shack framed from salvage timber. Solar<br>
+          panels lean against the porch rail. Inside<br>
+          the open bay, something long and low waits<br>
+          under a canvas tarp.</p>
+          <p class="scr-act">Asteroids drift across the darkening sky.</p>
+          <p class="scr-char">CHARLIE</p>
+          <p class="scr-dlg">You gonna stand there all night,<br>
+          or you gonna help me get her<br>running?</p>
+        </div>
+        <div class="pl-found">
+          <p class="pl-found-head mono">THE READ FOUND</p>
+          <p class="pl-found-line mono"><strong>6 DESIGN LANGUAGES</strong> &middot; <span class="c-hold">OF 9 PROPOSED</span></p>
+          <p class="pl-found-line mono"><strong>5 ENVIRONMENTS</strong> <span class="c-faint">WILDERNESS &middot; ENCLAVES &middot; GRM &middot; GENETICS &middot; ORBITAL</span></p>
+          <p class="pl-found-line mono"><strong>20 KEY LOCATIONS</strong></p>
+          <p class="pl-found-line mono"><strong>44 CAST, VEHICLES AND PROPS</strong></p>
+          <p class="pl-found-line mono"><strong>10 OPEN VISUAL QUESTIONS</strong></p>
+          <p class="pl-found-note">The open questions aren't a failure &mdash;
+          they're the interview. Your answers become the art direction
+          bible.</p>
+        </div>
+      </div>
+      <div class="pl-notes">
+        <div class="pl-note n-gate">
+          <p class="pl-note-k mono">THE GATE</p>
+          <p>Everything downstream cites this file. Replace the draft and
+          existing work keeps its citations &mdash; anything broken surfaces
+          for review.</p>
+        </div>
+        <div class="pl-note n-hold">
+          <p class="pl-note-k mono">WHAT PROPOSED MEANS</p>
+          <p>The read proposed nine design languages; three were duplicates
+          or noise. It proposes; it never adds itself. You confirm, rename,
+          or drop.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 — Production design -->
+    <section class="pl-stage" id="s2">
+      <div class="pl-head">
+        <span class="pl-num mono">02</span>
+        <div>
+          <h2>Production design</h2>
+          <p class="pl-para">You set the look once, in one document. Style
+          plates are given narrow jurisdictions &mdash; a cinematography
+          plate governs contrast and tonal depth, and is explicitly
+          forbidden from dictating a scene's hour or hue. Every render
+          afterwards obeys the bible.</p>
+        </div>
+      </div>
+      <div class="pl-art pl-bible">
+        <div class="pl-art-head mono"><span>ART DIRECTION BIBLE &middot; LOOKBOOK</span><span class="pl-badge b-ok">3 PLATES SET</span></div>
+        <div class="pl-bible-body">
+          <h3>Cinematography</h3>
+          <p class="juris mono"><span class="j-ok">CONTROLS</span> contrast &middot; tonal depth &middot; naturalism</p>
+          <p class="juris mono"><span class="j-bad">NEVER</span> a panel's hour or hue &mdash; set dawn, dusk and night separately</p>
+          <div class="pl-plates">
+            <figure><img src="/static/img/ref-0009.jpg" alt="Cinematography plate REF-0009" loading="lazy"><figcaption class="mono">REF-0009 <span class="inuse">IN USE</span></figcaption></figure>
+            <figure><img src="/static/img/ref-0010.jpg" alt="Cinematography plate REF-0010" loading="lazy"><figcaption class="mono">REF-0010 <span class="inuse">IN USE</span></figcaption></figure>
+            <figure><img src="/static/img/ref-0011.jpg" alt="Cinematography plate REF-0011" loading="lazy"><figcaption class="mono">REF-0011 <span class="inuse">IN USE</span></figcaption></figure>
+          </div>
+          <p class="pl-langs-head mono">DESIGN LANGUAGES SET BY THIS BIBLE</p>
+          <div class="pl-chips mono">
+            <span class="pl-chip">POST-FALL FRONTIER</span>
+            <span class="pl-chip">GRM ORDER</span>
+            <span class="pl-chip">BELTMINER &amp; TERRA NOVA</span>
+            <span class="pl-chip">GENETICS</span>
+            <span class="pl-chip">SKINNERS</span>
+            <span class="pl-chip">RESISTANCE</span>
+          </div>
+        </div>
+      </div>
+      <div class="pl-notes">
+        <div class="pl-note n-gate">
+          <p class="pl-note-k mono">THE GATE</p>
+          <p>No bible, no consistent look. Every prompt the app compiles
+          draws its rendering language from this document &mdash; you never
+          retype a style note.</p>
+        </div>
+        <div class="pl-note n-amber">
+          <p class="pl-note-k mono">WHY JURISDICTIONS</p>
+          <p>A reference left unbounded leaks. Naming what a plate does
+          <em>not</em> control is what keeps a dusk plate from turning every
+          scene to dusk.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 — Breakdown -->
+    <section class="pl-stage" id="s3">
+      <div class="pl-head">
+        <span class="pl-num mono">03</span>
+        <div>
+          <h2>Breakdown</h2>
+          <p class="pl-para">The script breakdown, done in software. Each
+          scene is decomposed by element &mdash; set, set dressing, props,
+          picture vehicles, atmosphere &mdash; and every element carries the
+          line of script that permits it. Nothing enters a render that
+          can't say where it came from.</p>
+        </div>
+      </div>
+      <div class="pl-art pl-sheet">
+        <div class="pl-art-head mono"><span>CHARLIES_CABIN_V001&ensp;SCENE 14</span><span class="pl-badge">LOCKED</span></div>
+        <div class="pl-sheet-cols">
+          <div class="pl-excerpt mono">
+            <p>A shack framed from
+            <mark>salvage timber</mark>. <mark>Solar
+            panels</mark> lean against
+            the <mark>porch rail</mark>. Inside
+            the open bay,
+            <mark>something long and
+            low</mark> waits under a
+            <mark>canvas tarp</mark>.</p>
+          </div>
+          <div class="pl-table mono">
+            <div class="pl-row pl-row-head"><span>ID</span><span>ELEMENT</span><span>CATEGORY</span><span>EVIDENCE</span></div>
+            <div class="pl-row"><span>P02-01</span><strong>ISOLATED SALVAGED SHACK</strong><span>SET</span><span><span class="c-ok">PASS</span> SCRIPT p.44</span></div>
+            <div class="pl-row"><span>P02-02</span><strong>HAMMERED SCRAP SIDING</strong><span>SET DRESSING</span><span><span class="c-ok">PASS</span> SCRIPT p.44</span></div>
+            <div class="pl-row"><span>P02-03</span><strong>TARPED VEHICLE IN THE BAY</strong><span>PICTURE VEHICLE</span><span><span class="c-ok">PASS</span> SCRIPT p.44</span></div>
+            <div class="pl-row"><span>P02-04</span><strong>LANTERN LIGHT, THIN SMOKE</strong><span>ATMOSPHERE</span><span><span class="c-ok">PASS</span> SCRIPT p.44</span></div>
+            <div class="pl-row"><span>P02-05</span><strong>ASTEROID CHUNKS, DUSK SKY</strong><span>ATMOSPHERE</span><span><span class="c-ok">PASS</span> SCRIPT p.44</span></div>
+            <div class="pl-row"><span>P02-06</span><strong>ANIMAL HIDES</strong><span>SET DRESSING</span><span><span class="c-hold">HOLD</span> INFERENCE</span></div>
+          </div>
+        </div>
+        <p class="pl-forbidden mono">FORBIDDEN &mdash; NEIGHBORING HOUSES &middot; MAINTAINED MODERN ROADS &middot; UNSUPPORTED VEHICLES &middot; FACTION SYMBOLS</p>
+      </div>
+      <div class="pl-notes">
+        <div class="pl-note n-gate">
+          <p class="pl-note-k mono">THE GATE</p>
+          <p>A sheet can't lock while a required element lacks evidence
+          &mdash; and only a locked sheet can render. You see the unmet
+          condition before you spend anything.</p>
+        </div>
+        <div class="pl-note n-hold">
+          <p class="pl-note-k mono">WHAT HOLD MEANS</p>
+          <p>The read inferred it. It is never allowed to promote its own
+          guess &mdash; you accept the inference or cut the element.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 — Panels -->
+    <section class="pl-stage" id="s4">
+      <div class="pl-head">
+        <span class="pl-num mono">04</span>
+        <div>
+          <h2>Panels</h2>
+          <p class="pl-para">Concept panels render against the approved
+          references and are judged one at a time, at full size, with their
+          provenance beside them. A rejection isn't lost work &mdash; its
+          reason rides along on every future take of that panel.</p>
+        </div>
+      </div>
+      <div class="pl-art pl-panelart">
+        <div class="pl-panel-main">
+          <img src="/static/img/web/cand-0042-w1400.jpg" alt="Approved concept panel — Charlie's shack in the meadow at dusk" loading="lazy">
+          <p class="pl-facts mono"><strong>CAND-0042 &mdash; P02 SHACK IN THE MEADOW</strong> <span class="c-faint">3136&times;1344</span><span class="pl-badge b-ok pl-facts-badge">APPROVED</span></p>
+          <div class="pl-takes">
+            <span class="pl-takes-k mono">TAKES</span>
+            <img class="take" src="/static/img/web/cand-0030-t320.jpg" alt="Superseded take CAND-0030" loading="lazy">
+            <img class="take" src="/static/img/web/cand-0031-t320.jpg" alt="Superseded take CAND-0031" loading="lazy">
+            <img class="take" src="/static/img/web/cand-0032-t320.jpg" alt="Superseded take CAND-0032" loading="lazy">
+            <img class="take take-ok" src="/static/img/web/cand-0042-t320.jpg" alt="Approved take CAND-0042" loading="lazy">
+            <span class="pl-takes-note mono">EVERY TAKE STAYS ON RECORD &mdash; REJECTIONS CARRY THEIR REASON</span>
+          </div>
+        </div>
+        <div class="pl-prov mono">
+          <p class="pl-prov-h">PROVENANCE</p>
+          <p>SPEC &mdash; CHARLIES_CABIN_V001</p>
+          <p>LOCKED &mdash; HASH B24A1D99</p>
+          <p>KIND &mdash; REGION REPAIR OF CAND-0040</p>
+          <p>PROMOTED &mdash; REF-0042</p>
+          <p class="pl-prov-h">SCOPE</p>
+          <p>BOARD &mdash; LOCATION</p>
+          <p>SETTING &mdash; INT/EXT &middot; SHACK</p>
+          <p>SCALE &mdash; WIDE</p>
+          <p class="pl-prov-h">CARRIED REJECTIONS</p>
+          <p class="pl-prov-q">"The cabin structure should be large enough
+          to have both living quarters and a shop space &hellip; the GT40
+          inside through an open or cracked large door."</p>
+        </div>
+      </div>
+      <div class="pl-notes">
+        <div class="pl-note n-gate">
+          <p class="pl-note-k mono">THE GATE</p>
+          <p>A take is a candidate, never canon. Nothing reaches a board
+          &mdash; or the reference library &mdash; without your approval.</p>
+        </div>
+        <div class="pl-note n-bad">
+          <p class="pl-note-k mono">NATIVE RESOLUTION</p>
+          <p>Renders are never upressed. A panel smaller than its slot is
+          flagged and regenerated larger, not stretched.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 — Board -->
+    <section class="pl-stage" id="s5">
+      <div class="pl-head">
+        <span class="pl-num mono">05</span>
+        <div>
+          <h2>Board</h2>
+          <p class="pl-para">Approved panels compose onto a true 4K
+          presentation board. Titles, panel captions and the canon block are
+          drawn by the app &mdash; never by the model &mdash; so the type is
+          always correct and always legible at print size.</p>
+        </div>
+      </div>
+      <div class="pl-art pl-boardart">
+        <img src="/static/img/web/board-0001-w1400.jpg" alt="Assembled presentation board — Kyra costume and action study" loading="lazy">
+        <p class="pl-facts mono"><strong>BOARD-0001 &mdash; KYRA COSTUME &amp; ACTION STUDY</strong> <span class="c-faint">5 PANELS&ensp;3840&times;2160</span><span class="pl-facts-right c-faint">TYPOGRAPHY DRAWN BY THE APP, NEVER THE MODEL</span></p>
+      </div>
+      <div class="pl-notes">
+        <div class="pl-note n-gate">
+          <p class="pl-note-k mono">THE GATE</p>
+          <p>Every slot must read OK &mdash; approved, and large enough for
+          its position &mdash; before the board will assemble.</p>
+        </div>
+        <div class="pl-note n-amber">
+          <p class="pl-note-k mono">THE LOOP CLOSES</p>
+          <p>An approved panel can be promoted back into the reference
+          library, so the next scene anchors to work you already signed off
+          on.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- The case file — one scene followed all the way down. -->
+<section class="pl-case" id="casefile">
+  <div class="wrap">
+    <div class="pl-case-head">
+      <div>
+        <p class="kicker">CASE FILE &mdash; SCENE 14</p>
+        <h2>Eleven lines of script.<br>One finished board.</h2>
+        <p class="pl-hero-sub">The same five stages, but one scene followed
+        all the way down &mdash; every artifact below is the same night at
+        Charlie's cabin.</p>
+      </div>
+      <p class="pl-hero-figs mono">THE BELTMINERS<br>EXT. CHARLIE'S CABIN &mdash; DUSK<br>2 NIGHTS &middot; 6 TAKES &middot; 1 APPROVED EXTERIOR</p>
+    </div>
+
+    <div class="pl-case-row">
+      <div class="pl-case-label">
+        <p class="pl-case-k mono">01 &mdash; WHAT WAS WRITTEN</p>
+        <p>The scene as it appears on page 44 of the draft.</p>
+      </div>
+      <div class="pl-doc mono pl-case-doc">
+        <p class="scr-slug">EXT. CHARLIE'S CABIN - DUSK</p>
+        <p class="scr-act">A shack framed from salvage timber. Solar panels<br>
+        lean against the porch rail. Inside the open bay,<br>
+        something long and low waits under a canvas tarp.</p>
+        <p class="scr-act">Asteroids drift across the darkening sky.</p>
+      </div>
+    </div>
+
+    <div class="pl-case-row">
+      <div class="pl-case-label">
+        <p class="pl-case-k mono">02 &mdash; HOW IT WILL BE SHOT</p>
+        <p>Three cinematography plates set contrast and tonal depth. The
+        hour stays the scene's own business.</p>
+      </div>
+      <div class="pl-case-plates">
+        <figure><img src="/static/img/ref-0009.jpg" alt="Cinematography plate REF-0009" loading="lazy"><figcaption class="mono">REF-0009</figcaption></figure>
+        <figure><img src="/static/img/ref-0010.jpg" alt="Cinematography plate REF-0010" loading="lazy"><figcaption class="mono">REF-0010</figcaption></figure>
+        <figure><img src="/static/img/ref-0011.jpg" alt="Cinematography plate REF-0011" loading="lazy"><figcaption class="mono">REF-0011</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="pl-case-row">
+      <div class="pl-case-label">
+        <p class="pl-case-k mono">03 &mdash; WHAT IS IN FRAME</p>
+        <p>Six elements. Five cited to the page; one held as inference,
+        for a human decision.</p>
+      </div>
+      <div class="pl-table mono pl-case-table">
+        <div class="pl-row"><span>P02-01</span><strong>ISOLATED SALVAGED SHACK</strong><span>SET</span><span class="c-ok">PASS</span></div>
+        <div class="pl-row"><span>P02-02</span><strong>HAMMERED SCRAP SIDING</strong><span>SET DRESSING</span><span class="c-ok">PASS</span></div>
+        <div class="pl-row"><span>P02-03</span><strong>TARPED VEHICLE IN THE BAY</strong><span>PICTURE VEHICLE</span><span class="c-ok">PASS</span></div>
+        <div class="pl-row"><span>P02-05</span><strong>ASTEROID CHUNKS, DUSK SKY</strong><span>ATMOSPHERE</span><span class="c-ok">PASS</span></div>
+        <div class="pl-row"><span>P02-06</span><strong>ANIMAL HIDES</strong><span>SET DRESSING</span><span class="c-hold">HOLD</span></div>
+      </div>
+    </div>
+
+    <div class="pl-case-row">
+      <div class="pl-case-label">
+        <p class="pl-case-k mono">04 &mdash; WHAT CAME BACK</p>
+        <p>Six takes on record. CAND-0040 held the meadow; a masked repair
+        &mdash; "Remove those asteroids" &mdash; became CAND-0042.</p>
+        <p class="pl-case-sub mono">CAND-0042 &middot; APPROVED<br>3136&times;1344 &middot; PROMOTED REF-0042</p>
+      </div>
+      <div class="pl-case-img">
+        <img src="/static/img/web/cand-0042-w1400.jpg" alt="Approved concept panel — Charlie's shack in the meadow at dusk" loading="lazy">
+      </div>
+    </div>
+
+    <div class="pl-case-row">
+      <div class="pl-case-label">
+        <p class="pl-case-k mono">05 &mdash; WHAT SHIPPED</p>
+        <p>Composed at true 4K, titled and captioned by the app, and
+        promoted back into the library as a scene anchor.</p>
+      </div>
+      <div class="pl-case-img">
+        <img src="/static/img/web/board-0001-w1400.jpg" alt="Assembled presentation board — Kyra costume and action study" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Closing CTA band -->
+<section class="pl-cta">
+  <div class="wrap pl-cta-row">
+    <p>Every board in your production carries a file like this one.</p>
+    <div class="btn-row">
+      <a class="btn btn-secondary" href="/#gallery">See the gallery</a>
+      <a class="btn btn-primary" href="/#pricing">See pricing</a>
+    </div>
+  </div>
+</section>
+
+<script>
+// Rail tracks reading position. If IntersectionObserver is unavailable
+// the rail simply stays on 01 — the page reads fine either way.
+(() => {
+  const items = [...document.querySelectorAll(".pl-rail-item")];
+  const byId = Object.fromEntries(items.map(a => [a.dataset.s, a]));
+  const set = id => items.forEach(a => a.classList.toggle("on", a.dataset.s === id));
+  set("s1");
+  if (!("IntersectionObserver" in window)) return;
+  const obs = new IntersectionObserver(entries => {
+    const hit = entries.filter(e => e.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (hit && byId[hit.target.id]) set(hit.target.id);
+  }, { rootMargin: "-25% 0px -55% 0px" });
+  ["s1", "s2", "s3", "s4", "s5", "casefile"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

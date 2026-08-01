@@ -18,7 +18,7 @@
     </a>
     <div class="head-side">
       <nav class="head-links-nav" aria-label="Site">
-        <a href="/#pipeline">The pipeline</a>
+        <a href="/pipeline"{% if request.url.path == "/pipeline" %} class="on"{% endif %}>The pipeline</a>
         <a href="/#gallery">Gallery</a>
         <a href="/#pricing">Pricing</a>
       </nav>

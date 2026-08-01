@@ -113,6 +113,14 @@ reader is.
   approved pages actually use. Only fills are capped.
 - **2026-08-01** — `/pipeline` added: the long walk (five stages, sticky
   rail, per-stage gate footnotes) followed by the case file.
+- **2026-08-01** — `/pipeline` implemented per STORE_PIPELINE_PLAN. One
+  correction under §6 (true numbers): the mock's placeholder figures were
+  replaced with the production record's — 124 pages read, 6 design
+  languages (of 9 proposed), 7 panels approved, 1 board assembled; the
+  stage-4 artifact is CAND-0042 (3136×1344, region repair of CAND-0040,
+  promoted REF-0042) with its real carried rejection quoted; the case-file
+  header reads 2 nights · 6 takes · 1 approved exterior. Layout, copy
+  structure and all five concept footnotes follow the mock.
 - **2026-08-01** — Non-canon: reliable-door workspace buttons. On /account
   and /success, "Open your workspace" links the branded address only once
   it provably serves (`domain_live`); until then it links the always-working

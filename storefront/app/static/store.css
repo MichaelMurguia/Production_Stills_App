@@ -206,6 +206,153 @@ body {
   border-top: 1px solid var(--line-soft);
 }
 
+/* ============================== /pipeline (STORE_PIPELINE_PLAN 2026-08-01)
+   Amber per §8 — fill: the CTA band's See pricing; kicker: THE METHOD,
+   CASE FILE, the case-row labels, and the amber concept-note labels;
+   highlight: the breakdown excerpt only; state: the active rail item and
+   the header's active tool. */
+
+.pl-hero { background: var(--bg2); border-bottom: 1px solid var(--line); }
+.pl-hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; padding-top: 56px; padding-bottom: 44px; flex-wrap: wrap; }
+.pl-hero h1 { font-size: 46px; font-weight: 700; letter-spacing: -.03em; line-height: 1.06; margin: 12px 0 16px; }
+.pl-hero-sub { max-width: 52ch; color: var(--ink-dim); font-size: 15px; }
+.pl-hero-sub em { color: var(--ink); font-style: italic; }
+.pl-hero-figs { font-size: 10.5px; letter-spacing: .1em; color: var(--ink-faint); text-align: right; line-height: 2; }
+
+/* the long walk: sticky rail + stage column */
+.pl-walk { display: grid; grid-template-columns: 196px 1fr; gap: 0; padding-left: 0; padding-right: 0; }
+.pl-rail { background: #0d0f12; border-right: 1px solid var(--line); }
+.pl-rail-inner { position: sticky; top: 20px; padding: 28px 0 28px 28px; }
+.pl-rail-head { font-size: 9px; letter-spacing: .18em; color: var(--ink-faint); margin-bottom: 14px; }
+.pl-rail-item {
+  display: block; font-size: 10.5px; letter-spacing: .1em; color: var(--ink-faint);
+  text-decoration: none; padding: 9px 12px 9px 14px;
+  border-left: 2px solid transparent;
+}
+.pl-rail-item:hover { color: var(--ink-dim); }
+.pl-rail-item.on { border-left-color: var(--accent); color: var(--accent); background: var(--panel); }
+.pl-rail-div { border-top: 1px solid var(--line-soft); margin: 16px 14px 16px 0; }
+
+.pl-stages { min-width: 0; }
+.pl-stage { padding: 48px 0 44px 48px; border-top: 1px solid var(--line-soft); max-width: 936px; padding-right: 28px; }
+.pl-stage:first-child { border-top: none; }
+.pl-head { display: grid; grid-template-columns: 64px 1fr; gap: 0; margin-bottom: 26px; }
+.pl-num { font-size: 34px; color: var(--line); letter-spacing: .02em; line-height: 1; padding-top: 4px; }
+.pl-stage h2 { font-size: 27px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 10px; }
+.pl-para { color: var(--ink-dim); font-size: 14.5px; max-width: 62ch; }
+
+.pl-art { border: 1px solid var(--line); background: var(--panel); }
+.pl-art-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid var(--line-soft);
+  font-size: 9.5px; letter-spacing: .1em; color: var(--ink-faint);
+}
+.pl-badge { border: 1px solid var(--line); color: var(--ink-faint); padding: 1px 8px; font-size: 9px; letter-spacing: .08em; }
+.pl-badge.b-ok { border-color: var(--ok); color: var(--ok); }
+
+/* stage 1 — screenplay beside THE READ FOUND */
+.pl-split { display: grid; grid-template-columns: 1fr 1.1fr; background: none; border: none; gap: 16px; }
+.pl-doc { border: 1px solid var(--line); background: var(--bg2); padding: 24px 26px; font-size: 12px; line-height: 1.75; }
+.pl-found { border: 1px solid var(--line); border-left: 2px solid var(--accent); background: var(--bg2); padding: 20px 24px; display: flex; flex-direction: column; }
+.pl-found-head { font-size: 10px; letter-spacing: .18em; color: var(--accent); margin-bottom: 14px; }
+.pl-found-line { font-size: 11.5px; letter-spacing: .04em; color: var(--ink-dim); padding: 3px 0; }
+.pl-found-line strong { color: var(--ink); font-weight: 400; }
+.c-hold { color: #7d8fd0; }
+.c-ok { color: var(--ok); }
+.c-faint { color: var(--ink-faint); }
+.pl-found-note { margin-top: auto; padding-top: 18px; font-size: 12.5px; color: var(--ink-dim); }
+
+/* footnotes — the argument of the page */
+.pl-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 22px; }
+.pl-note { border-left: 2px solid var(--line); padding-left: 16px; }
+.pl-note p { font-size: 12.5px; color: var(--ink-dim); }
+.pl-note-k { font-size: 10px; letter-spacing: .16em; margin-bottom: 6px; }
+.n-gate { border-left-color: var(--ok); }
+.n-gate .pl-note-k { color: var(--ok); }
+.n-hold { border-left-color: #7d8fd0; }
+.n-hold .pl-note-k { color: #7d8fd0; }
+.n-amber { border-left-color: var(--accent); }
+.n-amber .pl-note-k { color: var(--accent); }
+.n-bad { border-left-color: var(--bad); }
+.n-bad .pl-note-k { color: var(--bad); }
+
+/* stage 2 — the bible card */
+.pl-bible-body { padding: 20px 26px; }
+.pl-bible-body h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.pl-plates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0 20px; }
+.pl-plates img { width: 100%; height: 128px; object-fit: cover; display: block; border: 1px solid var(--line-soft); }
+.pl-plates figcaption { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: .06em; color: var(--ink-faint); margin-top: 5px; }
+.pl-langs-head { font-size: 9.5px; letter-spacing: .14em; color: var(--ink-faint); border-top: 1px solid var(--line-soft); padding-top: 16px; margin-bottom: 10px; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-chip { border: 1px solid var(--line); color: var(--ink-dim); font-size: 10px; letter-spacing: .06em; padding: 3px 10px; }
+
+/* stage 3 — the sheet */
+.pl-sheet-cols { display: grid; grid-template-columns: 1fr 1.9fr; }
+.pl-excerpt { padding: 20px 22px; border-right: 1px solid var(--line-soft); font-size: 11.5px; line-height: 1.9; color: var(--ink-dim); }
+.pl-excerpt mark { background: rgba(224, 163, 63, .16); color: var(--accent); padding: 0 2px; }
+.pl-table { padding: 12px 20px 16px; }
+.pl-row { display: grid; grid-template-columns: 62px 1.6fr 1fr .9fr; gap: 10px; font-size: 10.5px; padding: 8px 0; border-top: 1px solid var(--line-soft); color: var(--ink-faint); align-items: baseline; }
+.pl-row:first-child { border-top: none; }
+.pl-row strong { color: var(--ink); font-weight: 400; letter-spacing: .02em; }
+.pl-row-head { font-size: 9px; letter-spacing: .1em; }
+.pl-forbidden { border-top: 1px solid var(--line-soft); padding: 10px 20px; font-size: 9.5px; letter-spacing: .06em; color: var(--ink-faint); }
+
+/* stage 4 — panel + provenance rail */
+.pl-panelart { display: grid; grid-template-columns: 1fr 262px; background: none; border: none; gap: 0; border: 1px solid var(--line); }
+.pl-panel-main { min-width: 0; background: var(--panel); }
+.pl-panel-main > img { width: 100%; display: block; }
+.pl-facts { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line-soft); font-size: 10px; letter-spacing: .06em; color: var(--ink-faint); flex-wrap: wrap; }
+.pl-facts strong { color: var(--ink); font-weight: 400; }
+.pl-facts-badge { margin-left: auto; }
+.pl-facts-right { margin-left: auto; }
+.pl-takes { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+.pl-takes-k { font-size: 9.5px; letter-spacing: .12em; color: var(--ink-faint); }
+.take { width: 86px; height: auto; display: block; opacity: .45; border: 1px solid var(--line-soft); }
+.take-ok { opacity: 1; border-color: var(--ok); }
+.pl-takes-note { font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); max-width: 24ch; line-height: 1.6; }
+.pl-prov { border-left: 1px solid var(--line); padding: 20px 20px; font-size: 10px; letter-spacing: .05em; color: var(--ink-dim); line-height: 1.9; background: var(--bg2); }
+.pl-prov-h { color: var(--ink-faint); letter-spacing: .14em; font-size: 9px; margin-top: 16px; }
+.pl-prov-h:first-child { margin-top: 0; }
+.pl-prov-q { color: var(--ink-faint); line-height: 1.7; margin-top: 4px; }
+
+/* stage 5 — the board */
+.pl-boardart > img { width: 100%; display: block; }
+
+/* the case file — a separate chapter on darker ground */
+.pl-case { background: #0d0f12; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 64px 0 56px; }
+.pl-case-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; margin-bottom: 40px; flex-wrap: wrap; }
+.pl-case h2 { font-size: 38px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin: 12px 0 14px; }
+.pl-case-row { display: grid; grid-template-columns: 240px 1fr; gap: 32px; padding: 30px 0; border-top: 1px solid var(--line-soft); }
+.pl-case-k { font-size: 10px; letter-spacing: .14em; color: var(--accent); margin-bottom: 8px; }
+.pl-case-label p:not(.pl-case-k):not(.pl-case-sub) { font-size: 13px; color: var(--ink-dim); }
+.pl-case-sub { margin-top: 12px; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-faint); line-height: 1.9; }
+.pl-case-doc { font-size: 12px; }
+.pl-case-plates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.pl-case-plates img { width: 100%; height: 128px; object-fit: cover; display: block; border: 1px solid var(--line-soft); }
+.pl-case-plates figcaption { font-size: 9.5px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 6px; }
+.pl-case-table { border: 1px solid var(--line); background: var(--panel); }
+.pl-case-img img { width: 100%; display: block; border: 1px solid var(--line); }
+
+/* closing CTA band */
+.pl-cta { background: var(--bg2); border-bottom: 1px solid var(--line); }
+.pl-cta-row { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding-top: 34px; padding-bottom: 34px; flex-wrap: wrap; }
+.pl-cta-row > p { font-size: 16px; color: var(--ink-dim); }
+
+/* header: the active tool (state role) */
+.head-links-nav a.on { color: var(--ink); border-bottom: 2px solid var(--accent); padding-bottom: 3px; }
+
+@media (max-width: 900px) {
+  .pl-walk { grid-template-columns: 1fr; }
+  .pl-rail { display: none; }
+  .pl-stage { padding-left: 28px; }
+  .pl-split, .pl-sheet-cols, .pl-panelart, .pl-case-row { grid-template-columns: 1fr; }
+  .pl-excerpt { border-right: none; border-bottom: 1px solid var(--line-soft); }
+  .pl-prov { border-left: none; border-top: 1px solid var(--line); }
+  .pl-notes { grid-template-columns: 1fr; }
+  .pl-hero h1 { font-size: 36px; }
+  .pl-hero-figs { text-align: left; }
+}
+
 /* reduced motion: stills stand still, panes hard-cut */
 @media (prefers-reduced-motion: reduce) {
   .wall-a, .wall-b, .wall-c, .strip-row { animation: none; }
