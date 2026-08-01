@@ -189,6 +189,28 @@ def api_create_project(body: dict) -> dict:
     return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
 
 
+@app.post("/api/projects/rename")
+def api_rename_project(body: dict) -> dict:
+    """Rename the ACTIVE screenboard — the name lives in its project.json
+    and shows in the header and the projects list."""
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(422, "give the screenboard a name")
+    base = paths._project_base(paths.ACTIVE_PROJECT)
+    meta_path = base / "project.json"
+    meta = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+    meta["name"] = name
+    base.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    return {"name": name, "active": paths.ACTIVE_PROJECT,
+            "projects": paths.list_projects()}
+
+
 @app.post("/api/projects/activate")
 def api_activate_project(body: dict) -> dict:
     slug = str(body.get("slug", ""))

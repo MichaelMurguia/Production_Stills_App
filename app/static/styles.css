@@ -1246,3 +1246,9 @@ details.meta pre {
   .busy .busy-bar, .busy .spinner { animation: none; }
   * { transition: none !important; }
 }
+
+/* UNCANONIZED — 2026-08-01 — screenboard rename pencil (user-directed):
+   first icon in the product; inline SVG, currentColor, faint→ink hover. */
+.brand-rename { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--ink-faint); vertical-align: middle; margin-left: 6px; }
+.brand-rename:hover { color: var(--ink); }
+.brand-edit { background: var(--field); border: 1px solid var(--line); color: var(--ink); font-family: var(--mono); font-size: 11px; padding: 3px 8px; width: 220px; }

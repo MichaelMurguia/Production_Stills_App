@@ -94,3 +94,24 @@ class ApiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RenameTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-rename-"))
+        _redirect_home(self.tmp)
+        self.client = TestClient(appmain.app)
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_rename_active_screenboard(self):
+        r = self.client.post("/api/projects/rename", json={"name": "Dune But Cheaper"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["name"], "Dune But Cheaper")
+        listed = self.client.get("/api/projects").json()["projects"]
+        self.assertEqual(listed[0]["name"], "Dune But Cheaper")
+        state = self.client.get("/api/state").json()
+        self.assertEqual(state["project"], "Dune But Cheaper")
+        self.assertEqual(self.client.post("/api/projects/rename",
+                                          json={"name": "  "}).status_code, 422)
