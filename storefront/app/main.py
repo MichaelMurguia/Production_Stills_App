@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from . import db, mailer, provisioner, settings
+from . import auth, db, mailer, provisioner, settings
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -21,12 +21,39 @@ db.init_db()
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    """Baseline hardening on every public response."""
+    """Baseline hardening on every public response — and the session read,
+    so every template can render the header account widget."""
+    request.state.account_email = auth.read_session(
+        request.cookies.get(auth.SESSION_COOKIE, ""))
     resp = await call_next(request)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     return resp
+
+
+def _set_session(resp, request: Request, email: str) -> None:
+    resp.set_cookie(auth.SESSION_COOKIE, auth.make_session(email),
+                    max_age=auth.SESSION_DAYS * 86400, httponly=True,
+                    samesite="lax", secure=request.url.scheme == "https")
+
+
+def _login_account(email: str, name: str = "", google_sub: str = "") -> None:
+    """First sign-in creates the account; later ones refresh it. Signup and
+    sign-in deliberately converge — identity is the verified email."""
+    import datetime as dt
+    with db.session() as s:
+        acct = s.scalar(select(db.Account).where(db.Account.email == email))
+        if acct is None:
+            acct = db.Account(email=email, name=name, google_sub=google_sub)
+            s.add(acct)
+        else:
+            if name and not acct.name:
+                acct.name = name
+            if google_sub and not acct.google_sub:
+                acct.google_sub = google_sub
+        acct.last_login_at = dt.datetime.now(dt.timezone.utc)
+        s.commit()
 
 
 @app.on_event("startup")
@@ -184,10 +211,118 @@ def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+def _auth_page(request: Request, mode: str, **ctx):
+    return templates.TemplateResponse(request, "signin.html", {
+        "mode": mode, "google_ready": auth.google_configured(),
+        "mail_ready": mailer.configured(), "sent": False,
+        "error": "", **ctx})
+
+
+@app.get("/signin")
+def signin_page(request: Request):
+    if request.state.account_email:
+        return RedirectResponse("/account")
+    return _auth_page(request, "signin")
+
+
+@app.get("/signup")
+def signup_page(request: Request):
+    if request.state.account_email:
+        return RedirectResponse("/account")
+    return _auth_page(request, "signup")
+
+
+@app.post("/auth/email")
+def auth_email(request: Request, email: str = Form(""), mode: str = Form("signin")):
+    """Send a magic link. Uniform response for any address; creating vs
+    signing in converges at the link — the inbox is the proof."""
+    mode = "signup" if mode == "signup" else "signin"
+    if not mailer.configured():
+        return _auth_page(request, mode)
+    email = email.strip().lower()
+    if email and "@" in email:
+        with db.session() as s:
+            t = db.LoginToken(email=email)
+            s.add(t)
+            s.commit()
+            link = f"{settings.BASE_URL}/auth/verify?token={t.token}"
+        try:
+            mailer.send(email, "Sign in to Screenboard Studio",
+                        "Click to sign in (valid 30 minutes, single use):\n\n"
+                        f"{link}\n\nNot you? Ignore this mail — nothing "
+                        "happens without the link.\n\n— Screenboard Studio")
+        except mailer.MailError as e:
+            print(f"[auth] magic link send failed for {email}: {e}")
+    return _auth_page(request, mode, sent=True)
+
+
+@app.get("/auth/verify")
+def auth_verify(request: Request, token: str = ""):
+    import datetime as dt
+    with db.session() as s:
+        t = s.scalar(select(db.LoginToken).where(db.LoginToken.token == token))
+        if not t or t.used or t.expires_at < dt.datetime.utcnow():
+            return _auth_page(request, "signin",
+                              error="That link is expired or already used — request a fresh one.")
+        t.used = 1
+        email = t.email
+        s.commit()
+    _login_account(email)
+    resp = RedirectResponse("/account", status_code=303)
+    _set_session(resp, request, email)
+    return resp
+
+
+@app.get("/auth/google")
+def auth_google(request: Request):
+    if not auth.google_configured():
+        raise HTTPException(404)
+    return RedirectResponse(auth.google_auth_url(auth.make_state()), status_code=303)
+
+
+@app.get("/auth/google/callback")
+def auth_google_callback(request: Request, code: str = "", state: str = ""):
+    if not auth.google_configured():
+        raise HTTPException(404)
+    if not code or not auth.check_state(state):
+        return _auth_page(request, "signin",
+                          error="Google sign-in didn't complete — try again.")
+    try:
+        ident = auth.google_identity(code)
+    except auth.AuthError as e:
+        return _auth_page(request, "signin", error=str(e))
+    _login_account(ident["email"], ident["name"], ident["sub"])
+    resp = RedirectResponse("/account", status_code=303)
+    _set_session(resp, request, ident["email"])
+    return resp
+
+
+@app.post("/auth/logout")
+def auth_logout():
+    resp = RedirectResponse("/", status_code=303)
+    resp.delete_cookie(auth.SESSION_COOKIE)
+    return resp
+
+
 @app.get("/account")
 def account_page(request: Request):
+    email = request.state.account_email
+    if not email:
+        return templates.TemplateResponse(request, "account.html", {
+            "purchase": None, "missed": False, "purchases": None, "email": None})
+    with db.session() as s:
+        purchases = s.scalars(select(db.Purchase).where(
+            db.Purchase.email == email).order_by(db.Purchase.id.desc())).all()
+        for p in purchases:
+            if p.license:
+                _ = p.license.token
+            if p.workspace:
+                _ = (p.workspace.status, p.workspace.url,
+                     p.workspace.access_token)
+        s.expunge_all()
     return templates.TemplateResponse(request, "account.html", {
-        "purchase": None, "missed": False})
+        "purchase": None, "missed": False, "purchases": purchases,
+        "email": email})
 
 
 @app.post("/account")

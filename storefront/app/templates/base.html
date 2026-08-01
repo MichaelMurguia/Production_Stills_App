@@ -18,7 +18,14 @@
     </div>
     <div class="head-side">
       <p class="head-meta">screenplay &rarr; bible &rarr; sheets &rarr; panels &rarr; boards</p>
-      <a class="btn btn-secondary head-signin" href="/account">Sign in</a>
+      {% if request.state.account_email %}
+      <a class="head-account mono" href="/account" title="Your purchases">{{ request.state.account_email }}</a>
+      <form method="post" action="/auth/logout" class="head-logout">
+        <button class="btn btn-secondary head-signin" type="submit">Sign out</button>
+      </form>
+      {% else %}
+      <a class="btn btn-secondary head-signin" href="/signin">Sign in</a>
+      {% endif %}
     </div>
   </div>
 </header>

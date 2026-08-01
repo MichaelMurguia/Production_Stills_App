@@ -44,6 +44,13 @@ SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "")
 
+# --- Accounts (passwordless: magic links + Google OIDC) -------------------
+# SESSION_SECRET unset → per-boot ephemeral secret (sessions reset on each
+# deploy; set it in production). Google vars unset → the button hides.
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+
 # --- Entitlement-data export (operator backup) ----------------------------
 # Unset = the endpoint does not exist (404). Long random value; treat like
 # the Stripe secret key.

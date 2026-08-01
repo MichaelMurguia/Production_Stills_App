@@ -98,8 +98,8 @@ class AccountTests(unittest.TestCase):
 
     def test_signin_page_and_header_widget(self):
         self.assertEqual(self.client.get("/account").status_code, 200)
-        self.assertIn('href="/account"', self.client.get("/").text,
-                      "the header must carry the sign-in widget")
+        self.assertIn('href="/signin"', self.client.get("/").text,
+                      "the signed-out header must carry the sign-in widget")
 
     def test_license_token_signs_in(self):
         p = _fulfill(dl_session("cs_acct_1", "acct@example.com"))

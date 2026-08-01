@@ -77,6 +77,36 @@ class Workspace(Base):
     purchase: Mapped[Purchase] = relationship(back_populates="workspace")
 
 
+class Account(Base):
+    """A store account — identity is a verified email (Google OIDC or a
+    consumed magic link). No passwords exist anywhere in this system.
+    Purchases link by email; the account is a viewing lens, the purchase
+    row remains the entitlement truth."""
+
+    __tablename__ = "accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    google_sub: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
+    last_login_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
+
+
+class LoginToken(Base):
+    """One magic link: single-use, 30-minute expiry. Naive-UTC datetimes
+    throughout (SQLite drops tzinfo; comparisons stay consistent)."""
+
+    __tablename__ = "login_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320))
+    token: Mapped[str] = mapped_column(String(64), unique=True, default=lambda: secrets.token_urlsafe(24))
+    expires_at: Mapped[dt.datetime] = mapped_column(
+        DateTime, default=lambda: dt.datetime.utcnow() + dt.timedelta(minutes=30))
+    used: Mapped[int] = mapped_column(Integer, default=0)
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     # create_all never adds columns to tables that already exist; patch the
