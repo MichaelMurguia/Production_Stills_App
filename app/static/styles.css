@@ -794,6 +794,7 @@ details.meta pre {
 }
 .block-kind.HOLD { color: var(--hold); border-color: var(--hold); }
 .block-kind.GAP, .block-kind.SIZE, .block-kind.CITE { color: var(--bad); border-color: var(--bad); }
+.block-kind.CARE { color: var(--warn); border-color: var(--warn); }  /* advisory — backup reminders */
 .block-text { flex: 1; font-size: 13px; color: var(--ink); min-width: 0; }
 .block-text .mono-id { font-family: var(--mono); font-size: 12px; }
 .block-act {

@@ -11,7 +11,9 @@ import re
 
 from . import activity, generate, paths, store
 
-CITATION_REPORT = paths.DATA / "citation_report.json"
+def _citation_report_path():
+    # Computed per call — paths.DATA moves with the active project.
+    return paths.DATA / "citation_report.json"
 
 STYLE_ANCHOR_ROLES = {"BOARD_LAYOUT_STYLE", "BOARD_RENDERING_STYLE",
                       "CINEMATOGRAPHY_STYLE"}
@@ -129,6 +131,24 @@ def blocking() -> list[dict]:
                 "kind": "CITE", "spec_id": sid, "action": "specs",
                 "text": f"{n} cited quote(s) from {sid} no longer found in "
                         f"{rep.get('screenplay', 'the current screenplay')}",
+            })
+
+    # Backup reminder — advisory, always last so it never outranks real
+    # blockers. Only projects with content deserve the nag.
+    if app_state.get("screenplay") or specs:
+        from . import backup
+        days = backup.days_since_backup(paths.ACTIVE_PROJECT)
+        if days is None:
+            out.append({
+                "kind": "CARE", "action": "settings",
+                "text": "This project has never been backed up — download a "
+                        "backup zip from Settings › Projects",
+            })
+        elif days >= 7:
+            out.append({
+                "kind": "CARE", "action": "settings",
+                "text": f"Last backup {days} days ago — download a fresh one "
+                        "from Settings › Projects",
             })
     return out
 
@@ -311,9 +331,9 @@ def _friendly_event(e: dict) -> dict | None:
 
 
 def recent_activity(limit: int = 10) -> list[dict]:
-    if not activity.LOG.exists():
+    if not activity._log_path().exists():
         return []
-    lines = activity.LOG.read_text(encoding="utf-8").splitlines()[-500:]
+    lines = activity._log_path().read_text(encoding="utf-8").splitlines()[-500:]
     events: list[dict] = []
     for ln in reversed(lines):
         try:
@@ -576,15 +596,15 @@ def citation_check() -> dict:
 
 
 def _save_citation_report(report: dict) -> None:
-    CITATION_REPORT.write_text(
+    _citation_report_path().write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8")
 
 
 def load_citation_report() -> dict | None:
-    if not CITATION_REPORT.exists():
+    if not _citation_report_path().exists():
         return None
     try:
-        return json.loads(CITATION_REPORT.read_text(encoding="utf-8"))
+        return json.loads(_citation_report_path().read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return None

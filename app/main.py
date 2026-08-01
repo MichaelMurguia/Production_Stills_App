@@ -10,7 +10,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 from fastapi.staticfiles import StaticFiles
 
-from . import activity, assemble, autofill, bible, generate, insights, paths, store, wizard
+from . import (activity, assemble, autofill, backup, bible, generate,
+               insights, paths, store, wizard)
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -52,6 +53,17 @@ document.getElementById("f").onsubmit = async e => {
 
 
 @app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Baseline hardening on every response — the app is an app, never a
+    document to embed or sniff."""
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    return resp
+
+
+@app.middleware("http")
 async def workspace_auth(request: Request, call_next):
     if not ACCESS_TOKEN or request.url.path in _AUTH_EXEMPT:
         return await call_next(request)
@@ -74,6 +86,8 @@ def api_login(body: dict, request: Request):
     if not ACCESS_TOKEN:
         raise HTTPException(404)
     if not hmac.compare_digest(str(body.get("token", "")), ACCESS_TOKEN):
+        import time
+        time.sleep(0.5)  # keep online guessing expensive (sync route → threadpool)
         raise HTTPException(401, "wrong token")
     resp = JSONResponse({"ok": True})
     resp.set_cookie("sb_session", ACCESS_TOKEN, max_age=30 * 24 * 3600,
@@ -95,7 +109,37 @@ def api_healthz():
 
 @app.get("/api/projects")
 def api_list_projects() -> dict:
-    return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
+    projects = paths.list_projects()
+    for p in projects:
+        p["last_backup_at"] = backup.last_backup_at(p["slug"])
+        p["days_since_backup"] = backup.days_since_backup(p["slug"])
+    return {"active": paths.ACTIVE_PROJECT, "projects": projects}
+
+
+@app.get("/api/projects/backup")
+def api_backup_project(slug: str = "") -> Response:
+    """One zip of one project — screenplay, bible, references, sheets,
+    boards, approvals. API keys are never included."""
+    try:
+        payload, filename = backup.make_backup(slug)
+    except KeyError as e:
+        raise _err(e)
+    return Response(payload, media_type="application/zip",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="{filename}"'})
+
+
+@app.post("/api/projects/restore")
+async def api_restore_project(file: UploadFile = File(...)) -> dict:
+    """Restore a backup zip as a NEW project — existing projects are never
+    touched; switch to it from the list when ready."""
+    payload = await file.read()
+    try:
+        restored = await run_in_threadpool(backup.restore_backup, payload)
+    except backup.BackupError as e:
+        raise HTTPException(422, str(e))
+    return {**restored, "active": paths.ACTIVE_PROJECT,
+            "projects": paths.list_projects()}
 
 
 def _switch_project(slug: str) -> None:
@@ -784,7 +828,10 @@ def api_purge_rejected(spec_id: str) -> dict:
 
 @app.get("/api/specs/{spec_id}/candidates/{cand_id}/image")
 def api_candidate_image(spec_id: str, cand_id: str):
-    p = generate.candidate_image_path(spec_id, cand_id)
+    try:
+        p = generate.candidate_image_path(spec_id, cand_id)
+    except KeyError as e:  # traversal-shaped ids → the same 404 as unknown ids
+        raise _err(e)
     if p is None:
         raise HTTPException(404, f"no image for {cand_id}")
     return FileResponse(p)

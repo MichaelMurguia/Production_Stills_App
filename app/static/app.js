@@ -751,7 +751,7 @@ async function updateBand() {
 
 /* -------------------------------------------------------------- dashboard */
 
-const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review" };
+const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review", CARE: "Backup" };
 const BLOCK_SUPPORT = {
   HOLD: "Held rows on required objects block the lock — read each cited source, then pass or cut the row.",
   GAP: "A missing input upstream stops generation downstream.",
@@ -1061,7 +1061,9 @@ async function renderSettings() {
     $("#proj-list").innerHTML = pr.projects.map(p => `
       <div class="eng-row">
         <span style="font-weight:600">${esc(p.name)}</span>
-        <span class="eng-facts">${p.slug ? esc(p.slug) : "root layout"}</span>
+        <span class="eng-facts">${p.slug ? esc(p.slug) : "root layout"} · ${p.last_backup_at
+          ? `BACKED UP ${esc(p.last_backup_at.slice(0, 10))}` : "NEVER BACKED UP"}</span>
+        <button class="ghost" data-backup="${esc(p.slug)}" title="Download this project as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">Backup</button>
         ${p.active ? '<span class="badge APPROVED">ACTIVE</span>'
           : `<button class="ghost" data-slug="${esc(p.slug)}" title="Switch to this project — the current one keeps everything and stays listed here.">Open</button>`}
       </div>`).join("");
@@ -1071,7 +1073,24 @@ async function renderSettings() {
         location.reload();
       } catch (err) { toast(err.message, true); }
     });
+    $$("#proj-list [data-backup]").forEach(b => b.onclick = () => {
+      location.href = `/api/projects/backup?slug=${encodeURIComponent(b.dataset.backup)}`;
+      setTimeout(renderProjects, 1500);  // pick up the fresh last-backup stamp
+    });
   };
+  $("#proj-restore").addEventListener("submit", async e => {
+    e.preventDefault();
+    const f = $("#proj-zip").files[0];
+    if (!f) return toast("Choose a backup zip first.", true);
+    const fd = new FormData();
+    fd.append("file", f);
+    try {
+      const r = await api("/api/projects/restore", { method: "POST", body: fd });
+      toast(`"${r.name}" restored as a new project (${r.slug}) — open it from the list.`);
+      $("#proj-zip").value = "";
+      renderProjects();
+    } catch (err) { toast(err.message, true); }
+  });
   $("#proj-new").addEventListener("submit", async e => {
     e.preventDefault();
     const name = $("#proj-name").value.trim();
