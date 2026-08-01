@@ -218,11 +218,11 @@ class CustomDomainTests(unittest.TestCase):
         self.assertEqual(len(fake.domains), 1, "old custom domain must be deleted")
         self.assertEqual(fake.domains[0], "renamed-studio.screenboardstudio.com")
         self.assertEqual(len(fake.deleted), 1)
-        # self-heal: attached but NOT serving → delete and re-attach fresh
+        # NEVER churn: an attached target stays attached even if not yet
+        # serving — every re-attach mints a new DNS target at Railway.
         provisioner._domain_serves = lambda d: False
         provisioner.reconcile(railway=fake)
-        self.assertEqual(len(fake.deleted), 2, "stuck domain must be re-attached")
-        self.assertEqual(fake.domains, ["renamed-studio.screenboardstudio.com"])
+        self.assertEqual(len(fake.deleted), 1, "attached target must not re-attach")
 
 
 class StudioNamingTests(unittest.TestCase):

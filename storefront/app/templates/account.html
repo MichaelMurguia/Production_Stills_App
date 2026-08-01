@@ -112,4 +112,40 @@
   {% endif %}
 </section>
 
+{% if tenant_base %}
+<script>
+// Studio naming never errors after submit: the name corrects itself in
+// realtime as you type, the address preview shows exactly what you'll
+// get, and the form submits the corrected value.
+document.querySelectorAll(".studio-name-form").forEach(form => {
+  const input = form.querySelector('input[name="name"]');
+  const btn = form.querySelector('button[type="submit"]');
+  const out = form.nextElementSibling;
+  const reserved = new Set({{ reserved_names|tojson }});
+  const norm = v => v.toLowerCase()
+    .replace(/[\s_.]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63);
+  const sync = () => {
+    const slug = norm(input.value);
+    const isReserved = reserved.has(slug);
+    const bad = !slug || slug.length < 2 || isReserved;
+    btn.disabled = bad;
+    if (!input.value.trim()) { out.textContent = ""; out.classList.remove("bad"); return; }
+    out.textContent = isReserved
+      ? "THAT NAME IS RESERVED — TRY ANOTHER"
+      : slug.length < 2
+        ? "KEEP TYPING — AT LEAST 2 LETTERS OR DIGITS"
+        : "WILL BE — " + slug + ".{{ tenant_base }}";
+    out.classList.toggle("bad", bad);
+  };
+  input.addEventListener("input", sync);
+  form.addEventListener("submit", () => { input.value = norm(input.value); });
+  sync();
+});
+</script>
+{% endif %}
+
 {% endblock %}

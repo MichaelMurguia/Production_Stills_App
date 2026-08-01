@@ -145,22 +145,22 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
         ws.subdomain = random_subdomain(s)
         s.commit()
     domain = f"{ws.subdomain}.{base}"
-    if ws.url == f"https://{domain}" and _domain_serves(domain):
-        return  # branded, attached, and actually answering — done
+    if ws.url == f"https://{domain}":
+        return  # target attached; DNS/cert provisioning is Railway's side
     try:
         # SWAP, never accumulate: Railway caps custom domains per service,
         # so superseded ones are deleted before the new attach. The
         # *.up.railway.app address always remains as the fallback.
+        # NEVER re-attach an already-attached target: Railway assigns a
+        # NEW dns target on every attach (observed live 2026-08-01), so
+        # probe-driven re-attachment churns targets faster than DNS or
+        # certificates can ever catch up. Attach once; swap only when the
+        # NAME changes.
         existing = railway.list_custom_domains(ws.railway_service_id)
         if any(d.get("domain") == domain for d in existing):
-            if _domain_serves(domain):
-                ws.url = f"https://{domain}"
-                ws.detail = ""
-                s.commit()
-                return
-            # Attached but not serving — a stuck verification (attached
-            # under wrong DNS). Fall through: delete and re-attach fresh,
-            # which restarts verification against current DNS.
+            ws.url = f"https://{domain}"
+            s.commit()
+            return
         for d in existing:
             railway.delete_custom_domain(d["id"])
         dns_target = railway.create_custom_domain(ws.railway_service_id, domain)
