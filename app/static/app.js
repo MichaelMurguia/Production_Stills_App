@@ -1099,7 +1099,7 @@ async function renderSettings() {
     fd.append("file", f);
     try {
       const r = await api("/api/projects/restore", { method: "POST", body: fd });
-      toast(`"${r.name}" restored as a new project (${r.slug}) — open it from the list.`);
+      toast(`"${r.name}" restored as a new production (${r.slug}) — open it from the list.`);
       $("#proj-zip").value = "";
       renderProjects();
     } catch (err) { toast(err.message, true); }
@@ -1107,7 +1107,7 @@ async function renderSettings() {
   $("#proj-new").addEventListener("submit", async e => {
     e.preventDefault();
     const name = $("#proj-name").value.trim();
-    if (!name) return toast("Give the project a name first.", true);
+    if (!name) return toast("Give the production a name first.", true);
     try {
       await api("/api/projects", { method: "POST", json: { name } });
       toast(`${name} created — switching…`);
@@ -4644,7 +4644,7 @@ $("#brand-rename").onclick = () => {
   const input = document.createElement("input");
   input.type = "text";
   input.value = /untitled/i.test(current) ? "" : current;
-  input.placeholder = "name this screenboard…";
+  input.placeholder = "name this production…";
   input.className = "brand-edit";
   sub.textContent = "";
   sub.append(input);
@@ -4653,11 +4653,11 @@ $("#brand-rename").onclick = () => {
     if (e.key === "Escape") { sub.textContent = current; return; }
     if (e.key !== "Enter") return;
     const name = input.value.trim();
-    if (!name) return toast("Give the screenboard a name first.", true);
+    if (!name) return toast("Give the production a name first.", true);
     try {
       const r = await api("/api/projects/rename", { method: "POST", json: { name } });
       sub.textContent = r.name.toUpperCase();
-      toast(`Screenboard named "${r.name}".`);
+      toast(`Production named "${r.name}".`)
     } catch (err) { toast(err.message, true); }
   };
   input.onblur = () => { if (sub.querySelector("input")) sub.textContent = current; };

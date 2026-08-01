@@ -13,7 +13,7 @@
 <header>
   <div class="brand">
     <span class="brand-title">SCREENBOARD</span>
-    <span class="brand-sub" id="brand-project"></span><button class="brand-rename" id="brand-rename" title="Rename this Screenboard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>
+    <span class="brand-sub" id="brand-project"></span><button class="brand-rename" id="brand-rename" title="Rename this production"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>
   </div>
   <div class="head-right">
     <span class="engine-dots" id="engine-dots" title="Engine credentials — filled green: key saved here · blue: environment variable · hollow: none"></span>
@@ -393,11 +393,11 @@
         <h2>Projects — this install <span class="hint">(the registry: create, back up, restore. Switch from the project name in the header — engines and keys are install-level and shared)</span></h2>
         <div id="proj-list"></div>
         <form id="proj-new" class="row" style="margin-top:10px">
-          <input type="text" id="proj-name" placeholder="new project name…" style="max-width:320px" title="Creates an empty project and switches to it — the current project keeps everything; switch back any time.">
-          <button class="ghost">+ Project</button>
+          <input type="text" id="proj-name" placeholder="new production name…" style="max-width:320px" title="Creates an empty production and switches to it — the current production keeps everything; switch back any time.">
+          <button class="ghost">+ Production</button>
         </form>
         <form id="proj-restore" class="row" style="margin-top:8px">
-          <input type="file" id="proj-zip" accept=".zip" style="max-width:320px" title="A Screenboard backup zip — restores as a NEW project; nothing existing is touched.">
+          <input type="file" id="proj-zip" accept=".zip" style="max-width:320px" title="A production backup zip — restores as a NEW production; nothing existing is touched.">
           <button class="ghost">Restore backup</button>
         </form>
       </div>

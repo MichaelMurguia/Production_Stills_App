@@ -110,7 +110,7 @@ def restore_backup(payload: bytes) -> dict:
     try:
         z = zipfile.ZipFile(io.BytesIO(payload))
     except zipfile.BadZipFile as e:
-        raise BackupError("that file is not a Screenboard backup zip") from e
+        raise BackupError("that file is not a production backup zip") from e
 
     total = 0
     members = []

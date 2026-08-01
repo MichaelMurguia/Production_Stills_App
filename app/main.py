@@ -187,12 +187,12 @@ def _switch_project(slug: str) -> None:
 def api_create_project(body: dict) -> dict:
     name = str(body.get("name", "")).strip()
     if not name:
-        raise HTTPException(422, "give the project a name")
+        raise HTTPException(422, "give the production a name")
     slug = "".join(c if c.isalnum() or c in "._-" else "-" for c in name).strip("-_.").lower()
     if not slug:
         raise HTTPException(422, "the name needs at least one letter or digit")
     if (paths.PROJECTS_DIR / slug).exists():
-        raise HTTPException(409, f"project already exists: {slug}")
+        raise HTTPException(409, f"a production already exists at: {slug}")
     d = paths.PROJECTS_DIR / slug
     d.mkdir(parents=True)
     (d / "project.json").write_text(
@@ -204,11 +204,11 @@ def api_create_project(body: dict) -> dict:
 
 @app.post("/api/projects/rename")
 def api_rename_project(body: dict) -> dict:
-    """Rename the ACTIVE screenboard — the name lives in its project.json
+    """Rename the ACTIVE production — the name lives in its project.json
     and shows in the header and the projects list."""
     name = str(body.get("name", "")).strip()
     if not name:
-        raise HTTPException(422, "give the screenboard a name")
+        raise HTTPException(422, "give the production a name")
     base = paths._project_base(paths.ACTIVE_PROJECT)
     meta_path = base / "project.json"
     meta = {}
@@ -228,7 +228,7 @@ def api_rename_project(body: dict) -> dict:
 def api_activate_project(body: dict) -> dict:
     slug = str(body.get("slug", ""))
     if slug and not (paths.PROJECTS_DIR / slug).is_dir():
-        raise HTTPException(404, f"unknown project: {slug}")
+        raise HTTPException(404, f"unknown production: {slug}")
     _switch_project(slug)
     return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
 
@@ -317,9 +317,9 @@ def api_state() -> dict:
     blockers = insights.blocking()
     summary = insights.stage_summary(blockers)
     return {
-        # The active screenboard's name — never a hardcoded project.
+        # The active production's name — never hardcoded.
         "project": paths._project_name(
-            paths._project_base(paths.ACTIVE_PROJECT), "Untitled Screenboard"),
+            paths._project_base(paths.ACTIVE_PROJECT), "Untitled Production"),
         "screenplay": app_state.get("screenplay"),
         "references": {
             "total": len(refs),

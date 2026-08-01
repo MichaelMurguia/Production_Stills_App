@@ -81,7 +81,7 @@ def list_projects() -> list[dict]:
              if PROJECTS_DIR.exists() else [])
     out = []
     if (HOME / "data").exists() or ACTIVE_PROJECT == "" or not named:
-        out.append({"slug": "", "name": _project_name(HOME, "Untitled Screenboard")})
+        out.append({"slug": "", "name": _project_name(HOME, "Untitled Production")})
     out += [{"slug": d.name, "name": _project_name(d, d.name)} for d in named]
     for p in out:
         p["active"] = p["slug"] == ACTIVE_PROJECT
