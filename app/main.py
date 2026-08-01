@@ -30,23 +30,34 @@ _LOGIN_HTML = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/styles.css"></head>
 <body style="display:flex;align-items:center;justify-content:center;min-height:100vh">
-<div class="panel" style="width:min(460px,92vw)">
-  <h2>Workspace access</h2>
-  <p class="hint">This is a private Screenboard Studio workspace. Paste the
-  access token from your order confirmation to enter.</p>
+<div class="panel" id="gate" style="width:min(460px,92vw)">
+  <h2>Screenboard access</h2>
+  <p class="hint">This is a private Screenboard Studio. Paste the access
+  token from your order confirmation to enter.</p>
   <form id="f" class="row" style="margin-top:12px">
-    <input type="password" id="tok" placeholder="workspace access token" style="flex:1" autofocus>
+    <input type="password" id="tok" placeholder="access token" style="flex:1" autofocus>
     <button class="primary">Enter</button>
   </form>
-  <p class="mini hidden" id="err" style="color:var(--bad);margin-top:8px">That token doesn't match this workspace.</p>
+  <p class="mini hidden" id="err" style="color:var(--bad);margin-top:8px">That token doesn't match this Screenboard.</p>
+</div>
+<div class="panel hidden" id="signing" style="width:min(460px,92vw)">
+  <h2>Signing you in&hellip;</h2>
 </div>
 <script>
+// Arriving with a store handoff (/login#token): never flash the token
+// form — show the quiet signing-in state instead.
+if (location.hash.length > 1) {
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("signing").classList.remove("hidden");
+}
 const attempt = async token => {
   const r = await fetch("/api/login", { method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }) });
-  if (r.ok) location.replace("/");
-  else document.getElementById("err").classList.remove("hidden");
+  if (r.ok) { location.replace("/"); return; }
+  document.getElementById("signing").classList.add("hidden");
+  document.getElementById("gate").classList.remove("hidden");
+  document.getElementById("err").classList.remove("hidden");
 };
 document.getElementById("f").onsubmit = e => {
   e.preventDefault();
@@ -271,7 +282,9 @@ def api_state() -> dict:
     blockers = insights.blocking()
     summary = insights.stage_summary(blockers)
     return {
-        "project": "The Beltminers",
+        # The active screenboard's name — never a hardcoded project.
+        "project": paths._project_name(
+            paths._project_base(paths.ACTIVE_PROJECT), "Untitled Screenboard"),
         "screenplay": app_state.get("screenplay"),
         "references": {
             "total": len(refs),
