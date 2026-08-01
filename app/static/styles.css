@@ -894,6 +894,10 @@ details.meta pre {
 .scope-carry:empty { display: none; }
 /* UNCANONIZED — 2026-07-31 — per-panel environment override select */
 .penv-wrap select { max-width: 150px; }
+
+/* UNCANONIZED — 2026-07-31 — selected completed board replaces the grid:
+   same ref-card anatomy, wall-sized contained image. */
+.ref-card.board-solo img { height: auto; max-height: 72vh; object-fit: contain; }
 .loc-state {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
   color: var(--ink-faint); text-align: right; overflow: hidden;

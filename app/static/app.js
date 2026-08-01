@@ -4261,12 +4261,88 @@ async function renderAssembly() {
   const sel = $("#asm-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
     specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
-  sel.onchange = () => sel.value && renderAssemblyFor(sel.value);
-  if (specs.length === 1) { sel.value = specs[0].specification_id; renderAssemblyFor(sel.value); }
+  sel.onchange = () => sel.value ? renderAssemblyFor(sel.value) : renderAssembly();
+
+  const host = $("#assembly-host");
   if (!specs.length) {
-    $("#assembly-host").innerHTML =
+    host.innerHTML =
       `<div class="panel mini">No signed-off breakdowns yet. Approve one on the Breakdowns tab first.</div>`;
+    return;
   }
+
+  // The stage lands on the completed boards (user request 2026-07-31):
+  // every assembled wall under the sheet picker, newest first. Clicking
+  // one replaces the grid with that board full-width; the picker above
+  // still opens a sheet's assembly bench.
+  const all = (await Promise.all(specs.map(s =>
+    api(`/api/specs/${s.specification_id}/boards`)
+      .then(bs => bs.map(b => ({ ...b, _spec: s })))
+      .catch(() => []))))
+    .flat()
+    .sort((a, b) => String(b.candidate_id).localeCompare(String(a.candidate_id)));
+
+  if (!all.length) {
+    if (specs.length === 1) {
+      sel.value = specs[0].specification_id;
+      renderAssemblyFor(sel.value);
+      return;
+    }
+    host.innerHTML =
+      `<div class="panel mini">No boards assembled yet — pick a sheet above to open its assembly bench.</div>`;
+    return;
+  }
+
+  const lbItems = all.map(b => ({
+    src: `/api/specs/${b._spec.specification_id}/candidates/${b.candidate_id}/image`,
+    caption: `${b.candidate_id} — ${b._spec.subject || b._spec.specification_id} (${b.status}) ${b.width}×${b.height}`,
+  }));
+
+  const showGrid = () => {
+    host.innerHTML = "";
+    const p = document.createElement("div");
+    p.className = "panel";
+    p.innerHTML = `
+      <h2>Completed boards <span class="hint">(every assembled wall, newest first — click one to view and judge it; pick a sheet above to assemble more)</span></h2>
+      <div class="ref-grid" data-f="grid" style="margin-top:10px"></div>`;
+    const grid = $("[data-f=grid]", p);
+    all.forEach((b, i) => {
+      const card = document.createElement("div");
+      card.className = "ref-card";
+      card.style.cursor = "pointer";
+      card.title = "Open this board — it replaces the grid; judge it there.";
+      card.innerHTML = `
+        <img src="${lbItems[i].src}" loading="lazy" alt="${esc(b.candidate_id)}">
+        <div class="body">
+          <div><span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span> <b>${esc(b.candidate_id)}</b></div>
+          <div class="meta">${esc(b._spec.subject || b._spec.specification_id)}</div>
+          <div class="meta">${b.width}×${b.height}${b.layout_variant ? ` · ${esc(b.layout_variant)} layout` : ""} · ${esc((b.created_at || "").slice(0, 16).replace("T", " "))}</div>
+        </div>`;
+      card.onclick = () => showBoard(b, i);
+      grid.append(card);
+    });
+    host.append(p);
+  };
+
+  const showBoard = (b, i) => {
+    host.innerHTML = "";
+    const p = document.createElement("div");
+    p.className = "panel";
+    p.innerHTML = `
+      <div class="row" style="margin-top:0;align-items:center">
+        <button class="ghost" data-f="back">← All boards</button>
+        <span class="mini">${esc(b._spec.specification_id)} — ${esc(b._spec.subject || "")}</span>
+      </div>
+      <div data-f="board-host" style="margin-top:12px"></div>`;
+    $("[data-f=back]", p).onclick = showGrid;
+    // The canonical board card carries the judge actions (Approve /
+    // Reject / → Reference / Delete) — full-width here, not grid-sized.
+    const card = renderCard(b._spec.specification_id, b, () => renderAssembly(), lbItems, i);
+    card.classList.add("board-solo");
+    $("[data-f=board-host]", p).append(card);
+    host.append(p);
+  };
+
+  showGrid();
 }
 
 async function renderAssemblyFor(specId) {
