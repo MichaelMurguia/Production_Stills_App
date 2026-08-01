@@ -207,6 +207,22 @@ def success(request: Request, background: BackgroundTasks, session_id: str = "")
                                       {"state": "PAID", "purchase": purchase})
 
 
+@app.get("/success/status")
+def success_status(session_id: str = ""):
+    """Tiny poll target for the success page: is the workspace ready yet?
+    session_id is the same capability the success page itself uses; the
+    response carries state only, never credentials."""
+    if not session_id:
+        raise HTTPException(404)
+    with db.session() as s:
+        purchase = s.scalar(select(db.Purchase).where(
+            db.Purchase.stripe_session_id == session_id))
+        if not purchase:
+            return {"workspace": "NONE"}
+        ws = purchase.workspace
+        return {"workspace": ws.status if ws else "PENDING"}
+
+
 @app.get("/download/{token}")
 def download(token: str):
     with db.session() as s:

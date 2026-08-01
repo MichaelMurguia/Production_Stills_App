@@ -121,3 +121,30 @@ class AvatarTests(unittest.TestCase):
         self.assertIn("backgroundColor=1a1d21", u)
         self.assertEqual(u, auth.avatar_url("someone@example.com"),
                          "avatar must be deterministic per address")
+
+
+class SuccessStatusTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_status_tracks_workspace_lifecycle(self):
+        import types as _t
+        cloud = _t.SimpleNamespace(
+            id="cs_status_1", metadata=StripeLike(plan="cloud-personal"),
+            mode="subscription", customer_details=StripeLike(email="s@example.com"),
+            customer="cus", subscription="sub_status_1")
+        _fulfill(cloud)
+        r = self.client.get("/success/status?session_id=cs_status_1").json()
+        self.assertEqual(r["workspace"], "PENDING")
+        from app import db as _db
+        from sqlalchemy import select as _sel
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_status_1"))
+            ws.status = "ACTIVE"
+            s.commit()
+        r = self.client.get("/success/status?session_id=cs_status_1").json()
+        self.assertEqual(r["workspace"], "ACTIVE")
+        self.assertNotIn("token", str(r).lower(), "status carries state only")
+        r = self.client.get("/success/status?session_id=unknown").json()
+        self.assertEqual(r["workspace"], "NONE")

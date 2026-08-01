@@ -44,12 +44,33 @@
 {% else %}
 <section class="order">
   <p class="price-kind">SUBSCRIPTION ACTIVE</p>
-  <h1>Welcome aboard.</h1>
-  <p class="hero-sub">Your subscription is active under
-  <span class="mono">{{ purchase.email }}</span>. Your private workspace is
-  being prepared &mdash; revisit this page (the link in your Stripe receipt)
-  in a few minutes to collect its address and access token. Manage or cancel
-  any time from the billing portal link in your receipt.</p>
+  <h1>Building your studio.</h1>
+  <p class="hero-sub">Your subscription under
+  <span class="mono">{{ purchase.email }}</span> is active and your private
+  Screenboard Studio is being set up. <strong>Stay here &mdash; this page
+  opens it the moment it's ready</strong> (usually a couple of minutes).
+  It will also always be waiting on
+  <a href="/account">Your Screenboard</a>.</p>
+  <p class="hero-sub mono" id="ws-wait">SETTING UP<span id="ws-dots">&hellip;</span></p>
+  <script>
+  (() => {
+    const qs = new URLSearchParams(location.search);
+    const sid = qs.get("session_id");
+    if (!sid) return;
+    let ticks = 0;
+    const poll = async () => {
+      ticks += 1;
+      document.getElementById("ws-dots").textContent = ".".repeat(1 + ticks % 3);
+      try {
+        const r = await fetch(`/success/status?session_id=${encodeURIComponent(sid)}`);
+        const d = await r.json();
+        if (d.workspace === "ACTIVE") { location.reload(); return; }
+      } catch (e) { /* transient — keep polling */ }
+      setTimeout(poll, 8000);
+    };
+    setTimeout(poll, 8000);
+  })();
+  </script>
 </section>
 {% endif %}
 
