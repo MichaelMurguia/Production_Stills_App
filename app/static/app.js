@@ -1000,6 +1000,16 @@ async function renderScreenplay() {
 // empty state, and Replace). Success lands on the Screenplay stage to
 // show what the read found.
 function bindScreenplayUpload(form) {
+  // Gate readable as state: the verb stays disabled, with the condition
+  // stated, until a file is actually chosen.
+  const input = $('input[type="file"]', form);
+  const submit = $('button[type="submit"]', form);
+  const sync = () => {
+    submit.disabled = !input.files.length;
+    submit.title = input.files.length ? "" : "Choose a screenplay file first";
+  };
+  input.addEventListener("change", sync);
+  sync();
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const file = $('input[type="file"]', form).files[0];
