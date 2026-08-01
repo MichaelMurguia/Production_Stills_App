@@ -145,3 +145,7 @@ body {
 .head-logout { display: inline; margin: 0; }
 .head-account { color: var(--ink-dim); font-size: 12px; text-decoration: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .head-account:hover { color: var(--ink); text-decoration: underline; }
+
+/* Brand links home (2026-08-01) */
+.brand-link { text-decoration: none; color: inherit; display: block; }
+.brand-link:hover .wordmark { color: var(--accent); }
