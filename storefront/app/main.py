@@ -23,8 +23,14 @@ db.init_db()
 async def security_headers(request: Request, call_next):
     """Baseline hardening on every public response — and the session read,
     so every template can render the header account widget."""
-    request.state.account_email = auth.read_session(
-        request.cookies.get(auth.SESSION_COOKIE, ""))
+    email = auth.read_session(request.cookies.get(auth.SESSION_COOKIE, ""))
+    request.state.account_email = email
+    request.state.account_avatar = ""
+    if email and not request.url.path.startswith(("/static", "/healthz")):
+        with db.session() as s:
+            acct = s.scalar(select(db.Account).where(db.Account.email == email))
+            picture = acct.picture if acct else ""
+        request.state.account_avatar = auth.avatar_url(email, picture)
     resp = await call_next(request)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
@@ -38,20 +44,24 @@ def _set_session(resp, request: Request, email: str) -> None:
                     samesite="lax", secure=request.url.scheme == "https")
 
 
-def _login_account(email: str, name: str = "", google_sub: str = "") -> None:
+def _login_account(email: str, name: str = "", google_sub: str = "",
+                   picture: str = "") -> None:
     """First sign-in creates the account; later ones refresh it. Signup and
     sign-in deliberately converge — identity is the verified email."""
     import datetime as dt
     with db.session() as s:
         acct = s.scalar(select(db.Account).where(db.Account.email == email))
         if acct is None:
-            acct = db.Account(email=email, name=name, google_sub=google_sub)
+            acct = db.Account(email=email, name=name, google_sub=google_sub,
+                              picture=picture)
             s.add(acct)
         else:
             if name and not acct.name:
                 acct.name = name
             if google_sub and not acct.google_sub:
                 acct.google_sub = google_sub
+            if picture:
+                acct.picture = picture
         acct.last_login_at = dt.datetime.now(dt.timezone.utc)
         s.commit()
 
@@ -301,7 +311,8 @@ def auth_google_callback(request: Request, code: str = "", state: str = ""):
         ident = auth.google_identity(code)
     except auth.AuthError as e:
         return _auth_page(request, "signin", error=str(e))
-    _login_account(ident["email"], ident["name"], ident["sub"])
+    _login_account(ident["email"], ident["name"], ident["sub"],
+                   ident.get("picture", ""))
     resp = RedirectResponse("/account", status_code=303)
     _set_session(resp, request, ident["email"])
     return resp

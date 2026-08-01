@@ -19,7 +19,10 @@
     <div class="head-side">
       <p class="head-meta">screenplay &rarr; bible &rarr; sheets &rarr; panels &rarr; boards</p>
       {% if request.state.account_email %}
-      <a class="head-account mono" href="/account" title="Your purchases">{{ request.state.account_email }}</a>
+      <a class="head-account" href="/account" title="Your purchases">
+        <img class="head-avatar" src="{{ request.state.account_avatar }}" alt="" referrerpolicy="no-referrer">
+        <span class="mono head-email">{{ request.state.account_email }}</span>
+      </a>
       <form method="post" action="/auth/logout" class="head-logout">
         <button class="btn btn-secondary head-signin" type="submit">Sign out</button>
       </form>

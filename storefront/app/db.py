@@ -89,6 +89,7 @@ class Account(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)
     name: Mapped[str] = mapped_column(String(120), default="")
     google_sub: Mapped[str] = mapped_column(String(64), default="")
+    picture: Mapped[str] = mapped_column(String(500), default="")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
     last_login_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
 
@@ -111,11 +112,13 @@ def init_db() -> None:
     Base.metadata.create_all(engine)
     # create_all never adds columns to tables that already exist; patch the
     # known additive columns so early deployments upgrade in place.
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''"))
-    except Exception:
-        pass  # column already present
+    for ddl in ("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''",
+                "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''"):
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(ddl))
+        except Exception:
+            pass  # column already present
 
 
 def session() -> Session:

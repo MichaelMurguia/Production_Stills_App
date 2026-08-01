@@ -107,3 +107,17 @@ class AccountFlowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AvatarTests(unittest.TestCase):
+    def test_google_picture_wins(self):
+        self.assertEqual(auth.avatar_url("a@b.c", "https://lh3.example/pic"),
+                         "https://lh3.example/pic")
+
+    def test_email_fallback_is_hashed_dicebear_in_palette(self):
+        u = auth.avatar_url("someone@example.com")
+        self.assertIn("api.dicebear.com", u)
+        self.assertNotIn("someone", u, "the raw email must never reach a third party")
+        self.assertIn("backgroundColor=1a1d21", u)
+        self.assertEqual(u, auth.avatar_url("someone@example.com"),
+                         "avatar must be deterministic per address")

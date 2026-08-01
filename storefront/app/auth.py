@@ -121,4 +121,20 @@ def google_identity(code: str) -> dict:
         raise AuthError("Google did not return a verified email")
     return {"email": str(info["email"]).lower(),
             "name": str(info.get("name") or ""),
-            "sub": str(info.get("sub") or "")}
+            "sub": str(info.get("sub") or ""),
+            "picture": str(info.get("picture") or "")}
+
+
+def avatar_url(email: str, picture: str = "") -> str:
+    """The account's face: the Google photo when we have one, else a
+    DiceBear `shapes` avatar in the store palette — seeded with a HASH of
+    the email, so the address itself never reaches a third party."""
+    if picture:
+        return picture
+    seed = hashlib.sha256(email.encode()).hexdigest()[:16]
+    return ("https://api.dicebear.com/9.x/shapes/svg"
+            f"?seed={seed}"
+            "&backgroundColor=1a1d21"
+            "&shape1Color=e0a33f,7d8fd0,6fae7a"
+            "&shape2Color=9aa1a8,cd6155,e0a33f"
+            "&shape3Color=eceef0,7d8fd0,9aa1a8")
