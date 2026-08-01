@@ -103,6 +103,59 @@ class ApiTests(unittest.TestCase):
         bad = self.client.post("/api/projects", json={"name": "   "})
         self.assertEqual(bad.status_code, 422)
 
+    def test_library_summary_reach_and_next(self):
+        # PRODUCTIONS_PLAN M3: one row per production, each with reach,
+        # counts, and its own next verb — computed without disturbing the
+        # active production.
+        self.client.post("/api/projects", json={"name": "Empty Film"})
+        r = self.client.get("/api/projects/summary")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["active"], "empty-film",
+                         "summary must restore the active production")
+        row = next(p for p in data["projects"] if p["slug"] == "empty-film")
+        self.assertEqual(len(row["reach"]), 5)
+        self.assertTrue(all(c["state"] in ("ok", "bad", "never")
+                            for c in row["reach"]))
+        self.assertEqual(row["counts"], "NO SCREENPLAY YET")
+        self.assertEqual(row["next"]["kicker"], "DO THIS NEXT")
+        self.assertIn("Upload a screenplay", row["next"]["text"])
+
+    def test_duplicate_and_delete_lifecycle(self):
+        self.client.post("/api/projects", json={"name": "Keeper"})
+        dup = self.client.post("/api/projects/duplicate", json={"slug": "keeper"})
+        self.assertEqual(dup.status_code, 200)
+        self.assertEqual(dup.json()["name"], "Keeper copy")
+        self.assertEqual(dup.json()["slug"], "keeper-copy")
+        # The open production can never be deleted — gate, not surprise.
+        active_del = self.client.post("/api/projects/delete",
+                                      json={"slug": "keeper",
+                                            "confirm_name": "Keeper"})
+        self.assertEqual(active_del.status_code, 409)
+        # Deleting demands the exact name.
+        wrong = self.client.post("/api/projects/delete",
+                                 json={"slug": "keeper-copy",
+                                       "confirm_name": "nope"})
+        self.assertEqual(wrong.status_code, 422)
+        gone = self.client.post("/api/projects/delete",
+                                json={"slug": "keeper-copy",
+                                      "confirm_name": "Keeper copy"})
+        self.assertEqual(gone.status_code, 200)
+        slugs = [p["slug"] for p in gone.json()["projects"]]
+        self.assertNotIn("keeper-copy", slugs)
+        self.assertIn("keeper", slugs)
+
+    def test_rename_by_slug_from_the_shelf(self):
+        self.client.post("/api/projects", json={"name": "Alpha"})
+        self.client.post("/api/projects", json={"name": "Beta"})  # now active
+        r = self.client.post("/api/projects/rename",
+                             json={"name": "Alpha Prime", "slug": "alpha"})
+        self.assertEqual(r.status_code, 200)
+        names = {p["slug"]: p["name"]
+                 for p in self.client.get("/api/projects").json()["projects"]}
+        self.assertEqual(names["alpha"], "Alpha Prime")
+        self.assertEqual(names["beta"], "Beta", "only the named card renames")
+
 
 if __name__ == "__main__":
     unittest.main()

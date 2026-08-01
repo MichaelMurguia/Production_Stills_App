@@ -204,12 +204,18 @@ def api_create_project(body: dict) -> dict:
 
 @app.post("/api/projects/rename")
 def api_rename_project(body: dict) -> dict:
-    """Rename the ACTIVE production — the name lives in its project.json
-    and shows in the header and the projects list."""
+    """Rename a production — the ACTIVE one unless a slug is sent (the
+    library's cards rename in place). The name lives in project.json and
+    shows in the header, the shelf, and the switcher."""
     name = str(body.get("name", "")).strip()
     if not name:
         raise HTTPException(422, "give the production a name")
-    base = paths._project_base(paths.ACTIVE_PROJECT)
+    slug = str(body.get("slug", paths.ACTIVE_PROJECT))
+    if slug:
+        paths.safe_id(slug)
+        if not (paths.PROJECTS_DIR / slug).is_dir():
+            raise HTTPException(404, f"unknown production: {slug}")
+    base = paths._project_base(slug)
     meta_path = base / "project.json"
     meta = {}
     if meta_path.exists():
@@ -230,6 +236,159 @@ def api_activate_project(body: dict) -> dict:
     if slug and not (paths.PROJECTS_DIR / slug).is_dir():
         raise HTTPException(404, f"unknown production: {slug}")
     _switch_project(slug)
+    return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
+
+
+# The card reach band's stage order (PRODUCTIONS_PLAN A7). Keys are the
+# app's view ids; labels are the band's Courier text.
+_REACH_STAGES = (("screenplay", "01 SCRIPT"), ("wizard", "02 DESIGN"),
+                 ("specs", "03 BREAKDOWN"), ("boards", "04 PANELS"),
+                 ("assembly", "05 BOARDS"))
+_BLOCK_STAGE = {"dashboard": "screenplay", "references": "wizard",
+                "wizard": "wizard", "specs": "specs", "boards": "boards"}
+
+
+def _production_row(p: dict) -> dict:
+    """One production's card/switcher row, computed against the currently
+    pointed paths. PRODUCTIONS_PLAN A6/A7: reach per stage, counts, the
+    per-production next verb, care state."""
+    blockers = insights.blocking()
+    real = [b for b in blockers if b.get("kind") != "CARE"]
+    ss = insights.stage_summary(blockers)
+    pd, bd = ss["production_design"], ss["breakdowns"]
+    pn, bo = ss["panels"], ss["boards"]
+
+    ever = {"screenplay": bool(ss["screenplay"]), "wizard": bool(pd["bible_saved"]),
+            "specs": bd["locked"] > 0, "boards": pn["approved"] > 0,
+            "assembly": bo["assembled"] > 0}
+    blocked = {"screenplay" if b.get("kind") == "CITE"
+               else _BLOCK_STAGE.get(b.get("action", ""), "specs") for b in real}
+    reach = [{"label": label,
+              "state": "bad" if key in blocked else "ok" if ever[key] else "never"}
+             for key, label in _REACH_STAGES]
+
+    scenes = 0
+    if ss["screenplay"]:
+        try:
+            scenes = sum(g.get("scenes", 0)
+                         for g in insights.locations().get("locations", []))
+        except Exception:
+            pass
+    counts = (f"{scenes} SCENES · {pn['approved']} PANELS · "
+              f"{bo['assembled']} BOARDS · {len(store.list_references())} REFS"
+              if ss["screenplay"] else "NO SCREENPLAY YET")
+
+    # A6 — every card states its own next verb; ALL STAGES CLEAR has none.
+    if not ss["screenplay"]:
+        nxt = {"kicker": "DO THIS NEXT", "text": "Upload a screenplay to start the read"}
+    elif not pd["bible_saved"]:
+        nxt = {"kicker": "DO THIS NEXT",
+               "text": "Answer the read's open questions and draft the bible"}
+    elif real:
+        nxt = {"kicker": "DO THIS NEXT", "text": real[0]["text"]}
+    elif bd["locked"] + bd["drafts"] == 0:
+        nxt = {"kicker": "DO THIS NEXT", "text": "Pick a location and create its breakdown"}
+    else:
+        last = ""
+        try:
+            lines = activity._log_path().read_text(encoding="utf-8").splitlines()
+            if lines:
+                last = str(json.loads(lines[-1]).get("ts", ""))[:10]
+        except Exception:
+            pass
+        nxt = {"kicker": "ALL STAGES CLEAR",
+               "text": f"Wrapped {last} — nothing waiting" if last else "Nothing waiting"}
+
+    return {**p, "reach": reach, "counts": counts, "next": nxt,
+            "last_backup_at": backup.last_backup_at(p["slug"]),
+            "days_since_backup": backup.days_since_backup(p["slug"])}
+
+
+@app.get("/api/projects/summary")
+def api_projects_summary() -> dict:
+    """One row per production for the library cards and the switcher.
+    Read-only: paths point at each production in turn and are restored —
+    the app is single-user by design (switching reloads the whole UI), so
+    this cannot race a real switch."""
+    original = paths.ACTIVE_PROJECT
+    rows = []
+    try:
+        for p in paths.list_projects():
+            paths.set_project(p["slug"])
+            insights._text_cache.clear()
+            try:
+                rows.append(_production_row(p))
+            except Exception as e:  # one broken production never hides the shelf
+                rows.append({**p, "reach": [], "counts": "", "error": str(e)[:200],
+                             "next": {"kicker": "DO THIS NEXT",
+                                      "text": f"This production failed to read: {str(e)[:120]}"}})
+    finally:
+        paths.set_project(original)
+        insights._text_cache.clear()
+    return {"active": paths.ACTIVE_PROJECT, "projects": rows}
+
+
+@app.post("/api/projects/duplicate")
+def api_duplicate_project(body: dict) -> dict:
+    """Copy a production — everything a backup would carry, never keys.
+    The copy is its own production with a fresh created_at and no backup
+    history; the source is untouched."""
+    import shutil
+    slug = str(body.get("slug", ""))
+    if slug:
+        paths.safe_id(slug)
+    src = paths._project_base(slug)
+    if not src.exists() or (slug and not (paths.PROJECTS_DIR / slug).is_dir()):
+        raise HTTPException(404, f"unknown production: {slug}")
+    name = f"{paths._project_name(src, slug or 'Untitled Production')} copy"
+    slug_base = "".join(c if c.isalnum() or c in "._-" else "-"
+                        for c in name.lower()).strip("-_.") or "copy"
+    new_slug, n = slug_base, 2
+    while (paths.PROJECTS_DIR / new_slug).exists():
+        new_slug = f"{slug_base}-{n}"
+        n += 1
+    dest = paths.PROJECTS_DIR / new_slug
+    dest.mkdir(parents=True)
+    for top in backup.BACKUP_DIRS:
+        d = src / top
+        if d.exists():
+            shutil.copytree(d, dest / top,
+                            ignore=shutil.ignore_patterns("settings.json"))
+    meta = {"name": name, "created_at": store.utcnow(),
+            "duplicated_from": slug or "(root)"}
+    (dest / "project.json").write_text(json.dumps(meta, indent=2) + "\n",
+                                       encoding="utf-8")
+    return {"slug": new_slug, "name": name, "active": paths.ACTIVE_PROJECT,
+            "projects": paths.list_projects()}
+
+
+@app.post("/api/projects/delete")
+def api_delete_project(body: dict) -> dict:
+    """Delete a production — its screenplay, library and every board. The
+    open production can never be deleted (gate stated in the UI), and the
+    caller must send the production's exact name as confirmation."""
+    import shutil
+    slug = str(body.get("slug", ""))
+    confirm = str(body.get("confirm_name", "")).strip()
+    if slug:
+        paths.safe_id(slug)
+    base = paths._project_base(slug)
+    if not base.exists() or (slug and not (paths.PROJECTS_DIR / slug).is_dir()):
+        raise HTTPException(404, f"unknown production: {slug}")
+    if slug == paths.ACTIVE_PROJECT:
+        raise HTTPException(409, "the open production cannot be deleted — "
+                                 "open another production first")
+    name = paths._project_name(base, slug or "Untitled Production")
+    if confirm != name:
+        raise HTTPException(422, f'type the production name exactly to '
+                                 f'confirm deletion: "{name}"')
+    if slug:
+        shutil.rmtree(base)
+    else:  # the legacy root layout: remove its content dirs, never HOME
+        for top in backup.BACKUP_DIRS:
+            if (paths.HOME / top).exists():
+                shutil.rmtree(paths.HOME / top)
+        (paths.HOME / "project.json").unlink(missing_ok=True)
     return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
 
 

@@ -323,6 +323,42 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
 }
 const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
   (await modal({ title, body, confirmLabel, danger })) !== null;
+
+/* Inline rename (PRODUCTIONS_PLAN A5, canonical): a label the user owns is
+   renamed in place — the label becomes an input at the same position and
+   type size, pre-filled and selected; Enter commits, Esc reverts, blur
+   commits. Never a dialog, never a separate edit screen. `save(name)`
+   persists and may return the canonical name. */
+function inlineRename(el, save) {
+  if (el.querySelector("input")) return;
+  const current = el.textContent.trim();
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "inline-rename";
+  input.value = /untitled/i.test(current) ? "" : current;
+  input.placeholder = "name this production…";
+  el.textContent = "";
+  el.append(input);
+  input.focus();
+  input.select();
+  let settled = false;
+  const finish = text => {
+    if (settled) return;
+    settled = true;
+    el.textContent = text;
+  };
+  const commit = async () => {
+    const name = input.value.trim();
+    if (!name || name === current) return finish(current);
+    try { finish((await save(name)) || name); }
+    catch (err) { toast(err.message, true); finish(current); }
+  };
+  input.onkeydown = e => {
+    if (e.key === "Escape") finish(current);
+    else if (e.key === "Enter") { e.preventDefault(); commit(); }
+  };
+  input.onblur = commit;
+}
 async function copyText(text, what = "Prompt") {
   try {
     await navigator.clipboard.writeText(text);
@@ -1071,27 +1107,51 @@ async function renderLocations(state = null, langs = 0) {
 async function renderProjectsView() {
   useTemplate("tpl-projects");
 
+  // Care line escalation (PRODUCTIONS_PLAN A4): faint under 14 days,
+  // --hold to 29, --bad at 30+ — and never a blocker anywhere.
+  const careLine = p => {
+    if (!p.last_backup_at) return { text: "NEVER BACKED UP", cls: "" };
+    const d = p.days_since_backup ?? 0;
+    const text = d === 0 ? "BACKED UP TODAY"
+      : `BACKED UP ${d} DAY${d === 1 ? "" : "S"} AGO`;
+    return { text, cls: d >= 30 ? "care-bad" : d >= 14 ? "care-hold" : "" };
+  };
+
   const renderCards = async () => {
-    const pr = await api("/api/projects");
+    const pr = await api("/api/projects/summary");
     $("#prod-count").textContent =
       `${pr.projects.length} PRODUCTION${pr.projects.length === 1 ? "" : "S"} · 1 OPEN`;
-    // M2 scaffold rows — M3 replaces these with the full card anatomy.
-    $("#prod-cards").innerHTML = pr.projects.map(p => `
-      <div class="panel prod-card ${p.active ? "open" : ""}">
+    $("#prod-cards").innerHTML = pr.projects.map(p => {
+      const care = careLine(p);
+      const stale = (p.days_since_backup ?? -1) >= 30;
+      const clear = p.next?.kicker === "ALL STAGES CLEAR";
+      return `
+      <div class="panel prod-card ${p.active ? "open" : ""}" data-card="${esc(p.slug)}">
         <div class="prod-card-head">
-          <span class="prod-name">${esc(p.name)}</span>
+          <span class="prod-name" data-name="${esc(p.slug)}">${esc(p.name)}</span>
           ${p.active ? '<span class="prod-open mono">OPEN</span>' : ""}
           <span class="prod-slug mono">${p.slug ? esc(p.slug) : "root layout"}</span>
         </div>
+        <div class="prod-band">${(p.reach || []).map(r =>
+          `<span class="${r.state === "ok" ? "r-ok" : r.state === "bad" ? "r-bad" : ""}">${esc(r.label)}</span>`).join("")}
+        </div>
+        <div class="prod-counts">${esc(p.counts || "")}</div>
+        <div>
+          <div class="prod-next-k ${clear ? "clear" : ""}">${esc(p.next?.kicker || "DO THIS NEXT")}</div>
+          <div class="prod-next">${monoIds(esc(p.next?.text || ""))}</div>
+        </div>
         <div class="prod-foot">
-          <span class="prod-care mono">${p.last_backup_at
-            ? `BACKED UP ${esc(p.last_backup_at.slice(0, 10))}` : "NEVER BACKED UP"}</span>
+          <span class="prod-care mono ${care.cls}">${esc(care.text)}</span>
           <span class="prod-actions">
-            <button class="ghost" data-backup="${esc(p.slug)}" title="Download this production as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">Back up</button>
+            <button class="ghost ${stale ? "urgent" : ""}" data-backup="${esc(p.slug)}" title="Download this production as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">${stale ? "Back up now" : "Back up"}</button>
             ${p.active ? "" : `<button class="ghost" data-slug="${esc(p.slug)}" title="Open this production — the current one keeps everything and stays on the shelf.">Open</button>`}
+            <button class="ghost" data-rename="${esc(p.slug)}" title="Renames in place — Enter commits, Esc reverts.">Rename</button>
+            <button class="ghost" data-more="${esc(p.slug)}" title="Duplicate or delete this production">&hellip;</button>
           </span>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
+
     $$("#prod-cards [data-slug]").forEach(b => b.onclick = async () => {
       try {
         await api("/api/projects/activate", { method: "POST", json: { slug: b.dataset.slug } });
@@ -1102,6 +1162,59 @@ async function renderProjectsView() {
       location.href = `/api/projects/backup?slug=${encodeURIComponent(b.dataset.backup)}`;
       setTimeout(renderCards, 1500);  // pick up the fresh last-backup stamp
     });
+    $$("#prod-cards [data-rename]").forEach(b => b.onclick = () => {
+      const slug = b.dataset.rename;
+      const nameEl = $(`#prod-cards [data-name="${CSS.escape(slug)}"]`);
+      const isOpen = !!nameEl?.closest(".prod-card.open");
+      if (nameEl) inlineRename(nameEl, async name => {
+        const r = await api("/api/projects/rename", { method: "POST", json: { name, slug } });
+        toast(`Production named "${r.name}".`);
+        if (isOpen) $("#brand-project").textContent = r.name.toUpperCase();
+        return r.name;
+      });
+    });
+    $$("#prod-cards [data-more]").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      cardMenu(b, pr.projects.find(p => p.slug === b.dataset.more), renderCards);
+    });
+  };
+
+  // The ⋯ menu: duplicate and delete. Delete is typed-name confirmed —
+  // it destroys a screenplay, a library and every board.
+  const cardMenu = (btn, p, refresh) => {
+    $$(".card-menu").forEach(m => m.remove());
+    const menu = document.createElement("div");
+    menu.className = "card-menu";
+    menu.innerHTML = `
+      <button class="proj-item" data-act="dup">Duplicate</button>
+      <button class="proj-item danger-act" data-act="del" ${p.active ? "disabled" : ""}
+        ${p.active ? 'title="The open production cannot be deleted — open another first."' : ""}>Delete&hellip;</button>`;
+    btn.closest(".prod-actions").appendChild(menu);
+    const close = () => menu.remove();
+    setTimeout(() => document.addEventListener("click", close, { once: true }));
+    $('[data-act="dup"]', menu).onclick = async () => {
+      try {
+        const r = await api("/api/projects/duplicate", { method: "POST", json: { slug: p.slug } });
+        toast(`"${r.name}" added to the shelf.`);
+        refresh();
+      } catch (err) { toast(err.message, true); }
+    };
+    $('[data-act="del"]', menu).onclick = async () => {
+      if (p.active) return;
+      const vals = await modal({
+        title: `Delete "${p.name}"?`,
+        body: "This destroys its screenplay, reference library, breakdowns and every board. There is no undo — a backup zip is the only way back. Type the production's name to confirm.",
+        fields: [{ name: "confirm", label: "Production name", placeholder: p.name }],
+        confirmLabel: "Delete production", danger: true,
+      });
+      if (vals === null) return;
+      try {
+        await api("/api/projects/delete", { method: "POST",
+          json: { slug: p.slug, confirm_name: vals.confirm } });
+        toast(`"${p.name}" deleted.`);
+        refresh();
+      } catch (err) { toast(err.message, true); }
+    };
   };
 
   $("#proj-restore").addEventListener("submit", async e => {

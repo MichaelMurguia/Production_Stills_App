@@ -140,15 +140,15 @@ def blocking() -> list[dict]:
         days = backup.days_since_backup(paths.ACTIVE_PROJECT)
         if days is None:
             out.append({
-                "kind": "CARE", "action": "settings",
-                "text": "This project has never been backed up — download a "
-                        "backup zip from Settings › Projects",
+                "kind": "CARE", "action": "projects",
+                "text": "This production has never been backed up — download "
+                        "a backup zip from Productions",
             })
         elif days >= 7:
             out.append({
-                "kind": "CARE", "action": "settings",
+                "kind": "CARE", "action": "projects",
                 "text": f"Last backup {days} days ago — download a fresh one "
-                        "from Settings › Projects",
+                        "from Productions",
             })
     return out
 
