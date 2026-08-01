@@ -69,8 +69,9 @@ def _fulfill(checkout_session) -> db.Purchase:
         existing = s.scalar(select(db.Purchase).where(
             db.Purchase.stripe_session_id == checkout_session.id))
         if existing:
-            s.expunge(existing)
-            _ = existing.license and existing.license.token  # load before detach
+            if existing.license:
+                _ = existing.license.token  # force the lazy-load while attached
+            s.expunge_all()
             return existing
 
         plan = (checkout_session.metadata or {}).get("plan") or (
