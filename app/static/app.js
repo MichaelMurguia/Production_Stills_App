@@ -923,7 +923,7 @@ async function renderScreenplay() {
 // One finder-list scaffold (plan P4/R2): the screenplay coverage table and
 // the wizard's read-locations list render through this single code path —
 // Courier search over a scrolling row host, plus the shared verbs (Draft a
-// sheet prefills the breakdown prompt; Open sheet jumps to it).
+// Breakdown prefills the breakdown prompt; Open Breakdown jumps to it).
 function buildLocFinder(host, cfg) {
   host.innerHTML = `
     ${cfg.head || ""}
@@ -978,11 +978,11 @@ async function renderLocations(state = null, langs = 0) {
     }
   }
   const sheetCell = l => {
-    if (!l.sheet) return `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Draft a sheet</button>`;
+    if (!l.sheet) return `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create Breakdown</button>`;
     const held = heldBySpec[l.sheet.spec_id];
     return `<span class="loc-sheet">
       <span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span>
-      <button class="loc-open${held ? " held" : ""}" data-open="${esc(l.sheet.spec_id)}">${held ? `${held} held row${held > 1 ? "s" : ""}` : "Open sheet"}</button>
+      <button class="loc-open${held ? " held" : ""}" data-open="${esc(l.sheet.spec_id)}">${held ? `${held} held row${held > 1 ? "s" : ""}` : "Open Breakdown"}</button>
     </span>`;
   };
 
@@ -1008,7 +1008,7 @@ async function renderLocations(state = null, langs = 0) {
           .map(s => `
             <div class="scene-row">
               <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
-              <button class="block-act loc-draft" data-loc="${esc(s.heading)}">Draft a sheet</button>
+              <button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create Breakdown</button>
             </div>`).join("") : "";
         return `
           <div class="loc-row" data-exp="${esc(l.location)}" style="cursor:pointer" title="click to ${open ? "collapse" : "list"} this location's scenes">
@@ -1679,7 +1679,7 @@ async function renderWizard() {
       ${extraCell}
       <span class="loc-state">${sheet ? `SHEET — ${esc(sheet.spec_id)}` : "NO SHEET"}</span>
       ${sheet
-        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open sheet</button>`
+        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open Breakdown</button>`
         : `<button class="block-act loc-draft" data-loc="${esc(name)}">Create Breakdown</button>`}
     </div>`;
   const renderWizLocs = async () => {
