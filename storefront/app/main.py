@@ -84,8 +84,18 @@ def _ready() -> dict[str, bool]:
 
 @app.get("/healthz")
 def healthz():
+    """Liveness, serving revision, and which optional gates are open —
+    booleans only, never values; lets ops verify configuration landed
+    without touching a dashboard."""
     import os
-    return {"ok": True, "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12]}
+    return {"ok": True,
+            "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12],
+            "stripe": bool(settings.STRIPE_SECRET_KEY),
+            "mail": mailer.configured(),
+            "google_auth": auth.google_configured(),
+            "session_secret": bool(settings.SESSION_SECRET),
+            "provisioning": settings.railway_configured(),
+            "export": bool(settings.ADMIN_EXPORT_TOKEN)}
 
 
 @app.get("/")
