@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Screenboard Studio{% endblock %}
+{% block content %}
+
+<section class="order">
+  <p class="price-kind">YOUR SCREENBOARD</p>
+
+  {% if purchase %}
+    {% if purchase.kind == "download" %}
+    <h1>Your license.</h1>
+    <p class="hero-sub">Download {{ purchase.tier or "personal" }} license,
+    registered to <span class="mono">{{ purchase.email }}</span>.</p>
+    <div class="license-box">
+      <p class="license-label">LICENSE TOKEN</p>
+      <p class="license-token">{{ purchase.license.token }}</p>
+    </div>
+    <a class="btn btn-primary" href="/download/{{ purchase.license.token }}">Download Screenboard Studio</a>
+    {% else %}
+    <h1>Your workspace.</h1>
+    <p class="hero-sub">Cloud {{ purchase.tier or "personal" }} subscription,
+    registered to <span class="mono">{{ purchase.email }}</span>.</p>
+    {% if purchase.workspace and purchase.workspace.status == "ACTIVE" %}
+    <div class="license-box">
+      <p class="license-label">WORKSPACE URL</p>
+      <p class="license-token">{{ purchase.workspace.url }}</p>
+    </div>
+    <a class="btn btn-primary" href="{{ purchase.workspace.url }}">Open your workspace</a>
+    <p class="hero-sub" style="margin-top:14px">Use this same token to log in
+    there.</p>
+    {% else %}
+    <p class="hero-sub">Your workspace is being prepared — check back here in
+    a few minutes.</p>
+    {% endif %}
+    {% endif %}
+
+  {% else %}
+  <h1>Sign in with your token.</h1>
+  <p class="hero-sub">Your license token (download) or workspace access token
+  (cloud) is your credential — it's in your order confirmation.</p>
+  {% if missed %}
+  <p class="hero-sub mono" style="color:var(--bad)">THAT TOKEN DOESN'T MATCH
+  AN ACTIVE PURCHASE.</p>
+  {% endif %}
+  <form method="post" action="/account" class="recover-form">
+    <input type="password" name="token" placeholder="paste your token" required>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+  </form>
+  <p class="hero-sub" style="margin-top:14px"><a href="/recover">Lost your
+  token?</a> We'll mail everything registered to your address.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

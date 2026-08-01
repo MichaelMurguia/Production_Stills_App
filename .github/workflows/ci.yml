@@ -74,7 +74,7 @@ jobs:
       - name: Probe public pages
         run: |
           fail=0
-          for u in "" terms privacy recover; do
+          for u in "" terms privacy recover account; do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://www.screenboardstudio.com/$u")
             echo "/$u -> $code"
             [ "$code" = "200" ] || fail=1

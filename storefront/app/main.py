@@ -184,6 +184,40 @@ def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+@app.get("/account")
+def account_page(request: Request):
+    return templates.TemplateResponse(request, "account.html", {
+        "purchase": None, "missed": False})
+
+
+@app.post("/account")
+def account(request: Request, token: str = Form("")):
+    """Token-as-credential sign-in: a license token or workspace access
+    token shows its purchase. Tokens are unguessable 24-byte values; misses
+    pay a small delay and get one uniform message."""
+    token = token.strip()
+    purchase = None
+    if token:
+        with db.session() as s:
+            lic = s.scalar(select(db.License).where(db.License.token == token))
+            ws = None if lic else s.scalar(select(db.Workspace).where(
+                db.Workspace.access_token == token))
+            found = (lic.purchase if lic else ws.purchase if ws else None)
+            if found and found.status == "PAID":
+                purchase = found
+                if purchase.license:
+                    _ = purchase.license.token
+                if purchase.workspace:
+                    _ = (purchase.workspace.status, purchase.workspace.url,
+                         purchase.workspace.access_token)
+                s.expunge_all()
+    if purchase is None:
+        import time
+        time.sleep(0.5)
+    return templates.TemplateResponse(request, "account.html", {
+        "purchase": purchase, "missed": purchase is None})
+
+
 @app.get("/recover")
 def recover_page(request: Request):
     return templates.TemplateResponse(request, "recover.html", {

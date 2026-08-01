@@ -135,3 +135,8 @@ body {
 .foot-links { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; }
 .foot-links a { color: var(--ink-dim); text-decoration: none; }
 .foot-links a:hover { color: var(--ink); text-decoration: underline; }
+
+/* Header sign-in (2026-08-01) */
+.head-side { display: flex; align-items: center; gap: 18px; }
+.head-signin { padding: 8px 16px; font-size: 13px; white-space: nowrap; }
+@media (max-width: 720px) { .head-side .head-meta { display: none; } }

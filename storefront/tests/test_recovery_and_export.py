@@ -90,3 +90,25 @@ class RecoveryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AccountTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_signin_page_and_header_widget(self):
+        self.assertEqual(self.client.get("/account").status_code, 200)
+        self.assertIn('href="/account"', self.client.get("/").text,
+                      "the header must carry the sign-in widget")
+
+    def test_license_token_signs_in(self):
+        p = _fulfill(dl_session("cs_acct_1", "acct@example.com"))
+        r = self.client.post("/account", data={"token": p.license.token})
+        self.assertIn(p.license.token, r.text)
+        self.assertIn(f"/download/{p.license.token}", r.text)
+
+    def test_wrong_token_is_one_uniform_miss(self):
+        r = self.client.post("/account", data={"token": "not-a-real-token"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("DOESN'T MATCH", r.text.upper().replace("&#39;", "'"))
+        self.assertNotIn("/download/", r.text)
