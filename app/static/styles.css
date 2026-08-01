@@ -1359,3 +1359,18 @@ details.meta pre {
   border: 1px solid var(--accent); outline: none; padding: 0 6px;
   min-width: 18ch;
 }
+
+/* switcher menu anatomy (PRODUCTIONS_PLAN M4) */
+.pm-head { padding: 8px 10px; font-size: 9px; letter-spacing: .16em; color: var(--ink-faint); border-bottom: 1px solid var(--line-soft); }
+.proj-menu .proj-item { border-left: 2px solid transparent; }
+.proj-menu .proj-item.open { border-left-color: var(--accent); background: var(--panel2); }
+.pm-row { display: flex; align-items: baseline; gap: 12px; }
+.pm-name { letter-spacing: .06em; }
+.proj-item.open .pm-name { color: var(--accent); }
+.pm-chip { margin-left: auto; font-size: 9px; letter-spacing: .1em; }
+.pm-chip.open { color: var(--accent); }
+.pm-chip.stale { color: var(--bad); }
+.pm-sub { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-faint); }
+.pm-div { border-top: 1px solid var(--line-soft); margin-top: 4px; }
+.proj-menu .pm-new { display: block; width: 100%; text-align: left; padding: 8px 10px; color: var(--accent); }
+.pm-foot { padding: 8px 10px; border-top: 1px solid var(--line-soft); font-size: 8.5px; letter-spacing: .08em; color: var(--ink-faint); max-width: 30ch; }

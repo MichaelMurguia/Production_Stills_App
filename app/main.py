@@ -299,9 +299,29 @@ def _production_row(p: dict) -> dict:
         nxt = {"kicker": "ALL STAGES CLEAR",
                "text": f"Wrapped {last} — nothing waiting" if last else "Nothing waiting"}
 
+    # The switcher's one-line state preview (M4): where the production
+    # stands, so switching is an informed move.
+    holds = sum(1 for b in real if b.get("kind") == "HOLD")
+    if nxt["kicker"] == "ALL STAGES CLEAR" and bo["assembled"]:
+        preview = f"WRAPPED · {bo['assembled']} BOARD{'S' if bo['assembled'] != 1 else ''}"
+    else:
+        keys = [k for k, _ in _REACH_STAGES]
+        stage_no = next((i + 1 for i, r in enumerate(reach) if r["state"] == "bad"),
+                        next((i + 1 for i, r in enumerate(reach) if r["state"] == "never"),
+                             len(keys)))
+        detail = ("NO SCREENPLAY" if not ss["screenplay"]
+                  else f"{holds} HOLD{'S' if holds != 1 else ''}" if holds
+                  else f"{len(real)} BLOCKED" if real
+                  else f"{bd['drafts']} DRAFT{'S' if bd['drafts'] != 1 else ''}" if bd["drafts"]
+                  else f"{bd['locked']} LOCKED" if bd["locked"] else "")
+        preview = f"STAGE {stage_no:02d}" + (f" · {detail}" if detail else "")
+
+    days = backup.days_since_backup(p["slug"])
     return {**p, "reach": reach, "counts": counts, "next": nxt,
+            "preview": preview,
+            "backup_chip": f"BACKUP {days}D" if days is not None and days >= 30 else "",
             "last_backup_at": backup.last_backup_at(p["slug"]),
-            "days_since_backup": backup.days_since_backup(p["slug"])}
+            "days_since_backup": days}
 
 
 @app.get("/api/projects/summary")

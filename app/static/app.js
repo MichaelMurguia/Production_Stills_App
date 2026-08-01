@@ -4734,12 +4734,14 @@ async function renderAssemblyFor(specId) {
 
 /* ------------------------------------------------------------------ start */
 
-// Project switcher (design review 2026-08-01 §7): switching is navigation,
-// so it lives on the project name itself; Settings keeps the registry.
+// Production switcher (PRODUCTIONS_PLAN M4): switching is navigation, so
+// it lives on the production name itself. Every row previews where that
+// production stands — switching is an informed move — and the create gap
+// closes here: + New production is always one click away.
 (() => {
   const sub = $("#brand-project");
   sub.classList.add("brand-switch");
-  sub.title = "Switch project";
+  sub.title = "Switch production";
   let menu = null;
   const close = () => { menu?.remove(); menu = null; };
   document.addEventListener("click", e => {
@@ -4748,15 +4750,23 @@ async function renderAssemblyFor(specId) {
   sub.onclick = async () => {
     if (sub.querySelector("input")) return;  // mid-rename
     if (menu) { close(); return; }
-    const pr = await api("/api/projects");
+    const pr = await api("/api/projects/summary");
     menu = document.createElement("div");
     menu.className = "proj-menu";
-    menu.innerHTML = pr.projects.map(p => `
-      <button class="proj-item" data-slug="${esc(p.slug)}" ${p.active ? "disabled" : ""}>
-        <span>${esc(p.name)}</span>
-        ${p.active ? '<span class="cast-badge cast">ACTIVE</span>' : ""}
+    menu.innerHTML = `<div class="pm-head mono">SWITCH PRODUCTION</div>`
+      + pr.projects.map(p => `
+      <button class="proj-item ${p.active ? "open" : ""}" data-slug="${esc(p.slug)}" ${p.active ? "disabled" : ""}>
+        <span class="pm-row">
+          <span class="pm-name">${esc(p.name.toUpperCase())}</span>
+          ${p.active ? '<span class="pm-chip open mono">OPEN</span>'
+            : p.backup_chip ? `<span class="pm-chip stale mono">${esc(p.backup_chip)}</span>` : ""}
+        </span>
+        <span class="pm-sub mono">${esc(p.preview || "")}</span>
       </button>`).join("")
-      + `<button class="text-act proj-manage">Manage projects…</button>`;
+      + `<div class="pm-div"></div>
+         <button class="text-act pm-new">+ New production</button>
+         <button class="text-act proj-manage">Manage productions…</button>
+         <div class="pm-foot mono">SWITCHING RELOADS THE STUDIO. UNSAVED FORM TEXT IS NOT CARRIED OVER.</div>`;
     $(".brand").appendChild(menu);
     $$(".proj-item:not([disabled])", menu).forEach(b => b.onclick = async () => {
       try {
@@ -4764,7 +4774,14 @@ async function renderAssemblyFor(specId) {
         location.reload();
       } catch (err) { toast(err.message, true); }
     });
-    $(".proj-manage", menu).onclick = () => { close(); showView("settings"); };
+    // Never a form in the menu — navigate to the library with the name
+    // field ready to type into.
+    $(".pm-new", menu).onclick = async () => {
+      close();
+      await showView("projects");
+      $("#proj-name")?.focus();
+    };
+    $(".proj-manage", menu).onclick = () => { close(); showView("projects"); };
   };
 })();
 
