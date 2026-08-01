@@ -67,6 +67,16 @@ def checkout(plan: str):
     return RedirectResponse(checkout_session.url, status_code=303)
 
 
+def _sget(obj, key, default=None):
+    """Read a field off a StripeObject or a plain dict. Stripe's objects
+    support attribute access but not dict .get(); tests use dicts."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def _fulfill(checkout_session) -> db.Purchase:
     """Record a paid Checkout session, creating the license for downloads.
     Idempotent on stripe_session_id — safe to call from both the webhook and
@@ -80,13 +90,13 @@ def _fulfill(checkout_session) -> db.Purchase:
             s.expunge_all()
             return existing
 
-        plan = (checkout_session.metadata or {}).get("plan") or (
+        plan = _sget(checkout_session.metadata, "plan") or (
             "cloud" if checkout_session.mode == "subscription" else "download")
         kind, _, tier = plan.partition("-")
         purchase = db.Purchase(
             kind=kind,
             tier=tier,
-            email=(checkout_session.customer_details or {}).get("email") or "",
+            email=_sget(checkout_session.customer_details, "email") or "",
             stripe_session_id=checkout_session.id,
             stripe_customer_id=checkout_session.customer or "",
             stripe_subscription_id=checkout_session.subscription or "",
@@ -104,22 +114,15 @@ def _fulfill(checkout_session) -> db.Purchase:
 
 @app.get("/success")
 def success(request: Request, session_id: str = ""):
-    # TEMP DIAGNOSTIC — remove after sandbox debugging: surfaces the traceback
-    # instead of a bare 500 so the failure is visible without log access.
-    try:
-        if not session_id:
-            return RedirectResponse("/")
-        checkout_session = stripe.checkout.Session.retrieve(session_id)
-        if checkout_session.payment_status not in ("paid", "no_payment_required"):
-            return templates.TemplateResponse(request, "success.html",
-                                              {"state": "PENDING", "purchase": None})
-        purchase = _fulfill(checkout_session)
+    if not session_id:
+        return RedirectResponse("/")
+    checkout_session = stripe.checkout.Session.retrieve(session_id)
+    if checkout_session.payment_status not in ("paid", "no_payment_required"):
         return templates.TemplateResponse(request, "success.html",
-                                          {"state": "PAID", "purchase": purchase})
-    except Exception:
-        import traceback
-        from fastapi.responses import PlainTextResponse
-        return PlainTextResponse(traceback.format_exc(), status_code=500)
+                                          {"state": "PENDING", "purchase": None})
+    purchase = _fulfill(checkout_session)
+    return templates.TemplateResponse(request, "success.html",
+                                      {"state": "PAID", "purchase": purchase})
 
 
 @app.get("/download/{token}")
