@@ -14,3 +14,4 @@ projects/
 # Beltminer instance content — user canon, never in the repo or any deploy
 context/01_ART_DIRECTION_BIBLE.md
 project_state/
+settings.json
