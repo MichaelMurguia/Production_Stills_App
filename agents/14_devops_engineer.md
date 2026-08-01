@@ -15,7 +15,7 @@ volumes per the retention decision.
 `docs/DEPLOYMENT.md` kept current with every infrastructure, commerce, or
 tenant-operations change, in the same commit as the change. After any
 release of `app/` features, restage the release zip
-(`git archive -o storefront/releases/screenboard-studio.zip HEAD -- app
+(`git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app
 requirements.txt run.bat README.md INSTALL.md`) — a stale zip silently
 ships old product.
 

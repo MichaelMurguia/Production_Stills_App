@@ -152,7 +152,7 @@ migration.
 root:
 
 ```
-git archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
+git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
 ```
 
 The zip must never include user canon: `data/`, `project_state/`,

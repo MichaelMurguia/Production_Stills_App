@@ -53,12 +53,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Staged release zip must match HEAD
         run: |
-          git archive -o /tmp/fresh.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
+          git -c core.autocrlf=false archive -o /tmp/fresh.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md
           mkdir /tmp/fresh /tmp/staged
           unzip -q /tmp/fresh.zip -d /tmp/fresh
           unzip -q storefront/releases/screenboard-studio.zip -d /tmp/staged
           if ! diff -r /tmp/fresh /tmp/staged > /tmp/zipdiff.txt 2>&1; then
-            echo "::error::storefront/releases/screenboard-studio.zip is STALE — restage and push: git archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md"
+            echo "::error::storefront/releases/screenboard-studio.zip is STALE — restage and push: git -c core.autocrlf=false archive -o storefront/releases/screenboard-studio.zip HEAD -- app requirements.txt run.bat README.md INSTALL.md"
             head -40 /tmp/zipdiff.txt
             exit 1
           fi
