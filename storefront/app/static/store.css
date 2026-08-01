@@ -88,6 +88,8 @@ body {
 .price-desc { font-size: 14px; color: var(--ink-dim); margin-bottom: 14px; }
 .price-terms { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-bottom: 22px; }
 
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
 /* buttons — one amber primary in view */
 .btn {
   display: inline-block; padding: 10px 22px; font-family: var(--sans);

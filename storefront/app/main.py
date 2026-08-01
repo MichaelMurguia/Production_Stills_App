@@ -20,17 +20,27 @@ _here = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_here / "static"), name="static")
 templates = Jinja2Templates(directory=_here / "templates")
 
+# Plan slug -> Stripe mode + price env var. Slugs appear in checkout URLs and
+# in session metadata; kind/tier are derived by splitting on the hyphen.
 PLANS = {
-    "download": {"mode": "payment", "price": lambda: settings.STRIPE_PRICE_DOWNLOAD},
-    "cloud": {"mode": "subscription", "price": lambda: settings.STRIPE_PRICE_CLOUD},
+    "download-personal": {"mode": "payment", "price": lambda: settings.STRIPE_PRICE_DOWNLOAD_PERSONAL},
+    "download-business": {"mode": "payment", "price": lambda: settings.STRIPE_PRICE_DOWNLOAD_BUSINESS},
+    "cloud-personal": {"mode": "subscription", "price": lambda: settings.STRIPE_PRICE_CLOUD_PERSONAL},
+    "cloud-business": {"mode": "subscription", "price": lambda: settings.STRIPE_PRICE_CLOUD_BUSINESS},
 }
+
+
+def _ready() -> dict[str, bool]:
+    return {slug: bool(settings.STRIPE_SECRET_KEY and plan["price"]())
+            for slug, plan in PLANS.items()}
 
 
 @app.get("/")
 def index(request: Request):
+    ready = _ready()
     return templates.TemplateResponse(request, "index.html", {
-        "stripe_ready": bool(settings.STRIPE_SECRET_KEY and settings.STRIPE_PRICE_DOWNLOAD
-                             and settings.STRIPE_PRICE_CLOUD),
+        "ready": ready,
+        "all_ready": all(ready.values()),
     })
 
 
@@ -65,15 +75,17 @@ def _fulfill(checkout_session) -> db.Purchase:
 
         plan = (checkout_session.metadata or {}).get("plan") or (
             "cloud" if checkout_session.mode == "subscription" else "download")
+        kind, _, tier = plan.partition("-")
         purchase = db.Purchase(
-            kind=plan,
+            kind=kind,
+            tier=tier,
             email=(checkout_session.customer_details or {}).get("email") or "",
             stripe_session_id=checkout_session.id,
             stripe_customer_id=checkout_session.customer or "",
             stripe_subscription_id=checkout_session.subscription or "",
         )
         s.add(purchase)
-        if plan == "download":
+        if kind == "download":
             purchase.license = db.License()
         s.commit()
         s.refresh(purchase)

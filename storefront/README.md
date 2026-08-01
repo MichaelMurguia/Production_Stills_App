@@ -35,11 +35,11 @@ no database setup needed.
 
 ## Stripe setup (once)
 
-1. In dashboard.stripe.com create a product **Screenboard Studio — Download**
-   with a one-time price, and **Screenboard Studio — Cloud** with a monthly
-   recurring price. Copy both price IDs.
-2. Set env vars (see `.env.example`): `STRIPE_SECRET_KEY`,
-   `STRIPE_PRICE_DOWNLOAD`, `STRIPE_PRICE_CLOUD`.
+1. In dashboard.stripe.com create four products — Download Personal/Business
+   (one-time prices) and Cloud Personal/Business (monthly recurring). Copy
+   the four price IDs.
+2. Set env vars (see `.env.example`): `STRIPE_SECRET_KEY` plus the four
+   `STRIPE_PRICE_*` variables.
 3. Add a webhook endpoint at `<BASE_URL>/stripe/webhook` for events
    `checkout.session.completed` and `customer.subscription.deleted`; copy the
    signing secret into `STRIPE_WEBHOOK_SECRET`.

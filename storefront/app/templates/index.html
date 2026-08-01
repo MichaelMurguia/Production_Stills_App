@@ -37,14 +37,16 @@
   </div>
 </section>
 
-{% if not stripe_ready %}
+{% if not all_ready %}
 <div class="notice">
   <span class="notice-badge">SETUP</span>
-  Checkout is not live yet &mdash; Stripe keys and price IDs have not been
-  configured on this deployment. Purchasing is disabled until they are.
+  Checkout is not fully live yet &mdash; Stripe keys or price IDs are missing
+  on this deployment. Unconfigured plans render disabled below.
 </div>
 {% endif %}
 
+{# Prices shown here must match the Stripe price objects — update both
+   together (see docs/DEPLOYMENT.md). #}
 <section class="pricing">
   <div class="price-card price-lead">
     <p class="price-kind">DOWNLOAD</p>
@@ -53,10 +55,19 @@
     Your screenplay and references never leave your studio. Bring your own
     render-engine API keys.</p>
     <p class="price-terms">one-time license &middot; instant download &middot; runs on your hardware</p>
-    {% if stripe_ready %}
-    <a class="btn btn-primary" href="/checkout/download">Buy the download</a>
-    {% else %}
-    <span class="btn btn-disabled" aria-disabled="true">Buy the download</span>
+    <div class="btn-row">
+      {% if ready['download-personal'] %}
+      <a class="btn btn-primary" href="/checkout/download-personal">Personal &mdash; $119</a>
+      {% else %}
+      <span class="btn btn-disabled" aria-disabled="true">Personal &mdash; $119</span>
+      {% endif %}
+      {% if ready['download-business'] %}
+      <a class="btn btn-secondary" href="/checkout/download-business">Business &mdash; $249.99</a>
+      {% else %}
+      <span class="btn btn-disabled" aria-disabled="true">Business &mdash; $249.99</span>
+      {% endif %}
+    </div>
+    {% if not (ready['download-personal'] and ready['download-business']) %}
     <p class="gate-note">Unavailable &mdash; checkout not configured</p>
     {% endif %}
   </div>
@@ -67,10 +78,19 @@
     setup, updates land automatically. Cancel any time from the billing
     portal.</p>
     <p class="price-terms">monthly subscription &middot; hosted workspace</p>
-    {% if stripe_ready %}
-    <a class="btn btn-secondary" href="/checkout/cloud">Start subscription</a>
-    {% else %}
-    <span class="btn btn-disabled" aria-disabled="true">Start subscription</span>
+    <div class="btn-row">
+      {% if ready['cloud-personal'] %}
+      <a class="btn btn-secondary" href="/checkout/cloud-personal">Personal &mdash; $9.99/mo</a>
+      {% else %}
+      <span class="btn btn-disabled" aria-disabled="true">Personal &mdash; $9.99/mo</span>
+      {% endif %}
+      {% if ready['cloud-business'] %}
+      <a class="btn btn-secondary" href="/checkout/cloud-business">Business &mdash; $29.99/mo</a>
+      {% else %}
+      <span class="btn btn-disabled" aria-disabled="true">Business &mdash; $29.99/mo</span>
+      {% endif %}
+    </div>
+    {% if not (ready['cloud-personal'] and ready['cloud-business']) %}
     <p class="gate-note">Unavailable &mdash; checkout not configured</p>
     {% endif %}
   </div>

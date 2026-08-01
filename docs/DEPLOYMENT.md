@@ -6,7 +6,10 @@ read this before touching `storefront/` or anything deployment-related.
 
 ## The product
 
-Screenboard Studio itself is the product, sold to other filmmakers two ways:
+Screenboard Studio itself is the product, sold to other filmmakers two ways,
+each in a Personal and a Business tier (four SKUs total, one Stripe product
+each — prices as of 2026-08-01: $119 / $249.99 one-time, $9.99 / $29.99
+monthly):
 
 1. **Download license** — one-time Stripe payment; buyer receives a license
    token and downloads a packaged release zip. Runs on their hardware with
@@ -14,6 +17,12 @@ Screenboard Studio itself is the product, sold to other filmmakers two ways:
 2. **Cloud subscription** — monthly Stripe subscription for a hosted
    workspace. Billing works today; workspace provisioning is NOT built yet
    (see "Not built" below).
+
+Plan slugs are `download-personal`, `download-business`, `cloud-personal`,
+`cloud-business` (checkout URLs and session metadata); the purchase row
+stores kind and tier separately. **Displayed prices are hardcoded in
+`storefront/app/templates/index.html` — changing a price in Stripe requires
+updating that template in the same change.**
 
 ## The two-app architecture — the one rule that must never break
 
@@ -52,8 +61,10 @@ serve internal data from the storefront.
 |---|---|
 | `STRIPE_SECRET_KEY` | Stripe API key (test key until launch) |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for the webhook endpoint |
-| `STRIPE_PRICE_DOWNLOAD` | Price ID, one-time, product "Screenboard Studio — Download" |
-| `STRIPE_PRICE_CLOUD` | Price ID, monthly recurring, product "Screenboard Studio — Cloud" |
+| `STRIPE_PRICE_DOWNLOAD_PERSONAL` | Price ID, one-time, "Screenboard Studio Download Personal" ($119) |
+| `STRIPE_PRICE_DOWNLOAD_BUSINESS` | Price ID, one-time, "Screenboard Studio Downloadable Business" ($249.99) |
+| `STRIPE_PRICE_CLOUD_PERSONAL` | Price ID, monthly, "Screenboard Studio Cloud Personal" ($9.99/mo) |
+| `STRIPE_PRICE_CLOUD_BUSINESS` | Price ID, monthly, "Screenboard Studio Cloud Business" ($29.99/mo) |
 | `BASE_URL` | Public URL of the storefront, no trailing slash |
 | `DATABASE_URL` | Injected by Railway Postgres; local default SQLite |
 | `DOWNLOAD_FILE` | Optional override for the release zip path |

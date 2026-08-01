@@ -7,8 +7,10 @@ ROOT = Path(__file__).resolve().parent.parent  # storefront/
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_PRICE_DOWNLOAD = os.environ.get("STRIPE_PRICE_DOWNLOAD", "")
-STRIPE_PRICE_CLOUD = os.environ.get("STRIPE_PRICE_CLOUD", "")
+STRIPE_PRICE_DOWNLOAD_PERSONAL = os.environ.get("STRIPE_PRICE_DOWNLOAD_PERSONAL", "")
+STRIPE_PRICE_DOWNLOAD_BUSINESS = os.environ.get("STRIPE_PRICE_DOWNLOAD_BUSINESS", "")
+STRIPE_PRICE_CLOUD_PERSONAL = os.environ.get("STRIPE_PRICE_CLOUD_PERSONAL", "")
+STRIPE_PRICE_CLOUD_BUSINESS = os.environ.get("STRIPE_PRICE_CLOUD_BUSINESS", "")
 
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8100").rstrip("/")
 

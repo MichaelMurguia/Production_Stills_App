@@ -24,6 +24,7 @@ class Purchase(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     kind: Mapped[str] = mapped_column(String(16))  # "download" | "cloud"
+    tier: Mapped[str] = mapped_column(String(16), default="")  # "personal" | "business"
     email: Mapped[str] = mapped_column(String(320))
     stripe_session_id: Mapped[str] = mapped_column(String(255), unique=True)
     stripe_customer_id: Mapped[str] = mapped_column(String(255), default="")
