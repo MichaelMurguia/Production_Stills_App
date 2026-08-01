@@ -68,6 +68,23 @@ pattern (logged as above) or an instruction from the user.
 rename existing CSS classes** — the stylesheet deliberately preserves every one
 of them so styling and behavior stay decoupled.
 
+## Storefront & deployment
+
+The repo holds **two apps**. `app/` is the internal production tool and is
+never deployed. `storefront/` is the public sales site (the app itself is the
+product — download license + cloud subscription via Stripe), deployed on
+Railway with Root Directory `storefront`. The full operational reference is
+`docs/DEPLOYMENT.md` — read it before touching `storefront/`, Stripe, Railway
+config, or release packaging, and update it in the same commit as any such
+change (`agents/14_devops_engineer.md` defines the role).
+
+Hard boundary: no imports across `app/` ↔ `storefront/`; nothing from
+`data/` or `project_state/` is ever served publicly or packaged into a
+release zip; secrets live only in Railway variables and local shells, never
+in the repo. The storefront mirrors the design language (tokens are copied
+into `storefront/app/static/store.css`) but is a separate surface — it does
+not add rows to DESIGN_SYSTEM.md's Uncanonized table.
+
 ## Product model
 
 Strictly sequential: screenplay → art direction bible → breakdown sheet → lock →

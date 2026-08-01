@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Order — Screenboard Studio{% endblock %}
+{% block content %}
+
+{% if state == "PENDING" %}
+<section class="order">
+  <p class="price-kind">ORDER</p>
+  <h1>Payment still processing</h1>
+  <p class="hero-sub">Stripe has not confirmed this payment yet. Refresh in a
+  moment &mdash; nothing is lost, and your order will appear here the instant it
+  clears.</p>
+</section>
+
+{% elif purchase.kind == "download" %}
+<section class="order">
+  <p class="price-kind">ORDER CONFIRMED</p>
+  <h1>Your license is ready.</h1>
+  <p class="hero-sub">A receipt has gone to <span class="mono">{{ purchase.email }}</span>.
+  Keep the license token below &mdash; it is your download credential.</p>
+  <div class="license-box">
+    <p class="license-label">LICENSE TOKEN</p>
+    <p class="license-token">{{ purchase.license.token }}</p>
+  </div>
+  <a class="btn btn-primary" href="/download/{{ purchase.license.token }}">Download Screenboard Studio</a>
+</section>
+
+{% else %}
+<section class="order">
+  <p class="price-kind">SUBSCRIPTION ACTIVE</p>
+  <h1>Welcome aboard.</h1>
+  <p class="hero-sub">Your subscription is active under
+  <span class="mono">{{ purchase.email }}</span>. Workspace provisioning
+  details arrive by email &mdash; manage or cancel any time from the Stripe
+  billing portal link in your receipt.</p>
+</section>
+{% endif %}
+
+{% endblock %}

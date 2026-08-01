@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+  <h1>Production stills your screenplay already approved.</h1>
+  <p class="hero-sub">Screenboard Studio turns a screenplay into an art-direction
+  bible, breakdown sheets, and rendered story boards &mdash; with every image
+  anchored to canon references you approved, and every stage gated on the one
+  before it. No drift, no upscaling, no orphan art.</p>
+</section>
+
+<section class="pipeline-strip" aria-label="Pipeline">
+  <div class="pipe-cell"><span class="pipe-num">01</span> Screenplay</div>
+  <div class="pipe-cell"><span class="pipe-num">02</span> Art bible</div>
+  <div class="pipe-cell"><span class="pipe-num">03</span> Breakdown sheets</div>
+  <div class="pipe-cell"><span class="pipe-num">04</span> Panels</div>
+  <div class="pipe-cell"><span class="pipe-num">05</span> Boards</div>
+</section>
+
+<section class="features">
+  <div class="feature">
+    <h2>Canon-locked generation</h2>
+    <p>Character likenesses, vehicle geometry, and environment layouts come from
+    a reference library you approve. Panels are generated against those anchors
+    &mdash; a face stays the same face across every board.</p>
+  </div>
+  <div class="feature">
+    <h2>Gates, not surprises</h2>
+    <p>Only a locked breakdown sheet can generate panels. A board needs every
+    panel approved. Each gate is visible before you hit it, with the unmet
+    condition stated beside the control.</p>
+  </div>
+  <div class="feature">
+    <h2>Native resolution, always</h2>
+    <p>Renders are never upscaled. If a panel comes back smaller than its slot,
+    it is flagged and regenerated &mdash; boards ship at true 4K.</p>
+  </div>
+</section>
+
+{% if not stripe_ready %}
+<div class="notice">
+  <span class="notice-badge">SETUP</span>
+  Checkout is not live yet &mdash; Stripe keys and price IDs have not been
+  configured on this deployment. Purchasing is disabled until they are.
+</div>
+{% endif %}
+
+<section class="pricing">
+  <div class="price-card price-lead">
+    <p class="price-kind">DOWNLOAD</p>
+    <h2>Own it</h2>
+    <p class="price-desc">The full application, self-hosted on your machine.
+    Your screenplay and references never leave your studio. Bring your own
+    render-engine API keys.</p>
+    <p class="price-terms">one-time license &middot; instant download &middot; runs on your hardware</p>
+    {% if stripe_ready %}
+    <a class="btn btn-primary" href="/checkout/download">Buy the download</a>
+    {% else %}
+    <span class="btn btn-disabled" aria-disabled="true">Buy the download</span>
+    <p class="gate-note">Unavailable &mdash; checkout not configured</p>
+    {% endif %}
+  </div>
+  <div class="price-card">
+    <p class="price-kind">CLOUD</p>
+    <h2>Subscribe</h2>
+    <p class="price-desc">Hosted Screenboard Studio &mdash; same pipeline, zero
+    setup, updates land automatically. Cancel any time from the billing
+    portal.</p>
+    <p class="price-terms">monthly subscription &middot; hosted workspace</p>
+    {% if stripe_ready %}
+    <a class="btn btn-secondary" href="/checkout/cloud">Start subscription</a>
+    {% else %}
+    <span class="btn btn-disabled" aria-disabled="true">Start subscription</span>
+    <p class="gate-note">Unavailable &mdash; checkout not configured</p>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

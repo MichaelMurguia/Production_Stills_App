@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Screenboard Studio{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/store.css">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <div>
+      <p class="kicker">PRODUCTION TOOLING</p>
+      <p class="wordmark">Screenboard Studio</p>
+    </div>
+    <p class="head-meta">screenplay &rarr; bible &rarr; sheets &rarr; panels &rarr; boards</p>
+  </div>
+</header>
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <p class="foot-meta">SCREENBOARD STUDIO &middot; canon-locked art direction for film</p>
+  </div>
+</footer>
+</body>
+</html>
