@@ -115,6 +115,24 @@ Schema changes: `create_all` creates tables but never alters them; additive
 columns go in the `init_db()` micro-migration block (see `tier`). Anything
 destructive requires introducing Alembic first.
 
+### The wildcard tenant router (built 2026-08-01)
+
+Branded studio addresses (`<name>.TENANT_DOMAIN_BASE`) are served by the
+storefront itself, not by per-tenant Railway custom domains. `app` in
+`main.py` is a `TenantProxy` (`tenant_proxy.py`) wrapping the FastAPI app
+(exported as `store`): every request's Host is inspected — storefront
+hosts pass through untouched; a claimed, ACTIVE, PAID studio subdomain is
+reverse-proxied (streaming both ways, long read timeout for renders) to
+that workspace's `railway_url`. Unknown or revoked studio hosts get a
+stated 404 page, an unreachable tenant a stated 502. Safety invariant:
+the proxy only ever forwards to a `*.up.railway.app` host taken from the
+workspace row — never to a user-influenced or branded host (loop risk).
+The wildcard domain `*.<base>` is attached to the storefront service once
+(see DEPLOYMENT.md); claiming/renaming a studio therefore needs zero DNS
+or Railway calls and is live on row commit. `tests/test_tenant_proxy.py`
+drives the router with an `httpx.MockTransport` — pass-through, proxying,
+stated 404s, the off-railway guard, and request bodies are all covered.
+
 ## Requirements — the rules continued development must hold
 
 **Product app (`app/`):**

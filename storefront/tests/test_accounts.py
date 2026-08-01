@@ -155,7 +155,7 @@ class CustomDomainTests(unittest.TestCase):
         settings.TENANT_DOMAIN_BASE = ""
         settings.RAILWAY_PROJECT_TOKEN = ""
 
-    def test_active_workspace_upgrades_to_custom_domain(self):
+    def test_branded_address_serves_via_wildcard_router(self):
         import types as _t
         from app import db as _db, provisioner
         from sqlalchemy import select as _sel
@@ -167,6 +167,8 @@ class CustomDomainTests(unittest.TestCase):
         settings.RAILWAY_PROJECT_TOKEN = "ptok"
 
         class FakeRailway:
+            """No create_custom_domain on purpose — the router design must
+            never attach per-tenant domains; a call would AttributeError."""
             def __init__(self):
                 self.domains = []
                 self.deleted = []
@@ -178,14 +180,10 @@ class CustomDomainTests(unittest.TestCase):
             def redeploy(self, sid): pass
             def delete_service(self, sid): pass
             def list_custom_domains(self, sid):
-                return [{"id": f"cd-{i}", "domain": d}
-                        for i, d in enumerate(self.domains)]
+                return [{"id": f"cd-{d}", "domain": d} for d in self.domains]
             def delete_custom_domain(self, did):
                 self.deleted.append(did)
-                self.domains.pop(int(did.split("-")[1]))
-            def create_custom_domain(self, sid, domain):
-                self.domains.append(domain)
-                return "edge.railway.app"
+                self.domains.remove(did[3:])
 
         self._serves = provisioner._domain_serves
         provisioner._domain_serves = lambda d: True  # tests never probe live
@@ -197,6 +195,9 @@ class CustomDomainTests(unittest.TestCase):
                 _db.Purchase.stripe_session_id == "cs_dom_1"))
             self.assertEqual(ws.url, "https://tenant-d.up.railway.app")
         settings.TENANT_DOMAIN_BASE = "screenboardstudio.com"
+        # A legacy per-tenant custom domain from the earlier design is
+        # still attached — reconcile must clean it up, not keep it.
+        fake.domains.append("old-name.screenboardstudio.com")
         provisioner.reconcile(railway=fake)  # standing upgrade for ACTIVE
         with _db.session() as s:
             ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
@@ -205,28 +206,43 @@ class CustomDomainTests(unittest.TestCase):
             self.assertNotIn("studio-", ws.subdomain,
                              "the slug must never leak the purchase number")
             self.assertEqual(ws.url, f"https://{ws.subdomain}.screenboardstudio.com")
-            self.assertIn("edge.railway.app", ws.detail)
             # The reliable door survives the branded upgrade, and the
             # branded door only unlocks once the probe says it serves.
             self.assertEqual(ws.railway_url, "https://tenant-d.up.railway.app")
             self.assertEqual(ws.domain_live, 1)
-        provisioner.reconcile(railway=fake)  # idempotent
-        self.assertEqual(len(fake.domains), 1)
-        # renaming SWAPS the custom domain (Railway caps them per service)
+        self.assertEqual(fake.domains, [], "legacy custom domains are removed")
+        self.assertEqual(len(fake.deleted), 1)
+        provisioner.reconcile(railway=fake)  # idempotent — nothing new to do
+        self.assertEqual(len(fake.deleted), 1)
+        # Renaming needs NO Railway calls — the router serves the new name
+        # the moment the row commits; the probe re-verifies before doors
+        # switch to it.
         with _db.session() as s:
             ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
                 _db.Purchase.stripe_session_id == "cs_dom_1"))
             ws.subdomain = "renamed-studio"
             s.commit()
         provisioner.reconcile(railway=fake)
-        self.assertEqual(len(fake.domains), 1, "old custom domain must be deleted")
-        self.assertEqual(fake.domains[0], "renamed-studio.screenboardstudio.com")
-        self.assertEqual(len(fake.deleted), 1)
-        # NEVER churn: an attached target stays attached even if not yet
-        # serving — every re-attach mints a new DNS target at Railway.
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            self.assertEqual(ws.url, "https://renamed-studio.screenboardstudio.com")
+            self.assertEqual(ws.domain_live, 1)
+        # If the wildcard is not serving yet, the branded door stays locked
+        # (doors only open on verified addresses) and the railway URL keeps
+        # carrying the buttons.
         provisioner._domain_serves = lambda d: False
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            ws.subdomain = "renamed-again"
+            s.commit()
         provisioner.reconcile(railway=fake)
-        self.assertEqual(len(fake.deleted), 1, "attached target must not re-attach")
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            self.assertEqual(ws.domain_live, 0,
+                             "unverified branded door must stay locked")
 
 
 class StudioNamingTests(unittest.TestCase):

@@ -380,8 +380,8 @@ def auth_logout():
 def name_studio(request: Request, background: BackgroundTasks,
                 workspace_id: int = Form(0), name: str = Form("")):
     """Claim or rename a studio's subdomain. Owner-only (signed-in email
-    must match the purchase); the old address keeps answering — Railway
-    serves every domain ever attached, so bookmarks never break."""
+    must match the purchase). The wildcard router serves the new name the
+    moment reconcile commits it; the old name then reads as unclaimed."""
     from urllib.parse import quote
     email = request.state.account_email
     if not email:
@@ -574,3 +574,13 @@ async def stripe_webhook(request: Request, background: BackgroundTasks):
                 s.commit()
         background.add_task(provisioner.reconcile)
     return {"received": True}
+
+
+# The public ASGI entrypoint. `store` is the FastAPI storefront; `app` —
+# what uvicorn serves — wraps it in the wildcard tenant router, so
+# *.TENANT_DOMAIN_BASE studio hosts proxy to their tenant service and
+# every storefront host passes straight through (see tenant_proxy.py).
+from .tenant_proxy import TenantProxy  # noqa: E402
+
+store = app
+app = TenantProxy(store)

@@ -136,46 +136,29 @@ def _domain_serves(domain: str) -> bool:
 
 def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
                           railway) -> None:
-    """Upgrade the workspace to studio-<n>.<TENANT_DOMAIN_BASE> when the
-    base is configured. Non-fatal by design: an ACTIVE workspace never
-    regresses over a domain problem — the railway.app URL keeps working
-    and the issue lands in detail."""
+    """Point the workspace at its branded address. The address is served
+    by the storefront's wildcard router (*.TENANT_DOMAIN_BASE is attached
+    to the storefront service ONCE — see docs/DEPLOYMENT.md), so claiming
+    or renaming a studio needs no DNS work and no Railway domain calls.
+    Per-tenant Railway custom domains are retired; any still attached
+    from the earlier design are removed. Non-fatal by design: the
+    railway.app URL keeps working regardless."""
     base = settings.TENANT_DOMAIN_BASE
     if not base or not ws.railway_service_id:
         return
     if not ws.subdomain:  # pre-naming workspaces get their slug here
         ws.subdomain = random_subdomain(s)
         s.commit()
-    domain = f"{ws.subdomain}.{base}"
-    if ws.url == f"https://{domain}":
-        return  # target attached; DNS/cert provisioning is Railway's side
     try:
-        # SWAP, never accumulate: Railway caps custom domains per service,
-        # so superseded ones are deleted before the new attach. The
-        # *.up.railway.app address always remains as the fallback.
-        # NEVER re-attach an already-attached target: Railway assigns a
-        # NEW dns target on every attach (observed live 2026-08-01), so
-        # probe-driven re-attachment churns targets faster than DNS or
-        # certificates can ever catch up. Attach once; swap only when the
-        # NAME changes.
-        existing = railway.list_custom_domains(ws.railway_service_id)
-        if any(d.get("domain") == domain for d in existing):
-            ws.url = f"https://{domain}"
-            s.commit()
-            return
-        for d in existing:
+        for d in railway.list_custom_domains(ws.railway_service_id):
             railway.delete_custom_domain(d["id"])
-        dns_target = railway.create_custom_domain(ws.railway_service_id, domain)
-        ws.url = f"https://{domain}"
-        ws.detail = (f"custom domain attached; wildcard *.{base} must point "
-                     f"at {dns_target}" if dns_target else "")
+        ws.detail = ""
     except Exception as e:
-        detail = str(e)
-        if "already" in detail.lower():  # attached on a prior run — done
-            ws.url = f"https://{domain}"
-            ws.detail = ""
-        else:
-            ws.detail = f"custom domain pending: {detail[:400]}"
+        ws.detail = f"legacy custom-domain cleanup pending: {str(e)[:400]}"
+    new_url = f"https://{ws.subdomain}.{base}"
+    if ws.url != new_url:
+        ws.url = new_url
+        ws.domain_live = 0  # the new address re-verifies before doors use it
     s.commit()
 
 
