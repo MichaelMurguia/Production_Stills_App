@@ -3,18 +3,26 @@ from __future__ import annotations
 from pathlib import Path
 
 import stripe
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from . import db, settings
+from . import db, provisioner, settings
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 app = FastAPI(title="Screenboard Studio — Storefront")
 db.init_db()
+
+
+@app.on_event("startup")
+def _reconcile_on_start():
+    """Converge workspaces toward the purchases table on boot — catches
+    anything missed while the service was down. reconcile() never raises."""
+    import threading
+    threading.Thread(target=provisioner.reconcile, daemon=True).start()
 
 _here = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_here / "static"), name="static")
@@ -85,9 +93,9 @@ def _fulfill(checkout_session) -> db.Purchase:
         existing = s.scalar(select(db.Purchase).where(
             db.Purchase.stripe_session_id == checkout_session.id))
         if existing:
-            if existing.license:
-                _ = existing.license.token  # force the lazy-load while attached
-            s.expunge_all()
+            if existing.kind == "cloud":
+                provisioner.ensure_workspace_row(s, existing)
+            _detach_loaded(s, existing)
             return existing
 
         plan = _sget(checkout_session.metadata, "plan") or (
@@ -106,14 +114,25 @@ def _fulfill(checkout_session) -> db.Purchase:
             purchase.license = db.License()
         s.commit()
         s.refresh(purchase)
-        if purchase.license:
-            _ = purchase.license.token
-        s.expunge_all()
+        if kind == "cloud":
+            provisioner.ensure_workspace_row(s, purchase)
+        _detach_loaded(s, purchase)
         return purchase
 
 
+def _detach_loaded(s, purchase: db.Purchase) -> None:
+    """Force-load the relationships templates read, then detach — the
+    detached-safe rule from the DetachedInstanceError production bug."""
+    if purchase.license:
+        _ = purchase.license.token
+    if purchase.workspace:
+        _ = (purchase.workspace.status, purchase.workspace.url,
+             purchase.workspace.access_token)
+    s.expunge_all()
+
+
 @app.get("/success")
-def success(request: Request, session_id: str = ""):
+def success(request: Request, background: BackgroundTasks, session_id: str = ""):
     if not session_id:
         return RedirectResponse("/")
     checkout_session = stripe.checkout.Session.retrieve(session_id)
@@ -121,6 +140,10 @@ def success(request: Request, session_id: str = ""):
         return templates.TemplateResponse(request, "success.html",
                                           {"state": "PENDING", "purchase": None})
     purchase = _fulfill(checkout_session)
+    if purchase.kind == "cloud":
+        # Provision after the response goes out; the buyer revisits this
+        # page (idempotent) and finds the workspace once it's ACTIVE.
+        background.add_task(provisioner.reconcile)
     return templates.TemplateResponse(request, "success.html",
                                       {"state": "PAID", "purchase": purchase})
 
@@ -140,7 +163,7 @@ def download(token: str):
 
 
 @app.post("/stripe/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, background: BackgroundTasks):
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
     try:
@@ -149,7 +172,9 @@ async def stripe_webhook(request: Request):
         raise HTTPException(400, "invalid signature")
 
     if event["type"] == "checkout.session.completed":
-        _fulfill(stripe.checkout.Session.retrieve(event["data"]["object"]["id"]))
+        purchase = _fulfill(stripe.checkout.Session.retrieve(event["data"]["object"]["id"]))
+        if purchase.kind == "cloud":
+            background.add_task(provisioner.reconcile)
     elif event["type"] == "customer.subscription.deleted":
         sub_id = event["data"]["object"]["id"]
         with db.session() as s:
@@ -158,4 +183,5 @@ async def stripe_webhook(request: Request):
             if purchase:
                 purchase.status = "CANCELED"
                 s.commit()
+        background.add_task(provisioner.reconcile)
     return {"received": True}

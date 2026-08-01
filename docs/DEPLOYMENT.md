@@ -68,6 +68,16 @@ serve internal data from the storefront.
 | `BASE_URL` | Public URL of the storefront, no trailing slash |
 | `DATABASE_URL` | Injected by Railway Postgres; local default SQLite |
 | `DOWNLOAD_FILE` | Optional override for the release zip path |
+| `RAILWAY_API_TOKEN` | Railway API token the provisioner uses to create tenant services (see provisioning setup) |
+| `RAILWAY_PROJECT_ID` | Railway project that holds tenant workspaces (recommend a dedicated "screenboard-tenants" project) |
+| `RAILWAY_ENVIRONMENT_ID` | Environment id inside that project (usually `production`'s id) |
+| `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |
+| `TENANT_BRANCH` | Branch tenants deploy (default `main`) |
+
+All five provisioning variables are optional: while unset, cloud purchases
+queue as PENDING workspaces with the condition stated on the row — nothing
+crashes, and the success page honestly says the workspace is being
+prepared.
 
 Secrets live ONLY in Railway variables and local shells. Never in the repo,
 never in `data/settings.json` (that file is for the internal app's
@@ -75,9 +85,11 @@ render-engine keys and is a different concern entirely).
 
 ## Stripe wiring
 
-- Checkout: `GET /checkout/download` (mode=payment) and `GET /checkout/cloud`
-  (mode=subscription) redirect to Stripe-hosted Checkout. PCI stays Stripe's
-  problem; no card data ever touches this code.
+- Checkout: `GET /checkout/{plan}` for the four plan slugs
+  (`download-personal|download-business` mode=payment,
+  `cloud-personal|cloud-business` mode=subscription) redirects to
+  Stripe-hosted Checkout. PCI stays Stripe's problem; no card data ever
+  touches this code.
 - Webhook: `POST /stripe/webhook`, signature-verified. Events subscribed:
   `checkout.session.completed` (fulfill) and
   `customer.subscription.deleted` (mark purchase CANCELED).
@@ -153,12 +165,47 @@ Sandbox and live are fully parallel universes in Stripe: the sandbox
 products/webhook stay intact for future testing; the code is identical in
 both and driven purely by which keys are configured.
 
+## Cloud workspace provisioning — setup & permissions (added 2026-07-31)
+
+Built and tested against a fake Railway client; the first live provision is
+a **supervised test** (like the Stripe sandbox pass) — if Railway's GraphQL
+schema has drifted from `storefront/app/railway.py`, the workspace lands
+FAILED with the exact API error recorded on the row.
+
+What the operator must grant, one time:
+
+1. **Railway API token** — railway.com → Account Settings → Tokens. A
+   *team/account* token (not project-scoped) so the provisioner can create
+   services. Set as `RAILWAY_API_TOKEN` on the **storefront** service.
+   This token can control the whole Railway account — treat it like the
+   Stripe secret key.
+2. **A tenants project** — create an empty Railway project (recommend
+   `screenboard-tenants`, separate from the storefront's project so tenant
+   blast radius is isolated). Copy its project id and its production
+   environment id (both visible in the project's URL / settings) into
+   `RAILWAY_PROJECT_ID` and `RAILWAY_ENVIRONMENT_ID`.
+3. **GitHub access** — the Railway GitHub app must have access to this
+   repo in that project's scope (already true for the storefront; confirm
+   for the tenants project on first provision).
+4. **Cost awareness** — each tenant is one Railway service + one volume
+   billed by usage to the operator's account (idle FastAPI ≈ $2–5/mo).
+   Tenant costs scale linearly with subscribers; the Personal tier margin
+   depends on it.
+
+Lifecycle (all driven by `provisioner.reconcile()` — startup, after cloud
+fulfillment, after subscription webhooks): PAID cloud purchase → service
+created from `TENANT_REPO` (repo root, `uvicorn app.main:app`), volume at
+`/workspace`, env `SCREENBOARD_HOME=/workspace` +
+`SCREENBOARD_ACCESS_TOKEN=<workspace token>`, generated
+`*.up.railway.app` domain → row ACTIVE; buyer collects URL + token on the
+success page (revisitable). CANCELED → service deleted, row REVOKED
+(token kept as the record). Probe a tenant with `GET /api/healthz`.
+
 ## Not built (deliberate scope cuts, do not silently "fix")
 
-- Cloud workspace provisioning for subscribers — a separate project; the
-  success page honestly says provisioning details arrive by email.
 - License recovery ("find my license by email") page.
 - Transactional emails beyond Stripe's own receipts.
+- Tenant volume backups / export-my-data — decide before real subscribers.
 
 ## Design language
 

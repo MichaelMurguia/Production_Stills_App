@@ -66,10 +66,39 @@ objects specifically so it stays caught.
 
 - `purchases` — one row per completed checkout: `kind` (download|cloud),
   `tier` (personal|business), email, Stripe ids, `status` (PAID|CANCELED).
-  **This table is the source of truth for entitlements** — the future
-  provisioning system grants/revokes cloud workspaces from it.
+  **This table is the source of truth for entitlements** — the
+  provisioner grants/revokes cloud workspaces from it.
 - `licenses` — download credential: unique `token` gates the zip,
   `downloads_used` counts (bookkeeping, not a cap).
+- `workspaces` — one per cloud purchase: status
+  PENDING|ACTIVE|FAILED|REVOKED, `access_token` (the tenant's login),
+  Railway service/volume ids, `url`, and `detail` (the stated reason
+  whenever the row isn't ACTIVE).
+
+### Cloud workspace provisioning (built 2026-07-31)
+
+`provisioner.reconcile()` converges workspaces toward the purchases
+table — one tenant Railway service per PAID cloud purchase (repo root,
+`uvicorn app.main:app`, volume at `/workspace`, generated domain), deleted
+on CANCELED. It runs at startup, after cloud fulfillment, and after
+subscription webhooks; it never raises, every step is idempotent, and
+every failure lands on the workspace row as `detail`. The Railway GraphQL
+client (`railway.py`) is **injected**, so `tests/test_provisioner.py`
+drives the whole machine with a fake — unconfigured-gate, provision-once,
+failure-retry, and revoke are all covered. Missing `RAILWAY_*` config is a
+stated gate: rows queue PENDING, the success page says the workspace is
+being prepared, and the buyer's revisitable success URL is the pickup
+point for the workspace URL + access token once ACTIVE.
+
+The product app's cloud-mode contract (all env-gated; unset = standalone
+behavior, byte-identical and offline):
+
+- `SCREENBOARD_HOME` — relocates projects, settings, and all user data
+  (tenants point it at their volume).
+- `SCREENBOARD_ACCESS_TOKEN` — puts the whole app behind the workspace
+  login; `/api/healthz` stays open as the provisioner's probe.
+- Multi-project save/load lives in the product app itself (Settings →
+  Projects) and works identically standalone and hosted.
 
 Schema changes: `create_all` creates tables but never alters them; additive
 columns go in the `init_db()` micro-migration block (see `tier`). Anything
@@ -120,11 +149,12 @@ destructive requires introducing Alembic first.
 
 ## Roadmap (agreed, not yet built)
 
-1. **Cloud workspace provisioning** — the real second project. Consumes
-   `purchases` rows (kind=cloud, status=PAID) to create per-tenant hosted
-   instances of the product app; CANCELED revokes. Design not started —
-   do not improvise it into the storefront.
+1. ~~Cloud workspace provisioning~~ — **built 2026-07-31** (see section
+   above). Remaining: grant the `RAILWAY_*` variables and run the
+   supervised first live provision (`docs/DEPLOYMENT.md` setup section).
 2. **License recovery** — customer-facing "find my license by email".
 3. **Transactional email** — license/receipt mail beyond Stripe's.
 4. **Go-live** — Stripe activation + live keys swap; checklist in
    `docs/DEPLOYMENT.md`. No code change involved.
+5. **Tenant data care** — volume backups / export-my-data; decide before
+   real subscribers.

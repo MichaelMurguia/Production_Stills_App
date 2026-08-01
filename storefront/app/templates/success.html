@@ -24,14 +24,31 @@
   <a class="btn btn-primary" href="/download/{{ purchase.license.token }}">Download Screenboard Studio</a>
 </section>
 
+{% elif purchase.workspace and purchase.workspace.status == "ACTIVE" %}
+<section class="order">
+  <p class="price-kind">SUBSCRIPTION ACTIVE</p>
+  <h1>Your workspace is live.</h1>
+  <p class="hero-sub">Your private Screenboard Studio runs at the address
+  below. Keep the access token &mdash; it is your workspace key, and this
+  page (from your receipt link) always shows it again.</p>
+  <div class="license-box">
+    <p class="license-label">WORKSPACE URL</p>
+    <p class="license-token">{{ purchase.workspace.url }}</p>
+    <p class="license-label" style="margin-top:12px">ACCESS TOKEN</p>
+    <p class="license-token">{{ purchase.workspace.access_token }}</p>
+  </div>
+  <a class="btn btn-primary" href="{{ purchase.workspace.url }}">Open your workspace</a>
+</section>
+
 {% else %}
 <section class="order">
   <p class="price-kind">SUBSCRIPTION ACTIVE</p>
   <h1>Welcome aboard.</h1>
   <p class="hero-sub">Your subscription is active under
-  <span class="mono">{{ purchase.email }}</span>. Workspace provisioning
-  details arrive by email &mdash; manage or cancel any time from the Stripe
-  billing portal link in your receipt.</p>
+  <span class="mono">{{ purchase.email }}</span>. Your private workspace is
+  being prepared &mdash; revisit this page (the link in your Stripe receipt)
+  in a few minutes to collect its address and access token. Manage or cancel
+  any time from the billing portal link in your receipt.</p>
 </section>
 {% endif %}
 
