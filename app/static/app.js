@@ -663,7 +663,8 @@ function initLightbox() {
 
 const views = { status: renderStatus, screenplay: renderScreenplay, wizard: renderWizard,
                 references: renderReferences, specs: renderSpecs, boards: renderBoards,
-                assembly: renderAssembly, settings: renderSettings };
+                assembly: renderAssembly, projects: renderProjectsView,
+                settings: renderSettings };
 const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
 let activeView = "status";
 
@@ -1061,36 +1062,48 @@ async function renderLocations(state = null, langs = 0) {
   });
 }
 
-/* --------------------------------------------------------------- settings */
+/* ---------------------------------------------------- productions library */
 
-async function renderSettings() {
-  useTemplate("tpl-settings");
+// The Screenboard Library (PRODUCTIONS_PLAN A2): a production is the top
+// of the content hierarchy, so it gets its own view — Settings keeps only
+// install-level configuration. Switching reloads so every view re-reads
+// the newly active production. '' is the legacy root layout.
+async function renderProjectsView() {
+  useTemplate("tpl-projects");
 
-  // ---- projects (save/load — user request 2026-07-31) ----
-  // Registry-row grammar; switching reloads so every view re-reads the
-  // newly active project. '' is the legacy root layout.
-  const renderProjects = async () => {
+  const renderCards = async () => {
     const pr = await api("/api/projects");
-    $("#proj-list").innerHTML = pr.projects.map(p => `
-      <div class="eng-row">
-        <span style="font-weight:600">${esc(p.name)}</span>
-        <span class="eng-facts">${p.slug ? esc(p.slug) : "root layout"} · ${p.last_backup_at
-          ? `BACKED UP ${esc(p.last_backup_at.slice(0, 10))}` : "NEVER BACKED UP"}</span>
-        <button class="ghost" data-backup="${esc(p.slug)}" title="Download this project as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">Backup</button>
-        ${p.active ? '<span class="badge APPROVED">ACTIVE</span>'
-          : `<button class="ghost" data-slug="${esc(p.slug)}" title="Switch to this project — the current one keeps everything and stays listed here.">Open</button>`}
+    $("#prod-count").textContent =
+      `${pr.projects.length} PRODUCTION${pr.projects.length === 1 ? "" : "S"} · 1 OPEN`;
+    // M2 scaffold rows — M3 replaces these with the full card anatomy.
+    $("#prod-cards").innerHTML = pr.projects.map(p => `
+      <div class="panel prod-card ${p.active ? "open" : ""}">
+        <div class="prod-card-head">
+          <span class="prod-name">${esc(p.name)}</span>
+          ${p.active ? '<span class="prod-open mono">OPEN</span>' : ""}
+          <span class="prod-slug mono">${p.slug ? esc(p.slug) : "root layout"}</span>
+        </div>
+        <div class="prod-foot">
+          <span class="prod-care mono">${p.last_backup_at
+            ? `BACKED UP ${esc(p.last_backup_at.slice(0, 10))}` : "NEVER BACKED UP"}</span>
+          <span class="prod-actions">
+            <button class="ghost" data-backup="${esc(p.slug)}" title="Download this production as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">Back up</button>
+            ${p.active ? "" : `<button class="ghost" data-slug="${esc(p.slug)}" title="Open this production — the current one keeps everything and stays on the shelf.">Open</button>`}
+          </span>
+        </div>
       </div>`).join("");
-    $$("#proj-list [data-slug]").forEach(b => b.onclick = async () => {
+    $$("#prod-cards [data-slug]").forEach(b => b.onclick = async () => {
       try {
         await api("/api/projects/activate", { method: "POST", json: { slug: b.dataset.slug } });
         location.reload();
       } catch (err) { toast(err.message, true); }
     });
-    $$("#proj-list [data-backup]").forEach(b => b.onclick = () => {
+    $$("#prod-cards [data-backup]").forEach(b => b.onclick = () => {
       location.href = `/api/projects/backup?slug=${encodeURIComponent(b.dataset.backup)}`;
-      setTimeout(renderProjects, 1500);  // pick up the fresh last-backup stamp
+      setTimeout(renderCards, 1500);  // pick up the fresh last-backup stamp
     });
   };
+
   $("#proj-restore").addEventListener("submit", async e => {
     e.preventDefault();
     const f = $("#proj-zip").files[0];
@@ -1099,9 +1112,9 @@ async function renderSettings() {
     fd.append("file", f);
     try {
       const r = await api("/api/projects/restore", { method: "POST", body: fd });
-      toast(`"${r.name}" restored as a new production (${r.slug}) — open it from the list.`);
+      toast(`"${r.name}" restored as a new production (${r.slug}) — open it from the shelf.`);
       $("#proj-zip").value = "";
-      renderProjects();
+      renderCards();
     } catch (err) { toast(err.message, true); }
   });
   $("#proj-new").addEventListener("submit", async e => {
@@ -1114,7 +1127,14 @@ async function renderSettings() {
       location.reload();
     } catch (err) { toast(err.message, true); }
   });
-  renderProjects();
+  await renderCards();
+}
+
+/* --------------------------------------------------------------- settings */
+
+async function renderSettings() {
+  useTemplate("tpl-settings");
+  $("#goto-productions").onclick = () => showView("projects");
 
   $("#settings-subnav").addEventListener("click", e => {
     const btn = e.target.closest("button[data-sub]");
