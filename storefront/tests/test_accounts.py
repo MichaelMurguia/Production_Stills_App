@@ -169,6 +169,7 @@ class CustomDomainTests(unittest.TestCase):
         class FakeRailway:
             def __init__(self):
                 self.domains = []
+                self.deleted = []
             def create_service(self, name): return "svc-d"
             def create_volume(self, sid, mp): return "vol-d"
             def upsert_variables(self, sid, v): pass
@@ -176,6 +177,12 @@ class CustomDomainTests(unittest.TestCase):
             def create_domain(self, sid): return "tenant-d.up.railway.app"
             def redeploy(self, sid): pass
             def delete_service(self, sid): pass
+            def list_custom_domains(self, sid):
+                return [{"id": f"cd-{i}", "domain": d}
+                        for i, d in enumerate(self.domains)]
+            def delete_custom_domain(self, did):
+                self.deleted.append(did)
+                self.domains.pop(int(did.split("-")[1]))
             def create_custom_domain(self, sid, domain):
                 self.domains.append(domain)
                 return "edge.railway.app"
@@ -198,6 +205,16 @@ class CustomDomainTests(unittest.TestCase):
             self.assertIn("edge.railway.app", ws.detail)
         provisioner.reconcile(railway=fake)  # idempotent
         self.assertEqual(len(fake.domains), 1)
+        # renaming SWAPS the custom domain (Railway caps them per service)
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).join(_db.Purchase).where(
+                _db.Purchase.stripe_session_id == "cs_dom_1"))
+            ws.subdomain = "renamed-studio"
+            s.commit()
+        provisioner.reconcile(railway=fake)
+        self.assertEqual(len(fake.domains), 1, "old custom domain must be deleted")
+        self.assertEqual(fake.domains[0], "renamed-studio.screenboardstudio.com")
+        self.assertEqual(len(fake.deleted), 1)
 
 
 class StudioNamingTests(unittest.TestCase):

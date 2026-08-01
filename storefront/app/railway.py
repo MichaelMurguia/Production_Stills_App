@@ -172,6 +172,22 @@ def create_custom_domain(service_id: str, domain: str) -> str:
     return recs[0].get("requiredValue", "") if recs else ""
 
 
+def list_custom_domains(service_id: str) -> list[dict]:
+    data = _gql(
+        """query($projectId: String!, $environmentId: String!, $serviceId: String!) {
+             domains(projectId: $projectId, environmentId: $environmentId,
+                     serviceId: $serviceId) {
+               customDomains { id domain } } }""",
+        {"projectId": project_id(), "environmentId": environment_id(),
+         "serviceId": service_id})
+    return (data.get("domains") or {}).get("customDomains") or []
+
+
+def delete_custom_domain(domain_id: str) -> None:
+    _gql("""mutation($id: String!) { customDomainDelete(id: $id) }""",
+         {"id": domain_id})
+
+
 def redeploy(service_id: str) -> None:
     """Redeploy so variables set after the initial build take effect."""
     _gql(

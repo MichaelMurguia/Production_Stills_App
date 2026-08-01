@@ -134,6 +134,17 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
     if ws.url == f"https://{domain}":
         return
     try:
+        # SWAP, never accumulate: Railway caps custom domains per service,
+        # so superseded ones are deleted before the new attach. The
+        # *.up.railway.app address always remains as the fallback.
+        existing = railway.list_custom_domains(ws.railway_service_id)
+        if any(d.get("domain") == domain for d in existing):
+            ws.url = f"https://{domain}"
+            ws.detail = ""
+            s.commit()
+            return
+        for d in existing:
+            railway.delete_custom_domain(d["id"])
         dns_target = railway.create_custom_domain(ws.railway_service_id, domain)
         ws.url = f"https://{domain}"
         ws.detail = (f"custom domain attached; wildcard *.{base} must point "
