@@ -13,7 +13,10 @@ from typing import Any
 
 from . import paths
 
-LOG = paths.DATA / "activity_log.jsonl"
+def _log_path():
+    # Computed per call — paths.DATA moves with the active project.
+    return paths.DATA / "activity_log.jsonl"
+
 
 _REDACT_MARKERS = ("key", "token", "secret", "file_data", "image_url", "b64")
 _MAX_STR = 400
@@ -35,7 +38,7 @@ def log(event: dict) -> None:
         paths.ensure_dirs()
         event = {"ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
                  **_redact(event)}
-        with LOG.open("a", encoding="utf-8") as f:
+        with _log_path().open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, ensure_ascii=False) + "\n")
     except Exception:
         pass  # the flight recorder must never take the plane down

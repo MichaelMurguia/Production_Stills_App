@@ -24,6 +24,18 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 
+def safe_id(name: str) -> str:
+    """Traversal guard for URL-supplied ids that become path components:
+    one alnum-led component, no separators, no dot-led names (so '..' can
+    never pass). KeyError → the API's 404. Use on every spec/candidate id
+    that reaches the filesystem."""
+    import re as _re
+    n = str(name or "")
+    if not _re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", n):
+        raise KeyError(name)
+    return n
+
+
 def _project_base(slug: str) -> Path:
     """'' is the legacy root project (data/ directly under HOME — every
     install that predates multi-project); named projects live under

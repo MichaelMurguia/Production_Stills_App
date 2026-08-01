@@ -17,6 +17,16 @@ app = FastAPI(title="Screenboard Studio — Storefront")
 db.init_db()
 
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Baseline hardening on every public response."""
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    return resp
+
+
 @app.on_event("startup")
 def _reconcile_on_start():
     """Converge workspaces toward the purchases table on boot — catches

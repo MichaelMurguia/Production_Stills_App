@@ -545,7 +545,7 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
 # ---------------------------------------------------------------- candidates
 
 def _spec_board_dir(spec_id: str) -> Path:
-    d = paths.BOARDS_DIR / spec_id
+    d = paths.BOARDS_DIR / paths.safe_id(spec_id)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -597,7 +597,7 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
 
 
 def list_candidates(spec_id: str) -> list[dict]:
-    d = paths.BOARDS_DIR / spec_id
+    d = paths.BOARDS_DIR / paths.safe_id(spec_id)
     if not d.exists():
         return []
     out = []
@@ -607,14 +607,14 @@ def list_candidates(spec_id: str) -> list[dict]:
 
 
 def get_candidate(spec_id: str, cand_id: str) -> dict | None:
-    p = paths.BOARDS_DIR / spec_id / f"{cand_id}.json"
+    p = paths.BOARDS_DIR / paths.safe_id(spec_id) / f"{paths.safe_id(cand_id)}.json"
     if not p.exists():
         return None
     return json.loads(p.read_text(encoding="utf-8"))
 
 
 def candidate_image_path(spec_id: str, cand_id: str) -> Path | None:
-    p = paths.BOARDS_DIR / spec_id / f"{cand_id}.png"
+    p = paths.BOARDS_DIR / paths.safe_id(spec_id) / f"{paths.safe_id(cand_id)}.png"
     return p if p.exists() else None
 
 

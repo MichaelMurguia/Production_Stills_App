@@ -555,7 +555,7 @@ def approve_spec(spec_id: str, validate_fn) -> dict:
 
 
 def _board_records(spec_id: str) -> list[dict]:
-    d = paths.BOARDS_DIR / spec_id
+    d = paths.BOARDS_DIR / paths.safe_id(spec_id)
     out = []
     if d.exists():
         for j in d.glob("*.json"):
