@@ -98,6 +98,17 @@ class RecoveryTests(unittest.TestCase):
         r = self.client.get("/admin/wildcard?token=s3cret-export")
         self.assertEqual(r.status_code, 503)
 
+    def test_reconcile_trigger_gated_and_returns_summary(self):
+        settings.ADMIN_EXPORT_TOKEN = ""
+        self.assertEqual(self.client.get("/admin/reconcile").status_code, 404)
+        settings.ADMIN_EXPORT_TOKEN = "s3cret-export"
+        self.assertEqual(
+            self.client.get("/admin/reconcile?token=wrong").status_code, 404)
+        r = self.client.get("/admin/reconcile?token=s3cret-export")
+        self.assertEqual(r.status_code, 200)
+        for key in ("provisioned", "revoked", "pending", "failed"):
+            self.assertIn(key, r.json())
+
 
 if __name__ == "__main__":
     unittest.main()

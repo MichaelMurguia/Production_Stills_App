@@ -549,6 +549,18 @@ def admin_wildcard(token: str = "", attach: str = ""):
     return out
 
 
+@app.get("/admin/reconcile")
+def admin_reconcile(token: str = ""):
+    """Run provisioner.reconcile() on demand — same gate as /admin/export.
+    Ops use: after a DNS change, flip domain_live the moment the branded
+    address serves instead of waiting for the next deploy or webhook."""
+    if not settings.ADMIN_EXPORT_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
+        raise HTTPException(404)
+    return provisioner.reconcile()
+
+
 @app.get("/admin/export")
 def admin_export(token: str = ""):
     """Entitlement-data backup: purchases, licenses, workspaces as JSON.
