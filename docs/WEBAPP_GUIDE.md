@@ -41,6 +41,9 @@ publicly or packaged into a release.**
 | `GET /download/{token}` | Serves the release zip if the token belongs to a PAID purchase; 404 unknown token, 503 missing artifact. |
 | `POST /stripe/webhook` | Signature-verified. `checkout.session.completed` → fulfill; `customer.subscription.deleted` → mark purchase CANCELED. |
 | `GET /healthz` | `{ok, rev}` — the git commit currently serving. First stop when asking "did my deploy land?" |
+| `GET`/`POST /recover` | License recovery. Anti-enumeration by construction: identical response either way; details only ever mail to the owning address. SMTP unset → stated gate. |
+| `GET /terms`, `GET /privacy` | Plain-language legal pages (Stripe activation expects them). |
+| `GET /admin/export?token=` | Entitlement backup (purchases/licenses/workspaces JSON). Exists only when `ADMIN_EXPORT_TOKEN` is set; wrong token → 404. |
 
 ### Fulfillment — the invariant that matters most
 
@@ -156,9 +159,13 @@ destructive requires introducing Alembic first.
 1. ~~Cloud workspace provisioning~~ — **built 2026-07-31** (see section
    above). Remaining: grant the `RAILWAY_*` variables and run the
    supervised first live provision (`docs/DEPLOYMENT.md` setup section).
-2. **License recovery** — customer-facing "find my license by email".
-3. **Transactional email** — license/receipt mail beyond Stripe's.
+2. ~~License recovery~~ — **built 2026-08-01** (`/recover`, SMTP-gated,
+   anti-enumeration).
+3. ~~Transactional email~~ — **built 2026-08-01** for recovery mail
+   (stdlib SMTP via `mailer.py`); purchase-confirmation mail beyond
+   Stripe's receipts still open.
 4. **Go-live** — Stripe activation + live keys swap; checklist in
-   `docs/DEPLOYMENT.md`. No code change involved.
-5. **Tenant data care** — volume backups / export-my-data; decide before
-   real subscribers.
+   `docs/DEPLOYMENT.md` (now includes backups, SMTP, CI, legal review).
+5. **Tenant data care** — operator-side volume snapshots + retention
+   promise; decide before real subscribers. In-app project backups and
+   the entitlement export (tier A) exist.

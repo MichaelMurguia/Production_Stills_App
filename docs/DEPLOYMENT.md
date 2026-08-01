@@ -74,10 +74,35 @@ serve internal data from the storefront.
 | `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |
 | `TENANT_BRANCH` | Branch tenants deploy (default `main`) |
 
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Transactional mail for `/recover` (any SMTP endpoint — Resend/Postmark/SES). Unset → the recovery page states the gate |
+| `ADMIN_EXPORT_TOKEN` | Long random value enabling `GET /admin/export?token=…` (entitlement backup). Unset → the endpoint 404s |
+
 All five provisioning variables are optional: while unset, cloud purchases
 queue as PENDING workspaces with the condition stated on the row — nothing
 crashes, and the success page honestly says the workspace is being
-prepared.
+prepared. The SMTP and export variables are likewise optional gates.
+
+## Data safety (tier A, 2026-08-01)
+
+The `purchases`/`licenses`/`workspaces` tables are the entitlement truth —
+losing them means losing the record of who owns what. Two layers:
+
+1. **Railway Postgres backups** — confirm the plugin's backup policy in the
+   Railway dashboard (Database → Backups) and enable scheduled backups if
+   they aren't on. This is a dashboard setting; do it once at go-live.
+2. **App-level export** — set `ADMIN_EXPORT_TOKEN`, then fetch
+   `https://www.screenboardstudio.com/admin/export?token=…` on a schedule
+   (weekly cron, or by hand after each sale while volume is low) and keep
+   the JSON somewhere safe. Wrong or missing token → 404; the endpoint
+   never exists until configured.
+
+## CI
+
+`.github/workflows/ci.yml` runs both suites on every push and PR. Railway
+deploys `main` on push regardless (it cannot wait for CI) — so the standing
+rule is: suites green locally before pushing to `main`, and a red X on
+`main` means roll back (Railway dashboard → previous deployment) or fix
+forward immediately.
 
 Secrets live ONLY in Railway variables and local shells. Never in the repo,
 never in `data/settings.json` (that file is for the internal app's
@@ -157,12 +182,18 @@ field access (no dict `.get()`) — both regression-tested.
 ### Go-live checklist (the only remaining work)
 
 1. Activate the Stripe account (business profile, bank account for payouts;
-   website = https://www.screenboardstudio.com). Stripe reviews the site.
+   website = https://www.screenboardstudio.com). Stripe reviews the site —
+   `/terms` and `/privacy` exist for this; **read both pages yourself
+   before submitting** (they are plain-language drafts, not legal advice).
 2. In **live mode**, recreate the four products/prices (same names/amounts).
 3. In live mode, add a webhook endpoint for the same URL and two events.
 4. In Railway, replace all six `STRIPE_*` values with live ones
    (`sk_live_...`, four live `price_...`, live `whsec_...`).
-5. Run one real purchase with a real card, then refund it from the Stripe
+5. Enable Railway Postgres backups and set `ADMIN_EXPORT_TOKEN`; pull one
+   export and confirm it parses (see "Data safety").
+6. Set the `SMTP_*` variables and send yourself a `/recover` mail.
+7. Confirm the latest `main` is green in GitHub Actions.
+8. Run one real purchase with a real card, then refund it from the Stripe
    dashboard. Confirm license + download + webhook 200.
 
 Sandbox and live are fully parallel universes in Stripe: the sandbox

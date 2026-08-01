@@ -1,0 +1,27 @@
+# CI — both test suites on every push and PR. Railway deploys main on push
+# regardless (it cannot wait for CI), so the discipline is: a red X here
+# means roll back or fix forward IMMEDIATELY; never push to main without
+# green local suites (CLAUDE.md § Testing).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r storefront/requirements.txt httpx
+      - name: Product app suite
+        run: python -m unittest discover -s tests -v
+      - name: Storefront suite
+        working-directory: storefront
+        run: python -m unittest discover -s tests -v

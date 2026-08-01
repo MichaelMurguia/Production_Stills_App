@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import hmac
+
 import stripe
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from . import db, provisioner, settings
+from . import db, mailer, provisioner, settings
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -170,6 +172,103 @@ def download(token: str):
         s.commit()
     return FileResponse(settings.DOWNLOAD_FILE, filename=settings.DOWNLOAD_FILE.name,
                         media_type="application/zip")
+
+
+@app.get("/terms")
+def terms(request: Request):
+    return templates.TemplateResponse(request, "terms.html", {})
+
+
+@app.get("/privacy")
+def privacy(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {})
+
+
+@app.get("/recover")
+def recover_page(request: Request):
+    return templates.TemplateResponse(request, "recover.html", {
+        "mail_ready": mailer.configured(), "sent": False})
+
+
+def _recovery_body(purchases: list[db.Purchase]) -> str:
+    lines = ["Here is everything registered to this address:", ""]
+    for p in purchases:
+        if p.kind == "download" and p.license:
+            lines += [f"- Download license ({p.tier or 'personal'}):",
+                      f"  token: {p.license.token}",
+                      f"  download: {settings.BASE_URL}/download/{p.license.token}", ""]
+        elif p.kind == "cloud":
+            ws = p.workspace
+            if ws and ws.status == "ACTIVE":
+                lines += [f"- Cloud workspace ({p.tier or 'personal'}):",
+                          f"  url: {ws.url}",
+                          f"  access token: {ws.access_token}", ""]
+            else:
+                lines += [f"- Cloud subscription ({p.tier or 'personal'}): "
+                          "workspace pending — revisit your Stripe receipt's "
+                          "order link", ""]
+    lines += ["— Screenboard Studio"]
+    return "\n".join(lines)
+
+
+@app.post("/recover")
+def recover(request: Request, email: str = Form("")):
+    """Anti-enumeration by construction: the response is identical whether
+    the address has purchases or not — details only ever travel to the
+    address itself."""
+    if not mailer.configured():
+        return templates.TemplateResponse(request, "recover.html", {
+            "mail_ready": False, "sent": False})
+    email = email.strip().lower()
+    if email:
+        with db.session() as s:
+            purchases = s.scalars(select(db.Purchase).where(
+                db.Purchase.email == email,
+                db.Purchase.status == "PAID")).all()
+            for p in purchases:
+                if p.license:
+                    _ = p.license.token
+                if p.workspace:
+                    _ = (p.workspace.status, p.workspace.url,
+                         p.workspace.access_token)
+            s.expunge_all()
+        if purchases:
+            try:
+                mailer.send(email, "Your Screenboard Studio licenses",
+                            _recovery_body(purchases))
+            except mailer.MailError as e:
+                print(f"[recover] send failed for {email}: {e}")  # ops-only
+    return templates.TemplateResponse(request, "recover.html", {
+        "mail_ready": True, "sent": True})
+
+
+@app.get("/admin/export")
+def admin_export(token: str = ""):
+    """Entitlement-data backup: purchases, licenses, workspaces as JSON.
+    Exists only when ADMIN_EXPORT_TOKEN is configured; fetch it on a
+    schedule and keep the file — losing this data means losing the record
+    of who owns what."""
+    if not settings.ADMIN_EXPORT_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
+        raise HTTPException(404)
+    def row(o, cols):
+        return {c: (v.isoformat() if hasattr(v := getattr(o, c), "isoformat") else v)
+                for c in cols}
+    with db.session() as s:
+        return {
+            "purchases": [row(p, ("id", "kind", "tier", "email",
+                                  "stripe_session_id", "stripe_customer_id",
+                                  "stripe_subscription_id", "status", "created_at"))
+                          for p in s.scalars(select(db.Purchase)).all()],
+            "licenses": [row(l, ("id", "purchase_id", "token",
+                                 "downloads_used", "created_at"))
+                         for l in s.scalars(select(db.License)).all()],
+            "workspaces": [row(w, ("id", "purchase_id", "status", "access_token",
+                                   "railway_service_id", "railway_volume_id",
+                                   "url", "detail", "created_at"))
+                           for w in s.scalars(select(db.Workspace)).all()],
+        }
 
 
 @app.post("/stripe/webhook")

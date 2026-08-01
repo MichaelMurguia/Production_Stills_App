@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Privacy — Screenboard Studio{% endblock %}
+{% block content %}
+
+<section class="order legal">
+  <p class="price-kind">PRIVACY</p>
+  <h1>What we store, and what we never see.</h1>
+
+  <h2>What we store</h2>
+  <p>When you buy, we store your email address, what you bought, and Stripe's
+  identifiers for the transaction — that's the whole customer record. Card
+  details never touch our servers; payment runs entirely on Stripe
+  (<a href="https://stripe.com/privacy">their privacy policy</a>).</p>
+
+  <h2>Your creative work</h2>
+  <p><strong>Download:</strong> everything lives on your machine. Nothing is
+  uploaded to us — the only network calls are the render requests you make to
+  the engine providers with your own keys.
+  <strong>Cloud:</strong> your workspace's data lives on its own private
+  volume, gated by your access token. We don't read it, mine it, or train on
+  it; it exists to serve your workspace and is removed per the retention
+  policy after cancellation.</p>
+
+  <h2>What we don't do</h2>
+  <p>No analytics trackers, no ad pixels, no selling or sharing of your
+  data, no marketing mail. The only email we send is transactional — your
+  licenses, at your request.</p>
+
+  <h2>Your rights</h2>
+  <p>Want your purchase record corrected or deleted (where the law lets us
+  delete transaction records)? Reply to your receipt email and we'll do it.</p>
+
+  <p class="mono legal-date">EFFECTIVE 2026-08-01</p>
+</section>
+
+{% endblock %}

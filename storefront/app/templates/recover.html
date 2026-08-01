@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Recover a license — Screenboard Studio{% endblock %}
+{% block content %}
+
+<section class="order">
+  <p class="price-kind">LICENSE RECOVERY</p>
+
+  {% if not mail_ready %}
+  <h1>Recovery mail isn't set up yet.</h1>
+  <p class="hero-sub">Your original Stripe receipt contains an order link that
+  reopens your order page — license token, download, and workspace details are
+  always there. If the receipt is gone too, reply to any mail from us and a
+  human will sort it out.</p>
+
+  {% elif sent %}
+  <h1>Check your inbox.</h1>
+  <p class="hero-sub">If that address has purchases, everything registered to
+  it — license tokens, downloads, workspace access — is on its way there now.
+  Nothing arrived after a few minutes? Check spam, then try the order link in
+  your Stripe receipt.</p>
+
+  {% else %}
+  <h1>Lost your license?</h1>
+  <p class="hero-sub">Enter the email you bought with. We'll send everything
+  registered to it — the details only ever travel to that address.</p>
+  <form method="post" action="/recover" class="recover-form">
+    <input type="email" name="email" placeholder="you@example.com" required>
+    <button class="btn btn-primary" type="submit">Send my licenses</button>
+  </form>
+  {% endif %}
+</section>
+
+{% endblock %}

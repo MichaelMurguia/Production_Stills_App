@@ -35,3 +35,16 @@ TENANT_BRANCH = os.environ.get("TENANT_BRANCH", "main")
 
 def railway_configured() -> bool:
     return bool(RAILWAY_API_TOKEN and RAILWAY_PROJECT_ID and RAILWAY_ENVIRONMENT_ID)
+
+
+# --- Transactional mail (license recovery) --------------------------------
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587") or 587)
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", "")
+
+# --- Entitlement-data export (operator backup) ----------------------------
+# Unset = the endpoint does not exist (404). Long random value; treat like
+# the Stripe secret key.
+ADMIN_EXPORT_TOKEN = os.environ.get("ADMIN_EXPORT_TOKEN", "")
