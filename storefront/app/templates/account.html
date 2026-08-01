@@ -39,11 +39,15 @@
       <input type="hidden" name="workspace_id" value="{{ p.workspace.id }}">
       <input type="text" name="name" placeholder="name your studio…"
              value="{{ p.workspace.subdomain }}" title="Type anything — the address form appears below as you type.">
-      <button class="btn btn-secondary" type="submit">Claim name</button>
+      <button class="btn btn-secondary" type="submit">{{ "Rename" if p.workspace.name_claimed else "Claim name" }}</button>
     </form>
     <p class="name-preview mono" aria-live="polite"></p>
     <p class="hero-sub" style="margin-top:8px">Your studio's address is
     <span class="mono">{{ p.workspace.subdomain or "yourname" }}.{{ tenant_base }}</span></p>
+    <p class="hero-sub name-terms">If you rename your studio, only the URL
+    and studio name change &mdash; your productions are not touched. Your
+    previous name is released so others may claim it. One studio per
+    license.</p>
     {% endif %}
     {% elif p.status == "PAID" %}
     <p class="license-token">your studio is being set up — it appears right here the moment it's ready</p>

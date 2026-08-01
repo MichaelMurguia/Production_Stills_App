@@ -427,6 +427,10 @@ def account_page(request: Request, name_error: str = "", named: int = 0):
                 _ = (p.workspace.id, p.workspace.status, p.workspace.url,
                      p.workspace.access_token, p.workspace.subdomain,
                      p.workspace.railway_url, p.workspace.domain_live)
+                # Claimed vs still-auto-assigned drives Claim name/Rename.
+                p.workspace.name_claimed = bool(
+                    p.workspace.subdomain
+                    and not provisioner.is_random_slug(p.workspace.subdomain))
         s.expunge_all()
     return templates.TemplateResponse(request, "account.html", {
         "purchase": None, "missed": False, "purchases": purchases,

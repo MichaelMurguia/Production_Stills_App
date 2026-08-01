@@ -121,6 +121,12 @@ reader is.
   promoted REF-0042) with its real carried rejection quoted; the case-file
   header reads 2 nights · 6 takes · 1 approved exterior. Layout, copy
   structure and all five concept footnotes follow the mock.
+- **2026-08-01** — Non-canon: studio naming terms + Claim/Rename button.
+  The account form's button reads "Claim name" while the studio wears its
+  auto-assigned slug and "Rename" after (user-directed); a faint terms
+  line under the form states what a rename does and does not do ("only
+  the URL and studio name change… previous name is released… one studio
+  per license"). Built from canon — review copy/placement only.
 - **2026-08-01** — Non-canon: the tenant router's stated pages. Unclaimed
   studio hosts get "NO STUDIO AT THIS ADDRESS — CLAIM A NAME AT
   SCREENBOARDSTUDIO.COM" (amber link); an unreachable tenant gets "YOUR

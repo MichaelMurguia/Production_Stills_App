@@ -50,6 +50,17 @@ _NOUN = ("anvil", "atlas", "banner", "beacon", "canyon", "circuit", "comet",
 _SUBDOMAIN_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])\Z")
 
 
+def is_random_slug(name: str) -> bool:
+    """True while a studio still wears its auto-assigned adjective-noun
+    slug — the account page says "Claim name" then, "Rename" after. A
+    buyer who deliberately claims a wordlist pair reads as unclaimed;
+    harmless, the button still renames."""
+    parts = name.split("-")
+    if len(parts) == 3 and parts[2].isdigit():
+        parts = parts[:2]
+    return len(parts) == 2 and parts[0] in _ADJ and parts[1] in _NOUN
+
+
 def valid_subdomain(name: str) -> bool:
     return bool(_SUBDOMAIN_RE.fullmatch(name)) and name not in RESERVED_SUBDOMAINS
 

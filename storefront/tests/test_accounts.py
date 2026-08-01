@@ -317,6 +317,41 @@ class StudioNamingTests(unittest.TestCase):
                              follow_redirects=False)
         self.assertEqual(r.status_code, 404)
 
+    def test_button_says_claim_until_named_then_rename(self):
+        import types as _t
+        from app import db as _db, provisioner
+        from sqlalchemy import select as _sel
+        self.assertTrue(provisioner.is_random_slug("gilded-crane"))
+        self.assertTrue(provisioner.is_random_slug("amber-anvil-42"))
+        self.assertFalse(provisioner.is_random_slug("the-beltminers"))
+        cloud = _t.SimpleNamespace(
+            id="cs_name_2", metadata=StripeLike(plan="cloud-personal"),
+            mode="subscription",
+            customer_details=StripeLike(email="owner-r@example.com"),
+            customer="cus", subscription="sub_name_2")
+        p = _fulfill(cloud)
+        with _db.session() as s:
+            ws = s.scalar(_sel(_db.Workspace).where(
+                _db.Workspace.purchase_id == p.id))
+            ws.status = "ACTIVE"
+            ws.subdomain = "gilded-crane"  # auto-assigned shape
+            ws.railway_url = ws.url = "https://tenant-r.up.railway.app"
+            s.commit()
+            wid = ws.id
+        self._signin("owner-r@example.com")
+        page = self.client.get("/account").text
+        self.assertIn("Claim name", page)
+        self.assertNotIn(">Rename<", page)
+        # The terms are stated at the form, not discovered after the fact.
+        self.assertIn("your productions are not touched", page)
+        self.assertIn("One studio per", page)
+        with _db.session() as s:
+            s.get(_db.Workspace, wid).subdomain = "my-own-studio"
+            s.commit()
+        page = self.client.get("/account").text
+        self.assertIn(">Rename<", page)
+        self.assertNotIn("Claim name", page)
+
 
 class VersionTests(unittest.TestCase):
     def setUp(self):
