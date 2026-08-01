@@ -118,6 +118,20 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
     s.commit()
 
 
+def _domain_serves(domain: str) -> bool:
+    """Does the branded address actually answer over TLS? A domain can be
+    'attached' at Railway yet unverified (e.g. attached while DNS pointed
+    elsewhere) — the edge then 404s and no certificate exists. Probing the
+    tenant's open healthz is the truth."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"https://{domain}/api/healthz",
+                                    timeout=8) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
 def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
                           railway) -> None:
     """Upgrade the workspace to studio-<n>.<TENANT_DOMAIN_BASE> when the
@@ -139,10 +153,14 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
         # *.up.railway.app address always remains as the fallback.
         existing = railway.list_custom_domains(ws.railway_service_id)
         if any(d.get("domain") == domain for d in existing):
-            ws.url = f"https://{domain}"
-            ws.detail = ""
-            s.commit()
-            return
+            if _domain_serves(domain):
+                ws.url = f"https://{domain}"
+                ws.detail = ""
+                s.commit()
+                return
+            # Attached but not serving — a stuck verification (attached
+            # under wrong DNS). Fall through: delete and re-attach fresh,
+            # which restarts verification against current DNS.
         for d in existing:
             railway.delete_custom_domain(d["id"])
         dns_target = railway.create_custom_domain(ws.railway_service_id, domain)

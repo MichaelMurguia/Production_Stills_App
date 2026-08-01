@@ -535,7 +535,7 @@ def admin_export(token: str = ""):
             "licenses": [row(l, ("id", "purchase_id", "token",
                                  "downloads_used", "created_at"))
                          for l in s.scalars(select(db.License)).all()],
-            "workspaces": [row(w, ("id", "purchase_id", "status", "access_token",
+            "workspaces": [row(w, ("id", "purchase_id", "status", "subdomain", "access_token",
                                    "railway_service_id", "railway_volume_id",
                                    "url", "detail", "created_at"))
                            for w in s.scalars(select(db.Workspace)).all()],

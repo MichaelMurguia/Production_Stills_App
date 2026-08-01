@@ -187,6 +187,9 @@ class CustomDomainTests(unittest.TestCase):
                 self.domains.append(domain)
                 return "edge.railway.app"
 
+        self._serves = provisioner._domain_serves
+        provisioner._domain_serves = lambda d: True  # tests never probe live
+        self.addCleanup(lambda: setattr(provisioner, "_domain_serves", self._serves))
         fake = FakeRailway()
         provisioner.reconcile(railway=fake)  # no base yet → railway URL
         with _db.session() as s:
@@ -215,6 +218,11 @@ class CustomDomainTests(unittest.TestCase):
         self.assertEqual(len(fake.domains), 1, "old custom domain must be deleted")
         self.assertEqual(fake.domains[0], "renamed-studio.screenboardstudio.com")
         self.assertEqual(len(fake.deleted), 1)
+        # self-heal: attached but NOT serving → delete and re-attach fresh
+        provisioner._domain_serves = lambda d: False
+        provisioner.reconcile(railway=fake)
+        self.assertEqual(len(fake.deleted), 2, "stuck domain must be re-attached")
+        self.assertEqual(fake.domains, ["renamed-studio.screenboardstudio.com"])
 
 
 class StudioNamingTests(unittest.TestCase):
