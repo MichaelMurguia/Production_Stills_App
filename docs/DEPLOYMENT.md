@@ -122,19 +122,36 @@ first-class state: buy buttons render disabled with the unmet condition
 stated (per the project's gate philosophy), checkout returns 503. Never make
 missing config look like a crash.
 
-## Status as of 2026-07-31
+## Status as of 2026-08-01 — sandbox proven, awaiting go-live
 
-Scaffolded and smoke-tested locally (landing 200, gates render, bad token
-404, unconfigured checkout 503). **Not yet committed, not yet deployed.**
-Remaining one-time setup, in order:
+Deployed and serving at https://www.screenboardstudio.com (Railway service,
+root dir `storefront`, Postgres attached, custom domain `www` via GoDaddy
+CNAME + `_railway-verify.www` TXT; bare domain 301-forwards to www at the
+registrar). Release zip staged. `/healthz` reports the serving commit.
 
-1. Stripe: create account, two products/prices, webhook endpoint → collect
-   the four `STRIPE_*` values.
-2. Railway: create service from this repo, Root Directory `storefront`, add
-   Postgres, set variables, generate domain → set `BASE_URL`, point the
-   Stripe webhook at it.
-3. Package and commit the first release zip.
-4. Commit `storefront/` and push (first deploy).
+**Full sandbox test pass 2026-08-01, all green:** download purchase →
+license token → zip download; webhook `checkout.session.completed` 200;
+subscription purchase; immediate cancellation → `customer.subscription.
+deleted` 200 → purchase CANCELED; declined card leaves no record; bad
+download token 404s; success-page revisit returns the same license
+(idempotency). Bugs found and fixed during testing: DetachedInstanceError
+when the webhook fulfills before the browser redirect, and StripeObject
+field access (no dict `.get()`) — both regression-tested.
+
+### Go-live checklist (the only remaining work)
+
+1. Activate the Stripe account (business profile, bank account for payouts;
+   website = https://www.screenboardstudio.com). Stripe reviews the site.
+2. In **live mode**, recreate the four products/prices (same names/amounts).
+3. In live mode, add a webhook endpoint for the same URL and two events.
+4. In Railway, replace all six `STRIPE_*` values with live ones
+   (`sk_live_...`, four live `price_...`, live `whsec_...`).
+5. Run one real purchase with a real card, then refund it from the Stripe
+   dashboard. Confirm license + download + webhook 200.
+
+Sandbox and live are fully parallel universes in Stripe: the sandbox
+products/webhook stay intact for future testing; the code is identical in
+both and driven purely by which keys are configured.
 
 ## Not built (deliberate scope cuts, do not silently "fix")
 
