@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import secrets
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy import DateTime, ForeignKey, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 from . import settings
@@ -52,6 +52,13 @@ class License(Base):
 
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    # create_all never adds columns to tables that already exist; patch the
+    # known additive columns so early deployments upgrade in place.
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''"))
+    except Exception:
+        pass  # column already present
 
 
 def session() -> Session:

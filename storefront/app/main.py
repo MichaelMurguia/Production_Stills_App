@@ -35,6 +35,12 @@ def _ready() -> dict[str, bool]:
             for slug, plan in PLANS.items()}
 
 
+@app.get("/healthz")
+def healthz():
+    import os
+    return {"ok": True, "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12]}
+
+
 @app.get("/")
 def index(request: Request):
     ready = _ready()
