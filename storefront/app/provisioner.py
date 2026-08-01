@@ -175,6 +175,31 @@ def _revoke(s, ws: db.Workspace, railway) -> None:
     s.commit()
 
 
+def update_tenants(railway=railway_client) -> dict:
+    """Push the current product build to every ACTIVE tenant studio —
+    the cloud edition sells 'updates land the day they ship', and tenant
+    services otherwise stay frozen on the build they were provisioned
+    with. Per-service failures are recorded, never raised; a studio that
+    misses an update catches it on the next run."""
+    out = {"updated": [], "failed": []}
+    if not settings.railway_configured():
+        return out
+    with db.session() as s:
+        active = s.scalars(select(db.Workspace).where(
+            db.Workspace.status == "ACTIVE")).all()
+        for ws in active:
+            if not ws.railway_service_id:
+                continue
+            try:
+                railway.deploy_latest(ws.railway_service_id)
+                out["updated"].append(ws.subdomain or ws.railway_service_id)
+            except Exception as e:
+                ws.detail = f"update failed, will retry: {str(e)[:400]}"
+                s.commit()
+                out["failed"].append(ws.subdomain or ws.railway_service_id)
+    return out
+
+
 def reconcile(railway=railway_client) -> dict:
     """Converge workspaces toward the purchases table. Returns a small
     summary for logs/ops. Never raises."""

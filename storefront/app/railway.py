@@ -242,6 +242,23 @@ def redeploy(service_id: str) -> None:
          "serviceId": service_id})
 
 
+def deploy_latest(service_id: str) -> None:
+    """Build and deploy the service from the CURRENT head of its connected
+    repo — the fleet-update primitive ("updates land the day they ship").
+    serviceInstanceRedeploy reuses the existing build, so it cannot move a
+    tenant to a new commit; serviceInstanceDeploy builds fresh. Falls back
+    to redeploy if Railway ever drops the mutation."""
+    try:
+        _gql(
+            """mutation($environmentId: String!, $serviceId: String!) {
+                 serviceInstanceDeploy(environmentId: $environmentId,
+                                       serviceId: $serviceId) }""",
+            {"environmentId": environment_id(),
+             "serviceId": service_id})
+    except RailwayError:
+        redeploy(service_id)
+
+
 def delete_service(service_id: str) -> None:
     _gql("""mutation($id: String!) { serviceDelete(id: $id) }""",
          {"id": service_id})

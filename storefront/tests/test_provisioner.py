@@ -44,7 +44,8 @@ class FakeRailway:
         self.fail = fail
         self.calls = {"create_service": 0, "create_volume": 0,
                       "upsert_variables": 0, "set_start_command": 0,
-                      "create_domain": 0, "redeploy": 0, "delete_service": 0}
+                      "create_domain": 0, "redeploy": 0, "delete_service": 0,
+                      "deploy_latest": 0}
 
     def _hit(self, name):
         self.calls[name] += 1
@@ -75,6 +76,9 @@ class FakeRailway:
 
     def delete_service(self, service_id):
         self._hit("delete_service")
+
+    def deploy_latest(self, service_id):
+        self._hit("deploy_latest")
 
 
 def configure_railway(on=True):
@@ -132,6 +136,21 @@ class ProvisionerTests(unittest.TestCase):
         provisioner.reconcile(railway=good)  # retry converges
         ws = self._workspace_for(p.id)
         self.assertEqual(ws.status, "ACTIVE")
+
+    def test_fleet_update_pushes_current_build_to_active_tenants(self):
+        configure_railway(True)
+        p = _fulfill(cloud_session("cs_prov_5", "sub_p5"))
+        fake = FakeRailway()
+        provisioner.reconcile(railway=fake)
+        out = provisioner.update_tenants(railway=fake)
+        self.assertGreaterEqual(fake.calls["deploy_latest"], 1)
+        self.assertGreaterEqual(len(out["updated"]), 1)
+        # A failing update is recorded on the row and reported, not raised
+        bad = FakeRailway(fail=True)
+        out = provisioner.update_tenants(railway=bad)
+        self.assertGreaterEqual(len(out["failed"]), 1)
+        ws = self._workspace_for(p.id)
+        self.assertIn("update failed", ws.detail)
 
     def test_cancellation_revokes(self):
         configure_railway(True)

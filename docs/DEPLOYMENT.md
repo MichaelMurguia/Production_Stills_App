@@ -167,6 +167,21 @@ release of `app/` features** — a stale zip silently ships old product; the
 CI `release-zip` job enforces this by diffing the staged zip against HEAD
 and going red with the restage command when they drift.
 
+**Then update the tenant fleet.** Tenant services do NOT follow pushes —
+they stay on the build they were provisioned with until told otherwise
+(observed live 2026-08-01: a tenant serving a day-one rev 30+ commits
+behind main). The cloud edition sells "updates land the day they ship",
+so after every release of `app/` features hit:
+
+```
+GET https://www.screenboardstudio.com/admin/tenants/update?token=<ADMIN_EXPORT_TOKEN>
+```
+
+It rebuilds every ACTIVE studio from repo head via
+`provisioner.update_tenants()` (per-service failures land on the
+workspace row's `detail` and retry on the next run). Verify with any
+tenant's `/api/healthz` — `rev` must match the released commit.
+
 ## Local development
 
 ```

@@ -561,6 +561,19 @@ def admin_reconcile(token: str = ""):
     return provisioner.reconcile()
 
 
+@app.get("/admin/tenants/update")
+def admin_update_tenants(token: str = ""):
+    """Fleet update: rebuild every ACTIVE tenant studio from the current
+    repo head. Same gate as /admin/export. Run after each product release
+    (see DEPLOYMENT.md runbook) — the cloud edition promises updates land
+    the day they ship."""
+    if not settings.ADMIN_EXPORT_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
+        raise HTTPException(404)
+    return provisioner.update_tenants()
+
+
 @app.get("/admin/export")
 def admin_export(token: str = ""):
     """Entitlement-data backup: purchases, licenses, workspaces as JSON.
