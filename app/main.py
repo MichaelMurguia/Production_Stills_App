@@ -29,18 +29,18 @@ _LOGIN_HTML = """<!doctype html>
 <html><head><meta charset="utf-8"><title>Screenboard Studio — workspace login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/styles.css"></head>
-<body style="display:flex;align-items:center;justify-content:center;min-height:100vh">
-<div class="panel" id="gate" style="width:min(460px,92vw)">
+<body class="gate-page">
+<div class="panel" id="gate">
+  <span class="brand-title">SCREENBOARD</span>
   <h2>Screenboard access</h2>
-  <p class="hint">This is a private Screenboard Studio. Paste the access
-  token from your order confirmation to enter.</p>
+  <p class="hint">Paste the access token from your order confirmation.</p>
   <form id="f" class="row" style="margin-top:12px">
     <input type="password" id="tok" placeholder="access token" style="flex:1" autofocus>
     <button class="primary">Enter</button>
   </form>
   <p class="mini hidden" id="err" style="color:var(--bad);margin-top:8px">That token doesn't match this Screenboard.</p>
 </div>
-<div class="panel hidden" id="signing" style="width:min(460px,92vw)">
+<div class="panel hidden" id="signing">
   <h2>Signing you in&hellip;</h2>
 </div>
 <script>
@@ -57,6 +57,7 @@ const attempt = async token => {
   if (r.ok) { location.replace("/"); return; }
   document.getElementById("signing").classList.add("hidden");
   document.getElementById("gate").classList.remove("hidden");
+  document.getElementById("tok").classList.add("bad");
   document.getElementById("err").classList.remove("hidden");
 };
 document.getElementById("f").onsubmit = e => {

@@ -4588,6 +4588,40 @@ async function renderAssemblyFor(specId) {
 
 /* ------------------------------------------------------------------ start */
 
+// Project switcher (design review 2026-08-01 §7): switching is navigation,
+// so it lives on the project name itself; Settings keeps the registry.
+(() => {
+  const sub = $("#brand-project");
+  sub.classList.add("brand-switch");
+  sub.title = "Switch project";
+  let menu = null;
+  const close = () => { menu?.remove(); menu = null; };
+  document.addEventListener("click", e => {
+    if (menu && !e.target.closest(".proj-menu") && e.target !== sub) close();
+  });
+  sub.onclick = async () => {
+    if (sub.querySelector("input")) return;  // mid-rename
+    if (menu) { close(); return; }
+    const pr = await api("/api/projects");
+    menu = document.createElement("div");
+    menu.className = "proj-menu";
+    menu.innerHTML = pr.projects.map(p => `
+      <button class="proj-item" data-slug="${esc(p.slug)}" ${p.active ? "disabled" : ""}>
+        <span>${esc(p.name)}</span>
+        ${p.active ? '<span class="cast-badge cast">ACTIVE</span>' : ""}
+      </button>`).join("")
+      + `<button class="text-act proj-manage">Manage projects…</button>`;
+    $(".brand").appendChild(menu);
+    $$(".proj-item:not([disabled])", menu).forEach(b => b.onclick = async () => {
+      try {
+        await api("/api/projects/activate", { method: "POST", json: { slug: b.dataset.slug } });
+        location.reload();
+      } catch (err) { toast(err.message, true); }
+    });
+    $(".proj-manage", menu).onclick = () => { close(); showView("settings"); };
+  };
+})();
+
 // Screenboard rename (user request 2026-08-01): the pencil beside the name
 // swaps it for an input; Enter saves to the active project, Esc cancels.
 $("#brand-rename").onclick = () => {
