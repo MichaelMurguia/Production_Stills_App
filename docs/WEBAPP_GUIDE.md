@@ -44,6 +44,13 @@ publicly or packaged into a release.**
 | `GET`/`POST /recover` | License recovery. Anti-enumeration by construction: identical response either way; details only ever mail to the owning address. SMTP unset → stated gate. |
 | `GET /terms`, `GET /privacy` | Plain-language legal pages (Stripe activation expects them). |
 | `GET /admin/export?token=` | Entitlement backup (purchases/licenses/workspaces JSON). Exists only when `ADMIN_EXPORT_TOKEN` is set; wrong token → 404. |
+| `GET /signin`, `/signup` · `POST /auth/email` · `GET /auth/verify` | Passwordless accounts: magic links (single-use, 30 min, uniform responses) create-or-sign-in on click. No passwords exist anywhere. |
+| `GET /auth/google` + `/callback` · `POST /auth/logout` | Google OIDC (stdlib, no SDK): signed state, code exchange, verified-email required. Env-gated — button hides unconfigured. |
+| `GET /account` | Signed in: every purchase on the account email — download buttons, workspace doors. Signed out: token-as-credential fallback. |
+
+Accounts are a **viewing lens** — `purchases` remains the entitlement
+truth, linked by verified email; sessions are HMAC-signed cookies
+(`SESSION_SECRET`).
 
 ### Fulfillment — the invariant that matters most
 

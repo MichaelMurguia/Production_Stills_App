@@ -74,8 +74,10 @@ serve internal data from the storefront.
 | `TENANT_REPO` | GitHub repo tenant services deploy from (default `MichaelMurguia/Production_Stills_App`) |
 | `TENANT_BRANCH` | Branch tenants deploy (default `main`) |
 
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Transactional mail for `/recover` (any SMTP endpoint — Resend/Postmark/SES). Unset → the recovery page states the gate |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Transactional mail for `/recover` AND magic-link sign-in (any SMTP endpoint — Resend/Postmark/SES). Unset → both state the gate |
 | `ADMIN_EXPORT_TOKEN` | Long random value enabling `GET /admin/export?token=…` (entitlement backup). Unset → the endpoint 404s |
+| `SESSION_SECRET` | Long random value signing account-session cookies. Unset → per-boot secret (sessions reset each deploy) — set in production |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | "Continue with Google" (OIDC). Create at console.cloud.google.com → Credentials → OAuth client (web) with redirect URI `https://www.screenboardstudio.com/auth/google/callback`. Unset → the button hides; magic links still work |
 
 All five provisioning variables are optional: while unset, cloud purchases
 queue as PENDING workspaces with the condition stated on the row — nothing
