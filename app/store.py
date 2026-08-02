@@ -287,6 +287,33 @@ def _make_thumb(src: Path, ref_id: str) -> str:
     return thumb_name
 
 
+# The engines accept exactly these (OpenAI and Gemini alike) — anything
+# else the modern web hands us (AVIF above all, TIFF, BMP…) transcodes at
+# intake so the library only ever holds render-ready files. Observed live
+# 2026-08-02: an AVIF reference 400'd a whole generation at image[12].
+RENDER_SAFE_FORMATS = {"JPEG", "PNG", "WEBP"}
+_SAFE_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+
+
+def _render_safe(content: bytes, original_name: str) -> tuple[bytes, str]:
+    """(bytes, ext), transcoded if the actual format (sniffed, never the
+    filename) is one no engine accepts. Alpha keeps PNG; else JPEG q95."""
+    import io
+
+    from PIL import Image
+    im = Image.open(io.BytesIO(content))
+    fmt = (im.format or "").upper()
+    if fmt in RENDER_SAFE_FORMATS:
+        ext = Path(original_name).suffix.lower() or _SAFE_EXT[fmt]
+        return content, ext
+    buf = io.BytesIO()
+    if "A" in im.getbands():
+        im.save(buf, "PNG")
+        return buf.getvalue(), ".png"
+    im.convert("RGB").save(buf, "JPEG", quality=95)
+    return buf.getvalue(), ".jpg"
+
+
 def add_reference(original_name: str, content: bytes, role: str,
                   controls: list[str], does_not_control: list[str],
                   notes: str = "") -> dict:
@@ -295,7 +322,10 @@ def add_reference(original_name: str, content: bytes, role: str,
     state["ref_counter"] = int(state.get("ref_counter", 0)) + 1
     ref_id = f"REF-{state['ref_counter']:04d}"
 
-    ext = Path(original_name).suffix.lower() or ".png"
+    try:
+        content, ext = _render_safe(content, original_name)
+    except Exception:
+        raise ValueError(f"{original_name} is not a readable image")
     file_name = f"{ref_id}{ext}"
     dest = paths.REF_ORIGINALS / file_name
     dest.write_bytes(content)

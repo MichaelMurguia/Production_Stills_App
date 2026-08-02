@@ -605,13 +605,34 @@ def candidate_image_path(spec_id: str, cand_id: str) -> Path | None:
     return p if p.exists() else None
 
 
+def _render_ready(p: Path) -> Path:
+    """Compose-time backstop for legacy library files: sniff the ACTUAL
+    format and transcode anything the engines refuse (AVIF 400'd a live
+    generation 2026-08-02) to a cached sibling JPEG. Intake normalizes
+    going forward (store.RENDER_SAFE_FORMATS); this rescues files that
+    predate it without re-uploading."""
+    from PIL import Image
+    try:
+        with Image.open(p) as im:
+            fmt = (im.format or "").upper()
+    except Exception as e:
+        raise GenerationError(f"unreadable reference image {p.name}: {e}")
+    if fmt in store.RENDER_SAFE_FORMATS:
+        return p
+    safe = p.with_name(f"{p.stem}.render.jpg")
+    if not safe.exists():
+        with Image.open(p) as im:
+            im.convert("RGB").save(safe, "JPEG", quality=95)
+    return safe
+
+
 def _reference_image_paths(refs: list[dict]) -> list[Path]:
     out = []
     for r in refs:
         p = store.reference_image_path(r["id"])
         if p is None:
             raise GenerationError(f"image file missing for {r['id']}")
-        out.append(p)
+        out.append(_render_ready(p))
     return out
 
 

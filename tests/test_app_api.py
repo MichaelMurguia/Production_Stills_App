@@ -120,6 +120,31 @@ class ApiTests(unittest.TestCase):
                                                  "subject": "A test"})
         self.assertEqual(r.status_code, 200, r.text)
 
+    def test_references_store_render_ready_formats(self):
+        # Observed live 2026-08-02: an AVIF reference 400'd a generation.
+        # Intake transcodes anything outside JPEG/PNG/WEBP; the compose
+        # path rescues legacy files that predate the rule.
+        import io
+        from PIL import Image
+        from app import generate, store
+        buf = io.BytesIO()
+        Image.new("RGB", (64, 40), (120, 90, 60)).save(buf, "TIFF")
+        rec = store.add_reference("plate.tiff", buf.getvalue(), "CINEMATOGRAPHY_STYLE — test",
+                                  ["contrast"], [], "")
+        self.assertTrue(rec["file"].endswith(".jpg"),
+                        f"TIFF must transcode at intake, got {rec['file']}")
+        # Legacy backstop: plant an unsafe file behind an existing record.
+        legacy = paths.REF_ORIGINALS / "REF-9999.tiff"
+        buf2 = io.BytesIO()
+        Image.new("RGB", (64, 40), (10, 20, 30)).save(buf2, "TIFF")
+        legacy.write_bytes(buf2.getvalue())
+        ready = generate._render_ready(legacy)
+        self.assertTrue(str(ready).endswith(".render.jpg"))
+        self.assertTrue(ready.exists())
+        safe_path = paths.REF_ORIGINALS / rec["file"]
+        self.assertEqual(generate._render_ready(safe_path), safe_path,
+                         "safe formats pass through untouched")
+
     def test_interview_persists_per_production(self):
         # User ruling 2026-08-01: a refresh must never lose the interview.
         r = self.client.get("/api/wizard/interview").json()
