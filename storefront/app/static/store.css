@@ -102,6 +102,21 @@ body {
 .editions-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; margin-bottom: 26px; flex-wrap: wrap; }
 .editions-title { font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin-top: 8px; }
 .editions-note { max-width: 34ch; color: var(--ink-dim); font-size: 13px; text-align: right; }
+/* K1 — engine band (STORE_PRICING_PLAN, designer-ruled): amber budget is
+   the kicker role only; marks are status colors reporting state. */
+.engine-band { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border: 1px solid var(--line); margin-bottom: 18px; }
+.eb-left { padding: 26px 30px; }
+.eb-right { padding: 26px 30px; border-left: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 13px; }
+.eb-eyebrow { font-size: 10px; letter-spacing: .14em; color: var(--accent); margin-bottom: 8px; }
+.eb-left h3 { font-size: 21px; font-weight: 600; margin-bottom: 10px; }
+.eb-para { font-size: 13px; color: var(--ink-dim); max-width: 52ch; }
+.eb-row { display: flex; gap: 10px; }
+.eb-mark { font-size: 10px; line-height: 1.9; flex: none; }
+.eb-ok { color: var(--ok); }
+.eb-hold { color: var(--hold); }
+.eb-line { font-size: 13px; font-weight: 600; }
+.eb-sub { font-size: 12px; color: var(--ink-faint); }
+
 .editions { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .edition { background: var(--panel); border: 1px solid var(--line); padding: 26px 28px; display: flex; flex-direction: column; }
 .edition-lead { border-top: 2px solid var(--accent); }
@@ -372,6 +387,8 @@ body {
 }
 @media (max-width: 640px) {
   .editions, .figband { grid-template-columns: 1fr; }
+  .engine-band { grid-template-columns: 1fr; }
+  .eb-right { border-left: none; border-top: 1px solid var(--line); }
   .fig { border-left: none; border-top: 1px solid var(--line-soft); }
   .wall-cols { grid-template-columns: 1fr 1fr; }
   .wall-c { display: none; }
