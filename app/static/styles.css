@@ -1709,3 +1709,13 @@ details.meta pre {
   .cred-row { grid-template-columns: 36px minmax(0,1fr); }
   .cred-state, .cred-ident, .cred-acts { grid-column: 2; text-align: left; }
 }
+
+/* C3 — in-place auth expansions; the two auth kinds read differently */
+.cred-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.cred-connect { display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  border: 1px solid var(--line); background: var(--field); padding: 12px 14px; margin-top: 10px;
+  font-size: 13px; color: var(--ink-dim); }
+.cred-form-kicker.ok-k { color: var(--ok); }
+.cred-form-foot { font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
+  color: var(--ink-faint); margin-top: 10px; }
+.cred-form-foot a { color: var(--ink-dim); }

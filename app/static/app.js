@@ -1948,58 +1948,105 @@ async function renderSettings() {
     }
   }
 
-  async function openCredExpand(key, act) {
-    // C2 interim: modal-backed forms. C3 replaces these with the ruled
-    // in-place row expansions and the one-click OpenRouter connect box.
+  // C3 — the two auth kinds are stated, never blurred: the row expands in
+  // place (no modal); one-click gets a Connect button, paste-a-key gets a
+  // paste field and says why. Deep links go to each provider's key page.
+  function openCredExpand(key, act) {
+    $$(".cred-expand").forEach(b => b.classList.add("hidden"));
+    const box = $(`.cred-expand[data-expand="${CSS.escape(key)}"]`);
+    if (!box) return;
+    box.classList.remove("hidden");
+
     if (act === "add-custom") {
-      const r = await modal({
-        title: "Add your own image engine",
-        body: "The endpoint must speak the OpenAI Images API (images.generate / images.edit). The key is stored in settings.json and leaves this machine only to call this endpoint.",
-        fields: [
-          { name: "label", label: "Name", placeholder: "e.g. local SDXL, studio ComfyUI" },
-          { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
-          { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
-          { name: "api_key", label: "API key" },
-        ],
-        confirmLabel: "Add engine",
-      });
-      if (r === null) return;
-      try {
-        await api("/api/settings/engines", { method: "POST", json: r });
-        toast(`${r.label} added — it now appears in every Model dropdown.`);
-        renderSettings();
-      } catch (err) { toast(err.message, true); }
+      box.innerHTML = `
+        <div class="cred-form">
+          <p class="cred-form-kicker">YOUR OWN ENDPOINT — OPENAI IMAGES CONTRACT</p>
+          <p class="mini">The endpoint must speak images.generate / images.edit. The key is stored in settings.json and leaves this machine only to call this endpoint.</p>
+          <div class="cred-grid4">
+            <input data-f="label" placeholder="Name — e.g. local SDXL, studio ComfyUI">
+            <input data-f="base_url" placeholder="Base URL — https://api.example.com/v1">
+            <input data-f="model" placeholder="Model id this endpoint expects">
+            <input data-f="api_key" type="password" placeholder="API key">
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="primary" data-f="go">Add engine</button>
+            <button class="ghost" data-f="x">Cancel</button>
+          </div>
+        </div>`;
+      $("[data-f=go]", box).onclick = async () => {
+        const body = Object.fromEntries(["label", "base_url", "model", "api_key"]
+          .map(f => [f, $(`[data-f=${f}]`, box).value.trim()]));
+        if (!body.label || !body.base_url || !body.model || !body.api_key)
+          return toast("All four fields are needed.", true);
+        try {
+          await api("/api/settings/engines", { method: "POST", json: body });
+          toast(`${body.label} added — it now appears in every Model dropdown.`);
+          renderSettings();
+        } catch (err) { toast(err.message, true); }
+      };
+      $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
       return;
     }
+
     if (key === "openrouter") {
-      try {
-        const { url } = await api("/api/connectors/openrouter/auth");
-        location.href = url;  // returns via /connectors/openrouter/callback
-      } catch (err) { toast(err.message, true); }
+      box.innerHTML = `
+        <div class="cred-form">
+          <p class="cred-form-kicker ok-k">ONE-CLICK — OPENROUTER</p>
+          <p class="mini">Connect opens OpenRouter's own authorisation page and a scoped key comes back. Nothing is pasted.</p>
+          <div class="cred-connect">
+            <span>A browser window will open at <span class="mono">openrouter.ai</span>.</span>
+            <button class="primary" data-f="go">Connect</button>
+          </div>
+          <p class="cred-form-foot">THE KEY STAYS YOURS &middot; SCOPED TO THIS APP &middot; REVOKE IT AT ANY TIME FROM THEIR DASHBOARD</p>
+        </div>`;
+      $("[data-f=go]", box).onclick = async () => {
+        try {
+          const { url } = await api("/api/connectors/openrouter/auth");
+          location.href = url;  // returns via /connectors/openrouter/callback
+        } catch (err) { toast(err.message, true); }
+      };
       return;
     }
-    const field = settingsField[key];
-    const r = await modal({
-      title: field ? `${key === "openai" ? "OpenAI" : "Gemini"} API key` : "fal.ai API key",
-      body: "Stored in settings.json on this machine; leaves it only to call this provider.",
-      fields: [{ name: "key", label: "API key" }],
-      confirmLabel: "Save and test",
-    });
-    if (r === null || !r.key.trim()) return;
-    try {
-      if (field) {
-        await api("/api/settings", { method: "POST", json: { [field]: r.key.trim() } });
-        await api("/api/settings/test", { method: "POST", json: { provider: key } });
-        toast(`${key} key saved and tested.`);
-      } else {
-        const pub = await api(`/api/connectors/${key}/key`, { method: "POST", json: { key: r.key.trim() } });
-        toast(pub.status === "SYNCED"
-          ? `${pub.label}: ${pub.model_count} models synced.`
-          : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
-          pub.status !== "SYNCED");
-      }
-    } catch (err) { toast(err.message, true); }
-    renderSettings();
+
+    const PASTE = {
+      fal: { name: "FAL.AI", why: "fal offers no one-click authorisation, so this row says so rather than dressing a paste field as a connect button.",
+             link: "https://fal.ai/dashboard/keys", linkText: "fal.ai/dashboard/keys" },
+      openai: { name: "OPENAI", why: "API billing is separate from ChatGPT Plus. The key powers both AI roles.",
+                link: "https://platform.openai.com/api-keys", linkText: "platform.openai.com/api-keys" },
+      gemini: { name: "GOOGLE GEMINI", why: "The key comes from Google AI Studio and bills your Google account per render.",
+                link: "https://aistudio.google.com/apikey", linkText: "aistudio.google.com/apikey" },
+    }[key];
+    box.innerHTML = `
+      <div class="cred-form">
+        <p class="cred-form-kicker">PASTE A KEY — ${esc(PASTE.name)}</p>
+        <p class="mini">${esc(PASTE.why)}</p>
+        <div class="row" style="margin-top:8px">
+          <input type="password" data-f="key" placeholder="key_…" style="flex:1;min-width:0">
+          <button class="primary" data-f="go">Test and save</button>
+          <button class="ghost" data-f="x">Cancel</button>
+        </div>
+        <p class="cred-form-foot">GET ONE AT <a href="${esc(PASTE.link)}" target="_blank" rel="noopener">${esc(PASTE.linkText)}</a> — TAKES ABOUT A MINUTE.</p>
+      </div>`;
+    $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
+    $("[data-f=go]", box).onclick = async () => {
+      const k = $("[data-f=key]", box).value.trim();
+      if (!k) return toast("Paste the key first.", true);
+      try {
+        const field = settingsField[key];
+        if (field) {
+          await api("/api/settings", { method: "POST", json: { [field]: k } });
+          await api("/api/settings/test", { method: "POST", json: { provider: key } });
+          toast(`${PASTE.name} key saved and tested.`);
+        } else {
+          const pub = await api(`/api/connectors/${key}/key`, { method: "POST", json: { key: k } });
+          toast(pub.status === "SYNCED"
+            ? `${pub.label}: ${pub.model_count} models synced.`
+            : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
+            pub.status !== "SYNCED");
+        }
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    };
   }
 
   function expandCustomChip(cid, row) {
