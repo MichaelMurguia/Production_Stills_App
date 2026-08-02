@@ -134,16 +134,18 @@ reader is.
   line under the form states what a rename does and does not do ("only
   the URL and studio name change… previous name is released… one studio
   per license"). Built from canon — review copy/placement only.
-- **2026-08-01** — Non-canon: the tenant router's stated pages. Unclaimed
-  studio hosts get "NO STUDIO AT THIS ADDRESS — CLAIM A NAME AT
-  SCREENBOARDSTUDIO.COM" (amber link); an unreachable tenant gets "YOUR
-  STUDIO DID NOT ANSWER — IT MAY BE REDEPLOYING." Centered Courier on
-  --bg, built from tokens in `tenant_proxy.py` (inline — no template).
-  Review copy/placement; consider whether these deserve the full store
-  chrome. Awaiting design review.
-- **2026-08-01** — Non-canon: reliable-door workspace buttons. On /account
-  and /success, "Open your workspace" links the branded address only once
-  it provably serves (`domain_live`); until then it links the always-working
-  railway address with a small mono note ("… IS PROVISIONING — THIS BUTTON
-  USES THE RELIABLE ADDRESS MEANWHILE"). Reuses `hero-sub mono`; no new
-  tokens. Awaiting design review.
+- **2026-08-01** — RULED (STORE_ROUTER_PLAN T1/T2): the router's two
+  failure pages serve opposite audiences and must not look alike. The
+  unclaimed address is the one failure page that sells — full store
+  chrome, the address as the Courier H1, prefixed claim path, the
+  invited-visitor line (`router_unclaimed.html`, 404). The not-answering
+  page is a trust moment — wordmark only, nothing to buy, reassurance
+  about the work first, honest status block, real 15s recheck
+  (`router_unreachable.html`, 503 + Retry-After). Both zero-JS for
+  content; assets absolute to the store host.
+- **2026-08-01** — RULED (STORE_ROUTER_PLAN T3): the reliable-door
+  mechanic was confirmed; its footnote became a stated block — a --hold
+  PROVISIONING chip above the button on --field with the 2px --hold left
+  border, unchanged copy — and the YOUR STUDIO label wears a bordered
+  --ok LIVE chip once the branded name serves. One
+  `_workspace_door.html` partial serves all three cloud-ACTIVE sites.

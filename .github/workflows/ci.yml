@@ -110,4 +110,11 @@ jobs:
             echo "/$u -> $code"
             [ "$code" = "200" ] || fail=1
           done
+          # The router's unclaimed page must serve its stated 404 with the
+          # store chrome (T1). The 503 page cannot be provoked safely from
+          # CI — it is covered by tests/test_tenant_proxy.py instead.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://ci-probe-unclaimed.screenboardstudio.com/")
+          echo "unclaimed router page -> $code"
+          [ "$code" = "404" ] || fail=1
+          curl -s --max-time 15 "https://ci-probe-unclaimed.screenboardstudio.com/" | grep -q "NO STUDIO AT THIS ADDRESS" || fail=1
           exit $fail
