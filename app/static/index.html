@@ -175,7 +175,7 @@
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
           <div class="wiz-col-head">
-            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want.">Rendering</span>
+            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want.">Board Rendering Style</span>
             <span class="badge REJECTED" data-f="state">NONE</span>
           </div>
           <p class="hint">CONTROLS medium, brushwork, finish<br>NEVER content</p>
@@ -253,6 +253,16 @@
       </div>
     </div>
 
+    <div class="panel">
+      <h2>Art Direction Bible <span class="hint">(the single source every prompt draws from)</span></h2>
+      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
+      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px"></textarea>
+      <div class="row">
+        <button class="primary" id="style-save">Save Art Direction Bible</button>
+        <span id="style-status" class="mini"></span>
+      </div>
+    </div>
+
     <div class="panel step" data-step="6">
       <h2>Model bake-off <span class="hint">(pick your default engine by looking, not guessing)</span></h2>
       <p class="hint">Every engine renders the <b>same location from your screenplay</b> under your saved Bible and approved anchors — the exact conditions real panel generations run under. Recommended locations come from step 2.</p>
@@ -267,37 +277,11 @@
       <div class="wiz-cols" id="wiz-samples" style="margin-top:12px"></div>
     </div>
 
-    <div class="panel">
-      <h2>Documents <span class="hint">(reference material, not steps)</span></h2>
-      <p class="hint">The locked art direction, the standing project rules, and the engine keys they run on.</p>
-    </div>
-
-    <div class="panel">
-      <h2>Art Direction Bible <span class="hint">(the single source every prompt draws from)</span></h2>
-      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
-      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px"></textarea>
-      <div class="row">
-        <button class="primary" id="style-save">Save Art Direction Bible</button>
-        <span id="style-status" class="mini"></span>
-      </div>
-    </div>
 
     <div class="panel">
       <h2>Lessons learned <span class="hint">(standing project-wide rules, added by hand)</span></h2>
       <p class="hint">These go into every future render prompt across all boards. Rejection reasons do <b>not</b> land here automatically — they become REJECTION FEEDBACK on that specific panel's future prompts. Use this list for rules that should apply everywhere.</p>
       <div id="lessons-list"></div>
-    </div>
-
-    <div class="panel">
-      <h2>Engines &amp; API keys <span class="hint">(full forms in Settings)</span></h2>
-      <div class="row" style="margin-top:0">
-        <input type="password" id="wiz-gem-key" placeholder="Gemini API key…" style="max-width:250px" title="From aistudio.google.com. Stored only in data/settings.json on this machine.">
-        <button class="ghost" id="wiz-gem-save">Save</button>
-        <span id="wiz-gem-state" class="mini"></span>
-        <input type="password" id="wiz-oai-key" placeholder="OpenAI API key…" style="max-width:250px" title="From platform.openai.com (sk-proj-…). Stored only in data/settings.json on this machine.">
-        <button class="ghost" id="wiz-oai-save">Save</button>
-        <span id="wiz-oai-state" class="mini"></span>
-      </div>
     </div>
   </section>
 </template>

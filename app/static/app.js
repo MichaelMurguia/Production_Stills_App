@@ -863,6 +863,35 @@ function useTemplate(id) {
   return main;
 }
 
+/* Model selectors state their gate (user ruling 2026-08-01): only engines
+   with a configured key are listed; with none, the selector itself says
+   so instead of offering models that cannot run. Returns whether any
+   engine is ready. */
+async function fillProviderSelect(sel) {
+  if (!sel) return false;
+  let s = {};
+  try { s = await api("/api/settings"); } catch { /* stated below */ }
+  const opts = [
+    ...(s.gemini_api_key_set ? [["gemini", "Gemini (research pass)"]] : []),
+    ...(s.openai_api_key_set ? [["openai", "OpenAI GPT-5.6"]] : []),
+  ];
+  if (!opts.length) {
+    sel.innerHTML = `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS</option>`;
+    sel.disabled = true;
+    sel.title = "Every model action needs a Gemini or OpenAI key — add one in Settings.";
+    return false;
+  }
+  const prev = sel.value;
+  sel.disabled = false;
+  sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  if (opts.some(([v]) => v === prev)) sel.value = prev;
+  return true;
+}
+
+// The selector's visible label — busy meters say which model is running.
+const selectedModelLabel = sel =>
+  sel?.selectedOptions?.[0]?.textContent?.trim() || "the selected model";
+
 async function showView(name) {
   activeView = name;
   _roleCtx = null;  // suggestion sources refresh per navigation
@@ -889,6 +918,13 @@ async function updateBand() {
     const src = (eng[k] || {}).source;
     return `<span class="edot ${src === "settings" ? "ok" : src === "env" ? "env" : "none"}"><i></i>${k.toUpperCase()}</span>`;
   }).join("");
+
+  // Errors in the flight recorder surface on the Status tool itself
+  // (user ruling 2026-08-01) — a breadcrumb, not a buried log line.
+  api("/api/activity?limit=10").then(rows => {
+    $('#tools-nav button[data-view="status"]')
+      ?.classList.toggle("has-err", rows.some(r => r.kind === "error"));
+  }).catch(() => {});
 
   const ss = state.stage_summary || {};
   const pd = ss.production_design || {}, bd = ss.breakdowns || {},
@@ -1700,29 +1736,18 @@ async function renderWizard() {
     ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
     : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
 
-  // ---- Engines & API keys ----
-  const refreshEngineState = async () => {
-    const s = await api("/api/settings");
-    $("#wiz-gem-state").innerHTML = s.gemini_api_key_set
-      ? `<span class="badge APPROVED">SET</span>` : `<span class="badge REJECTED">NO KEY</span>`;
-    $("#wiz-oai-state").innerHTML = s.openai_api_key_set
-      ? `<span class="badge APPROVED">SET</span>` : `<span class="badge REJECTED">NO KEY</span>`;
-    return s;
-  };
-  const wireKeySave = (btnId, inputId, field, label) => {
-    $(btnId).onclick = async () => {
-      const key = $(inputId).value.trim();
-      if (!key) return toast(`Paste the ${label} key first.`, true);
-      try {
-        await api("/api/settings", { method: "POST", json: { [field]: key } });
-        $(inputId).value = "";
-        toast(`${label} key saved.`);
-        refreshEngineState();
-      } catch (err) { toast(err.message, true); }
-    };
-  };
-  wireKeySave("#wiz-gem-save", "#wiz-gem-key", "gemini_api_key", "Gemini");
-  wireKeySave("#wiz-oai-save", "#wiz-oai-key", "openai_api_key", "OpenAI");
+  // Engine state (user ruling 2026-08-01): keys live in Settings only —
+  // the wizard's model selector states the gate when none are configured
+  // and lists only engines that actually have a key.
+  const engReady = await fillProviderSelect($("#wiz-provider"));
+  if (!engReady) {
+    $("#wiz-analyze").disabled = true;
+    $("#wiz-analyze").title = "Add a Gemini or OpenAI key in Settings first.";
+    $("#wiz-draft").disabled = true;
+    $("#wiz-draft").title = "Add a Gemini or OpenAI key in Settings first.";
+    $("#wiz-analyze-lock").textContent =
+      "NO ENGINE CONFIGURED — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
+  }
 
   // ---- Step 6: model bake-off (after the production design is set) ----
   // Every engine renders the same screenplay location; suggestions come from
@@ -1780,7 +1805,6 @@ async function renderWizard() {
       host.append(col);
     }
   };
-  await refreshEngineState();
   renderSamples();
 
   $("#wiz-samples-go").onclick = async (e) => {
@@ -2472,7 +2496,8 @@ async function renderWizard() {
     const btn = e.target;
     btn.disabled = true;
     const busy = startBusy($("#wiz-analyze-busy"),
-      "Reading the screenplay and identifying visual story elements and scenes…", "a minute or two");
+      `Reading the screenplay and identifying visual story elements and scenes — ${selectedModelLabel($("#wiz-provider"))}…`,
+      "a minute or two");
     try {
       const analysis = await api("/api/wizard/analyze", {
         method: "POST", json: { provider: $("#wiz-provider").value } });
@@ -2493,7 +2518,7 @@ async function renderWizard() {
     const btn = e.target;
     btn.disabled = true;
     const busy = startBusy($("#wiz-draft-busy"),
-      "Drafting the Art Direction Bible from screenplay, worlds, interview, and reference photos…",
+      `Drafting the Art Direction Bible from screenplay, worlds, interview, and reference photos — ${selectedModelLabel($("#wiz-provider"))}…`,
       "this is the big one — a few minutes is normal");
     try {
       // PROPOSED worlds stay out of the draft — confirming is what writes a
@@ -2609,7 +2634,9 @@ async function renderWizard() {
   await loadBibleEditor();
   $("#style-save").onclick = async () => {
     try {
-      const r = await api("/api/style-bible", { method: "PUT", json: { text: $("#style-bible").value } });
+      const text = $("#style-bible").value.trim();
+      if (!text) return toast("The bible is empty — draft it in step 5 (or paste content) before saving.", true);
+      const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
       toast("Art Direction Bible saved.");
     } catch (err) { toast(err.message, true); }
@@ -3001,6 +3028,8 @@ async function renderSpecs(openId = null) {
   };
   persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt", "spec-auto-mode", "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode", "spec-new-btype"]);
+
+  await fillProviderSelect($("#spec-auto-provider"));
 
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
   // underscores.

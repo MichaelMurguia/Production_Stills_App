@@ -818,7 +818,12 @@ details.meta pre {
 .recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none; }
 .recent-text { color: var(--ink-dim); min-width: 0; }
 .recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 12px; }
-.recent-row.error .recent-text { color: var(--bad); }
+.recent-row.error {
+  border-left: 2px solid var(--bad); padding-left: 10px;
+  background: var(--panel2);
+}
+.recent-row.error .recent-text { color: var(--bad); font-weight: 600; }
+.recent-row.error .recent-ts { color: var(--bad); }
 
 /* Location coverage table + canonical meter (plan v3 Part A.3): 4 segments
    11×4px, 3px gap; filled = --ok; a single amber first segment = thin. */
@@ -861,8 +866,8 @@ details.meta pre {
 /* Wizard read-locations rows (plan P4/R2): name · sheet-match state · verb.
    Same finder vocabulary, three columns instead of four; grouped rows
    (plan P7) add the reassign select as a fourth. */
-.wiz-loc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 260px) minmax(0, 130px); }
-.wiz-loc-row.grouped { grid-template-columns: minmax(0, 1fr) minmax(0, 150px) minmax(0, 220px) minmax(0, 130px); }
+.wiz-loc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 180px) max-content; }
+.wiz-loc-row.grouped { grid-template-columns: minmax(0, 1fr) minmax(0, 150px) minmax(0, 140px) max-content; }
 .wiz-loc-row .loc-draft, .wiz-loc-row .loc-open { justify-self: end; }
 .loc-group {
   font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
@@ -1467,3 +1472,12 @@ details.meta pre {
 .sc-addr { flex: none; font-size: 9.5px; letter-spacing: .1em; color: var(--ink-faint); }
 .sc-row.cur .sc-addr { color: var(--accent); }
 .sc-foot { margin-top: 12px; font-size: 8.5px; letter-spacing: .1em; color: var(--ink-faint); }
+
+/* QA batch 2026-08-01 */
+.wiz-loc-row select { width: 100%; min-width: 0; }
+.wiz-loc-row .loc-state { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the Status tool's error breadcrumb — square, per canon */
+.tools button.has-err::after {
+  content: ""; display: inline-block; width: 6px; height: 6px;
+  background: var(--bad); margin-left: 7px; vertical-align: 7px;
+}
