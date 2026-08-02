@@ -1240,10 +1240,19 @@ async function updateBand() {
   _debugTools = !!settings.debug_tools;
   updateTextEditChip();
 
-  const eng = settings.engines || {};
-  $("#engine-dots").innerHTML = ["gemini", "openai"].map(k => {
-    const src = (eng[k] || {}).source;
-    return `<span class="edot ${src === "settings" ? "ok" : src === "env" ? "env" : "none"}"><i></i>${k.toUpperCase()}</span>`;
+  // C8 — one square per ROLE, not per provider: can this app do its two
+  // jobs right now? Worst state among everything each role needs.
+  const roles = settings.roles || {};
+  const ROLE_TITLES = {
+    ok: "OK", warn: "DEGRADED — STILL RUNS",
+    bad: "BLOCKED", none: "NOT CONFIGURED",
+  };
+  $("#engine-dots").innerHTML = [
+    ["narrative", "NARRATIVE", "Narrative & content evaluation"],
+    ["image", "IMAGE", "Image generation"],
+  ].map(([k, lab, full]) => {
+    const st = roles[k] || "none";
+    return `<span class="edot ${st}" title="${esc(full)} — ${ROLE_TITLES[st]}. Configure in Settings → AI & engines."><i></i>${lab}</span>`;
   }).join("");
 
   // Errors in the flight recorder surface on the Status tool itself

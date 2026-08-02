@@ -104,10 +104,15 @@ header {
   font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
-.edot i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+/* C8 — one SQUARE per AI role (never a circle; --radius is 0 everywhere
+   else): worst state among everything that role needs. GREEN OK · AMBER
+   DEGRADED, STILL RUNS · RED BLOCKED · HOLLOW NOT CONFIGURED. */
+.edot i { width: 7px; height: 7px; display: inline-block; }
 .edot.ok i { background: var(--ok); }
+.edot.warn i { background: var(--warn); }
+.edot.bad i { background: var(--bad); }
 .edot.env i { background: var(--hold); }
-.edot.none i { background: transparent; border: 1px solid var(--line); }
+.edot.none i { background: transparent; border: 1px solid var(--ink-faint); }
 nav.tools { display: flex; gap: 18px; }
 nav.tools button {
   background: none; border: none; padding: 4px 0; cursor: pointer;
