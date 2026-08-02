@@ -16,7 +16,22 @@ ACCENT = (216, 162, 74)
 
 MARGIN = 64
 GUTTER = 36
-HEADER_H = 150
+HEADER_H = 150  # legacy constant; geometry now derives from _type_scale
+
+
+def _type_scale(height: int) -> dict:
+    """Board typography scales with the canvas (user-caught 2026-08-02:
+    fixed 64px titles read tiny on a 4K wall board — the grammar says
+    legible at print size). Sizes are tuned at 2160 and scale linearly;
+    the slot map derives its header from the same numbers so preview and
+    board never drift."""
+    sc = height / 2160
+    title = max(48, int(96 * sc))
+    sub = max(20, int(34 * sc))
+    label = max(20, int(36 * sc))
+    rule_y = MARGIN - 10 + title + int(12 * sc) + sub + int(20 * sc)
+    return {"title": title, "sub": sub, "label": label,
+            "rule_y": rule_y, "inner_y": rule_y + int(24 * sc) + 3}
 LABEL_H = 46
 
 FONT_CANDIDATES = [
@@ -235,7 +250,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
                if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
     inner_x = MARGIN
-    inner_y = HEADER_H + MARGIN
+    inner_y = _type_scale(height)["inner_y"]
     inner_w = width - 2 * MARGIN
     inner_h = height - inner_y - MARGIN
     derived = [pid for pid in ("MATERIALS", "PALETTE") if pid in approved]
@@ -321,22 +336,25 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
     board = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(board)
 
-    title_font = _font(64)
-    sub_font = _font(26)
-    label_font = _font(28)
+    ts = _type_scale(height)
+    title_font = _font(ts["title"])
+    sub_font = _font(ts["sub"])
+    label_font = _font(ts["label"])
 
-    # Header — board title in the Master Board presentation grammar.
+    # Header — board title in the Master Board presentation grammar,
+    # scaled to the canvas so it reads at print size.
     draw.text((MARGIN, MARGIN - 10), str(spec.get("subject", spec_id)).upper(),
               font=title_font, fill=INK)
     slug = _slug(spec)
     sub = "  ·  ".join(x for x in [
         slug, spec_id, str(spec.get("mode", "")), "BOARD CANDIDATE — UNAPPROVED"] if x)
-    draw.text((MARGIN, MARGIN + 72), sub, font=sub_font, fill=INK_DIM)
-    draw.line([(MARGIN, HEADER_H + MARGIN - 24), (width - MARGIN, HEADER_H + MARGIN - 24)],
-              fill=ACCENT, width=3)
+    draw.text((MARGIN, MARGIN - 10 + ts["title"] + int(12 * height / 2160)),
+              sub, font=sub_font, fill=INK_DIM)
+    draw.line([(MARGIN, ts["rule_y"]), (width - MARGIN, ts["rule_y"])],
+              fill=ACCENT, width=max(3, int(3 * height / 2160)))
 
     inner_x = MARGIN
-    inner_y = HEADER_H + MARGIN
+    inner_y = ts["inner_y"]
     inner_w = width - 2 * MARGIN
     inner_h = height - inner_y - MARGIN
 

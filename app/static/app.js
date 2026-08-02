@@ -5198,7 +5198,7 @@ async function renderAssemblyFor(specId) {
         — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
       <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
         <div class="slot apdrawn" style="left:1.7%;top:3%;width:96.6%;height:${Math.max(4, (minY - 0.05) * 100).toFixed(1)}%">
-          <span class="slot-id">${esc((spec.project || "").toUpperCase())} — ${esc((spec.subject || specId).toUpperCase())}</span>
+          <span class="slot-id">${esc((_bandState?.project || spec.project || "").toUpperCase())} — ${esc((spec.subject || specId).toUpperCase())}</span>
           <span class="slot-id">TITLE BLOCK · APP-DRAWN</span>
         </div>
         ${sm.slots.map(s => `
@@ -5226,6 +5226,13 @@ async function renderAssemblyFor(specId) {
   ];
   let variant = "aspect";
   const boardsCount = boards.length;
+  // Same takes + same layout = the board that already exists; assembling
+  // again would mint a duplicate (user ruling 2026-08-02).
+  const currentTakes = Object.fromEntries((sm?.slots || [])
+    .filter(sl => sl.candidate_id).map(sl => [sl.panel_id, sl.candidate_id]));
+  const dupBoard = boards.find(b =>
+    (b.layout_variant || "aspect") === variant &&
+    JSON.stringify(b.panels_used || {}) === JSON.stringify(currentTakes));
 
   const asm = document.createElement("div");
   asm.className = "panel";
@@ -5237,7 +5244,7 @@ async function renderAssemblyFor(specId) {
         <div class="rail-sheet" style="font-size:16px">${esc(specId)}</div>
         <p class="mini" style="margin:4px 0 0">${esc(spec.subject || "")} · ${spec.panels.length} slot${spec.panels.length > 1 ? "s" : ""}</p>
       </div>
-      <button class="primary" id="asm-go" ${sm?.ready ? "" : "disabled"} title="${sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">Assemble 4K board</button>
+      <button class="primary" id="asm-go" ${sm?.ready && !dupBoard ? "" : "disabled"} title="${dupBoard ? `Already assembled as ${dupBoard.candidate_id} with these exact takes and this layout — approve a new take or pick another variant to assemble again` : sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">${dupBoard ? "Assembled" : "Assemble 4K board"}</button>
     </div>
     <div class="slot-caption" style="margin-top:14px">
       <span class="f-label">Slot map · true 4K canvas</span>
@@ -5286,7 +5293,10 @@ async function renderAssemblyFor(specId) {
     try {
       const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h, variant } });
       toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout) — BOARD CANDIDATE, unapproved.`);
-      renderAssemblyFor(specId);
+      // The finished board is the point — land on the completed-boards
+      // grid with it in view (user ruling 2026-08-02).
+      uiSet("asmSpec", "");
+      renderAssembly();
     } catch (err) {
       busy.done();
       toast(err.message, true);
