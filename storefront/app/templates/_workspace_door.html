@@ -1,19 +1,62 @@
-{# The workspace door (STORE_ROUTER_PLAN T3, mock 11c) — one partial for
-   every cloud-ACTIVE state: /success and both /account blocks. Expects
-   `ws` (workspace). The gate is stated as a block above the button, never
-   footnoted; when the branded name serves, the YOUR STUDIO box wears a
-   LIVE chip instead. #}
+{# The workspace door (STORE_ROUTER_PLAN T3; naming-first rework ruled by
+   the user 2026-08-03) — one partial for every cloud-ACTIVE state.
+   Expects `ws`. When `ws_name_sid` is set (the success page) and the
+   studio is unclaimed, the door leads with NAME YOUR STUDIO and a live
+   URL preview. The raw railway address is never DISPLAYED — the Open
+   button may use it silently while the branded name provisions. #}
+{% set claimed = ws.subdomain and ws.name_claimed %}
+{% set branded = ws.railway_url and ws.url != ws.railway_url %}
 {% set door = ws.url if (ws.domain_live or not ws.railway_url) else ws.railway_url %}
-{% if door != ws.url %}
+{% set naming = branded and not claimed and ws_name_sid is defined %}
+{% if naming %}
+{% set base = (ws.url.split("://") | last).split(".", 1) | last %}
+<div class="license-box name-box">
+  <p class="license-label">NAME YOUR STUDIO</p>
+  <form method="post" action="/studio/name" class="name-form">
+    <input type="hidden" name="workspace_id" value="{{ ws.id }}">
+    <input type="hidden" name="session_id" value="{{ ws_name_sid }}">
+    <div class="name-row">
+      <input class="name-input mono" name="name" id="ws-name-{{ ws.id }}"
+             placeholder="yourfilm" maxlength="63" autocomplete="off"
+             pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?" autofocus>
+      <button class="btn btn-primary" type="submit">Claim name</button>
+    </div>
+    <p class="name-preview mono" id="ws-prev-{{ ws.id }}">YOURFILM.{{ base | upper }}</p>
+  </form>
+  {% if name_error %}<p class="name-err mono">{{ name_error | upper }}</p>{% endif %}
+  <p class="name-terms">Lowercase letters, digits and hyphens. Only the URL
+  and studio name are set by this &mdash; your work, subscription and
+  sign-in stay put. You can rename later from Your Screenboard.</p>
+</div>
+<script>
+(() => {
+  const inp = document.getElementById("ws-name-{{ ws.id }}");
+  const prev = document.getElementById("ws-prev-{{ ws.id }}");
+  if (!inp) return;
+  inp.addEventListener("input", () => {
+    const v = inp.value.trim().toLowerCase();
+    prev.textContent = `${(v || "yourfilm").toUpperCase()}.{{ base | upper }}`;
+  });
+})();
+</script>
+{% endif %}
+{% if branded and not ws.domain_live %}
 <div class="prov-block mono">
   <span class="prov-chip">PROVISIONING</span>
+  {% if claimed %}
   <span>{{ ws.url | replace("https://", "") | upper }} IS PROVISIONING &mdash;
-  THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE.</span>
+  THE OPEN BUTTON USES A RELIABLE ADDRESS MEANWHILE.</span>
+  {% else %}
+  <span>YOUR CUSTOM ADDRESS IS CREATED THE MOMENT YOU NAME YOUR STUDIO
+  &mdash; THE OPEN BUTTON ALREADY WORKS.</span>
+  {% endif %}
 </div>
 {% endif %}
+{% if claimed %}
 <div class="license-box">
-  <p class="license-label">YOUR STUDIO{% if ws.domain_live and ws.url != ws.railway_url %} <span class="live-chip mono">LIVE</span>{% endif %}</p>
-  <p class="license-token">{{ door }}</p>
+  <p class="license-label">YOUR STUDIO{% if ws.domain_live %} <span class="live-chip mono">LIVE</span>{% endif %}</p>
+  <p class="license-token">{{ ws.url }}</p>
 </div>
-<p style="margin-top:12px"><a class="btn btn-primary" target="_blank" rel="noopener"
+{% endif %}
+<p style="margin-top:12px"><a class="btn {{ "btn-secondary" if naming else "btn-primary" }}" target="_blank" rel="noopener"
    href="{{ door }}/login#{{ ws.access_token }}">Open your workspace</a></p>

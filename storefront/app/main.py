@@ -315,14 +315,18 @@ def _detach_loaded(s, purchase: db.Purchase) -> None:
     if purchase.license:
         _ = purchase.license.token
     if purchase.workspace:
-        _ = (purchase.workspace.status, purchase.workspace.url,
-             purchase.workspace.access_token,
-             purchase.workspace.railway_url, purchase.workspace.domain_live)
+        ws = purchase.workspace
+        _ = (ws.id, ws.status, ws.url, ws.access_token,
+             ws.railway_url, ws.domain_live, ws.subdomain)
+        # Claimed vs auto-assigned drives the door's naming-first state.
+        ws.name_claimed = bool(ws.subdomain
+                               and not provisioner.is_random_slug(ws.subdomain))
     s.expunge_all()
 
 
 @app.get("/success")
-def success(request: Request, background: BackgroundTasks, session_id: str = ""):
+def success(request: Request, background: BackgroundTasks, session_id: str = "",
+            name_error: str = ""):
     if not session_id:
         return RedirectResponse("/")
     try:
@@ -339,7 +343,9 @@ def success(request: Request, background: BackgroundTasks, session_id: str = "")
         # page (idempotent) and finds the workspace once it's ACTIVE.
         background.add_task(provisioner.reconcile)
     return templates.TemplateResponse(request, "success.html",
-                                      {"state": "PAID", "purchase": purchase})
+                                      {"state": "PAID", "purchase": purchase,
+                                       "session_id": session_id,
+                                       "name_error": name_error[:120]})
 
 
 @app.get("/success/status")
@@ -533,14 +539,20 @@ def auth_logout():
 
 @app.post("/studio/name")
 def name_studio(request: Request, background: BackgroundTasks,
-                workspace_id: int = Form(0), name: str = Form("")):
-    """Claim or rename a studio's subdomain. Owner-only (signed-in email
-    must match the purchase). The wildcard router serves the new name the
-    moment reconcile commits it; the old name then reads as unclaimed."""
+                workspace_id: int = Form(0), name: str = Form(""),
+                session_id: str = Form("")):
+    """Claim or rename a studio's subdomain. Owner-only: the signed-in
+    email must match the purchase — or, on the success page, the Stripe
+    session id is the same capability that page already trusts to show
+    the workspace itself (a fresh buyer has not signed in yet). The
+    wildcard router serves the new name the moment reconcile commits it;
+    the old name then reads as unclaimed."""
     from urllib.parse import quote
     email = request.state.account_email
-    if not email:
+    if not email and not session_id:
         return RedirectResponse("/signin", status_code=303)
+    back = (f"/success?session_id={quote(session_id)}" if session_id
+            else "/account")
     name = name.strip().lower()
     err = ""
     if not provisioner.valid_subdomain(name):
@@ -549,7 +561,10 @@ def name_studio(request: Request, background: BackgroundTasks,
                provisioner.RESERVED_SUBDOMAINS else "that name is reserved")
     with db.session() as s:
         ws = s.get(db.Workspace, workspace_id)
-        if not ws or ws.purchase.email != email:
+        owner_ok = ws and (
+            (email and ws.purchase.email == email)
+            or (session_id and ws.purchase.stripe_session_id == session_id))
+        if not owner_ok:
             raise HTTPException(404)
         if not err and ws.subdomain != name:
             clash = s.scalar(select(db.Workspace).where(
@@ -566,10 +581,12 @@ def name_studio(request: Request, background: BackgroundTasks,
                     s.rollback()
                     err = "that name is taken"
     if err:
-        return RedirectResponse(f"/account?name_error={quote(err)}",
+        sep = "&" if "?" in back else "?"
+        return RedirectResponse(f"{back}{sep}name_error={quote(err)}",
                                 status_code=303)
     background.add_task(provisioner.reconcile)
-    return RedirectResponse("/account?named=1", status_code=303)
+    sep = "&" if "?" in back else "?"
+    return RedirectResponse(f"{back}{sep}named=1", status_code=303)
 
 
 @app.get("/account")

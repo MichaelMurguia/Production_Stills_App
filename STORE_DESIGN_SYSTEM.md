@@ -156,6 +156,17 @@ reader is.
   border, unchanged copy — and the YOUR STUDIO label wears a bordered
   --ok LIVE chip once the branded name serves. One
   `_workspace_door.html` partial serves all three cloud-ACTIVE sites.
+- **2026-08-03** — RULED (user): the workspace door leads with the studio,
+  never the infrastructure. An unclaimed studio's door on the success page
+  IS the naming form — NAME YOUR STUDIO input with a live
+  `<name>.screenboardstudio.com` preview as they type; the raw
+  `*.up.railway.app` address is never displayed anywhere (the Open button
+  may use it silently while the branded name provisions — the T3 reliable-
+  door mechanic unchanged). The provisioning chip names the claimed
+  address, or states that the address is created at naming. Claiming works
+  from the success page via the same session capability the page already
+  trusts; the ADVANCED access-token reveal is deleted. Claim name is the
+  door's one fill; Open drops to secondary while the form shows.
 - **2026-08-03** — RULED (STORE_PRICING_PLAN K1–K3): the engine band —
   the BYO-render-key fact sits in a shared bordered band ABOVE the price
   cards (BOTH EDITIONS amber kicker, two --ok advantage rows, one --hold

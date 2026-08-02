@@ -33,13 +33,8 @@
   nothing to save. Your studio is always one click away on
   <a href="/account">Your Screenboard</a>.</p>
   {% set ws = purchase.workspace %}
+  {% set ws_name_sid = session_id %}
   {% include "_workspace_door.html" %}
-  <details class="token-reveal">
-    <summary>ADVANCED &mdash; SHOW ACCESS TOKEN</summary>
-    <p class="hero-sub">You don't need this. It's only for signing in
-    manually at the studio's own login page (a bookmark, another browser).</p>
-    <p class="license-token">{{ purchase.workspace.access_token }}</p>
-  </details>
 </section>
 
 {% else %}
