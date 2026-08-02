@@ -1088,10 +1088,17 @@ async function renderStatus() {
     blocking.classList.add("hidden");
   }
 
+  // Timestamps in the viewer's own timezone (user ruling 2026-08-01) —
+  // the log records UTC; the reader lives somewhere.
+  const localTime = ts => {
+    const d = new Date(ts);
+    return isNaN(d) ? (ts || "").slice(11, 16)
+      : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  };
   $("#dash-recent").innerHTML = recent.length
     ? recent.map(e => `
         <div class="recent-row${e.kind === "error" ? " error" : ""}">
-          <span class="recent-ts">${esc((e.ts || "").slice(11, 16))}</span>
+          <span class="recent-ts" title="${esc(e.ts || "")}">${esc(localTime(e.ts))}</span>
           <span class="recent-text">${monoIds(esc(e.text))}</span>
         </div>`).join("")
     : `<p class="mini">No activity recorded yet.</p>`;
