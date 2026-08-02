@@ -183,6 +183,14 @@ tenant-host response — proxied studio traffic and router pages alike —
 carries `X-Robots-Tag: noindex`; private studios are never crawlable.
 Tests: `tests/test_seo.py`.
 
+**Owner page-text rewrites** (debug tool, 2026-08-03): `/api/site-text`
+— public GET (the overrides are the live page copy, applied by a
+base-template script for every visitor), owner-only PUT/DELETE
+(`OWNER_EMAILS` session accounts; everyone else sees 404 and never
+receives the editor script). Overrides live in the `site_texts` table —
+never on disk (ephemeral). Owner controls sit on Your Screenboard;
+Alt-click rewrites in place. Tests: `tests/test_site_text.py`.
+
 ## Developing and shipping
 
 - **Product app:** `run.bat` at repo root (uvicorn, auto-reload).

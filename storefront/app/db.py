@@ -102,6 +102,19 @@ class Account(Base):
     last_login_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
 
 
+class SiteText(Base):
+    """Owner page-text rewrites (debug tool, 2026-08-03): exact original
+    text -> replacement, applied client-side on every store page. Edited
+    only by OWNER_EMAILS accounts; content is public by nature (it IS the
+    page copy). Postgres because the store's disk is ephemeral."""
+
+    __tablename__ = "site_texts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    original: Mapped[str] = mapped_column(String(500), unique=True)
+    replacement: Mapped[str] = mapped_column(String(500), default="")
+
+
 class LoginToken(Base):
     """One magic link: single-use, 30-minute expiry. Naive-UTC datetimes
     throughout (SQLite drops tzinfo; comparisons stay consistent)."""

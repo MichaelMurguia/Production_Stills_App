@@ -27,6 +27,7 @@ async def security_headers(request: Request, call_next):
     so every template can render the header account widget."""
     email = auth.read_session(request.cookies.get(auth.SESSION_COOKIE, ""))
     request.state.account_email = email
+    request.state.is_owner = bool(email) and email.lower() in settings.OWNER_EMAILS
     request.state.account_avatar = ""
     if email and not request.url.path.startswith(("/static", "/healthz")):
         def _picture() -> str:
@@ -177,6 +178,48 @@ def sitemap_xml():
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         f"{urls}\n</urlset>\n", media_type="application/xml")
+
+
+# --------------------------------------------- owner page-text rewrites
+# Debug tool (user request 2026-08-03): the store owner rewrites page copy
+# in place. Reads are public (the overrides ARE the page copy every
+# visitor sees); writes exist only for signed-in OWNER_EMAILS accounts.
+
+def _require_owner(request: Request) -> None:
+    if not getattr(request.state, "is_owner", False):
+        raise HTTPException(404)
+
+
+@app.get("/api/site-text")
+def api_get_site_text() -> dict:
+    with db.session() as s:
+        rows = s.scalars(select(db.SiteText)).all()
+        return {"overrides": {r.original: r.replacement for r in rows}}
+
+
+@app.put("/api/site-text")
+async def api_put_site_text(request: Request, body: dict) -> dict:
+    _require_owner(request)
+    overrides = body.get("overrides")
+    if not isinstance(overrides, dict):
+        raise HTTPException(422, "overrides must be an object of text → text")
+    clean = {str(k)[:500]: str(v)[:500] for k, v in overrides.items()
+             if str(k).strip()}
+    with db.session() as s:
+        s.execute(sa_delete(db.SiteText))
+        for orig, repl in clean.items():
+            s.add(db.SiteText(original=orig, replacement=repl))
+        s.commit()
+    return {"overrides": clean}
+
+
+@app.delete("/api/site-text")
+def api_clear_site_text(request: Request) -> dict:
+    _require_owner(request)
+    with db.session() as s:
+        s.execute(sa_delete(db.SiteText))
+        s.commit()
+    return {"overrides": {}}
 
 
 @app.get("/checkout/{plan}")

@@ -60,5 +60,72 @@
       <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></p>
   </div>
 </footer>
+<script>
+// Owner page-text rewrites (debug tool 2026-08-03): exact-text overrides
+// from /api/site-text, applied to every visitor's page.
+(async () => {
+  try {
+    const o = (await (await fetch("/api/site-text")).json()).overrides || {};
+    window.SB_SITE_TEXT = o;
+    if (!Object.keys(o).length) return;
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const t = n.textContent.trim();
+      if (t && Object.prototype.hasOwnProperty.call(o, t) && o[t] !== t)
+        n.textContent = n.textContent.replace(t, o[t]);
+    }
+  } catch (e) { /* copy stays as authored */ }
+})();
+</script>
+{% if request.state.is_owner %}
+<script>
+// Owner-only editor: Alt-click any text to rewrite it. Armed from Your
+// Screenboard; the chip states the mode. Invisible to every other visitor.
+(() => {
+  const armed = () => localStorage.getItem("sbStoreTextEdit") === "1";
+  const chip = () => {
+    let c = document.getElementById("store-text-chip");
+    if (!armed()) { c?.remove(); return; }
+    if (!c) {
+      c = document.createElement("div");
+      c.id = "store-text-chip";
+      c.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:99;" +
+        "background:#141210;color:#e8e5dd;border:1px solid #d8a24a;" +
+        "border-left-width:4px;padding:7px 12px;font:10px/1.4 'Courier New',monospace;" +
+        "letter-spacing:.08em";
+      c.textContent = "STORE TEXT EDIT ON — ALT-CLICK ANY TEXT · EXIT ON YOUR SCREENBOARD";
+      document.body.append(c);
+    }
+  };
+  window.sbStoreTextChip = chip;
+  chip();
+  document.addEventListener("click", async e => {
+    if (!armed() || !e.altKey) return;
+    e.preventDefault(); e.stopPropagation();
+    let node = null;
+    const r = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (r?.startContainer?.nodeType === Node.TEXT_NODE) node = r.startContainer;
+    if (!node?.textContent?.trim())
+      node = [...(e.target.childNodes || [])].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+    const current = node?.textContent.trim();
+    if (!current) return;
+    const o = window.SB_SITE_TEXT || {};
+    const key = Object.keys(o).find(k => o[k] === current) || current;
+    const next = window.prompt("Rewrite this text (applies wherever it appears, for every visitor):", current);
+    if (next === null) return;
+    if (!next.trim() || next === key) delete o[key]; else o[key] = next;
+    try {
+      const resp = await fetch("/api/site-text", { method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overrides: o }) });
+      if (!resp.ok) throw new Error("save failed (" + resp.status + ")");
+      window.SB_SITE_TEXT = o;
+      if (node.textContent.trim() === current)
+        node.textContent = node.textContent.replace(current, next.trim() ? next : key);
+    } catch (err) { alert("Could not save the rewrite: " + err.message); }
+  }, true);
+})();
+</script>
+{% endif %}
 </body>
 </html>
