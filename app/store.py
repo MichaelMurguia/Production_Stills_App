@@ -534,6 +534,12 @@ def get_spec(spec_id: str) -> dict | None:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def spec_lock_hash(spec_id: str) -> str:
+    """The locked hash the sheet was approved under, '' when unlocked —
+    the card states it at the moment of dispatch (PANEL_CARD_PLAN P6)."""
+    return str((_load_locks().get(spec_id) or {}).get("hash", ""))
+
+
 def spec_locked(spec_id: str) -> bool:
     return spec_id in _load_locks()
 

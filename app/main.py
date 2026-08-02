@@ -719,6 +719,7 @@ def api_get_spec(spec_id: str) -> dict:
                       f"{' '.join(p.get('required_objects', []))}"
                       for p in spec.get("panels", [])])
     return {"spec": spec, "locked": store.spec_locked(spec_id),
+            "lock_hash": store.spec_lock_hash(spec_id),
             "bible_catalog": bible.sections_catalog(),
             "bible_inferred": bible.infer_selection(hay)}
 

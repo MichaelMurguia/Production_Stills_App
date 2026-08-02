@@ -1573,3 +1573,11 @@ details.meta pre {
 /* A pre-checked match is the app's decision — distinguishable from a box
    the user ticked. */
 .ref-group.has-ref { border-left: 3px solid var(--ok); }
+
+/* Dispatch facts: what is about to be sent, at the moment of sending.
+   (PANEL_CARD_PLAN P6) */
+.dispatch-facts {
+  font-size: 10px; letter-spacing: .08em; color: var(--ink-faint);
+  line-height: 1.7; align-self: center; margin-left: auto; text-align: right;
+}
+.gen-actions .text-act { align-self: center; }

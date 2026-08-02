@@ -4553,7 +4553,7 @@ function removePendingTake(specId, panelId, id) {
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec }, refs, candidates, appSettings, slotMap] = await Promise.all([
+  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
@@ -4805,10 +4805,11 @@ async function renderBoardPanels(specId) {
           <select data-f="aspect">${(appSettings.aspects || ASPECT_FALLBACK).map(a =>
             `<option value="${esc(a.id)}" ${a.id === "16:9" ? "selected" : ""}>${esc(a.label)}</option>`).join("")}</select>
         </div>
+        <div class="dispatch-facts mono" data-f="dispatch-facts"></div>
         <div class="gen-actions">
-          <button class="ghost" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
-          <button class="ghost" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
-          <button class="ghost gen-go" data-f="generate" ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : "Render the next take with the model, size, aspect, and references above — deliberately not amber; Approve panel keeps that budget"}">Generate candidate</button>
+          <button class="text-act" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
+          <button class="text-act" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
+          <button class="${workOrder ? "primary" : "ghost gen-go"}" data-f="generate" ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : workOrder ? "Render this panel's first take — the one action that fills the card" : "Render the next take with the model, size, aspect, and references above — not amber after the first take; nothing here is the one thing to do"}">${workOrder ? "Generate first take" : "Generate candidate"}</button>
         </div>
       </div>
       <div data-f="busy"></div>
@@ -4820,6 +4821,7 @@ async function renderBoardPanels(specId) {
     const busyHost = $("[data-f=busy]", card);
 
     const refCount = $("[data-f=ref-count]", card);
+    const dispatchFacts = $("[data-f=dispatch-facts]", card);
     const updateRefCount = () => {
       const n = checkedRefs().length;
       const total = n + styleAnchors.length;
@@ -4827,6 +4829,10 @@ async function renderBoardPanels(specId) {
         `${n} SUBJECT + ${styleAnchors.length} STYLE = ${total} OF 14 ATTACHED` +
         (total > 14 ? " — OVER LIMIT, UNCHECK A GROUP" : "");
       refCount.style.color = total > 14 ? "var(--bad)" : "";
+      // P6: what is about to be sent, legible at the moment of sending.
+      dispatchFacts.innerHTML =
+        `${styleAnchors.length} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
+        + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
@@ -4958,7 +4964,7 @@ async function renderBoardPanels(specId) {
     };
 
     $("[data-f=generate]", card).onclick = (e) =>
-      runGenerate(e.target, "Generate candidate");
+      runGenerate(e.target, workOrder ? "Generate first take" : "Generate candidate");
 
     $("[data-f=prose]", card).onclick = async (e) => {
       const btn = e.target;
