@@ -41,6 +41,13 @@ def _screenplay_bytes() -> tuple[bytes, str]:
     rec = state.get("screenplay")
     if not rec:
         raise AutofillError("No screenplay uploaded. Add it on the Dashboard first.")
+    # The efficient format first (user ruling 2026-08-02): extracted text
+    # costs a fraction of PDF-per-page billing and prompt-caches across
+    # scans, drafts and redrafts. The original file is the stated
+    # fallback for image-only PDFs that yield no text.
+    text = store.screenplay_text_cached()
+    if text.strip():
+        return text.encode("utf-8"), "text/plain"
     p = paths.SCREENPLAY_DIR / rec["file"]
     if not p.exists():
         raise AutofillError(f"Screenplay file missing on disk: {rec['file']}")

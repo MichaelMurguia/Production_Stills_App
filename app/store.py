@@ -111,6 +111,49 @@ def save_wizard_analysis(analysis: dict) -> None:
 
 # ---------------------------------------------------------------- screenplay
 
+_EXTRACTED_NAME = "_extracted.txt"
+
+
+def _extract_screenplay_text(p: Path) -> str:
+    """The screenplay's plain text — the model-efficient format. A PDF
+    billed to a model costs per PAGE (image + text); the same script as
+    text costs a fraction and prompt-caches. Empty return = extraction
+    failed (image-only scan) and callers fall back to the original file."""
+    if p.suffix.lower() == ".pdf":
+        try:
+            from pypdf import PdfReader
+            return "\n".join((page.extract_text() or "")
+                             for page in PdfReader(str(p)).pages)
+        except Exception:
+            return ""
+    try:
+        return p.read_bytes().decode("utf-8", "replace")
+    except Exception:
+        return ""
+
+
+def screenplay_text_cached() -> str:
+    """The stored extraction (user ruling 2026-08-02: convert at import).
+    Productions that predate the rule extract once here and persist."""
+    state = load_app_state()
+    rec = state.get("screenplay")
+    if not rec:
+        return ""
+    tp = paths.SCREENPLAY_DIR / _EXTRACTED_NAME
+    if rec.get("text_file") and tp.exists():
+        return tp.read_text(encoding="utf-8")
+    p = paths.SCREENPLAY_DIR / rec["file"]
+    if not p.exists():
+        return ""
+    text = _extract_screenplay_text(p)
+    if text.strip():  # backfill the efficient format for legacy uploads
+        tp.write_text(text, encoding="utf-8")
+        rec["text_file"] = _EXTRACTED_NAME
+        rec["text_chars"] = len(text)
+        save_app_state(state)
+    return text
+
+
 def set_screenplay(original_name: str, content: bytes) -> dict:
     paths.ensure_dirs()
     safe = re.sub(r"[^A-Za-z0-9._ -]", "_", original_name)
@@ -122,6 +165,13 @@ def set_screenplay(original_name: str, content: bytes) -> dict:
         "size": dest.stat().st_size,
         "uploaded_at": utcnow(),
     }
+    # Convert to the efficient format ONCE at import — every model call
+    # reads this, not the PDF.
+    text = _extract_screenplay_text(dest)
+    if text.strip():
+        (paths.SCREENPLAY_DIR / _EXTRACTED_NAME).write_text(text, encoding="utf-8")
+        record["text_file"] = _EXTRACTED_NAME
+        record["text_chars"] = len(text)
     state = load_app_state()
     state["screenplay"] = record
     save_app_state(state)

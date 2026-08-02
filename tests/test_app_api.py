@@ -125,6 +125,30 @@ class ApiTests(unittest.TestCase):
         self.assertNotEqual(spec["project"], "The Beltminers")
         self.assertEqual(spec["project"], "Untitled Production")
 
+    def test_screenplay_converts_to_efficient_format_at_import(self):
+        # User ruling 2026-08-02: $31 of "image gen" was 2.3M input tokens
+        # of re-sent PDF. Import extracts once; model calls read the text.
+        import io
+        content = b"INT. DINER - DAY\n\nA long counter. Twelve stools.\n"
+        r = self.client.post("/api/screenplay",
+                             files={"file": ("script.txt", io.BytesIO(content))})
+        self.assertEqual(r.status_code, 200, r.text)
+        rec = r.json()
+        self.assertEqual(rec.get("text_file"), "_extracted.txt")
+        self.assertGreater(rec.get("text_chars", 0), 10)
+        from app import autofill, store
+        self.assertIn("Twelve stools", store.screenplay_text_cached())
+        doc, mime = autofill._screenplay_bytes()
+        self.assertEqual(mime, "text/plain")
+        self.assertIn(b"Twelve stools", doc)
+        # Legacy backfill: strip the marker and the extraction re-persists.
+        state = store.load_app_state()
+        state["screenplay"].pop("text_file")
+        store.save_app_state(state)
+        (paths.SCREENPLAY_DIR / "_extracted.txt").unlink()
+        self.assertIn("Twelve stools", store.screenplay_text_cached())
+        self.assertTrue((paths.SCREENPLAY_DIR / "_extracted.txt").exists())
+
     def test_references_store_render_ready_formats(self):
         # Observed live 2026-08-02: an AVIF reference 400'd a generation.
         # Intake transcodes anything outside JPEG/PNG/WEBP; the compose

@@ -406,21 +406,12 @@ def screenplay_text() -> str:
     rec = store.load_app_state().get("screenplay")
     if not rec:
         return ""
-    p = paths.SCREENPLAY_DIR / rec["file"]
-    if not p.exists():
-        return ""
     key = rec.get("sha256") or rec["file"]
     if key in _text_cache:
         return _text_cache[key]
-    if p.suffix.lower() == ".pdf":
-        try:
-            from pypdf import PdfReader
-            text = "\n".join((page.extract_text() or "")
-                             for page in PdfReader(str(p)).pages)
-        except Exception:
-            text = ""
-    else:
-        text = p.read_bytes().decode("utf-8", "replace")
+    # One extraction, done at import (store.set_screenplay) and reused by
+    # every feature AND every model call; legacy uploads backfill there.
+    text = store.screenplay_text_cached()
     _text_cache.clear()  # only ever one current screenplay
     _text_cache[key] = text
     return text
