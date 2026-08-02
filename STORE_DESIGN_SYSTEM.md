@@ -62,9 +62,16 @@ stated condition (SETUP notice in `--hold`, disabled control, Courier
 hidden control.
 
 ### 6. Provenance lines
-A faint Courier line naming what is shown (`SHOWN — THE BELTMINERS · 3
-BOARDS · 41 APPROVED PANELS`) accompanies gallery sections. It converts
-decoration into evidence. Keep the numbers true.
+A faint Courier line naming what is shown accompanies gallery sections
+(`SHOWN — THE BELTMINERS · EXT. CHARLIE'S CABIN · KYRA COSTUME AND ACTION
+STUDY`). It converts decoration into evidence. **A provenance line names
+the work being shown. It may carry a count only when the count is
+impressive on its own terms; a small true number invites the wrong
+comparison and undersells a young product. Never inflate — reword.**
+(Ruled 2026-08-01: "41 approved panels" was doing sales work and the
+honest figure was 7 — so the line names the work instead. Rules and
+guarantees — 3840×2160, 100%, 0 — are not tallies and keep their
+numbers.)
 
 ### 7. Vocabulary
 Use the profession's words, correctly: production design, art department,

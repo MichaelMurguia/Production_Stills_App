@@ -34,7 +34,8 @@ class PipelinePageTests(unittest.TestCase):
             self.assertIn(marker, r.text)
         # Provenance stays true to the production record
         for fact in ("CAND-0042", "BOARD-0001", "REF-0042",
-                     "7 PANELS APPROVED", "1 BOARD ASSEMBLED"):
+                     "124-PAGE DRAFT, READ IN FULL", "5 ENVIRONMENTS",
+                     "EVERY IMAGE BELOW IS FROM IT"):
             self.assertIn(fact, r.text)
         # The footnotes are the argument of the page — never drop them
         for note in ("THE GATE", "WHAT PROPOSED MEANS", "WHY JURISDICTIONS",

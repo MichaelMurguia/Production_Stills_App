@@ -467,3 +467,4 @@ body {
   border: 1px solid var(--ok); color: var(--ok);
   padding: 0 6px; font-size: 9px; letter-spacing: .1em; margin-left: 8px;
 }
+.figs-from { color: var(--ink-dim); }
