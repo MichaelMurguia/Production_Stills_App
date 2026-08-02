@@ -124,6 +124,13 @@ class ApiTests(unittest.TestCase):
         spec = self.client.get("/api/specs/TEST_SHEET_V001").json()["spec"]
         self.assertNotEqual(spec["project"], "The Beltminers")
         self.assertEqual(spec["project"], "Untitled Production")
+        # Regression (user-caught 2026-08-02): the validator demanded the
+        # hardcoded film and failed every real production's sheets. The
+        # rule is presence, not a name.
+        v = self.client.post("/api/specs/TEST_SHEET_V001/validate").json()
+        joined = " ".join(map(str, v.get("errors", [])))
+        self.assertNotIn("must be The Beltminers", joined)
+        self.assertNotIn("project must be", joined)
 
     def test_screenplay_converts_to_efficient_format_at_import(self):
         # User ruling 2026-08-02: $31 of "image gen" was 2.3M input tokens

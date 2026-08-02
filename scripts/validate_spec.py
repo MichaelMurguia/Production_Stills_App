@@ -8,7 +8,10 @@ def validate(spec: dict) -> list[str]:
     errors=[]
     for k in REQUIRED:
         if k not in spec: errors.append(f'missing required field: {k}')
-    if spec.get('project')!='The Beltminers': errors.append('project must be The Beltminers')
+    # The rule is presence, not a hardcoded film (user-caught 2026-08-02:
+    # specs now record the active production's name; the validator must
+    # accept any non-empty project).
+    if not str(spec.get('project','')).strip(): errors.append('project must be set')
     mode=spec.get('mode')
     if mode not in {'CANON_EXTRACTION','DESIGN_EXPLORATION'}: errors.append('invalid mode')
     if not spec.get('canon_sources'): errors.append('canon_sources must not be empty')

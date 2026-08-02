@@ -3159,18 +3159,60 @@ async function renderSpecs(openId = null) {
   await fillProviderSelect($("#spec-auto-provider"));
 
   // The instruction example speaks this production's screenplay, never a
-  // hardcoded film's (user ruling 2026-08-01): the read's top location
-  // becomes the worked example and the prompt placeholder.
-  api("/api/screenplay/locations").then(d => {
-    const top = d.locations?.[0]?.location;
-    if (!top) return;
-    const t = top.toLowerCase().replace(/(^|[\s/#-])([a-z])/g,
-      (m, p, c) => p + c.toUpperCase());
-    const ex = $("#spec-auto-example");
-    if (ex) ex.textContent = `"${t} — the scenes the script sets there"`;
-    const ta = $("#spec-auto-prompt");
-    if (ta && !ta.value) ta.placeholder = `Auto-fill for ${t}…`;
-  }).catch(() => { /* the neutral example stands */ });
+  // hardcoded film's (user ruling 2026-08-01); the same fetch powers the
+  // Create Breakdown pre-population.
+  Promise.all([api("/api/screenplay/locations"), api("/api/specs")])
+    .then(([d, allSpecs]) => {
+      const locs = d.locations || [];
+      const titleCase = t => String(t).toLowerCase()
+        .replace(/(^|[\s/#-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+      const top = locs[0]?.location;
+      if (top) {
+        const t = titleCase(top);
+        const ex = $("#spec-auto-example");
+        if (ex) ex.textContent = `"${t} — the scenes the script sets there"`;
+        const ta0 = $("#spec-auto-prompt");
+        if (ta0 && !ta0.value) ta0.placeholder = `Auto-fill for ${t}…`;
+      }
+      if (!locHint) return;
+      const norm = x => String(x).toUpperCase().trim();
+      let rec = locs.find(l => norm(l.location) === norm(locHint));
+      let scene = null;
+      if (!rec) {
+        for (const l of locs) {
+          const hit = (l.scene_list || []).find(s2 => norm(s2.heading) === norm(locHint));
+          if (hit) { rec = l; scene = hit; break; }
+        }
+      }
+      const idEl = $("#spec-auto-id");
+      if (idEl && !idEl.value.trim()) {
+        const base = slugSpecId(rec?.location || locHint)
+          .replace(/^_+|_+$/g, "").slice(0, 40) || "BOARD";
+        const taken = new Set(allSpecs.map(x => x.specification_id));
+        let n = 1, id = `${base}_V001`;
+        while (taken.has(id)) { n += 1; id = `${base}_V${String(n).padStart(3, "0")}`; }
+        idEl.value = id;
+      }
+      const promptEl = $("#spec-auto-prompt");
+      if (!promptEl || promptEl.value.trim()) return;
+      if (scene) {
+        promptEl.value = `${scene.heading} — a scene board for this single scene at `
+          + `${titleCase(rec.location)}. Extract the set, dressing, props and `
+          + `atmosphere the script gives this scene.`;
+      } else if (rec) {
+        const heads = (rec.scene_list || []).map(s2 => s2.heading);
+        promptEl.value = `${titleCase(rec.location)} — a `
+          + `${rec.int_ext ? rec.int_ext + " " : ""}location board covering the `
+          + `${rec.scenes} scene${rec.scenes === 1 ? "" : "s"} the script sets there`
+          + (heads.length ? `: ${heads.slice(0, 4).join("; ")}`
+            + (heads.length > 4 ? ` (+${heads.length - 4} more)` : "") : "")
+          + `. Focus on the location itself — its set, dressing and atmosphere `
+          + `as the script establishes them.`;
+      } else {
+        promptEl.value = `${titleCase(locHint)} — the scenes the script sets `
+          + `there. Focus on the location's set, dressing and atmosphere as established.`;
+      }
+    }).catch(() => { /* the neutral example stands */ });
 
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
   // underscores.
@@ -3191,12 +3233,12 @@ async function renderSpecs(openId = null) {
   }
 
   // Arriving from the dashboard's location map: seed the draft subject.
+  // Create Breakdown arrives with a real pre-population (user ruling
+  // 2026-08-02): a deduped Spec ID and a genuine brief composed from
+  // what the read already knows about the location — never just the raw
+  // hint string. Filled by the locations fetch below.
   const locHint = sessionStorage.getItem("draftLocationHint");
-  if (locHint) {
-    sessionStorage.removeItem("draftLocationHint");
-    const promptEl = $("#spec-auto-prompt");
-    if (promptEl && !promptEl.value.trim()) promptEl.value = locHint;
-  }
+  if (locHint) sessionStorage.removeItem("draftLocationHint");
 
   // Spec IDs must match the backend's [A-Za-z0-9._-] and by convention are
   // CAPS_WITH_UNDERSCORES. The tooltip states this, but a tooltip is invisible
