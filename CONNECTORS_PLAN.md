@@ -20,6 +20,31 @@ essentially every flagship image model shipping in mid-2026**, Replicate
 adds the community long tail. One connector = one key = a self-updating
 catalog.
 
+## Two AI roles, selected separately (user ruling 2026-08-03)
+
+The app runs **two different kinds of AI** and the UI must stop conflating
+them:
+
+1. **Narrative & content evaluation AI** — reads the screenplay, drafts the
+   bible, runs the scene scan, autofills breakdowns, compiles and rewrites
+   prompts, audits output. Today this is one buried setting
+   (`openai_chat_model`, default `gpt-5.6`) with no first-class UI.
+2. **Image generation AI** — the render engines and everything this plan's
+   connectors add.
+
+Settings presents the two roles as **separate sections**, each with its own
+selection and its own recommendation. **Ruled defaults: ChatGPT is the
+recommendation for BOTH roles** — the mainline ChatGPT model for narrative
+(it is doing very good work in this framework) and the ChatGPT image
+pipeline (`openai-chat`) as the recommended/default image engine
+(`DEFAULT_PROVIDER` moves from `gemini` to `openai-chat` once a key
+exists; gates still rule — with no OpenAI key the recommendation renders
+as a stated gate, never a preselected broken option).
+
+The UI for both roles is designed by Claude Design —
+`design_handoff/CONNECTORS_DESIGN_BRIEF.md` is the brief; N2 implements
+the resulting plan rather than improvising layout.
+
 ## The two hard filters (what "staying focused" means in code)
 
 1. **Reference conditioning is the product.** Canon-locked generation needs
