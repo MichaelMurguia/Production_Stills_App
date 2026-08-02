@@ -1561,3 +1561,15 @@ details.meta pre {
   padding: 8px 12px; border-bottom: 1px solid var(--line);
 }
 .anchor-sum-row .mono { font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); }
+
+/* The stated zero state (PANEL_CARD_PLAN P5): when the app decided and
+   the answer was "nothing matched", say so — a quality warning before a
+   spend, never four silently-unchecked boxes. */
+.nomatch {
+  border: 1px solid var(--bad); padding: 10px 14px; margin: 8px 0 10px;
+}
+.nomatch b { color: var(--bad); font-size: 10.5px; letter-spacing: .1em; }
+.nomatch p { margin: 5px 0 0; font-size: 12.5px; color: var(--ink-dim); }
+/* A pre-checked match is the app's decision — distinguishable from a box
+   the user ticked. */
+.ref-group.has-ref { border-left: 3px solid var(--ok); }

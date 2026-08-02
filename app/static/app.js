@@ -4758,7 +4758,28 @@ async function renderBoardPanels(specId) {
               `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
             </div>`;
         })()}
-        <h4>Attach subject references <span class="hint">(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)</span></h4>
+        <h4>Attach subject references
+          <span class="mini mono" style="float:right">${groupList.filter(g => reqObjs.some(o => matches(o, g.name))).length} / ${groupList.length}</span>
+          <span class="hint">(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)</span></h4>
+        ${(() => {
+          // P5: four unchecked boxes read as a choice not yet made; in
+          // fact the app decided and the answer was NOTHING MATCHED. Say
+          // so before a 4K spend — this is a quality warning.
+          if (!groupList.length || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
+            return "";
+          const kindName = { CHARACTER_LIKENESS: "cast likeness",
+                             VEHICLE_GEOMETRY: "vehicle reference",
+                             PROP_REFERENCE: "prop reference" };
+          const kinds = [...new Set(groupList.map(g =>
+            kindName[g.head] || g.head.replaceAll("_", " ").toLowerCase()))];
+          const kindPhrase = kinds.length === 1 ? `a ${kinds[0]}`
+            : `a ${kinds.slice(0, -1).join(", ")} or ${kinds.at(-1)}`;
+          return `<div class="nomatch">
+            <b class="mono">NO MATCHES</b>
+            <p>Every group in the library is ${esc(kindPhrase)}; this panel
+            requires places and objects. It will render from text and style
+            alone.</p></div>`;
+        })()}
         <div class="ref-groups">${groupList.map(g => {
             const matched = reqObjs.some(o => matches(o, g.name));
             return `<label class="check ref-group ${matched ? "has-ref" : ""}"
