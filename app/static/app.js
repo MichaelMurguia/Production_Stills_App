@@ -4576,8 +4576,25 @@ async function renderBoardPanels(specId) {
           return;
         }
         toast(err.message, true);
-        report.innerHTML = `<div class="report fail"><b>Generation failed</b> — ${esc(err.message)}
-          <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
+        // A content-policy refusal reads as a stated condition — the
+        // engine's decision, the reason, and the craft options — never a
+        // raw 400 (user ruling 2026-08-02).
+        if (err.message.startsWith("ENGINE REFUSED — CONTENT POLICY")) {
+          const detail = err.message.split("Provider said:")[1]?.trim() || "";
+          report.innerHTML = `<div class="report" style="border-left:2px solid var(--hold)">
+            <b class="mono" style="color:var(--hold);letter-spacing:.08em">ENGINE REFUSED — CONTENT POLICY</b>
+            <p style="margin:6px 0 4px">The engine's safety system declined this panel's
+            content. Nothing is broken and nothing was billed — but this exact staging
+            will not render on this engine.</p>
+            <p style="margin:0 0 4px"><b>The craft answer:</b> restage the panel to imply
+            the sensitive element rather than inventory it (edit the sheet's required
+            objects), or try a different engine — policy lines differ.</p>
+            ${detail ? `<p class="mini mono" style="margin-top:6px">PROVIDER — ${esc(detail)}</p>` : ""}
+            <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
+        } else {
+          report.innerHTML = `<div class="report fail"><b>Generation failed</b> — ${esc(err.message)}
+            <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
+        }
       } finally {
         removePendingTake(specId, p.id, pendId);
       }

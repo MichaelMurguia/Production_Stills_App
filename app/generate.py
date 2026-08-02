@@ -114,6 +114,28 @@ CANDIDATE_STATUSES = {"CANDIDATE", "APPROVED", "REJECTED"}
 class GenerationError(Exception):
     pass
 
+# Content-policy refusals are a stated condition, not a raw error blob
+# (user ruling 2026-08-02, after a legitimate scene — an overdose tableau
+# from the screenplay — was refused). The app never routes around a
+# provider's safety system; it explains the refusal and the craft answer.
+_SAFETY_MARKS = ("safety system", "content policy", "content_policy",
+                 "safety_violations", "blocked by", "responsible ai",
+                 "prohibited_content", "moderation")
+
+
+def _wrap_engine_error(engine: str, e: Exception) -> "GenerationError":
+    msg = str(e)
+    if any(m in msg.lower() for m in _SAFETY_MARKS):
+        return GenerationError(
+            f"ENGINE REFUSED — CONTENT POLICY: {engine} declined to render "
+            f"this panel's content. This is the provider's safety system, "
+            f"not an app error, and it cannot be bypassed. The craft answer "
+            f"is usually to restage the panel — imply the sensitive element "
+            f"rather than inventory it — or try a different engine, whose "
+            f"policy line may differ. Provider said: {msg[:300]}")
+    return GenerationError(f"{engine} generation failed: {e}")
+
+
 
 # --------------------------------------------------------------- style bible
 
@@ -726,7 +748,7 @@ def _render_openai(prompt: str, ref_paths: list[Path],
             response = client.images.generate(
                 model=OPENAI_MODEL, prompt=prompt, size=size, quality="high")
     except Exception as e:
-        raise GenerationError(f"OpenAI generation failed: {e}") from e
+        raise _wrap_engine_error("OpenAI", e) from e
 
     if not getattr(response, "data", None) or not response.data[0].b64_json:
         raise GenerationError("OpenAI returned no image.")
@@ -761,7 +783,7 @@ def _render_custom(provider: str, prompt: str, ref_paths: list[Path],
             response = client.images.generate(
                 model=eng["model"], prompt=prompt, size=size)
     except Exception as e:
-        raise GenerationError(f"{name} generation failed: {e}") from e
+        raise _wrap_engine_error(name, e) from e
 
     data = getattr(response, "data", None)
     if data and getattr(data[0], "b64_json", None):
@@ -920,7 +942,7 @@ def _render_openai_chat(prompt: str, ref_paths: list[Path],
                 tool_choice={"type": "image_generation"},
             )
     except Exception as e:
-        raise GenerationError(f"OpenAI (ChatGPT pipeline) generation failed: {e}") from e
+        raise _wrap_engine_error("OpenAI (ChatGPT pipeline)", e) from e
 
     calls = [o for o in response.output if getattr(o, "type", "") == "image_generation_call"]
     if not calls or not getattr(calls[0], "result", None):
