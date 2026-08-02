@@ -37,7 +37,9 @@ body {
 .mono { font-family: var(--mono); }
 
 /* header */
-.site-head { background: var(--bg2); border-bottom: 1px solid var(--line); position: relative; z-index: 5; }
+/* Pinned header (user request 2026-08-03) — mirrors the app's sticky
+   chrome; z sits above content, below the edit-mode chip (99). */
+.site-head { background: var(--bg2); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 45; }
 .head-row { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
 .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--accent); }
 .kicker-dim { font-size: 10px; letter-spacing: 2px; color: var(--ink-faint); }
@@ -222,7 +224,7 @@ body {
 /* the long walk: sticky rail + stage column */
 .pl-walk { display: grid; grid-template-columns: 196px 1fr; gap: 0; padding-left: 0; padding-right: 0; }
 .pl-rail { background: #0d0f12; border-right: 1px solid var(--line); }
-.pl-rail-inner { position: sticky; top: 20px; padding: 28px 0 28px 28px; }
+.pl-rail-inner { position: sticky; top: 86px; padding: 28px 0 28px 28px; } /* clears the pinned header */
 .pl-rail-head { font-size: 9px; letter-spacing: .18em; color: var(--ink-faint); margin-bottom: 14px; }
 .pl-rail-item {
   display: block; font-size: 10.5px; letter-spacing: .1em; color: var(--ink-faint);
