@@ -1546,3 +1546,18 @@ details.meta pre {
   color: var(--ink-faint); white-space: nowrap;
 }
 .scope-line { font-size: 11px; letter-spacing: .06em; color: var(--ink-dim); margin: 4px 0 12px; }
+
+/* Style anchors summarised: mandatory attachments state themselves once
+   (ALWAYS ON chip), roles carry plate counts, IDs live behind SHOW IDS.
+   (PANEL_CARD_PLAN P4) */
+.always-on {
+  border: 1px solid var(--ok); color: var(--ok);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  padding: 2px 8px; margin-left: 10px; vertical-align: 2px;
+}
+.anchor-sum { border: 1px solid var(--line); border-bottom: none; }
+.anchor-sum-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 12px; border-bottom: 1px solid var(--line);
+}
+.anchor-sum-row .mono { font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); }

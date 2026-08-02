@@ -4728,11 +4728,36 @@ async function renderBoardPanels(specId) {
           <span class="f-label">Generate next take</span>
           <span class="bench-count" data-f="ref-count"></span>
         </div>
-        <h4>Style anchors <span class="hint">(art direction — attached to every generation automatically)</span></h4>
-        <div class="mini" style="margin-bottom:10px">${styleAnchors.map(r =>
-          `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")
-          || 'none yet — upload a Board rendering style or Cinematography style image on the Production Design tab'}
-        </div>
+        <h4>Style anchors
+          ${styleAnchors.length ? '<span class="always-on" title="Auto-attached to every render on this board — they control style only, never content">ALWAYS ON</span>' : ""}
+        </h4>
+        ${(() => {
+          // P4: auto-attached and un-uncheckable — a wall of full-size
+          // badges spends the card's best space on data the user can only
+          // read. One row per role with a plate count; IDs behind a
+          // disclosure, unchanged.
+          if (!styleAnchors.length)
+            return '<div class="mini" style="margin-bottom:10px">none yet — upload a Board rendering style or Cinematography style image on the Production Design tab</div>';
+          const heads = {};
+          for (const r of styleAnchors) (heads[roleHead(r.role)] ??= []).push(r);
+          const pretty = h => {
+            const t = h.replace(/_STYLE$/, "").replaceAll("_", " ").toLowerCase();
+            return t.charAt(0).toUpperCase() + t.slice(1);
+          };
+          const ids = styleAnchors.map(r => r.id);
+          const range = ids.length > 2 ? `${ids[0]} … ${ids[ids.length - 1]}` : ids.join(" · ");
+          return `
+            <p class="mini" style="margin:2px 0 8px">Set on Production Design. Attached to every render on this board — they control style only, never content.</p>
+            <div class="anchor-sum">${Object.entries(heads).map(([h, rs]) => `
+              <div class="anchor-sum-row"><span>${esc(pretty(h))}</span>
+                <span class="mono">${rs.length} PLATE${rs.length === 1 ? "" : "S"}</span></div>`).join("")}
+            </div>
+            <div class="mini mono" style="margin:6px 0 10px">${esc(range)}
+              <button class="text-act mono" data-f="show-ids" style="font-size:10.5px;letter-spacing:.08em">SHOW IDS</button></div>
+            <div class="mini hidden" data-f="anchor-ids" style="margin-bottom:10px">${styleAnchors.map(r =>
+              `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
+            </div>`;
+        })()}
         <h4>Attach subject references <span class="hint">(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)</span></h4>
         <div class="ref-groups">${groupList.map(g => {
             const matched = reqObjs.some(o => matches(o, g.name));
@@ -4784,6 +4809,14 @@ async function renderBoardPanels(specId) {
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
+
+    // P4 disclosure: the full anchor badge list, unchanged, on demand.
+    const showIds = $("[data-f=show-ids]", card);
+    if (showIds) showIds.onclick = () => {
+      const list = $("[data-f=anchor-ids]", card);
+      const open = list.classList.toggle("hidden");
+      showIds.textContent = open ? "SHOW IDS" : "HIDE IDS";
+    };
 
     // Ratios grey per the selected engine's real contract; switching models
     // snaps an unsupported selection to the nearest ratio and says so.
