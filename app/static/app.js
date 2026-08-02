@@ -4575,6 +4575,50 @@ async function renderBoardPanels(specId) {
   function buildWorkbench(p) {
     const alloc = (spec.layout?.panels || []).find(x => x.id === p.id)?.allocation_percent;
     const panelCands = candidates.filter(c => c.panel_id === p.id).reverse();
+    // PANEL_CARD_PLAN ruling: two lives, one component. Before its first
+    // take the card is a WORK ORDER (spec is the content); after, a light
+    // table (image is the content, spec is context).
+    const workOrder = panelCands.length === 0;
+
+    // Reference groups + the two-way substring match are shared between
+    // the required-content marks (P2), the zero-match notice (P5) and the
+    // checkbox list — one source, so the spec visibly CAUSES the selection.
+    const refGroups = {};
+    for (const r of approvedRefs) {
+      const suffix = String(r.role).split("—")[1]?.trim();
+      const key = (suffix || String(r.role).trim()).toUpperCase();
+      (refGroups[key] ??= { name: suffix || r.role, head: roleHead(r.role), ids: [] }).ids.push(r.id);
+    }
+    const groupList = Object.values(refGroups);
+    const matches = (obj, name) => {
+      const o = String(obj).toLowerCase(), n = String(name).toLowerCase();
+      return o.includes(n) || n.includes(o);
+    };
+    const objHasRef = obj => groupList.some(g => matches(obj, g.name));
+    const reqObjs = p.required_objects || [];
+    const evidenceOf = obj => (spec.evidence_ledger || []).find(r =>
+      String(r.panel_id).toUpperCase() === p.id
+      && String(r.object).toLowerCase() === String(obj).toLowerCase());
+
+    // P2: the work order's largest block — required content as a numbered
+    // table (Courier ordinal, Archivo object), each row marked from state:
+    // ✓ REF when a library group matches, HOLD when its evidence row is
+    // not PASS. Twelve objects in a comma run cannot be read or counted.
+    const withRef = reqObjs.filter(objHasRef).length;
+    const reqTableHtml = `
+      <div class="req-head"><span class="f-label">Required content</span>
+        <span class="mini mono">${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE</span></div>
+      <div class="req-table">${reqObjs.map((o, i) => {
+        const ev = evidenceOf(o);
+        const mark = objHasRef(o) ? '<span class="req-mark ok">✓ REF</span>'
+          : ev && ev.status !== "PASS" ? '<span class="req-mark hold">HOLD</span>' : "";
+        return `<div class="req-row"><span class="req-ord">${String(i + 1).padStart(2, "0")}</span><span class="req-obj">${esc(o)}</span>${mark}</div>`;
+      }).join("") || '<div class="req-row"><span class="req-obj mini">none — this panel is steered by its purpose alone</span></div>'}</div>`;
+    // Light-table state: the spec is context — compact bordered chips.
+    const reqChipsHtml = `
+      <div class="spec-chips"><span class="f-label">Required · ${reqObjs.length}</span>
+        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}</span>`).join("")
+          || '<span class="mini">none</span>'}</div>`;
     const roomSel = boardRoomSel[specId];
     roomSel.staged ??= {};
     let staged = panelCands.find(c => c.candidate_id === roomSel.staged[p.id]) || panelCands[0] || null;
@@ -4640,8 +4684,8 @@ async function renderBoardPanels(specId) {
       <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
         <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(((appSettings.aspects || []).find(x => x.id === staged.aspect_ratio) || {}).label || staged.aspect_ratio || "")}` : ""}</span></h2>
       <p class="mini">${esc(p.purpose)}</p>
-      <p class="mini">required: ${esc((p.required_objects || []).join(", ") || "—")}
-        &nbsp;·&nbsp; forbidden: ${esc((p.forbidden_objects || []).join(", ") || "—")}</p>
+      ${workOrder ? reqTableHtml : reqChipsHtml}
+      ${workOrder ? "" : `<p class="mini">forbidden: ${esc((p.forbidden_objects || []).join(", ") || "—")}</p>`}
       ${stagedHtml}
       ${takesHtml}
       <div class="spec-section">
@@ -4655,26 +4699,14 @@ async function renderBoardPanels(specId) {
           || 'none yet — upload a Board rendering style or Cinematography style image on the Production Design tab'}
         </div>
         <h4>Attach subject references <span class="hint">(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)</span></h4>
-        <div class="ref-groups">${(() => {
-          const groups = {};
-          for (const r of approvedRefs) {
-            const suffix = String(r.role).split("—")[1]?.trim();
-            const key = (suffix || String(r.role).trim()).toUpperCase();
-            (groups[key] ??= { name: suffix || r.role, head: roleHead(r.role), ids: [] }).ids.push(r.id);
-          }
-          const matches = (obj, name) => {
-            const o = String(obj).toLowerCase(), n = String(name).toLowerCase();
-            return o.includes(n) || n.includes(o);
-          };
-          return Object.values(groups).map(g => {
-            const matched = (p.required_objects || []).some(o => matches(o, g.name));
+        <div class="ref-groups">${groupList.map(g => {
+            const matched = reqObjs.some(o => matches(o, g.name));
             return `<label class="check ref-group ${matched ? "has-ref" : ""}"
               title="${esc(g.ids.join(", "))}${matched ? " — matches a required object of this panel; pre-checked" : ""}">
               <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${matched ? "checked" : ""}>
               ${esc(g.name)} <span class="mini">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
             </label>`;
-          }).join("") || '<span class="mini">no approved subject references yet — add them via the cast & subjects cards on Production Design</span>';
-        })()}
+          }).join("") || '<span class="mini">no approved subject references yet — add them via the cast & subjects cards on Production Design</span>'}
         </div>
       </div>
       <div class="gen-row">

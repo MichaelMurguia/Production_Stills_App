@@ -1511,3 +1511,29 @@ details.meta pre {
   border: 1px solid var(--accent); border-left-width: 4px;
   padding: 7px 12px; font-size: 10px; letter-spacing: .08em;
 }
+
+/* Panel card, work-order state (PANEL_CARD_PLAN 2026-08-03). Required
+   content is the card's largest block: numbered two-column table, Courier
+   ordinal + Archivo object, per-row state mark. */
+.req-head { display: flex; align-items: baseline; gap: 12px; margin: 14px 0 8px; }
+.req-head .mini.mono { letter-spacing: .08em; }
+.req-table {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line); border-bottom: none;
+}
+.req-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 12px; border-bottom: 1px solid var(--line); min-width: 0;
+}
+.req-row:nth-child(odd) { border-right: 1px solid var(--line); }
+.req-ord { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+.req-obj { flex: 1; min-width: 0; }
+.req-mark { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+.req-mark.ok { color: var(--ok); }
+.req-mark.hold { color: var(--hold); }
+/* Light-table state: the spec is context — compact bordered chips. */
+.spec-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.req-chip {
+  border: 1px solid var(--line); padding: 3px 10px; font-size: 12.5px;
+  color: var(--ink-dim); white-space: nowrap;
+}
