@@ -109,6 +109,47 @@
       document.body.append(c);
     }
   };
+  // Paragraph editor (user request 2026-08-03): window.prompt is one line;
+  // rewrites are paragraphs. Same contract — resolves new text or null.
+  const editDialog = current => new Promise(resolve => {
+    const scrim = document.createElement("div");
+    scrim.style.cssText = "position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.55);" +
+      "display:flex;align-items:center;justify-content:center;padding:24px";
+    const box = document.createElement("div");
+    box.style.cssText = "background:#1a1d21;border:1px solid #2b3037;max-width:640px;width:100%;padding:20px";
+    const label = document.createElement("p");
+    label.textContent = "REWRITE — APPLIES WHEREVER IT APPEARS, FOR EVERY VISITOR";
+    label.style.cssText = "font:10px/1.4 'Courier New',monospace;letter-spacing:.08em;color:#9aa1a8;margin:0 0 10px";
+    const ta = document.createElement("textarea");
+    ta.value = current;
+    ta.style.cssText = "width:100%;min-height:150px;resize:vertical;box-sizing:border-box;" +
+      "background:#0f1114;color:#eceef0;border:1px solid #2b3037;padding:10px;" +
+      "font:14px/1.5 Archivo,sans-serif";
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:14px";
+    const hint = document.createElement("span");
+    hint.textContent = "ESC CANCELS · CTRL+ENTER SAVES";
+    hint.style.cssText = "font:10px/1 'Courier New',monospace;letter-spacing:.08em;color:#6b7278;margin-right:auto";
+    const mk = (t, primary) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = t;
+      b.style.cssText = "padding:8px 18px;font:600 13px Archivo,sans-serif;cursor:pointer;" +
+        (primary ? "background:#e0a33f;color:#0b0c0e;border:1px solid #e0a33f"
+                 : "background:transparent;color:#eceef0;border:1px solid #2b3037");
+      return b;
+    };
+    const ok = mk("Save rewrite", true), cancel = mk("Cancel", false);
+    const done = v => { scrim.remove(); resolve(v); };
+    ok.onclick = () => done(ta.value);
+    cancel.onclick = () => done(null);
+    scrim.onclick = e => { if (e.target === scrim) done(null); };
+    ta.onkeydown = e => {
+      if (e.key === "Escape") done(null);
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) done(ta.value);
+    };
+    row.append(hint, cancel, ok); box.append(label, ta, row); scrim.append(box);
+    document.body.append(scrim); ta.focus(); ta.select();
+  });
   window.sbStoreTextChip = chip;
   chip();
   // Header Debug toggle (owner request 2026-08-03): arms/disarms the same
@@ -138,7 +179,7 @@
     if (!current) return;
     const o = window.SB_SITE_TEXT || {};
     const key = Object.keys(o).find(k => o[k] === current) || current;
-    const next = window.prompt("Rewrite this text (applies wherever it appears, for every visitor):", current);
+    const next = await editDialog(current);
     if (next === null) return;
     if (!next.trim() || next === key) delete o[key]; else o[key] = next;
     try {
