@@ -4064,9 +4064,30 @@ const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", 
 
 // Engine options come from settings (built-ins plus user-added custom
 // engines) so every Model dropdown stays in sync with Settings.
-const providerOptions = (settings, selected) =>
-  Object.entries(settings.providers || {}).map(([v, label]) =>
-    `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(label)}</option>`).join("");
+// Engine dropdowns offer only what can actually run (user rulings
+// 2026-08-02): unconfigured engines are omitted entirely; a configured
+// key that FAILED its test lists disabled with the reason; with nothing
+// usable the select itself states the fix.
+const providerUsable = (settings, v) => {
+  const e = settings.engines?.[v];
+  return !!e?.configured && e.last_test?.ok !== false;
+};
+const providerOptions = (settings, selected) => {
+  const entries = Object.entries(settings.providers || {});
+  const usable = entries.filter(([v]) => providerUsable(settings, v));
+  const failed = entries.filter(([v]) => settings.engines?.[v]?.configured
+    && settings.engines?.[v]?.last_test?.ok === false);
+  if (!usable.length) {
+    return `<option value="">${failed.length
+      ? "KEY FAILED ITS TEST — RETEST IN SETTINGS"
+      : "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS"}</option>`;
+  }
+  const sel = usable.some(([v]) => v === selected) ? selected : usable[0][0];
+  return usable.map(([v, label]) =>
+    `<option value="${esc(v)}" ${v === sel ? "selected" : ""}>${esc(label)}</option>`).join("")
+    + failed.map(([v, label]) =>
+      `<option value="${esc(v)}" disabled>${esc(label)} — KEY FAILED ITS TEST</option>`).join("");
+};
 
 async function renderBoards() {
   useTemplate("tpl-boards");
@@ -4429,6 +4450,12 @@ async function renderBoardPanels(specId) {
     const aspectById = Object.fromEntries(aspects.map(a => [a.id, a]));
     const modelSel = $("[data-f=model]", card);
     const aspectSel = $("[data-f=aspect]", card);
+    if (!modelSel.value) {
+      for (const f of ["generate", "prose"]) {
+        const b = $(`[data-f=${f}]`, card);
+        if (b) { b.disabled = true; b.title = modelSel.options[0]?.textContent || "No usable engine."; }
+      }
+    }
     const supportsRatio = (a, prov) => !a.engines.length || a.engines.includes(prov);
     const syncAspects = (quiet) => {
       const prov = modelSel.value;
