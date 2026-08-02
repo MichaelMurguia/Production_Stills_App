@@ -36,8 +36,9 @@ vocabulary — append a row for it to the `## Uncanonized patterns` table in
 used, and what the designer should rule on (for pure-reuse features, note
 "built from canon — review placement/copy only"). This applies to features from
 design-handoff plans and user-directed changes alike; only the designer's
-review, on the next Omelette round-trip, moves a feature from that table into
-canon.
+review moves a feature from that table into canon. ("Claude Design" = the
+user's separate design-review Claude chat, which has this project folder
+connected and delivers its rulings as `*_PLAN.md` files in the repo.)
 
 **When a feature genuinely needs a pattern the design system doesn't cover,
 additionally:**
@@ -48,9 +49,10 @@ additionally:**
 
 The uncanonized table is a to-do list for a designer, not a permanent home. When
 it reaches ~4 rows, tell the user in plain language that the UI has accumulated
-patterns worth a design review, and that re-attaching the project folder in
-Omelette will get them reviewed and folded in properly. Then keep working — do
-not block on it.
+patterns worth a design review: they open their design-review Claude chat with
+this folder connected (re-syncing it so it sees the current files) and ask it to
+review the Uncanonized table; it answers with a plan file to implement. Then
+keep working — do not block on it.
 
 **Also update `DESIGN_SYSTEM.md` when you:** add or reorder a pipeline stage
 (the nav band and its numbering are documented there), add a token, change a

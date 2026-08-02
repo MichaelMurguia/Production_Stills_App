@@ -519,9 +519,11 @@ are additionally built with existing tokens and marked
 `/* UNCANONIZED — date — feature */` in the CSS.
 
 This table is a to-do list, not a home. At ~4 rows, tell the user the UI has
-accumulated patterns worth a design review — re-attaching the project folder in
-Omelette gets them designed properly and folded into the sections above, and the
-rows are then deleted.
+accumulated patterns worth a design review — they open their design-review
+Claude chat (the one with this folder connected, which delivers `*_PLAN.md`
+files), re-sync the folder so it sees current files, and ask it to review this
+table. The resulting plan folds patterns into the sections above, and the rows
+are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
