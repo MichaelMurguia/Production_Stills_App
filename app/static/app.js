@@ -3476,6 +3476,13 @@ async function openSpecEditor(specId) {
       el.textContent = `SCOPE — INHERITS BOARD · ${inherit}`;
     });
   };
+  // Hosts are declared BEFORE the first updateCarry() call — it iterates
+  // panelsHost, and a const in its temporal dead zone threw here and
+  // silently blanked every sheet's panels and ledger (user-caught
+  // 2026-08-01, reproduced with the live production's data).
+  const panelsHost = $("#sp-panels", panel);
+  const ledgerHost = $("#sp-ledger", panel);
+
   if ($("#sp-carry", panel)) {
     updateCarry();
     for (const id of ["#sp-design", "#sp-lessons", "#sp-environment"])
@@ -3484,9 +3491,6 @@ async function openSpecEditor(specId) {
 
   const allocById = {};
   (spec.layout?.panels || []).forEach(p => { allocById[p.id] = p.allocation_percent; });
-
-  const panelsHost = $("#sp-panels", panel);
-  const ledgerHost = $("#sp-ledger", panel);
 
   const updateSettingVis = () => {
     const t = $("#sp-btype", panel).value;
@@ -3777,9 +3781,22 @@ REMOVE — marked for removal from the board.">
     ledgerHost.append(row);
   }
 
-  (spec.panels || []).forEach(addPanelRow);
-  (spec.evidence_ledger || []).forEach(addLedgerRow);
-  updateSettingVis();
+  // Population failures are STATED, never a silent blank sheet — the
+  // server's data is fine; the reader must know the editor broke.
+  try {
+    (spec.panels || []).forEach(addPanelRow);
+    (spec.evidence_ledger || []).forEach(addLedgerRow);
+    updateSettingVis();
+  } catch (err) {
+    $("#sp-gate", panel).innerHTML =
+      `<div class="report" style="border-left:2px solid var(--bad)"><b>The editor
+      failed to render this sheet's ${panelsHost.children.length ? "ledger" : "panels"}</b>
+      — the sheet itself is intact on the server (${(spec.panels || []).length} panels,
+      ${(spec.evidence_ledger || []).length} evidence rows).
+      <span class="mono">${esc(String(err.message || err))}</span> —
+      reload to retry; if it persists this is an app bug worth reporting.</div>`;
+    throw err;
+  }
 
   // The lock gate, run continuously from the DOM — the same rules approval
   // enforces server-side (validate_spec.py), so CANNOT-LOCK is never a
