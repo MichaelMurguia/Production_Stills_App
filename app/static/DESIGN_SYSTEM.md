@@ -132,20 +132,37 @@ kind `CARE`) render below an `ADVISORY` divider with a faint kind badge
 (`--ink-faint`, never `--warn`), are never counted as blockers, and are
 never promoted to the lead (review 2026-08-01 §9).
 
-**Stated-path empty states** (PRODUCTIONS_PLAN M6 + ratified C2). A dead
-end states the path to the outcome the user came for. The Boards stage
-with no signed-off breakdowns gets the full treatment: headline ("A board
-starts life as a breakdown."), one paragraph, the primary verb (`Create a
-breakdown`, with a Courier line naming where it opens), and THE PATH FROM
-HERE — six steps, `✓` done in `--ok`, `→` current in `--accent`, the rest
-faint. The *middle* state (locked sheets, no boards yet) gets exactly one
-Courier `--ink-faint` line above the bench — `NO BOARDS YET — APPROVE
-EVERY PANEL IN A SHEET, THEN ASSEMBLE` — because the picker and bench
-already state the path by being present; a checklist there would be
-nagging. The line disappears the moment a board exists. First run (no
-productions, empty root) is the same pattern at app scale: one centered
-panel, "Name the show you're working on.", create + restore, the pipeline
-band hidden until there is a production to stand in.
+**Stated-path empty states** (PRODUCTIONS_PLAN M6, superseded in part by
+LOCKED_STAGE_PLAN L4). A dead end states the path to the outcome the user
+came for — as the **stage checklist** (see Components), never as an
+explanation box plus a go-to-stage button. The *middle* state (locked
+sheets, no boards yet) still gets exactly one Courier `--ink-faint` line
+above the bench — `NO BOARDS YET — APPROVE EVERY PANEL IN A SHEET, THEN
+ASSEMBLE` (ratified C2) — because the picker and bench already state the
+path by being present. First run (no productions, empty root) is the same
+idea at app scale: one centered panel, "Name the show you're working
+on.", create + restore, the pipeline band hidden until there is a
+production to stand in.
+
+**Locked stage cells** (LOCKED_STAGE_PLAN L1, mock 12b). A stage whose
+gate is unmet is a condition, not a destination: its band cell is inert —
+no navigation, no view change, no history entry — on the sanctioned
+`#17191c` ground with `cursor: not-allowed` and a bordered `--hold`
+`LOCKED` chip beside the name. Labels stay `--ink-faint`; never dimmer —
+the band is the product's map and every stage name must stay readable
+(`#4a4d52` is for disabled buttons only). Cells stay focusable with
+`aria-disabled` so keyboard users get the same explanation. Every unmet
+stage locks, not just the next one.
+
+**Anchored lock explanation** (LOCKED_STAGE_PLAN L2, mock 12b). Clicking
+a locked cell explains in place: a popover on `--panel2` with a `#3a4048`
+border and no top border (it hangs from the band), anchored under the
+**first unmet stage's cell** — the cell the user actually needs — roughly
+two cells wide. Header: bordered `--hold` chip (`03 IS LOCKED`) and `×`.
+One sentence stating the gate with the live remaining count; the
+remaining steps in Courier, current `→` amber, rest `·` faint; footer
+`03 UNLOCKS ITSELF THE MOMENT …`. Dismiss on ×, Esc, outside click. The
+view behind never changes.
 
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
@@ -367,6 +384,17 @@ per Registry rows), ghost actions right (`Back up`/`Back up now` ·
 `Open` · `Rename` · `⋯` menu holding Duplicate and typed-name-confirmed
 Delete via the app modal).
 
+**Stage checklist** (`stageChecklist()` / `.stage-check`,
+LOCKED_STAGE_PLAN L4, mock 12c). One bordered list for any stage's
+reachable-but-empty state: kicker (`NO BOARDS YET — N STEPS LEFT`),
+headline, one row per gate step. Each unfinished row IS the link — verb
+(sans 600), one-line subtitle, Courier address (`STAGE 02 ↗`); the
+current row wears the amber left border and `--panel2` fill; done rows
+collapse to a single `✓` line; a terminal info row reads `NO ACTION
+NEEDED`. No generic navigation button anywhere on the screen. Rows come
+from `gateChain()` — real state, so completed steps drop off as they are
+done; a checklist that doesn't move is a poster.
+
 **Derive affordance** (review 2026-08-01 §2). A ghost button at the field's
 label row that deterministically fills an editable field from data the app
 already has ("Derive from screenplay"). Never amber (not the region's
@@ -494,7 +522,7 @@ rows are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
-| 2026-08-01 | Production-design gate (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved; the Breakdowns stage locks whole (STAGE LOCKED + path box, reusing the stated-path family) and the server refuses creation with 423 | Location finders (Screenplay + wizard), Breakdowns stage | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment and the locked-stage layout |
+| 2026-08-01 | Production-design gate tag (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved (the locked-stage layout itself was ruled by LOCKED_STAGE_PLAN and is canon) | Location finders (Screenplay + wizard) | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment |
 | 2026-08-01 | "Script Scene Scan" (user naming): the Production Design step 2 read is named Script Scene Scan ("Run the Scene Scan") so the second read of the screenplay states what it returns | Wizard step 2 | Pure copy — review naming only |
 
 ---
@@ -504,6 +532,13 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-01** — Locked-stage pass (LOCKED_STAGE_PLAN L1–L4): a locked
+  stage is a condition, not a destination — unmet stages are inert with a
+  LOCKED chip; clicking one opens the anchored explanation under the
+  first unmet stage's cell; gate steps read from live state (scan_done
+  added to stage_summary); the stage checklist replaces every
+  explanation-plus-button empty state and the rows are the navigation;
+  Production Design steps 3↔4 swapped (interview before casting).
 - **2026-08-01** — Director's ruling: the template default art direction
   (DEFAULT_STYLE_BIBLE — the Beltminers-flavored VISUAL STYLE block) is
   deleted. Every production's rendering style comes only from its own
