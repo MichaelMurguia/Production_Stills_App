@@ -393,7 +393,11 @@ current row wears the amber left border and `--panel2` fill; done rows
 collapse to a single `✓` line; a terminal info row reads `NO ACTION
 NEEDED`. No generic navigation button anywhere on the screen. Rows come
 from `gateChain()` — real state, so completed steps drop off as they are
-done; a checklist that doesn't move is a poster.
+done; a checklist that doesn't move is a poster. Optional steps (the look
+interview — blanks come back PROPOSED) list plainly with an `OPTIONAL`
+suffix but never hold the `→` pointer and never count toward "N steps
+left" — a gate must never claim a step the product does not require
+(user-caught 2026-08-01).
 
 **Derive affordance** (review 2026-08-01 §2). A ghost button at the field's
 label row that deterministically fills an editable field from data the app

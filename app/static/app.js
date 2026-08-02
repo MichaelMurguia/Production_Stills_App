@@ -739,8 +739,10 @@ function gateChain(state) {
       sub: "Reads the draft for design languages, environments, locations and cast" },
     { label: "ADD STYLE REFERENCE", verb: "Add style reference", done: (pd.style_anchors || 0) > 0, stage: "wizard",
       sub: "Board layout, cinematography and rendering plates — the three anchors" },
-    { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview", done: (pd.interview_answered || 0) > 0 || !!pd.bible_saved, stage: "wizard",
-      sub: "Touchstones, medium, palette, and what it must never look like" },
+    { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview",
+      done: (pd.interview_answered || 0) > 0 || !!pd.bible_saved,
+      optional: true, stage: "wizard",
+      sub: "Optional — touchstones, medium, palette; blanks come back marked PROPOSED" },
     { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
       sub: "Everything above becomes the document every render obeys" },
     { label: "DRAFT & LOCK A BREAKDOWN", verb: "Draft & lock a breakdown", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
@@ -769,7 +771,8 @@ function lockPopover(stage) {
   if (!_bandState) return;
   const chain = gateChain(_bandState).slice(0, UNLOCK_NEED[stage] || 5);
   const remaining = chain.filter(s => !s.done);
-  if (!remaining.length) { updateBand(); return; }  // gate met; band was stale
+  const required = remaining.filter(s => !s.optional);
+  if (!required.length) { updateBand(); return; }  // gate met; band was stale
   const cell = $(`#nav button[data-view="${remaining[0].stage}"]`)
             || $(`#nav button[data-view="${stage}"]`);
   const nav = $("#nav");
@@ -777,7 +780,7 @@ function lockPopover(stage) {
   pop.className = "band-pop";
   pop.setAttribute("role", "dialog");
   pop.setAttribute("aria-label", `Stage ${STAGE_NUM[stage]} is locked`);
-  const n = remaining.length;
+  const n = required.length;
   pop.innerHTML = `
     <div class="bp-head">
       <span class="bp-chip mono">${STAGE_NUM[stage]} IS LOCKED</span>
@@ -786,9 +789,10 @@ function lockPopover(stage) {
     <p class="bp-sent">${esc(NEED_SENTENCE[stage] || "This stage's gate is upstream.")}
       <b>${COUNT_WORDS[n] || n} step${n === 1 ? "" : "s"} first.</b></p>
     <div class="bp-steps mono">
-      ${remaining.map((s, i) => `
-        <div class="bp-step ${i === 0 ? "cur" : ""}">
-          <span class="bp-mark">${i === 0 ? "→" : "·"}</span><span>${esc(s.label)}</span>
+      ${remaining.map(s => `
+        <div class="bp-step ${s === required[0] ? "cur" : ""}">
+          <span class="bp-mark">${s === required[0] ? "→" : "·"}</span>
+          <span>${esc(s.label)}${s.optional ? " · OPTIONAL" : ""}</span>
         </div>`).join("")}
     </div>
     <div class="bp-foot mono">${STAGE_NUM[stage]} UNLOCKS ITSELF ${UNLOCK_LINE[stage] || ""}</div>`;
@@ -844,9 +848,11 @@ function stageChecklist({ kicker, headline, rows, footnote }) {
 
 function checklistRows(state, upTo) {
   const chain = gateChain(state).slice(0, upTo);
-  const cur = chain.findIndex(s => !s.done);
+  // The pointer lands on the first REQUIRED undone step — optional ones
+  // (the interview) list plainly but never read as the blocker.
+  const cur = chain.findIndex(s => !s.done && !s.optional);
   return chain.map((s, i) => ({
-    ...s, addr: `STAGE ${STAGE_NUM[s.stage]}`,
+    ...s, addr: `STAGE ${STAGE_NUM[s.stage]}${s.optional && !s.done ? " · OPTIONAL" : ""}`,
     state: s.done ? "done" : i === cur ? "cur" : "todo",
   }));
 }
@@ -2687,7 +2693,8 @@ async function renderWizard() {
       if (!text) return toast("The bible is empty — draft it in step 5 (or paste content) before saving.", true);
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
-      toast("Art Direction Bible saved.");
+      updateBand();  // Breakdowns unlock themselves right now, visibly
+      toast(`Art Direction Bible saved — Breakdowns are open.`);
     } catch (err) { toast(err.message, true); }
   };
   renderLessons();
