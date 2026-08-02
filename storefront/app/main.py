@@ -186,13 +186,19 @@ def checkout(plan: str):
     price = PLANS[plan]["price"]()
     if not (settings.STRIPE_SECRET_KEY and price):
         raise HTTPException(503, "Stripe is not configured yet")
-    checkout_session = stripe.checkout.Session.create(
-        mode=PLANS[plan]["mode"],
-        line_items=[{"price": price, "quantity": 1}],
-        success_url=f"{settings.BASE_URL}/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{settings.BASE_URL}/",
-        metadata={"plan": plan},
-    )
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            mode=PLANS[plan]["mode"],
+            line_items=[{"price": price, "quantity": 1}],
+            success_url=f"{settings.BASE_URL}/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.BASE_URL}/",
+            metadata={"plan": plan},
+        )
+    except stripe.StripeError as e:
+        # A misconfigured price/key must read as a stated condition, not a
+        # mystery 500. Stripe's message names the offending object (price
+        # ids are not secrets); the buyer sees that checkout is down.
+        raise HTTPException(503, f"Checkout is unavailable: {getattr(e, 'user_message', None) or str(e)}")
     return RedirectResponse(checkout_session.url, status_code=303)
 
 
