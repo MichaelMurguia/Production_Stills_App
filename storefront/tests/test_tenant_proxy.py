@@ -103,6 +103,56 @@ class TenantProxyTests(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
         self.assertEqual(self.upstream_requests, [])
 
+    def test_unreachable_studio_reassures_and_rechecks(self):
+        # T2: a paying customer locked out mid-session — stripped chrome,
+        # the work's safety first, honest status, 503 + Retry-After.
+        _mk_workspace("dead-studio",
+                      railway_url="https://tenant-dead.up.railway.app")
+
+        def flaky(request: httpx.Request) -> httpx.Response:
+            if request.url.host == "tenant-dead.up.railway.app":
+                raise httpx.ConnectError("refused")
+            return httpx.Response(200, content=b"ok")
+
+        proxy = TenantProxy(store, transport=httpx.MockTransport(flaky))
+        r = TestClient(proxy, base_url=f"https://dead-studio.{BASE}").get("/")
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r.headers.get("retry-after"), "15")
+        self.assertIn("YOUR STUDIO DID NOT ANSWER", r.text)
+        self.assertIn("Dead Studio", r.text, "H1 names the studio")
+        self.assertIn("Nothing you approved\n  is at risk"
+                      .replace("\n  ", " "), r.text.replace("\n  ", " "))
+        self.assertIn("SAFE &mdash; STORED SEPARATELY", r.text)
+        self.assertIn("RECHECKING AUTOMATICALLY EVERY 15 SECONDS", r.text)
+        self.assertIn("help@screenboardstudio.com", r.text)
+        # Nothing to buy on a trust page: no nav, no pricing, no footer.
+        self.assertNotIn("Pricing", r.text)
+        self.assertNotIn("The pipeline", r.text)
+        # No proxy success yet in this process → the LAST ANSWERED row
+        # drops rather than guessing.
+        self.assertNotIn("LAST ANSWERED", r.text)
+
+    def test_last_answered_appears_after_a_good_response(self):
+        _mk_workspace("blinky-studio",
+                      railway_url="https://tenant-blink.up.railway.app")
+        state = {"up": True}
+
+        def blinky(request: httpx.Request) -> httpx.Response:
+            if request.url.host == "tenant-blink.up.railway.app":
+                if not state["up"]:
+                    raise httpx.ConnectError("refused")
+                return httpx.Response(200, content=b"ok")
+            return httpx.Response(200, content=b"ok")
+
+        proxy = TenantProxy(store, transport=httpx.MockTransport(blinky))
+        c = TestClient(proxy, base_url=f"https://blinky-studio.{BASE}")
+        self.assertEqual(c.get("/api/healthz").status_code, 200)
+        state["up"] = False
+        r = c.get("/")
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("LAST ANSWERED", r.text)
+        self.assertIn("AGO", r.text)
+
     def test_post_bodies_reach_the_tenant(self):
         _mk_workspace("post-studio")
         r = self.client(f"post-studio.{BASE}").post(

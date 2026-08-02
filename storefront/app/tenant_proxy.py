@@ -17,6 +17,7 @@ and never to a branded address (which would loop back here).
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import httpx
@@ -39,13 +40,24 @@ _jinja = jinja2.Environment(
     loader=jinja2.FileSystemLoader(Path(__file__).resolve().parent / "templates"),
     autoescape=True)
 
-_PAGE = ("<!doctype html><html><body style=\"background:#0b0c0e;"
-         "color:#9aa1a8;font-family:'Courier New',monospace;display:flex;"
-         "align-items:center;justify-content:center;min-height:100vh;"
-         "letter-spacing:.08em;font-size:13px\"><p>%s</p></body></html>")
-_BAD_GATEWAY = (_PAGE % ("YOUR STUDIO DID NOT ANSWER &mdash; IT MAY BE "
-                         "REDEPLOYING. TRY AGAIN IN A MINUTE."
-                         )).encode()
+# Last time each studio's upstream answered, by subdomain — in-process
+# only, so the LAST ANSWERED row simply drops after a storefront restart
+# rather than ever guessing (T2's rule: no data, no row).
+_last_answered: dict[str, float] = {}
+
+
+def _ago(seconds: float) -> str:
+    s = int(seconds)
+    if s < 60:
+        return f"{s} SECOND{'S' if s != 1 else ''} AGO"
+    m = s // 60
+    if m < 60:
+        return f"{m} MINUTE{'S' if m != 1 else ''} AGO"
+    return f"{m // 60} HOUR{'S' if m // 60 != 1 else ''} AGO"
+
+
+def _studio_name(sub: str) -> str:
+    return " ".join(w.capitalize() for w in sub.split("-") if w) or sub
 
 
 async def _page(send, status: int, body: bytes,
@@ -120,16 +132,17 @@ class TenantProxy:
         if target is None:
             await self.app(scope, receive, send)
             return
+        sub = host.split(":", 1)[0].lower().split(".", 1)[0]
         if not target:
             # The one failure page that sells (T1): a stranger, a typo, or
             # someone guessing — full store chrome, the address as the H1.
-            sub = host.split(":", 1)[0].lower().split(".", 1)[0]
             await _page(send, 404, _render(
                 "router_unclaimed.html", host=host.split(":", 1)[0], sub=sub))
             return
-        await self._forward(scope, receive, send, target, host)
+        await self._forward(scope, receive, send, target, host, sub)
 
-    async def _forward(self, scope, receive, send, target: str, host: str):
+    async def _forward(self, scope, receive, send, target: str, host: str,
+                       sub: str = ""):
         path = scope.get("raw_path") or scope["path"].encode("latin-1")
         url = target + path.decode("latin-1")
         if scope.get("query_string"):
@@ -158,8 +171,18 @@ class TenantProxy:
                 content=body() if has_body else None)
             resp = await client.send(req, stream=True)
         except httpx.HTTPError:
-            await _page(send, 502, _BAD_GATEWAY)
+            # A paying customer locked out mid-session (T2): reassure
+            # about the work first, state what is known, recheck honestly.
+            # 503 + Retry-After — this is temporary and says so.
+            seen = _last_answered.get(sub)
+            await _page(send, 503, _render(
+                "router_unreachable.html",
+                host=host.split(":", 1)[0],
+                studio_name=_studio_name(sub),
+                last_answered=_ago(time.time() - seen) if seen else ""),
+                extra_headers=[(b"retry-after", b"15")])
             return
+        _last_answered[sub] = time.time()
         try:
             await send({"type": "http.response.start",
                         "status": resp.status_code,

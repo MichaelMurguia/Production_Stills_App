@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ studio_name }} is redeploying — Screenboard Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+{# A paying customer locked out mid-session (STORE_ROUTER_PLAN T2): no
+   nav, no pricing, nothing to buy. Assets absolute — this serves on the
+   tenant hostname. #}
+<link rel="stylesheet" href="{{ base_url }}/static/store.css">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <div class="brand-link">
+      <p class="kicker" style="color:var(--ink-faint)">PRODUCTION TOOLING</p>
+      <p class="wordmark">Screenboard Studio</p>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+<section class="order router-page">
+  <p class="price-kind hold-kicker">YOUR STUDIO DID NOT ANSWER</p>
+  <h1>{{ studio_name }}<br>is redeploying.</h1>
+  <p class="hero-sub">Your screenplay, references and boards are untouched
+  &mdash; they live on storage that stays put while the studio itself
+  restarts. Nothing you approved is at risk.</p>
+  <div class="status-block mono">
+    <div class="status-row"><span>ADDRESS</span><b>{{ host }}</b></div>
+    {% if last_answered %}
+    <div class="status-row"><span>LAST ANSWERED</span><b>{{ last_answered }}</b></div>
+    {% endif %}
+    <div class="status-row"><span>TYPICAL RETURN</span><b>UNDER 2 MINUTES AFTER A DEPLOY</b></div>
+    <div class="status-row"><span>YOUR WORK</span><b class="ok">SAFE &mdash; STORED SEPARATELY</b></div>
+  </div>
+  <div class="btn-row" style="align-items:center;margin-top:22px">
+    <a class="btn btn-primary" href="">Try again</a>
+    <span class="mono recheck-note">RECHECKING AUTOMATICALLY EVERY 15 SECONDS</span>
+  </div>
+  <div class="router-rule"></div>
+  <p class="price-kind">STILL DOWN AFTER FIVE MINUTES?</p>
+  <p class="hero-sub" style="margin-top:8px">Reach us at
+  <a href="mailto:help@screenboardstudio.com" class="mail-link">help@screenboardstudio.com</a>
+  with the address above &mdash; that line tells us which studio to look
+  at.</p>
+</section>
+</main>
+<script>
+// A page that says it rechecks must recheck. Progressive enhancement —
+// the content and the Try again link work with zero JS.
+setTimeout(() => location.reload(), 15000);
+</script>
+</body>
+</html>

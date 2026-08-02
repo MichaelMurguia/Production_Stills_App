@@ -441,3 +441,11 @@ body {
 .router-page { max-width: 720px; }
 .router-addr { font-family: var(--mono); font-size: 30px; font-weight: 700; word-break: break-all; letter-spacing: .01em; margin-bottom: 16px; }
 .router-rule { border-top: 1px solid var(--line); margin: 34px 0 18px; }
+.hold-kicker { color: var(--hold, #7d8fd0); }
+.status-block { border: 1px solid var(--line); border-left: 2px solid var(--hold, #7d8fd0); background: var(--field); padding: 16px 20px; margin-top: 22px; }
+.status-row { display: flex; gap: 24px; font-size: 11px; letter-spacing: .06em; padding: 4px 0; color: var(--ink-faint); }
+.status-row span { width: 130px; flex: none; }
+.status-row b { color: var(--ink); font-weight: 400; word-break: break-all; }
+.status-row b.ok { color: var(--ok); }
+.recheck-note { font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); }
+.mail-link { color: var(--accent); }
