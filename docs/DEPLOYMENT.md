@@ -93,6 +93,19 @@ queue as PENDING workspaces with the condition stated on the row — nothing
 crashes, and the success page honestly says the workspace is being
 prepared. The SMTP and export variables are likewise optional gates.
 
+## House entitlements (decided 2026-08-03)
+
+Rows whose `stripe_session_id` starts `cs_test_` are the owner's sandbox-era
+purchases, kept deliberately: the test-era cloud workspace is the **house
+studio** — the owner's own instance holding tutorial and example projects.
+Do NOT cancel, revoke, or "clean up" these rows or that tenant service; the
+`cs_test_`/`cs_live_` prefix is the permanent discriminator (exclude
+`cs_test_` from any revenue counting). Its sandbox subscription can no
+longer emit processable webhooks (live signing secret), which is fine — the
+house studio is permanent until deliberately removed. Open risk: tenant
+volumes have no backup yet; the house studio's tutorial content shares that
+exposure (see "Not built").
+
 ## Data safety (tier A, 2026-08-01)
 
 The `purchases`/`licenses`/`workspaces` tables are the entitlement truth —
