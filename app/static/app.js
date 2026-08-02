@@ -129,7 +129,7 @@ function openRepair(imgUrl, onSubmit) {
   ov.innerHTML = `
     <div class="crop-head">
       <span class="row" style="margin:0;flex:1">
-        <input type="text" data-f="instr" placeholder="what should change in the painted region…" style="flex:1;max-width:520px" title="The repair instruction — e.g. 'make the car an exact 1966 Ford GT40 Mk II rear: twin raised intakes, four round tail lights'">
+        <input type="text" data-f="instr" placeholder="what should change in the painted region…" style="flex:1;max-width:520px" title="The repair instruction — name exactly what changes inside the painted region, e.g. 'a fitted canvas cover following the shape beneath it'">
         <label class="mini" style="display:flex;align-items:center;gap:6px;margin:0">brush
           <input type="range" data-f="brush" min="8" max="140" value="46" style="width:110px">
         </label>
@@ -3087,6 +3087,20 @@ async function renderSpecs(openId = null) {
 
   await fillProviderSelect($("#spec-auto-provider"));
 
+  // The instruction example speaks this production's screenplay, never a
+  // hardcoded film's (user ruling 2026-08-01): the read's top location
+  // becomes the worked example and the prompt placeholder.
+  api("/api/screenplay/locations").then(d => {
+    const top = d.locations?.[0]?.location;
+    if (!top) return;
+    const t = top.toLowerCase().replace(/(^|[\s/#-])([a-z])/g,
+      (m, p, c) => p + c.toUpperCase());
+    const ex = $("#spec-auto-example");
+    if (ex) ex.textContent = `"${t} — the scenes the script sets there"`;
+    const ta = $("#spec-auto-prompt");
+    if (ta && !ta.value) ta.placeholder = `Auto-fill for ${t}…`;
+  }).catch(() => { /* the neutral example stands */ });
+
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
   // underscores.
   for (const idSel of ["#spec-auto-id", "#spec-new-id"]) {
@@ -3317,7 +3331,7 @@ async function openSpecEditor(specId) {
     <div class="spec-section" style="margin-top:14px;border-top:none;padding-top:0">
       <h4>Identity <span class="hint">(what this sheet is)</span></h4>
       <div class="grid-form">
-      <label title="What this board is about — a short human-readable name for the location, scene, prop, or character (e.g. Charlie's Cabin and GT40 Workshop). It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
+      <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
         <select id="sp-mode" ${locked ? "disabled" : ""}>
           <option ${spec.mode === "CANON_EXTRACTION" ? "selected" : ""}>CANON_EXTRACTION</option>

@@ -301,7 +301,7 @@
   <section class="view">
     <div class="panel panel-lead">
       <h2>Script breakdown <span class="hint">(draft a breakdown sheet from the screenplay)</span></h2>
-      <p class="hint">Describe the board and the research pass reads the whole screenplay, extracts the sets, dressing, props, and evidence, and drafts the sheet — every claim cited, unknowns left honest. You review and edit before anything locks. Example: <i>"Charlie's cabin — the workshop scenes with the GT40"</i></p>
+      <p class="hint">Describe the board and the research pass reads the whole screenplay, extracts the sets, dressing, props, and evidence, and drafts the sheet — every claim cited, unknowns left honest. You review and edit before anything locks. Example: <i id="spec-auto-example">"the film's lead location — the scenes the script sets there"</i></p>
       <form id="spec-auto-form" class="grid-form">
         <label title="Unique ID for the new specification — CAPS_WITH_UNDERSCORES, versioned (e.g. CHARLIES_CABIN_V001). Used in filenames, prompts, and the audit trail; it cannot be renamed later.">Spec ID <input type="text" id="spec-auto-id" placeholder="CHARLIES_CABIN_V001" required></label>
         <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
@@ -316,8 +316,8 @@
             <option value="openai">OpenAI GPT-5.6</option>
           </select>
         </label>
-        <label class="wide" title="Plain-language description of the board you want (e.g. 'Charlie's cabin — the workshop scenes with the GT40'). The research pass reads the whole screenplay with this as its brief and drafts panels, objects, and cited evidence.">What is this board about?
-          <textarea id="spec-auto-prompt" placeholder="Auto-fill for Charlie's cabin…" required></textarea>
+        <label class="wide" title="Plain-language description of the board you want — a location and which of its scenes. The research pass reads the whole screenplay with this as its brief and drafts panels, objects, and cited evidence.">What is this board about?
+          <textarea id="spec-auto-prompt" placeholder="describe the board…" required></textarea>
         </label>
         <div class="row">
           <button type="submit" class="primary" id="spec-auto-go">Run breakdown</button>
