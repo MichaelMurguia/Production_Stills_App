@@ -4675,16 +4675,21 @@ async function renderBoardPanels(specId) {
       <div class="stage-shot" title="Click to open at full size">
         <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
       </div>
-      <div class="shot-under">
-        <span class="shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
-        ${stagedRef ? `<span class="badge LOCKED" title="This take was promoted into the reference library — it anchors future generations">REFERENCE · ${esc(stagedRef)}</span>` : ""}
-        <span class="shot-actions" data-f="primary-actions"></span>
+      <div class="act-bar">
+        <span class="act-zone act-left">
+          <span class="shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
+          ${stagedRef ? `<span class="badge LOCKED" title="This take was promoted into the reference library — it anchors future generations">REF · ${esc(stagedRef)}</span>` : ""}
+          <span data-f="act-approve"></span>
+        </span>
+        <span class="act-zone act-use" data-f="act-use"></span>
+        <span class="act-rule" aria-hidden="true"></span>
+        <span class="act-zone act-derive" data-f="act-derive"></span>
+        <span class="act-zone act-right" data-f="act-danger"></span>
       </div>
-      <div class="shot-ghost-row" data-f="ghost-actions"></div>
       <div data-f="shot-busy"></div>
       ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("")}
       ${staged.status === "REJECTED" && staged.status_reason ? `<div class="meta" style="color:var(--bad)">rejected — ${esc(staged.status_reason)}</div>` : ""}
-      ${staged.model_notes || staged.render_prompt ? `<details class="meta"><summary>${staged.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(staged.render_prompt ? `RENDER PROMPT (user-edited):\n${staged.render_prompt}${staged.model_notes ? "\n\n" + staged.model_notes : ""}` : staged.model_notes)}</pre></details>` : ""}`;
+`;
 
     const sheetRejected = candidates.filter(c => c.status === "REJECTED").length;
     const pending = pendingTakes[specId]?.[p.id] || [];
@@ -4695,18 +4700,23 @@ async function renderBoardPanels(specId) {
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
           <span class="hint">rejected takes stay as a record</span>
+          ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
         <div class="takes-row">
           ${pending.map(pendingTileHtml).join("")}
           ${panelCands.map(c => {
             const pr = promotedRefOf(c);
+            const isShown = staged && c.candidate_id === staged.candidate_id;
+            const word = isShown ? "SHOWN"
+              : c.status === "REJECTED" ? "REJECTED"
+              : c.status === "APPROVED" ? "APPROVED" : "";
             return `
-            <button class="take${staged && c.candidate_id === staged.candidate_id ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
+            <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
               <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="">
-              <span class="take-label">${esc(c.candidate_id)}${c.status === "REJECTED" ? " REJECTED" : c.status === "APPROVED" ? " APPROVED" : (staged && c.candidate_id === staged.candidate_id ? " SHOWN" : "")}${pr ? " · REF" : ""}</span>
+              <span class="take-cap">${esc(c.candidate_id)}${word ? ` · ${word}` : ""}${pr ? " · REF" : ""}</span>
             </button>`;
           }).join("")}
         </div>
@@ -5042,10 +5052,24 @@ async function renderBoardPanels(specId) {
         b.onclick = fn;
         return b;
       };
-      const prim = $("[data-f=primary-actions]", card);
-      const ghost = $("[data-f=ghost-actions]", card);
+      // P7: one bordered bar — status (left, divided) · use this take ·
+      // derive from it · Reject (right, fenced off). A destructive action
+      // never sits adjacent to a promotion.
+      const actApprove = $("[data-f=act-approve]", card);
+      const actUse = $("[data-f=act-use]", card);
+      const actDerive = $("[data-f=act-derive]", card);
+      const actDanger = $("[data-f=act-danger]", card);
 
-      if (c.status !== "REJECTED") prim.append(mk("Reject", "danger", async () => {
+      const notesBtn = $("[data-f=notes]", card);
+      if (notesBtn) notesBtn.onclick = () => promptOverlay(
+        c.prompt_source === "edited" ? "EDITED RENDER PROMPT" : "MODEL NOTES / REWRITTEN PROMPT",
+        c.render_prompt
+          ? "RENDER PROMPT (user-edited):" + String.fromCharCode(10) + c.render_prompt
+            + (c.model_notes ? String.fromCharCode(10, 10) + c.model_notes : "")
+          : (c.model_notes || ""),
+        [p.id, c.candidate_id].join(" · "));
+
+      if (c.status !== "REJECTED") actDanger.append(mk("Reject", "danger", async () => {
         const reason = await askText(`Reject ${c.candidate_id}`, "Reason",
           { hint: "recorded verbatim, carried into this panel's future prompts as rejection feedback",
             confirmLabel: "Reject", danger: true });
@@ -5055,11 +5079,11 @@ async function renderBoardPanels(specId) {
           toast(`${c.candidate_id} rejected.`); refresh();
         } catch (err) { toast(err.message, true); }
       }));
-      prim.append(mk("→ Reference", "ghost", () => promoteDialog(specId, c),
+      actDerive.append(mk("→ Reference", "ghost", () => promoteDialog(specId, c),
         c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — only approved renders become canon anchors" }
         : { title: "Promote this approved render into the reference library" }));
-      if (c.status !== "APPROVED") prim.append(mk("Approve panel", "primary", async () => {
+      if (c.status !== "APPROVED") actApprove.append(mk("Approve panel", "ghost act-approve-btn", async () => {
         try {
           await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "APPROVED" });
           toast(`${c.candidate_id} approved.`); refresh();
@@ -5069,7 +5093,7 @@ async function renderBoardPanels(specId) {
       // Re-performance for resolution (never interpolation): the take
       // anchors itself; a locked reproduce-exactly instruction renders it
       // at full size. The answer to a good take trapped in a small file.
-      if (c.kind !== "derived_palette") ghost.append(mk("→ Full-size take", "ghost", () => {
+      if (c.kind !== "derived_palette") actUse.append(mk("→ Full-size take", "ghost", () => {
         const ov = document.createElement("div");
         ov.className = "modal-scrim";
         ov.innerHTML = `
@@ -5112,7 +5136,7 @@ async function renderBoardPanels(specId) {
           // Progress lives right under the action that started it, and every
           // staged action locks while the engine paints (only the ones that
           // were live — gate-disabled buttons stay gated on error).
-          const lockable = $$("button", prim).concat($$("button", ghost)).filter(b => !b.disabled);
+          const lockable = $$(".act-bar button", card).filter(b => !b.disabled);
           lockable.forEach(b => { b.disabled = true; });
           const busy = startBusy($("[data-f=shot-busy]", card),
             `Painting the full-size take from ${c.candidate_id} — ${size} on ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
@@ -5134,7 +5158,7 @@ async function renderBoardPanels(specId) {
           }
         };
       }, { title: "Make a NEW take: repaint this exact image at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated). This take stays untouched." }));
-      if (c.kind !== "derived_palette") ghost.append(mk("Repair region", "ghost", () =>
+      if (c.kind !== "derived_palette") actUse.append(mk("Repair region", "ghost", () =>
         openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
           async (mask, instruction, provider) => {
             const pendId = addPendingTake(specId, p.id, `PAINTING — REPAIR OF ${c.candidate_id}`);
@@ -5152,13 +5176,13 @@ async function renderBoardPanels(specId) {
             }
           }),
         { title: "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region — the app composites the patch, so nothing outside your paint can change. The result is a new take; this one is untouched. You can close the paint screen while it renders — a pending tile holds its place in the strip." }));
-      ghost.append(mk("Crop → reference", "ghost", () =>
+      actDerive.append(mk("Crop → reference", "ghost", () =>
         cropToReference({ type: "candidate", spec_id: specId, id: c.candidate_id },
           `/api/specs/${specId}/candidates/${c.candidate_id}/image`),
         c.status !== "APPROVED"
           ? { disabled: true, title: "Approve this take first — crops enter the library as approved canon" }
           : { title: "Harvest a region of this image as a new reference with its own narrow role" }));
-      ghost.append(mk("→ Light study", "ghost", async () => {
+      actDerive.append(mk("→ Light study", "ghost", async () => {
         if (!(await askConfirm(`Create a lighting study from ${c.candidate_id}`,
           "This panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.",
           "Create study"))) return;
@@ -5169,7 +5193,7 @@ async function renderBoardPanels(specId) {
       }, c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — the study locks this panel's geometry" }
         : { title: "Derive a lighting-study board: this panel becomes the geometry anchor, and each new panel renders the same place under one approved atmosphere" }));
-      if (c.status === "REJECTED") ghost.append(mk("Delete forever", "danger", async () => {
+      if (c.status === "REJECTED") actDanger.append(mk("Delete forever", "danger", async () => {
         if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
           "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
           "Delete forever", true))) return;

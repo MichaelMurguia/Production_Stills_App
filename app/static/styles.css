@@ -1065,7 +1065,7 @@ details.meta pre {
 }
 .take img { width: 100%; height: 70px; object-fit: cover; display: block; }
 .take.rejected img { opacity: .45; }
-.take.shown { border-color: var(--accent); }
+.take.shown { border-color: var(--ok); }  /* PANEL_CARD P7: shown keeps --ok */
 .take-label {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em;
   color: var(--ink-faint); padding: 4px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
@@ -1074,7 +1074,7 @@ details.meta pre {
 .take.shown .take-label { color: var(--accent); }
 .take.approved { border-color: var(--ok); }
 .take.approved .take-label { color: var(--ok); }
-.take.shown.approved { border-color: var(--accent); }  /* staged wins the frame; the label stays green */
+.take.shown.approved { border-color: var(--ok); }
 .take.shown.approved .take-label { color: var(--ok); }
 
 /* Pending take tile + take state tags — canonical (2026-07-30c): in-flight
@@ -1581,3 +1581,32 @@ details.meta pre {
   line-height: 1.7; align-self: center; margin-left: auto; text-align: right;
 }
 .gen-actions .text-act { align-self: center; }
+
+/* One action bar (PANEL_CARD_PLAN P7): status fenced left, use-this-take
+   and derive-from-it split by an internal rule, Reject fenced right —
+   a destructive action never sits adjacent to a promotion. Must not wrap. */
+.act-bar {
+  display: flex; align-items: center; border: 1px solid var(--line);
+  margin-top: 10px; min-height: 42px; overflow-x: auto; white-space: nowrap;
+}
+.act-zone { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; }
+.act-left { border-right: 1px solid var(--line); }
+.act-rule { width: 1px; align-self: stretch; background: var(--line); }
+.act-use { margin-left: 2px; }
+.act-derive { flex: 1; }
+.act-right { border-left: 1px solid var(--line); margin-left: auto; }
+.act-bar .ghost, .act-bar .danger {
+  border: none; background: transparent; padding: 4px 2px;
+}
+.act-bar .ghost:hover { color: var(--ink); text-decoration: underline; background: transparent; }
+.act-bar .danger { color: var(--bad); }
+.act-bar .danger:hover { text-decoration: underline; background: transparent; }
+.act-bar .act-approve-btn { border: 1px solid var(--ok); color: var(--ok); padding: 4px 12px; }
+/* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
+.take-cap {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
+  color: var(--ink-faint); padding: 4px 6px; white-space: nowrap;
+}
+.take.shown .take-cap { color: var(--ok); }
+.take.approved .take-cap { color: var(--ok); }
+.take.rejected .take-cap { color: var(--bad); }
