@@ -1486,3 +1486,18 @@ details.meta pre {
   content: ""; display: inline-block; width: 6px; height: 6px;
   background: var(--bad); margin-left: 7px; vertical-align: 7px;
 }
+
+/* Structural board (user ruling 2026-08-02): layout frames hold the real
+   panel images; the composite is the export. Ground matches the drawn
+   board (#2a2723 canvas, ink header, amber rule). */
+.board-frame { position: relative; width: 100%; background: #2a2723; overflow: hidden; }
+.bf-head { position: absolute; left: 1.7%; top: 2.5%; right: 1.7%; z-index: 2; }
+.bf-title { color: #e8e5dd; font-weight: 700; font-size: clamp(14px, 2.4vw, 34px); letter-spacing: .02em; }
+.bf-sub { color: #9a978f; font-size: clamp(8px, 1vw, 13px); letter-spacing: .08em; margin-top: 4px; }
+.bf-rule { border-top: 3px solid var(--accent); margin-top: 8px; }
+.bf-slot { position: absolute; background: #232019; }
+.bf-slot img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+.bf-pid {
+  position: absolute; left: 6px; top: 6px; font-size: 9px; letter-spacing: .1em;
+  color: #e8e5dd; background: rgba(42, 39, 35, .75); padding: 1px 6px; pointer-events: none;
+}

@@ -5182,14 +5182,78 @@ async function renderAssembly() {
       </div>
       <div data-f="board-host" style="margin-top:12px"></div>`;
     $("[data-f=back]", p).onclick = showGrid;
-    // The canonical board card carries the judge actions (Approve /
-    // Reject / → Reference / Delete) — full-width here, not grid-sized.
-    const card = renderCard(b._spec.specification_id, b, () => renderAssembly(), lbItems, i);
-    card.classList.add("board-solo");
-    $("[data-f=board-host]", p).append(card);
+    const bh = $("[data-f=board-host]", p);
+    if (b.rects && Object.keys(b.rects).length) {
+      // Structural board (user ruling 2026-08-02): the layout frames hold
+      // the individual panel images — click one to see the full-sized,
+      // uncropped take. The composite single image is the EXPORT.
+      const sid = b._spec.specification_id;
+      const takeOf = pid => b.panels_used?.[pid];
+      const takeItems = Object.keys(b.rects)
+        .filter(pid => takeOf(pid))
+        .map(pid => ({
+          src: `/api/specs/${sid}/candidates/${takeOf(pid)}/image`,
+          caption: `${takeOf(pid)} — ${pid} · full uncropped take`,
+        }));
+      bh.innerHTML = `
+        <div class="board-frame" style="aspect-ratio:${b.width}/${b.height}">
+          <div class="bf-head">
+            <div class="bf-title">${esc((b._spec.subject || sid).toUpperCase())}</div>
+            <div class="bf-sub mono">${esc(sid)} · ${esc(b._spec.mode || "")} · ${esc(b.status === "CANDIDATE" ? "BOARD CANDIDATE — UNAPPROVED" : b.status)}</div>
+            <div class="bf-rule"></div>
+          </div>
+          ${Object.entries(b.rects).map(([pid, r]) => `
+            <div class="bf-slot" style="left:${(r[0] / b.width * 100).toFixed(2)}%;top:${(r[1] / b.height * 100).toFixed(2)}%;width:${(r[2] / b.width * 100).toFixed(2)}%;height:${(r[3] / b.height * 100).toFixed(2)}%">
+              ${takeOf(pid) ? `<img src="/api/specs/${sid}/candidates/${esc(takeOf(pid))}/image" loading="lazy" alt="${esc(pid)}" data-bfp="${esc(pid)}" title="Click for the full-sized, uncropped take (${esc(takeOf(pid))})">` : ""}
+              <span class="bf-pid mono">${esc(pid)}</span>
+            </div>`).join("")}
+        </div>
+        <div class="row" style="margin-top:12px;align-items:center">
+          <span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span>
+          <span class="mini mono">${b.width}×${b.height} · ${esc(b.layout_variant || "aspect")} LAYOUT · PANELS STAY CLICKABLE — EXPORT FOR ONE FLAT IMAGE</span>
+          <span style="flex:1"></span>
+          ${b.status !== "APPROVED" ? `<button class="primary" data-bf="approve">Approve board</button>` : ""}
+          ${b.status !== "REJECTED" ? `<button class="ghost" data-bf="reject">Reject</button>` : ""}
+          <a class="ghost" style="text-decoration:none" href="/api/specs/${sid}/candidates/${esc(b.candidate_id)}/image" download="${esc(b.candidate_id)}.png" title="Download the composite: one flat 4K image of this board, typography drawn in">Export board</a>
+        </div>`;
+      $$("[data-bfp]", bh).forEach(img => {
+        img.onclick = () => {
+          const idx = takeItems.findIndex(t => t.caption.includes(`— ${img.dataset.bfp} `));
+          openLightbox(takeItems, Math.max(0, idx));
+        };
+      });
+      const post = (path, json) => api(path, { method: "POST", json });
+      $("[data-bf=approve]", bh)?.addEventListener("click", async () => {
+        try {
+          await post(`/api/specs/${sid}/candidates/${b.candidate_id}/status`, { status: "APPROVED" });
+          toast(`${b.candidate_id} approved.`); renderAssembly();
+        } catch (err) { toast(err.message, true); }
+      });
+      $("[data-bf=reject]", bh)?.addEventListener("click", async () => {
+        const vals = await modal({ title: `Reject ${b.candidate_id}`,
+          fields: [{ name: "reason", label: "Why (rides into lessons)", textarea: true }],
+          confirmLabel: "Reject board", danger: true });
+        if (vals === null) return;
+        try {
+          await post(`/api/specs/${sid}/candidates/${b.candidate_id}/status`, { status: "REJECTED", reason: vals.reason || "" });
+          toast(`${b.candidate_id} rejected.`); renderAssembly();
+        } catch (err) { toast(err.message, true); }
+      });
+    } else {
+      // Legacy boards (pre-structural) keep the canonical composite card.
+      const card = renderCard(b._spec.specification_id, b, () => renderAssembly(), lbItems, i);
+      card.classList.add("board-solo");
+      bh.append(card);
+    }
     host.append(p);
   };
 
+  const pendingOpen = uiGet("openBoard", "");
+  if (pendingOpen) {
+    uiSet("openBoard", "");
+    const idx = orderedBoards.findIndex(x => x.candidate_id === pendingOpen);
+    if (idx >= 0) { showBoard(orderedBoards[idx], idx); return; }
+  }
   showGrid();
 }
 
@@ -5314,9 +5378,10 @@ async function renderAssemblyFor(specId) {
     try {
       const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h, variant } });
       toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout) — BOARD CANDIDATE, unapproved.`);
-      // The finished board is the point — land on the completed-boards
-      // grid with it in view (user ruling 2026-08-02).
+      // The finished board is the point — land ON it, full size
+      // (user ruling 2026-08-02).
       uiSet("asmSpec", "");
+      uiSet("openBoard", b.candidate_id);
       renderAssembly();
     } catch (err) {
       busy.done();

@@ -464,6 +464,10 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
         "height": height,
         "layout_variant": variant,
         "panels_used": used,
+        # The structural layout (user ruling 2026-08-02): the board page
+        # keeps panels as individual images in these frames — click-through
+        # to the uncropped take — and the composite PNG becomes the export.
+        "rects": {pid: list(r) for pid, r in rects.items()},
         "warnings": warnings,
         "created_at": store.utcnow(),
     }
