@@ -1420,3 +1420,23 @@ details.meta pre {
   padding: 0 5px; margin-left: 8px; vertical-align: 1px;
 }
 #nav button.s-locked .lock-chip { display: inline-block; }
+
+/* The anchored lock explanation (LOCKED_STAGE_PLAN L2, mock 12b): hangs
+   from the band under the first unmet stage's cell — no top border, so it
+   reads as attached. #3a4048 border sanctioned by the plan. */
+.band-pop {
+  position: absolute; z-index: 60; background: var(--panel2);
+  border: 1px solid #3a4048; border-top: none;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+  padding: 16px 18px 14px; min-width: 300px;
+}
+.bp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.bp-chip { border: 1px solid var(--hold); color: var(--hold); font-size: 9.5px; letter-spacing: .1em; padding: 1px 8px; }
+.bp-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 14px; padding: 0 2px; }
+.bp-x:hover { color: var(--ink); }
+.bp-sent { font-size: 13px; color: var(--ink-dim); margin-bottom: 14px; }
+.bp-sent b { color: var(--ink); }
+.bp-step { display: flex; gap: 10px; font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); padding: 3px 0; }
+.bp-step.cur { color: var(--ink); }
+.bp-step.cur .bp-mark { color: var(--accent); }
+.bp-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 8.5px; letter-spacing: .1em; color: var(--ink-faint); }

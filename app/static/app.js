@@ -715,9 +715,98 @@ for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
     if (!btn) return;
-    if (lockedStages.has(btn.dataset.view)) return;  // inert (L2 explains)
+    if (lockedStages.has(btn.dataset.view)) {
+      lockPopover(btn.dataset.view);  // explain in place — never navigate
+      return;
+    }
     showView(btn.dataset.view);
   });
+}
+
+/* The gate chain (LOCKED_STAGE_PLAN L2/L3): every step between here and a
+   stage unlocking, driven from real state so completed steps drop off as
+   they are done. One model feeds the band popover and the stage
+   checklist. The look interview leaves no server trace until the bible
+   is drafted, so it completes with the bible — the movable steps (scan,
+   anchors, bible) all track live state. */
+function gateChain(state) {
+  const ss = state.stage_summary || {};
+  const pd = ss.production_design || {};
+  return [
+    { label: "UPLOAD THE SCREENPLAY", done: !!ss.screenplay, stage: "screenplay",
+      sub: "The read starts here — everything downstream derives from the draft" },
+    { label: "RUN THE SCRIPT SCAN", done: !!pd.scan_done, stage: "wizard",
+      sub: "Reads the draft for design languages, environments, locations and cast" },
+    { label: "ADD STYLE REFERENCE", done: (pd.style_anchors || 0) > 0, stage: "wizard",
+      sub: "Board layout, cinematography and rendering plates — the three anchors" },
+    { label: "COMPLETE THE LOOK INTERVIEW", done: !!pd.bible_saved, stage: "wizard",
+      sub: "Touchstones, medium, palette, and what it must never look like" },
+    { label: "DRAFT THE ART DIRECTION BIBLE", done: !!pd.bible_saved, stage: "wizard",
+      sub: "Everything above becomes the document every render obeys" },
+    { label: "DRAFT & LOCK A BREAKDOWN", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
+      sub: "Only a locked sheet can render" },
+    { label: "RENDER AND APPROVE PANELS", done: (ss.panels?.approved || 0) > 0, stage: "boards",
+      sub: "Takes are judged full-size, one at a time" },
+  ];
+}
+
+const STAGE_NUM = { screenplay: "01", wizard: "02", specs: "03", boards: "04", assembly: "05" };
+// How much of the chain each stage's gate requires.
+const UNLOCK_NEED = { specs: 5, boards: 6, assembly: 7 };
+const UNLOCK_LINE = { specs: "THE MOMENT THE BIBLE IS SAVED",
+                     boards: "THE MOMENT A SHEET LOCKS",
+                     assembly: "THE MOMENT A PANEL IS APPROVED" };
+const NEED_SENTENCE = { specs: "Breakdowns need the Art Direction Bible.",
+                       boards: "Panels need a locked breakdown sheet.",
+                       assembly: "Boards need approved panels." };
+const COUNT_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven"];
+
+/* Clicking a locked stage explains, in place (L2): a popover anchored
+   under the FIRST UNMET stage's cell — the cell the user actually needs —
+   while the view behind stays exactly where it was. */
+function lockPopover(stage) {
+  $$(".band-pop").forEach(p => p.remove());
+  if (!_bandState) return;
+  const chain = gateChain(_bandState).slice(0, UNLOCK_NEED[stage] || 5);
+  const remaining = chain.filter(s => !s.done);
+  if (!remaining.length) { updateBand(); return; }  // gate met; band was stale
+  const cell = $(`#nav button[data-view="${remaining[0].stage}"]`)
+            || $(`#nav button[data-view="${stage}"]`);
+  const nav = $("#nav");
+  const pop = document.createElement("div");
+  pop.className = "band-pop";
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-label", `Stage ${STAGE_NUM[stage]} is locked`);
+  const n = remaining.length;
+  pop.innerHTML = `
+    <div class="bp-head">
+      <span class="bp-chip mono">${STAGE_NUM[stage]} IS LOCKED</span>
+      <button class="bp-x" title="Dismiss (Esc)">×</button>
+    </div>
+    <p class="bp-sent">${esc(NEED_SENTENCE[stage] || "This stage's gate is upstream.")}
+      <b>${COUNT_WORDS[n] || n} step${n === 1 ? "" : "s"} first.</b></p>
+    <div class="bp-steps mono">
+      ${remaining.map((s, i) => `
+        <div class="bp-step ${i === 0 ? "cur" : ""}">
+          <span class="bp-mark">${i === 0 ? "→" : "·"}</span><span>${esc(s.label)}</span>
+        </div>`).join("")}
+    </div>
+    <div class="bp-foot mono">${STAGE_NUM[stage]} UNLOCKS ITSELF ${UNLOCK_LINE[stage] || ""}</div>`;
+  const nr = nav.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+  pop.style.left = `${Math.round(cr.left + window.scrollX)}px`;
+  pop.style.top = `${Math.round(nr.bottom + window.scrollY)}px`;
+  pop.style.width = `${Math.round(Math.min(cr.width * 2, window.innerWidth - cr.left - 24))}px`;
+  document.body.appendChild(pop);
+  const close = () => {
+    pop.remove();
+    window.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("mousedown", onOut, true);
+  };
+  const onKey = e => { if (e.key === "Escape") { e.stopPropagation(); close(); } };
+  const onOut = e => { if (!e.target.closest(".band-pop")) close(); };
+  window.addEventListener("keydown", onKey, true);
+  setTimeout(() => document.addEventListener("mousedown", onOut, true));
+  $(".bp-x", pop).onclick = close;
 }
 
 function useTemplate(id) {
