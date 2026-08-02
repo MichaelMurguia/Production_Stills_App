@@ -1610,3 +1610,10 @@ details.meta pre {
 .take.shown .take-cap { color: var(--ok); }
 .take.approved .take-cap { color: var(--ok); }
 .take.rejected .take-cap { color: var(--bad); }
+
+/* The render dossier is ONE panel (PANEL_CARD_PLAN P8): rules between
+   sections, and the prompt gets the height the rail already occupied. */
+.side-dossier { padding: 0; }
+.side-sec { padding: 12px 14px; }
+.side-sec + .side-sec { border-top: 1px solid var(--line); }
+.side-prompt-tall { max-height: 340px; }

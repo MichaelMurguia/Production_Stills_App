@@ -5344,26 +5344,42 @@ async function renderBoardPanels(specId) {
       ? `RENDER PROMPT (user-edited):\n${c.render_prompt}` : (c.prompt || "");
     const rejectedTakes = panelCands.filter(t =>
       t.status === "REJECTED" && (t.status_reason || "").trim());
+    // P8: one bordered panel with rules between sections — the rail was
+    // ~60% empty while the prompt was a five-line peephole.
+    const shapeClass = Math.max(c.width || 0, c.height || 0) >= 3200 ? "4K"
+      : Math.max(c.width || 0, c.height || 0) >= 1920 ? "2K" : "1K";
+    const allRefs = c.references || [];
+    const AUTO_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"];
+    const subjRefs = allRefs.filter(r => !AUTO_HEADS.includes(roleHead(r.role)));
+    const styleCount = allRefs.length - subjRefs.length;
     const el = document.createElement("aside");
     el.className = "board-side";
     el.innerHTML = `
-      <div class="rail-block">
+      <div class="rail-block side-dossier">
+      <div class="side-sec">
         <div class="rail-label">THIS RENDER</div>
         <div class="fact"><span>MODEL</span><b>${esc(c.model || "—")}</b></div>
-        <div class="fact"><span>SIZE</span><b>${c.width} × ${c.height}</b></div>
+        <div class="fact"><span>RENDERED</span><b>${c.width} × ${c.height}</b></div>
+        <div class="fact"><span>SHAPE</span><b>${esc(c.aspect_ratio || "—")} · ${shapeClass}</b></div>
         <div class="fact"><span>RUN</span><b>${esc((c.created_at || "").slice(0, 16).replace("T", " "))}</b></div>
         <div class="fact"><span>SPEC HASH</span><b>${esc((c.spec_hash || "").slice(0, 8) || "—")}</b></div>
+        <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NATIVE RENDER · NEVER UPSCALED</div>
       </div>
-      <div class="rail-block">
-        <div class="rail-label">ANCHORED TO · ${(c.references || []).length}</div>
-        ${(c.references || []).map(r => `
+      <div class="side-sec">
+        <div class="rail-label">ANCHORED TO · ${allRefs.length}</div>
+        ${subjRefs.length === 0 ? `
+          <div class="nomatch" style="margin:6px 0 2px">
+            <b class="mono">NO SUBJECT REFERENCES</b>
+            <p>This take was painted from the written spec${styleCount ? ` and the ${styleCount} style plate${styleCount === 1 ? "" : "s"} only` : " alone"}.</p>
+          </div>` : ""}
+        ${allRefs.map(r => `
           <div class="anchor-row" title="${esc(r.role)}">
             <span class="rail-thumb"><img src="/api/references/${esc(r.id)}/image?thumb=true" loading="lazy" alt="" onerror="this.remove()"></span>
             <span class="anchor-meta"><b>${esc(roleHead(r.role))}</b><i>${esc(r.id)}</i></span>
-          </div>`).join("") || '<span class="mini">no references attached to this render</span>'}
+          </div>`).join("")}
       </div>
       ${promptText ? `
-      <div class="rail-block">
+      <div class="side-sec">
         <div class="rail-label">COMPILED PROMPT
           <span style="display:inline-flex;gap:10px">
             <button class="block-act" data-f="copy" style="font-size:11px;padding:0" title="Copy the full prompt to the clipboard">Copy</button>
@@ -5371,21 +5387,20 @@ async function renderBoardPanels(specId) {
             <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button>
           </span>
         </div>
-        <pre class="side-prompt" data-f="ppre">${esc(promptText.slice(0, 340))}${promptText.length > 340 ? "…" : ""}</pre>
+        <pre class="side-prompt side-prompt-tall" data-f="ppre">${esc(promptText)}</pre>
       </div>` : ""}
       ${rejectedTakes.length ? `
-      <div class="rail-block">
+      <div class="side-sec">
         <div class="rail-label bad">CARRIED REJECTIONS · ${rejectedTakes.length}</div>
         ${rejectedTakes.map(t => `<div class="carried">${esc(t.candidate_id)} — ${esc(t.status_reason.toUpperCase())}</div>`).join("")}
-      </div>` : ""}`;
+      </div>` : ""}
+      </div>`;
     const fullBtn = $("[data-f=full]", el);
     if (fullBtn) {
-      let expanded = false;
       fullBtn.onclick = () => {
-        expanded = !expanded;
-        $("[data-f=ppre]", el).textContent = expanded
-          ? promptText : promptText.slice(0, 340) + (promptText.length > 340 ? "…" : "");
-        fullBtn.textContent = expanded ? "Less" : "Full";
+        const pre = $("[data-f=ppre]", el);
+        const capped = pre.classList.toggle("side-prompt-tall");
+        fullBtn.textContent = capped ? "Full" : "Less";
       };
       $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
       $("[data-f=detach]", el).onclick = () => promptOverlay(
