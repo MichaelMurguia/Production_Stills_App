@@ -883,20 +883,30 @@ async function fillProviderSelect(sel) {
   if (!sel) return false;
   let s = {};
   try { s = await api("/api/settings"); } catch { /* stated below */ }
-  const opts = [
-    ...(s.gemini_api_key_set ? [["gemini", "Gemini (research pass)"]] : []),
-    ...(s.openai_api_key_set ? [["openai", "OpenAI GPT-5.6"]] : []),
-  ];
-  if (!opts.length) {
-    sel.innerHTML = `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS</option>`;
+  const eng = s.engines || {};
+  // A key that FAILED its test is never selectable (user ruling
+  // 2026-08-02) — it lists disabled, stating why, so the fix is obvious.
+  const DEFS = [["gemini", "Gemini (research pass)"], ["openai", "OpenAI GPT-5.6"]];
+  const usable = DEFS.filter(([k]) =>
+    eng[k]?.configured && eng[k]?.last_test?.ok !== false);
+  const failed = DEFS.filter(([k]) =>
+    eng[k]?.configured && eng[k]?.last_test?.ok === false);
+  if (!usable.length) {
+    sel.innerHTML = failed.length
+      ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
+      : `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS</option>`;
     sel.disabled = true;
-    sel.title = "Every model action needs a Gemini or OpenAI key — add one in Settings.";
+    sel.title = failed.length
+      ? "Every configured key failed its last test — retest or replace it in Settings."
+      : "Every model action needs a Gemini or OpenAI key — add one in Settings.";
     return false;
   }
   const prev = sel.value;
   sel.disabled = false;
-  sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
-  if (opts.some(([v]) => v === prev)) sel.value = prev;
+  sel.innerHTML = usable.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")
+    + failed.map(([v, l]) =>
+      `<option value="${v}" disabled>${esc(l)} — KEY FAILED ITS TEST</option>`).join("");
+  if (usable.some(([v]) => v === prev)) sel.value = prev;
   return true;
 }
 
@@ -1785,11 +1795,23 @@ async function renderWizard() {
     // Only engines with a configured key compete (user ruling
     // 2026-08-01). With none, the three slots stay — nameless — and
     // state how they earn a name.
-    const avail = [
-      ...(s.gemini_api_key_set ? ["gemini"] : []),
-      ...(s.openai_api_key_set ? ["openai", "openai-chat"] : []),
-    ];
-    if (!avail.length) {
+    const eng = s.engines || {};
+    const keyFor = p => p === "gemini" ? s.gemini_api_key_set : s.openai_api_key_set;
+    const failedP = p => keyFor(p) && eng[p]?.last_test?.ok === false;
+    const avail = ["gemini", "openai", "openai-chat"]
+      .filter(p => keyFor(p) && !failedP(p));
+    const failedList = ["gemini", "openai", "openai-chat"].filter(failedP);
+    for (const p of failedList) {
+      const smp = samples.find(x => x.provider === p);
+      const col = document.createElement("div");
+      col.className = "wiz-col";
+      col.innerHTML = `
+        <div class="wiz-col-head"><span class="f-label">${esc(smp?.label || p)}</span></div>
+        <p class="mini" style="color:var(--bad)">KEY FAILED ITS TEST &mdash;
+        retest or replace it in Settings before this engine competes.</p>`;
+      host.append(col);
+    }
+    if (!avail.length && !failedList.length) {
       host.innerHTML = [1, 2, 3].map(() => `
         <div class="wiz-col">
           <div class="wiz-col-head"><span class="f-label">&mdash;</span></div>
@@ -1846,11 +1868,23 @@ async function renderWizard() {
     const btn = e.target;
     btn.disabled = true;
     const s = await api("/api/settings");
-    const avail = [
-      ...(s.gemini_api_key_set ? ["gemini"] : []),
-      ...(s.openai_api_key_set ? ["openai", "openai-chat"] : []),
-    ];
-    if (!avail.length) {
+    const eng = s.engines || {};
+    const keyFor = p => p === "gemini" ? s.gemini_api_key_set : s.openai_api_key_set;
+    const failedP = p => keyFor(p) && eng[p]?.last_test?.ok === false;
+    const avail = ["gemini", "openai", "openai-chat"]
+      .filter(p => keyFor(p) && !failedP(p));
+    const failedList = ["gemini", "openai", "openai-chat"].filter(failedP);
+    for (const p of failedList) {
+      const smp = samples.find(x => x.provider === p);
+      const col = document.createElement("div");
+      col.className = "wiz-col";
+      col.innerHTML = `
+        <div class="wiz-col-head"><span class="f-label">${esc(smp?.label || p)}</span></div>
+        <p class="mini" style="color:var(--bad)">KEY FAILED ITS TEST &mdash;
+        retest or replace it in Settings before this engine competes.</p>`;
+      host.append(col);
+    }
+    if (!avail.length && !failedList.length) {
       btn.disabled = false;
       return toast("Save at least one API key first.", true);
     }
@@ -4236,6 +4270,11 @@ async function renderBoardPanels(specId) {
     api(`/api/specs/${specId}/slot-map`).catch(() => null),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
+  const prefKeyFailed =
+    appSettings.engines?.[prefProvider]?.last_test?.ok === false;
+  const genGateTitle = prefKeyFailed
+    ? "The default engine's key failed its last test — retest it in Settings or pick another default in the bake-off."
+    : "";
   const isAutoStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"]
     .includes(roleHead(r.role));
   const styleAnchors = refs.filter(r => r.status === "APPROVED" && isAutoStyle(r));
@@ -4361,7 +4400,7 @@ async function renderBoardPanels(specId) {
         <div class="gen-actions">
           <button class="ghost" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
           <button class="ghost" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
-          <button class="ghost gen-go" data-f="generate" title="Render the next take with the model, size, aspect, and references above — deliberately not amber; Approve panel keeps that budget">Generate candidate</button>
+          <button class="ghost gen-go" data-f="generate" ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : "Render the next take with the model, size, aspect, and references above — deliberately not amber; Approve panel keeps that budget"}">Generate candidate</button>
         </div>
       </div>
       <div data-f="busy"></div>
@@ -4492,7 +4531,7 @@ async function renderBoardPanels(specId) {
           archived with the candidate. Works with any model in the dropdown.</p>
           <textarea data-f="prose-text" style="width:100%;min-height:240px;font-family:Consolas,monospace;font-size:12px"></textarea>
           <div class="row" style="margin-top:8px">
-            <button class="ghost gen-go" data-f="generate-prose">Generate from this prose</button>
+            <button class="ghost gen-go" data-f="generate-prose" ${prefKeyFailed ? "disabled" : ""} ${prefKeyFailed ? `title="${genGateTitle}"` : ""}>Generate from this prose</button>
             <button class="ghost" data-f="close-prose">Close</button>
           </div>`;
         report.append(box);
