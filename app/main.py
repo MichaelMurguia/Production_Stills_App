@@ -1284,11 +1284,49 @@ async def api_wizard_analyze(body: dict) -> dict:
     return analysis
 
 
+_INTERVIEW_FIELDS = ("touchstones", "medium", "palette", "never", "notes")
+
+
+def _interview_path():
+    return paths.DATA / "interview.json"
+
+
+@app.get("/api/wizard/interview")
+def api_get_interview() -> dict:
+    """The look interview, persisted per production (user ruling
+    2026-08-01: a refresh must never lose it). Lives in data/ so backups
+    carry it."""
+    p = _interview_path()
+    if not p.exists():
+        return {k: "" for k in _INTERVIEW_FIELDS}
+    try:
+        saved = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {k: "" for k in _INTERVIEW_FIELDS}
+    return {k: str(saved.get(k, "")) for k in _INTERVIEW_FIELDS}
+
+
+@app.put("/api/wizard/interview")
+async def api_save_interview(body: dict) -> dict:
+    fields = {k: str(body.get(k, "")).strip() for k in _INTERVIEW_FIELDS}
+    paths.ensure_dirs()
+    _interview_path().write_text(json.dumps(fields, indent=2) + "\n",
+                                 encoding="utf-8")
+    return fields
+
+
 @app.post("/api/wizard/draft-bible")
 async def api_wizard_draft_bible(body: dict) -> dict:
+    answers = body.get("answers", {})
+    # The saved interview backstops the payload — a draft from any client
+    # state still honors what the director recorded.
+    saved = api_get_interview()
+    for k in _INTERVIEW_FIELDS:
+        if not str(answers.get(k, "")).strip() and saved.get(k):
+            answers[k] = saved[k]
     try:
         return await run_in_threadpool(
-            wizard.draft_bible, body.get("answers", {}), body.get("provider", "gemini"))
+            wizard.draft_bible, answers, body.get("provider", "gemini"))
     except autofill.AutofillError as e:
         raise HTTPException(422, str(e))
     except generate.GenerationError as e:

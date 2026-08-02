@@ -739,7 +739,7 @@ function gateChain(state) {
       sub: "Reads the draft for design languages, environments, locations and cast" },
     { label: "ADD STYLE REFERENCE", verb: "Add style reference", done: (pd.style_anchors || 0) > 0, stage: "wizard",
       sub: "Board layout, cinematography and rendering plates — the three anchors" },
-    { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview", done: !!pd.bible_saved, stage: "wizard",
+    { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview", done: (pd.interview_answered || 0) > 0 || !!pd.bible_saved, stage: "wizard",
       sub: "Touchstones, medium, palette, and what it must never look like" },
     { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
       sub: "Everything above becomes the document every render obeys" },
@@ -2628,8 +2628,32 @@ async function renderWizard() {
     } catch { /* badges are commentary — never block the wizard */ }
   };
   wizardStepBadges();
-  for (const id of ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"])
-    $(id)?.addEventListener("change", () => wizardStepBadges());
+
+  // The look interview persists per production (user ruling 2026-08-01:
+  // a refresh must never lose it): fields load from the server and every
+  // change saves back — its answers then bind every bible draft.
+  const IV = { "#wiz-touchstones": "touchstones", "#wiz-medium": "medium",
+               "#wiz-palette": "palette", "#wiz-never": "never",
+               "#wiz-notes": "notes" };
+  try {
+    const saved = await api("/api/wizard/interview");
+    for (const [sel, key] of Object.entries(IV))
+      if ($(sel) && !$(sel).value) $(sel).value = saved[key] || "";
+    wizardStepBadges();
+  } catch { /* first run — nothing saved yet */ }
+  const saveInterview = async () => {
+    try {
+      await api("/api/wizard/interview", { method: "PUT",
+        json: Object.fromEntries(Object.entries(IV)
+          .map(([sel, key]) => [key, $(sel)?.value.trim() || ""])) });
+      $("#wiz-iv-state").textContent =
+        "SAVED — THESE ANSWERS BIND EVERY BIBLE DRAFT";
+    } catch (err) {
+      $("#wiz-iv-state").textContent = `NOT SAVED — ${err.message}`;
+    }
+  };
+  for (const id of Object.keys(IV))
+    $(id)?.addEventListener("change", () => { saveInterview(); wizardStepBadges(); });
 
   await loadBibleEditor();
   $("#style-save").onclick = async () => {

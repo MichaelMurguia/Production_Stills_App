@@ -153,6 +153,19 @@ def blocking() -> list[dict]:
     return out
 
 
+def _interview_answered() -> int:
+    """How many look-interview fields hold answers — the gate chain's
+    interview step tracks real state now that the interview persists."""
+    p = paths.DATA / "interview.json"
+    if not p.exists():
+        return 0
+    try:
+        saved = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return 0
+    return sum(1 for v in saved.values() if str(v).strip())
+
+
 # --------------------------------------------------------------- stage summary
 
 def stage_summary(blockers: list[dict] | None = None) -> dict:
@@ -196,6 +209,7 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
             # The Script Scene Scan has run (LOCKED_STAGE_PLAN L3) — feeds
             # the gate chain so its step drops off when done.
             "scan_done": paths.WIZARD_ANALYSIS.exists(),
+            "interview_answered": _interview_answered(),
             "style_anchors": anchors,
             "subjects": len(store.list_subjects()),
             "lessons": len(generate.load_lessons()),

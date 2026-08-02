@@ -120,6 +120,28 @@ class ApiTests(unittest.TestCase):
                                                  "subject": "A test"})
         self.assertEqual(r.status_code, 200, r.text)
 
+    def test_interview_persists_per_production(self):
+        # User ruling 2026-08-01: a refresh must never lose the interview.
+        r = self.client.get("/api/wizard/interview").json()
+        self.assertEqual(r["touchstones"], "")
+        put = self.client.put("/api/wizard/interview", json={
+            "touchstones": "McQuarrie production paintings",
+            "palette": "warm dusk", "never": "glossy key art"})
+        self.assertEqual(put.status_code, 200)
+        r = self.client.get("/api/wizard/interview").json()
+        self.assertEqual(r["touchstones"], "McQuarrie production paintings")
+        self.assertEqual(r["medium"], "")
+        # The gate chain sees it as real state.
+        pd = self.client.get("/api/state").json()["stage_summary"]["production_design"]
+        self.assertEqual(pd["interview_answered"], 3)
+        # And it survives inside a backup (it lives in data/).
+        zip_r = self.client.get("/api/projects/backup?slug=")
+        self.assertEqual(zip_r.status_code, 200)
+        import io as _io
+        import zipfile as _zf
+        names = _zf.ZipFile(_io.BytesIO(zip_r.content)).namelist()
+        self.assertIn("data/interview.json", names)
+
     def test_no_template_art_direction(self):
         # Director's ruling 2026-08-01: with no bible, the app never
         # substitutes another film's art direction — the style text is

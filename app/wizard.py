@@ -169,7 +169,11 @@ def _bible_instructions(answers: dict) -> str:
 for this screenplay (attached). The director has answered an interview; the bible must
 reflect their answers and the screenplay's evidence — never your own inventions.
 
-DIRECTOR'S ANSWERS
+DIRECTOR'S ANSWERS — BINDING. These are decisions, not suggestions: build
+the Overall Visual Identity, Rendering Language and Lighting sections
+AROUND them, carry their concrete vocabulary into the bible verbatim, and
+translate the never-list item for item into the Avoid list. Where an
+answer conflicts with your own instinct, the answer wins.
 - Visual touchstones (films/artists/eras it should feel like): {answers.get('touchstones') or 'not specified — propose from the screenplay, mark PROPOSED'}
 - Medium and finish: {answers.get('medium') or 'not specified — propose, mark PROPOSED'}
 - Palette and light bias: {answers.get('palette') or 'not specified — propose, mark PROPOSED'}
