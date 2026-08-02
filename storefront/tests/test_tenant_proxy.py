@@ -79,6 +79,14 @@ class TenantProxyTests(unittest.TestCase):
         r = self.client(f"never-claimed.{BASE}").get("/")
         self.assertEqual(r.status_code, 404)
         self.assertIn("NO STUDIO AT THIS ADDRESS", r.text)
+        # T1: full store chrome, the address as the H1, and a prefilled
+        # claim path — the one failure page that sells.
+        self.assertIn(f"never-claimed.{BASE}", r.text)
+        self.assertIn("claim=never-claimed", r.text)
+        self.assertIn("The pipeline", r.text)
+        self.assertIn("LOOKING FOR A STUDIO YOU WERE INVITED TO?", r.text)
+        # Served on a tenant host: every asset must name the store host.
+        self.assertNotIn('href="/static', r.text)
 
     def test_inactive_or_unpaid_studios_do_not_serve(self):
         _mk_workspace("gone-studio", ws_status="REVOKED")

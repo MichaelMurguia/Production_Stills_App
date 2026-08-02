@@ -38,7 +38,7 @@
     <form method="post" action="/studio/name" class="recover-form studio-name-form" style="margin-top:12px">
       <input type="hidden" name="workspace_id" value="{{ p.workspace.id }}">
       <input type="text" name="name" placeholder="name your studio…"
-             value="{{ p.workspace.subdomain }}" title="Type anything — the address form appears below as you type.">
+             value="{{ claim or p.workspace.subdomain }}" title="Type anything — the address form appears below as you type.">
       <button class="btn btn-secondary" type="submit">{{ "Rename" if p.workspace.name_claimed else "Claim name" }}</button>
     </form>
     <p class="name-preview mono" aria-live="polite"></p>

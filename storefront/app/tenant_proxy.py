@@ -17,7 +17,10 @@ and never to a branded address (which would loop back here).
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
+import jinja2
 from sqlalchemy import select
 
 from . import db, provisioner, settings
@@ -28,24 +31,35 @@ _HOP = {b"connection", b"keep-alive", b"proxy-authenticate",
         b"proxy-authorization", b"te", b"trailers", b"transfer-encoding",
         b"upgrade", b"host"}
 
+# The router's own pages (STORE_ROUTER_PLAN 2026-08-01) render outside
+# FastAPI, so they get their own tiny Jinja env over the same templates.
+# They serve on TENANT hostnames — templates must link every asset and
+# href absolutely to the store host, never relatively.
+_jinja = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(Path(__file__).resolve().parent / "templates"),
+    autoescape=True)
+
 _PAGE = ("<!doctype html><html><body style=\"background:#0b0c0e;"
          "color:#9aa1a8;font-family:'Courier New',monospace;display:flex;"
          "align-items:center;justify-content:center;min-height:100vh;"
          "letter-spacing:.08em;font-size:13px\"><p>%s</p></body></html>")
-_NOT_FOUND = (_PAGE % ("NO STUDIO AT THIS ADDRESS &mdash; CLAIM A NAME AT "
-                       "<a href='https://www.screenboardstudio.com/account' "
-                       "style='color:#e0a33f'>SCREENBOARDSTUDIO.COM</a>"
-                       )).encode()
 _BAD_GATEWAY = (_PAGE % ("YOUR STUDIO DID NOT ANSWER &mdash; IT MAY BE "
                          "REDEPLOYING. TRY AGAIN IN A MINUTE."
                          )).encode()
 
 
-async def _page(send, status: int, body: bytes) -> None:
+async def _page(send, status: int, body: bytes,
+                extra_headers: list | None = None) -> None:
     await send({"type": "http.response.start", "status": status,
                 "headers": [(b"content-type", b"text/html; charset=utf-8"),
-                            (b"content-length", str(len(body)).encode())]})
+                            (b"content-length", str(len(body)).encode())]
+                + (extra_headers or [])})
     await send({"type": "http.response.body", "body": body})
+
+
+def _render(template: str, **ctx) -> bytes:
+    return _jinja.get_template(template).render(
+        base_url=settings.BASE_URL.rstrip("/"), **ctx).encode()
 
 
 class TenantProxy:
@@ -107,7 +121,11 @@ class TenantProxy:
             await self.app(scope, receive, send)
             return
         if not target:
-            await _page(send, 404, _NOT_FOUND)
+            # The one failure page that sells (T1): a stranger, a typo, or
+            # someone guessing — full store chrome, the address as the H1.
+            sub = host.split(":", 1)[0].lower().split(".", 1)[0]
+            await _page(send, 404, _render(
+                "router_unclaimed.html", host=host.split(":", 1)[0], sub=sub))
             return
         await self._forward(scope, receive, send, target, host)
 

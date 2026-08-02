@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No studio at this address — Screenboard Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+{# Served on a tenant hostname — every asset and link must name the store
+   host absolutely, or it routes straight back into the router. #}
+<link rel="stylesheet" href="{{ base_url }}/static/store.css">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand-link" href="{{ base_url }}/" title="Screenboard Studio — home">
+      <p class="kicker">PRODUCTION TOOLING</p>
+      <p class="wordmark">Screenboard Studio</p>
+    </a>
+    <div class="head-side">
+      <nav class="head-links-nav" aria-label="Site">
+        <a href="{{ base_url }}/pipeline">The pipeline</a>
+        <a href="{{ base_url }}/#pricing">Pricing</a>
+      </nav>
+      <a class="btn btn-secondary head-signin" href="{{ base_url }}/signin">Sign in</a>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+<section class="order router-page">
+  <p class="price-kind">NO STUDIO AT THIS ADDRESS</p>
+  <h1 class="router-addr mono">{{ host }}</h1>
+  <p class="hero-sub">No production has claimed this name. Every Screenboard
+  cloud studio lives at an address like this one &mdash; a private workspace
+  where a film's art department keeps its screenplay, its references and
+  its boards.</p>
+  <div class="btn-row" style="margin-top:22px">
+    <a class="btn btn-primary" href="{{ base_url }}/account?claim={{ sub }}">Claim this name</a>
+    <a class="btn btn-secondary" href="{{ base_url }}/pipeline">See what Screenboard does</a>
+  </div>
+  <div class="router-rule"></div>
+  <p class="price-kind">LOOKING FOR A STUDIO YOU WERE INVITED TO?</p>
+  <p class="hero-sub" style="margin-top:8px">Check the spelling with whoever
+  sent it &mdash; studio names are exact, and an unclaimed name looks the
+  same as a mistyped one.</p>
+</section>
+</main>
+<footer class="site-foot">
+  <div class="wrap foot-row">
+    <p class="foot-meta">SCREENBOARD STUDIO &middot; canon-locked art direction for film</p>
+    <p class="foot-links"><a href="{{ base_url }}/recover">Lost license</a> &middot;
+      <a href="{{ base_url }}/terms">Terms</a> &middot; <a href="{{ base_url }}/privacy">Privacy</a></p>
+  </div>
+</footer>
+</body>
+</html>

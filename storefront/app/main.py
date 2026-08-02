@@ -412,7 +412,11 @@ def name_studio(request: Request, background: BackgroundTasks,
 
 
 @app.get("/account")
-def account_page(request: Request, name_error: str = "", named: int = 0):
+def account_page(request: Request, name_error: str = "", named: int = 0,
+                 claim: str = ""):
+    # ?claim=<name> arrives from the router's unclaimed-address page (T1):
+    # it prefills the naming form so "Claim this name" lands ready to go.
+    claim = claim.strip().lower()[:63]
     email = request.state.account_email
     if not email:
         return templates.TemplateResponse(request, "account.html", {
@@ -435,7 +439,7 @@ def account_page(request: Request, name_error: str = "", named: int = 0):
     return templates.TemplateResponse(request, "account.html", {
         "purchase": None, "missed": False, "purchases": purchases,
         "email": email, "tenant_base": settings.TENANT_DOMAIN_BASE,
-        "name_error": name_error[:120], "named": named,
+        "name_error": name_error[:120], "named": named, "claim": claim,
         "versions": [v for v, _ in available_versions()],
         "reserved_names": sorted(provisioner.RESERVED_SUBDOMAINS)})
 
