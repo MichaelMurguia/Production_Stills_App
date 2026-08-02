@@ -1407,3 +1407,16 @@ details.meta pre {
   font-size: 9px; letter-spacing: .1em; color: var(--ink-faint);
   border: 1px dashed var(--line); padding: 2px 8px; white-space: nowrap;
 }
+
+/* Locked stage cells (LOCKED_STAGE_PLAN L1): a stage whose gate is unmet
+   is inert — a condition, not a destination. #17191c is the sanctioned
+   below---bg2 ground from mock 12b; labels stay --ink-faint (the band is
+   the product's map — names must stay readable). */
+#nav button.s-locked { background: #17191c; cursor: not-allowed; }
+#nav button.s-locked:hover { background: #17191c; }
+.lock-chip {
+  display: none; font-family: var(--mono); font-size: 8.5px;
+  letter-spacing: .1em; border: 1px solid var(--hold); color: var(--hold);
+  padding: 0 5px; margin-left: 8px; vertical-align: 1px;
+}
+#nav button.s-locked .lock-chip { display: inline-block; }

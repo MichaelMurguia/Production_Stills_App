@@ -704,10 +704,19 @@ const views = { status: renderStatus, screenplay: renderScreenplay, wizard: rend
 const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
 let activeView = "status";
 
+// A locked stage is a condition, not a destination (LOCKED_STAGE_PLAN
+// L1): its cell is inert — no navigation, no view change, no history.
+// Clicking it explains in place (L2). Membership is recomputed by
+// updateBand on every navigation.
+let lockedStages = new Set();
+let _bandState = null;  // last /api/state — feeds the popover's gate chain
+
 for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
-    if (btn) showView(btn.dataset.view);
+    if (!btn) return;
+    if (lockedStages.has(btn.dataset.view)) return;  // inert (L2 explains)
+    showView(btn.dataset.view);
   });
 }
 
@@ -774,16 +783,26 @@ async function updateBand() {
     .map(b => b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs"));
   const frontier = STAGE_ORDER.find(s => !complete[s]) || "assembly";
 
+  // Everything past the frontier has an unmet gate and is inert (L1) —
+  // 04 and 05 lock just like 03; the frontier itself is where you work.
+  _bandState = state;
+  const frontierIdx = STAGE_ORDER.indexOf(frontier);
+  lockedStages = new Set(STAGE_ORDER.filter((s, i) => i > frontierIdx));
+
   for (const stage of STAGE_ORDER) {
     const btn = $(`#nav button[data-view="${stage}"]`);
     if (!btn) continue;
     $(".stage-sub", btn).textContent = subs[stage] || "";
     const isHere = activeView === stage;
     const isCurrent = isHere || (!STAGE_ORDER.includes(activeView) && stage === frontier && !isHere);
+    const isLocked = lockedStages.has(stage);
     btn.classList.toggle("here", isHere);
     btn.classList.toggle("s-cur", isCurrent);
     btn.classList.toggle("s-bad", !isCurrent && blocked.has(stage));
     btn.classList.toggle("s-ok", !isCurrent && !blocked.has(stage) && complete[stage]);
+    btn.classList.toggle("s-locked", isLocked);
+    // Focusable stays true — keyboard users get the same explanation.
+    btn.setAttribute("aria-disabled", isLocked ? "true" : "false");
   }
 }
 
