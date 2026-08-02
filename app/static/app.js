@@ -4553,12 +4553,13 @@ function removePendingTake(specId, panelId, id) {
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap] = await Promise.all([
+  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
     api("/api/settings"),
     api(`/api/specs/${specId}/slot-map`).catch(() => null),
+    api(`/api/specs/${specId}/boards`).catch(() => []),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
   const prefKeyFailed =
@@ -5302,23 +5303,32 @@ async function renderBoardPanels(specId) {
       <div class="rail-state"><i></i>LOCKED · CAN GENERATE</div>
     </div>
     <div class="rail-block">
-      <div class="rail-label">PANELS <span>${approvedCount}/${pids.length}</span></div>
+      <div class="rail-label">PANELS <span>· ${approvedCount} APPROVED</span></div>
       ${spec.panels.map(p => `
         <button class="rail-panel${roomSel.panel === p.id ? " sel" : ""}" data-pid="${esc(p.id)}"
                 title="${esc(p.title || p.purpose || "")}">
           <span class="rail-thumb${latestThumb(p.id) ? "" : " empty hatch-fine"}">${latestThumb(p.id)}</span>
-          <span class="rail-pid">${esc(p.id)}</span>
+          <span class="rail-meta"><span class="rail-pid">${esc(p.id)}</span>
+            <span class="rail-title">${esc(p.title || p.purpose || "")}</span></span>
           ${railMark(p.id)}
         </button>`).join("")}
+      <div class="rail-legend mono">
+        <span><i class="dot ok"></i>APPROVED</span>
+        <span><i class="dot warn"></i>TAKES, NONE APPROVED</span>
+        <span><i class="dot none"></i>NO TAKES</span>
+      </div>
     </div>
     <div class="rail-block rail-tail">
-      <div class="rail-label">DERIVED</div>
-      <button class="rail-panel${roomSel.panel === "__derived" ? " sel" : ""}" data-pid="__derived"
+      <div class="rail-label">DERIVED PANELS</div>
+      <button class="rail-panel rail-derived${roomSel.panel === "__derived" ? " sel" : ""}" data-pid="__derived"
               title="Palette and materials built FROM this board's approved panels">
-        <span class="rail-pid">PALETTE · MATERIALS</span>
-        <span class="rail-mark ${derivedCands.length ? "okdot" : "none"}">${derivedCands.length ? "" : "—"}</span>
+        <span class="drow"><span>Palette</span><span class="mono">${derivedCands.some(c => c.panel_id === "PALETTE") ? "SAMPLED" : "NOT SAMPLED"}</span></span>
+        <span class="drow"><span>Materials</span><span class="mono">${derivedCands.some(c => c.panel_id === "MATERIALS") ? "DERIVED" : "NOT DERIVED"}</span></span>
       </button>
-      <div class="rail-note">ASSEMBLY LIVES IN <button class="block-act" data-f="to-assembly" style="font-size:11px;font-family:var(--mono)">05 BOARDS</button></div>
+      <div class="rail-note">Both are measured from this sheet's approved panels at assembly.</div>
+      <div class="rail-note">${boards.length
+        ? `This sheet is assembled in <button class="text-act" data-f="to-assembly">${boards.length} board${boards.length === 1 ? "" : "s"}</button>.`
+        : `Not assembled yet — <button class="text-act" data-f="to-assembly">05 Boards</button> is where that happens.`}</div>
     </div>`;
   $("[data-f=to-assembly]", rail).onclick = () => showView("assembly");
   $$(".rail-panel", rail).forEach(btn => {
