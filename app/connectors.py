@@ -374,8 +374,213 @@ def openrouter_generate(key: str, provider_model_id: str, prompt: str,
     return ""
 
 
-def fal_sync(key: str, http=None) -> list[dict]:  # replaced in N4
-    raise ConnectorError("fal connector not built yet")
+# ---------------------------------------------------------------- fal (N4)
+# Catalog: GET https://api.fal.ai/v1/models?category=... (public, cursor
+# paginated). Generation: the async queue at queue.fal.run — submit, poll,
+# fetch. fal publishes no prices; price_per_image stays None, never made up.
+
+FAL_API = "https://api.fal.ai/v1"
+FAL_QUEUE = "https://queue.fal.run"
+
+# Families whose parameter shape the generator maps today. Anything else
+# is listed but marked unsupported — a stated gate, not a guess (C5).
+FAL_SUPPORTED = ("flux", "recraft", "ideogram", "qwen", "stable-diffusion",
+                 "sd3", "nano-banana", "gemini", "gpt-image", "seedream",
+                 "bytedance", "imagen", "sana", "hidream")
+
+FAL_FAMILY_DEV = {
+    "flux": "Black Forest Labs", "recraft": "Recraft", "ideogram": "Ideogram",
+    "qwen": "Qwen", "stable-diffusion": "Stability", "sd3": "Stability",
+    "nano-banana": "Google", "gemini": "Google", "imagen": "Google",
+    "gpt-image": "OpenAI", "seedream": "ByteDance", "bytedance": "ByteDance",
+    "soul": "Higgsfield", "higgsfield": "Higgsfield", "sana": "NVIDIA",
+    "hidream": "HiDream",
+}
+
+
+def _fal_headers(key: str) -> dict:
+    return {"Authorization": f"Key {key}"} if key else {}
+
+
+def _fal_family(endpoint_id: str) -> str:
+    parts = endpoint_id.split("/")
+    body = "/".join(parts[1:]) if len(parts) > 1 else endpoint_id
+    for fam in sorted(FAL_FAMILY_DEV, key=len, reverse=True):
+        if fam in body:
+            return fam
+    return ""
+
+
+def _fal_normalize(m: dict, category: str) -> dict:
+    eid = m.get("endpoint_id") or m.get("id") or ""
+    meta = m.get("metadata") or {}
+    cat = (meta.get("category") or m.get("category") or category or "").lower()
+    refs = cat == "image-to-image"
+    fam = _fal_family(eid)
+    status = (m.get("status") or meta.get("status") or "active").lower()
+    return {
+        "id": f"fal:{eid}",
+        "connector": "fal",
+        "provider_model_id": eid,
+        "label": m.get("title") or meta.get("title") or eid.split("/", 1)[-1],
+        "developer": FAL_FAMILY_DEV.get(fam, "fal community"),
+        "task": "image-to-image" if refs else "text-to-image",
+        "refs": refs,
+        "max_refs": APP_MAX_REFS if refs else 0,
+        "max_px": None,  # fal's catalog states no ceiling
+        "aspect_enum": None,
+        "price_per_image": None,  # not published — never invented
+        "status": "active" if status == "active" else "deprecated",
+        "supported": any(f in eid for f in FAL_SUPPORTED),
+    }
+
+
+def _fal_page(url: str, key: str, http) -> tuple[list[dict], str | None]:
+    out = http(url, headers=_fal_headers(key))
+    items = out.get("models") or out.get("data") or out.get("items") or []
+    cursor = out.get("next_cursor") if out.get("has_more") else None
+    return items, cursor
+
+
+def fal_sync(key: str, http=None) -> list[dict]:
+    http = http or _http_json
+    # A wrong key must read REJECTED, not sync happily off the public
+    # catalog — probe the authenticated queue surface first.
+    try:
+        http(f"{FAL_QUEUE}/fal-ai/flux-2/dev/requests/00000000-0000-0000-0000-000000000000/status",
+             headers=_fal_headers(key))
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise
+        # 404/422 = authenticated, request id simply doesn't exist. Good.
+    records, seen = [], set()
+    for category in ("text-to-image", "image-to-image"):
+        url = f"{FAL_API}/models?category={category}&limit=100"
+        for _ in range(12):  # pagination backstop
+            items, cursor = _fal_page(url, key, http)
+            for m in items:
+                r = _fal_normalize(m, category)
+                if r["provider_model_id"] and r["id"] not in seen:
+                    seen.add(r["id"])
+                    records.append(r)
+            if not cursor:
+                break
+            url = (f"{FAL_API}/models?category={category}&limit=100"
+                   f"&cursor={urllib.parse.quote(cursor)}")
+    return records
+
+
+def fal_search(key: str, query: str, http=None) -> list[dict]:
+    """Server-side reach for the picker (C7): fal's catalog takes a
+    free-text query, so a miss on the local cache can go to the source."""
+    http = http or _http_json
+    out, seen = [], set()
+    for category in ("text-to-image", "image-to-image"):
+        url = (f"{FAL_API}/models?category={category}&limit=50"
+               f"&search={urllib.parse.quote(query)}")
+        items, _ = _fal_page(url, key, http)
+        for m in items:
+            r = _fal_normalize(m, category)
+            if r["provider_model_id"] and r["id"] not in seen:
+                seen.add(r["id"])
+                out.append(r)
+    return out
+
+
+def adopt_record(rec: dict) -> None:
+    """A server-side search hit the local cache has never seen: fold it
+    into its connector's catalog so it can be enabled and rendered."""
+    cid = rec.get("connector")
+    if cid not in REGISTRY:
+        raise ConnectorError(f"unknown connector on record: {cid}")
+    state = load_state()
+    c = state.setdefault(cid, {})
+    catalog = c.setdefault("catalog", [])
+    if not any(m["id"] == rec["id"] for m in catalog):
+        keys = {"id", "connector", "provider_model_id", "label", "developer",
+                "task", "refs", "max_refs", "max_px", "aspect_enum",
+                "price_per_image", "status", "supported"}
+        catalog.append({k: rec.get(k) for k in keys})
+        save_state(state)
+
+
+def _http_bytes(url: str, headers: dict | None = None, timeout: int = 300,
+                cap: int = 64 * 1024 * 1024) -> bytes:
+    if not url.startswith(("https://", "http://")):
+        raise ConnectorError("non-HTTP artifact URL — refused")
+    req = urllib.request.Request(url, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        data = r.read(cap + 1)
+    if len(data) > cap:
+        raise ConnectorError("artifact over 64 MB — refused")
+    return data
+
+
+_SIZE_LONG_EDGE = {"1K": 1024, "2K": 2048, "4K": 3840}
+
+
+def _px_dims(image_size: str, aspect_ratio: str) -> tuple[int, int]:
+    w, h = (float(x) for x in aspect_ratio.split(":"))
+    long_edge = _SIZE_LONG_EDGE.get(image_size, 1024)
+    if w >= h:
+        width, height = long_edge, int(long_edge * h / w)
+    else:
+        width, height = int(long_edge * w / h), long_edge
+    return (width // 8) * 8, (height // 8) * 8
+
+
+def fal_generate(key: str, rec: dict, prompt: str, ref_paths: list,
+                 image_size: str, aspect_ratio: str, out_path,
+                 http=None, sleep=None) -> str:
+    import base64 as b64
+    import time as _t
+    http = http or _http_json
+    sleep = sleep or _t.sleep
+    width, height = _px_dims(image_size, aspect_ratio)
+    payload = {"prompt": prompt, "image_size": {"width": width, "height": height}}
+    if ref_paths:
+        uris = []
+        for p in list(ref_paths)[:APP_MAX_REFS]:
+            mime = "image/png" if str(p).lower().endswith(".png") else "image/jpeg"
+            uris.append(f"data:{mime};base64,{b64.b64encode(p.read_bytes()).decode()}")
+        payload["image_urls"] = uris
+    eid = rec["provider_model_id"]
+    try:
+        job = http(f"{FAL_QUEUE}/{eid}", method="POST",
+                   headers=_fal_headers(key), body=payload, timeout=120)
+    except urllib.error.HTTPError as e:
+        if e.code == 422 and ref_paths:
+            # Single-image families take image_url, not image_urls.
+            payload["image_url"] = payload.pop("image_urls")[0]
+            job = http(f"{FAL_QUEUE}/{eid}", method="POST",
+                       headers=_fal_headers(key), body=payload, timeout=120)
+        else:
+            raise
+    status_url = job.get("status_url") or f"{FAL_QUEUE}/{eid}/requests/{job.get('request_id')}/status"
+    response_url = job.get("response_url") or f"{FAL_QUEUE}/{eid}/requests/{job.get('request_id')}"
+    deadline = _t.monotonic() + 600
+    while True:
+        st = http(status_url, headers=_fal_headers(key))
+        s = (st.get("status") or "").upper()
+        if s == "COMPLETED":
+            break
+        if s in ("ERROR", "FAILED", "CANCELLED"):
+            raise ConnectorError(f"{rec['label']}: queue reported {s} — "
+                                 f"{json.dumps(st)[:200]}")
+        if _t.monotonic() > deadline:
+            raise ConnectorError(f"{rec['label']}: still queued after 10 minutes — "
+                                 "the take was abandoned, nothing was rendered elsewhere.")
+        sleep(3)
+    result = http(response_url, headers=_fal_headers(key))
+    images = result.get("images") or ([result["image"]] if result.get("image") else [])
+    url = (images[0] or {}).get("url", "") if images else ""
+    if url.startswith("data:"):
+        out_path.write_bytes(b64.b64decode(url.split(",", 1)[1]))
+    elif url:
+        out_path.write_bytes(_http_bytes(url))
+    else:
+        raise ConnectorError(f"{rec['label']}: no image in the queue result.")
+    return ""
 
 
 # --------------------------------------------------------------- sync core

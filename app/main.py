@@ -948,10 +948,20 @@ def api_connector_disconnect(cid: str) -> dict:
 
 @app.post("/api/connectors/enable")
 def api_connector_enable(body: dict = Body(...)) -> dict:
+    mid = str(body.get("id", ""))
     try:
-        return connectors.set_enabled(str(body.get("id", "")), bool(body.get("on")))
-    except connectors.ConnectorError as e:
-        raise HTTPException(422, str(e))
+        return connectors.set_enabled(mid, bool(body.get("on")))
+    except connectors.ConnectorError:
+        # A server-side search hit the cache has never seen: the client
+        # sends the record along; adopt it, then enable.
+        rec = body.get("record")
+        if not (isinstance(rec, dict) and rec.get("id") == mid):
+            raise HTTPException(422, f"unknown catalog model: {mid}")
+        try:
+            connectors.adopt_record(rec)
+            return connectors.set_enabled(mid, bool(body.get("on")))
+        except connectors.ConnectorError as e:
+            raise HTTPException(422, str(e))
 
 
 @app.get("/api/connectors/catalog")
@@ -962,6 +972,21 @@ def api_connectors_catalog(q: str = "", refs: bool = False, fourk: bool = False,
     hits = connectors.filter_records(records, query=q, refs_only=refs,
                                      fourk_only=fourk, priced_only=priced)
     searched = "enabled models" if scope == "enabled" else "the synced catalogs"
+    # The field never returns "no results" while results exist upstream
+    # (C7): a miss with a query escalates to fal's server-side search.
+    if q and scope == "all" and not hits:
+        fal_pub = connectors.connector_public("fal")
+        if fal_pub["status"] == "SYNCED":
+            key = connectors.load_state().get("fal", {}).get("key", "")
+            try:
+                server = connectors.fal_search(key, q)
+                known = {m["id"] for m in records}
+                hits = connectors.filter_records(
+                    [m for m in server if m["id"] not in known],
+                    refs_only=refs, fourk_only=fourk, priced_only=priced)
+                searched = "the synced catalogs and fal's live catalog"
+            except Exception:
+                searched = "the synced catalogs (fal unreachable — cache only)"
     return {"records": hits, "total": len(records), "searched": searched}
 
 

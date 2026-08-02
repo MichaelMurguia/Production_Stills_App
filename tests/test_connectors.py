@@ -208,5 +208,101 @@ class OpenRouterTests(unittest.TestCase):
         self.assertIn("can't render", str(cm.exception))
 
 
+FAL_PAGE = {"models": [
+    {"endpoint_id": "fal-ai/flux-2/dev", "title": "FLUX.2 [dev]",
+     "metadata": {"category": "image-to-image"}, "status": "active"},
+    {"endpoint_id": "fal-ai/ideogram/v4/turbo", "title": "Ideogram 4 Turbo",
+     "metadata": {"category": "text-to-image"}, "status": "active"},
+    {"endpoint_id": "higgsfield-ai/soul/standard", "title": "Soul",
+     "metadata": {"category": "text-to-image"}, "status": "active"},
+], "has_more": False}
+
+
+class FalTests(unittest.TestCase):
+    def setUp(self):
+        self._home = paths.HOME
+        self._tmp = tempfile.TemporaryDirectory()
+        paths.HOME = Path(self._tmp.name)
+
+    def tearDown(self):
+        paths.HOME = self._home
+        self._tmp.cleanup()
+
+    @staticmethod
+    def fake_http(url, method="GET", headers=None, body=None, timeout=60):
+        import urllib.error
+        if "/requests/00000000" in url:
+            raise urllib.error.HTTPError(url, 404, "not found", {}, None)
+        if "api.fal.ai/v1/models" in url:
+            return FAL_PAGE
+        raise AssertionError(f"unexpected url {url}")
+
+    def test_sync_normalizes_families_and_support(self):
+        pub = connectors.save_key("fal", "key_abc", http=self.fake_http)
+        self.assertEqual(pub["status"], "SYNCED")
+        recs = connectors.catalog_records()
+        flux = next(m for m in recs if m["id"] == "fal:fal-ai/flux-2/dev")
+        self.assertTrue(flux["refs"] and flux["supported"])
+        self.assertEqual(flux["developer"], "Black Forest Labs")
+        soul = next(m for m in recs if "soul" in m["id"])
+        self.assertFalse(soul["supported"])  # shape not mapped — stated
+        self.assertIsNone(flux["price_per_image"])  # fal publishes none
+
+    def test_bad_key_reads_rejected(self):
+        import urllib.error
+
+        def http(url, **kw):
+            raise urllib.error.HTTPError(url, 401, "no", {}, None)
+        pub = connectors.save_key("fal", "bad", http=http)
+        self.assertEqual(pub["status"], "REJECTED")
+
+    def test_generate_queue_roundtrip_and_size(self):
+        calls = []
+
+        def http(url, method="GET", headers=None, body=None, timeout=60):
+            calls.append(url)
+            if url.endswith("flux-2/dev") and method == "POST":
+                self.assertEqual(body["image_size"], {"width": 3840, "height": 1600})
+                return {"request_id": "r1",
+                        "status_url": "https://queue.fal.run/s",
+                        "response_url": "https://queue.fal.run/r"}
+            if url == "https://queue.fal.run/s":
+                return {"status": "COMPLETED"}
+            if url == "https://queue.fal.run/r":
+                import base64
+                b = base64.b64encode(b"falimg").decode()
+                return {"images": [{"url": f"data:image/png;base64,{b}"}]}
+            raise AssertionError(url)
+        rec = {"provider_model_id": "fal-ai/flux-2/dev", "label": "FLUX.2 [dev]"}
+        out = Path(self._tmp.name) / "o.png"
+        connectors.fal_generate("k", rec, "prompt", [], "4K", "2.39:1", out,
+                                http=http, sleep=lambda s: None)
+        self.assertEqual(out.read_bytes(), b"falimg")
+
+    def test_generate_queue_failure_is_stated(self):
+        def http(url, method="GET", headers=None, body=None, timeout=60):
+            if method == "POST":
+                return {"request_id": "r1", "status_url": "https://queue.fal.run/s",
+                        "response_url": "https://queue.fal.run/r"}
+            return {"status": "FAILED", "detail": "boom"}
+        rec = {"provider_model_id": "fal-ai/flux-2/dev", "label": "FLUX.2 [dev]"}
+        with self.assertRaises(connectors.ConnectorError) as cm:
+            connectors.fal_generate("k", rec, "p", [], "1K", "1:1",
+                                    Path(self._tmp.name) / "o.png",
+                                    http=http, sleep=lambda s: None)
+        self.assertIn("FAILED", str(cm.exception))
+
+    def test_adopt_record_enables_server_hit(self):
+        self_state = connectors.load_state()
+        self_state["fal"] = {"key": "k", "catalog": []}
+        connectors.save_state(self_state)
+        rec = connectors._fal_normalize(
+            {"endpoint_id": "fal-ai/recraft/v4", "title": "Recraft v4",
+             "metadata": {"category": "text-to-image"}}, "text-to-image")
+        connectors.adopt_record(rec)
+        out = connectors.set_enabled("fal:fal-ai/recraft/v4", True)
+        self.assertTrue(out["enabled"])
+
+
 if __name__ == "__main__":
     unittest.main()
