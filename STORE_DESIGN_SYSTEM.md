@@ -50,10 +50,17 @@ Copy sits on a scrim, never on picture. Use one angled linear-gradient from
 fully still while the image moves behind it.
 
 ### 4. Trait lists sell an edition
-A pricing card's middle block is a Courier list: four `■` traits in `--ok`,
-then **exactly one** `□` tradeoff in `--ink-faint`. Both editions carry a
-tradeoff. A card with only upsides reads as marketing; a card that names
-its cost reads as a spec sheet, which is what this audience trusts.
+A pricing card's middle block is a Courier list: the `■` traits in `--ok`
+(four or five), then **exactly one** `□` tradeoff in `--ink-faint`. Both
+editions carry a tradeoff. A card with only upsides reads as marketing; a
+card that names its cost reads as a spec sheet, which is what this audience
+trusts.
+
+**Parity rule (ruled 2026-08-03, STORE_PRICING_PLAN K2):** when two
+editions are presented side by side, any trait true of both appears in
+**both** lists, in the same position. A trait present in one column and
+absent from the other is read as a difference between the editions,
+whatever the footnotes say.
 
 ### 5. Gates are stated, never errored
 Unconfigured checkout, missing mail, missing Google: render as a visible
@@ -149,3 +156,11 @@ reader is.
   border, unchanged copy — and the YOUR STUDIO label wears a bordered
   --ok LIVE chip once the branded name serves. One
   `_workspace_door.html` partial serves all three cloud-ACTIVE sites.
+- **2026-08-03** — RULED (STORE_PRICING_PLAN K1–K3): the engine band —
+  the BYO-render-key fact sits in a shared bordered band ABOVE the price
+  cards (BOTH EDITIONS amber kicker, two --ok advantage rows, one --hold
+  condition row), never in a footnote below them. §4 gains the parity
+  rule (a trait true of both editions appears in both lists) and its
+  trait count loosens to four-or-five; the ANY ENGINE — YOUR OWN API KEY
+  line now sits in both lists. The editions footnote drops its engine
+  clause and states prices are USD.
