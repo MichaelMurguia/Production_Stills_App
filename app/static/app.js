@@ -2049,6 +2049,26 @@ async function renderSettings() {
     };
   }
 
+  // C4 — §03 the catalog summary. The tiles and the browser count read
+  // from the same /api/connectors stats — one source, one truth.
+  $("#reach-sub").textContent = cxStats.total
+    ? `${cxStats.total} models in the synced catalogs. Only the ones you enable reach a dropdown.`
+    : "No catalogs synced yet — connect fal.ai or OpenRouter in 02 and the models list themselves.";
+  $("#reach-tiles").innerHTML = [
+    [cxStats.enabled, "Enabled and in the selector", ""],
+    [cxStats.anchor_refs, "Anchor references — usable for canon work", ""],
+    [cxStats.fourk, "Reach 4K natively", ""],
+    [cxStats.deprecated_enabled, "Enabled but now deprecated upstream",
+     cxStats.deprecated_enabled ? "bad" : ""],
+  ].map(([n, lab, cls]) => `
+    <div class="reach-tile ${cls}"><span class="reach-num">${n}</span>
+    <span class="reach-lab">${esc(lab)}</span></div>`).join("");
+  const catBtn = $("#open-catalog");
+  if (cxStats.total) {
+    catBtn.classList.remove("hidden");
+    catBtn.onclick = () => renderCatalogBrowser();
+  }
+
   function expandCustomChip(cid, row) {
     const e = customs.find(x => x.id === cid);
     if (!e) return;
