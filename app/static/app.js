@@ -711,6 +711,24 @@ let activeView = "status";
 let lockedStages = new Set();
 let _bandState = null;  // last /api/state — feeds the popover's gate chain
 
+/* Persistent UI state (user ruling 2026-08-02): every toggle and
+   selection survives refresh and view switches. Namespaced per
+   production so switching productions keeps each one's workbench as it
+   was left. localStorage — device-local working state, not canon. */
+let _activeSlug = "";
+let _uiState = {};
+const _uiKey = () => `sbUI:${_activeSlug}`;
+function uiLoad(slug) {
+  _activeSlug = slug || "";
+  try { _uiState = JSON.parse(localStorage.getItem(_uiKey()) || "{}"); }
+  catch { _uiState = {}; }
+}
+const uiGet = (k, d) => (k in _uiState ? _uiState[k] : d);
+function uiSet(k, v) {
+  _uiState[k] = v;
+  try { localStorage.setItem(_uiKey(), JSON.stringify(_uiState)); } catch { /* full/blocked */ }
+}
+
 for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
@@ -916,6 +934,7 @@ const selectedModelLabel = sel =>
 
 async function showView(name) {
   activeView = name;
+  uiSet("view", name);
   _roleCtx = null;  // suggestion sources refresh per navigation
   $$("#tools-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   updateBand();  // fire and forget — the band must never block the view
@@ -1536,9 +1555,19 @@ async function renderSettings() {
   useTemplate("tpl-settings");
   $("#goto-productions").onclick = () => showView("projects");
 
+  const rememberedTab = uiGet("settingsTab", "");
+  if (rememberedTab) {
+    const btn = $(`#settings-subnav button[data-sub="${CSS.escape(rememberedTab)}"]`);
+    if (btn) {
+      $$("#settings-subnav button").forEach(b => b.classList.toggle("active", b === btn));
+      $$("[data-subview]").forEach(v =>
+        v.classList.toggle("hidden", v.dataset.subview !== rememberedTab));
+    }
+  }
   $("#settings-subnav").addEventListener("click", e => {
     const btn = e.target.closest("button[data-sub]");
     if (!btn) return;
+    uiSet("settingsTab", btn.dataset.sub);
     $$("#settings-subnav button").forEach(b => b.classList.toggle("active", b === btn));
     $$("[data-subview]").forEach(v =>
       v.classList.toggle("hidden", v.dataset.subview !== btn.dataset.sub));
@@ -3267,10 +3296,13 @@ async function renderSpecs(openId = null) {
     tbody.append(tr);
   }
 
-  if (openId) openSpecEditor(openId);
+  const remembered = openId || uiGet("openSpec", null);
+  if (remembered && specs.some(x => x.specification_id === remembered))
+    openSpecEditor(remembered);
 }
 
 async function openSpecEditor(specId) {
+  uiSet("openSpec", specId);
   const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs] = await Promise.all([
     api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references")]);
 
@@ -4095,8 +4127,11 @@ async function renderBoards() {
   const sel = $("#board-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
     specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
-  sel.onchange = () => sel.value && renderBoardPanels(sel.value);
-  if (specs.length === 1) { sel.value = specs[0].specification_id; renderBoardPanels(sel.value); }
+  sel.onchange = () => { uiSet("boardSpec", sel.value); sel.value && renderBoardPanels(sel.value); };
+  const rememberedB = uiGet("boardSpec", "");
+  if (rememberedB && specs.some(s2 => s2.specification_id === rememberedB)) {
+    sel.value = rememberedB; renderBoardPanels(rememberedB);
+  } else if (specs.length === 1) { sel.value = specs[0].specification_id; renderBoardPanels(sel.value); }
   if (!specs.length) {
     $("#board-panels").innerHTML =
       `<div class="panel mini">No signed-off breakdowns yet. Approve one on the Breakdowns tab first.</div>`;
@@ -4254,7 +4289,10 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
   return cc;
 }
 
-const boardRoomSel = {};  // per-sheet: which panel is on the stage, which take is shown
+// Per-sheet: which panel is on the stage, which take is shown. Loaded
+// from and mirrored to the persistent UI state (survives refresh).
+const boardRoomSel = {};
+const persistRoomSel = () => uiSet("roomSel", boardRoomSel);
 
 // In-flight renders show as pending tiles in the takes filmstrip — closing
 // the repair screen (or navigating within the room) never loses sight of a
@@ -4450,6 +4488,16 @@ async function renderBoardPanels(specId) {
     const aspectById = Object.fromEntries(aspects.map(a => [a.id, a]));
     const modelSel = $("[data-f=model]", card);
     const aspectSel = $("[data-f=aspect]", card);
+    const sizeSel = $("[data-f=size]", card);
+    // Restore the last-used generation settings (per production); every
+    // change persists — refresh and view switches keep them.
+    const gen = uiGet("gen", {});
+    for (const [selEl, k] of [[modelSel, "model"], [sizeSel, "size"], [aspectSel, "aspect"]]) {
+      if (gen[k] && [...selEl.options].some(o => o.value === gen[k] && !o.disabled))
+        selEl.value = gen[k];
+      selEl.addEventListener("change", () =>
+        uiSet("gen", { ...uiGet("gen", {}), [k]: selEl.value }));
+    }
     if (!modelSel.value) {
       for (const f of ["generate", "prose"]) {
         const b = $(`[data-f=${f}]`, card);
@@ -4579,6 +4627,7 @@ async function renderBoardPanels(specId) {
     $$("[data-take]", card).forEach(btn => {
       btn.onclick = () => {
         roomSel.staged[p.id] = btn.dataset.take;
+        persistRoomSel();
         renderBoardPanels(specId);
       };
     });
@@ -4683,6 +4732,7 @@ async function renderBoardPanels(specId) {
               { method: "POST", json: { image_size: size, provider: prov } });
             toast(`${rec.candidate_id} — full-size take ready (${rec.width}×${rec.height}). Now staged; judge it against ${c.candidate_id}.`);
             roomSel.staged[p.id] = rec.candidate_id;  // show the result, immediately
+            persistRoomSel();
             if ($("#board-panels")) await renderBoardPanels(specId);
           } catch (err) {
             busy.done();
@@ -4804,7 +4854,8 @@ async function renderBoardPanels(specId) {
   }
 
   // ---------------- the judging room: rail · stage · provenance (mock 3b) ---
-  const roomSel = boardRoomSel[specId] ??= {};
+  const roomSel = boardRoomSel[specId] ??=
+    (uiGet("roomSel", {})[specId] || {});
   const pids = spec.panels.map(p => p.id);
   if (roomSel.panel !== "__derived" && !pids.includes(roomSel.panel))
     roomSel.panel = pids[0] || "__derived";
@@ -4858,6 +4909,7 @@ async function renderBoardPanels(specId) {
   $$(".rail-panel", rail).forEach(btn => {
     btn.onclick = () => {
       roomSel.panel = btn.dataset.pid;
+      persistRoomSel();
       renderBoardPanels(specId);
     };
   });
@@ -4951,7 +5003,7 @@ async function renderAssembly() {
   const sel = $("#asm-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
     specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
-  sel.onchange = () => sel.value ? renderAssemblyFor(sel.value) : renderAssembly();
+  sel.onchange = () => { uiSet("asmSpec", sel.value); sel.value ? renderAssemblyFor(sel.value) : renderAssembly(); };
 
   const host = $("#assembly-host");
   if (!specs.length) {
@@ -4989,6 +5041,13 @@ async function renderAssembly() {
     // checklist — the picker and bench already state the path by being
     // present. The line disappears the moment a board exists.
     const note = `<div class="mini mono asm-none">NO BOARDS YET &mdash; APPROVE EVERY PANEL IN A SHEET, THEN ASSEMBLE</div>`;
+    const rememberedA = uiGet("asmSpec", "");
+    if (rememberedA && specs.some(s2 => s2.specification_id === rememberedA)) {
+      sel.value = rememberedA;
+      await renderAssemblyFor(rememberedA);
+      host.insertAdjacentHTML("afterbegin", note);
+      return;
+    }
     if (specs.length === 1) {
       sel.value = specs[0].specification_id;
       await renderAssemblyFor(sel.value);
@@ -5255,10 +5314,17 @@ initLightbox();
 // until there is a production to stand in.
 async function boot() {
   let first = false;
-  try { first = (await api("/api/projects")).first_run; } catch { /* boot anyway */ }
+  try {
+    const pr = await api("/api/projects");
+    first = pr.first_run;
+    uiLoad(pr.active || "");
+  } catch { uiLoad(""); /* boot anyway */ }
   if (!first) {
-    // Deep-link support: #screenplay, #boards, … land on that view directly.
-    showView(views[location.hash.slice(1)] ? location.hash.slice(1) : "status");
+    // Deep-link support: #screenplay, #boards, … land on that view
+    // directly; otherwise the app reopens exactly where it was left.
+    const stored = uiGet("view", "status");
+    showView(views[location.hash.slice(1)] ? location.hash.slice(1)
+      : views[stored] ? stored : "status");
     return;
   }
   $("#nav").classList.add("hidden");
