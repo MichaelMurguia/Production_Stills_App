@@ -193,6 +193,9 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
         "production_design": {
             "bible_saved": paths.BIBLE.exists(),
             "bible_rev": int(app_state.get("bible_rev", 0)),
+            # The Script Scene Scan has run (LOCKED_STAGE_PLAN L3) — feeds
+            # the gate chain so its step drops off when done.
+            "scan_done": paths.WIZARD_ANALYSIS.exists(),
             "style_anchors": anchors,
             "subjects": len(store.list_subjects()),
             "lessons": len(generate.load_lessons()),

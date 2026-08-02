@@ -152,6 +152,10 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(all(c["state"] in ("ok", "bad", "never")
                             for c in row["reach"]))
         self.assertEqual(row["counts"], "NO SCREENPLAY YET")
+        # LOCKED_STAGE_PLAN L3: the gate chain reads scan state live.
+        state = self.client.get("/api/state").json()
+        self.assertIn("scan_done", state["stage_summary"]["production_design"])
+        self.assertFalse(state["stage_summary"]["production_design"]["scan_done"])
         self.assertEqual(row["next"]["kicker"], "DO THIS NEXT")
         self.assertIn("Upload a screenplay", row["next"]["text"])
 

@@ -153,7 +153,7 @@
 
     <div class="panel step" data-step="1">
       <h2>Style reference images <span class="hint">(the three anchors of art direction)</span></h2>
-      <p class="hint">Three anchors, three jurisdictions. Every render studies these — and nothing else about the look is invented. Subject photos (cast, vehicles, props) are research, not style: add them in step 3.</p>
+      <p class="hint">Three anchors, three jurisdictions. Every render studies these — and nothing else about the look is invented. Subject photos (cast, vehicles, props) are research, not style: add them in step 4.</p>
       <div class="wiz-cols">
         <div class="wiz-col" data-role="BOARD_LAYOUT_STYLE">
           <div class="wiz-col-head">
@@ -202,10 +202,25 @@
       <div id="wiz-analysis"></div>
     </div>
 
+    <!-- Steps 3 and 4 swapped (LOCKED_STAGE_PLAN L3, director's note):
+         the look interview precedes casting — a card's photos are
+         reference gathering, not a precondition for drafting the bible. -->
+    <div class="panel step" data-step="3">
+      <h2>Interview <span class="hint">(skip anything — blanks come back marked PROPOSED)</span></h2>
+      <p class="hint">Questions you answered in step 2 are already included.</p>
+      <div class="grid-form">
+        <label class="wide" title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="e.g. Ralph McQuarrie production paintings, Andor, Apollo-era NASA hardware"></label>
+        <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
+        <label title="Color palette and light bias — becomes the Lighting Language section.">Palette &amp; light <input type="text" id="wiz-palette" placeholder="e.g. warm earthy palette, morning light, restrained effects"></label>
+        <label class="wide" title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
+        <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
+      </div>
+    </div>
+
     <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf —
          the extraction proposes uncast subjects; casting creates the card
          in the library. The wizard owns the moment; the library owns the data. -->
-    <div class="panel step" data-step="3">
+    <div class="panel step" data-step="4">
       <h2>Cast the film <span class="hint">(cards live in Reference / SUBJECTS — this step is the door)</span></h2>
       <p class="hint">The screenplay read found these. Casting one creates its card in the library and carries the screenplay's identity text into every prompt it appears in. Upload photos into the card — they enter the library already approved, grouped under this exact name.</p>
       <div class="uncast-block">
@@ -220,18 +235,6 @@
         </div>
       </div>
       <div id="wiz-subj-grid" class="subj-grid"></div>
-    </div>
-
-    <div class="panel step" data-step="4">
-      <h2>Interview <span class="hint">(skip anything — blanks come back marked PROPOSED)</span></h2>
-      <p class="hint">Questions you answered in step 2 are already included.</p>
-      <div class="grid-form">
-        <label class="wide" title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="e.g. Ralph McQuarrie production paintings, Andor, Apollo-era NASA hardware"></label>
-        <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
-        <label title="Color palette and light bias — becomes the Lighting Language section.">Palette &amp; light <input type="text" id="wiz-palette" placeholder="e.g. warm earthy palette, morning light, restrained effects"></label>
-        <label class="wide" title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
-        <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
-      </div>
     </div>
 
     <div class="panel step" data-step="5">
@@ -524,7 +527,7 @@
         <p>This app builds <b>canon-locked art direction boards</b>. The chain is:</p>
         <p class="chain">Screenplay → Cast &amp; anchors (REFERENCE) → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
         <h3>1 — Load your sources (01 Screenplay / Reference)</h3>
-        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. There is <b>one reference library</b> (Reference), on three shelves by when an image rides along: STYLE (every render, automatically), SUBJECTS (when its subject appears on a panel — cast the film in Production Design step 3 to fill it), SCENES (when a board covers its scene). Every image has a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
+        <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. There is <b>one reference library</b> (Reference), on three shelves by when an image rides along: STYLE (every render, automatically), SUBJECTS (when its subject appears on a panel — cast the film in Production Design step 4 to fill it), SCENES (when a board covers its scene). Every image has a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
         <h3>2 — Write or auto-fill a breakdown sheet (03 Breakdowns)</h3>
         <p>A breakdown sheet is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the sheet; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the sheet with a content hash.</p>
         <h3>3 — Generate and judge takes (04 Panels)</h3>

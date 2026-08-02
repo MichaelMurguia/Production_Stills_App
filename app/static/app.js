@@ -2534,15 +2534,16 @@ async function renderWizard() {
         !wizAnalysis ? "NOT RUN"
           : `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES`
             + (proposedN ? ` · ${proposedN} PROPOSED` : " FOUND"));
-      // Step 4 counts the interview itself (mock 2a) — answered = non-blank.
+      // Step 3 counts the interview itself (mock 2a; swapped ahead of
+      // casting per LOCKED_STAGE_PLAN L3) — answered = non-blank.
       const ivFields = ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"];
       const ivDone = ivFields.filter(id => $(id)?.value.trim()).length;
-      setB(4, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
+      setB(3, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
         `${ivDone} OF ${ivFields.length} ANSWERED`);
       // Cast the film: --hold border while anything stays uncast, --ok when
       // the whole read is cast (plan D4; existing badge classes carry it).
       const uncastN = uncastRecommendations(subjects).length;
-      setB(3, !subjects.length && !uncastN ? "LOCKED"
+      setB(4, !subjects.length && !uncastN ? "LOCKED"
         : uncastN ? "PROVISIONAL" : "APPROVED",
         !subjects.length && !uncastN ? "NONE YET"
         : `${subjects.length} CAST · ${uncastN} UNCAST`);
@@ -2653,7 +2654,7 @@ const SUBJECT_ROLE_OF = {
   CHARACTER: "CHARACTER_LIKENESS", VEHICLE: "VEHICLE_GEOMETRY", PROP: "PROP_REFERENCE" };
 
 // Screenplay-read recommendations not yet cast — shared by the SUBJECTS
-// shelf and wizard step 3 (casting is a door into the same shelf).
+// shelf and wizard step 4 (casting is a door into the same shelf).
 function uncastRecommendations(subjects) {
   const analysis = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
   const have = new Set(subjects.map(s => s.name.toLowerCase()));
@@ -2661,7 +2662,7 @@ function uncastRecommendations(subjects) {
     .filter(r => r.name && !have.has(String(r.name).toLowerCase()));
 }
 
-// One subject card, two hosts (SUBJECTS shelf + wizard step 3). Anatomy per
+// One subject card, two hosts (SUBJECTS shelf + wizard step 4). Anatomy per
 // mock 5a: Courier name · bordered kind badge · CAST badge · editable
 // identity text · photo mosaic with a + drop slot · Courier facts line.
 function buildSubjectCard(s, refs, onChange, opts = {}) {
@@ -2805,7 +2806,7 @@ const SHELVES = [
   { key: "STYLE", name: "STYLE", ride: "RIDES ALONG — EVERY RENDER, AUTOMATICALLY",
     note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
   { key: "SUBJECT", name: "SUBJECTS", ride: "RIDES ALONG — WHEN ITS SUBJECT APPEARS ON A PANEL",
-    note: "cast in Production Design step 3 — same cards, this is where they live",
+    note: "cast in Production Design step 4 — same cards, this is where they live",
     count: n => `${n.cast} CAST · ${n.uncast} UNCAST` },
   { key: "SCENE", name: "SCENES", ride: "RIDES ALONG — WHEN A BOARD COVERS ITS SCENE",
     note: "promoted takes, light studies, crops of environments",
