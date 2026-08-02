@@ -42,7 +42,7 @@ Identify 2-5 design languages ("design_worlds" in the JSON) — distinct visual
 cultures that each need their own design language (protagonist world,
 antagonist institutions, exotic technology, etc.).
 Identify 2-6 environments — the physical worlds panels live in (forest,
-desert, asteroid surface, station interior). Environments are not factions:
+desert town, ship interior). Environments are not factions:
 a faction's outpost in forest vs. desert shares its culture but not its
 palette, light, or atmosphere. If a LOCATION LIST is provided below, assign
 each of its entries to exactly ONE environment, copied verbatim — never

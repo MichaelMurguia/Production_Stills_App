@@ -3394,7 +3394,7 @@ async function openSpecEditor(specId) {
           ${["", "INT", "EXT", "INT/EXT"].map(v => `<option value="${v}" ${(spec.setting?.int_ext || "") === v ? "selected" : ""}>${v || "—"}</option>`).join("")}
         </select>
       </label>
-      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="e.g. CHARLIE'S CABIN" value="${esc(spec.setting?.location || "")}" ${locked ? "disabled" : ""}></label>
+      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${locked ? "disabled" : ""}></label>
       <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day, exactly as the script's scene heading says it (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue.">Time of day <input type="text" id="sp-tod" list="tod-list" placeholder="DAY, DUSK, NIGHT…" value="${esc(spec.setting?.time_of_day || "")}" ${locked ? "disabled" : ""}>
         <datalist id="tod-list">${[...TIMES_OF_DAY, "MAGIC HOUR"].map(t => `<option value="${esc(t)}">`).join("")}</datalist>
       </label>

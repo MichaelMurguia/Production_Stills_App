@@ -50,7 +50,7 @@ def _screenplay_bytes() -> tuple[bytes, str]:
 
 
 def _instructions(subject_prompt: str, mode: str, prohibited: list[str]) -> str:
-    return f"""You are the research agent for a film production art department on the project "The Beltminers".
+    return f"""You are the research agent for a film production art department on the project "{store.project_name()}".
 The attached document is the current screenplay. Your task: draft a Production Generation
 Specification for an art direction board about: {subject_prompt}
 
@@ -189,7 +189,7 @@ def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
 
     return {
         "specification_id": spec_id,
-        "project": "The Beltminers",
+        "project": store.project_name(),
         "subject": str(draft.get("subject", ""))[:200] or spec_id,
         "board_type": (str(draft.get("board_type", "")).strip().upper()
                        if str(draft.get("board_type", "")).strip().upper()
@@ -281,7 +281,7 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
     if store.get_spec(spec_id) is not None:
         raise AutofillError(f"specification already exists: {spec_id}")
     if not subject_prompt.strip():
-        raise AutofillError("describe what the board is about, e.g. \"Charlie's cabin\"")
+        raise AutofillError("describe what the board is about — a location and which of its scenes")
 
     doc, mime = _screenplay_bytes()
     prohibited = []

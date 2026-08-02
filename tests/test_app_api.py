@@ -119,6 +119,11 @@ class ApiTests(unittest.TestCase):
         r = self.client.post("/api/specs", json={"specification_id": "TEST_SHEET_V001",
                                                  "subject": "A test"})
         self.assertEqual(r.status_code, 200, r.text)
+        # User ruling 2026-08-02: records and prompts carry the ACTIVE
+        # production's name, never a hardcoded film's.
+        spec = self.client.get("/api/specs/TEST_SHEET_V001").json()["spec"]
+        self.assertNotEqual(spec["project"], "The Beltminers")
+        self.assertEqual(spec["project"], "Untitled Production")
 
     def test_references_store_render_ready_formats(self):
         # Observed live 2026-08-02: an AVIF reference 400'd a generation.

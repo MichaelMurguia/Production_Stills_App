@@ -500,6 +500,13 @@ def template_panels(board_type: str) -> tuple[list[dict], list[dict]]:
     return panels, layout
 
 
+def project_name() -> str:
+    """The active production's name — prompts and records carry it, never
+    a hardcoded film's (user ruling 2026-08-02)."""
+    return paths._project_name(paths._project_base(paths.ACTIVE_PROJECT),
+                               "Untitled Production")
+
+
 def new_spec(spec_id: str, subject: str, mode: str,
              board_type: str = "LOCATION") -> dict:
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
@@ -512,7 +519,7 @@ def new_spec(spec_id: str, subject: str, mode: str,
     panels, layout_panels = template_panels(board_type)
     spec = {
         "specification_id": spec_id,
-        "project": "The Beltminers",
+        "project": project_name(),
         "subject": subject,
         "mode": mode,
         "board_type": board_type,

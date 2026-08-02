@@ -385,7 +385,7 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     from common import stable_hash  # scripts/ on sys.path via app.paths
 
     lines = [
-        "BELTMINERS PRODUCTION RENDER — SINGLE PANEL",
+        f"{store.project_name().upper()} PRODUCTION RENDER — SINGLE PANEL",
         f"SPECIFICATION: {spec['specification_id']} (hash {stable_hash(spec)[:16]})",
         f"PANEL: {panel['id']} — {panel.get('title', panel.get('purpose', ''))}",
         f"MODE: {spec['mode']}",
@@ -1622,7 +1622,7 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
                   "purpose": "Material and texture studies derived from this board's "
                              "approved panels."}
     prompt = "\n".join([
-        f"BELTMINERS PRODUCTION RENDER — DERIVED MATERIALS PANEL",
+        f"{store.project_name().upper()} PRODUCTION RENDER — DERIVED MATERIALS PANEL",
         f"SPECIFICATION: {spec_id} (hash {stable_hash(spec)[:16]})",
         "",
         "TASK",
