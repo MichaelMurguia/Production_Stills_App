@@ -733,19 +733,19 @@ function gateChain(state) {
   const ss = state.stage_summary || {};
   const pd = ss.production_design || {};
   return [
-    { label: "UPLOAD THE SCREENPLAY", done: !!ss.screenplay, stage: "screenplay",
+    { label: "UPLOAD THE SCREENPLAY", verb: "Upload the screenplay", done: !!ss.screenplay, stage: "screenplay",
       sub: "The read starts here — everything downstream derives from the draft" },
-    { label: "RUN THE SCRIPT SCAN", done: !!pd.scan_done, stage: "wizard",
+    { label: "RUN THE SCRIPT SCAN", verb: "Run the script scan", done: !!pd.scan_done, stage: "wizard",
       sub: "Reads the draft for design languages, environments, locations and cast" },
-    { label: "ADD STYLE REFERENCE", done: (pd.style_anchors || 0) > 0, stage: "wizard",
+    { label: "ADD STYLE REFERENCE", verb: "Add style reference", done: (pd.style_anchors || 0) > 0, stage: "wizard",
       sub: "Board layout, cinematography and rendering plates — the three anchors" },
-    { label: "COMPLETE THE LOOK INTERVIEW", done: !!pd.bible_saved, stage: "wizard",
+    { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview", done: !!pd.bible_saved, stage: "wizard",
       sub: "Touchstones, medium, palette, and what it must never look like" },
-    { label: "DRAFT THE ART DIRECTION BIBLE", done: !!pd.bible_saved, stage: "wizard",
+    { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
       sub: "Everything above becomes the document every render obeys" },
-    { label: "DRAFT & LOCK A BREAKDOWN", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
+    { label: "DRAFT & LOCK A BREAKDOWN", verb: "Draft & lock a breakdown", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
       sub: "Only a locked sheet can render" },
-    { label: "RENDER AND APPROVE PANELS", done: (ss.panels?.approved || 0) > 0, stage: "boards",
+    { label: "RENDER AND APPROVE PANELS", verb: "Render and approve panels", done: (ss.panels?.approved || 0) > 0, stage: "boards",
       sub: "Takes are judged full-size, one at a time" },
   ];
 }
@@ -807,6 +807,54 @@ function lockPopover(stage) {
   window.addEventListener("keydown", onKey, true);
   setTimeout(() => document.addEventListener("mousedown", onOut, true));
   $(".bp-x", pop).onclick = close;
+}
+
+/* The stage checklist (LOCKED_STAGE_PLAN L4, mock 12c): one bordered
+   list where each unfinished row IS the link — its verb, what it does,
+   and its address. Done rows collapse to a ✓ line; the current row gets
+   the amber border. No generic navigation button anywhere — the rows
+   are the navigation. One component for any stage's empty state. */
+function stageChecklist({ kicker, headline, rows, footnote }) {
+  return `
+    <div class="stage-check">
+      <div class="fact-head">${esc(kicker)}</div>
+      <h2 class="sc-headline">${headline}</h2>
+      <div class="sc-list">
+        ${rows.map(r => {
+          if (r.state === "done") return `
+            <div class="sc-row done"><span class="sc-mark">✓</span>
+              <span class="sc-label">${esc(r.verb || r.label)}</span>
+              <span class="sc-addr mono">${esc(r.addr || "")} · DONE</span></div>`;
+          if (r.state === "info") return `
+            <div class="sc-row info"><span class="sc-mark">·</span>
+              <span class="sc-label">${esc(r.verb || r.label)}</span>
+              <span class="sc-addr mono">NO ACTION NEEDED</span></div>`;
+          return `
+            <button class="sc-row ${r.state}" data-stage="${esc(r.stage || "")}">
+              <span class="sc-mark">${r.state === "cur" ? "→" : "·"}</span>
+              <span class="sc-main"><span class="sc-label">${esc(r.verb || r.label)}</span>
+                ${r.sub ? `<span class="sc-sub">${esc(r.sub)}</span>` : ""}</span>
+              <span class="sc-addr mono">${esc(r.addr || "")} ↗</span>
+            </button>`;
+        }).join("")}
+      </div>
+      ${footnote ? `<div class="sc-foot mono">${esc(footnote)}</div>` : ""}
+    </div>`;
+}
+
+function checklistRows(state, upTo) {
+  const chain = gateChain(state).slice(0, upTo);
+  const cur = chain.findIndex(s => !s.done);
+  return chain.map((s, i) => ({
+    ...s, addr: `STAGE ${STAGE_NUM[s.stage]}`,
+    state: s.done ? "done" : i === cur ? "cur" : "todo",
+  }));
+}
+
+function bindStageChecklist(host) {
+  $$(".sc-row[data-stage]", host).forEach(b => {
+    if (b.dataset.stage) b.onclick = () => showView(b.dataset.stage);
+  });
 }
 
 function useTemplate(id) {
@@ -2917,40 +2965,23 @@ async function renderSpecs(openId = null) {
   useTemplate("tpl-specs");
 
   // The stage locks until Production Design is complete (user ruling
-  // 2026-08-01): a breakdown draws its rendering language, environments
-  // and subjects from the bible — opened early it would have nothing to
-  // draw from. Server enforces the same gate on creation (423).
+  // 2026-08-01; presentation per LOCKED_STAGE_PLAN L4): normally the
+  // band's inert cell keeps you out — this branch answers deep links and
+  // stale tabs with the checklist page. Server enforces the same gate on
+  // creation (423).
   try {
     const gateState = await api("/api/state");
     if (!gateState.stage_summary?.production_design?.bible_saved) {
-      $("#main").innerHTML = `
-        <section class="view"><div class="panel boards-empty">
-          <div>
-            <div class="fact-head">STAGE LOCKED</div>
-            <h2 class="be-title">Breakdowns unlock after<br>Production Design.</h2>
-            <p class="be-para">A breakdown sheet draws its rendering
-            language, environments and subjects from the Art Direction
-            Bible. Until the bible is saved there is nothing for a sheet
-            to draw from.</p>
-            <button class="primary" id="pd-go">Open Production Design</button>
-            <div class="be-note mono">RUN THE SCRIPT SCENE SCAN, THEN SAVE THE BIBLE &mdash; THIS STAGE UNLOCKS ITSELF</div>
-          </div>
-          <div class="path-box">
-            <div class="fact-head">THE PATH FROM HERE</div>
-            ${[
-              { label: "SCREENPLAY READ", done: !!gateState.screenplay },
-              { label: "SCRIPT SCENE SCAN", done: !!gateState.stage_summary?.production_design?.bible_rev },
-              { label: "SAVE THE BIBLE", done: false },
-              { label: "CREATE BREAKDOWNS", done: false },
-            ].map((s, i, arr) => {
-              const cur = arr.findIndex(x => !x.done);
-              return `<div class="path-row mono ${s.done ? "done" : i === cur ? "cur" : ""}">
-                <span class="path-mark">${s.done ? "✓" : i === cur ? "→" : "·"}</span>
-                <span>${esc(s.label)}</span></div>`;
-            }).join("")}
-          </div>
-        </div></section>`;
-      $("#pd-go").onclick = () => showView("wizard");
+      const rows = [...checklistRows(gateState, UNLOCK_NEED.specs),
+                    { verb: "Breakdowns unlock automatically", state: "info" }];
+      const left = rows.filter(r => r.state === "cur" || r.state === "todo").length;
+      $("#main").innerHTML = `<section class="view">` + stageChecklist({
+        kicker: `BREAKDOWNS ARE LOCKED — ${left} STEP${left === 1 ? "" : "S"} LEFT`,
+        headline: "A sheet draws its language, environments and<br>subjects from the bible. There isn't one yet.",
+        rows,
+        footnote: "NOTHING HERE IS BLOCKED BY US — EVERY STEP IS YOURS TO MAKE",
+      }) + `</section>`;
+      bindStageChecklist($("#main"));
       return;
     }
   } catch { /* state unavailable — let the stage render; the server gate holds */ }
@@ -4735,43 +4766,21 @@ async function renderAssembly() {
 
   const host = $("#assembly-host");
   if (!specs.length) {
-    // PRODUCTIONS_PLAN M6: the dead end states the path. A board's life
-    // starts three stages earlier — say so, with where you stand.
-    let ss = {};
-    try { ss = (await api("/api/state")).stage_summary || {}; } catch { /* stateless fallback */ }
-    const pd = ss.production_design || {}, bd = ss.breakdowns || {},
-          pn = ss.panels || {}, bo = ss.boards || {};
-    const steps = [
-      { label: "SCREENPLAY READ", done: !!ss.screenplay },
-      { label: `BIBLE SAVED${pd.bible_rev ? ` · REV ${pd.bible_rev}` : ""}`, done: !!pd.bible_saved },
-      { label: "PICK A LOCATION", done: (bd.locked || 0) + (bd.drafts || 0) > 0 },
-      { label: "DRAFT & LOCK THE BREAKDOWN", done: (bd.locked || 0) > 0 },
-      { label: "RENDER AND APPROVE PANELS", done: (pn.approved || 0) > 0 },
-      { label: "ASSEMBLE THE BOARD", done: (bo.assembled || 0) > 0 },
-    ];
-    const cur = steps.findIndex(s => !s.done);
-    host.innerHTML = `
-      <div class="boards-empty">
-        <div>
-          <div class="fact-head">NO BOARDS YET</div>
-          <h2 class="be-title">A board starts life<br>as a breakdown.</h2>
-          <p class="be-para">Boards are assembled from approved panels, and
-          panels can only be rendered from a locked breakdown. Pick the
-          location you want to see and the app will draft its breakdown
-          for you.</p>
-          <button class="primary" id="be-create">Create a breakdown</button>
-          <div class="be-note mono">OPENS PRODUCTION DESIGN &rarr; LOCATIONS</div>
-        </div>
-        <div class="path-box">
-          <div class="fact-head">THE PATH FROM HERE</div>
-          ${steps.map((s, i) => `
-            <div class="path-row mono ${s.done ? "done" : i === cur ? "cur" : ""}">
-              <span class="path-mark">${s.done ? "✓" : i === cur ? "→" : "·"}</span>
-              <span>${esc(s.label)}</span>
-            </div>`).join("")}
-        </div>
-      </div>`;
-    $("#be-create").onclick = () => showView("wizard");
+    // LOCKED_STAGE_PLAN L4: the checklist IS the page — each unfinished
+    // step is the link, with its verb, what it does, and its address.
+    // No generic navigation button anywhere; the rows are the navigation.
+    let gateState = {};
+    try { gateState = await api("/api/state"); } catch { /* stateless fallback */ }
+    const rows = [...checklistRows(gateState, UNLOCK_NEED.assembly),
+                  { verb: "Boards assemble here", state: "info" }];
+    const left = rows.filter(r => r.state === "cur" || r.state === "todo").length;
+    host.innerHTML = stageChecklist({
+      kicker: `NO BOARDS YET — ${left} STEP${left === 1 ? "" : "S"} LEFT`,
+      headline: "A board starts life<br>as a breakdown.",
+      rows,
+      footnote: "NOTHING HERE IS BLOCKED BY US — EVERY STEP IS YOURS TO MAKE",
+    });
+    bindStageChecklist(host);
     return;
   }
 
