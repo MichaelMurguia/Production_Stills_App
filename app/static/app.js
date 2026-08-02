@@ -1762,20 +1762,108 @@ async function renderSettings() {
     } catch (err) { toast(err.message, true); }
   };
 
-  // Default engine chips — built-ins get short names, customs their label.
-  const PREF_LABELS = { gemini: "GEMINI", openai: "GPT IMAGE 2", "openai-chat": "PIPELINE" };
-  const prefChips = $("#pref-chips");
-  prefChips.innerHTML = Object.keys(settings.providers).map(v =>
-    `<button class="vchip${v === settings.preferred_provider ? " on" : ""}" data-v="${esc(v)}">${esc(PREF_LABELS[v] || settings.providers[v].toUpperCase().slice(0, 18))}</button>`).join("");
-  $$(".vchip", prefChips).forEach(ch => {
-    ch.onclick = async () => {
+  // C1 (CONNECTORS_UI_PLAN) — §01, the two AI roles. The recommendation
+  // is a bordered ink-dim Courier chip plus one sentence of reason —
+  // never amber, never unexplained. With no key it renders as the gate
+  // grammar, never a preselected broken default.
+  const engAll = settings.engines || {};
+  let cxRows = [], cxStats = { total: 0, enabled: 0 };
+  try {
+    const cxState = await api("/api/connectors");
+    cxRows = cxState.connectors; cxStats = cxState.stats;
+  } catch { /* rows render NOT CONNECTED */ }
+  const cxStatus = Object.fromEntries(cxRows.map(r => [r.id, r.status]));
+  const usableProvider = pid => {
+    if (pid.startsWith("or:")) return cxStatus.openrouter === "SYNCED";
+    if (pid.startsWith("fal:")) return cxStatus.fal === "SYNCED";
+    const e = engAll[pid];
+    return !!(e?.configured && e?.last_test?.ok !== false);
+  };
+  const provMeta = pid => {
+    const m = settings.provider_meta?.[pid] || {};
+    if (pid === "openai-chat") return `${settings.openai_chat_model} REWRITE → ${settings.openai_model} · REFS ≤14 · 1.5K PRESET CAP`;
+    if (pid === "gemini") return `${settings.model} · REFS ≤14 · NATIVE 4K`;
+    if (pid === "openai") return `${settings.openai_model} · REFS ≤14 · FLAGS OUTPUT ABOVE 2560×1440`;
+    if (pid === "mock") return "debug dry-run — no cost, watermarked MOCK";
+    if (pid.startsWith("custom:")) return `${m.model} · YOUR ENDPOINT`;
+    if (m.connector) {
+      const bits = [`${m.model}`, `VIA ${m.connector.toUpperCase()}`,
+        m.refs ? "ANCHORS REFERENCES" : "NO REFERENCES"];
+      if (m.price) bits.push(`$${m.price}/IMG`);
+      return bits.join(" · ");
+    }
+    return m.model || "";
+  };
+  const recRow = (el, reason, gated, gateText) => {
+    el.innerHTML = `<span class="rec-chip">RECOMMENDED</span>`
+      + `<span class="rec-reason">${esc(reason)}${gated
+        ? ` <span class="rec-gate">${esc(gateText)}</span>` : ""}</span>`;
+  };
+
+  // Role 01 — narrative & content evaluation (openai_chat_model).
+  const nSel = $("#role-narrative");
+  const nDefault = settings.openai_chat_model_default;
+  const nCur = settings.openai_chat_model || nDefault;
+  const oaiConfigured = !!engAll.openai?.configured;
+  if (!oaiConfigured) {
+    nSel.innerHTML = `<option value="">NO OPENAI KEY — ADD ONE IN 02 BELOW</option>`;
+    nSel.disabled = true;
+    $("#role-narrative-meta").textContent = "THE ROLE IS GATED UNTIL ITS CREDENTIAL EXISTS";
+  } else {
+    const opts = [[nDefault, `ChatGPT — ${nDefault}`]];
+    if (nCur !== nDefault) opts.push([nCur, `Custom — ${nCur}`]);
+    opts.push(["__custom", "Custom model id…"]);
+    nSel.innerHTML = opts.map(([v, l]) =>
+      `<option value="${esc(v)}">${esc(l)}</option>`).join("");
+    nSel.value = nCur;
+    $("#role-narrative-meta").textContent = "RUNS ON THE OPENAI KEY BELOW";
+    nSel.onchange = async () => {
+      let v = nSel.value;
+      if (v === "__custom") {
+        const r = await modal({
+          title: "Narrative model id",
+          body: "The exact OpenAI model id this install should use for every screenplay read, draft and rewrite.",
+          fields: [{ name: "id", label: "Model id", placeholder: nDefault }],
+          confirmLabel: "Use this model",
+        });
+        if (r === null || !r.id.trim()) { nSel.value = nCur; return; }
+        v = r.id.trim();
+      }
       try {
-        await api("/api/settings", { method: "POST", json: { preferred_provider: ch.dataset.v } });
-        $$(".vchip", prefChips).forEach(x => x.classList.toggle("on", x === ch));
-        toast(`Default engine: ${settings.providers[ch.dataset.v]}.`);
+        await api("/api/settings", { method: "POST", json: { openai_chat_model: v === nDefault ? "" : v } });
+        toast(`Narrative model: ${v}.`);
+        renderSettings();
       } catch (err) { toast(err.message, true); }
     };
-  });
+  }
+  recRow($("#rec-narrative"),
+    "It holds canon across a 124-page read better than anything else we have tested in this framework.",
+    !oaiConfigured, "GATED — no OpenAI key yet; add one in section 02.");
+
+  // Role 02 — image generation: the STARTING engine (preferred_provider).
+  const iSel = $("#role-image");
+  const usableProviders = Object.keys(settings.providers).filter(usableProvider);
+  if (!usableProviders.length) {
+    iSel.innerHTML = `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN 02 BELOW</option>`;
+    iSel.disabled = true;
+    $("#role-image-meta").textContent = "THE ROLE IS GATED UNTIL A CREDENTIAL EXISTS";
+  } else {
+    iSel.innerHTML = usableProviders.map(v =>
+      `<option value="${esc(v)}">${esc(settings.providers[v])}</option>`).join("");
+    iSel.value = usableProviders.includes(settings.preferred_provider)
+      ? settings.preferred_provider : usableProviders[0];
+    $("#role-image-meta").textContent = provMeta(iSel.value).toUpperCase();
+    iSel.onchange = async () => {
+      try {
+        await api("/api/settings", { method: "POST", json: { preferred_provider: iSel.value } });
+        $("#role-image-meta").textContent = provMeta(iSel.value).toUpperCase();
+        toast(`Starting engine: ${settings.providers[iSel.value]}.`);
+      } catch (err) { toast(err.message, true); }
+    };
+  }
+  recRow($("#rec-image"),
+    "It rewrites the spec into render prose under zero-invention rules before painting, which holds forbidden content out most reliably.",
+    !oaiConfigured, "GATED — the pipeline needs the OpenAI key in section 02.");
 
   // Honest connection state (B3): CONNECTED only after the user's own Test
   // passed; otherwise the key source. Never a fake CONNECTED, no polling.

@@ -928,7 +928,17 @@ def _chat_model() -> str:
 
 def preferred_provider() -> str:
     p = load_settings().get("preferred_provider", "")
-    return p if p in all_providers() else DEFAULT_PROVIDER
+    if p in all_providers():
+        return p
+    # Ruled default (CONNECTORS_UI_PLAN C1): the ChatGPT image pipeline is
+    # the recommended starting engine once an OpenAI key exists; without
+    # one the recommendation is a stated gate, and Gemini leads if that
+    # key is present instead. Never a preselected broken option.
+    import os
+    if load_settings().get("openai_api_key", "").strip() or \
+            os.environ.get("OPENAI_API_KEY", "").strip():
+        return "openai-chat"
+    return DEFAULT_PROVIDER
 
 
 def draft_render_prose(spec_id: str, panel_id: str, ref_ids: list[str]) -> dict:

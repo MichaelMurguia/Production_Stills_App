@@ -433,9 +433,36 @@
     <div data-subview="api">
       <p class="mini prod-moved">PRODUCTIONS MOVED &mdash; manage them in
         <button class="text-act" id="goto-productions">Productions</button></p>
-      <div class="panel" style="margin-bottom:20px">
-        <h2>Engines &amp; keys</h2>
-        <p class="hint">Keys are written to <code>data/settings.json</code> on this machine and leave it only to call the provider you gave them to. Gemini keys come from aistudio.google.com; OpenAI keys from platform.openai.com (API billing is separate from ChatGPT Plus).</p>
+      <div class="panel ai-head" style="margin-bottom:20px">
+        <div>
+          <h2>AI &amp; engines</h2>
+          <p class="hint">Keys are written to <code>settings.json</code> on this machine and leave it only to call the provider you gave them to. Nothing is proxied through us and no render credit is resold.</p>
+        </div>
+        <span class="bill-warn">BILLED PER RENDER &mdash; REJECTED TAKES COST THE SAME</span>
+      </div>
+
+      <!-- C1 — §01 WHAT WILL RUN: the two AI roles, chosen separately. -->
+      <div class="fact-head sec-head">01 &mdash; WHAT WILL RUN <span class="sec-sub">Two different kinds of AI. They are chosen separately.</span></div>
+      <div class="role-cards">
+        <div class="panel role-card">
+          <p class="role-kicker">ROLE 01 <b>Narrative &amp; content evaluation</b></p>
+          <p class="role-jobs">SCRIPT SCAN &middot; BIBLE DRAFTING &middot; BREAKDOWN AUTOFILL &middot; PROMPT COMPILE &amp; REWRITE &middot; INSIGHTS</p>
+          <div class="role-sel">
+            <select id="role-narrative"></select>
+            <p class="role-sel-meta" id="role-narrative-meta"></p>
+          </div>
+          <div class="rec-row" id="rec-narrative"></div>
+        </div>
+        <div class="panel role-card">
+          <p class="role-kicker">ROLE 02 <b>Image generation</b> <span class="role-tag">STARTING ENGINE</span></p>
+          <p class="role-jobs">PANEL TAKES &middot; REPAIR REGION &middot; FULL-SIZE RE-RENDER &middot; DERIVED MATERIALS</p>
+          <div class="role-sel">
+            <select id="role-image"></select>
+            <p class="role-sel-meta" id="role-image-meta"></p>
+          </div>
+          <div class="rec-row" id="rec-image"></div>
+          <p class="role-note">&rarr; This is only where a new take <i>starts</i>. Every panel keeps its own picker on the <b>Panels</b> tab &mdash; switching engines per panel is how you get the best frame.</p>
+        </div>
       </div>
       <div class="engine-cards">
         <div class="panel engine-card">
@@ -485,13 +512,6 @@
           <button class="ghost" id="eng-add">+ Add engine</button>
         </div>
         <div id="custom-engines"></div>
-      </div>
-      <div class="panel" style="margin-top:20px">
-        <div class="eng-head">
-          <div><h3 style="margin:0">Default engine</h3>
-            <p class="hint" style="margin:4px 0 0">pre-selected everywhere a Model dropdown appears — still overridable per render</p></div>
-          <span class="variant-chips" id="pref-chips" title="The default engine pre-selected in every Model dropdown (panel generation, derived materials, repair). You can still override per generation."></span>
-        </div>
       </div>
       <div class="facts-row">
         <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">EVERYTHING LIVES HERE</div>
