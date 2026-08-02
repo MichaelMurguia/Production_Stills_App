@@ -1009,22 +1009,50 @@ function useTemplate(id) {
 /* Model selectors state their gate (user ruling 2026-08-01): only engines
    with a configured key are listed; with none, the selector itself says
    so instead of offering models that cannot run. Returns whether any
-   engine is ready. */
+   engine is ready.
+
+   C7 (CONNECTORS_UI_PLAN): enabled connector models join every selector,
+   grouped by capability (never by seller); each option states refs,
+   ceiling and price — a name is not enough. A failing connector's models
+   STAY listed and fail loudly at render — never a silent substitution.
+   A search button beside the select opens the picker (search the enabled
+   set first, escalate the same query to the full catalog). */
+
+// Per-engine facts for the point of choice. Built-ins are known; the
+// rest reads from provider_meta. Nothing invented: unknown ceiling reads
+// as nothing rather than a guess.
+function engineFacts(pid, s) {
+  const m = s.provider_meta?.[pid] || {};
+  if (pid === "gemini") return { refs: true, maxPx: 3840, price: null, facts: "REFS ≤14 · 4K NATIVE" };
+  if (pid === "openai") return { refs: true, maxPx: 2560, price: null, facts: "REFS ≤14 · 2.5K MAX" };
+  if (pid === "openai-chat") return { refs: true, maxPx: 1536, price: null, facts: "REFS ≤14 · 1.5K PRESET CAP" };
+  if (pid === "mock") return { refs: true, maxPx: 3840, price: "0", facts: "DEBUG DRY-RUN · NO COST" };
+  if (pid.startsWith("custom:")) return { refs: true, maxPx: null, price: null, facts: "YOUR ENDPOINT" };
+  const bits = [m.refs ? "REFS ≤14" : "NO REFERENCES"];
+  if ((m.max_px || 0) >= 3840) bits.push("4K NATIVE");
+  else if (m.max_px) bits.push(`${m.max_px >= 2048 ? "2K" : "1K"} MAX`);
+  if (m.price) bits.push(`$${m.price}/IMG`);
+  else bits.push("PRICE NOT PUBLISHED");
+  bits.push(`VIA ${(m.connector || "").toUpperCase()}`);
+  return { refs: !!m.refs, maxPx: m.max_px || null, price: m.price || null,
+           facts: bits.join(" · ") };
+}
+
 async function fillProviderSelect(sel, labels) {
   if (!sel) return false;
   let s = {};
   try { s = await api("/api/settings"); } catch { /* stated below */ }
   const eng = s.engines || {};
-  // A key that FAILED its test is never selectable (user ruling
-  // 2026-08-02) — it lists disabled, stating why, so the fix is obvious.
-  const DEFS = [["gemini", labels?.gemini || "Gemini (research pass)"],
-                ["openai", labels?.openai || "OpenAI GPT-5.6"]];
-  // The debug dry-run engine joins every selector while its toggle is on.
-  if (eng.mock?.configured) DEFS.push(["mock", "MOCK ENGINE — no cost (debug)"]);
-  const usable = DEFS.filter(([k]) =>
-    eng[k]?.configured && eng[k]?.last_test?.ok !== false);
-  const failed = DEFS.filter(([k]) =>
-    eng[k]?.configured && eng[k]?.last_test?.ok === false);
+  const usable = [], failed = [];
+  for (const pid of Object.keys(s.providers || {})) {
+    if (pid.startsWith("or:") || pid.startsWith("fal:")) {
+      usable.push(pid);  // stays listed; a dead key fails loudly at render
+      continue;
+    }
+    const e = eng[pid];
+    if (!e?.configured) continue;
+    (e.last_test?.ok === false ? failed : usable).push(pid);
+  }
   if (!usable.length) {
     sel.innerHTML = failed.length
       ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
@@ -1032,16 +1060,152 @@ async function fillProviderSelect(sel, labels) {
     sel.disabled = true;
     sel.title = failed.length
       ? "Every configured key failed its last test — retest or replace it in Settings."
-      : "Every model action needs a Gemini or OpenAI key — add one in Settings.";
+      : "Every model action needs a key or connector — add one in Settings.";
     return false;
   }
   const prev = sel.value;
   sel.disabled = false;
-  sel.innerHTML = usable.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")
-    + failed.map(([v, l]) =>
-      `<option value="${v}" disabled>${esc(l)} — KEY FAILED ITS TEST</option>`).join("");
-  if (usable.some(([v]) => v === prev)) sel.value = prev;
+  const opt = pid => {
+    const f = engineFacts(pid, s);
+    return `<option value="${esc(pid)}">${esc(s.providers[pid])} — ${esc(f.facts)}</option>`;
+  };
+  const anchors = usable.filter(pid => engineFacts(pid, s).refs);
+  const styleOnly = usable.filter(pid => !engineFacts(pid, s).refs);
+  sel.innerHTML =
+    (anchors.length ? `<optgroup label="ANCHORS REFERENCES">${anchors.map(opt).join("")}</optgroup>` : "")
+    + (styleOnly.length ? `<optgroup label="STYLE STUDIES ONLY">${styleOnly.map(opt).join("")}</optgroup>` : "")
+    + failed.map(pid =>
+      `<option value="${esc(pid)}" disabled>${esc(s.providers[pid])} — KEY FAILED ITS TEST</option>`).join("");
+  if (usable.includes(prev)) sel.value = prev;
+  else if (usable.includes(s.preferred_provider)) sel.value = s.preferred_provider;
+  // The picker button rides beside every model select, once.
+  if (!sel._sbPicker) {
+    sel._sbPicker = true;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "picker-open";
+    btn.title = "Search engines — the enabled set first, then the full catalog";
+    btn.textContent = "⌕";
+    sel.after(btn);
+    btn.onclick = () => openEnginePicker(sel, s);
+  }
   return true;
+}
+
+/* The engine picker (mock 16e): search at the top, capability on every
+   row, escalation to the full catalog as the last row. Three rules: a
+   name is not enough; the limit that bites is amber at the point of
+   choice; never a silent substitution. */
+async function openEnginePicker(sel, s) {
+  document.getElementById("engine-picker")?.remove();
+  const enabled = Array.from(sel.options).filter(o => !o.disabled && o.value)
+    .map(o => o.value);
+  const panel = document.createElement("div");
+  panel.id = "engine-picker";
+  const r = sel.getBoundingClientRect();
+  panel.style.left = `${Math.max(8, Math.min(r.left, innerWidth - 420))}px`;
+  panel.style.top = `${Math.min(r.bottom + 6, innerHeight - 440)}px`;
+  document.body.append(panel);
+  const state = { q: "", refs: false, fourk: false, cheap: false, server: null };
+
+  const rowHtml = (pid, label, f, fromCatalog) => `
+    <button class="pick-row${sel.value === pid ? " cur" : ""}" data-pid="${esc(pid)}"${fromCatalog ? ` data-cat="1"` : ""}>
+      <span class="pick-name">${esc(label)}</span>
+      <span class="pick-facts">${f.facts.split(" · ").map(x =>
+        /MAX|PRESET CAP/.test(x) && !/4K/.test(x)
+          ? `<i class="pf-amber">${esc(x)}</i>` : esc(x)).join(" · ")}</span>
+    </button>`;
+
+  const draw = async () => {
+    let list = enabled.filter(pid => {
+      const f = engineFacts(pid, s);
+      if (state.refs && !f.refs) return false;
+      if (state.fourk && (f.maxPx || 0) < 3840) return false;
+      if (state.q && !`${s.providers[pid]} ${pid}`.toLowerCase().includes(state.q.toLowerCase())) return false;
+      return true;
+    });
+    if (state.cheap) list = [...list].sort((a, b) => {
+      const pa = parseFloat(engineFacts(a, s).price ?? "999"),
+            pb = parseFloat(engineFacts(b, s).price ?? "999");
+      return pa - pb;
+    });
+    const groups = [
+      ["ANCHORS REFERENCES", list.filter(p => engineFacts(p, s).refs)],
+      ["STYLE STUDIES ONLY", list.filter(p => !engineFacts(p, s).refs)],
+    ];
+    let serverRows = "";
+    if (state.server?.length) {
+      serverRows = `<p class="pick-group">FROM THE FULL CATALOG · ${state.server.length}</p>`
+        + state.server.map(m => {
+          const f = { facts: [m.refs ? `REFS ≤${m.max_refs}` : "NO REFERENCES",
+                              m.price_per_image ? `$${m.price_per_image}/IMG` : "PRICE NOT PUBLISHED",
+                              `VIA ${m.connector.toUpperCase()}`].join(" · ") };
+          return rowHtml(m.id, m.label, f, true);
+        }).join("");
+    }
+    panel.innerHTML = `
+      <div class="pick-search">
+        <input id="pick-q" placeholder="Search engines…" value="${esc(state.q)}">
+        <span class="pick-count">${list.length} OF ${enabled.length}</span>
+      </div>
+      <div class="pick-chips">
+        <button class="pchip${state.refs ? " on" : ""}" data-c="refs">ANCHORS REFS</button>
+        <button class="pchip${state.fourk ? " on" : ""}" data-c="fourk">4K</button>
+        <button class="pchip${state.cheap ? " on" : ""}" data-c="cheap">CHEAPEST</button>
+      </div>
+      <div class="pick-list">
+        ${groups.map(([t, rows]) => rows.length
+          ? `<p class="pick-group">${t} · ${rows.length}</p>`
+            + rows.map(pid => rowHtml(pid, s.providers[pid], engineFacts(pid, s), false)).join("")
+          : "").join("")}
+        ${serverRows}
+        ${!list.length && !state.server?.length
+          ? `<p class="pick-none">Nothing in your enabled set matches.</p>` : ""}
+      </div>
+      <div class="pick-foot">
+        <span class="pick-scope">${state.server ? "SEARCHED ENABLED + FULL CATALOG" : "SEARCHING ENABLED MODELS"}</span>
+        ${state.q && !state.server ? `<button class="text-act" id="pick-all">Search the full catalog</button>` : ""}
+      </div>`;
+    const q = panel.querySelector("#pick-q");
+    q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+    q.oninput = e => { state.q = e.target.value; state.server = null; draw(); };
+    panel.querySelectorAll(".pchip").forEach(c => {
+      c.onclick = () => { state[c.dataset.c] = !state[c.dataset.c]; draw(); };
+    });
+    panel.querySelector("#pick-all")?.addEventListener("click", async () => {
+      try {
+        const out = await api(`/api/connectors/catalog?q=${encodeURIComponent(state.q)}&scope=all`);
+        const have = new Set(enabled);
+        state.server = out.records.filter(m => !have.has(m.id) && m.supported);
+        state._searched = out.searched;
+      } catch (err) { toast(err.message, true); state.server = []; }
+      draw();
+    });
+    panel.querySelectorAll(".pick-row").forEach(rowBtn => {
+      rowBtn.onclick = async () => {
+        const pid = rowBtn.dataset.pid;
+        if (rowBtn.dataset.cat) {
+          // Enable-and-select without leaving the panel.
+          const m = state.server.find(x => x.id === pid);
+          try {
+            await api("/api/connectors/enable", { method: "POST",
+              json: { id: pid, on: true, record: m } });
+            const o = document.createElement("option");
+            o.value = pid; o.textContent = `${m.label} — via ${m.connector}`;
+            sel.append(o);
+            toast(`${m.label} enabled and selected.`);
+          } catch (err) { toast(err.message, true); return; }
+        }
+        sel.value = pid;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        panel.remove();
+      };
+    });
+  };
+  await draw();
+  setTimeout(() => document.addEventListener("click", e => {
+    if (!panel.contains(e.target)) panel.remove();
+  }, { once: true, capture: true }));
 }
 
 // The selector's visible label — busy meters say which model is running.
