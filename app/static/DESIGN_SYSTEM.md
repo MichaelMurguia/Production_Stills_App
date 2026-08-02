@@ -552,6 +552,9 @@ well — this log records what changed, it does not replace the rules.
   tools tab (mock engine + page-text edit mode); new UNCANONIZED
   `.text-edit-chip` fixed mode banner (z 60, amber left border). Mock
   output is always stamped MOCK — it can never read as a real render.
+  Same day, owner-linked (user ruling): the tab, endpoints and mock
+  provider exist only on the owner's installs (`SCREENBOARD_DEBUG_TOOLS`,
+  set by the store for OWNER_EMAILS studios) — customers never see them.
 - **2026-08-01** — Locked-stage pass (LOCKED_STAGE_PLAN L1–L4): a locked
   stage is a condition, not a destination — unmet stages are inert with a
   LOCKED chip; clicking one opens the anchored explanation under the

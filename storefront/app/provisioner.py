@@ -109,6 +109,10 @@ def ensure_workspace_row(s, purchase: db.Purchase) -> db.Workspace:
     return ws
 
 
+def _is_owner(purchase: db.Purchase) -> bool:
+    return (purchase.email or "").strip().lower() in settings.OWNER_EMAILS
+
+
 def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
     """Build the tenant service. Any exception marks the row FAILED with
     the error; reconcile retries on its next run."""
@@ -121,13 +125,18 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
             ws.railway_volume_id = railway.create_volume(
                 ws.railway_service_id, MOUNT_PATH)
             s.commit()
-        railway.upsert_variables(ws.railway_service_id, {
+        variables = {
             "SCREENBOARD_HOME": MOUNT_PATH,
             "SCREENBOARD_ACCESS_TOKEN": ws.access_token,
             # Railway's edge proxies every request; uvicorn must trust its
             # X-Forwarded-Proto so cookies see the real (https) scheme.
             "FORWARDED_ALLOW_IPS": "*",
-        })
+        }
+        if _is_owner(purchase):
+            # Debug tools exist only on the store owner's own studios —
+            # linked to the account, never shipped to customers.
+            variables["SCREENBOARD_DEBUG_TOOLS"] = "1"
+        railway.upsert_variables(ws.railway_service_id, variables)
         railway.set_start_command(ws.railway_service_id, START_COMMAND)
         try:
             railway.configure_graceful_deploys(ws.railway_service_id)
@@ -291,6 +300,12 @@ def _reconcile(railway, out: dict) -> dict:
                         except Exception:
                             pass
                     _ensure_custom_domain(s, ws, purchase, railway)
+                    if _is_owner(purchase):
+                        try:  # standing upgrade: owner studios gain the flag
+                            railway.upsert_variables(ws.railway_service_id, {
+                                "SCREENBOARD_DEBUG_TOOLS": "1"})
+                        except Exception:
+                            pass  # next reconcile retries
                     # Doors must open before they are offered: the branded
                     # address unlocks in the UI only once it provably
                     # serves. Probe is read-only — never a re-attach.

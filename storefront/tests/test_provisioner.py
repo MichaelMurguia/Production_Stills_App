@@ -62,6 +62,7 @@ class FakeRailway:
 
     def upsert_variables(self, service_id, variables):
         self._hit("upsert_variables")
+        self.variables = {**getattr(self, "variables", {}), **variables}
         self.last_variables = variables
 
     def set_start_command(self, service_id, cmd):
@@ -160,6 +161,34 @@ class ProvisionerTests(unittest.TestCase):
         self.assertGreaterEqual(len(out["failed"]), 1)
         ws = self._workspace_for(p.id)
         self.assertIn("update failed", ws.detail)
+
+    def test_owner_studios_get_debug_tools_customers_never(self):
+        """User ruling 2026-08-03: debug tools are linked to the owner's
+        account — the flag rides provisioning for OWNER_EMAILS purchases
+        only; a customer studio never receives it."""
+        from app import settings as st
+        configure_railway(True)
+        # Customer first: no flag.
+        p = _fulfill(cloud_session("cs_prov_own1", "sub_own1"))
+        fake = FakeRailway()
+        provisioner.reconcile(railway=fake)
+        self.assertNotIn("SCREENBOARD_DEBUG_TOOLS", fake.variables)
+        # Owner: the same email, now on the owner list.
+        old_owners = st.OWNER_EMAILS
+        st.OWNER_EMAILS = {"t@example.com"}
+        self.addCleanup(lambda: setattr(st, "OWNER_EMAILS", old_owners))
+        p2 = _fulfill(cloud_session("cs_prov_own2", "sub_own2"))
+        fake2 = FakeRailway()
+        provisioner.reconcile(railway=fake2)
+        self.assertEqual(fake2.variables.get("SCREENBOARD_DEBUG_TOOLS"), "1")
+        ws = self._workspace_for(p2.id)
+        self.assertEqual(ws.status, "ACTIVE")
+        # Standing upgrade: an ALREADY-ACTIVE owner studio gains the flag
+        # on the next reconcile (fresh fake proves it re-upserts).
+        fake3 = FakeRailway()
+        provisioner.reconcile(railway=fake3)
+        self.assertEqual(getattr(fake3, "variables", {}).get(
+            "SCREENBOARD_DEBUG_TOOLS"), "1")
 
     def test_cancellation_revokes(self):
         configure_railway(True)

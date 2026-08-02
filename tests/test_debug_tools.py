@@ -59,8 +59,13 @@ FADE OUT.
 
 class DebugToolsBase(unittest.TestCase):
     def setUp(self):
+        import os
         self.tmp = Path(tempfile.mkdtemp(prefix="sb-debug-"))
         _redirect_home(self.tmp)
+        # Debug tools are owner-linked: they exist only where this env
+        # flag is set (the owner's machines / owner-provisioned studios).
+        os.environ["SCREENBOARD_DEBUG_TOOLS"] = "1"
+        self.addCleanup(lambda: os.environ.pop("SCREENBOARD_DEBUG_TOOLS", None))
         self.client = TestClient(appmain.app)
 
     def tearDown(self):
@@ -174,6 +179,32 @@ class MockEngineTests(DebugToolsBase):
         self.assertIn("no cost", notes.lower())
         with Image.open(out) as im:
             self.assertEqual(im.size, (2560, 1920))
+
+
+class OwnerGateTests(DebugToolsBase):
+    """Without the env flag — every customer install — the tools do not
+    exist: no tab data, no endpoints, no mock provider, even if a
+    settings file claims debug_mock."""
+
+    def test_everything_404s_without_the_flag(self):
+        import os
+        self._enable_mock()  # owner turns it on…
+        os.environ.pop("SCREENBOARD_DEBUG_TOOLS", None)  # …customer install
+        s = self.client.get("/api/settings").json()
+        self.assertFalse(s["debug_tools"])
+        self.assertNotIn("mock", s["providers"])
+        self.assertNotIn("mock", s["engines"])
+        self.assertEqual(self.client.post(
+            "/api/settings", json={"debug_mock": True}).status_code, 404)
+        self.assertEqual(self.client.get(
+            "/api/debug/text-overrides").status_code, 404)
+        self.assertEqual(self.client.put(
+            "/api/debug/text-overrides",
+            json={"overrides": {}}).status_code, 404)
+        self.assertEqual(self.client.delete(
+            "/api/debug/text-overrides").status_code, 404)
+        self.assertFalse(generate.mock_enabled(),
+                         "a smuggled settings flag must not resurrect mock")
 
 
 class TextOverrideTests(DebugToolsBase):

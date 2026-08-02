@@ -37,6 +37,13 @@ RAILWAY_ENVIRONMENT_ID = os.environ.get("RAILWAY_ENVIRONMENT_ID", "")
 # studio-<n>.<base> custom domains instead of *.up.railway.app — needs the
 # one-time wildcard CNAME described in docs/DEPLOYMENT.md.
 TENANT_DOMAIN_BASE = os.environ.get("TENANT_DOMAIN_BASE", "").strip(".")
+
+# Store-owner account emails (comma-separated). Studios purchased under
+# these addresses are provisioned with SCREENBOARD_DEBUG_TOOLS=1 — the
+# in-app Debug tools (mock engine, text edit) exist ONLY there.
+OWNER_EMAILS = {e.strip().lower()
+                for e in os.environ.get("OWNER_EMAILS", "").split(",")
+                if e.strip()}
 TENANT_REPO = os.environ.get("TENANT_REPO", "MichaelMurguia/Production_Stills_App")
 TENANT_BRANCH = os.environ.get("TENANT_BRANCH", "main")
 

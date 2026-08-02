@@ -795,7 +795,7 @@ def api_get_settings() -> dict:
         "openai-chat": {"configured": bool(openai_src), "source": openai_src,
                         "last_test": tests.get("openai-chat")},
     }
-    if generate.mock_enabled():
+    if generate.mock_enabled():  # implies debug_tools_enabled()
         # The debug dry-run engine: always "configured" while the toggle is
         # on — it has no key and no test because it never calls anything.
         engines["mock"] = {"configured": True, "source": "debug",
@@ -819,6 +819,7 @@ def api_get_settings() -> dict:
             "aspects": generate.aspect_catalog(),
             "board_templates": store.BOARD_TEMPLATES,
             "custom_engines": customs,
+            "debug_tools": generate.debug_tools_enabled(),
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),
             "engines": engines}
@@ -832,6 +833,8 @@ async def api_save_settings(body: dict) -> dict:
     if "openai_api_key" in body:
         s["openai_api_key"] = str(body["openai_api_key"]).strip()
     if "debug_mock" in body:
+        if not generate.debug_tools_enabled():
+            raise HTTPException(404)  # the feature does not exist here
         s["debug_mock"] = bool(body["debug_mock"])
         # Turning the dry-run engine off must never leave it selected.
         if not s["debug_mock"] and s.get("preferred_provider") == "mock":
@@ -855,8 +858,14 @@ def _text_overrides_path():
     return paths.HOME / "text_overrides.json"
 
 
+def _require_debug_tools() -> None:
+    if not generate.debug_tools_enabled():
+        raise HTTPException(404)
+
+
 @app.get("/api/debug/text-overrides")
 def api_get_text_overrides() -> dict:
+    _require_debug_tools()
     p = _text_overrides_path()
     try:
         data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
@@ -867,6 +876,7 @@ def api_get_text_overrides() -> dict:
 
 @app.put("/api/debug/text-overrides")
 async def api_put_text_overrides(body: dict) -> dict:
+    _require_debug_tools()
     overrides = body.get("overrides")
     if not isinstance(overrides, dict):
         raise HTTPException(422, "overrides must be an object of text → text")
@@ -878,6 +888,7 @@ async def api_put_text_overrides(body: dict) -> dict:
 
 @app.delete("/api/debug/text-overrides")
 def api_clear_text_overrides() -> dict:
+    _require_debug_tools()
     _text_overrides_path().unlink(missing_ok=True)
     return {"overrides": {}}
 

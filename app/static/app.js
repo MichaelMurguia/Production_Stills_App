@@ -756,7 +756,12 @@ function wizACacheSet(a) {
    modal; "clear" in Settings → Debug tools removes everything. */
 let _textOverrides = {};
 let _toRaf = 0;
-const textEditMode = () => localStorage.getItem("sbTextEdit") === "1";
+// Server-declared (owner installs only). Until /api/settings has been
+// seen this stays false, so nothing debug-shaped ever flashes for
+// customers.
+let _debugTools = false;
+const textEditMode = () =>
+  _debugTools && localStorage.getItem("sbTextEdit") === "1";
 
 async function loadTextOverrides() {
   try { _textOverrides = (await api("/api/debug/text-overrides")).overrides || {}; }
@@ -1067,6 +1072,9 @@ async function updateBand() {
   } catch { return; }
 
   $("#brand-project").textContent = (state.project || "").toUpperCase();
+
+  _debugTools = !!settings.debug_tools;
+  updateTextEditChip();
 
   const eng = settings.engines || {};
   $("#engine-dots").innerHTML = ["gemini", "openai"].map(k => {
@@ -1669,7 +1677,9 @@ async function renderSettings() {
   useTemplate("tpl-settings");
   $("#goto-productions").onclick = () => showView("projects");
 
-  const rememberedTab = uiGet("settingsTab", "");
+  const rememberedTab0 = uiGet("settingsTab", "");
+  const rememberedTab = rememberedTab0 === "debug" && !_debugTools
+    ? "" : rememberedTab0;
   if (rememberedTab) {
     const btn = $(`#settings-subnav button[data-sub="${CSS.escape(rememberedTab)}"]`);
     if (btn) {
@@ -1688,6 +1698,13 @@ async function renderSettings() {
   });
 
   const settings = await api("/api/settings");
+  _debugTools = !!settings.debug_tools;
+  if (!_debugTools) {
+    // Debug tools exist only on the owner's installs — the tab and its
+    // subview are removed outright, never merely hidden.
+    $('#settings-subnav button[data-sub="debug"]')?.remove();
+    $('[data-subview="debug"]')?.remove();
+  }
 
   // User-added engines: list, test, remove, add (OpenAI Images API contract).
   const customs = settings.custom_engines || [];

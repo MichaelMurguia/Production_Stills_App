@@ -32,9 +32,19 @@ def custom_engines() -> list[dict]:
     return out
 
 
+def debug_tools_enabled() -> bool:
+    """Debug tools exist only where the OWNER runs the app: the env flag
+    is set on the user's own machines and, for cloud studios, by the
+    provisioner only on workspaces whose purchase email is in the store's
+    OWNER_EMAILS. Customers never see the tab, the endpoints, or the
+    mock provider (user ruling 2026-08-03: linked to my account)."""
+    import os
+    return bool(os.environ.get("SCREENBOARD_DEBUG_TOOLS"))
+
+
 def mock_enabled() -> bool:
     """Debug tools → Mock engine: the whole pipeline at zero cost."""
-    return bool(load_settings().get("debug_mock"))
+    return debug_tools_enabled() and bool(load_settings().get("debug_mock"))
 
 
 def all_providers() -> dict:
