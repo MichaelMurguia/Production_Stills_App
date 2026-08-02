@@ -1729,3 +1729,50 @@ details.meta pre {
 .reach-tile.bad { border-color: var(--bad); }
 .reach-tile.bad .reach-num { color: var(--bad); }
 @media (max-width: 980px) { .reach-tiles { grid-template-columns: 1fr 1fr; } }
+
+/* C5 — the model browser: capability before vendor */
+.cat-wrap { border: 1px solid var(--line); background: var(--panel); margin-top: 16px; }
+.cat-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.cat-bar input#cat-q { flex: 1; min-width: 220px; }
+.cat-f { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim);
+  border: 1px solid var(--line); padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.cat-f.on { border-color: var(--ok); color: var(--ink); }
+.cat-showing { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; color: var(--ink-faint); }
+.cat-group-head { padding: 14px 16px 8px; }
+.cat-group-title { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--ink); }
+.cat-group-sub { font-size: 12px; color: var(--ink-dim); margin-left: 10px; }
+.cat-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 290px 104px;
+  gap: 14px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line-soft);
+  border-left: 2px solid transparent; }
+.cat-row.dep-on { border-left-color: var(--bad); }
+.cat-row.unsup .cat-name, .cat-row.unsup .cred-tile { color: var(--ink-faint); }
+.cat-row.unsup .cat-meta { color: var(--ink-faint); } /* never dimmer than its name */
+.cat-name { font-weight: 600; font-size: 13.5px; display: block; }
+.cat-meta { font-family: var(--mono); font-size: 9px; letter-spacing: .05em; color: var(--ink-faint);
+  display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-badges { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.cbadge { font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; padding: 2px 6px;
+  border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
+.cbadge.ok { border-color: var(--ok); color: var(--ok); }
+.cbadge.hold { border-color: var(--hold); color: var(--hold); }
+.cbadge.dim { border-color: var(--line); color: var(--ink-dim); }
+.cbadge.accent { border-color: var(--accent); color: var(--accent); }
+.cbadge.bad { border-color: var(--bad); color: var(--bad); }
+.cbadge.dline { border-style: dashed; color: var(--ink-faint); }
+.cbadge.dhold { border-style: dashed; border-color: var(--hold); color: var(--hold); }
+.cat-enable { text-align: right; }
+.cat-en { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; padding: 5px 10px;
+  background: transparent; border: 1px solid var(--line); color: var(--ink-dim); cursor: pointer; }
+.cat-en.on { border-color: var(--ok); color: var(--ok); }
+.cat-noten { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: var(--ink-faint); }
+
+/* C6 — witnessed test frames; tiles stay typographic until WE render */
+.cat-thumb { width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--line); display: block; }
+.cat-prevbtn { cursor: pointer; }
+.cat-prevbtn:hover { border-color: var(--ink-faint); }
+.cat-strip { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-top: 1px solid var(--line-soft); }
+.cat-strip .cred-tile { font-size: 8px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
+.cat-strip-txt { flex: 1; font-size: 12px; color: var(--ink-dim); }
+.cat-strip-cost { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--warn); white-space: nowrap; }

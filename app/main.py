@@ -990,6 +990,45 @@ def api_connectors_catalog(q: str = "", refs: bool = False, fourk: bool = False,
     return {"records": hits, "total": len(records), "searched": searched}
 
 
+# C6 — the witnessed test frame: one standardised in-house prompt through
+# the user's own key; the result becomes the model's preview — our
+# witnessed output, never the vendor's marketing sample. Cached to disk,
+# served from disk, works air-gapped afterward.
+_PREVIEW_PROMPT = (
+    "Production still, working film set at dusk: a practical interior "
+    "location with visible light rigging, one crew member adjusting a "
+    "flag on a C-stand, honest colour, shallow depth of field, no text, "
+    "no watermark, no logo.")
+
+
+@app.post("/api/connectors/preview")
+def api_connector_preview(body: dict = Body(...)) -> dict:
+    import re as _re
+    mid = str(body.get("id", ""))
+    rec = next((m for m in connectors.enabled_records() if m["id"] == mid), None)
+    if rec is None:
+        raise HTTPException(404, "enable the model first")
+    connectors.cache_dir().mkdir(parents=True, exist_ok=True)
+    name = _re.sub(r"[^A-Za-z0-9._-]", "_", mid) + ".png"
+    out = connectors.cache_dir() / name
+    try:
+        generate._render_connector(mid, _PREVIEW_PROMPT, [], "1K", "3:2", out)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+    state = connectors.load_state()
+    state.setdefault(rec["connector"], {}).setdefault("previews", {})[mid] = name
+    connectors.save_state(state)
+    return {"id": mid, "preview": f"/api/connectors/preview-image/{name}"}
+
+
+@app.get("/api/connectors/preview-image/{name}")
+def api_connector_preview_image(name: str):
+    p = connectors.cache_dir() / paths.safe_id(name)
+    if not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p, media_type="image/png")
+
+
 @app.get("/api/connectors/openrouter/auth")
 def api_openrouter_auth(request: Request) -> dict:
     callback = str(request.base_url).rstrip("/") + "/connectors/openrouter/callback"

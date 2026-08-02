@@ -150,14 +150,18 @@ def connector_public(cid: str, state: dict | None = None) -> dict:
 
 
 def catalog_records(state: dict | None = None) -> list[dict]:
-    """Every synced record across connectors, enabled flag attached."""
+    """Every synced record across connectors, enabled flag and witnessed
+    preview (C6) attached."""
     state = state if state is not None else load_state()
     out = []
     for cid in REGISTRY:
         c = state.get(cid, {})
         enabled = set(c.get("enabled", []))
+        previews = c.get("previews", {})
         for m in c.get("catalog", []):
-            out.append({**m, "enabled": m["id"] in enabled})
+            name = previews.get(m["id"])
+            out.append({**m, "enabled": m["id"] in enabled,
+                        "preview": f"/api/connectors/preview-image/{name}" if name else None})
     return out
 
 

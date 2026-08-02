@@ -2069,6 +2069,126 @@ async function renderSettings() {
     catBtn.onclick = () => renderCatalogBrowser();
   }
 
+  // C5 — the model browser: grouped by what they can do, not by who
+  // sells them. Reference capability is the product's first hard filter,
+  // so it is the first thing the layout expresses. C6 — imagery is the
+  // typographic tile plus the witnessed test frame, never vendor samples.
+  const DEVTILES = { "openai": "OAI", "google": "GGL", "black forest labs": "BFL",
+    "bytedance": "BDN", "ideogram": "IDG", "recraft": "RCF", "stability": "STB",
+    "higgsfield": "HGS", "qwen": "QWN", "krea": "KRA", "microsoft": "MSF",
+    "x-ai": "XAI", "xai": "XAI", "nvidia": "NVD", "hidream": "HDR" };
+  const devTile = d => DEVTILES[(d || "").toLowerCase()]
+    || ((d || "").split(/[\s-]+/).filter(Boolean).map(w => w[0]).join("").slice(0, 3).toUpperCase() || "???");
+  const badges = m => {
+    const b = [];
+    if (m.status !== "active") b.push(`<span class="cbadge bad">DEPRECATED UPSTREAM</span>`);
+    if (!m.supported) b.push(`<span class="cbadge dhold">UNSUPPORTED SHAPE</span>`);
+    if (m.supported && m.status === "active") {
+      b.push(m.refs ? `<span class="cbadge ok">REFS ≤${m.max_refs}</span>`
+                    : `<span class="cbadge hold">NO REFERENCES</span>`);
+      if ((m.max_px || 0) >= 3840) b.push(`<span class="cbadge dim">4K NATIVE</span>`);
+      else if (m.max_px) b.push(`<span class="cbadge accent">${m.max_px >= 2048 ? "2K" : "1K"} MAX</span>`);
+      if (m.price_per_image) b.push(`<span class="cbadge dim">$${esc(m.price_per_image)}/IMG</span>`);
+      else b.push(`<span class="cbadge dline">NO PRICE</span>`);
+    }
+    return b.join("");
+  };
+  const catState = uiGet("catalogFilters", null) || { q: "", refs: true, fourk: false, priced: false };
+
+  function renderCatalogBrowser() {
+    const host = $("#catalog-host");
+    const f = catState;
+    const hits = catalogAll.filter(m =>
+      (!f.refs || m.refs)
+      && (!f.fourk || (m.max_px || 0) >= 3840)
+      && (!f.priced || m.price_per_image)
+      && (!f.q || `${m.label} ${m.developer} ${m.provider_model_id}`.toLowerCase().includes(f.q.toLowerCase())));
+    const groups = [
+      ["ANCHORS REFERENCES", "Takes your approved reference images as input — the only kind that can hold a face, a vehicle or a location on model.", hits.filter(m => m.refs)],
+      ["STYLE STUDIES ONLY", "Text-only input. Cannot hold a subject on model — use these for look development, never for a canon panel.", hits.filter(m => !m.refs)],
+    ];
+    const row = m => `
+      <div class="cat-row${m.status !== "active" && m.enabled ? " dep-on" : ""}${!m.supported ? " unsup" : ""}">
+        ${m.preview
+          ? `<img class="cat-thumb" src="${esc(m.preview)}" alt="" title="Witnessed test frame — rendered through your key">`
+          : m.enabled && m.supported
+            ? `<button class="cred-tile cat-prevbtn" data-prev="${esc(m.id)}" title="Render a test frame — ${m.price_per_image ? `~$${esc(m.price_per_image)}` : "engine rate"}, billed to your key">${esc(devTile(m.developer))}</button>`
+            : `<span class="cred-tile">${esc(devTile(m.developer))}</span>`}
+        <span class="cat-id">
+          <span class="cat-name">${esc(m.label)}</span>
+          <span class="cat-meta">${esc((m.developer || "").toUpperCase())} · VIA ${esc(m.connector.toUpperCase())} · ${esc(m.provider_model_id)}${!m.supported ? " · PARAMETER SHAPE NOT YET MAPPED" : ""}</span>
+        </span>
+        <span class="cat-badges">${badges(m)}</span>
+        <span class="cat-enable">${!m.supported
+          ? `<span class="cat-noten">NOT ENABLEABLE</span>`
+          : `<button class="cat-en${m.enabled ? " on" : ""}" data-mid="${esc(m.id)}">${m.enabled ? "✓ ENABLED" : "ENABLE"}</button>`}</span>
+      </div>`;
+    host.innerHTML = `
+      <div class="cat-wrap">
+        <div class="cat-bar">
+          <input id="cat-q" placeholder="Search ${cxStats.total} models…" value="${esc(f.q)}">
+          <label class="cat-f${f.refs ? " on" : ""}"><input type="checkbox" id="cat-refs"${f.refs ? " checked" : ""}> Anchors references</label>
+          <label class="cat-f${f.fourk ? " on" : ""}"><input type="checkbox" id="cat-4k"${f.fourk ? " checked" : ""}> 4K native only</label>
+          <label class="cat-f${f.priced ? " on" : ""}"><input type="checkbox" id="cat-pr"${f.priced ? " checked" : ""}> Price published</label>
+          <span class="cat-showing">SHOWING ${hits.length}</span>
+          <button class="text-act" id="cat-close">Close</button>
+        </div>
+        ${groups.map(([title, sub, rows]) => rows.length ? `
+          <div class="cat-group-head"><span class="cat-group-title">${title}</span>
+          <span class="cat-group-sub">${sub}</span></div>
+          ${rows.map(row).join("")}` : "").join("")}
+        ${!hits.length ? `<p class="mini" style="padding:16px 4px">Nothing matches in ${cxStats.total} synced models — loosen a filter. The per-panel picker can also search fal's live catalog.</p>` : ""}
+        <div class="cat-strip">
+          <span class="cred-tile">NO<br>PRV</span>
+          <span class="cat-strip-txt"><b>Render a test frame</b> — click an enabled model's tile.
+          One standardised in-house prompt through your own key; the result becomes that
+          model's preview — our witnessed output, not the vendor's marketing sample.</span>
+          <span class="cat-strip-cost">BILLED TO YOUR KEY AT THE ENGINE'S RATE</span>
+        </div>
+      </div>`;
+    $("#cat-q").oninput = e => {
+      f.q = e.target.value; uiSet("catalogFilters", f); renderCatalogBrowser();
+      const q = $("#cat-q"); q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+    };
+    $("#cat-refs").onchange = e => { f.refs = e.target.checked; uiSet("catalogFilters", f); renderCatalogBrowser(); };
+    $("#cat-4k").onchange = e => { f.fourk = e.target.checked; uiSet("catalogFilters", f); renderCatalogBrowser(); };
+    $("#cat-pr").onchange = e => { f.priced = e.target.checked; uiSet("catalogFilters", f); renderCatalogBrowser(); };
+    $("#cat-close").onclick = () => { $("#catalog-host").innerHTML = ""; };
+    $$(".cat-prevbtn", host).forEach(btn => {
+      btn.onclick = async () => {
+        const m = catalogAll.find(x => x.id === btn.dataset.prev);
+        const cost = m.price_per_image ? `~$${m.price_per_image}` : "the engine's rate";
+        if (!(await askConfirm(`Render a test frame with ${m.label}`,
+          `One standardised prompt through your own key (${cost} — billed to you). The result becomes this model's preview.`,
+          "Render"))) return;
+        btn.textContent = "…";
+        btn.disabled = true;
+        try {
+          const r = await api("/api/connectors/preview", { method: "POST", json: { id: m.id } });
+          m.preview = r.preview;
+          toast(`${m.label}: test frame witnessed — it is the preview now.`);
+        } catch (err) { toast(err.message, true); }
+        renderCatalogBrowser();
+      };
+    });
+    $$(".cat-en", host).forEach(btn => {
+      btn.onclick = async () => {
+        const m = catalogAll.find(x => x.id === btn.dataset.mid);
+        try {
+          await api("/api/connectors/enable", { method: "POST",
+            json: { id: m.id, on: !m.enabled } });
+          m.enabled = !m.enabled;
+          const st = await api("/api/connectors");
+          cxStats = st.stats;
+          toast(m.enabled
+            ? `${m.label} enabled — it now appears in every Model dropdown.`
+            : `${m.label} disabled — it leaves the dropdowns; its takes keep their records.`);
+        } catch (err) { toast(err.message, true); }
+        renderCatalogBrowser();
+      };
+    });
+  }
+
   function expandCustomChip(cid, row) {
     const e = customs.find(x => x.id === cid);
     if (!e) return;
