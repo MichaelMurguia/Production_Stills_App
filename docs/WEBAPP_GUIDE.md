@@ -171,6 +171,18 @@ OAuth state is expiring and cookie-bound; admin endpoints accept
 tenant proxy strips inbound `X-Forwarded-*`, validates upstream hosts by
 parsed hostname, and refuses websockets on tenant hosts.
 
+**SEO surface (pass of 2026-08-03) — keep consistent:** exactly four
+public pages (`/`, `/pipeline`, `/terms`, `/privacy`) are indexable and
+listed in `/sitemap.xml`; `robots.txt` disallows everything
+transactional, and those pages ALSO carry `noindex` meta (account,
+success, signin/signup, recover, both router pages). Canonicals and
+`og:url` always build from `BASE_URL`, never the request host. The
+index page's JSON-LD offer prices must change in the same commit as the
+displayed prices (same rule as the price/template pairing above). Every
+tenant-host response — proxied studio traffic and router pages alike —
+carries `X-Robots-Tag: noindex`; private studios are never crawlable.
+Tests: `tests/test_seo.py`.
+
 ## Developing and shipping
 
 - **Product app:** `run.bat` at repo root (uvicorn, auto-reload).

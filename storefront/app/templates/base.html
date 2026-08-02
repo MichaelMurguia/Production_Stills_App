@@ -4,10 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Screenboard Studio{% endblock %}</title>
+<meta name="description" content="{% block meta_description %}Screenboard Studio is a film production's art department in software: it reads the screenplay, builds an art direction bible, breaks scenes down with cited evidence, and renders native-4K concept boards under your own model API keys.{% endblock %}">
+{% block robots %}{% endblock %}
+<link rel="canonical" href="{{ base_url }}{{ request.url.path }}">
+<meta property="og:site_name" content="Screenboard Studio">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ self.title() }}">
+<meta property="og:description" content="{{ self.meta_description() }}">
+<meta property="og:url" content="{{ base_url }}{{ request.url.path }}">
+<meta property="og:image" content="{{ base_url }}/static/img/board-0001.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ self.title() }}">
+<meta name="twitter:description" content="{{ self.meta_description() }}">
+<meta name="twitter:image" content="{{ base_url }}/static/img/board-0001.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/store.css">
+{% block head_extra %}{% endblock %}
 </head>
 <body>
 <header class="site-head">

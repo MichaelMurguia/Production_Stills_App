@@ -6,7 +6,7 @@ import hmac
 
 import stripe
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete as sa_delete, select
@@ -91,6 +91,9 @@ def _reconcile_on_start():
 _here = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_here / "static"), name="static")
 templates = Jinja2Templates(directory=_here / "templates")
+# Canonical URLs and og:url must always name the PUBLIC host, never
+# whatever Host header arrived — BASE_URL is the truth (SEO pass).
+templates.env.globals["base_url"] = settings.BASE_URL.rstrip("/")
 
 # Plan slug -> Stripe mode + price env var. Slugs appear in checkout URLs and
 # in session metadata; kind/tier are derived by splitting on the hyphen.
@@ -136,6 +139,44 @@ def index(request: Request):
 def pipeline(request: Request):
     """The method page — static marketing, no data dependencies."""
     return templates.TemplateResponse(request, "pipeline.html", {})
+
+
+# ------------------------------------------------------------------- SEO
+# Crawl surface (SEO pass, user request 2026-08-03): the four public pages
+# index and sitemap; everything transactional or private is disallowed
+# here AND carries a noindex meta (belt and braces — robots.txt is a
+# request, the meta is the instruction).
+
+_PUBLIC_PATHS = ("/", "/pipeline", "/terms", "/privacy")
+
+
+@app.get("/robots.txt")
+def robots_txt():
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        "User-agent: *\n"
+        "Disallow: /account\n"
+        "Disallow: /success\n"
+        "Disallow: /signin\n"
+        "Disallow: /signup\n"
+        "Disallow: /recover\n"
+        "Disallow: /auth/\n"
+        "Disallow: /checkout/\n"
+        "Disallow: /download/\n"
+        "Disallow: /admin/\n"
+        "Disallow: /studio/\n"
+        f"Sitemap: {settings.BASE_URL.rstrip('/')}/sitemap.xml\n")
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    base = settings.BASE_URL.rstrip("/")
+    urls = "\n".join(
+        f"  <url><loc>{base}{p}</loc></url>" for p in _PUBLIC_PATHS)
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}\n</urlset>\n", media_type="application/xml")
 
 
 @app.get("/checkout/{plan}")

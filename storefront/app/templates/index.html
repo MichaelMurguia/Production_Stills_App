@@ -1,5 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Screenboard Studio — Your Movie Visualized{% endblock %}
+{% block meta_description %}Concept boards, art direction bibles and scene breakdowns for film productions. Screenboard Studio reads your screenplay and renders native-4K presentation boards with your own AI model keys — download for your machine, or a private cloud studio.{% endblock %}
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Screenboard Studio",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Windows, macOS, Linux, Web",
+  "description": "A film production's art department in software: screenplay-driven art direction bibles, evidence-cited scene breakdowns, and native-4K concept boards rendered under the customer's own AI model API keys.",
+  "url": "{{ base_url }}/",
+  "image": "{{ base_url }}/static/img/board-0001.png",
+  "offers": [
+    {"@type": "Offer", "name": "Download Personal", "price": "119.00", "priceCurrency": "USD", "category": "one-time license"},
+    {"@type": "Offer", "name": "Download Business", "price": "249.99", "priceCurrency": "USD", "category": "one-time license"},
+    {"@type": "Offer", "name": "Cloud Personal", "price": "9.99", "priceCurrency": "USD", "category": "subscription (monthly)"},
+    {"@type": "Offer", "name": "Cloud Business", "price": "29.99", "priceCurrency": "USD", "category": "subscription (monthly)"}
+  ],
+  "publisher": {"@type": "Organization", "name": "Screenboard Studio", "url": "{{ base_url }}/"}
+}
+</script>
+{% endblock %}
 {% block main_attrs %}{% endblock %}
 {% block content %}
 

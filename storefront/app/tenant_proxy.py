@@ -158,7 +158,8 @@ class TenantProxy:
             # The one failure page that sells (T1): a stranger, a typo, or
             # someone guessing — full store chrome, the address as the H1.
             await _page(send, 404, _render(
-                "router_unclaimed.html", host=host.split(":", 1)[0], sub=sub))
+                "router_unclaimed.html", host=host.split(":", 1)[0], sub=sub),
+                extra_headers=[(b"x-robots-tag", b"noindex")])
             return
         await self._forward(scope, receive, send, target, host, sub)
 
@@ -209,14 +210,18 @@ class TenantProxy:
                 host=host.split(":", 1)[0],
                 studio_name=_studio_name(sub),
                 last_answered=_ago(time.time() - seen) if seen else ""),
-                extra_headers=[(b"retry-after", b"15")])
+                extra_headers=[(b"retry-after", b"15"),
+                               (b"x-robots-tag", b"noindex")])
             return
         _last_answered[sub] = time.time()
         try:
+            # Private studios are never crawlable — every proxied tenant
+            # response says so (SEO pass, 2026-08-03).
             await send({"type": "http.response.start",
                         "status": resp.status_code,
                         "headers": [(k, v) for k, v in resp.headers.raw
-                                    if k.lower() not in _HOP]})
+                                    if k.lower() not in _HOP]
+                        + [(b"x-robots-tag", b"noindex")]})
             if resp.is_stream_consumed:
                 # Content arrived preloaded (mock transports, cached
                 # responses) — a second stream would raise.
