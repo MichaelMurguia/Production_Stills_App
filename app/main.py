@@ -795,6 +795,11 @@ def api_get_settings() -> dict:
         "openai-chat": {"configured": bool(openai_src), "source": openai_src,
                         "last_test": tests.get("openai-chat")},
     }
+    if generate.mock_enabled():
+        # The debug dry-run engine: always "configured" while the toggle is
+        # on — it has no key and no test because it never calls anything.
+        engines["mock"] = {"configured": True, "source": "debug",
+                           "last_test": None}
     customs = []
     for e in generate.custom_engines():
         pid = f"custom:{e['id']}"
@@ -826,6 +831,11 @@ async def api_save_settings(body: dict) -> dict:
         s["gemini_api_key"] = str(body["gemini_api_key"]).strip()
     if "openai_api_key" in body:
         s["openai_api_key"] = str(body["openai_api_key"]).strip()
+    if "debug_mock" in body:
+        s["debug_mock"] = bool(body["debug_mock"])
+        # Turning the dry-run engine off must never leave it selected.
+        if not s["debug_mock"] and s.get("preferred_provider") == "mock":
+            s["preferred_provider"] = generate.DEFAULT_PROVIDER
     if "preferred_provider" in body:
         p = str(body["preferred_provider"]).strip()
         if p not in generate.all_providers():
@@ -833,6 +843,43 @@ async def api_save_settings(body: dict) -> dict:
         s["preferred_provider"] = p
     generate.save_settings(s)
     return api_get_settings()
+
+
+# -------------------------------------------------- debug: page-text edits
+# Debug tool (user request 2026-08-03): rewrite any static UI text in
+# place. Overrides are exact-text → replacement pairs, install-level (they
+# are workbench copy, not production data — never in backups), applied
+# client-side after every render.
+
+def _text_overrides_path():
+    return paths.HOME / "text_overrides.json"
+
+
+@app.get("/api/debug/text-overrides")
+def api_get_text_overrides() -> dict:
+    p = _text_overrides_path()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except json.JSONDecodeError:
+        data = {}
+    return {"overrides": data if isinstance(data, dict) else {}}
+
+
+@app.put("/api/debug/text-overrides")
+async def api_put_text_overrides(body: dict) -> dict:
+    overrides = body.get("overrides")
+    if not isinstance(overrides, dict):
+        raise HTTPException(422, "overrides must be an object of text → text")
+    clean = {str(k)[:500]: str(v)[:500] for k, v in overrides.items()
+             if str(k).strip()}
+    store._atomic_write_json(_text_overrides_path(), clean)
+    return {"overrides": clean}
+
+
+@app.delete("/api/debug/text-overrides")
+def api_clear_text_overrides() -> dict:
+    _text_overrides_path().unlink(missing_ok=True)
+    return {"overrides": {}}
 
 
 @app.post("/api/settings/engines")

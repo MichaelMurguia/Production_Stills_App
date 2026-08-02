@@ -420,6 +420,7 @@
       <button data-sub="api" class="active">Engines &amp; keys</button>
       <button data-sub="workflow">Workflow &amp; Instructions</button>
       <button data-sub="faq">FAQ</button>
+      <button data-sub="debug">Debug tools</button>
     </nav>
 
     <div data-subview="api">
@@ -540,6 +541,37 @@
         <p>Locally: <code>data/</code> holds references, screenplay, specs, boards, and your API key. <code>project_state/approval_log.md</code> is the running approval record. Nothing goes to any server except generation calls to Google.</p>
         <h3>What does a generation cost?</h3>
         <p>Each render is a paid API call to the engine you picked, billed to your key — rejected takes cost the same as approved ones, which is why validation runs before generation and the slot map shows readiness before assembly.</p>
+      </div>
+    </div>
+
+    <div data-subview="debug" class="hidden">
+      <div class="panel">
+        <h2>Mock engine <span class="hint">(dry-run the whole pipeline at zero cost)</span></h2>
+        <p class="hint">While on, <span class="mono">MOCK ENGINE</span> appears in every model
+        dropdown — scan, bible draft, breakdowns, panels, repairs, re-renders and boards all
+        run on static content built from your uploaded screenplay and existing library images.
+        No model is ever called; nothing is billed. Every mock artifact is stamped
+        <span class="mono">MOCK</span> so it can never pass for real research or a real render.</p>
+        <label class="row" style="margin-top:12px;align-items:center;gap:8px">
+          <input type="checkbox" id="dbg-mock">
+          <span>Enable mock engine</span>
+          <span id="dbg-mock-state" class="mini mono"></span>
+        </label>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <h2>Page text editing <span class="hint">(rewrite any static UI text in place)</span></h2>
+        <p class="hint">While on, <b>Alt-click</b> any text in the app to rewrite it. Edits apply
+        everywhere that exact text appears, survive refresh, and live on this install only —
+        they are workbench copy, never production data. Turn the mode off here when done;
+        your rewrites stay until cleared.</p>
+        <label class="row" style="margin-top:12px;align-items:center;gap:8px">
+          <input type="checkbox" id="dbg-textedit">
+          <span>Text edit mode (Alt-click to rewrite)</span>
+        </label>
+        <div class="row" style="margin-top:10px;align-items:center">
+          <button class="danger" id="dbg-text-clear">Clear all text edits</button>
+          <span id="dbg-text-count" class="mini mono"></span>
+        </div>
       </div>
     </div>
   </section>

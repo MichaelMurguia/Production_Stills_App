@@ -750,6 +750,91 @@ function wizACacheSet(a) {
   catch { /* full/blocked */ }
 }
 
+/* Page-text overrides (debug tool, user request 2026-08-03): exact-text →
+   replacement pairs, install-level on the server, applied to every render.
+   Alt-click in text-edit mode rewrites the clicked text via the standard
+   modal; "clear" in Settings → Debug tools removes everything. */
+let _textOverrides = {};
+let _toRaf = 0;
+const textEditMode = () => localStorage.getItem("sbTextEdit") === "1";
+
+async function loadTextOverrides() {
+  try { _textOverrides = (await api("/api/debug/text-overrides")).overrides || {}; }
+  catch { _textOverrides = {}; }
+}
+
+function applyTextOverrides(root) {
+  if (!Object.keys(_textOverrides).length) return;
+  const w = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const trimmed = n.textContent.trim();
+    if (trimmed && Object.prototype.hasOwnProperty.call(_textOverrides, trimmed)
+        && _textOverrides[trimmed] !== trimmed) {
+      n.textContent = n.textContent.replace(trimmed, _textOverrides[trimmed]);
+    }
+  }
+}
+
+// Re-renders happen constantly; re-apply after DOM changes, debounced to a
+// frame. Replaced text no longer matches any key, so this cannot loop.
+new MutationObserver(() => {
+  if (_toRaf) return;
+  _toRaf = requestAnimationFrame(() => { _toRaf = 0; applyTextOverrides(); });
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+function updateTextEditChip() {
+  let chip = document.getElementById("text-edit-chip");
+  if (!textEditMode()) { chip?.remove(); return; }
+  if (!chip) {
+    chip = document.createElement("div");
+    chip.id = "text-edit-chip";
+    chip.className = "text-edit-chip mono";
+    chip.textContent =
+      "TEXT EDIT ON — ALT-CLICK ANY TEXT TO REWRITE IT · EXIT IN SETTINGS → DEBUG TOOLS";
+    document.body.append(chip);
+  }
+}
+
+document.addEventListener("click", async e => {
+  if (!textEditMode() || !e.altKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  let node = null;
+  const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+  if (range?.startContainer?.nodeType === Node.TEXT_NODE) node = range.startContainer;
+  if (!node?.textContent?.trim()) {
+    node = [...(e.target.childNodes || [])]
+      .find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+  }
+  const current = node?.textContent.trim();
+  if (!current) return toast("No editable text there — Alt-click directly on words.", true);
+  // If this text is already a rewrite, edit against its ORIGINAL so one
+  // key per string exists and "clear" restores cleanly.
+  const key = Object.keys(_textOverrides)
+    .find(k => _textOverrides[k] === current) || current;
+  const vals = await modal({
+    title: "Rewrite page text",
+    body: "Applies everywhere this exact text appears and survives refresh. "
+          + "Workbench copy on this install only — never production data.",
+    fields: [{ name: "text", label: "Text", textarea: true, value: current }],
+    confirmLabel: "Rewrite",
+  });
+  if (vals === null) return;
+  const next = vals.text;
+  if (!next || next === key) delete _textOverrides[key];
+  else _textOverrides[key] = next;
+  try {
+    await api("/api/debug/text-overrides", { method: "PUT",
+      json: { overrides: _textOverrides } });
+    if (node && node.textContent.trim() === current) {
+      node.textContent = node.textContent.replace(current, next || key);
+    }
+    applyTextOverrides();
+    toast(next && next !== key ? "Text rewritten — applies everywhere it appears."
+                               : "Rewrite removed — original text restored on next render.");
+  } catch (err) { toast(err.message, true); }
+}, true);
+
 for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
@@ -929,6 +1014,8 @@ async function fillProviderSelect(sel, labels) {
   // 2026-08-02) — it lists disabled, stating why, so the fix is obvious.
   const DEFS = [["gemini", labels?.gemini || "Gemini (research pass)"],
                 ["openai", labels?.openai || "OpenAI GPT-5.6"]];
+  // The debug dry-run engine joins every selector while its toggle is on.
+  if (eng.mock?.configured) DEFS.push(["mock", "MOCK ENGINE — no cost (debug)"]);
   const usable = DEFS.filter(([k]) =>
     eng[k]?.configured && eng[k]?.last_test?.ok !== false);
   const failed = DEFS.filter(([k]) =>
@@ -1744,6 +1831,53 @@ async function renderSettings() {
   keyTest("#test-key", "#test-key-result", "#gemini-key", "gemini_api_key", "gemini", "Gemini");
   keyTest("#test-openai-key", "#test-openai-key-result", "#openai-key", "openai_api_key", "openai", "OpenAI");
 
+  // Debug tools (user request 2026-08-03): the mock engine and page-text
+  // edit mode. Both state exactly what they are; neither touches canon.
+  const mockBox = $("#dbg-mock");
+  if (mockBox) {
+    mockBox.checked = !!settings.engines?.mock?.configured;
+    const mockState = () => {
+      $("#dbg-mock-state").textContent = mockBox.checked
+        ? "ON — MOCK ENGINE listed in every model dropdown" : "";
+    };
+    mockState();
+    mockBox.onchange = async () => {
+      try {
+        await api("/api/settings", { method: "POST",
+                                     json: { debug_mock: mockBox.checked } });
+        mockState();
+        toast(mockBox.checked
+          ? "Mock engine ON — pick MOCK ENGINE in any model dropdown; nothing will be billed."
+          : "Mock engine OFF — dropdowns show real engines only.");
+      } catch (err) { mockBox.checked = !mockBox.checked; toast(err.message, true); }
+    };
+    const te = $("#dbg-textedit");
+    te.checked = textEditMode();
+    te.onchange = () => {
+      localStorage.setItem("sbTextEdit", te.checked ? "1" : "0");
+      updateTextEditChip();
+      toast(te.checked ? "Text edit mode ON — Alt-click any text to rewrite it."
+                       : "Text edit mode OFF — your rewrites stay until cleared.");
+    };
+    const count = () => {
+      const n = Object.keys(_textOverrides).length;
+      $("#dbg-text-count").textContent =
+        n ? `${n} REWRITE${n > 1 ? "S" : ""} ACTIVE` : "NO REWRITES YET";
+    };
+    count();
+    $("#dbg-text-clear").onclick = async () => {
+      if (!(await askConfirm("Clear all text edits",
+          "Every rewritten string on this install returns to its original text.",
+          "Clear edits", true))) return;
+      try {
+        await api("/api/debug/text-overrides", { method: "DELETE" });
+        _textOverrides = {};
+        count();
+        toast("Text edits cleared — originals are back.");
+        showView("settings");
+      } catch (err) { toast(err.message, true); }
+    };
+  }
 }
 
 async function renderLessons() {
@@ -1856,6 +1990,7 @@ async function renderWizard() {
     const failedP = p => keyFor(p) && eng[p]?.last_test?.ok === false;
     const avail = ["gemini", "openai", "openai-chat"]
       .filter(p => keyFor(p) && !failedP(p));
+    if (eng.mock?.configured) avail.push("mock");  // debug dry-run engine
     const failedList = ["gemini", "openai", "openai-chat"].filter(failedP);
     for (const p of failedList) {
       const smp = samples.find(x => x.provider === p);
@@ -1929,6 +2064,7 @@ async function renderWizard() {
     const failedP = p => keyFor(p) && eng[p]?.last_test?.ok === false;
     const avail = ["gemini", "openai", "openai-chat"]
       .filter(p => keyFor(p) && !failedP(p));
+    if (eng.mock?.configured) avail.push("mock");  // debug dry-run engine
     const failedList = ["gemini", "openai", "openai-chat"].filter(failedP);
     // Failed-key columns are renderSamples' job — this handler only
     // decides whether anything can run.
@@ -5509,6 +5645,10 @@ initLightbox();
 // root layout, the app opens on naming the show — the pipeline band waits
 // until there is a production to stand in.
 async function boot() {
+  // Debug page-text rewrites load first so the first render is already
+  // corrected; fire-and-forget chip for text-edit mode.
+  loadTextOverrides().then(() => applyTextOverrides());
+  updateTextEditChip();
   let first = false;
   try {
     const pr = await api("/api/projects");

@@ -55,6 +55,11 @@ do not invent."""
 
 
 def analyze_screenplay(provider: str = "gemini") -> dict:
+    if provider == "mock" and generate.mock_enabled():
+        from . import mockflow
+        result = mockflow.analyze()
+        result["model"] = mockflow.MODEL_NAME
+        return result
     doc, mime = autofill._screenplay_bytes()
     # Environment membership is ASSIGNMENT, not generation (Gap 6 ruling):
     # the model picks from the deterministic slugline parse, so the coverage
@@ -111,6 +116,8 @@ def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
     PROPOSED worlds; the model never adds a language itself."""
     from . import bible
 
+    if provider == "mock":
+        return []  # the mock scan proposes nothing beyond its own read
     covered = [str(w.get("name", "")) for w in analysis.get("design_worlds", [])
                if w.get("name")]
     for n in bible.design_language_names():
@@ -255,6 +262,10 @@ director can confirm or replace it during review."""
 
 
 def draft_bible(answers: dict, provider: str = "gemini") -> dict:
+    if provider == "mock" and generate.mock_enabled():
+        from . import mockflow
+        return {"markdown": mockflow.bible_markdown(answers),
+                "model": mockflow.MODEL_NAME}
     doc, mime = autofill._screenplay_bytes()
     ref_ids = answers.get("ref_ids") or []
     ref_paths, roles = [], []

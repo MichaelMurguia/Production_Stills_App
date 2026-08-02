@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from . import bible, paths, store
+from . import bible, mockflow, paths, store
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -32,13 +32,23 @@ def custom_engines() -> list[dict]:
     return out
 
 
+def mock_enabled() -> bool:
+    """Debug tools → Mock engine: the whole pipeline at zero cost."""
+    return bool(load_settings().get("debug_mock"))
+
+
 def all_providers() -> dict:
-    """Built-in engines plus every user-added one (ids 'custom:<id>')."""
+    """Built-in engines plus every user-added one (ids 'custom:<id>'),
+    plus the mock engine while the debug toggle is on."""
     providers = dict(PROVIDERS)
     for e in custom_engines():
         providers[f"custom:{e['id']}"] = {
             "model": e["model"], "label": e.get("label") or e["id"],
             "custom": True}
+    if mock_enabled():
+        providers[mockflow.PROVIDER_ID] = {
+            "model": mockflow.MODEL_NAME, "label": mockflow.LABEL,
+            "mock": True}
     return providers
 
 
@@ -998,8 +1008,8 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     screenplay (picked in the wizard) rendered under the saved Art Direction
     Bible and the approved style anchors — the same conditions real panel
     generations run under. Without a location, a generic scene is used."""
-    if provider not in PROVIDERS:
-        raise GenerationError(f"provider must be one of {sorted(PROVIDERS)}")
+    if provider not in all_providers():
+        raise GenerationError(f"provider must be one of {sorted(all_providers())}")
     subject = (subject or "").strip()
     style_refs = store.auto_style_references()
     ref_paths = _reference_image_paths(style_refs)
@@ -1031,14 +1041,16 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     parts += ["", "Render a single full-bleed image. No text, labels, or borders."]
     prompt = "\n".join(parts)
     out = _samples_dir() / f"{provider}.png"
-    if provider == "openai-chat":
+    if provider == "mock":
+        notes = mockflow.render(prompt, ref_paths, "1K", "16:9", out)
+    elif provider == "openai-chat":
         notes = _render_openai_chat(prompt, ref_paths, "1K", "16:9", out, verbatim=True)
     elif provider == "openai":
         notes = _render_openai(prompt, ref_paths, "1K", "16:9", out)
     else:
         notes = _render_gemini(prompt, ref_paths, "1K", "16:9", out)
-    meta = {"provider": provider, "model": PROVIDERS[provider]["model"],
-            "label": PROVIDERS[provider]["label"],
+    meta = {"provider": provider, "model": all_providers()[provider]["model"],
+            "label": all_providers()[provider]["label"],
             "subject": subject or None,
             "style_anchors": [r["id"] for r in style_refs],
             "notes": notes[:500], "created_at": store.utcnow()}
@@ -1084,7 +1096,8 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     from PIL import Image
     import io
 
-    if provider not in REPAIR_PROVIDERS:
+    if provider not in REPAIR_PROVIDERS and not (
+            provider == "mock" and mock_enabled()):
         raise GenerationError(
             f"repair provider must be one of {sorted(REPAIR_PROVIDERS)}")
     instruction = (instruction or "").strip()
@@ -1170,7 +1183,13 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     out_path = d / f"{new_id}.png"
     notes = ""
 
-    if provider == "gemini":
+    if provider == "mock":
+        # A visibly-different patch; the mask composite below still carries
+        # every outside-mask pixel over bit-identical.
+        mockflow.repair_patch(src_path, out_path)
+        notes = mockflow.NOTES
+        model_used = mockflow.MODEL_NAME
+    elif provider == "gemini":
         from google.genai import types
 
         contents: list = [prompt, src_im, guide_im]
@@ -1314,7 +1333,8 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     from common import stable_hash
     from PIL import Image
 
-    if provider not in ("gemini", "openai"):
+    if provider not in ("gemini", "openai") and not (
+            provider == "mock" and mock_enabled()):
         raise GenerationError("re-render supports gemini or openai — the "
                               "source image is the only anchor either gets")
     if image_size not in IMAGE_SIZES:
@@ -1334,7 +1354,11 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     out_path = d / f"{new_id}.png"
     notes = ""
 
-    if provider == "openai":
+    if provider == "mock":
+        notes = mockflow.render(RERENDER_PROMPT, [src_path], image_size,
+                                aspect, out_path)
+        model_used = mockflow.MODEL_NAME
+    elif provider == "openai":
         import base64
         client = _openai_client()
         with src_path.open("rb") as f:
@@ -1443,7 +1467,10 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
 
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
-    if provider == "openai-chat":
+    if provider == "mock":
+        notes = mockflow.render(override or prompt, ref_paths, image_size,
+                                aspect_ratio, img_path)
+    elif provider == "openai-chat":
         # A user-edited prompt is final copy: skip the rewrite, render it as-is.
         notes = _render_openai_chat(override or prompt, ref_paths, image_size,
                                     aspect_ratio, img_path, verbatim=bool(override))
@@ -1682,7 +1709,9 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
     cand_id = _new_candidate_id()
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
-    if provider == "openai-chat":
+    if provider == "mock":
+        notes = mockflow.render(prompt, src_paths, image_size, "21:9", img_path)
+    elif provider == "openai-chat":
         notes = _render_openai_chat(prompt, src_paths, image_size, "21:9", img_path,
                                     verbatim=True)
     elif provider == "openai":

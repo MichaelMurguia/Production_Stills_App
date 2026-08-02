@@ -286,7 +286,9 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                   provider: str = "gemini") -> dict:
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise AutofillError(f"invalid mode: {mode}")
-    if provider not in {"gemini", "openai"}:
+    from . import generate as _gen
+    if provider not in {"gemini", "openai"} and not (
+            provider == "mock" and _gen.mock_enabled()):
         raise AutofillError(f"provider must be gemini or openai, not: {provider}")
     if not re.fullmatch(r"[A-Za-z0-9._-]+", spec_id):
         raise AutofillError("spec ID may only contain letters, numbers, dot, dash, underscore")
@@ -301,9 +303,14 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
         prohibited = json.loads(paths.PROJECT_STATE.read_text(encoding="utf-8")) \
             .get("prohibited_inventions", [])
 
-    instructions = _instructions(subject_prompt.strip(), mode, prohibited)
-    draft_fn = _draft_openai if provider == "openai" else _draft_gemini
-    draft, model = draft_fn(doc, mime, instructions)
+    if provider == "mock":
+        from . import mockflow
+        draft, model = (mockflow.autofill_draft(subject_prompt.strip(), mode),
+                        mockflow.MODEL_NAME)
+    else:
+        instructions = _instructions(subject_prompt.strip(), mode, prohibited)
+        draft_fn = _draft_openai if provider == "openai" else _draft_gemini
+        draft, model = draft_fn(doc, mime, instructions)
 
     spec = _coerce(draft, spec_id, mode)
     spec["autofill"] = {"prompt": subject_prompt.strip(), "model": model,

@@ -30,6 +30,7 @@ Hard boundary: no imports across the two; nothing from `data/` or
 | `bible.py` | Art Direction Bible parsing: `##` design languages, `### Environments`, atmospheres; `render_context(haystack, languages, lessons, environments)` builds the per-panel prompt block; `sections_catalog()` feeds the sheet scope UI |
 | `assemble.py` | Board math + composition: `_variant_rects` (aspect-first default: justified rows, aspect > scale > crop; grid; hero; allocation), `slot_map()` (same geometry + verdicts, incl. TOO_SMALL — the no-upscale rule made visible), `assemble()` (records `rects` + `panels_used` for the structural view AND draws the 4K composite with `_type_scale` typography) |
 | `backup.py` | One-zip-per-production backup (never `settings.json`), zip-slip-guarded restore that always creates a NEW production, `days_since_backup` care data |
+| `mockflow.py` | The debug dry-run engine (Settings → Debug tools): scan/bible/breakdown text derived deterministically from the screenplay, renders drawn or reused from the library — everything stamped MOCK, no model calls, no cost. Joins `all_providers()` as `mock` while `debug_mock` is set |
 | `activity.py` | Append-only `data/activity_log.jsonl` per production, secrets redacted |
 | `validation.py` + `scripts/` | The canon rule engine (stdlib-only): `validate_spec` (structure, budgets, PASS coverage, project presence), `audit_spec`, `compile_prompt` (stable spec hash) — the app imports these rather than reimplementing rules |
 

@@ -1501,3 +1501,13 @@ details.meta pre {
   position: absolute; left: 6px; top: 6px; font-size: 9px; letter-spacing: .1em;
   color: #e8e5dd; background: rgba(42, 39, 35, .75); padding: 1px 6px; pointer-events: none;
 }
+
+/* UNCANONIZED — 2026-08-03 — text-edit mode chip (debug tool): a fixed
+   state banner while Alt-click rewriting is armed. Existing tokens only;
+   amber border as the mode's signal-of-record (it IS the active state). */
+.text-edit-chip {
+  position: fixed; left: 14px; bottom: 14px; z-index: 60;
+  background: var(--panel, #232019); color: var(--ink, #e8e5dd);
+  border: 1px solid var(--accent); border-left-width: 4px;
+  padding: 7px 12px; font-size: 10px; letter-spacing: .08em;
+}

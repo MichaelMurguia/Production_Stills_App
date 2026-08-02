@@ -536,6 +536,8 @@ rows are then deleted.
 | 2026-08-02 | Persistent UI state (user-directed, invisible — no new visuals): view, open sheet, judging-room panel/take, board & assembly pickers, generation model/size/aspect, settings tab all survive refresh and view switches, namespaced per production in localStorage | App-wide | Nothing to review visually; listed for completeness |
 | 2026-08-01 | Interview persistence (user-directed, built from canon — review copy only): the look interview saves per production on every field change, with a mini stamp "SAVED — THESE ANSWERS BIND EVERY BIBLE DRAFT"; answers backstop every draft server-side and the drafter treats them as binding | Wizard step 3 | — |
 | 2026-08-01 | QA batch (user-directed, built from canon — review placement/copy only): error activity rows gain `--bad` left border + `--panel2` fill; model selectors list only configured engines and state "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS" when none; busy meters name the running model; third anchor relabeled "Board Rendering Style"; bible editor moved above the bake-off; wizard's duplicate key forms removed (keys live in Settings only) | Status, wizard, Breakdowns | — |
+| 2026-08-03 | Debug tools tab (user-directed): Settings gains a fourth subnav tab holding the mock engine toggle (a no-key "engine" labeled `MOCK ENGINE — no cost (debug)` that joins every model dropdown while on; all its output is stamped MOCK) and the page-text edit controls. Built from canon (panel, checkbox rows, hint copy) | Settings → Debug tools | Review placement/copy, and rule on how a debug-only engine should read inside production dropdowns |
+| 2026-08-03 | Text-edit mode chip (user-directed, NEW PATTERN): while Alt-click rewriting is armed, a fixed bottom-left Courier chip with an amber left border states the mode and its exit; Alt-click opens the standard modal prefilled with the clicked text | App-wide (debug mode) | First persistent mode indicator in the product — designer should rule on mode-chip vocabulary (position, dismissal, amber usage as active-mode signal) |
 
 ---
 
@@ -544,6 +546,10 @@ rows are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — Debug tools (user-directed): Settings gains a Debug
+  tools tab (mock engine + page-text edit mode); new UNCANONIZED
+  `.text-edit-chip` fixed mode banner (z 60, amber left border). Mock
+  output is always stamped MOCK — it can never read as a real render.
 - **2026-08-01** — Locked-stage pass (LOCKED_STAGE_PLAN L1–L4): a locked
   stage is a condition, not a destination — unmet stages are inert with a
   LOCKED chip; clicking one opens the anchored explanation under the
