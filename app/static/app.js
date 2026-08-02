@@ -1770,7 +1770,23 @@ async function renderWizard() {
     const [samples, s] = await Promise.all([api("/api/wizard/samples"), api("/api/settings")]);
     const host = $("#wiz-samples");
     host.innerHTML = "";
-    for (const smp of samples) {
+    // Only engines with a configured key compete (user ruling
+    // 2026-08-01). With none, the three slots stay — nameless — and
+    // state how they earn a name.
+    const avail = [
+      ...(s.gemini_api_key_set ? ["gemini"] : []),
+      ...(s.openai_api_key_set ? ["openai", "openai-chat"] : []),
+    ];
+    if (!avail.length) {
+      host.innerHTML = [1, 2, 3].map(() => `
+        <div class="wiz-col">
+          <div class="wiz-col-head"><span class="f-label">&mdash;</span></div>
+          <p class="mini">NO ENGINE CONFIGURED &mdash; add a Gemini or
+          OpenAI key in Settings and this slot names itself.</p>
+        </div>`).join("");
+      return;
+    }
+    for (const smp of samples.filter(x => avail.includes(x.provider))) {
       const isPref = smp.provider === s.preferred_provider;
       const col = document.createElement("div");
       col.className = "wiz-col";
