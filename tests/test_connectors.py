@@ -118,5 +118,95 @@ class ConnectorStateTests(unittest.TestCase):
         self.assertEqual(connectors.dev_tile(""), "???")
 
 
+OR_MODELS = {"data": [
+    {"id": "google/gemini-3-pro-image", "name": "Gemini 3 Pro Image",
+     "architecture": {"input_modalities": ["text", "image"],
+                      "output_modalities": ["image"]},
+     "pricing": {"image_output": "0.13"}},
+    {"id": "krea/krea-2", "name": "Krea 2",
+     "architecture": {"input_modalities": ["text"],
+                      "output_modalities": ["image"]},
+     "pricing": {}},
+]}
+
+
+class OpenRouterTests(unittest.TestCase):
+    def setUp(self):
+        self._home = paths.HOME
+        self._tmp = tempfile.TemporaryDirectory()
+        paths.HOME = Path(self._tmp.name)
+
+    def tearDown(self):
+        paths.HOME = self._home
+        self._tmp.cleanup()
+
+    @staticmethod
+    def fake_http(url, method="GET", headers=None, body=None, timeout=60):
+        if url.endswith("/key"):
+            return {"data": {"label": "studio key"}}
+        if "/models" in url:
+            return OR_MODELS
+        if url.endswith("/auth/keys"):
+            assert body["code"] == "CODE123" and body["code_verifier"]
+            return {"key": "sk-or-v1-newkey0000"}
+        raise AssertionError(f"unexpected url {url}")
+
+    def test_sync_normalizes_and_sets_identity(self):
+        pub = connectors.save_key("openrouter", "sk-or-x", http=self.fake_http)
+        self.assertEqual(pub["status"], "SYNCED")
+        self.assertEqual(pub["identity"], "studio key")
+        recs = connectors.catalog_records()
+        gem = next(m for m in recs if m["id"] == "or:google/gemini-3-pro-image")
+        self.assertTrue(gem["refs"])
+        self.assertEqual(gem["task"], "image-to-image")
+        self.assertEqual(gem["max_refs"], connectors.APP_MAX_REFS)
+        self.assertEqual(gem["price_per_image"], "0.13")
+        self.assertIsNone(gem["max_px"])  # catalog silent — never invented
+        krea = next(m for m in recs if m["id"] == "or:krea/krea-2")
+        self.assertFalse(krea["refs"])
+        self.assertEqual(krea["task"], "text-to-image")
+        self.assertIsNone(krea["price_per_image"])  # zero/missing → None
+
+    def test_failed_sync_keeps_last_good_catalog(self):
+        connectors.save_key("openrouter", "sk-or-x", http=self.fake_http)
+
+        def dead(url, **kw):
+            import urllib.error
+            raise urllib.error.URLError("no route")
+        pub = connectors.sync("openrouter", http=dead)
+        self.assertEqual(pub["status"], "NO_NETWORK")
+        self.assertEqual(pub["model_count"], 2)  # cache survives
+
+    def test_pkce_roundtrip(self):
+        url = connectors.pkce_start("http://127.0.0.1:8000/connectors/openrouter/callback")
+        self.assertIn("openrouter.ai/auth?", url)
+        self.assertIn("code_challenge=", url)
+        connectors.pkce_finish("CODE123", http=self.fake_http)
+        pub = connectors.connector_public("openrouter")
+        self.assertEqual(pub["status"], "SYNCED")
+        self.assertTrue(pub["key_hint"].startswith("sk-o"))
+
+    def test_generate_decodes_base64_image(self):
+        import base64
+        png = base64.b64encode(b"fakepngbytes").decode()
+
+        def http(url, method="GET", headers=None, body=None, timeout=60):
+            assert body["modalities"] == ["image", "text"]
+            return {"choices": [{"message": {"images": [
+                {"image_url": {"url": f"data:image/png;base64,{png}"}}]}}]}
+        out = Path(self._tmp.name) / "out.png"
+        connectors.openrouter_generate("k", "google/gemini-3-pro-image",
+                                       "a prompt", [], out, http=http)
+        self.assertEqual(out.read_bytes(), b"fakepngbytes")
+
+    def test_generate_refusal_states_itself(self):
+        def http(url, **kw):
+            return {"choices": [{"message": {"content": "I can't render that."}}]}
+        out = Path(self._tmp.name) / "out.png"
+        with self.assertRaises(connectors.ConnectorError) as cm:
+            connectors.openrouter_generate("k", "m", "p", [], out, http=http)
+        self.assertIn("can't render", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

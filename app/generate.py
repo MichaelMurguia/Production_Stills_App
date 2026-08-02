@@ -49,12 +49,24 @@ def mock_enabled() -> bool:
 
 def all_providers() -> dict:
     """Built-in engines plus every user-added one (ids 'custom:<id>'),
+    plus every ENABLED connector model (ids 'or:<id>' / 'fal:<id>'),
     plus the mock engine while the debug toggle is on."""
     providers = dict(PROVIDERS)
     for e in custom_engines():
         providers[f"custom:{e['id']}"] = {
             "model": e["model"], "label": e.get("label") or e["id"],
             "custom": True}
+    try:
+        from . import connectors as cx
+        for m in cx.enabled_records():
+            providers[m["id"]] = {
+                "model": m["provider_model_id"], "label": m["label"],
+                "connector": m["connector"], "refs": m.get("refs"),
+                "max_px": m.get("max_px"), "price": m.get("price_per_image"),
+                "aspect_enum": m.get("aspect_enum"), "task": m.get("task"),
+                "status": m.get("status")}
+    except Exception:
+        pass  # a corrupt connectors file must never hide the built-ins
     if mock_enabled():
         providers[mockflow.PROVIDER_ID] = {
             "model": mockflow.MODEL_NAME, "label": mockflow.LABEL,
@@ -118,6 +130,11 @@ def aspect_catalog() -> list[dict]:
                 ok = a["id"] in GEMINI_RATIOS
             elif pid == "openai-chat":
                 ok = a["id"] in CHAT_RATIOS
+            elif pid.startswith(("or:", "fal:")):
+                # A connector model with a stated aspect enum keeps it;
+                # one without is treated as arbitrary, judged at render.
+                enum = providers[pid].get("aspect_enum")
+                ok = a["id"] in enum if enum else True
             else:  # openai + custom engines: arbitrary pixel sizes
                 ok = True
             if ok:
@@ -291,6 +308,17 @@ def test_connection(provider: str = DEFAULT_PROVIDER) -> dict:
             client.models.list()
             got = eng["model"]
         return {"ok": True, "provider": provider, "model": got}
+    if provider.startswith(("or:", "fal:")):
+        from . import connectors as cx
+        rec = next((m for m in cx.enabled_records() if m["id"] == provider), None)
+        if rec is None:
+            raise GenerationError(f"unknown provider: {provider}")
+        pub = cx.sync(rec["connector"])
+        if pub["status"] != "SYNCED":
+            raise GenerationError(
+                f"{pub['label']}: {pub['status']} — "
+                f"{pub['last_error'].get('detail', 'see Settings')}")
+        return {"ok": True, "provider": provider, "model": rec["provider_model_id"]}
     if provider in ("openai", "openai-chat"):
         client = _openai_client(timeout_s=20.0)
         want = OPENAI_MODEL if provider == "openai" else OPENAI_CHAT_MODEL
@@ -939,6 +967,30 @@ def _chat_tool_size(aspect_ratio: str) -> str:
     return "1024x1024"
 
 
+def _render_connector(provider: str, prompt: str, ref_paths: list[Path],
+                      image_size: str, aspect_ratio: str, out_path: Path) -> str:
+    """A render through an enabled connector model. Never a silent
+    substitution: any failure raises and states itself — the take is not
+    quietly sent to a different engine."""
+    from . import connectors as cx
+    rec = next((m for m in cx.enabled_records() if m["id"] == provider), None)
+    if rec is None:
+        raise GenerationError(f"unknown connector model: {provider}")
+    key = cx.load_state().get(rec["connector"], {}).get("key", "")
+    if not key:
+        raise GenerationError(
+            f"{rec['label']}: its connector is NOT CONNECTED — reconnect in "
+            "Settings. The take was not rendered anywhere else.")
+    try:
+        if rec["connector"] == "openrouter":
+            return cx.openrouter_generate(key, rec["provider_model_id"],
+                                          prompt, ref_paths, out_path)
+        return cx.fal_generate(key, rec, prompt, ref_paths,
+                               image_size, aspect_ratio, out_path)
+    except Exception as e:
+        raise _wrap_engine_error(rec["label"], e) from e
+
+
 def _render_openai_chat(prompt: str, ref_paths: list[Path],
                         image_size: str, aspect_ratio: str, out_path: Path,
                         verbatim: bool = False) -> str:
@@ -1467,6 +1519,12 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
             f"The ChatGPT pipeline cannot render {aspect_ratio} — its image "
             "tool has three preset sizes (1:1, 3:2, 2:3). Pick one of those "
             "or a direct engine.")
+    if provider.startswith(("or:", "fal:")):
+        enum = providers[provider].get("aspect_enum")
+        if enum and aspect_ratio not in enum:
+            raise GenerationError(
+                f"{providers[provider]['label']} states a fixed aspect set "
+                f"({', '.join(enum)}) — pick one of those.")
 
     spec, panel, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
     prompt = compile_panel_prompt(spec, panel, refs)
@@ -1487,6 +1545,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     elif provider.startswith("custom:"):
         notes = _render_custom(provider, override or prompt, ref_paths,
                                image_size, aspect_ratio, img_path)
+    elif provider.startswith(("or:", "fal:")):
+        notes = _render_connector(provider, override or prompt, ref_paths,
+                                  image_size, aspect_ratio, img_path)
     else:
         render = _render_openai if provider == "openai" else _render_gemini
         notes = render(override or prompt, ref_paths, image_size, aspect_ratio, img_path)

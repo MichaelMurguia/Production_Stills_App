@@ -243,3 +243,173 @@ def _classify(e: Exception) -> str:
     if isinstance(e, urllib.error.HTTPError) and e.code in (401, 403):
         return "auth"
     return "network"
+
+
+# ---------------------------------------------------------- OpenRouter (N3)
+# Catalog: GET /api/v1/models?output_modalities=image — architecture
+# modalities, per-image pricing. Key test/identity: GET /api/v1/key.
+# Generation: chat completions with modalities ["image","text"]; refs ride
+# as data-URI image parts; the image returns base64 in message.images.
+
+OPENROUTER_API = "https://openrouter.ai/api/v1"
+
+
+def _or_headers(key: str) -> dict:
+    return {"Authorization": f"Bearer {key}",
+            "HTTP-Referer": "https://www.screenboardstudio.com",
+            "X-Title": "Screenboard Studio"}
+
+
+def _or_normalize(m: dict) -> dict:
+    arch = m.get("architecture") or {}
+    inputs = [s.lower() for s in arch.get("input_modalities") or []]
+    refs = "image" in inputs
+    pricing = m.get("pricing") or {}
+    price = pricing.get("image_output") or pricing.get("image") or None
+    try:
+        price = None if not price or float(price) == 0 else f"{float(price):.4f}".rstrip("0").rstrip(".")
+    except (TypeError, ValueError):
+        price = None
+    dev = (m.get("id") or "").split("/")[0]
+    # Typed constraints (images/models endpoint): aspect_ratio enum.
+    aspect = None
+    for pname, spec in (m.get("parameters") or {}).items() if isinstance(m.get("parameters"), dict) else []:
+        if pname == "aspect_ratio" and isinstance(spec, dict) and spec.get("enum"):
+            aspect = [str(a) for a in spec["enum"]]
+    return {
+        "id": f"or:{m['id']}",
+        "connector": "openrouter",
+        "provider_model_id": m["id"],
+        "label": m.get("name") or m["id"],
+        "developer": dev,
+        "task": "image-to-image" if refs else "text-to-image",
+        "refs": refs,
+        "max_refs": APP_MAX_REFS if refs else 0,
+        "max_px": None,  # OpenRouter's catalog states no resolution ceiling
+        "aspect_enum": aspect,
+        "price_per_image": price,
+        "status": "active" if not m.get("deprecated") else "deprecated",
+        "supported": True,
+    }
+
+
+def openrouter_sync(key: str, http=None) -> tuple[list[dict], str]:
+    """Returns (records, identity). Raises on auth/network failure."""
+    http = http or _http_json
+    ident = ""
+    info = http(f"{OPENROUTER_API}/key", headers=_or_headers(key))
+    data = info.get("data") or {}
+    ident = data.get("label") or "authorised"
+    listing = http(f"{OPENROUTER_API}/models?output_modalities=image",
+                   headers=_or_headers(key))
+    # The endpoint is already filtered to image-output models.
+    records = [_or_normalize(m) for m in listing.get("data") or []]
+    return records, ident
+
+
+# PKCE (one-click connect). The exchanged key is scoped and revocable from
+# the user's OpenRouter dashboard — and it IS stored here, because calls
+# need it; the UI must say that truthfully (deviation from mock 16b ruled
+# at implementation, logged in DESIGN_SYSTEM's changelog).
+
+def pkce_start(callback_url: str) -> str:
+    import base64 as b64
+    import hashlib
+    import secrets
+    verifier = secrets.token_urlsafe(48)
+    challenge = b64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+    state = load_state()
+    state.setdefault("openrouter", {})["pkce_verifier"] = verifier
+    save_state(state)
+    q = urllib.parse.urlencode({
+        "callback_url": callback_url,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256"})
+    return f"https://openrouter.ai/auth?{q}"
+
+
+def pkce_finish(code: str, http=None) -> None:
+    http = http or _http_json
+    state = load_state()
+    verifier = state.get("openrouter", {}).pop("pkce_verifier", "")
+    if not verifier:
+        raise ConnectorError("No pending connect — start again from Settings.")
+    out = http("https://openrouter.ai/api/v1/auth/keys", method="POST", body={
+        "code": code, "code_verifier": verifier,
+        "code_challenge_method": "S256"})
+    key = out.get("key") or ""
+    if not key:
+        raise ConnectorError("OpenRouter returned no key.")
+    state.setdefault("openrouter", {})["key"] = key
+    save_state(state)
+    sync("openrouter", http=http)
+
+
+def openrouter_generate(key: str, provider_model_id: str, prompt: str,
+                        ref_paths: list, out_path, http=None) -> str:
+    """One render through OpenRouter's chat-completions image path.
+    References ride as data-URI image parts. No size parameter exists on
+    this path — the model renders at its native default and the app's
+    no-upscaling flag judges the result honestly."""
+    import base64 as b64
+    http = http or _http_json
+    parts = [{"type": "text", "text": prompt}]
+    for p in list(ref_paths)[:APP_MAX_REFS]:
+        mime = "image/png" if str(p).lower().endswith(".png") else "image/jpeg"
+        parts.append({"type": "image_url", "image_url": {
+            "url": f"data:{mime};base64,{b64.b64encode(p.read_bytes()).decode()}"}})
+    out = http(f"{OPENROUTER_API}/chat/completions", method="POST",
+               headers=_or_headers(key), timeout=600, body={
+                   "model": provider_model_id,
+                   "messages": [{"role": "user", "content": parts}],
+                   "modalities": ["image", "text"]})
+    choice = (out.get("choices") or [{}])[0]
+    images = (choice.get("message") or {}).get("images") or []
+    url = ((images[0].get("image_url") or {}).get("url") or "") if images else ""
+    if not url.startswith("data:"):
+        detail = (choice.get("message") or {}).get("content") or out.get("error", {}).get("message") or "no image returned"
+        raise ConnectorError(f"OpenRouter/{provider_model_id}: {str(detail)[:300]}")
+    out_path.write_bytes(b64.b64decode(url.split(",", 1)[1]))
+    return ""
+
+
+def fal_sync(key: str, http=None) -> list[dict]:  # replaced in N4
+    raise ConnectorError("fal connector not built yet")
+
+
+# --------------------------------------------------------------- sync core
+
+def save_key(cid: str, key: str, http=None) -> dict:
+    if cid not in REGISTRY:
+        raise ConnectorError(f"unknown connector: {cid}")
+    state = load_state()
+    state.setdefault(cid, {})["key"] = key.strip()
+    save_state(state)
+    return sync(cid, http=http)
+
+
+def sync(cid: str, http=None) -> dict:
+    """Refresh a connector's catalog. Failures never destroy the cached
+    catalog — the last good sync stays browsable with its age stated."""
+    state = load_state()
+    c = state.setdefault(cid, {})
+    key = c.get("key", "")
+    if not key:
+        raise ConnectorError(f"{REGISTRY[cid]['label']} is not connected.")
+    try:
+        if cid == "openrouter":
+            records, ident = openrouter_sync(key, http=http)
+            c["identity"] = ident
+        elif cid == "fal":
+            records = fal_sync(key, http=http)
+        else:
+            raise ConnectorError(f"unknown connector: {cid}")
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ConnectorError) as e:
+        _record_error(state, cid, _classify(e) if not isinstance(e, ConnectorError) else "auth", str(e))
+        return connector_public(cid)
+    c["catalog"] = records
+    c["last_sync"] = now_iso()
+    c["last_error"] = {}
+    save_state(state)
+    return connector_public(cid)

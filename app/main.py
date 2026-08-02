@@ -10,8 +10,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 from fastapi.staticfiles import StaticFiles
 
-from . import (activity, assemble, autofill, backup, bible, generate,
-               insights, paths, store, wizard)
+from . import (activity, assemble, autofill, backup, bible, connectors,
+               generate, insights, paths, store, wizard)
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -441,6 +441,18 @@ def api_delete_project(body: dict) -> dict:
     return {"active": paths.ACTIVE_PROJECT, "projects": paths.list_projects()}
 
 
+def _redact_secrets(o):
+    """Credentials must never land in the flight recorder — any string
+    field whose name smells like a secret is masked before logging."""
+    if isinstance(o, dict):
+        return {k: ("…REDACTED" if isinstance(v, str) and any(
+            t in k.lower() for t in ("key", "secret", "token", "password"))
+            else _redact_secrets(v)) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_redact_secrets(x) for x in o]
+    return o
+
+
 @app.middleware("http")
 async def activity_middleware(request: Request, call_next):
     """Flight recorder: every mutating /api call, with body, outcome,
@@ -464,7 +476,7 @@ async def activity_middleware(request: Request, call_next):
         req = Request(request.scope, receive)
         if raw:
             try:
-                body_summary = json.loads(raw)
+                body_summary = _redact_secrets(json.loads(raw))
             except json.JSONDecodeError:
                 body_summary = {"raw_bytes": len(raw)}
 
@@ -809,6 +821,7 @@ def api_get_settings() -> dict:
         customs.append({"id": e["id"], "label": e.get("label") or e["id"],
                         "model": e["model"], "base_url": e.get("base_url", ""),
                         "key_hint": f"…{e['api_key'][-4:]}"})
+    provider_meta = generate.all_providers()
     return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "gemini_api_key_set": bool(gkey),
             "gemini_api_key_hint": f"…{gkey[-4:]}" if gkey else None,
@@ -816,14 +829,51 @@ def api_get_settings() -> dict:
             "openai_api_key_hint": f"…{okey[-4:]}" if okey else None,
             "model": generate.MODEL,
             "openai_model": generate.OPENAI_MODEL,
-            "providers": {k: v["label"] for k, v in generate.all_providers().items()},
+            "openai_chat_model": generate._chat_model(),
+            "openai_chat_model_default": generate.OPENAI_CHAT_MODEL,
+            "providers": {k: v["label"] for k, v in provider_meta.items()},
+            "provider_meta": provider_meta,
             "aspects": generate.aspect_catalog(),
             "board_templates": store.BOARD_TEMPLATES,
             "custom_engines": customs,
             "debug_tools": generate.debug_tools_enabled(),
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),
+            "roles": _role_states(engines),
             "engines": engines}
+
+
+def _role_states(engines: dict) -> dict:
+    """One state per AI role for the header marks (C8): the worst state
+    among everything that role needs. ok / warn (degraded, still runs) /
+    bad (blocked) / none (not configured)."""
+    def key_state(e):
+        if not e or not e.get("configured"):
+            return "none"
+        t = e.get("last_test")
+        if t and t.get("ok") is False:
+            return "bad"
+        if t and t.get("ok"):
+            return "ok"
+        return "warn"  # configured but never proven by a test
+
+    narrative = key_state(engines.get("openai"))
+
+    image_states = [key_state(engines[k]) for k in engines]
+    for row in (connectors.connector_public(cid) for cid in connectors.REGISTRY):
+        if row["enabled_count"] == 0 and row["status"] == "NOT_CONNECTED":
+            continue
+        image_states.append({"SYNCED": "ok", "REJECTED": "bad",
+                             "NO_NETWORK": "warn",
+                             "NOT_CONNECTED": "bad"}[row["status"]])
+    live = [s for s in image_states if s != "none"]
+    if not live:
+        image = "none"
+    elif "ok" in live:
+        image = "ok" if "bad" not in live and "warn" not in live else "warn"
+    else:
+        image = "bad"
+    return {"narrative": narrative, "image": image}
 
 
 @app.post("/api/settings")
@@ -845,8 +895,93 @@ async def api_save_settings(body: dict) -> dict:
         if p not in generate.all_providers():
             raise HTTPException(422, f"unknown provider: {p}")
         s["preferred_provider"] = p
+    if "openai_chat_model" in body:
+        # Role 01's selection — empty string returns to the default.
+        s["openai_chat_model"] = str(body["openai_chat_model"]).strip()
     generate.save_settings(s)
     return api_get_settings()
+
+
+# ---------------------------------------------------------------- connectors
+# CONNECTORS_PLAN N3/N4: state rows, key save + sync, refresh, disconnect,
+# enable/disable, the catalog for browser and picker, OpenRouter PKCE.
+# Every failure is a stated row condition, never a bare 500; a failing
+# connector never silently reroutes a render.
+
+@app.get("/api/connectors")
+def api_connectors_state() -> dict:
+    return {"connectors": [connectors.connector_public(cid)
+                           for cid in connectors.REGISTRY],
+            "stats": connectors.stats()}
+
+
+@app.post("/api/connectors/{cid}/key")
+def api_connector_key(cid: str, body: dict = Body(...)) -> dict:
+    if cid not in connectors.REGISTRY:
+        raise HTTPException(404)
+    key = str(body.get("key", "")).strip()
+    if not key:
+        raise HTTPException(422, "key required")
+    try:
+        return connectors.save_key(cid, key)
+    except connectors.ConnectorError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/connectors/{cid}/refresh")
+def api_connector_refresh(cid: str) -> dict:
+    if cid not in connectors.REGISTRY:
+        raise HTTPException(404)
+    try:
+        return connectors.sync(cid)
+    except connectors.ConnectorError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/connectors/{cid}/disconnect")
+def api_connector_disconnect(cid: str) -> dict:
+    if cid not in connectors.REGISTRY:
+        raise HTTPException(404)
+    connectors.disconnect(cid)
+    return connectors.connector_public(cid)
+
+
+@app.post("/api/connectors/enable")
+def api_connector_enable(body: dict = Body(...)) -> dict:
+    try:
+        return connectors.set_enabled(str(body.get("id", "")), bool(body.get("on")))
+    except connectors.ConnectorError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/connectors/catalog")
+def api_connectors_catalog(q: str = "", refs: bool = False, fourk: bool = False,
+                           priced: bool = False, scope: str = "all") -> dict:
+    records = (connectors.enabled_records() if scope == "enabled"
+               else connectors.catalog_records())
+    hits = connectors.filter_records(records, query=q, refs_only=refs,
+                                     fourk_only=fourk, priced_only=priced)
+    searched = "enabled models" if scope == "enabled" else "the synced catalogs"
+    return {"records": hits, "total": len(records), "searched": searched}
+
+
+@app.get("/api/connectors/openrouter/auth")
+def api_openrouter_auth(request: Request) -> dict:
+    callback = str(request.base_url).rstrip("/") + "/connectors/openrouter/callback"
+    return {"url": connectors.pkce_start(callback)}
+
+
+@app.get("/connectors/openrouter/callback")
+def api_openrouter_callback(code: str = ""):
+    try:
+        connectors.pkce_finish(code)
+    except Exception as e:
+        return HTMLResponse(
+            "<pre>OpenRouter connect did not complete: "
+            f"{str(e)[:300]}\n\nReturn to the app and start again from "
+            "Settings → AI &amp; engines.</pre>", status_code=400)
+    # The app restores the last view (Settings) on load.
+    return RedirectResponse("/", status_code=303)
 
 
 # -------------------------------------------------- debug: page-text edits
