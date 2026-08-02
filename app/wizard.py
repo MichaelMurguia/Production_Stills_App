@@ -262,7 +262,11 @@ def draft_bible(answers: dict, provider: str = "gemini") -> dict:
         r = store.get_reference(rid)
         p = store.reference_image_path(rid)
         if r and p:
-            ref_paths.append(p)
+            # Render-ready always (user ruling 2026-08-02): an engine that
+            # cannot read a reference would either fail the draft or draft
+            # the bible WITHOUT considering it — both unacceptable. Same
+            # transcode backstop as panel generation.
+            ref_paths.append(generate._render_ready(p))
             roles.append(f"{r.get('role', 'reference')} — {r.get('notes', '')}".strip(" —"))
     answers = dict(answers)
     answers["reference_roles"] = roles
