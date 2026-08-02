@@ -115,6 +115,10 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
             "SCREENBOARD_ACCESS_TOKEN": ws.access_token,
         })
         railway.set_start_command(ws.railway_service_id, START_COMMAND)
+        try:
+            railway.configure_graceful_deploys(ws.railway_service_id)
+        except Exception:
+            pass  # a tenant without drain still works; next update retries
         if not ws.url:
             ws.url = f"https://{railway.create_domain(ws.railway_service_id)}"
         if not ws.railway_url:
@@ -204,6 +208,10 @@ def update_tenants(railway=railway_client) -> dict:
             if not ws.railway_service_id:
                 continue
             try:
+                try:  # existing tenants gain graceful drain before the build
+                    railway.configure_graceful_deploys(ws.railway_service_id)
+                except Exception:
+                    pass
                 railway.deploy_latest(ws.railway_service_id, sha)
                 out["updated"].append(ws.subdomain or ws.railway_service_id)
             except Exception as e:

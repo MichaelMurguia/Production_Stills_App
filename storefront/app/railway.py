@@ -116,6 +116,22 @@ def set_start_command(service_id: str, start_command: str) -> None:
          "input": {"startCommand": start_command}})
 
 
+def configure_graceful_deploys(service_id: str) -> None:
+    """Deploys must never kill a render mid-flight (observed live
+    2026-08-02: a fleet update restarted a tenant during its first panel
+    generation). Overlap starts the new instance before the old one
+    stops; draining gives in-flight requests five minutes to finish —
+    longer than any single render call."""
+    _gql(
+        """mutation($environmentId: String!, $serviceId: String!,
+                    $input: ServiceInstanceUpdateInput!) {
+             serviceInstanceUpdate(environmentId: $environmentId,
+                                   serviceId: $serviceId, input: $input) }""",
+        {"environmentId": environment_id(),
+         "serviceId": service_id,
+         "input": {"overlapSeconds": 60, "drainingSeconds": 300}})
+
+
 def upsert_variables(service_id: str, variables: dict[str, str]) -> None:
     _gql(
         """mutation($input: VariableCollectionUpsertInput!) {

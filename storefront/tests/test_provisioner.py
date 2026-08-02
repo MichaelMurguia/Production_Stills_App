@@ -81,6 +81,11 @@ class FakeRailway:
         self._hit("deploy_latest")
         self.last_deploy_sha = commit_sha
 
+    def configure_graceful_deploys(self, service_id):
+        self.calls["configure_graceful_deploys"] =             self.calls.get("configure_graceful_deploys", 0) + 1
+        if self.fail:
+            raise RuntimeError("railway said no")
+
 
 def configure_railway(on=True):
     settings.RAILWAY_API_TOKEN = "tok" if on else ""
@@ -145,6 +150,9 @@ class ProvisionerTests(unittest.TestCase):
         provisioner.reconcile(railway=fake)
         out = provisioner.update_tenants(railway=fake)
         self.assertGreaterEqual(fake.calls["deploy_latest"], 1)
+        # Deploys must never kill a render mid-flight: drain config is
+        # (re)applied before every fleet build.
+        self.assertGreaterEqual(fake.calls.get("configure_graceful_deploys", 0), 1)
         self.assertGreaterEqual(len(out["updated"]), 1)
         # A failing update is recorded on the row and reported, not raised
         bad = FakeRailway(fail=True)
