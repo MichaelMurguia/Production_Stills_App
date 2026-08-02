@@ -71,14 +71,33 @@ def google_configured() -> bool:
     return bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET)
 
 
+STATE_COOKIE = "sb_oauth_state"
+STATE_TTL = 600  # seconds — one sign-in attempt, not a standing pass
+
+
 def make_state() -> str:
     nonce = secrets.token_urlsafe(16)
-    return f"{nonce}.{_sign(nonce)}"
+    exp = int(time.time()) + STATE_TTL
+    payload = f"{nonce}.{exp}"
+    return f"{payload}.{_sign(payload)}"
 
 
-def check_state(state: str) -> bool:
-    nonce, _, sig = (state or "").partition(".")
-    return bool(nonce) and hmac.compare_digest(sig, _sign(nonce))
+def check_state(state: str, cookie: str) -> bool:
+    """Valid only if signed, unexpired, AND identical to the state cookie
+    set when the flow started — binding the callback to the browser that
+    initiated it (login-CSRF guard; a signature alone proves nothing about
+    who is completing the flow)."""
+    state = state or ""
+    if not cookie or not hmac.compare_digest(state, cookie):
+        return False
+    payload, _, sig = state.rpartition(".")
+    nonce, _, exp = payload.partition(".")
+    if not nonce or not hmac.compare_digest(sig, _sign(payload)):
+        return False
+    try:
+        return int(exp) >= time.time()
+    except ValueError:
+        return False
 
 
 def google_auth_url(state: str) -> str:

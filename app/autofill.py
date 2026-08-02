@@ -232,12 +232,17 @@ def _parse_json(raw: str) -> dict:
     if not raw:
         raise AutofillError("The model returned an empty response.")
     try:
-        return json.loads(raw)
+        obj = json.loads(raw)
     except json.JSONDecodeError:
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         if not m:
             raise AutofillError("The model did not return valid JSON.")
-        return json.loads(m.group(0))
+        obj = json.loads(m.group(0))
+    if not isinstance(obj, dict):
+        # Callers index into this immediately — a top-level list or string
+        # must be a stated 422, not a TypeError-turned-502.
+        raise AutofillError("The model returned JSON that is not an object.")
+    return obj
 
 
 def _draft_gemini(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:

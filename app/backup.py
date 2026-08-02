@@ -12,6 +12,7 @@ import datetime as dt
 import io
 import json
 import re
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -141,20 +142,41 @@ def restore_backup(payload: bytes) -> dict:
         slug = f"{slug_base}-{n}"
         n += 1
 
+    # Extract into a hidden staging dir renamed into place on success — a
+    # half-written tree must never appear on the shelf as a real
+    # production. Size caps are enforced on the DECOMPRESSED stream, not
+    # the attacker-controlled header sizes.
     dest = paths.PROJECTS_DIR / slug
-    dest.mkdir(parents=True)
-    for info in members:
-        target = dest / info.filename
-        # Belt and braces on top of _safe_member.
-        if not target.resolve().is_relative_to(dest.resolve()):
-            raise BackupError(f"unsafe archive member: {info.filename}")
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(z.read(info))
-    meta = _read_project_meta(dest)
-    meta["name"] = name
-    meta["restored_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-    (dest / "project.json").write_text(
-        json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    staging = paths.PROJECTS_DIR / f".restore-{slug}"
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
+    try:
+        total_out = 0
+        for info in members:
+            target = staging / info.filename
+            # Belt and braces on top of _safe_member.
+            if not target.resolve().is_relative_to(staging.resolve()):
+                raise BackupError(f"unsafe archive member: {info.filename}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            written = 0
+            with z.open(info) as src, target.open("wb") as out:
+                while chunk := src.read(1 << 20):
+                    written += len(chunk)
+                    total_out += len(chunk)
+                    if written > MAX_MEMBER_BYTES or total_out > MAX_TOTAL_BYTES:
+                        raise BackupError(
+                            f"archive member exceeds its declared size: {info.filename}")
+                    out.write(chunk)
+        meta = _read_project_meta(staging)
+        meta["name"] = name
+        meta["restored_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        (staging / "project.json").write_text(
+            json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+        staging.rename(dest)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
     return {"slug": slug, "name": name}
 
 

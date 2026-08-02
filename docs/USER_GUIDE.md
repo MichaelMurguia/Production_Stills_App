@@ -1,8 +1,10 @@
 # Screenboard Studio — User Guide
 
-*Working draft toward the full manual. Current as of 2026-07-29 (plan v3 UI,
-C1–C15). Everything here describes shipped behavior, verified against the
-running app.*
+*Working draft toward the full manual. Written 2026-07-29 (plan v3 UI);
+core mechanics remain accurate, but the app has since gained productions
+(multi-project), locked-stage gates, persistent UI state, structural
+boards and cloud studios — see [`INTENT.md`](INTENT.md) for the current
+shape and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the technicals.*
 
 ---
 

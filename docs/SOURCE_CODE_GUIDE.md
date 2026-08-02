@@ -1,5 +1,9 @@
 # Source Code Guide
 
+> Superseded for the app itself by [`ARCHITECTURE.md`](ARCHITECTURE.md)
+> (full module map, data layout, flows). This file remains the reference
+> for the stdlib governance scripts below.
+
 ## Python tools
 
 - `scripts/validate_spec.py` — deterministic structural and canon-budget checks.

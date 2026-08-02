@@ -46,7 +46,7 @@ def validate(spec: dict) -> list[str]:
     return errors
 
 def main():
-    ap=argparse.ArgumentParser(description='Validate a Beltminers Production Generation Specification')
+    ap=argparse.ArgumentParser(description='Validate a Production Generation Specification')
     ap.add_argument('spec'); args=ap.parse_args()
     errors=validate(load_json(args.spec))
     if errors:

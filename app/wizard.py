@@ -300,7 +300,9 @@ def draft_bible(answers: dict, provider: str = "gemini") -> dict:
         model = autofill.pick_text_model(client)
         contents: list = [types.Part.from_bytes(data=doc, mime_type=mime)]
         for p in ref_paths:
-            contents.append(Image.open(p))
+            im = Image.open(p)
+            im.load()  # release the handle before the long model call
+            contents.append(im)
         contents.append(instructions)
         response = client.models.generate_content(model=model, contents=contents)
         text = (response.text or "").strip()

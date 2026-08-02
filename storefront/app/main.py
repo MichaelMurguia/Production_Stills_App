@@ -9,7 +9,9 @@ from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import delete as sa_delete, select
+from sqlalchemy.exc import IntegrityError
+from starlette.concurrency import run_in_threadpool
 
 from . import auth, db, mailer, provisioner, settings
 
@@ -27,9 +29,14 @@ async def security_headers(request: Request, call_next):
     request.state.account_email = email
     request.state.account_avatar = ""
     if email and not request.url.path.startswith(("/static", "/healthz")):
-        with db.session() as s:
-            acct = s.scalar(select(db.Account).where(db.Account.email == email))
-            picture = acct.picture if acct else ""
+        def _picture() -> str:
+            with db.session() as s:
+                acct = s.scalar(select(db.Account).where(
+                    db.Account.email == email))
+                return acct.picture if acct else ""
+        # Sync DB work off the event loop — this middleware wraps every
+        # request, including long-poll proxying.
+        picture = await run_in_threadpool(_picture)
         request.state.account_avatar = auth.avatar_url(email, picture)
     resp = await call_next(request)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -38,10 +45,18 @@ async def security_headers(request: Request, call_next):
     return resp
 
 
+def _cookies_secure(request: Request) -> bool:
+    """Railway terminates TLS upstream, so request.url.scheme can read
+    'http' on a fully-HTTPS deployment — the public BASE_URL is the truth
+    about whether Secure cookies are safe to require."""
+    return (request.url.scheme == "https"
+            or settings.BASE_URL.startswith("https"))
+
+
 def _set_session(resp, request: Request, email: str) -> None:
     resp.set_cookie(auth.SESSION_COOKIE, auth.make_session(email),
                     max_age=auth.SESSION_DAYS * 86400, httponly=True,
-                    samesite="lax", secure=request.url.scheme == "https")
+                    samesite="lax", secure=_cookies_secure(request))
 
 
 def _login_account(email: str, name: str = "", google_sub: str = "",
@@ -173,11 +188,24 @@ def _fulfill(checkout_session) -> db.Purchase:
             stripe_session_id=checkout_session.id,
             stripe_customer_id=checkout_session.customer or "",
             stripe_subscription_id=checkout_session.subscription or "",
+            stripe_payment_intent=_sget(checkout_session, "payment_intent") or "",
         )
         s.add(purchase)
         if kind == "download":
             purchase.license = db.License()
-        s.commit()
+        try:
+            s.commit()
+        except IntegrityError:
+            # Webhook and /success fulfilled the same session at once; the
+            # unique stripe_session_id makes exactly one insert win. Read
+            # the winner and serve it — the buyer must never see a 500.
+            s.rollback()
+            existing = s.scalar(select(db.Purchase).where(
+                db.Purchase.stripe_session_id == checkout_session.id))
+            if existing.kind == "cloud":
+                provisioner.ensure_workspace_row(s, existing)
+            _detach_loaded(s, existing)
+            return existing
         s.refresh(purchase)
         if kind == "cloud":
             provisioner.ensure_workspace_row(s, purchase)
@@ -201,7 +229,11 @@ def _detach_loaded(s, purchase: db.Purchase) -> None:
 def success(request: Request, background: BackgroundTasks, session_id: str = ""):
     if not session_id:
         return RedirectResponse("/")
-    checkout_session = stripe.checkout.Session.retrieve(session_id)
+    try:
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.StripeError:
+        # Garbage or foreign session ids are a visitor problem, not a 500.
+        return RedirectResponse("/")
     if checkout_session.payment_status not in ("paid", "no_payment_required"):
         return templates.TemplateResponse(request, "success.html",
                                           {"state": "PENDING", "purchase": None})
@@ -241,7 +273,9 @@ def available_versions() -> list[tuple[str, Path]]:
         if m:
             out.append((m.group(1), f))
     def key(item):
-        return [int(x) if x.isdigit() else x
+        # Typed tuples, not bare values — a version like 2026.08.01-rc
+        # would make int < str comparisons raise and 500 the account page.
+        return [(0, int(x), "") if x.isdigit() else (1, 0, x)
                 for x in _re.split(r"[.\-]", item[0])]
     return sorted(out, key=key, reverse=True)
 
@@ -303,16 +337,32 @@ def signup_page(request: Request):
     return _auth_page(request, "signup")
 
 
+# Last magic-link send per address — one mail a minute is plenty for a
+# human and starves a mail-bomb loop. In-process on purpose: a restart
+# forgiving the throttle is harmless.
+_magic_last: dict[str, float] = {}
+
+
 @app.post("/auth/email")
 def auth_email(request: Request, email: str = Form(""), mode: str = Form("signin")):
     """Send a magic link. Uniform response for any address; creating vs
     signing in converges at the link — the inbox is the proof."""
+    import datetime as dt
+    import time
     mode = "signup" if mode == "signup" else "signin"
     if not mailer.configured():
         return _auth_page(request, mode)
     email = email.strip().lower()
     if email and "@" in email:
+        now = time.time()
+        if now - _magic_last.get(email, 0) < 60:
+            return _auth_page(request, mode, sent=True)  # uniform response
+        _magic_last[email] = now
         with db.session() as s:
+            # Opportunistic hygiene: dead tokens never accumulate forever.
+            s.execute(sa_delete(db.LoginToken).where(
+                db.LoginToken.expires_at
+                < dt.datetime.utcnow() - dt.timedelta(days=1)))
             t = db.LoginToken(email=email)
             s.add(t)
             s.commit()
@@ -348,14 +398,22 @@ def auth_verify(request: Request, token: str = ""):
 def auth_google(request: Request):
     if not auth.google_configured():
         raise HTTPException(404)
-    return RedirectResponse(auth.google_auth_url(auth.make_state()), status_code=303)
+    state = auth.make_state()
+    resp = RedirectResponse(auth.google_auth_url(state), status_code=303)
+    # The callback must come from the browser that started the flow —
+    # the state cookie is the binding (login-CSRF guard).
+    resp.set_cookie(auth.STATE_COOKIE, state, max_age=auth.STATE_TTL,
+                    httponly=True, samesite="lax",
+                    secure=_cookies_secure(request))
+    return resp
 
 
 @app.get("/auth/google/callback")
 def auth_google_callback(request: Request, code: str = "", state: str = ""):
     if not auth.google_configured():
         raise HTTPException(404)
-    if not code or not auth.check_state(state):
+    state_cookie = request.cookies.get(auth.STATE_COOKIE, "")
+    if not code or not auth.check_state(state, state_cookie):
         return _auth_page(request, "signin",
                           error="Google sign-in didn't complete — try again.")
     try:
@@ -365,6 +423,7 @@ def auth_google_callback(request: Request, code: str = "", state: str = ""):
     _login_account(ident["email"], ident["name"], ident["sub"],
                    ident.get("picture", ""))
     resp = RedirectResponse("/account", status_code=303)
+    resp.delete_cookie(auth.STATE_COOKIE)
     _set_session(resp, request, ident["email"])
     return resp
 
@@ -403,7 +462,13 @@ def name_studio(request: Request, background: BackgroundTasks,
                 err = "that name is taken"
             else:
                 ws.subdomain = name
-                s.commit()
+                try:
+                    s.commit()
+                except IntegrityError:
+                    # Two buyers claimed the same name in the same instant;
+                    # the partial unique index picks exactly one winner.
+                    s.rollback()
+                    err = "that name is taken"
     if err:
         return RedirectResponse(f"/account?name_error={quote(err)}",
                                 status_code=303)
@@ -530,18 +595,27 @@ def recover(request: Request, email: str = Form("")):
         "mail_ready": True, "sent": True})
 
 
+def _admin_gate(request: Request, token: str) -> None:
+    """One gate for every /admin endpoint. The token still works as a
+    query param (curl-friendly, existing runbooks), but an Authorization
+    bearer header is preferred — query strings land in access logs."""
+    supplied = token or request.headers.get(
+        "authorization", "").removeprefix("Bearer ").strip()
+    if not settings.ADMIN_EXPORT_TOKEN:
+        raise HTTPException(404)
+    if not hmac.compare_digest(supplied, settings.ADMIN_EXPORT_TOKEN):
+        raise HTTPException(404)
+
+
 @app.get("/admin/wildcard")
-def admin_wildcard(token: str = "", attach: str = ""):
+def admin_wildcard(request: Request, token: str = "", attach: str = ""):
     """One-time ops tool for the wildcard tenant router: list the Railway
     project's services, and with ?attach=<service_id> attach
     *.TENANT_DOMAIN_BASE to that service (the storefront), returning the
     DNS records Railway wants. Replaces hunting through Railway's UI.
     Gated exactly like /admin/export; harmlessly idempotent — Railway
     rejects a duplicate attach with a stated error."""
-    if not settings.ADMIN_EXPORT_TOKEN:
-        raise HTTPException(404)
-    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
-        raise HTTPException(404)
+    _admin_gate(request, token)
     if not (settings.railway_configured() and settings.TENANT_DOMAIN_BASE):
         raise HTTPException(503, "railway or TENANT_DOMAIN_BASE not configured")
     from . import railway
@@ -558,28 +632,22 @@ def admin_wildcard(token: str = "", attach: str = ""):
 
 
 @app.get("/admin/reconcile")
-def admin_reconcile(token: str = ""):
+def admin_reconcile(request: Request, token: str = ""):
     """Run provisioner.reconcile() on demand — same gate as /admin/export.
     Ops use: after a DNS change, flip domain_live the moment the branded
     address serves instead of waiting for the next deploy or webhook."""
-    if not settings.ADMIN_EXPORT_TOKEN:
-        raise HTTPException(404)
-    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
-        raise HTTPException(404)
+    _admin_gate(request, token)
     return provisioner.reconcile()
 
 
 @app.get("/admin/tenants/update")
-def admin_update_tenants(token: str = "", status: int = 0):
+def admin_update_tenants(request: Request, token: str = "", status: int = 0):
     """Fleet update: rebuild every ACTIVE tenant studio from the current
     repo head. Same gate as /admin/export. Run after each product release
     (see DEPLOYMENT.md runbook) — the cloud edition promises updates land
     the day they ship. ?status=1 lists recent deployments per studio
     instead of triggering anything."""
-    if not settings.ADMIN_EXPORT_TOKEN:
-        raise HTTPException(404)
-    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
-        raise HTTPException(404)
+    _admin_gate(request, token)
     if status:
         from sqlalchemy import select as _sel
         from . import railway
@@ -597,15 +665,12 @@ def admin_update_tenants(token: str = "", status: int = 0):
 
 
 @app.get("/admin/export")
-def admin_export(token: str = ""):
+def admin_export(request: Request, token: str = ""):
     """Entitlement-data backup: purchases, licenses, workspaces as JSON.
     Exists only when ADMIN_EXPORT_TOKEN is configured; fetch it on a
     schedule and keep the file — losing this data means losing the record
     of who owns what."""
-    if not settings.ADMIN_EXPORT_TOKEN:
-        raise HTTPException(404)
-    if not hmac.compare_digest(token, settings.ADMIN_EXPORT_TOKEN):
-        raise HTTPException(404)
+    _admin_gate(request, token)
     def row(o, cols):
         return {c: (v.isoformat() if hasattr(v := getattr(o, c), "isoformat") else v)
                 for c in cols}
@@ -613,7 +678,8 @@ def admin_export(token: str = ""):
         return {
             "purchases": [row(p, ("id", "kind", "tier", "email",
                                   "stripe_session_id", "stripe_customer_id",
-                                  "stripe_subscription_id", "status", "created_at"))
+                                  "stripe_subscription_id",
+                                  "stripe_payment_intent", "status", "created_at"))
                           for p in s.scalars(select(db.Purchase)).all()],
             "licenses": [row(l, ("id", "purchase_id", "token",
                                  "downloads_used", "created_at"))
@@ -634,9 +700,27 @@ async def stripe_webhook(request: Request, background: BackgroundTasks):
     except (ValueError, stripe.SignatureVerificationError):
         raise HTTPException(400, "invalid signature")
 
-    if event["type"] == "checkout.session.completed":
-        purchase = _fulfill(stripe.checkout.Session.retrieve(event["data"]["object"]["id"]))
-        if purchase.kind == "cloud":
+    if event["type"] in ("checkout.session.completed",
+                         "checkout.session.async_payment_succeeded"):
+        checkout_session = stripe.checkout.Session.retrieve(
+            event["data"]["object"]["id"])
+        # completed fires even for delayed-payment methods still pending —
+        # fulfilling would hand out licenses for money that never arrives.
+        # Unpaid sessions wait for async_payment_succeeded.
+        if checkout_session.payment_status in ("paid", "no_payment_required"):
+            purchase = _fulfill(checkout_session)
+            if purchase.kind == "cloud":
+                background.add_task(provisioner.reconcile)
+    elif event["type"] in ("charge.refunded", "charge.dispute.created"):
+        pi = _sget(event["data"]["object"], "payment_intent") or ""
+        if pi:
+            with db.session() as s:
+                purchase = s.scalar(select(db.Purchase).where(
+                    db.Purchase.stripe_payment_intent == pi))
+                if purchase and purchase.status == "PAID":
+                    purchase.status = "REFUNDED"
+                    s.commit()
+            # Download gate reads status; cloud studios get revoked.
             background.add_task(provisioner.reconcile)
     elif event["type"] == "customer.subscription.deleted":
         sub_id = event["data"]["object"]["id"]

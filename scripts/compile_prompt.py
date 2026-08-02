@@ -8,7 +8,7 @@ def compile_prompt(spec: dict) -> str:
     errors=validate(spec)
     if errors: raise ValueError('Specification failed validation:\n'+'\n'.join('- '+e for e in errors))
     lines=[]
-    lines += [f"BELTMINERS PRODUCTION RENDER INSTRUCTIONS",f"SPECIFICATION: {spec['specification_id']}",f"SPEC HASH: {stable_hash(spec)}",f"SUBJECT: {spec['subject']}",f"MODE: {spec['mode']}",'']
+    lines += ["PRODUCTION RENDER INSTRUCTIONS",f"SPECIFICATION: {spec['specification_id']}",f"SPEC HASH: {stable_hash(spec)}",f"SUBJECT: {spec['subject']}",f"MODE: {spec['mode']}",'']
     lines += ['NON-NEGOTIABLE SOURCE RULES','Render only what the approved specification requires. Do not invent additional worldbuilding, objects, culture, technology, fauna, vehicles, symbols, characters, props, or action. Omit unspecified content rather than filling space. Master Board #001 controls presentation grammar only.','']
     lines += ['BOARD PRESENTATION',str(spec.get('render_intent','Wide painterly production-development board; image-first hierarchy; concise labels; visible brushwork; no glossy marketing finish.')),f"Canvas: {spec['layout'].get('canvas','wide cinematic')}",'']
     lines += ['FORBIDDEN ELEMENTS',bullet(spec.get('forbidden_elements',[])),'']

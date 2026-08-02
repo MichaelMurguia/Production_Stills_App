@@ -738,6 +738,18 @@ function uiSet(k, v) {
   try { localStorage.setItem(_uiKey(), JSON.stringify(_uiState)); } catch { /* full/blocked */ }
 }
 
+/* The cached Scene Scan follows the same per-production rule — an
+   un-namespaced copy once leaked one film's locations and cast into
+   another's Locations table and casting chips. */
+function wizACache() {
+  try { return JSON.parse(localStorage.getItem(`wizardAnalysis:${_activeSlug}`) || "null"); }
+  catch { return null; }
+}
+function wizACacheSet(a) {
+  try { localStorage.setItem(`wizardAnalysis:${_activeSlug}`, JSON.stringify(a)); }
+  catch { /* full/blocked */ }
+}
+
 for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
@@ -945,6 +957,9 @@ const selectedModelLabel = sel =>
   sel?.selectedOptions?.[0]?.textContent?.trim() || "the selected model";
 
 async function showView(name) {
+  // Own keys only — #toString would otherwise "exist" via the prototype,
+  // dispatch garbage, and persist a view name that renders nothing.
+  if (!Object.hasOwn(views, name)) name = "status";
   activeView = name;
   uiSet("view", name);
   _roleCtx = null;  // suggestion sources refresh per navigation
@@ -1390,7 +1405,7 @@ async function renderLocations(state = null, langs = 0) {
       // Environment grouping (plan P7): the read's verbatim slugline
       // assignments — the same buckets as the wizard's finder list, zero
       // fuzzy matching. No environments = the flat table it always was.
-      const envs = (JSON.parse(localStorage.getItem("wizardAnalysis") || "null")
+      const envs = (wizACache()
         ?.environments || []).filter(e => (e.name || "").trim());
       if (!envs.length) return list.map(rowHtml).join("") || empty;
       const assignedTo = {};
@@ -1653,7 +1668,7 @@ async function renderSettings() {
       try {
         await api("/api/settings", { method: "POST", json: { preferred_provider: ch.dataset.v } });
         $$(".vchip", prefChips).forEach(x => x.classList.toggle("on", x === ch));
-        toast(`Default engine: ${esc(settings.providers[ch.dataset.v])}.`);
+        toast(`Default engine: ${settings.providers[ch.dataset.v]}.`);
       } catch (err) { toast(err.message, true); }
     };
   });
@@ -1796,12 +1811,12 @@ async function renderWizard() {
     const srv = await api("/api/wizard/analysis");
     wizAnalysis = srv && Object.keys(srv).length ? srv : null;
   } catch { /* server copy unavailable; fall back to local */ }
-  const localAnalysis = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+  const localAnalysis = wizACache();
   if (!wizAnalysis && localAnalysis) {
     wizAnalysis = localAnalysis;
     api("/api/wizard/analysis", { method: "PUT", json: localAnalysis }).catch(() => {});
   }
-  if (wizAnalysis) localStorage.setItem("wizardAnalysis", JSON.stringify(wizAnalysis));
+  if (wizAnalysis) wizACacheSet(wizAnalysis);
   $("#wiz-screenplay").innerHTML = state.screenplay
     ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
     : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
@@ -1823,7 +1838,7 @@ async function renderWizard() {
   // Every engine renders the same screenplay location; suggestions come from
   // the Step 2 analysis's recurring locations.
   const locInput = $("#wiz-sample-loc");
-  const sampleLocs = JSON.parse(localStorage.getItem("wizardAnalysis") || "null")?.key_locations || [];
+  const sampleLocs = wizACache()?.key_locations || [];
   $("#wiz-sample-locs").innerHTML = sampleLocs.map(l => `<option value="${esc(l)}"></option>`).join("");
   locInput.value = localStorage.getItem("wizardSampleLoc") || sampleLocs[0] || "";
   locInput.oninput = () => localStorage.setItem("wizardSampleLoc", locInput.value);
@@ -1915,19 +1930,13 @@ async function renderWizard() {
     const avail = ["gemini", "openai", "openai-chat"]
       .filter(p => keyFor(p) && !failedP(p));
     const failedList = ["gemini", "openai", "openai-chat"].filter(failedP);
-    for (const p of failedList) {
-      const smp = samples.find(x => x.provider === p);
-      const col = document.createElement("div");
-      col.className = "wiz-col";
-      col.innerHTML = `
-        <div class="wiz-col-head"><span class="f-label">${esc(smp?.label || p)}</span></div>
-        <p class="mini" style="color:var(--bad)">KEY FAILED ITS TEST &mdash;
-        retest or replace it in Settings before this engine competes.</p>`;
-      host.append(col);
-    }
-    if (!avail.length && !failedList.length) {
+    // Failed-key columns are renderSamples' job — this handler only
+    // decides whether anything can run.
+    if (!avail.length) {
       btn.disabled = false;
-      return toast("Save at least one API key first.", true);
+      return toast(failedList.length
+        ? "Every configured key failed its test — retest or replace in Settings."
+        : "Save at least one API key first.", true);
     }
     const subject = sampleSubject();
     const busy = startBusy($("#wiz-samples-busy"),
@@ -2021,7 +2030,7 @@ async function renderWizard() {
         ? `FOUND IN THE SCREENPLAY — ${fresh.length} UNCAST`
         : "FOUND IN THE SCREENPLAY — UNCAST";
       if (!fresh.length) {
-        const ran = !!JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+        const ran = !!wizACache();
         host.innerHTML = `<span class="mini">${ran
           ? "everything the read found is cast" : "run Step 2 to get casting proposals"}</span>`;
         return;
@@ -2132,7 +2141,7 @@ async function renderWizard() {
   const getAnalysis = () => wizAnalysis;
   const saveAnalysis = a => {
     wizAnalysis = a;
-    localStorage.setItem("wizardAnalysis", JSON.stringify(a));
+    wizACacheSet(a);
     api("/api/wizard/analysis", { method: "PUT", json: a }).catch(() => {});
     wizardStepBadges();  // confirmations/drops move the step-2 badge
   };
@@ -2868,7 +2877,7 @@ const SUBJECT_ROLE_OF = {
 // Screenplay-read recommendations not yet cast — shared by the SUBJECTS
 // shelf and wizard step 4 (casting is a door into the same shelf).
 function uncastRecommendations(subjects) {
-  const analysis = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+  const analysis = wizACache();
   const have = new Set(subjects.map(s => s.name.toLowerCase()));
   return (analysis?.subjects || [])
     .filter(r => r.name && !have.has(String(r.name).toLowerCase()));
@@ -3418,7 +3427,7 @@ async function openSpecEditor(specId) {
   // the gate readable before it's hit (their entry lands on the next
   // Bible draft). The suggestion is the read's own verbatim location
   // assignment, never a fuzzy guess.
-  const wizA = JSON.parse(localStorage.getItem("wizardAnalysis") || "null");
+  const wizA = wizACache();
   const envNotes = Object.fromEntries((wizA?.environments || [])
     .filter(e => e.name).map(e => [String(e.name), e.notes || ""]));
   const envAssigned = Object.fromEntries((wizA?.environments || [])
@@ -3497,7 +3506,7 @@ async function openSpecEditor(specId) {
       <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects and the project lessons-learned into every render prompt.">Forbidden elements <span class="hint">(one per line — seeded from the rejection history on the dashboard)</span>
         <textarea id="sp-forbidden" ${locked ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
-      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${spec.canon_budget?.weak_inference_max ?? 2}" ${locked ? "disabled" : ""}></label>
+      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${locked ? "disabled" : ""}></label>
       </div>
     </div>
 
@@ -4027,24 +4036,33 @@ REMOVE — marked for removal from the board.">
       const v = f => $(`[data-f=${f}]`, row).value;
       const id = row.dataset.pid;
       if (!id) continue;
-      out.panels.push({
+      // Fields the editor doesn't surface (scale, evidence, per-row
+      // confidence/rationale below) must survive a Save — hardcoding
+      // them here once silently wiped autofill's work on every save.
+      const orig = (spec.panels || []).find(x => x.id === id) || {};
+      const p = {
+        ...orig,
         id,
         title: v("title").trim(),
         purpose: v("purpose").trim(),
         required_objects: $$(".chip", row).map(c => c.dataset.obj),
         forbidden_objects: split(v("forbidden")),
-        evidence: ["USER_DIRECTED"],
-        scale: "WIDE",
-        composition_role: out.panels.length === 0 ? "hero" : "support",
+        evidence: Array.isArray(orig.evidence) && orig.evidence.length
+          ? orig.evidence : ["USER_DIRECTED"],
+        scale: orig.scale || "WIDE",
+        composition_role: orig.composition_role
+          || (out.panels.length === 0 ? "hero" : "support"),
         time_of_day: v("ptod"),
-        // An exception exists only when something is chosen — empty
-        // override controls collapse back to inheritance (review §3+4).
-        ...($("[data-f=penv]", row)?.value
-          ? { environment: $("[data-f=penv]", row).value } : {}),
-        ...($$(".vchip.set[data-plang]", row).length
-          ? { design_languages: $$(".vchip.set[data-plang]", row).map(c => c.dataset.plang) }
-          : {}),
-      });
+      };
+      // An exception exists only when something is chosen — empty
+      // override controls collapse back to inheritance (review §3+4).
+      delete p.environment;
+      delete p.design_languages;
+      if ($("[data-f=penv]", row)?.value)
+        p.environment = $("[data-f=penv]", row).value;
+      const plangs = $$(".vchip.set[data-plang]", row).map(c => c.dataset.plang);
+      if (plangs.length) p.design_languages = plangs;
+      out.panels.push(p);
       layoutPanels.push({ id, allocation_percent: parseFloat(v("alloc")) || 0 });
     }
     out.layout = { canvas: $("#sp-canvas", panel).value.trim(), panels: layoutPanels };
@@ -4055,15 +4073,22 @@ REMOVE — marked for removal from the board.">
       const v = f => $(`[data-f=${f}]`, row).value;
       if (!v("object").trim()) continue;
       n += 1;
+      const pid = v("panel_id").trim();
+      const obj = v("object").trim();
+      const origRow = (spec.evidence_ledger || []).find(e =>
+        (e.panel_id || "") === pid
+        && (e.object || "").toLowerCase() === obj.toLowerCase()) || {};
       out.evidence_ledger.push({
+        ...origRow,
         object_id: `OBJ-${String(n).padStart(3, "0")}`,
-        panel_id: v("panel_id").trim(),
-        object: v("object").trim(),
+        panel_id: pid,
+        object: obj,
         evidence_class: v("evidence_class"),
         source: v("source").trim(),
-        confidence: 1.0,
+        confidence: typeof origRow.confidence === "number"
+          ? origRow.confidence : 1.0,
         status: v("status"),
-        rationale: "",
+        rationale: origRow.rationale || "",
       });
     }
     return out;
@@ -5251,8 +5276,8 @@ async function renderAssembly() {
   const pendingOpen = uiGet("openBoard", "");
   if (pendingOpen) {
     uiSet("openBoard", "");
-    const idx = orderedBoards.findIndex(x => x.candidate_id === pendingOpen);
-    if (idx >= 0) { showBoard(orderedBoards[idx], idx); return; }
+    const idx = all.findIndex(x => x.candidate_id === pendingOpen);
+    if (idx >= 0) { showBoard(all[idx], idx); return; }
   }
   showGrid();
 }
@@ -5356,7 +5381,21 @@ async function renderAssemblyFor(specId) {
       sm = await api(`/api/specs/${specId}/slot-map?variant=${encodeURIComponent(variant)}&width=${w}&height=${h}`);
       $("[data-f=slot-wrap]", asm).innerHTML = slotHtml(sm);
       $("[data-f=canvas-chip]", asm).textContent = `${w} × ${h}`;
-      $("#asm-go", asm).disabled = !sm.ready;
+      // The duplicate guard must follow the variant — switching away and
+      // back once re-enabled Assemble for an already-minted board.
+      const takes = Object.fromEntries((sm?.slots || [])
+        .filter(sl => sl.candidate_id).map(sl => [sl.panel_id, sl.candidate_id]));
+      const dup = boards.find(b =>
+        (b.layout_variant || "aspect") === variant &&
+        JSON.stringify(b.panels_used || {}) === JSON.stringify(takes));
+      const go = $("#asm-go", asm);
+      go.disabled = !sm.ready || !!dup;
+      go.textContent = dup ? "Assembled" : "Assemble 4K board";
+      go.title = dup
+        ? `Already assembled as ${dup.candidate_id} with these exact takes and this layout — approve a new take or pick another variant to assemble again`
+        : sm.ready
+          ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling"
+          : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first";
     } catch (err) { toast(err.message, true); }
   };
   $$(".vchip", asm).forEach(ch => {
@@ -5480,8 +5519,9 @@ async function boot() {
     // Deep-link support: #screenplay, #boards, … land on that view
     // directly; otherwise the app reopens exactly where it was left.
     const stored = uiGet("view", "status");
-    showView(views[location.hash.slice(1)] ? location.hash.slice(1)
-      : views[stored] ? stored : "status");
+    const hashView = location.hash.slice(1);
+    showView(Object.hasOwn(views, hashView) ? hashView
+      : Object.hasOwn(views, stored) ? stored : "status");
     return;
   }
   $("#nav").classList.add("hidden");

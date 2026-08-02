@@ -49,9 +49,7 @@ def _custom_engine(provider: str) -> dict:
         raise GenerationError(f"unknown custom engine: {provider}")
     return eng
 
-BOARD_TYPES = {"SCENE", "LOCATION", "ASSET", "LIGHTING_STUDY", "MASTER"}
 DEFAULT_BOARD_TYPE = "LOCATION"  # legacy specs predate types; they behaved as location boards
-TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"]
 
 IMAGE_SIZES = {"1K", "2K", "4K"}
 
@@ -181,8 +179,7 @@ def add_lesson(reason: str, source: str) -> None:
         return
     lessons.append({"reason": reason, "source": source, "added_at": store.utcnow()})
     paths.ensure_dirs()
-    _lessons_path().write_text(
-        json.dumps(lessons, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    store._atomic_write_json(_lessons_path(), lessons)
 
 
 def remove_lesson(reason: str) -> bool:
@@ -190,8 +187,7 @@ def remove_lesson(reason: str) -> bool:
     kept = [l for l in lessons if l["reason"].casefold() != reason.strip().casefold()]
     if len(kept) == len(lessons):
         return False
-    _lessons_path().write_text(
-        json.dumps(kept, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    store._atomic_write_json(_lessons_path(), kept)
     return True
 
 
@@ -215,7 +211,13 @@ def load_settings() -> dict:
     in data/settings.json; that copy is read until the first save moves
     them to the install home."""
     if paths.SETTINGS.exists():
-        return json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
+        try:
+            return json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            # A corrupt file must not brick every route — set it aside
+            # (nothing is destroyed) and present a fresh, stated blank.
+            paths.SETTINGS.replace(paths.SETTINGS.with_suffix(".json.corrupt"))
+            return {}
     legacy = paths.HOME / "data" / "settings.json"  # pre-multi-project home
     if legacy.exists():
         return json.loads(legacy.read_text(encoding="utf-8"))
@@ -223,9 +225,10 @@ def load_settings() -> dict:
 
 
 def save_settings(settings: dict) -> None:
+    # Atomic — a truncated settings.json would 500 every route, including
+    # the Settings page the user would need to repair it.
     paths.ensure_dirs()
-    paths.SETTINGS.write_text(json.dumps(settings, indent=2) + "\n",
-                              encoding="utf-8")
+    store._atomic_write_json(paths.SETTINGS, settings)
 
 
 def _client(timeout_ms: int = 300_000):
@@ -299,7 +302,7 @@ def archive_feedback(spec_id: str, panel_id: str, reason: str, source: str) -> N
     items.append({"base": base, "panel_id": panel_id, "reason": reason,
                   "source": source, "archived_at": store.utcnow()})
     paths.ensure_dirs()
-    p.write_text(json.dumps(items, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    store._atomic_write_json(p, items)
 
 
 def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
@@ -456,9 +459,10 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     # model's prior on a NAMED thing is stronger than any attached photo.
     idents = []
     seen_subj = set()
+    subjects = store.list_subjects()  # one read, not one per object
     for obj in panel.get("required_objects", []):
         o = str(obj).casefold()
-        for s in store.list_subjects():
+        for s in subjects:
             n = s["name"].casefold()
             if s["id"] not in seen_subj and (n in o or o in n) and (s.get("traits") or s.get("subtitle")):
                 seen_subj.add(s["id"])
@@ -665,7 +669,9 @@ def _render_gemini(prompt: str, ref_paths: list[Path],
 
     contents: list = [prompt]
     for p in ref_paths:
-        contents.append(Image.open(p))
+        im = Image.open(p)
+        im.load()  # read fully and release the file handle (Windows locks)
+        contents.append(im)
 
     client = _client()
     response = client.models.generate_content(
@@ -789,8 +795,18 @@ def _render_custom(provider: str, prompt: str, ref_paths: list[Path],
     if data and getattr(data[0], "b64_json", None):
         out_path.write_bytes(base64.b64decode(data[0].b64_json))
     elif data and getattr(data[0], "url", None):
+        # The URL comes from a user-configured engine — https only (no
+        # file:// reads into a served artifact), bounded time and size.
         import urllib.request
-        out_path.write_bytes(urllib.request.urlopen(data[0].url).read())
+        url = str(data[0].url)
+        if not url.startswith(("https://", "http://")):
+            raise GenerationError(
+                f"{name} returned a non-HTTP image URL — refused.")
+        with urllib.request.urlopen(url, timeout=120) as r:
+            img = r.read(64 * 1024 * 1024 + 1)
+        if len(img) > 64 * 1024 * 1024:
+            raise GenerationError(f"{name} returned an image over 64 MB — refused.")
+        out_path.write_bytes(img)
     else:
         raise GenerationError(f"{name} returned no image.")
     return getattr(data[0], "revised_prompt", "") or ""
@@ -1026,8 +1042,7 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
             "subject": subject or None,
             "style_anchors": [r["id"] for r in style_refs],
             "notes": notes[:500], "created_at": store.utcnow()}
-    (_samples_dir() / f"{provider}.json").write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    store._atomic_write_json(_samples_dir() / f"{provider}.json", meta)
     return meta
 
 
@@ -1159,7 +1174,10 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
         from google.genai import types
 
         contents: list = [prompt, src_im, guide_im]
-        contents += [Image.open(p) for p in ref_paths]
+        for p in ref_paths:
+            _im = Image.open(p)
+            _im.load()  # release the handle before the long model call
+            contents.append(_im)
         cfg = {"response_modalities": ["TEXT", "IMAGE"]}
         # Gemini's ImageConfig only accepts its own enum — a film-format
         # source (e.g. 2.55:1 from GPT Image 2) repairs without a size hint.
@@ -1421,10 +1439,7 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     ref_paths = _reference_image_paths(refs)
     override = (render_prompt or "").strip()
 
-    state = store.load_app_state()
-    state["cand_counter"] = int(state.get("cand_counter", 0)) + 1
-    cand_id = f"CAND-{state['cand_counter']:04d}"
-    store.save_app_state(state)
+    cand_id = store.next_counter("cand_counter", "CAND")
 
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
@@ -1528,10 +1543,7 @@ def _approved_panel_candidates(spec_id: str) -> list[dict]:
 
 
 def _new_candidate_id() -> str:
-    state = store.load_app_state()
-    state["cand_counter"] = int(state.get("cand_counter", 0)) + 1
-    store.save_app_state(state)
-    return f"CAND-{state['cand_counter']:04d}"
+    return store.next_counter("cand_counter", "CAND")
 
 
 def derive_palette(spec_id: str) -> dict:

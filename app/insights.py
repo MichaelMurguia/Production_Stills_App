@@ -606,9 +606,7 @@ def citation_check() -> dict:
 
 
 def _save_citation_report(report: dict) -> None:
-    _citation_report_path().write_text(
-        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8")
+    store._atomic_write_json(_citation_report_path(), report)
 
 
 def load_citation_report() -> dict | None:

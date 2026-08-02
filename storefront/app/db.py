@@ -29,7 +29,9 @@ class Purchase(Base):
     stripe_session_id: Mapped[str] = mapped_column(String(255), unique=True)
     stripe_customer_id: Mapped[str] = mapped_column(String(255), default="")
     stripe_subscription_id: Mapped[str] = mapped_column(String(255), default="")
-    status: Mapped[str] = mapped_column(String(16), default="PAID")  # PAID | CANCELED
+    # Lets charge.refunded / dispute events find their purchase.
+    stripe_payment_intent: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(16), default="PAID")  # PAID | CANCELED | REFUNDED
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
 
     license: Mapped["License | None"] = relationship(back_populates="purchase", uselist=False)
@@ -64,8 +66,9 @@ class Workspace(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     purchase_id: Mapped[int] = mapped_column(ForeignKey("purchases.id"), unique=True)
     status: Mapped[str] = mapped_column(String(16), default="PENDING")
-    # The studio's subdomain label. Uniqueness is enforced in the app (a DB
-    # unique constraint would break on pre-claim '' rows).
+    # The studio's subdomain label. Uniqueness is enforced by a partial
+    # unique index (WHERE subdomain <> '' — see init_db); pre-claim '' rows
+    # stay exempt. The app-level clash check remains for friendly errors.
     subdomain: Mapped[str] = mapped_column(String(63), default="")
     access_token: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
     railway_service_id: Mapped[str] = mapped_column(String(64), default="")
@@ -113,20 +116,35 @@ class LoginToken(Base):
     used: Mapped[int] = mapped_column(Integer, default=0)
 
 
+def _is_duplicate_ddl_error(e: Exception) -> bool:
+    """Distinguish 'column/index already there' (expected, idempotent) from
+    a genuinely broken database. Swallowing everything once hid a down DB
+    at import — the service then served with unmigrated tables."""
+    msg = str(e).lower()
+    return any(k in msg for k in ("duplicate column", "duplicate key",
+                                  "already exists", "duplicate object"))
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     # create_all never adds columns to tables that already exist; patch the
-    # known additive columns so early deployments upgrade in place.
+    # known additive columns so early deployments upgrade in place. The
+    # partial unique index enforces subdomain uniqueness at the DB (the
+    # claim race), leaving pre-claim '' rows exempt.
     for ddl in ("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''",
+                "ALTER TABLE purchases ADD COLUMN stripe_payment_intent VARCHAR(255) DEFAULT ''",
                 "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN railway_url VARCHAR(255) DEFAULT ''",
-                "ALTER TABLE workspaces ADD COLUMN domain_live INTEGER DEFAULT 0"):
+                "ALTER TABLE workspaces ADD COLUMN domain_live INTEGER DEFAULT 0",
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_workspaces_subdomain "
+                "ON workspaces (subdomain) WHERE subdomain <> ''"):
         try:
             with engine.begin() as conn:
                 conn.execute(text(ddl))
-        except Exception:
-            pass  # column already present
+        except Exception as e:
+            if not _is_duplicate_ddl_error(e):
+                raise  # connectivity/permission problems must be loud
 
 
 def session() -> Session:

@@ -77,7 +77,13 @@ serve internal data from the storefront.
 | `TENANT_DOMAIN_BASE` | e.g. `screenboardstudio.com` — studios live at `<name>.<base>`, served by the **wildcard tenant router** built into the storefront (`app/tenant_proxy.py`): the storefront reverse-proxies each studio host to that tenant's `*.up.railway.app` service. **One-time setup, never per customer:** in the Railway dashboard attach the custom domain `*.<base>` to the STOREFRONT service (Settings → Networking) and create the DNS records Railway prints — the wildcard CNAME and, for the wildcard certificate, the `_acme-challenge` record it asks for. After that, claiming or renaming a studio is live the moment the row commits: no DNS, no certificates, no Railway domain calls, no per-service domain caps. Reconcile deletes any legacy per-tenant custom domains left from the pre-router design. The `railway.app` URL keeps working throughout, and account/success buttons keep using it until the branded address passes the health probe (`domain_live`) |
 
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Transactional mail for `/recover` AND magic-link sign-in (any SMTP endpoint — Resend/Postmark/SES). Unset → both state the gate |
-| `ADMIN_EXPORT_TOKEN` | Long random value enabling `GET /admin/export?token=…` (entitlement backup). Unset → the endpoint 404s |
+| `ADMIN_EXPORT_TOKEN` | Long random value enabling the `/admin/*` endpoints (export, reconcile, wildcard, tenants/update). Send it as `Authorization: Bearer <token>` (preferred — query `?token=…` still works but lands in access logs). Unset → the endpoints 404 |
+
+Tenant services additionally get `FORWARDED_ALLOW_IPS=*` from the
+provisioner so uvicorn trusts Railway's `X-Forwarded-Proto` and the
+workspace session cookie is marked Secure. Existing tenants pick it up
+on the next provision sweep; the app also forces Secure whenever it
+detects Railway.
 | `SESSION_SECRET` | Long random value signing account-session cookies. Unset → per-boot secret (sessions reset each deploy) — set in production |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | "Continue with Google" (OIDC). Create at console.cloud.google.com → Credentials → OAuth client (web) with redirect URI `https://www.screenboardstudio.com/auth/google/callback`. Unset → the button hides; magic links still work |
 

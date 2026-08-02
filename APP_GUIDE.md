@@ -4,10 +4,13 @@ A standalone local app for building canon-locked art direction boards for a
 screenplay. The engine is project-agnostic — **The Beltminers** is the proving
 project. Everything runs and stays on your machine; the browser is just the screen.
 
-> **The full walkthrough lives in [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)**
-> — screens, concepts, recipes, and FAQ, current to the 2026-07-29 five-stage
-> UI. This file is the operator's reference: setup, milestones, engines, and
-> the canon rules.
+> **Start with [`docs/INTENT.md`](docs/INTENT.md)** (what the product is and
+> how it's used, current to 2026-08-02) and
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (the technical map).
+> [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) is the screen-by-screen
+> walkthrough (2026-07-29 vintage — mechanics still accurate, some chrome
+> has moved). This file is the operator's reference: setup, milestones,
+> engines, and the canon rules.
 
 ## The pipeline band — five stages plus three tools
 

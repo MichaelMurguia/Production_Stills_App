@@ -95,6 +95,29 @@ class TenantProxyTests(unittest.TestCase):
             r = self.client(f"{sub}.{BASE}").get("/")
             self.assertEqual(r.status_code, 404, sub)
 
+    def test_netloc_trickery_never_passes_the_allowlist(self):
+        # endswith on a string-sliced netloc once let
+        # https://evil.com?x=.up.railway.app through — the hostname must
+        # come from a real URL parse.
+        _mk_workspace("query-trick",
+                      railway_url="https://evil.com?x=.up.railway.app")
+        r = self.client(f"query-trick.{BASE}").get("/")
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(self.upstream_requests, [])
+
+    def test_inbound_forwarded_headers_are_stripped(self):
+        _mk_workspace("honest-chain")
+        r = self.client(f"honest-chain.{BASE}").get(
+            "/", headers={"x-forwarded-host": "spoofed.example",
+                          "x-forwarded-for": "6.6.6.6"})
+        self.assertEqual(r.status_code, 200)
+        req = self.upstream_requests[-1]
+        # The proxy is the sole authority on forwarding facts.
+        self.assertEqual(req.headers["x-forwarded-host"],
+                         f"honest-chain.{BASE}")
+        self.assertNotIn("6.6.6.6",
+                         req.headers.get("x-forwarded-for", ""))
+
     def test_never_proxies_off_railway(self):
         # A poisoned railway_url (e.g. pointing back at the branded base)
         # must not be followed — that would loop or exfiltrate.

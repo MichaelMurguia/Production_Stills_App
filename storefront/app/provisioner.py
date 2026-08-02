@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import re
 import secrets
+import threading
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from . import db, railway as railway_client, settings
 
@@ -88,12 +90,21 @@ def ensure_workspace_row(s, purchase: db.Purchase) -> db.Workspace:
     ws = s.scalar(select(db.Workspace).where(
         db.Workspace.purchase_id == purchase.id))
     if ws is None:
-        ws = db.Workspace(purchase_id=purchase.id,
-                          subdomain=random_subdomain(s),
-                          detail="" if settings.railway_configured()
-                          else NOT_CONFIGURED)
-        s.add(ws)
-        s.commit()
+        for _ in range(3):  # random slug can race the unique index
+            ws = db.Workspace(purchase_id=purchase.id,
+                              subdomain=random_subdomain(s),
+                              detail="" if settings.railway_configured()
+                              else NOT_CONFIGURED)
+            s.add(ws)
+            try:
+                s.commit()
+                break
+            except IntegrityError:
+                s.rollback()
+                existing = s.scalar(select(db.Workspace).where(
+                    db.Workspace.purchase_id == purchase.id))
+                if existing:  # concurrent fulfill won the row itself
+                    return existing
         s.refresh(ws)
     return ws
 
@@ -113,6 +124,9 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
         railway.upsert_variables(ws.railway_service_id, {
             "SCREENBOARD_HOME": MOUNT_PATH,
             "SCREENBOARD_ACCESS_TOKEN": ws.access_token,
+            # Railway's edge proxies every request; uvicorn must trust its
+            # X-Forwarded-Proto so cookies see the real (https) scheme.
+            "FORWARDED_ALLOW_IPS": "*",
         })
         railway.set_start_command(ws.railway_service_id, START_COMMAND)
         try:
@@ -162,8 +176,13 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
     if not base or not ws.railway_service_id:
         return
     if not ws.subdomain:  # pre-naming workspaces get their slug here
-        ws.subdomain = random_subdomain(s)
-        s.commit()
+        for _ in range(3):
+            ws.subdomain = random_subdomain(s)
+            try:
+                s.commit()
+                break
+            except IntegrityError:
+                s.rollback()
     try:
         for d in railway.list_custom_domains(ws.railway_service_id):
             railway.delete_custom_domain(d["id"])
@@ -178,12 +197,17 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
 
 
 def _revoke(s, ws: db.Workspace, railway) -> None:
-    """Subscription gone → service deleted. The workspace row (and its
-    token) is kept as the record of what existed."""
+    """Subscription gone → service deleted. REVOKED is only ever stamped
+    after the delete succeeds — a terminal status on a still-running
+    service would host it unbilled forever. The workspace row (and its
+    token) is kept as the record of what existed; the subdomain is
+    released so the name can be claimed again (REVOKED rows must not
+    squat names the router already serves as unclaimed)."""
     try:
         if ws.railway_service_id:
             railway.delete_service(ws.railway_service_id)
         ws.status = "REVOKED"
+        ws.subdomain = ""
         ws.detail = "subscription canceled — service deleted"
     except Exception as e:
         ws.detail = f"revoke failed, will retry: {str(e)[:500]}"
@@ -221,10 +245,26 @@ def update_tenants(railway=railway_client) -> dict:
     return out
 
 
+# reconcile() is spawned from startup, /success, the webhook, and studio
+# naming — often concurrently. Every step is idempotent, but two runs
+# interleaving through _provision can still double-create Railway
+# resources; one run at a time is enough, so overlapping calls just skip.
+_reconcile_lock = threading.Lock()
+
+
 def reconcile(railway=railway_client) -> dict:
     """Converge workspaces toward the purchases table. Returns a small
     summary for logs/ops. Never raises."""
     out = {"provisioned": 0, "revoked": 0, "pending": 0, "failed": 0}
+    if not _reconcile_lock.acquire(blocking=False):
+        return {**out, "skipped": "reconcile already running"}
+    try:
+        return _reconcile(railway, out)
+    finally:
+        _reconcile_lock.release()
+
+
+def _reconcile(railway, out: dict) -> dict:
     with db.session() as s:
         cloud = s.scalars(select(db.Purchase).where(
             db.Purchase.kind == "cloud")).all()
@@ -259,12 +299,22 @@ def reconcile(railway=railway_client) -> dict:
                             and _domain_serves(ws.url.replace("https://", ""))):
                         ws.domain_live = 1
                         s.commit()
-            elif purchase.status == "CANCELED" and ws.status in ("ACTIVE", "FAILED", "PENDING"):
-                if ws.railway_service_id and settings.railway_configured():
-                    _revoke(s, ws, railway)
+            elif (purchase.status in ("CANCELED", "REFUNDED")
+                  and ws.status in ("ACTIVE", "FAILED", "PENDING")):
+                if ws.railway_service_id:
+                    if settings.railway_configured():
+                        _revoke(s, ws, railway)
+                    else:
+                        # A real service exists but Railway credentials are
+                        # missing — REVOKED here would be terminal while the
+                        # studio kept running unbilled. Stay put, say why.
+                        ws.detail = ("cancel pending — " + NOT_CONFIGURED)
+                        s.commit()
                 else:
                     ws.status = "REVOKED"
+                    ws.subdomain = ""
                     ws.detail = "subscription canceled before provisioning"
                     s.commit()
-                out["revoked"] += 1
+                if ws.status == "REVOKED":
+                    out["revoked"] += 1
     return out

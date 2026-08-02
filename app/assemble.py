@@ -16,7 +16,6 @@ ACCENT = (216, 162, 74)
 
 MARGIN = 64
 GUTTER = 36
-HEADER_H = 150  # legacy constant; geometry now derives from _type_scale
 
 
 def _type_scale(height: int) -> dict:
@@ -209,6 +208,16 @@ def check_variant(spec: dict, variant: str | None) -> str:
     raise AssemblyError(f"unknown layout variant: {v}")
 
 
+def check_canvas(width: int, height: int) -> None:
+    """Stated bounds on the board canvas. Unchecked query values once
+    allowed a 60000×60000 (~10 GB) allocation — and tiny heights make the
+    aspect solver find no feasible row partition at all."""
+    if not (1024 <= width <= 8192 and 576 <= height <= 8192):
+        raise AssemblyError(
+            f"canvas {width}×{height} is out of range — width 1024–8192, "
+            "height 576–8192.")
+
+
 def _variant_rects(spec: dict, alloc: dict[str, float],
                    aspects: dict[str, float], variant: str,
                    x0: int, y0: int, w: int,
@@ -218,6 +227,11 @@ def _variant_rects(spec: dict, alloc: dict[str, float],
     if btype == "LIGHTING_STUDY" or variant == "grid":
         return _grid_rects(panels, x0, y0, w, h)
     if variant == "aspect":
+        # The aspect solver scores every contiguous row partition —
+        # 2^(n-1) of them. Past a dozen panels that's the dashboard's hot
+        # path stalling for seconds; the grid is the honest fallback.
+        if len(panels) > 12:
+            return _grid_rects(panels, x0, y0, w, h)
         return _aspect_rects(panels, aspects, x0, y0, w, h)
     hero_id = variant[5:] if variant.startswith("hero:") else None
     return _layout_rects(panels, alloc, x0, y0, w, h, hero_id)
@@ -230,6 +244,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
     (approved render smaller than its slot in both dimensions — it would
     need upscaling, which never happens), NO_CANDIDATE. Mirrors
     assemble_board's exact geometry so the preview is honest."""
+    check_canvas(width, height)
     spec = store.get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
@@ -313,6 +328,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
                    variant: str | None = None) -> dict:
     from common import stable_hash
 
+    check_canvas(width, height)
     spec = store.get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
@@ -443,10 +459,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
             if sx >= inner_x + inner_w:
                 break
 
-    state = store.load_app_state()
-    state["board_counter"] = int(state.get("board_counter", 0)) + 1
-    board_id = f"BOARD-{state['board_counter']:04d}"
-    store.save_app_state(state)
+    board_id = store.next_counter("board_counter", "BOARD")
 
     d = paths.BOARDS_DIR / spec_id
     d.mkdir(parents=True, exist_ok=True)

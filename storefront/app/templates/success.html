@@ -65,6 +65,12 @@
         const r = await fetch(`/success/status?session_id=${encodeURIComponent(sid)}`);
         const d = await r.json();
         if (d.workspace === "ACTIVE") { location.reload(); return; }
+        if (d.workspace === "FAILED") {
+          // A stated gate, never a silent forever-spinner: say what is
+          // known and that the system keeps retrying on its own.
+          document.getElementById("ws-wait").textContent =
+            "SETUP HIT A SNAG — IT RETRIES AUTOMATICALLY. THIS PAGE KEEPS CHECKING; YOUR SUBSCRIPTION IS SAFE.";
+        }
       } catch (e) { /* transient — keep polling */ }
       setTimeout(poll, 8000);
     };

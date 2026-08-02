@@ -44,6 +44,8 @@
     previous name is released so others may claim it. One studio per
     license.</p>
     {% endif %}
+    {% elif p.status == "PAID" and p.workspace and p.workspace.status == "FAILED" %}
+    <p class="license-token">setup hit a snag — it retries automatically and your studio appears right here the moment it's ready. stuck for more than an hour? write help@screenboardstudio.com</p>
     {% elif p.status == "PAID" %}
     <p class="license-token">your studio is being set up — it appears right here the moment it's ready</p>
     {% else %}

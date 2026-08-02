@@ -119,9 +119,14 @@ def api_login(body: dict, request: Request):
         time.sleep(0.5)  # keep online guessing expensive (sync route → threadpool)
         raise HTTPException(401, "wrong token")
     resp = JSONResponse({"ok": True})
+    # Hosted tenants sit behind Railway's TLS terminator — the request
+    # scheme can read http there unless uvicorn trusts the proxy headers,
+    # and this cookie IS the workspace token. Railway presence forces
+    # Secure; localhost standalone (no token gate anyway) is unaffected.
+    on_railway = bool(os.environ.get("RAILWAY_GIT_COMMIT_SHA"))
     resp.set_cookie("sb_session", ACCESS_TOKEN, max_age=30 * 24 * 3600,
                     httponly=True, samesite="lax",
-                    secure=request.url.scheme == "https")
+                    secure=request.url.scheme == "https" or on_railway)
     return resp
 
 
@@ -163,6 +168,8 @@ def api_backup_project(slug: str = "") -> Response:
     """One zip of one project — screenplay, bible, references, sheets,
     boards, approvals. API keys are never included."""
     try:
+        if slug:
+            paths.safe_id(slug)  # traversal guard before any path math
         payload, filename = backup.make_backup(slug)
     except KeyError as e:
         raise _err(e)
@@ -185,10 +192,11 @@ async def api_restore_project(file: UploadFile = File(...)) -> dict:
 
 
 def _switch_project(slug: str) -> None:
-    paths.set_project(slug)
-    paths.save_active_project(slug)
-    paths.ensure_dirs()
-    insights._text_cache.clear()  # screenplay cache is per-project
+    with paths.SWITCH_LOCK:  # never interleave with the summary sweep
+        paths.set_project(slug)
+        paths.save_active_project(slug)
+        paths.ensure_dirs()
+        insights._text_cache.clear()  # screenplay cache is per-project
 
 
 @app.post("/api/projects")
@@ -241,6 +249,11 @@ def api_rename_project(body: dict) -> dict:
 @app.post("/api/projects/activate")
 def api_activate_project(body: dict) -> dict:
     slug = str(body.get("slug", ""))
+    try:
+        if slug:
+            paths.safe_id(slug)  # traversal guard before any path math
+    except KeyError as e:
+        raise _err(e)
     if slug and not (paths.PROJECTS_DIR / slug).is_dir():
         raise HTTPException(404, f"unknown production: {slug}")
     _switch_project(slug)
@@ -341,24 +354,26 @@ def _production_row(p: dict) -> dict:
 @app.get("/api/projects/summary")
 def api_projects_summary() -> dict:
     """One row per production for the library cards and the switcher.
-    Read-only: paths point at each production in turn and are restored —
-    the app is single-user by design (switching reloads the whole UI), so
-    this cannot race a real switch."""
-    original = paths.ACTIVE_PROJECT
+    Read-only, but it points the path globals at each production in turn —
+    SWITCH_LOCK makes the whole sweep atomic against switches and counter
+    allocations (a render CAN be in flight while the switcher opens; the
+    'single-user cannot race' assumption this once relied on was wrong)."""
     rows = []
-    try:
-        for p in paths.list_projects():
-            paths.set_project(p["slug"])
+    with paths.SWITCH_LOCK:
+        original = paths.ACTIVE_PROJECT
+        try:
+            for p in paths.list_projects():
+                paths.set_project(p["slug"])
+                insights._text_cache.clear()
+                try:
+                    rows.append(_production_row(p))
+                except Exception as e:  # one broken production never hides the shelf
+                    rows.append({**p, "reach": [], "counts": "", "error": str(e)[:200],
+                                 "next": {"kicker": "DO THIS NEXT",
+                                          "text": f"This production failed to read: {str(e)[:120]}"}})
+        finally:
+            paths.set_project(original)
             insights._text_cache.clear()
-            try:
-                rows.append(_production_row(p))
-            except Exception as e:  # one broken production never hides the shelf
-                rows.append({**p, "reach": [], "counts": "", "error": str(e)[:200],
-                             "next": {"kicker": "DO THIS NEXT",
-                                      "text": f"This production failed to read: {str(e)[:120]}"}})
-    finally:
-        paths.set_project(original)
-        insights._text_cache.clear()
     return {"active": paths.ACTIVE_PROJECT, "projects": rows}
 
 
@@ -999,14 +1014,19 @@ async def api_crop_reference(body: dict) -> dict:
     if w < 0.02 or h < 0.02:
         raise HTTPException(422, "crop region is too small")
 
-    if src.get("type") == "candidate":
-        p = generate.candidate_image_path(str(src.get("spec_id", "")), str(src.get("id", "")))
-        origin = f"{src.get('id')} of {src.get('spec_id')}"
-    elif src.get("type") == "reference":
-        p = store.reference_image_path(str(src.get("id", "")))
-        origin = str(src.get("id"))
-    else:
-        raise HTTPException(422, "source.type must be candidate or reference")
+    try:
+        if src.get("type") == "candidate":
+            p = generate.candidate_image_path(str(src.get("spec_id", "")), str(src.get("id", "")))
+            origin = f"{src.get('id')} of {src.get('spec_id')}"
+        elif src.get("type") == "reference":
+            p = store.reference_image_path(str(src.get("id", "")))
+            origin = str(src.get("id"))
+        else:
+            raise HTTPException(422, "source.type must be candidate or reference")
+    except KeyError as e:
+        # Traversal-shaped ids are a 404, not a 500 (same contract as
+        # api_candidate_image).
+        raise _err(e)
     if p is None:
         raise HTTPException(404, "source image not found")
 
@@ -1310,8 +1330,7 @@ def api_get_interview() -> dict:
 async def api_save_interview(body: dict) -> dict:
     fields = {k: str(body.get(k, "")).strip() for k in _INTERVIEW_FIELDS}
     paths.ensure_dirs()
-    _interview_path().write_text(json.dumps(fields, indent=2) + "\n",
-                                 encoding="utf-8")
+    store._atomic_write_json(_interview_path(), fields)
     return fields
 
 

@@ -160,6 +160,17 @@ stated 404s, the off-railway guard, and request bodies are all covered.
 **Both:** update the relevant doc (`WEBAPP_GUIDE`, `DEPLOYMENT`,
 `DESIGN_SYSTEM`) in the same commit as the change it describes.
 
+**Hardening baseline (audited 2026-08-02, `docs/AUDIT_2026-08-02.md`) —
+do not regress:** fulfillment follows the money (webhook gates on
+`payment_status`; refunds/disputes flip status via the stored payment
+intent); REVOKED is stamped only after the Railway delete succeeds and
+releases the subdomain; subdomain uniqueness is a DB partial unique
+index, not a check-then-set; `reconcile()` runs under a process lock;
+OAuth state is expiring and cookie-bound; admin endpoints accept
+`Authorization: Bearer`; magic links are throttled per address; the
+tenant proxy strips inbound `X-Forwarded-*`, validates upstream hosts by
+parsed hostname, and refuses websockets on tenant hosts.
+
 ## Developing and shipping
 
 - **Product app:** `run.bat` at repo root (uvicorn, auto-reload).

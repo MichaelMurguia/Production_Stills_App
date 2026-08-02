@@ -1,7 +1,16 @@
 from __future__ import annotations
 import os
 import sys
+import threading
 from pathlib import Path
+
+# Guards every flip-work-restore sequence over the module-level project
+# paths (the projects-summary sweep points the globals at each production
+# in turn) and any read-modify-write that must not interleave with a flip
+# — a counter allocation or switch landing mid-sweep once risked writing
+# one production's record into another's directory. Reentrant: a switch
+# inside a locked sweep nests cleanly.
+SWITCH_LOCK = threading.RLock()
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -77,7 +86,10 @@ def list_projects() -> list[dict]:
     which is listed only while it has content (a data/ dir), is active, or
     no named project exists yet. A migrated install therefore shows only
     its named projects; a fresh one still starts with 'Main project'."""
-    named = ([d for d in sorted(PROJECTS_DIR.iterdir()) if d.is_dir()]
+    # Dot-led dirs are staging areas (e.g. an in-flight restore), never
+    # productions.
+    named = ([d for d in sorted(PROJECTS_DIR.iterdir())
+              if d.is_dir() and not d.name.startswith(".")]
              if PROJECTS_DIR.exists() else [])
     out = []
     if (HOME / "data").exists() or ACTIVE_PROJECT == "" or not named:

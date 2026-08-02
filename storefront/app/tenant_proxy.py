@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
 import jinja2
 from sqlalchemy import select
+from starlette.concurrency import run_in_threadpool
 
 from . import db, provisioner, settings
 
@@ -102,8 +104,13 @@ class TenantProxy:
                 db.Workspace.status == "ACTIVE",
                 db.Purchase.status == "PAID"))
             target = (row.railway_url or "") if row else ""
-        netloc = target.split("//", 1)[-1].split("/", 1)[0]
-        if target.startswith("https://") and netloc.endswith(".up.railway.app"):
+        # urlsplit's hostname, not string surgery — userinfo/query tricks
+        # like https://evil.com?x=.up.railway.app must never pass.
+        try:
+            hostname = urlsplit(target).hostname or ""
+        except ValueError:
+            hostname = ""
+        if target.startswith("https://") and hostname.endswith(".up.railway.app"):
             return target.rstrip("/")
         return ""
 
@@ -119,16 +126,30 @@ class TenantProxy:
                                       pool=15))
         return self._client
 
+    @staticmethod
+    def _host_of(scope) -> str:
+        for k, v in scope.get("headers") or ():
+            if k.lower() == b"host":
+                return v.decode("latin-1")
+        return ""
+
     async def __call__(self, scope, receive, send):
+        if scope["type"] == "websocket":
+            # The proxy speaks plain HTTP only; a websocket reaching a
+            # tenant host must not fall through to the storefront app
+            # (cross-host confusion). Refuse the handshake outright.
+            host = self._host_of(scope)
+            if await run_in_threadpool(self._target, host) is not None:
+                await send({"type": "websocket.close", "code": 1008})
+                return
+            await self.app(scope, receive, send)
+            return
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        host = ""
-        for k, v in scope.get("headers") or ():
-            if k.lower() == b"host":
-                host = v.decode("latin-1")
-                break
-        target = self._target(host)
+        host = self._host_of(scope)
+        # _target does sync DB work — keep it off the event loop.
+        target = await run_in_threadpool(self._target, host)
         if target is None:
             await self.app(scope, receive, send)
             return
@@ -147,10 +168,18 @@ class TenantProxy:
         url = target + path.decode("latin-1")
         if scope.get("query_string"):
             url += "?" + scope["query_string"].decode("latin-1")
+        # Drop hop-by-hop headers AND any inbound x-forwarded-* — a client
+        # could otherwise smuggle a spoofed chain straight to the tenant.
+        # The proxy is the authority on forwarding facts.
         headers = [(k, v) for k, v in scope["headers"]
-                   if k.lower() not in _HOP]
+                   if k.lower() not in _HOP
+                   and not k.lower().startswith(b"x-forwarded-")]
+        client = scope.get("client")
         headers += [(b"x-forwarded-host", host.encode("latin-1")),
                     (b"x-forwarded-proto", b"https")]
+        if client:
+            headers.append((b"x-forwarded-for",
+                            str(client[0]).encode("latin-1")))
         has_body = any(k.lower() in (b"content-length", b"transfer-encoding")
                        for k, _ in scope["headers"])
 

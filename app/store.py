@@ -15,7 +15,6 @@ from PIL import Image
 from . import paths
 
 REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
-SPEC_STATUSES = {"DRAFT", "REVIEWED", "APPROVED", "REJECTED"}
 THUMB_SIZE = 480
 
 # Roles suggested by context/02_CANON_AND_REFERENCE_RULES.md; free-form roles
@@ -33,12 +32,10 @@ SUGGESTED_ROLES = [
     "PROP_REFERENCE",
 ]
 
-# Art direction (style) vs reference (subject) are different things:
-# style images anchor HOW it is painted/photographed and apply to everything;
-# subject references anchor WHAT things are (a face, a vehicle) per panel.
-STYLE_ROLES = {"BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"}
-# Style roles auto-attached to every panel generation. BOARD_LAYOUT_STYLE is
-# style-kind but board-assembly grammar, so it stays a manual attachment.
+# Style roles auto-attached to every panel generation (style anchors HOW it
+# is painted/photographed; subject references anchor WHAT things are).
+# BOARD_LAYOUT_STYLE is style-kind but board-assembly grammar, so it stays a
+# manual attachment.
 AUTO_STYLE_ROLES = {"BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"}
 
 
@@ -46,10 +43,6 @@ def role_head(role: str) -> str:
     """The role's family name, tolerant of legacy underscore-sanitized records
     (e.g. 'CHARACTER_LIKENESS_—_JOHN' → 'CHARACTER_LIKENESS')."""
     return str(role or "").split("—")[0].strip(" _-").upper()
-
-
-def reference_kind(role: str) -> str:
-    return "style" if role_head(role) in STYLE_ROLES else "subject"
 
 
 def utcnow() -> str:
@@ -97,6 +90,19 @@ def load_app_state() -> dict:
 
 def save_app_state(state: dict) -> None:
     _atomic_write_json(paths.APP_STATE, state)
+
+
+def next_counter(key: str, prefix: str) -> str:
+    """Allocate 'PREFIX-000N' atomically. The read-increment-persist is a
+    race without the lock: two concurrent renders both read N and one
+    candidate record silently clobbered the other. paths.SWITCH_LOCK (not
+    a private lock) so an allocation can also never land while the
+    summary sweep has the path globals pointed at another production."""
+    with paths.SWITCH_LOCK:
+        state = load_app_state()
+        state[key] = int(state.get(key, 0)) + 1
+        save_app_state(state)
+        return f"{prefix}-{state[key]:04d}"
 
 
 # The screenplay analysis (design languages, subjects, key locations) lives
@@ -215,7 +221,12 @@ SUBJECT_ROLE_PREFIX = {"CHARACTER": "CHARACTER_LIKENESS",
 def list_subjects() -> list[dict]:
     if not paths.SUBJECTS.exists():
         return []
-    return json.loads(paths.SUBJECTS.read_text(encoding="utf-8"))
+    try:
+        return json.loads(paths.SUBJECTS.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        # Corrupt cast file: set aside, never brick /api/state.
+        paths.SUBJECTS.replace(paths.SUBJECTS.with_suffix(".json.corrupt"))
+        return []
 
 
 def _save_subjects(subjects: list[dict]) -> None:
@@ -368,9 +379,9 @@ def add_reference(original_name: str, content: bytes, role: str,
                   controls: list[str], does_not_control: list[str],
                   notes: str = "") -> dict:
     paths.ensure_dirs()
-    state = load_app_state()
-    state["ref_counter"] = int(state.get("ref_counter", 0)) + 1
-    ref_id = f"REF-{state['ref_counter']:04d}"
+    # Allocated-and-persisted atomically — a crash after the file write
+    # can never reuse this id and overwrite the previous image.
+    ref_id = next_counter("ref_counter", "REF")
 
     try:
         content, ext = _render_safe(content, original_name)
@@ -402,7 +413,6 @@ def add_reference(original_name: str, content: bytes, role: str,
     refs = _load_refs()
     refs.append(record)
     _save_refs(refs)
-    save_app_state(state)
     return record
 
 
@@ -456,17 +466,25 @@ def set_reference_status(ref_id: str, status: str, reason: str = "") -> dict:
     raise KeyError(ref_id)
 
 
-def reference_image_path(ref_id: str, thumb: bool = False) -> Path | None:
+def reference_image_path(ref_id: str, thumb: bool = False,
+                         include_quarantine: bool = False) -> Path | None:
+    """Resolve a reference's image. Quarantined (REJECTED) files resolve
+    only when the record itself says REJECTED or the caller explicitly
+    asks — the physical quarantine must hold even if index and disk ever
+    disagree; generation paths must never attach a rejected file."""
     r = get_reference(ref_id)
     if not r:
         return None
     if thumb:
         p = paths.REF_THUMBS / r["thumb"]
         return p if p.exists() else None
-    for folder in (paths.REF_ORIGINALS, paths.REF_QUARANTINE):
-        p = folder / r["file"]
-        if p.exists():
-            return p
+    p = paths.REF_ORIGINALS / r["file"]
+    if p.exists():
+        return p
+    if include_quarantine or r.get("status") == "REJECTED":
+        q = paths.REF_QUARANTINE / r["file"]
+        if q.exists():
+            return q
     return None
 
 
@@ -475,6 +493,10 @@ def reference_image_path(ref_id: str, thumb: bool = False) -> Path | None:
 def _spec_path(spec_id: str) -> Path:
     if not re.fullmatch(r"[A-Za-z0-9._-]+", spec_id):
         raise ValueError(f"invalid specification_id: {spec_id}")
+    # safe_id refuses dot-led names ('..' matched the regex above, and
+    # delete_spec builds an rmtree target from this id) — the guard
+    # belongs here, not in whichever caller happens to run first.
+    paths.safe_id(spec_id)
     return paths.SPECS_DIR / f"{spec_id}.json"
 
 
@@ -519,7 +541,6 @@ def spec_locked(spec_id: str) -> bool:
 # Board grammars (director's ruling 2026-07-30): a template is panel COUNT
 # and ALLOCATION structure only — never camera views, never content. The
 # board may crop images to fit its layout; originals stay one click away.
-# (Board-type names mirror generate.BOARD_TYPES.)
 BOARD_TEMPLATES = {
     "SCENE": [50, 25, 25],
     "LOCATION": [50, 25, 25],
