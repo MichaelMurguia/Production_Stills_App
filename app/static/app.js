@@ -4590,8 +4590,10 @@ async function renderBoardPanels(specId) {
       refs.find(r => (r.notes || "").includes(`promoted from ${c.candidate_id} of`))?.id || null;
 
     const stagedRef = staged ? promotedRefOf(staged) : null;
-    const stagedHtml = !staged ? `
-      <div class="stage-shot empty hatch"><span class="mini">No takes yet — set the model below and generate the first candidate.</span></div>` : `
+    // PANEL_CARD_PLAN P1: an empty state never reserves the shape of the
+    // missing thing — before its first take the card is a WORK ORDER (the
+    // spec is the content); no hatched placeholder, no "nothing here" line.
+    const stagedHtml = !staged ? "" : `
       <div class="stage-shot" title="Click to open at full size">
         <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
       </div>
@@ -4608,7 +4610,9 @@ async function renderBoardPanels(specId) {
 
     const sheetRejected = candidates.filter(c => c.status === "REJECTED").length;
     const pending = pendingTakes[specId]?.[p.id] || [];
-    const takesHtml = `
+    // Work-order state: no takes strip either — unless a render is already
+    // painting, whose pending tile must never disappear.
+    const takesHtml = !panelCands.length && !pending.length ? "" : `
       <div class="takes">
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>

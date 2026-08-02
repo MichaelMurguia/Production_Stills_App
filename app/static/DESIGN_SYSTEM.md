@@ -72,6 +72,13 @@ its track.
 `--panel2`) per view, and it holds the thing blocking the user. Everything else
 is a plain `.panel`. Two leads = no lead.
 
+**An empty state never reserves the shape of the missing thing.** (PANEL_CARD
+ruling, 2026-08-03.) No hatched rectangles, no dashed image-sized wells whose
+only message is *there is nothing here*. Show what the user has, and make the
+act that fills the gap the primary action. A component with an empty life and
+a filled life ships as one component with two states — the empty state is a
+different layout, not the filled layout minus its content.
+
 **Main/side split.** Work goes left in `.dash-main` at generous width; counts,
 standing rules, and history recede into `.dash-side`. Counts are not the point
 of a screen — the next action is.
