@@ -4619,6 +4619,40 @@ async function renderBoardPanels(specId) {
       <div class="spec-chips"><span class="f-label">Required · ${reqObjs.length}</span>
         ${reqObjs.map(o => `<span class="req-chip">${esc(o)}</span>`).join("")
           || '<span class="mini">none</span>'}</div>`;
+
+    // P3: the user is about to spend a render — everything the render
+    // obeys goes on the card. Forbidden states its provenance (panel vs
+    // inherited from the board); SCOPE carries the languages, environment
+    // and slugline the prompt will actually use.
+    const ownForbid = p.forbidden_objects || [];
+    const boardForbid = (spec.forbidden_elements || [])
+      .filter(f => !ownForbid.some(o => String(o).toLowerCase() === String(f).toLowerCase()));
+    const forbidChips = [...ownForbid, ...boardForbid].map(f =>
+      `<span class="forbid-chip">${esc(String(f).toUpperCase())}</span>`).join("");
+    const forbidHead =
+      `${ownForbid.length ? `${ownForbid.length} ON THIS PANEL` : "NOTHING ON THIS PANEL"}`
+      + ` · ${boardForbid.length} INHERITED FROM THE BOARD`;
+    const forbiddenHtml = `
+      <div class="req-head"><span class="f-label">Forbidden</span>
+        <span class="mini mono">${forbidHead}</span></div>
+      ${forbidChips ? `<div class="spec-chips">${forbidChips}</div>`
+        : '<p class="mini">nothing forbidden anywhere — the drift rule still applies</p>'}`;
+
+    const scopeLangs = p.design_languages?.length ? p.design_languages
+      : (spec.design_languages || []);
+    const scopeOverride = !!(p.design_languages?.length || p.environment);
+    const scopeEnv = p.environment || (spec.environments || [])[0] || "";
+    const setting = spec.setting || {};
+    const scopeBits = [
+      ...scopeLangs.map(l => String(l).toUpperCase()),
+      scopeEnv ? `ENV: ${String(scopeEnv).toUpperCase()}` : "",
+      String(setting.int_ext || "").toUpperCase(),
+      String(p.time_of_day || setting.time_of_day || "").toUpperCase(),
+    ].filter(Boolean);
+    const scopeHtml = scopeBits.length ? `
+      <div class="req-head"><span class="f-label">Scope</span>
+        <span class="mini mono">${scopeOverride ? "PANEL OVERRIDE" : "INHERITED FROM THE BOARD"}</span></div>
+      <p class="scope-line mono">${esc(scopeBits.join("  ·  "))}</p>` : "";
     const roomSel = boardRoomSel[specId];
     roomSel.staged ??= {};
     let staged = panelCands.find(c => c.candidate_id === roomSel.staged[p.id]) || panelCands[0] || null;
@@ -4684,8 +4718,9 @@ async function renderBoardPanels(specId) {
       <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
         <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(((appSettings.aspects || []).find(x => x.id === staged.aspect_ratio) || {}).label || staged.aspect_ratio || "")}` : ""}</span></h2>
       <p class="mini">${esc(p.purpose)}</p>
-      ${workOrder ? reqTableHtml : reqChipsHtml}
-      ${workOrder ? "" : `<p class="mini">forbidden: ${esc((p.forbidden_objects || []).join(", ") || "—")}</p>`}
+      ${workOrder ? reqTableHtml + forbiddenHtml + scopeHtml : reqChipsHtml + `
+      <div class="spec-chips"><span class="f-label">Forbidden · ${ownForbid.length + boardForbid.length}</span>
+        ${forbidChips || '<span class="mini">nothing</span>'}</div>`}
       ${stagedHtml}
       ${takesHtml}
       <div class="spec-section">
