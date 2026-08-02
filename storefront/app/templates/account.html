@@ -25,13 +25,8 @@
     {% elif p.kind == "cloud" %}
     <p class="license-label">CLOUD {{ (p.tier or "personal")|upper }} · {{ "ACTIVE" if p.status == "PAID" else p.status }}</p>
     {% if p.workspace and p.workspace.status == "ACTIVE" and p.status == "PAID" %}
-    {% set door = p.workspace.url if (p.workspace.domain_live or not p.workspace.railway_url) else p.workspace.railway_url %}
-    <p class="license-token">{{ door }}</p>
-    <p style="margin-top:12px"><a class="btn btn-primary" target="_blank" rel="noopener"
-       href="{{ door }}/login#{{ p.workspace.access_token }}">Open your workspace</a></p>
-    {% if door != p.workspace.url %}
-    <p class="hero-sub mono" style="margin-top:10px;font-size:10px">{{ p.workspace.url | replace("https://", "") | upper }} IS PROVISIONING &mdash; THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE.</p>
-    {% endif %}
+    {% set ws = p.workspace %}
+    {% include "_workspace_door.html" %}
     {% if tenant_base %}
     {% if named %}<p class="hero-sub mono" style="margin-top:12px;color:var(--ok)">STUDIO RENAMED &mdash; THE NEW ADDRESS GOES LIVE IN A MINUTE AND REPLACES THE OLD ONE.</p>{% endif %}
     {% if name_error %}<p class="hero-sub mono" style="margin-top:12px;color:var(--bad)">{{ name_error.upper() }}</p>{% endif %}
@@ -79,16 +74,8 @@
     <p class="hero-sub">Cloud {{ purchase.tier or "personal" }} subscription,
     registered to <span class="mono">{{ purchase.email }}</span>.</p>
     {% if purchase.workspace and purchase.workspace.status == "ACTIVE" %}
-    {% set door = purchase.workspace.url if (purchase.workspace.domain_live or not purchase.workspace.railway_url) else purchase.workspace.railway_url %}
-    <div class="license-box">
-      <p class="license-label">YOUR STUDIO</p>
-      <p class="license-token">{{ door }}</p>
-    </div>
-    <a class="btn btn-primary" target="_blank" rel="noopener"
-       href="{{ door }}/login#{{ purchase.workspace.access_token }}">Open your workspace</a>
-    {% if door != purchase.workspace.url %}
-    <p class="hero-sub mono" style="margin-top:10px;font-size:10px">{{ purchase.workspace.url | replace("https://", "") | upper }} IS PROVISIONING &mdash; THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE.</p>
-    {% endif %}
+    {% set ws = purchase.workspace %}
+    {% include "_workspace_door.html" %}
     <p class="hero-sub" style="margin-top:14px">Opens in a new tab, already
     signed in &mdash; nothing to copy.</p>
     <details class="token-reveal">

@@ -1,0 +1,19 @@
+{# The workspace door (STORE_ROUTER_PLAN T3, mock 11c) — one partial for
+   every cloud-ACTIVE state: /success and both /account blocks. Expects
+   `ws` (workspace). The gate is stated as a block above the button, never
+   footnoted; when the branded name serves, the YOUR STUDIO box wears a
+   LIVE chip instead. #}
+{% set door = ws.url if (ws.domain_live or not ws.railway_url) else ws.railway_url %}
+{% if door != ws.url %}
+<div class="prov-block mono">
+  <span class="prov-chip">PROVISIONING</span>
+  <span>{{ ws.url | replace("https://", "") | upper }} IS PROVISIONING &mdash;
+  THIS BUTTON USES THE RELIABLE ADDRESS MEANWHILE.</span>
+</div>
+{% endif %}
+<div class="license-box">
+  <p class="license-label">YOUR STUDIO{% if ws.domain_live and ws.url != ws.railway_url %} <span class="live-chip mono">LIVE</span>{% endif %}</p>
+  <p class="license-token">{{ door }}</p>
+</div>
+<p style="margin-top:12px"><a class="btn btn-primary" target="_blank" rel="noopener"
+   href="{{ door }}/login#{{ ws.access_token }}">Open your workspace</a></p>

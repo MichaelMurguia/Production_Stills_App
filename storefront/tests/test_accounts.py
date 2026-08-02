@@ -351,6 +351,23 @@ class StudioNamingTests(unittest.TestCase):
         page = self.client.get("/account").text
         self.assertIn(">Rename<", page)
         self.assertNotIn("Claim name", page)
+        # T3: gate stated as a block, never a footnote — and a LIVE chip
+        # once the branded name serves.
+        with _db.session() as s:
+            ws = s.get(_db.Workspace, wid)
+            ws.url = "https://my-own-studio.screenboardstudio.com"
+            ws.domain_live = 0
+            s.commit()
+        page = self.client.get("/account").text
+        self.assertIn("PROVISIONING", page)
+        self.assertIn("RELIABLE ADDRESS MEANWHILE", page)
+        self.assertNotIn("live-chip", page)
+        with _db.session() as s:
+            s.get(_db.Workspace, wid).domain_live = 1
+            s.commit()
+        page = self.client.get("/account").text
+        self.assertIn("live-chip", page)
+        self.assertNotIn("prov-block", page)
 
 
 class VersionTests(unittest.TestCase):
