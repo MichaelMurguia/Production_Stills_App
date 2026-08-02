@@ -159,33 +159,46 @@
     </div>
 
     <div class="panel step" data-step="1">
-      <h2>Style reference images <span class="hint">(the three anchors of art direction)</span></h2>
-      <p class="hint">Three anchors, three jurisdictions. Every render studies these — and nothing else about the look is invented. Subject photos (cast, vehicles, props) are research, not style: add them in step 4.</p>
+      <h2>Style reference images <span class="hint">(three movie parameters · one board parameter)</span></h2>
+      <p class="hint">Four anchors, four jurisdictions. The first three define <b>the movie</b>; the fourth defines only <b>how boards are presented</b> — the film would be the same film in a different medium. Every render studies these. Subject photos (cast, vehicles, props) are research, not style: add them in step 4. Board <i>layout</i> lives at Assembly now, where real panels exist.</p>
+      <p class="wiz-group-label">THE MOVIE</p>
       <div class="wiz-cols">
-        <div class="wiz-col" data-role="BOARD_LAYOUT_STYLE">
+        <div class="wiz-col" data-role="WORLD_TEXTURE">
           <div class="wiz-col-head">
-            <span class="f-label" title="How a finished BOARD is laid out — an example of a studio development wall / master board.">Board layout</span>
+            <span class="f-label" title="The world's condition — how worn, patched, dusty, or pristine everything is allowed to look. Pristine is a texture philosophy too.">World Texture</span>
             <span class="badge REJECTED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS presentation grammar at assembly<br>NEVER enters a panel render</p>
-          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more images — they upload immediately as approved BOARD_LAYOUT_STYLE anchors.">
+          <p class="hint">CONTROLS wear, patina, entropy<br>NEVER subjects, palette, or light</p>
+          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more images — they upload immediately as approved WORLD_TEXTURE anchors.">
+          <div class="wiz-thumbs" data-f="list"></div>
+        </div>
+        <div class="wiz-col" data-role="COLOR_PALETTE">
+          <div class="wiz-col-head">
+            <span class="f-label" title="The film's color language — a palette board or color-script frames: permitted hues, how dark it keys, how far saturation travels.">Color Palette</span>
+            <span class="badge REJECTED" data-f="state">NONE</span>
+          </div>
+          <p class="hint">CONTROLS hue, value key, saturation<br>NEVER framing, light source, or medium</p>
+          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more palette boards or color-script frames — they upload immediately as approved COLOR_PALETTE anchors.">
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
           <div class="wiz-col-head">
-            <span class="f-label" title="How the film is photographed — stills whose light and contrast character you want.">Cinematography</span>
+            <span class="f-label" title="How the film is photographed — stills whose light behaviour and framing you want. If a still's grade is loud, use it in black and white; palette belongs to the Color Palette anchor.">Cinematography</span>
             <span class="badge REJECTED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS contrast, tonal depth, naturalism<br>NEVER a panel's hour or hue — upload dawn, dusk, night</p>
+          <p class="hint">CONTROLS light behaviour, lens, framing<br>NEVER palette — nor a panel's hour: upload dawn, dusk, night</p>
           <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more film stills — they upload immediately as approved CINEMATOGRAPHY_STYLE anchors.">
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
+      </div>
+      <p class="wiz-group-label">THE BOARDS</p>
+      <div class="wiz-cols wiz-cols-board">
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
           <div class="wiz-col-head">
-            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want.">Board Rendering Style</span>
+            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want. Presentation only: nothing about the film.">Board Rendering Style</span>
             <span class="badge REJECTED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS medium, brushwork, finish<br>NEVER content</p>
+          <p class="hint">CONTROLS medium, brushwork, finish — how the work is PRESENTED<br>NEVER content, palette, or the world</p>
           <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more artworks — they upload immediately as approved BOARD_RENDERING_STYLE anchors.">
           <div class="wiz-thumbs" data-f="list"></div>
         </div>

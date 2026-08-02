@@ -661,6 +661,7 @@ are then deleted.
 | 2026-08-01 | QA batch (user-directed, built from canon — review placement/copy only): error activity rows gain `--bad` left border + `--panel2` fill; model selectors list only configured engines and state "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS" when none; busy meters name the running model; third anchor relabeled "Board Rendering Style"; bible editor moved above the bake-off; wizard's duplicate key forms removed (keys live in Settings only) | Status, wizard, Breakdowns | — |
 | 2026-08-03 | Debug tools tab (user-directed): Settings gains a fourth subnav tab holding the mock engine toggle (a no-key "engine" labeled `MOCK ENGINE — no cost (debug)` that joins every model dropdown while on; all its output is stamped MOCK) and the page-text edit controls. Built from canon (panel, checkbox rows, hint copy) | Settings → Debug tools | Review placement/copy, and rule on how a debug-only engine should read inside production dropdowns |
 | 2026-08-03 | Text-edit mode chip (user-directed, NEW PATTERN): while Alt-click rewriting is armed, a fixed bottom-left Courier chip with an amber left border states the mode and its exit; Alt-click opens the standard modal prefilled with the clicked text | App-wide (debug mode) | First persistent mode indicator in the product — designer should rule on mode-chip vocabulary (position, dismissal, amber usage as active-mode signal) |
+| 2026-08-03 | Four-anchor shelf (user ruling, adversarially reviewed): Production Design step 1 groups anchors under Courier labels THE MOVIE (World Texture · Color Palette · Cinematography) and THE BOARDS (Board Rendering Style); board LAYOUT leaves the step for Assembly. `.wiz-group-label` + a narrowed single-column board group | Production Design step 1 | The movie/presentation grouping inside one step is new vocabulary — designer should rule on the group-label treatment and the four-up column rhythm |
 
 ---
 
@@ -669,6 +670,15 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — The four-anchor ruling (user, adversarially reviewed):
+  style anchors restructure as three MOVIE parameters (WORLD_TEXTURE,
+  COLOR_PALETTE, CINEMATOGRAPHY_STYLE — palette explicitly outside
+  cinematography's jurisdiction) plus one BOARD parameter
+  (BOARD_RENDERING_STYLE, presentation only). All four auto-attach,
+  capped at 2 per role so style never starves subject anchoring;
+  BOARD_LAYOUT_STYLE leaves Production Design for Assembly (its gate
+  already lived there); the bible drafter is forbidden medium language
+  outside Rendering Language / Board Presentation.
 - **2026-08-03** — Settings rebuilt for two AI roles and connectors
   (CONNECTORS_UI_PLAN C1–C9): recommendation ruled as a stated fact with
   a reason, credentials unified into one list, catalog grouped by

@@ -1816,3 +1816,9 @@ details.meta pre {
 .pick-foot { display: flex; justify-content: space-between; align-items: center;
   padding: 9px 12px; border-top: 1px solid var(--line-soft); }
 .pick-scope { font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; color: var(--ink-faint); }
+
+/* Four-anchor shelf (ruled 2026-08-03): movie group vs board group */
+.wiz-group-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  color: var(--ink-faint); margin: 14px 0 8px; }
+.wiz-cols-board .wiz-col { max-width: 33%; }
+@media (max-width: 980px) { .wiz-cols-board .wiz-col { max-width: none; } }

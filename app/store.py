@@ -20,8 +20,10 @@ THUMB_SIZE = 480
 # Roles suggested by context/02_CANON_AND_REFERENCE_RULES.md; free-form roles
 # are also allowed — these seed the UI dropdown.
 SUGGESTED_ROLES = [
-    "BOARD_RENDERING_STYLE",
+    "WORLD_TEXTURE",
+    "COLOR_PALETTE",
     "CINEMATOGRAPHY_STYLE",
+    "BOARD_RENDERING_STYLE",
     "BOARD_LAYOUT_STYLE",
     "CHARACTER_LIKENESS",
     "VEHICLE_GEOMETRY",
@@ -32,11 +34,17 @@ SUGGESTED_ROLES = [
     "PROP_REFERENCE",
 ]
 
-# Style roles auto-attached to every panel generation (style anchors HOW it
-# is painted/photographed; subject references anchor WHAT things are).
-# BOARD_LAYOUT_STYLE is style-kind but board-assembly grammar, so it stays a
-# manual attachment.
-AUTO_STYLE_ROLES = {"BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"}
+# The four-anchor ruling (user, 2026-08-03): THREE MOVIE PARAMETERS —
+# WORLD_TEXTURE (condition/patina), COLOR_PALETTE (hue/value/saturation),
+# CINEMATOGRAPHY_STYLE (light behaviour/lens/framing) — and ONE BOARD
+# PARAMETER, BOARD_RENDERING_STYLE (the medium boards are drawn in; how
+# the work is PRESENTED, nothing to do with the film). All four
+# auto-attach to every panel generation, capped per role so style never
+# starves the subject-anchoring budget. BOARD_LAYOUT_STYLE is assembly
+# grammar: it gates board assembly and never enters a panel render.
+MOVIE_STYLE_ROLES = ("WORLD_TEXTURE", "COLOR_PALETTE", "CINEMATOGRAPHY_STYLE")
+AUTO_STYLE_ROLES = {*MOVIE_STYLE_ROLES, "BOARD_RENDERING_STYLE"}
+STYLE_ATTACH_CAP = 2  # newest approved N per role ride each render
 
 
 def role_head(role: str) -> str:
@@ -330,9 +338,18 @@ def delete_reference(ref_id: str) -> dict:
 
 
 def auto_style_references() -> list[dict]:
-    """Approved style anchors attached to every panel generation."""
-    return [r for r in _load_refs()
-            if r["status"] == "APPROVED" and role_head(r["role"]) in AUTO_STYLE_ROLES]
+    """Approved style anchors attached to every panel generation — capped
+    per role (newest first) so four global anchors cannot starve the
+    subject-reference budget that holds faces and vehicles on model."""
+    by_role: dict[str, list[dict]] = {}
+    for r in _load_refs():
+        if r["status"] == "APPROVED" and role_head(r["role"]) in AUTO_STYLE_ROLES:
+            by_role.setdefault(role_head(r["role"]), []).append(r)
+    out = []
+    for role, refs in by_role.items():
+        out.extend(sorted(refs, key=lambda r: r.get("added_at", ""),
+                          reverse=True)[:STYLE_ATTACH_CAP])
+    return out
 
 
 def get_reference(ref_id: str) -> dict | None:

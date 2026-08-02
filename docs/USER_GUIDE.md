@@ -46,7 +46,7 @@ Core vocabulary:
 | Term | Meaning |
 |---|---|
 | **Reference** | An image in the library with exactly one **role** — its jurisdiction. `CHARACTER_LIKENESS — JOHN STANNER` controls John's face and build, *not* his costume or lighting. References are PROVISIONAL until approved; approved ones are **canon anchors**. |
-| **Style anchors** | Three special role families: `BOARD_RENDERING_STYLE` (how panels are painted), `CINEMATOGRAPHY_STYLE` (how the film is photographed), `BOARD_LAYOUT_STYLE` (how a finished board is laid out). The first two auto-attach to **every** generation, style-only; the third governs assembly grammar and never enters a panel render. |
+| **Style anchors** | The four-anchor shelf — **three movie parameters**: `WORLD_TEXTURE` (the world's condition — wear, patina, entropy), `COLOR_PALETTE` (the film's color language — hue, value key, saturation), `CINEMATOGRAPHY_STYLE` (light behaviour, lens, framing — never palette); and **one board parameter**: `BOARD_RENDERING_STYLE` (how boards are presented — medium only, nothing about the film). All four auto-attach to **every** generation, capped per role. `BOARD_LAYOUT_STYLE` is assembly grammar: it gates board assembly and never enters a panel render. |
 | **Breakdown sheet** (specification) | The brief you'd give a concept artist, written down and enforceable: subject, board type, slugline setting, scene paragraph, render intent, panels, forbidden elements, and the evidence ledger. Sheets are DRAFT until **approved & locked**. |
 | **Evidence ledger** | One row per visible object, saying why it may exist: the evidence class (screenplay-explicit → user-directed → weak inference), the cited quote or source, and a state — PASS renders, HOLD blocks the lock, REMOVE marks for removal. |
 | **Spec hash** | Locking a sheet mints a content hash. Every candidate records the hash it was generated against — the audit trail of *exactly what brief* produced *exactly what image*. |
@@ -112,8 +112,11 @@ features but nothing else.)
 Six steps produce the **Art Direction Bible** — the locked lookbook every
 render obeys. Each step's header badge states where it stands.
 
-1. **Style reference images** — the three anchors, one column per role, each
-   stating its jurisdiction (`CONTROLS … / NEVER …`). Files upload approved.
+1. **Style reference images** — the four anchors in two groups (THE MOVIE:
+   World Texture · Color Palette · Cinematography; THE BOARDS: Board
+   Rendering Style), one column per role, each stating its jurisdiction
+   (`CONTROLS … / NEVER …`). Files upload approved. Board *layout* is not
+   here — it belongs to Assembly, where real panels exist.
 2. **Read the screenplay** — the read presents as a reveal: a summary strip
    (counts link to their sections), then the project's **design languages**
    (distinct visual cultures: factions, eras, technology families) and

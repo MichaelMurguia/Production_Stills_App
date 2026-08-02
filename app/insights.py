@@ -15,8 +15,11 @@ def _citation_report_path():
     # Computed per call — paths.DATA moves with the active project.
     return paths.DATA / "citation_report.json"
 
-STYLE_ANCHOR_ROLES = {"BOARD_LAYOUT_STYLE", "BOARD_RENDERING_STYLE",
-                      "CINEMATOGRAPHY_STYLE"}
+# The Production Design shelf (four-anchor ruling 2026-08-03): three movie
+# parameters + one board parameter. BOARD_LAYOUT_STYLE is assembly grammar
+# and counts toward Boards, not Production Design.
+STYLE_ANCHOR_ROLES = {"WORLD_TEXTURE", "COLOR_PALETTE",
+                      "CINEMATOGRAPHY_STYLE", "BOARD_RENDERING_STYLE"}
 
 
 # ------------------------------------------------------------ evidence gaps
@@ -53,8 +56,9 @@ def blocking() -> list[dict]:
     if not any(r["role"] == "BOARD_LAYOUT_STYLE" and r["status"] == "APPROVED"
                for r in refs):
         out.append({"kind": "GAP",
-                    "text": "Master Board #001 (BOARD_LAYOUT_STYLE) not "
-                            "approved in reference library",
+                    "text": "Board layout master (BOARD_LAYOUT_STYLE) not "
+                            "approved — needed to ASSEMBLE boards, not to "
+                            "render panels",
                     "action": "references"})
 
     approved_ref_ids = {r["id"] for r in refs if r["status"] == "APPROVED"}

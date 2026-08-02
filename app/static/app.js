@@ -286,9 +286,11 @@ function roleHead(role) {
   return String(role || "").split("—")[0].replace(/[\s_-]+$/, "").trim().toUpperCase();
 }
 
-// Roles auto-attached to every render (BOARD_LAYOUT_STYLE governs assembly
-// only — it never enters a panel render).
-const AUTO_ATTACH_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"];
+// Roles auto-attached to every render — the four-anchor shelf (ruled
+// 2026-08-03): three movie parameters + the board presentation parameter.
+// BOARD_LAYOUT_STYLE governs assembly only — it never enters a panel render.
+const AUTO_ATTACH_HEADS = ["WORLD_TEXTURE", "COLOR_PALETTE",
+                           "CINEMATOGRAPHY_STYLE", "BOARD_RENDERING_STYLE"];
 
 /* The app's own dialog (plan v3 C15) — replaces every browser prompt()/
    confirm(). Resolves to an object of field values on confirm, null on
@@ -412,9 +414,11 @@ const ROLE_FAMILIES = [
   { head: "CHARACTER_LIKENESS", desc: "a named character's face and build — never costume or lighting", kind: "CHARACTER", titled: true },
   { head: "VEHICLE_GEOMETRY", desc: "exact vehicle geometry", kind: "VEHICLE", titled: true },
   { head: "PROP_REFERENCE", desc: "a prop or device", kind: "PROP", titled: true },
-  { head: "BOARD_RENDERING_STYLE", desc: "how panels are painted — auto-attached to every render, style only", kind: "style", titled: false },
-  { head: "CINEMATOGRAPHY_STYLE", desc: "light and contrast character — auto-attached to every render", kind: "style", titled: false },
-  { head: "BOARD_LAYOUT_STYLE", desc: "board assembly grammar — never enters a panel render", kind: "style", titled: false },
+  { head: "WORLD_TEXTURE", desc: "the world's condition — wear, patina, entropy; auto-attached to every render", kind: "style", titled: false },
+  { head: "COLOR_PALETTE", desc: "the film's color language — hue, value key, saturation; auto-attached to every render", kind: "style", titled: false },
+  { head: "CINEMATOGRAPHY_STYLE", desc: "light behaviour, lens and framing — never palette; auto-attached to every render", kind: "style", titled: false },
+  { head: "BOARD_RENDERING_STYLE", desc: "how boards are PRESENTED — medium and finish only, nothing about the film; auto-attached to every render", kind: "style", titled: false },
+  { head: "BOARD_LAYOUT_STYLE", desc: "board assembly grammar — gates Assembly, never enters a panel render", kind: "style", titled: false },
 ];
 
 // Controls facets are semi-finite per family: seeded as toggle chips,
@@ -3418,10 +3422,11 @@ async function renderWizard() {
         api("/api/references"), api("/api/subjects"),
         api("/api/wizard/samples").catch(() => []), api("/api/style-bible"),
       ]);
-      const roles = ["BOARD_LAYOUT_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_RENDERING_STYLE"];
+      const roles = AUTO_ATTACH_HEADS;  // the four-anchor shelf
       const set = roles.filter(role => refs.some(r =>
         r.status === "APPROVED" && roleHead(r.role) === role)).length;
-      setB(1, set === 3 ? "APPROVED" : "PROVISIONAL", `${set} OF 3 ANCHOR ROLES SET`);
+      setB(1, set === roles.length ? "APPROVED" : "PROVISIONAL",
+        `${set} OF ${roles.length} ANCHOR ROLES SET`);
       // Step 2 reflects review debt: proposed languages AND environments
       // hold the badge at PROVISIONAL until confirmed or dropped (plan P9).
       const proposedN =
@@ -3497,7 +3502,8 @@ async function renderWizard() {
 
 // Role → shelf mapping: STYLE rides on every render; SCENES ride when a
 // board covers their scene; SUBJECTS ride when their subject is on a panel.
-const STYLE_HEADS = ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE", "BOARD_LAYOUT_STYLE"];
+const STYLE_HEADS = ["WORLD_TEXTURE", "COLOR_PALETTE", "CINEMATOGRAPHY_STYLE",
+                     "BOARD_RENDERING_STYLE", "BOARD_LAYOUT_STYLE"];
 const SCENE_HEADS = ["SCENE_REFERENCE", "LOCATION_GEOMETRY"];
 const bucketOfRef = r => STYLE_HEADS.includes(roleHead(r.role)) ? "STYLE"
   : SCENE_HEADS.includes(roleHead(r.role)) ? "SCENE" : "SUBJECT";

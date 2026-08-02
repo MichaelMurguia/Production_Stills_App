@@ -559,10 +559,27 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
     """Per-attachment scope declarations — what each reference image controls
     and what it must not. Shared by panel prompts and the bake-off samples."""
     style_defaults = {
+        # The four-anchor ruling (2026-08-03): three movie parameters
+        # (WORLD_TEXTURE, COLOR_PALETTE, CINEMATOGRAPHY_STYLE) and one
+        # board parameter (BOARD_RENDERING_STYLE — presentation only).
         "BOARD_RENDERING_STYLE": (
             "the rendering and painting style of the artwork only — medium, "
-            "brushwork, finish, surface texture",
-            "content, subjects, composition, or layout"),
+            "brushwork, finish, surface texture. This is how the BOARD is "
+            "drawn, not anything about the film's world",
+            "content, subjects, composition, palette, or layout"),
+        "WORLD_TEXTURE": (
+            "the world's CONDITION only — wear, patina, age, grime, repair "
+            "density, entropy: how used or how pristine everything in this "
+            "film is allowed to look",
+            "subjects, composition, palette, lighting, medium, or the scene"),
+        "COLOR_PALETTE": (
+            "the film's COLOR LANGUAGE only — the permitted hues, the global "
+            "value key (how dark this film is allowed to get), and how far "
+            "saturation may travel. The scene's own light still comes from "
+            "the sheet's SETTING and Lighting Language, expressed inside "
+            "this palette",
+            "content, subjects, composition, framing, medium, or the "
+            "specific light source and time of day"),
         "CINEMATOGRAPHY_STYLE": (
             "the film's photographic CHARACTER only — contrast handling, "
             "tonal depth, naturalism, lens and framing feel",
@@ -635,9 +652,10 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
                 f"{rid} is {r['status']}, not APPROVED — it cannot be attached to a generation.")
         refs.append(r)
 
-    # Style anchors (board rendering style, cinematography style) are art
-    # direction, not subject reference — they apply to every generation
-    # automatically, ahead of the panel's subject references.
+    # Style anchors (the four-anchor shelf: world texture, color palette,
+    # cinematography, board rendering) are art direction, not subject
+    # reference — they apply to every generation automatically, capped per
+    # role, ahead of the panel's subject references.
     seen_ids = {r["id"] for r in refs}
     refs = [r for r in store.auto_style_references() if r["id"] not in seen_ids] + refs
 

@@ -49,7 +49,11 @@ Examples:
 - `JOHN_LIKENESS`
 - `WORKSHOP_LAYOUT`
 - `ONYX_UNIT_PROPORTIONS`
-- `BOARD_LAYOUT_STYLE`
+- `WORLD_TEXTURE` (movie parameter — the world's condition)
+- `COLOR_PALETTE` (movie parameter — the film's color language)
+- `CINEMATOGRAPHY_STYLE` (movie parameter — light behaviour and framing)
+- `BOARD_RENDERING_STYLE` (board parameter — presentation medium only)
+- `BOARD_LAYOUT_STYLE` (assembly grammar — never in a panel render)
 - `LIGHTING_REFERENCE`
 - `MATERIAL_REFERENCE`
 

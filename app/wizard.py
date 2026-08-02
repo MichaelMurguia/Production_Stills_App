@@ -168,13 +168,30 @@ def _bible_instructions(answers: dict) -> str:
     refs_note = ""
     if answers.get("reference_roles"):
         refs_note = ("\nATTACHED REFERENCE PHOTOS — study them; each controls only "
-                     "its stated scope. Fold what they show (materials, light, "
-                     "construction logic, palette) into the relevant sections:\n"
+                     "its stated scope. Fold what they show into the relevant "
+                     "sections:\n"
                      + "\n".join(f"- image {i + 1}: {r}" for i, r in
                                  enumerate(answers["reference_roles"])))
     return f"""You are a film production designer writing the locked Art Direction Bible
 for this screenplay (attached). The director has answered an interview; the bible must
 reflect their answers and the screenplay's evidence — never your own inventions.
+
+THE FOUR ANCHORS (ruled structure). The attached style anchors divide into
+THREE MOVIE PARAMETERS and ONE BOARD PARAMETER, and the bible is structured
+by that split:
+- WORLD_TEXTURE (movie): the world's condition — wear, patina, entropy.
+  Feeds Overall Visual Identity, Design Languages, Core Material Language.
+- COLOR_PALETTE (movie): the film's color language — permitted hues, value
+  key, saturation limits. Feeds Environments and Lighting Language.
+- CINEMATOGRAPHY_STYLE (movie): light behaviour, lens and framing feel.
+  Feeds Lighting Language and Composition Rules.
+- BOARD_RENDERING_STYLE (board): how the BOARDS are drawn. It says nothing
+  about the film's world and feeds ONLY the Rendering Language and
+  Production Board Presentation sections.
+HARD RULE: the movie sections describe the FILM, never the medium — no
+"painterly", "gouache", "photorealistic" or any rendering-technique
+language outside Rendering Language and Production Board Presentation.
+The film would be the same film boarded in a different medium.
 
 DIRECTOR'S ANSWERS — BINDING. These are decisions, not suggestions: build
 the Overall Visual Identity, Rendering Language and Lighting sections
