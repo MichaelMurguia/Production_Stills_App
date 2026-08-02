@@ -820,9 +820,11 @@ function lockPopover(stage) {
         </div>`).join("")}
     </div>
     <div class="bp-foot mono">${STAGE_NUM[stage]} UNLOCKS ITSELF ${UNLOCK_LINE[stage] || ""}</div>`;
+  // Fixed positioning: the band is sticky, so the popover pins to the
+  // viewport and stays attached through scrolling.
   const nr = nav.getBoundingClientRect(), cr = cell.getBoundingClientRect();
-  pop.style.left = `${Math.round(cr.left + window.scrollX)}px`;
-  pop.style.top = `${Math.round(nr.bottom + window.scrollY)}px`;
+  pop.style.left = `${Math.round(cr.left)}px`;
+  pop.style.top = `${Math.round(nr.bottom)}px`;
   pop.style.width = `${Math.round(Math.min(cr.width * 2, window.innerWidth - cr.left - 24))}px`;
   document.body.appendChild(pop);
   const close = () => {
