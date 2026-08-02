@@ -2557,32 +2557,34 @@ async function renderWizard() {
       };
       const r = await api("/api/wizard/draft-bible", {
         method: "POST", json: { answers, provider: $("#wiz-provider").value } });
-      $("#wiz-bible-wrap").classList.remove("hidden");
-      $("#wiz-bible").value = r.markdown;
-      toast(`Bible drafted by ${r.model} — review, edit, then save. Search for (PROPOSED) to find its guesses.`);
+      // One bible surface (user-flagged 2026-08-01): the draft lands in
+      // the editor it will be saved from. Unsaved prior content is never
+      // silently replaced.
+      const editor = $("#style-bible");
+      if (editor.value.trim() && editor.value.trim() !== r.markdown.trim()) {
+        if (!(await askConfirm("Replace the editor content?",
+          "The Art Direction Bible editor already holds text. Load the new draft over it? (Nothing is saved until you press Save.)",
+          "Load the draft"))) {
+          toast(`Draft ready but not loaded — the editor kept your text.`, true);
+          return;
+        }
+      }
+      editor.value = r.markdown;
+      $("#style-status").innerHTML =
+        `DRAFTED BY ${esc(r.model || "the model").toUpperCase()} — REVIEW, EDIT, THEN SAVE`;
+      toast(`Bible drafted by ${r.model} — review below, then save. Search for (PROPOSED) to find its guesses.`);
     } catch (err) { toast(err.message, true); }
     finally { busy.done(); btn.disabled = false; }
-  };
-
-  $("#wiz-save").onclick = async () => {
-    const text = $("#wiz-bible").value.trim();
-    if (!text) return;
-    if (!(await askConfirm("Save the Art Direction Bible",
-      "This replaces the current bible, and every future prompt uses it immediately.",
-      "Save bible"))) return;
-    try {
-      await api("/api/style-bible", { method: "PUT", json: { text } });
-      toast("Art Direction Bible saved — it now governs every render.");
-      loadBibleEditor();
-    } catch (err) { toast(err.message, true); }
   };
 
   // ---- the Bible itself + project-wide lessons (the PD's living documents) ----
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
     $("#style-bible").value = bible.text;
-    $("#style-status").innerHTML = bible.is_default
-      ? "showing built-in default — save to make it yours"
+    // No template default exists (director's ruling 2026-08-01) — empty
+    // means not yet drafted, and says so.
+    $("#style-status").innerHTML = !bible.text.trim()
+      ? "NOT DRAFTED YET — the Draft button above writes it here for review"
       : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> every future prompt uses this` : "");
     return bible;
   };

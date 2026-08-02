@@ -238,28 +238,20 @@
       <div id="wiz-subj-grid" class="subj-grid"></div>
     </div>
 
+    <!-- One bible surface (user-flagged duplication, 2026-08-01): the
+         draft lands in the same editor it saves from. Interim unification
+         ahead of the design ruling logged in DESIGN_SYSTEM.md. -->
     <div class="panel step" data-step="5">
-      <h2>Draft &amp; review</h2>
+      <h2>Art Direction Bible <span class="hint">(draft it, review it, save it — the single source every prompt draws from)</span></h2>
+      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
       <div class="row" style="margin-top:0">
         <button id="wiz-draft" class="primary">Draft Art Direction Bible</button>
-        <span class="hint">from screenplay + design languages + interview + attached reference photos</span>
+        <span class="hint">from screenplay + design languages + interview + attached reference photos — the draft appears below for review</span>
       </div>
       <div id="wiz-draft-busy"></div>
-      <div id="wiz-bible-wrap" class="hidden">
-        <textarea id="wiz-bible" style="min-height:420px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
-        <div class="row">
-          <button id="wiz-save" class="primary">Save as project Art Direction Bible</button>
-          <span class="hint">replaces the current bible — every future prompt uses it immediately</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Art Direction Bible <span class="hint">(the single source every prompt draws from)</span></h2>
-      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
-      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px"></textarea>
+      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
       <div class="row">
-        <button class="primary" id="style-save">Save Art Direction Bible</button>
+        <button class="ghost" id="style-save">Save Art Direction Bible</button>
         <span id="style-status" class="mini"></span>
       </div>
     </div>
