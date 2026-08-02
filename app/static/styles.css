@@ -463,6 +463,10 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 }
 .subnav button:hover { color: var(--ink); background: var(--panel); }
 .subnav button.active { color: var(--ink); background: var(--panel2); border-left-color: var(--accent); font-weight: 600; }
+/* C9 — the productions pointer rides the right end of the subnav bar */
+.subnav-end { margin-left: auto; align-self: center; padding: 0 12px;
+  font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); background: var(--bg); white-space: nowrap; }
+.subnav-end .text-act { font-size: 9px; letter-spacing: .08em; }
 
 /* ============================================================== doc panels */
 .doc h3 {

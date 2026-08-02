@@ -1,5 +1,12 @@
 # CONNECTORS_PLAN.md — auto-listing image engines in Settings
 
+> **Status 2026-08-03:** N1, N3, N4 shipped; N2 shipped as
+> CONNECTORS_UI_PLAN C1–C9 (that file retired). Remaining: **N5**
+> (Replicate — only if users ask) and **N6** (truth pass: max_px into the
+> undersize flag per-model, max_refs into anchor limits, USER_GUIDE +
+> WEBAPP_GUIDE updates, and only then the store copy). Store copy stays
+> frozen until N6.
+
 **For the coding agent.** Research completed 2026-08-03 (live-verified
 endpoints, sources at bottom). Goal: the app lists current image-generation
 models automatically through provider **connectors** in Settings, so the

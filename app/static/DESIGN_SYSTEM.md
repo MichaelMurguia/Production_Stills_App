@@ -285,6 +285,19 @@ the strip: approved = `--ok` border + label; promoted = `· REF` suffix on
 the tile and a `REFERENCE · REF-xxxx` bordered badge on the stage (status
 color border, never filled — the verdict-chip grammar).
 
+**Three-question Settings order** (CONNECTORS_UI_PLAN, ruled 2026-08-03).
+The AI & engines tab answers exactly three questions, in order, never
+mixed: 01 WHAT WILL RUN (the two AI roles and their selection) · 02 WHAT
+PAYS FOR IT (every credential — built-in keys and connectors in ONE list;
+splitting them would imply a hierarchy that does not exist) · 03 WHAT
+ELSE IS REACHABLE (the synced catalogs and the enabled set).
+
+**Capability before vendor** (ruled 2026-08-03). Wherever models list —
+the catalog browser, every Model dropdown, the engine picker — they group
+by what they can do (`ANCHORS REFERENCES` first, `STYLE STUDIES ONLY`
+second), never by who sells them. At the point of choice the question is
+whether this model can hold a subject, not who bills for it.
+
 ---
 
 ## Copy
@@ -479,6 +492,38 @@ Close. Copy feedback via toast with the character count. Use it for any
 machine document too long for a rail — prompts, logs, raw JSON. Never for
 forms.
 
+**Recommendation** (`.rec-chip` + `.rec-reason`, ruled 2026-08-03). A
+bordered `--ink-dim` Courier chip reading `RECOMMENDED`, always followed
+by ONE sentence of reason on the same line. Never amber (a recommendation
+is not the current stage, the primary action, or focus — it is a stated
+fact), never ordering alone, never unexplained: a recommendation without
+a stated reason is an advertisement. With no key behind it, it renders as
+the gate grammar, never a preselected broken default.
+
+**Credential row** (`.cred-row`, ruled 2026-08-03). One row per provider
+in the §02 list: 36px Courier initials tile on `--field` · name + Courier
+powers-and-limits meta (flex) · state · identity · actions, fixed column
+widths so every action sits on a shared baseline. Connector states are
+exactly four: `NOT CONNECTED` (hollow mark — the only disconnected term),
+`SYNCED` (`--ok`), `401 — REJECTED <stamp>` (`--bad`; the cached catalog
+stays visible with its age stated, enabled models stay listed and fail
+loudly at render — never a silent substitution), `NO NETWORK` (`--hold`;
+everything but Refresh and rendering works air-gapped). Rows expand in
+place for auth — no modal — and the two auth kinds read differently:
+one-click Connect only where the provider offers OAuth; a paste field
+never dresses as a connect button.
+
+**Capability badges** (`.cbadge`, ruled 2026-08-03). Courier, bordered in
+their meaning's color, never filled: `REFS ≤N` `--ok` · `NO REFERENCES`
+`--hold` · `4K NATIVE` `--ink-dim` · `2K MAX` **`--accent`** (the one
+amber badge — a ceiling below the board bar is the fact that disappoints
+after the money is spent, so it bites at the point of choice) · `$X/IMG`
+`--ink-dim` · `NO PRICE` dashed `--line` (never invented) · `DEPRECATED
+UPSTREAM` `--bad` (deprecated-but-enabled keeps a `--bad` left border and
+STAYS enabled — we report upstream, we do not overrule the user) ·
+`UNSUPPORTED SHAPE` dashed `--hold` (dimmed row, reason line never dimmer
+than the name it explains).
+
 ## Scrollbars
 
 Scrollbars are chrome, not content. The global rules in `styles.css` cover
@@ -559,6 +604,22 @@ busy photograph, or render it below 16px. The PNGs are full-bleed;
 `maskable-512.png` alone carries a safe zone (art at 80%) and is used only
 for the manifest's maskable purpose.
 
+## Icons
+
+- **Header marks: one square per AI role** (ruled 2026-08-03) — NARRATIVE
+  and IMAGE, filled squares (never circles), Courier-labelled, carrying
+  the worst state among everything that role needs: green ok · amber
+  degraded-still-runs · red blocked · hollow not configured. The count is
+  fixed at two forever, however many connectors exist.
+- **Model imagery is the typographic tile** (ruled 2026-08-03): Courier
+  developer initials on `--field` (`OAI`, `GGL`, `BFL`…). No vendor
+  thumbnails ever — a grid of third-party marketing samples is a slot
+  machine and other people's marketing presented as our evidence. The
+  only image a model may wear is a **witnessed test frame**: one
+  standardised in-house prompt rendered through the user's own key (cost
+  stated before the click), cached to disk, served from disk. Empty state
+  is a stated `NO PREVIEW`, never a broken image.
+
 ## Do not
 
 - Add a CSS framework, or Inter/Roboto.
@@ -608,6 +669,17 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — Settings rebuilt for two AI roles and connectors
+  (CONNECTORS_UI_PLAN C1–C9): recommendation ruled as a stated fact with
+  a reason, credentials unified into one list, catalog grouped by
+  capability, per-panel picker gains search with server-side reach,
+  header dots become one square per role. New canon: three-question
+  Settings order, capability-before-vendor grouping, the recommendation /
+  credential-row / capability-badge components, role squares and
+  typographic tiles under Icons. One truthful deviation from mock 16b:
+  OpenRouter's PKCE key IS stored on this machine (calls need it), so the
+  row states SCOPED KEY — REVOKE FROM THEIR DASHBOARD rather than the
+  mock's "no key held" claim.
 - **2026-08-03** — Brand icon lands (designer handoff `icon_update`): new
   **Brand** section (the mark, two-master rule, placement rules); icons
   served at `/icons/` on both surfaces with full favicon/manifest head
