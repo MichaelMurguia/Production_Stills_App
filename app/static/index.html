@@ -464,55 +464,12 @@
           <p class="role-note">&rarr; This is only where a new take <i>starts</i>. Every panel keeps its own picker on the <b>Panels</b> tab &mdash; switching engines per panel is how you get the best frame.</p>
         </div>
       </div>
-      <div class="engine-cards">
-        <div class="panel engine-card">
-          <div class="eng-head">
-            <div><h3 style="margin:0">Google Gemini</h3><span class="eng-model">gemini-3-pro-image</span></div>
-            <span id="gem-chip"></span>
-          </div>
-          <form id="settings-form" class="row">
-            <input type="password" id="gemini-key" placeholder="Paste Gemini API key" style="flex:1;min-width:0">
-            <button type="submit" class="primary">Save</button>
-            <button type="button" class="ghost" id="test-key">Test</button>
-          </form>
-          <span id="test-key-result" class="mini"></span>
-          <div class="fact-head">POWERS</div>
-          <p class="eng-powers">Panel renders to native 4K · screenplay reads · bible drafting</p>
-          <p class="eng-note">BILLED PER RENDER — REJECTED TAKES COST THE SAME</p>
-          <div id="dash-keystate" class="mini"></div>
-        </div>
-        <div class="panel engine-card">
-          <div class="eng-head">
-            <div><h3 style="margin:0">OpenAI</h3><span class="eng-model">gpt-image-2</span></div>
-            <span id="oai-chip"></span>
-          </div>
-          <form id="openai-settings-form" class="row">
-            <input type="password" id="openai-key" placeholder="Paste OpenAI API key" style="flex:1;min-width:0">
-            <button type="submit" class="primary">Save</button>
-            <button type="button" class="ghost" id="test-openai-key">Test</button>
-          </form>
-          <span id="test-openai-key-result" class="mini"></span>
-          <div class="fact-head">POWERS</div>
-          <p class="eng-powers">Panel renders · screenplay reads · bible drafting</p>
-          <p class="eng-note warn">FLAGS OUTPUT ABOVE 2560×1440 — PREFER GEMINI FOR 4K</p>
-          <div id="openai-keystate" class="mini"></div>
-        </div>
-      </div>
-      <div class="panel" style="margin-top:20px">
-        <div class="eng-head">
-          <div><h3 style="margin:0">OpenAI — ChatGPT pipeline</h3><span class="eng-model">gpt-5.6 rewrite → gpt-image-2</span></div>
-          <span class="badge PROVISIONAL">USES OPENAI KEY</span>
-        </div>
-        <p class="hint" style="margin-bottom:0">GPT-5.6 first rewrites the compiled spec into render prose under zero-invention rules, then calls the same image model ChatGPT uses. No separate credential — it runs on the OpenAI key above.</p>
-      </div>
-      <div class="panel" style="margin-top:20px">
-        <div class="eng-head">
-          <div><h3 style="margin:0">Your engines</h3>
-            <p class="hint" style="margin:4px 0 0">bring your own image generation API — the endpoint must speak the OpenAI Images API (base URL + model + key); it then appears in every Model dropdown</p></div>
-          <button class="ghost" id="eng-add">+ Add engine</button>
-        </div>
-        <div id="custom-engines"></div>
-      </div>
+      <!-- C2 — §02 WHAT PAYS FOR IT: one credential list, one row per
+           provider; a key pasted six months ago deserves a state and a
+           Test link, not a card. Rows expand in place — no modal. -->
+      <div class="fact-head sec-head">02 &mdash; WHAT PAYS FOR IT <span class="sec-sub">Your accounts. Nothing is connected until you connect it.</span></div>
+      <div class="cred-list" id="cred-list"></div>
+      <p class="cred-foot">NO NETWORK CALL IS MADE UNTIL A CONNECTOR IS CONFIGURED &mdash; THE STANDALONE BUILD STAYS AIR-GAPPED BY DEFAULT</p>
       <div class="facts-row">
         <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">EVERYTHING LIVES HERE</div>
           <p class="eng-powers" style="font-family:var(--mono)">data/</p>

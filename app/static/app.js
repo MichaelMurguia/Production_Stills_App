@@ -1706,71 +1706,19 @@ async function renderSettings() {
     $('[data-subview="debug"]')?.remove();
   }
 
-  // User-added engines: list, test, remove, add (OpenAI Images API contract).
+  // User-added engines render inside the §02 credential list (C2).
   const customs = settings.custom_engines || [];
-  $("#custom-engines").innerHTML = customs.length ? customs.map(e => `
-    <div class="eng-row" data-eid="${esc(e.id)}">
-      <span class="eng-row-name">${esc(e.label)}</span>
-      <span class="eng-row-meta">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}</span>
-      <span class="eng-row-test" data-f="eng-test-out">${(() => {
-        const t = (settings.engines || {})[`custom:${e.id}`]?.last_test;
-        return t ? `LAST TEST — <span class="${t.ok ? "ok" : "bad"}">${t.ok ? "PASS" : "FAIL"}</span> ${esc((t.at || "").slice(0, 16).replace("T", " "))}` : "";
-      })()}</span>
-      <button class="ghost" data-f="eng-test">Test</button>
-      <button class="danger" data-f="eng-del">Remove</button>
-    </div>`).join("")
-    : `<p class="mini">none yet — add one and it joins every Model dropdown</p>`;
-  $$("#custom-engines .eng-row").forEach(row => {
-    const eid = row.dataset.eid;
-    $("[data-f=eng-test]", row).onclick = async (ev) => {
-      ev.target.disabled = true;
-      $("[data-f=eng-test-out]", row).textContent = "TESTING…";
-      try {
-        const r = await api("/api/settings/test", { method: "POST", json: { provider: `custom:${eid}` } });
-        toast(`${eid} connection OK — ${r.model}`);
-      } catch (err) { toast(err.message, true); }
-      renderSettings();
-    };
-    $("[data-f=eng-del]", row).onclick = async () => {
-      if (!(await askConfirm(`Remove engine ${eid}`,
-        "Its key is deleted from settings and it leaves every Model dropdown. Candidates it generated keep their records.",
-        "Remove", true))) return;
-      try {
-        await api(`/api/settings/engines/${encodeURIComponent(eid)}`, { method: "DELETE" });
-        toast(`${eid} removed.`);
-        renderSettings();
-      } catch (err) { toast(err.message, true); }
-    };
-  });
-  $("#eng-add").onclick = async () => {
-    const r = await modal({
-      title: "Add your own image engine",
-      body: "The endpoint must speak the OpenAI Images API (images.generate / images.edit). The key is stored in data/settings.json and leaves this machine only to call this endpoint.",
-      fields: [
-        { name: "label", label: "Name", placeholder: "e.g. xAI Grok Image, Together, local SDXL" },
-        { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
-        { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
-        { name: "api_key", label: "API key" },
-      ],
-      confirmLabel: "Add engine",
-    });
-    if (r === null) return;
-    try {
-      await api("/api/settings/engines", { method: "POST", json: r });
-      toast(`${r.label} added — it now appears in every Model dropdown.`);
-      renderSettings();
-    } catch (err) { toast(err.message, true); }
-  };
 
   // C1 (CONNECTORS_UI_PLAN) — §01, the two AI roles. The recommendation
   // is a bordered ink-dim Courier chip plus one sentence of reason —
   // never amber, never unexplained. With no key it renders as the gate
   // grammar, never a preselected broken default.
   const engAll = settings.engines || {};
-  let cxRows = [], cxStats = { total: 0, enabled: 0 };
+  let cxRows = [], cxStats = { total: 0, enabled: 0 }, catalogAll = [];
   try {
     const cxState = await api("/api/connectors");
     cxRows = cxState.connectors; cxStats = cxState.stats;
+    catalogAll = (await api("/api/connectors/catalog?scope=all")).records;
   } catch { /* rows render NOT CONNECTED */ }
   const cxStatus = Object.fromEntries(cxRows.map(r => [r.id, r.status]));
   const usableProvider = pid => {
@@ -1865,76 +1813,230 @@ async function renderSettings() {
     "It rewrites the spec into render prose under zero-invention rules before painting, which holds forbidden content out most reliably.",
     !oaiConfigured, "GATED — the pipeline needs the OpenAI key in section 02.");
 
-  // Honest connection state (B3): CONNECTED only after the user's own Test
-  // passed; otherwise the key source. Never a fake CONNECTED, no polling.
-  const eng = settings.engines || {};
-  const chip = provider => {
-    const e = eng[provider] || {};
-    if (e.last_test?.ok) return '<span class="badge APPROVED">● CONNECTED</span>';
-    if (e.last_test && !e.last_test.ok) return '<span class="badge REJECTED">● TEST FAILED</span>';
-    if (e.source === "settings") return '<span class="badge APPROVED">KEY SET</span>';
-    if (e.source === "env") return '<span class="badge PROVISIONAL">● ENV VAR</span>';
-    return '<span class="badge REJECTED">NO KEY</span>';
+  // C2 (CONNECTORS_UI_PLAN) — §02, one credential list. From the user's
+  // side an OpenAI key and a fal key are the same kind of thing: a
+  // credential they own that costs them money. Fixed columns; every row
+  // the same height; NOT CONNECTED is the only disconnected term.
+  const stamp = t => (t || "").slice(0, 16).replace("T", " ");
+  const credState = pid => {
+    const e = engAll[pid] || {};
+    if (e.last_test?.ok) return ["ok", "KEY OK"];
+    if (e.last_test && !e.last_test.ok) return ["bad", `KEY FAILED ${stamp(e.last_test.at)}`];
+    if (e.source === "settings") return ["hold", "KEY SET — UNTESTED"];
+    if (e.source === "env") return ["hold", "ENV VAR — UNTESTED"];
+    return ["none", "NO KEY"];
   };
-  $("#gem-chip").innerHTML = chip("gemini");
-  $("#oai-chip").innerHTML = chip("openai");
+  const cxRowState = r => ({
+    NOT_CONNECTED: ["none", "NOT CONNECTED"],
+    SYNCED: ["ok", "SYNCED"],
+    REJECTED: ["bad", `401 — REJECTED ${stamp(r.last_error?.at)}`],
+    NO_NETWORK: ["hold", "NO NETWORK"],
+  })[r.status];
+  const mark = kind => `<span class="cred-mark ${kind}"></span>`;
 
-  const lastTest = provider => {
-    const t = eng[provider]?.last_test;
-    if (!t) return "";
-    return `LAST TEST — <span class="badge ${t.ok ? "APPROVED" : "REJECTED"}">${t.ok ? "PASS" : "FAIL"}</span> <span class="mini">${esc((t.at || "").slice(0, 16).replace("T", " "))}</span>`;
+  const builtinMeta = {
+    openai: `POWERS BOTH ROLES · ${settings.openai_chat_model} · ${settings.openai_model} · FLAGS OUTPUT ABOVE 2560×1440 — PREFER A 4K-NATIVE ENGINE`,
+    gemini: `IMAGE GENERATION · ${settings.model} · NATIVE 4K`,
   };
-  $("#dash-keystate").innerHTML = (settings.gemini_api_key_set
-    ? `<span class="mini">key ${esc(settings.gemini_api_key_hint)} saved here. </span>`
-    : `<span class="mini">no key — generation and auto-fill via Gemini disabled until one is saved. </span>`)
-    + lastTest("gemini");
-  $("#openai-keystate").innerHTML = (settings.openai_api_key_set
-    ? `<span class="mini">key ${esc(settings.openai_api_key_hint)} saved here. </span>`
-    : settings.openai_env_key_hint
-      ? `<span class="mini">no key saved here — falling back to OPENAI_API_KEY (${esc(settings.openai_env_key_hint)}) from your environment. </span>`
-      : `<span class="mini">no key — optional, needed for GPT Image 2 and the pipeline. </span>`)
-    + lastTest("openai");
+  const cxMeta = r => [
+    `${r.model_count || "NO"} MODELS`,
+    r.prices_published ? "PRICES PUBLISHED" : "NO PRICES PUBLISHED",
+    r.last_sync ? `LAST SYNC ${stamp(r.last_sync)}` : "NEVER SYNCED",
+  ].join(" · ");
 
-  const keyForm = (formSel, inputSel, field, label) => {
-    $(formSel).addEventListener("submit", async e => {
-      e.preventDefault();
-      const key = $(inputSel).value.trim();
-      if (!key) return;
+  const builtinIdentity = pid => {
+    const e = engAll[pid] || {};
+    const hint = pid === "openai"
+      ? (settings.openai_api_key_hint || settings.openai_env_key_hint)
+      : settings.gemini_api_key_hint;
+    const tested = e.last_test ? ` · TESTED ${stamp(e.last_test.at)}` : "";
+    return hint ? `${esc(hint)}${tested}` : "—";
+  };
+  const cxIdentity = r => {
+    if (r.status === "NOT_CONNECTED") return "—";
+    if (r.id === "openrouter" && r.identity)
+      return `${esc(r.identity)} · SCOPED KEY ${esc(r.key_hint)}`;
+    return esc(r.key_hint || "—");
+  };
+
+  const orRow = cxRows.find(r => r.id === "openrouter") || { status: "NOT_CONNECTED", auth: "oauth", tile: "ORT", label: "OpenRouter", prices_published: true };
+  const falRow = cxRows.find(r => r.id === "fal") || { status: "NOT_CONNECTED", auth: "key", tile: "FAL", label: "fal.ai", prices_published: false };
+  const credRows = [
+    { key: "openai", tile: "OAI", name: "OpenAI", tag: "BUILT IN",
+      meta: builtinMeta.openai, state: credState("openai"),
+      identity: builtinIdentity("openai"),
+      actions: [["Test", "test"], ["Replace", "replace"]] },
+    { key: "gemini", tile: "GGL", name: "Google Gemini", tag: "BUILT IN",
+      meta: builtinMeta.gemini, state: credState("gemini"),
+      identity: builtinIdentity("gemini"),
+      actions: [["Test", "test"], ["Replace", "replace"]] },
+    { key: "fal", tile: "FAL", name: "fal.ai", tag: "CONNECTOR",
+      meta: cxMeta(falRow), state: cxRowState(falRow), identity: cxIdentity(falRow),
+      actions: { NOT_CONNECTED: [["Connect", "connect"]],
+                 SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
+                 REJECTED: [["Replace key", "connect"], [`Disable its ${falRow.enabled_count || 0} models`, "disable-all"]],
+                 NO_NETWORK: [] }[falRow.status] },
+    { key: "openrouter", tile: "ORT", name: "OpenRouter", tag: "CONNECTOR",
+      meta: cxMeta(orRow), state: cxRowState(orRow), identity: cxIdentity(orRow),
+      actions: { NOT_CONNECTED: [["Connect", "connect"]],
+                 SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
+                 REJECTED: [["Reconnect", "connect"], [`Disable its ${orRow.enabled_count || 0} models`, "disable-all"]],
+                 NO_NETWORK: [] }[orRow.status] },
+    { key: "custom", tile: "+", name: "Your own endpoints", tag: "",
+      meta: "ANY OPENAI-IMAGES-CONTRACT URL · BASE URL + MODEL + KEY",
+      state: null, identity: "", custom: true,
+      actions: [["Add engine", "add-custom"]] },
+  ];
+
+  $("#cred-list").innerHTML = credRows.map(r => `
+    <div class="cred-row" data-cred="${esc(r.key)}">
+      <span class="cred-tile${r.custom ? " plus" : ""}">${esc(r.tile)}</span>
+      <span class="cred-id">
+        <span class="cred-name">${esc(r.name)}${r.tag ? ` <i class="cred-tag">${esc(r.tag)}</i>` : ""}</span>
+        <span class="cred-meta">${esc(r.meta)}</span>
+      </span>
+      <span class="cred-state">${r.state ? mark(r.state[0]) + esc(r.state[1]) : ""}</span>
+      <span class="cred-ident">${r.custom
+        ? customs.map(e => `<button class="cchip" data-cid="${esc(e.id)}">${esc((e.label || e.id).toUpperCase().slice(0, 14))}</button>`).join(" ")
+        : r.identity}</span>
+      <span class="cred-acts">${(r.actions || []).map(([l, a]) =>
+        `<button class="text-act" data-act="${esc(a)}">${esc(l)}</button>`).join(" ")}</span>
+    </div>
+    <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`).join("");
+
+  const settingsField = { openai: "openai_api_key", gemini: "gemini_api_key" };
+  $$("#cred-list .cred-row").forEach(row => {
+    const key = row.dataset.cred;
+    $$("button[data-act]", row).forEach(btn => {
+      btn.onclick = () => credAction(key, btn.dataset.act, row);
+    });
+    $$("button.cchip", row).forEach(ch => {
+      ch.onclick = () => expandCustomChip(ch.dataset.cid, row);
+    });
+  });
+
+  async function credAction(key, act, row) {
+    if (act === "test") {
       try {
-        await api("/api/settings", { method: "POST", json: { [field]: key } });
-        toast(`${label} key saved.`);
+        const r = await api("/api/settings/test", { method: "POST", json: { provider: key } });
+        toast(`${key} connection OK — ${r.model}`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    } else if (act === "replace" || act === "connect" || act === "add-custom") {
+      openCredExpand(key, act);
+    } else if (act === "refresh") {
+      try {
+        const r = await api(`/api/connectors/${key}/refresh`, { method: "POST" });
+        toast(`${r.label}: ${r.model_count} models synced.`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    } else if (act === "disconnect") {
+      if (!(await askConfirm(`Disconnect ${key}`,
+        "The credential is forgotten. Your synced catalog and enabled models are kept — they render again when you reconnect.",
+        "Disconnect", true))) return;
+      try { await api(`/api/connectors/${key}/disconnect`, { method: "POST" }); }
+      catch (err) { toast(err.message, true); }
+      renderSettings();
+    } else if (act === "disable-all") {
+      const mine = catalogAll.filter(m => m.connector === key && m.enabled);
+      for (const m of mine) {
+        try { await api("/api/connectors/enable", { method: "POST", json: { id: m.id, on: false } }); }
+        catch { /* stated on rerender */ }
+      }
+      toast(`${mine.length} model${mine.length === 1 ? "" : "s"} disabled for now.`);
+      renderSettings();
+    }
+  }
+
+  async function openCredExpand(key, act) {
+    // C2 interim: modal-backed forms. C3 replaces these with the ruled
+    // in-place row expansions and the one-click OpenRouter connect box.
+    if (act === "add-custom") {
+      const r = await modal({
+        title: "Add your own image engine",
+        body: "The endpoint must speak the OpenAI Images API (images.generate / images.edit). The key is stored in settings.json and leaves this machine only to call this endpoint.",
+        fields: [
+          { name: "label", label: "Name", placeholder: "e.g. local SDXL, studio ComfyUI" },
+          { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
+          { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
+          { name: "api_key", label: "API key" },
+        ],
+        confirmLabel: "Add engine",
+      });
+      if (r === null) return;
+      try {
+        await api("/api/settings/engines", { method: "POST", json: r });
+        toast(`${r.label} added — it now appears in every Model dropdown.`);
         renderSettings();
       } catch (err) { toast(err.message, true); }
-    });
-  };
-  keyForm("#settings-form", "#gemini-key", "gemini_api_key", "Gemini");
-  keyForm("#openai-settings-form", "#openai-key", "openai_api_key", "OpenAI");
-
-  const keyTest = (btnSel, outSel, inputSel, field, provider, label) => {
-    $(btnSel).addEventListener("click", async (e) => {
-      const btn = e.target, out = $(outSel);
-      btn.disabled = true;
-      out.innerHTML = `<span class="badge PROVISIONAL">TESTING…</span> contacting ${esc(label)}`;
+      return;
+    }
+    if (key === "openrouter") {
       try {
-        // If a key is sitting in the input box, save it first — Test always
-        // exercises the key the app will actually use.
-        const typed = $(inputSel).value.trim();
-        if (typed) {
-          await api("/api/settings", { method: "POST", json: { [field]: typed } });
-          $(inputSel).value = "";
-          toast(`${label} key saved.`);
-        }
-        const r = await api("/api/settings/test", { method: "POST", json: { provider } });
-        out.innerHTML = `<span class="badge APPROVED">PASS</span> connected — ${esc(r.model)}`;
-        toast(`${label} connection OK — ${r.model}`);
-      } catch (err) {
-        out.innerHTML = `<span class="badge REJECTED">FAIL</span> ${esc(err.message)}`;
-        toast(err.message, true);
-      } finally { btn.disabled = false; }
+        const { url } = await api("/api/connectors/openrouter/auth");
+        location.href = url;  // returns via /connectors/openrouter/callback
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
+    const field = settingsField[key];
+    const r = await modal({
+      title: field ? `${key === "openai" ? "OpenAI" : "Gemini"} API key` : "fal.ai API key",
+      body: "Stored in settings.json on this machine; leaves it only to call this provider.",
+      fields: [{ name: "key", label: "API key" }],
+      confirmLabel: "Save and test",
     });
-  };
-  keyTest("#test-key", "#test-key-result", "#gemini-key", "gemini_api_key", "gemini", "Gemini");
-  keyTest("#test-openai-key", "#test-openai-key-result", "#openai-key", "openai_api_key", "openai", "OpenAI");
+    if (r === null || !r.key.trim()) return;
+    try {
+      if (field) {
+        await api("/api/settings", { method: "POST", json: { [field]: r.key.trim() } });
+        await api("/api/settings/test", { method: "POST", json: { provider: key } });
+        toast(`${key} key saved and tested.`);
+      } else {
+        const pub = await api(`/api/connectors/${key}/key`, { method: "POST", json: { key: r.key.trim() } });
+        toast(pub.status === "SYNCED"
+          ? `${pub.label}: ${pub.model_count} models synced.`
+          : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
+          pub.status !== "SYNCED");
+      }
+    } catch (err) { toast(err.message, true); }
+    renderSettings();
+  }
+
+  function expandCustomChip(cid, row) {
+    const e = customs.find(x => x.id === cid);
+    if (!e) return;
+    const box = $(`.cred-expand[data-expand="custom"]`);
+    box.classList.remove("hidden");
+    const t = engAll[`custom:${cid}`]?.last_test;
+    box.innerHTML = `
+      <div class="cred-form">
+        <p class="cred-form-kicker">${esc((e.label || e.id).toUpperCase())} — YOUR ENDPOINT</p>
+        <p class="mini">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}${t ? ` · LAST TEST ${t.ok ? "PASS" : "FAIL"} ${esc(stamp(t.at))}` : ""}</p>
+        <div class="row" style="margin-top:8px">
+          <button class="ghost" data-f="t">Test</button>
+          <button class="danger" data-f="d">Remove</button>
+          <button class="ghost" data-f="x">Close</button>
+        </div>
+      </div>`;
+    $("[data-f=t]", box).onclick = async () => {
+      try {
+        const r = await api("/api/settings/test", { method: "POST", json: { provider: `custom:${cid}` } });
+        toast(`${cid} connection OK — ${r.model}`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    };
+    $("[data-f=d]", box).onclick = async () => {
+      if (!(await askConfirm(`Remove engine ${cid}`,
+        "Its key is deleted from settings and it leaves every Model dropdown. Candidates it generated keep their records.",
+        "Remove", true))) return;
+      try {
+        await api(`/api/settings/engines/${encodeURIComponent(cid)}`, { method: "DELETE" });
+        toast(`${cid} removed.`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
+    };
+    $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
+  }
 
   // Debug tools (user request 2026-08-03): the mock engine and page-text
   // edit mode. Both state exactly what they are; neither touches canon.
