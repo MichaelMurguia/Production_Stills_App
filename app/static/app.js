@@ -715,11 +715,17 @@ for (const navSel of ["#nav", "#tools-nav"]) {
   $(navSel).addEventListener("click", e => {
     const btn = e.target.closest("button[data-view]");
     if (!btn) return;
-    if (lockedStages.has(btn.dataset.view)) {
-      lockPopover(btn.dataset.view);  // explain in place — never navigate
+    const view = btn.dataset.view;
+    if (lockedStages.has(view)) {
+      // Never refuse on a stale lock (user-caught 2026-08-01: approve
+      // didn't refresh the band, and inert clicks could never heal it).
+      updateBand().then(() => {
+        if (lockedStages.has(view)) lockPopover(view);
+        else showView(view);
+      });
       return;
     }
-    showView(btn.dataset.view);
+    showView(view);
   });
 }
 
@@ -772,7 +778,7 @@ function lockPopover(stage) {
   const chain = gateChain(_bandState).slice(0, UNLOCK_NEED[stage] || 5);
   const remaining = chain.filter(s => !s.done);
   const required = remaining.filter(s => !s.optional);
-  if (!required.length) { updateBand(); return; }  // gate met; band was stale
+  if (!required.length) { updateBand(); showView(stage); return; }  // stale — heal and go
   const cell = $(`#nav button[data-view="${remaining[0].stage}"]`)
             || $(`#nav button[data-view="${stage}"]`);
   const nav = $("#nav");
@@ -3976,7 +3982,8 @@ REMOVE — marked for removal from the board.">
       try {
         await api(`/api/specs/${specId}`, { method: "PUT", json: collect() });
         await api(`/api/specs/${specId}/approve`, { method: "POST" });
-        toast(`${specId} approved and locked.`);
+        updateBand();  // Panels unlocks itself right now, visibly
+        toast(`${specId} approved and locked — Panels is open.`);
         renderSpecs(specId);
       } catch (err) { toast(err.message, true); }
     };
@@ -4001,7 +4008,7 @@ REMOVE — marked for removal from the board.">
       } catch (err) { toast(err.message, true); }
     };
     $("#sp-unlock", panel).onclick = doUnlock;
-    $("[data-f=lock-unlock]", panel).onclick = doUnlock;
+    $("[data-f=lock-unlock]", panel).onclick = async () => { await doUnlock(); updateBand(); };
   }
 }
 
