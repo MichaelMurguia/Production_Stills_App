@@ -126,6 +126,15 @@ function openCropper(imgUrl, onDone) {
 function openRepair(imgUrl, onSubmit) {
   const ov = document.createElement("div");
   ov.className = "cropper";
+  setTimeout(() => fillProviderSelect($("[data-f=prov]", ov), {
+    openai: "GPT Image 2 — masked patch",
+    gemini: "Gemini (Nano Banana Pro) — guided patch",
+  }).then(ok => {
+    if (!ok) {
+      const go = $("[data-f=go]", ov);
+      if (go) { go.disabled = true; go.title = "No usable engine — add or retest a key in Settings."; }
+    }
+  }));
   ov.innerHTML = `
     <div class="crop-head">
       <span class="row" style="margin:0;flex:1">
@@ -899,14 +908,15 @@ function useTemplate(id) {
    with a configured key are listed; with none, the selector itself says
    so instead of offering models that cannot run. Returns whether any
    engine is ready. */
-async function fillProviderSelect(sel) {
+async function fillProviderSelect(sel, labels) {
   if (!sel) return false;
   let s = {};
   try { s = await api("/api/settings"); } catch { /* stated below */ }
   const eng = s.engines || {};
   // A key that FAILED its test is never selectable (user ruling
   // 2026-08-02) — it lists disabled, stating why, so the fix is obvious.
-  const DEFS = [["gemini", "Gemini (research pass)"], ["openai", "OpenAI GPT-5.6"]];
+  const DEFS = [["gemini", labels?.gemini || "Gemini (research pass)"],
+                ["openai", labels?.openai || "OpenAI GPT-5.6"]];
   const usable = DEFS.filter(([k]) =>
     eng[k]?.configured && eng[k]?.last_test?.ok !== false);
   const failed = DEFS.filter(([k]) =>
@@ -4772,6 +4782,17 @@ async function renderBoardPanels(specId) {
             </div>
           </div>`;
         document.body.append(ov);
+        // Only engines that can run are offered (user-caught 2026-08-02).
+        fillProviderSelect($("[data-rr=prov]", ov), {
+          gemini: "Gemini (Nano Banana Pro) — native 4K",
+          openai: "GPT Image 2 (direct)",
+        }).then(ok => {
+          if (!ok) {
+            const go = $("[data-rr=go]", ov);
+            go.disabled = true;
+            go.title = "No usable engine — add or retest a key in Settings.";
+          }
+        });
         const doneRr = () => ov.remove();
         $("[data-rr=cancel]", ov).onclick = doneRr;
         ov.addEventListener("mousedown", ev => { if (ev.target === ov) doneRr(); });
