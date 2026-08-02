@@ -314,6 +314,34 @@ Prose was ~3:1 over interface by area in v1. Rules:
 
 `.badge.LOCKED` is deliberately grey: locked is a fact, not an action.
 
+**Panel card, two lives** (PANEL_CARD ruling, 2026-08-03 — mocks
+13a/13b). Before its first take the card is a **work order**: the spec is
+the content — required objects as a numbered two-column table
+(`.req-table`, Courier ordinal + per-row `✓ REF`/`HOLD` marks driven
+from real state), forbidden as dashed chips with provenance stated in the
+header, a Courier SCOPE line, and the single amber `Generate first take`.
+After a take it is a **light table**: the image leads, the spec collapses
+to chips, and generate is a ghost. Keyed on `candidates.length === 0`.
+
+**Summarised auto-attachment** (`.anchor-sum`, from P4). Anything
+attached automatically and un-uncheckable is summarised — one row per
+role with a count, a bordered `ALWAYS ON` chip in `--ok` stating the
+mandatory part out loud, and the full ID list behind a `SHOW IDS` text
+act. Full-size badge walls are for things the user can act on.
+
+**The stated zero state** (`.nomatch`, from P5/P8). When the app decided
+and the answer was *nothing* — no reference group matched, no subject
+anchors on a render — that is a finding, not a null: a bordered `--bad`
+notice naming the state and its consequence ("it will render from text
+and style alone"). Zeros the user should act on are never blank space or
+an unexplained `0`.
+
+**One-bar action grouping** (`.act-bar`, from P7). A thing being judged
+gets exactly one bordered action bar: its status fenced left, *use this
+thing* and *derive from it* split by an internal rule, and the
+destructive act fenced right — never adjacent to a promotion. Buttons
+inside the bar are borderless text; the bar never wraps.
+
 **Intake row** (`.ref-add`, `.chip-add`). High-frequency entry into the
 list/library directly above it. Max 6 fields; placeholders name fields,
 tooltips explain them; only the one field a first-timer can't guess gets a
@@ -555,6 +583,15 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — Panel card redesign (PANEL_CARD_PLAN P1–P9, designer
+  ruling): the card ships as one component with two lives — work order
+  (numbered required table with REF/HOLD marks, stated forbidden/scope,
+  summarised style anchors, named zero-match state, one amber Generate
+  first take + dispatch facts) and light table (one action bar, take
+  captions, merged dossier with true shape label and the no-subject-
+  references finding, legible navigator). New canon: empty-state rule,
+  summarised auto-attachment, the stated zero state, one-bar action
+  grouping. GET /api/specs/{id} gained lock_hash for the dispatch line.
 - **2026-08-03** — Debug tools (user-directed): Settings gains a Debug
   tools tab (mock engine + page-text edit mode); new UNCANONIZED
   `.text-edit-chip` fixed mode banner (z 60, amber left border). Mock
