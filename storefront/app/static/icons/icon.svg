@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Screenboard Studio">
+  <rect width="64" height="64" fill="#0f1114"></rect>
+  <g fill="#9aa1a8">
+    <rect x="7" y="11" width="8" height="8"></rect><rect x="7" y="28" width="8" height="8"></rect><rect x="7" y="45" width="8" height="8"></rect>
+    <rect x="49" y="11" width="8" height="8"></rect><rect x="49" y="28" width="8" height="8"></rect><rect x="49" y="45" width="8" height="8"></rect>
+  </g>
+  <rect x="21" y="11" width="22" height="20" fill="#e0a33f"></rect>
+  <rect x="21" y="33" width="22" height="20" fill="#eceef0"></rect>
+</svg>

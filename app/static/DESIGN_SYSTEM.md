@@ -534,6 +534,31 @@ wrong.
 
 ---
 
+## Brand
+
+**The mark ("15d2, three and larger").** A near-black `--field` tile, three
+perforations per side in `--ink-dim`, two frames between them: the top one
+`--accent`, the lower one `--ink`. It says what the interface says — one
+thing leads, the rest support. Amber appears once and carries meaning.
+
+**Two masters, not one.** `icon.svg` (3 perfs/side) renders everything 48px
+and above; `icon-small.svg` (2 larger perfs) exists solely for 16px and
+32px, where six tiny perforations would smear. It is the only sanctioned
+deviation — never generate 16px assets from the 3-perf master. Masters and
+the full raster set live in `brand/icons/` and are copied (not linked) into
+`app/static/icons/` and `storefront/app/static/icons/`, served at
+`/icons/` on both surfaces.
+
+**Placement.** The icon may appear in-product — an About dialog, the
+standalone build's splash, the storefront header — because it is the app's
+own field colour spending amber the way the interface does. It must never
+sit inside a working view where it competes with the stage band. No
+inverted or light variant exists or is needed; never re-colour it, add a
+gradient, round its corners (platforms apply their own masks), set it on a
+busy photograph, or render it below 16px. The PNGs are full-bleed;
+`maskable-512.png` alone carries a safe zone (art at 80%) and is used only
+for the manifest's maskable purpose.
+
 ## Do not
 
 - Add a CSS framework, or Inter/Roboto.
@@ -583,6 +608,10 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — Brand icon lands (designer handoff `icon_update`): new
+  **Brand** section (the mark, two-master rule, placement rules); icons
+  served at `/icons/` on both surfaces with full favicon/manifest head
+  snippets. Handoff spec `brand/BRAND_ICON.md` folded in and deleted.
 - **2026-08-03** — Panel card redesign (PANEL_CARD_PLAN P1–P9, designer
   ruling): the card ships as one component with two lives — work order
   (numbered required table with REF/HOLD marks, stated forbidden/scope,

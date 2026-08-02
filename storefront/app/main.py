@@ -94,6 +94,9 @@ def _reconcile_on_start():
 
 _here = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_here / "static"), name="static")
+# Brand icons at /icons/ per brand spec — the webmanifest's src paths and
+# both sites' head snippets agree on this root.
+app.mount("/icons", StaticFiles(directory=_here / "static" / "icons"), name="icons")
 templates = Jinja2Templates(directory=_here / "templates")
 # Canonical URLs and og:url must always name the PUBLIC host, never
 # whatever Host header arrived — BASE_URL is the truth (SEO pass).
