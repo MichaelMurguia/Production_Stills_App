@@ -29,16 +29,19 @@ async def security_headers(request: Request, call_next):
     request.state.account_email = email
     request.state.is_owner = bool(email) and email.lower() in settings.OWNER_EMAILS
     request.state.account_avatar = ""
+    request.state.account_name = email  # header shows first name when known
     if email and not request.url.path.startswith(("/static", "/healthz")):
-        def _picture() -> str:
+        def _acct() -> tuple[str, str]:
             with db.session() as s:
                 acct = s.scalar(select(db.Account).where(
                     db.Account.email == email))
-                return acct.picture if acct else ""
+                return (acct.name if acct else "", acct.picture if acct else "")
         # Sync DB work off the event loop — this middleware wraps every
         # request, including long-poll proxying.
-        picture = await run_in_threadpool(_picture)
+        name, picture = await run_in_threadpool(_acct)
         request.state.account_avatar = auth.avatar_url(email, picture)
+        if name.strip():
+            request.state.account_name = name.split()[0]
     resp = await call_next(request)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")

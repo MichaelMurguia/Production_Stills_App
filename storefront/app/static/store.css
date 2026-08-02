@@ -416,6 +416,8 @@ body {
 .head-account:hover { color: var(--ink); }
 .head-avatar { width: 28px; height: 28px; border: 1px solid var(--line); display: block; object-fit: cover; background: var(--panel); }
 .head-email { color: var(--ink-dim); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Debug toggle reports edit-mode state — status color as state, not accent */
+.head-debug.on { border-color: var(--warn); color: var(--warn); }
 .head-account:hover .head-email { color: var(--ink); }
 
 /* Brand links home (2026-08-01) */
