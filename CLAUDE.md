@@ -142,6 +142,18 @@ never touch the real install — redirect `app.paths` to a temp home (see
 `tests/test_app_api.py`) and inject fakes for external services (see
 `storefront/tests/test_provisioner.py`).
 
+## Autonomy
+
+This project runs with permission prompts bypassed
+(`.claude/settings.local.json` → `"defaultMode": "bypassPermissions"`,
+gitignored — never ship it in the repo or a release zip). The user has
+stated they never read confirmation modals; the prompts were pure
+friction. Do not re-create that friction in text — act, don't ask. What
+remains is judgment, not ceremony: for truly irreversible or
+outward-facing actions (deleting user data, force-pushes, publishing,
+spending real money), state what you're doing in one line as you do it,
+and stop only when the evidence genuinely contradicts the request.
+
 ## Changes
 
 Functionality is not to change as part of design or styling work. Keep existing
