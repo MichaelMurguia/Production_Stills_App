@@ -1842,9 +1842,15 @@ details.meta pre {
   border: 1px solid var(--line); padding: 3px 8px; }
 .fr-arrow { color: var(--ink-faint); font-size: 11px; }
 .fr-foot { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
-.fr-notice { border-left: 1px solid var(--line-soft); padding-left: 34px; }
-.fr-notice h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
-.fr-notice p { font-size: 13px; color: var(--ink-dim); margin-bottom: 18px; }
+.fr-notice { border-left: 1px solid var(--line-soft); padding-left: 34px;
+  user-select: none; cursor: default; caret-color: transparent; }
+.fr-notice h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.fr-notice p { font-size: 13px; font-weight: 400; color: var(--ink-dim); margin-bottom: 18px; }
+.fr-notice b { font-weight: 700; color: var(--ink); }
+/* The hero's fixed copy is chrome too — selectable prose invites the
+   caret and drag-highlight the mock never shows. Buttons stay live. */
+.fr-eyebrow, .fr-h, .fr-oneclick, .fr-chain, .fr-foot, .fr-marquee {
+  user-select: none; cursor: default; }
 .fr-rule { width: 34px; height: 2px; background: var(--accent); margin-bottom: 12px; }
 .fr-row { grid-template-columns: 36px minmax(0,1fr) 140px; }
 .prov-ico { width: 22px; height: 22px; object-fit: contain; display: block; }
@@ -1863,12 +1869,12 @@ details.meta pre {
 .auth-modal .auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 
 /* F4 — provider marquee: duplicated sequence, seamless 36s loop, edge fade */
-.fr-marquee { overflow: hidden; margin-top: 18px;
+.fr-marquee { overflow: hidden; margin-top: 18px; max-width: 540px;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .mq-track { display: flex; width: max-content; animation: mq-scroll 36s linear infinite; }
 .mq-tile { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
-  background: var(--panel); padding: 8px 14px; margin-right: 10px; font-size: 13px;
+  background: var(--field); padding: 9px 16px; margin-right: 8px; font-size: 13px;
   color: var(--ink-dim); white-space: nowrap; }
 .mq-tile img { width: 18px; height: 18px; object-fit: contain; }
 @keyframes mq-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
