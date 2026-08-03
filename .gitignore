@@ -21,3 +21,4 @@ storefront_img/
 
 # Design handoff bundles are local working files, not repo content
 design_handoff/
+connectors.json
