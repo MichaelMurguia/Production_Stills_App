@@ -1,0 +1,68 @@
+{# The third router page (user request 2026-08-04): a studio that IS
+   claimed and paid for but whose workspace has not finished provisioning.
+   Previously these hosts fell to the unclaimed 404 — telling a paying
+   owner their own address does not exist. This page is neither a sales
+   page nor an error: it is a receipt. Zero JS except the honest recheck;
+   every asset absolute to the store host (this serves on a tenant host). #}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{ studio_name }} — setting up</title>
+<link rel="icon" href="{{ base_url }}/icons/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ base_url }}/static/store.css">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand-link" href="{{ base_url }}/">
+      <p class="kicker">PRODUCTION TOOLING</p>
+      <p class="wordmark">Screenboard Studio</p>
+    </a>
+  </div>
+</header>
+<main class="wrap">
+  <section class="order">
+    <p class="price-kind">COMING SOON</p>
+    <h1>{{ studio_name }} is being set up.</h1>
+    <p class="hero-sub">This address is claimed and yours. Your private
+    workspace is still being built &mdash; it usually takes a couple of
+    minutes, and nothing is waiting on you.</p>
+
+    <div class="prov-block mono">
+      <span class="prov-chip">PROVISIONING</span>
+      <span>{{ host | upper }} &middot; {{ state }}</span>
+    </div>
+
+    <div class="license-box">
+      <p class="license-label">WHAT IS HAPPENING</p>
+      <p class="hero-sub" style="margin:0">A dedicated studio is being
+      created for this production &mdash; its own storage, its own address,
+      nobody else's work in it. This page rechecks on its own; when the
+      studio answers, it opens automatically.</p>
+    </div>
+
+    <p class="hero-sub">Your subscription is active and your billing is
+    unaffected by setup time. Everything you own is listed on
+    <a href="{{ base_url }}/account">Your Screenboard</a>.</p>
+    <p class="foot-meta">THIS PAGE RECHECKS EVERY 15 SECONDS</p>
+  </section>
+</main>
+<footer class="site-foot">
+  <div class="wrap foot-row">
+    <p class="foot-meta">SCREENBOARD STUDIO &middot; canon-locked art direction for film</p>
+    <p class="foot-links"><a href="{{ base_url }}/account">Your Screenboard</a></p>
+  </div>
+</footer>
+<script>
+// An honest recheck, not a spinner: reload on an interval and the page
+// either becomes the studio or states the same facts again.
+setTimeout(() => location.reload(), 15000);
+</script>
+</body>
+</html>

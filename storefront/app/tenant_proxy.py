@@ -114,6 +114,18 @@ class TenantProxy:
             return target.rstrip("/")
         return ""
 
+    def _pending(self, sub: str):
+        """A PAID studio that owns this name but is not ACTIVE yet — the
+        coming-soon case (2026-08-04). Returns its status, or None: a
+        paying owner must never be told their own address does not
+        exist."""
+        with db.session() as s:
+            row = s.scalar(select(db.Workspace).join(db.Purchase).where(
+                db.Workspace.subdomain == sub,
+                db.Workspace.status.in_(("PENDING", "FAILED")),
+                db.Purchase.status == "PAID"))
+            return row.status if row else None
+
     def _renamed_to(self, sub: str):
         """The current subdomain of an ACTIVE studio that last released
         `sub`, or None. Only consulted when `sub` itself matched nothing —
@@ -181,6 +193,21 @@ class TenantProxy:
                                         (b"x-robots-tag", b"noindex")]})
                 await send({"type": "http.response.body", "body": b""})
                 return
+            # Claimed and paid, workspace still building: a receipt, not a
+            # 404 (user request 2026-08-04). FAILED reads the same way to
+            # the owner — reconcile retries on its own — and never leaks
+            # infrastructure detail onto a customer's address.
+            pending = await run_in_threadpool(self._pending, sub)
+            if pending:
+                await _page(send, 503, _render(
+                    "router_coming_soon.html",
+                    host=host.split(":", 1)[0],
+                    studio_name=_studio_name(sub),
+                    state="SETTING UP" if pending == "PENDING"
+                          else "SETTING UP — RETRYING"),
+                    extra_headers=[(b"retry-after", b"15"),
+                                   (b"x-robots-tag", b"noindex")])
+                return
             # The one failure page that sells (T1): a stranger, a typo, or
             # someone guessing — full store chrome, the address as the H1.
             await _page(send, 404, _render(
@@ -203,7 +230,11 @@ class TenantProxy:
                    and not k.lower().startswith(b"x-forwarded-")]
         client = scope.get("client")
         headers += [(b"x-forwarded-host", host.encode("latin-1")),
-                    (b"x-forwarded-proto", b"https")]
+                    (b"x-forwarded-proto", b"https"),
+                    # Proof-of-router: Railway's edge cannot set this, so
+                    # the tenant app can tell OUR proxy from a direct hit
+                    # and never redirect proxied traffic (loop guard).
+                    (b"x-screenboard-router", b"1")]
         if client:
             headers.append((b"x-forwarded-for",
                             str(client[0]).encode("latin-1")))

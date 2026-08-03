@@ -173,17 +173,31 @@ class StaleOriginFixTests(unittest.TestCase):
 
     def test_railway_host_redirects_to_branded(self):
         appmain.PUBLIC_URL = "https://my-studio.screenboardstudio.com"
+        # 302, not 301 (ERR_TOO_MANY_REDIRECTS, prod 2026-08-04): a
+        # permanent redirect caches a misconfiguration into every visitor's
+        # browser, so the customer stays broken after the server is fixed.
+        # Origin consolidation is a routing preference, never permanent.
         r = self.client.get("/?x=1", follow_redirects=False,
                             headers={"host": "tenant-9.up.railway.app"})
-        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.status_code, 302)
         self.assertEqual(r.headers["location"],
-                         "https://my-studio.screenboardstudio.com/?x=1")
+                         "https://my-studio.screenboardstudio.com/?x=1&_sb=1")
         # Railway's edge forwards the railway hostname on DIRECT hits —
         # those must redirect too (the presence-check bug, prod-caught).
         r1b = self.client.get("/", follow_redirects=False,
                               headers={"host": "tenant-9.up.railway.app",
                                        "x-forwarded-host": "tenant-9.up.railway.app"})
-        self.assertEqual(r1b.status_code, 301)
+        self.assertEqual(r1b.status_code, 302)
+        # Loop guards: our router's private header, and the one-shot
+        # marker refused on the way back in. Either makes a cycle
+        # impossible even if the branded address resolves straight here.
+        for hdrs in ({"host": "tenant-9.up.railway.app",
+                      "x-screenboard-router": "1"},):
+            self.assertEqual(self.client.get("/", follow_redirects=False,
+                                             headers=hdrs).status_code, 200)
+        self.assertEqual(self.client.get(
+            "/?_sb=1", follow_redirects=False,
+            headers={"host": "tenant-9.up.railway.app"}).status_code, 200)
         # Proxied traffic (our router sets X-Forwarded-Host) passes.
         r2 = self.client.get("/", follow_redirects=False,
                              headers={"host": "tenant-9.up.railway.app",

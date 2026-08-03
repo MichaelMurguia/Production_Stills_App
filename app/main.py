@@ -1757,15 +1757,28 @@ async def canonical_host(request: Request, call_next):
     # hits and forwards the railway hostname; our wildcard router
     # forwards the BRANDED hostname. Presence of the header proves
     # nothing (production-caught 2026-08-04) — its value does.
+    #
+    # ERR_TOO_MANY_REDIRECTS, production 2026-08-04: when the branded
+    # address resolves straight to this service (a per-tenant custom
+    # domain still attached at Railway, bypassing the router), the app
+    # still sees a railway host and redirects to the branded address —
+    # which lands here again. Three guards make a loop impossible:
+    #   1. our router marks its traffic with a header Railway cannot set;
+    #   2. one redirect only — the marker on the way out is refused on
+    #      the way in;
+    #   3. 302, never 301 — a misconfiguration must not be cached into
+    #      the customer's browser permanently.
     host = (request.headers.get("x-forwarded-host")
             or request.headers.get("host", "")).split(":", 1)[0].lower()
     if (PUBLIC_URL and host.endswith(".up.railway.app")
             and request.method in ("GET", "HEAD")
-            and not request.url.path.startswith("/api/")):
+            and not request.url.path.startswith("/api/")
+            and request.headers.get("x-screenboard-router") != "1"
+            and "_sb" not in request.query_params):
         q = request.url.query
         return RedirectResponse(
-            PUBLIC_URL + request.url.path + (f"?{q}" if q else ""),
-            status_code=301)
+            PUBLIC_URL + request.url.path + ("?" + q + "&_sb=1" if q else "?_sb=1"),
+            status_code=302)
     return await call_next(request)
 
 
@@ -1775,6 +1788,8 @@ def serve_index() -> HTMLResponse:
     ver = paths.ROOT / "VERSION"
     v = ver.read_text(encoding="utf-8").strip() if ver.exists() else "dev"
     html = html.replace('src="/app.js"', f'src="/app.js?v={v}"')                .replace('href="/styles.css"', f'href="/styles.css?v={v}"')
+    # Freshness is the no-cache middleware's job (tested contract, all
+    # three UI paths) — do not set a second, weaker rule here.
     return HTMLResponse(html)
 
 
