@@ -10,6 +10,15 @@ exists in places, and matching the style of surrounding code will reproduce the
 problems the redesign fixed. If existing code conflicts with `DESIGN_SYSTEM.md`,
 the design system wins — bring the old code forward rather than copying it.
 
+**Every UI-touching change runs the `/design-verify` skill before it
+commits** (`.claude/skills/design-verify/`): seeded env-clean headless
+capture at the design width, mock comparison, the standing token
+contracts (`tests/test_design_tokens.py` — extend them in the same commit
+as the component), and for visual changes a capture sent to the user
+BEFORE release. Delivered `*_SNIPPET.html` files are authoritative for
+their element: transliterate (hex → existing token), never reinterpret,
+delete when done.
+
 Two rules govern everything, both explained in full in that file:
 
 1. **Amber (`--accent`) is a signal, not a decoration.** It marks the current

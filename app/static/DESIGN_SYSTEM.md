@@ -695,7 +695,7 @@ are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-04 | Conformance-audit open questions (not a feature — rulings needed): amber `.fr-eyebrow`/`.fr-rule` in first-run vs "the page's only amber" (kicker canon conflicts); the tokenized `--accent-hover` #f0bc63; translucent-amber alphas (.06/.14) vs unused `--accent-soft`/`--accent-line`; the structural board's content-palette exemption; a dead-CSS deletion list (boards-empty family, engine-cards, subj-add, prod-moved, take-label states) awaiting an explicit OK against the preserve-every-class rule; remaining inline style-attribute promotions | styles.css, first-run Settings | Each needs a designer ruling, not a coder guess |
+| 2026-08-04 | Conformance-audit open questions (not a feature — rulings needed): ~~amber `.fr-eyebrow`/`.fr-rule`~~ (RESOLVED 2026-08-04: the notice snippet ships the amber rule-sweep and block caret deliberately — typewriter grammar stands); the tokenized `--accent-hover` #f0bc63; translucent-amber alphas (.06/.14) vs unused `--accent-soft`/`--accent-line`; the structural board's content-palette exemption; a dead-CSS deletion list (boards-empty family, engine-cards, subj-add, prod-moved, take-label states) awaiting an explicit OK against the preserve-every-class rule; remaining inline style-attribute promotions | styles.css, first-run Settings | Each needs a designer ruling, not a coder guess |
 | 2026-08-04 | Authenticate modal, connector grammar (user-directed, revised same day): the modal is the anchor — OpenRouter-style step chain (OPEN THE KEY PAGE → SIGN IN & CREATE A KEY → PASTE IT HERE), a ghost act that opens the provider console only when clicked (the earlier auto-open stole focus and read as "no modal"), Test & save, and a footer stating in-place update. Providers' auth pages cannot be iframed (frame-ancestors DENY) and offer no OAuth-for-API-keys — stated constraint, not a choice | Authenticate modal (first-run rows + credential list) | Designer should ratify the chain-in-modal grammar and copy |
 | 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
 | 2026-08-01 | Production-design gate tag (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved (the locked-stage layout itself was ruled by LOCKED_STAGE_PLAN and is canon) | Location finders (Screenplay + wizard) | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment |
@@ -718,6 +718,16 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-04** — Reference snippets delivered and adopted (marquee +
+  AI-models notice), all hexes mapped to tokens: the marquee's channel/
+  tile anatomy is final; the notice gains the typewriter grammar — a
+  one-time amber rule-sweep and a Courier block caret blinking with
+  steps(1) (a fading caret reads as a glitch), both under
+  prefers-reduced-motion. The verification loop is now EXECUTABLE:
+  `.claude/skills/design-verify/` + the standing token contracts in
+  `tests/test_design_tokens.py` (CI-enforced), mandated by CLAUDE.md for
+  every UI-touching change.
 
 - **2026-08-04** — Conformance audit (21 findings, user-prompted): `.mono`
   utility DEFINED at last — it was used ~45 times but never existed, so a

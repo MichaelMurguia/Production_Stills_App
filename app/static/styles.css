@@ -1851,16 +1851,33 @@ details.meta pre {
   border: 1px solid var(--line); padding: 3px 8px; }
 .fr-arrow { color: var(--ink-faint); font-size: 11px; }
 .fr-foot { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
+/* AI-models notice per the delivered reference snippet (2026-08-04),
+   tokenized. Typewriter grammar: the rule draws itself once; the block
+   caret SNAPS via steps(1) — a fading caret reads as a glitch. The
+   column stays chrome: unselectable, no text caret ever. */
+@keyframes rule-sweep   { 0% { width: 0; } 55% { width: 34px; } 100% { width: 34px; } }
+@keyframes cursor-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
 .fr-notice { border-left: 1px solid var(--line-soft); padding-left: 34px;
+  display: flex; flex-direction: column; gap: 26px;
   user-select: none; cursor: default; caret-color: transparent; }
-.fr-notice h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
-.fr-notice p { font-size: 13px; font-weight: 400; color: var(--ink-dim); margin-bottom: 18px; }
-.fr-notice b { font-weight: 700; color: var(--ink); }
+.fr-notice h3 { margin: 0 0 10px; font-size: 18px; font-weight: 600;
+  letter-spacing: -0.01em; color: var(--ink); }
+.fr-notice p { margin: 0; font-size: 13.5px; line-height: 1.7;
+  color: var(--ink-dim); text-wrap: pretty; }
+.fr-notice p strong { color: var(--ink); font-weight: 600; }
+.fr-cursor { display: inline-block; width: 9px; height: 17px;
+  background: var(--accent); margin-left: 9px; vertical-align: -2px;
+  animation: cursor-blink 1.15s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fr-cursor { animation: none; }
+  .fr-rule { animation: none; }
+}
 /* The hero's fixed copy is chrome too — selectable prose invites the
    caret and drag-highlight the mock never shows. Buttons stay live. */
 .fr-eyebrow, .fr-h, .fr-oneclick, .fr-chain, .fr-foot, .fr-marquee {
   user-select: none; cursor: default; }
-.fr-rule { width: 34px; height: 2px; background: var(--accent); margin-bottom: 12px; }
+.fr-rule { display: block; width: 34px; height: 2px; background: var(--accent);
+  margin-bottom: 10px; animation: rule-sweep 2.4s ease-out; }
 .fr-row { grid-template-columns: 36px minmax(0,1fr) 140px; }
 .prov-ico { width: 22px; height: 22px; object-fit: contain; display: block; }
 .wv-tag { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
