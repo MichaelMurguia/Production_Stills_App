@@ -1877,20 +1877,21 @@ details.meta pre {
 #settings-firstrun .role-card .role-tag { float: none; margin-left: 10px; }
 .auth-modal .auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 
-/* F4 — provider marquee: duplicated sequence, seamless 36s loop, edge fade */
-.fr-marquee { overflow: hidden; margin-top: 18px; max-width: 540px;
-  border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft);
-  padding: 8px 0;  /* the icon channel: hairline-bounded, sampled #23272c */
+/* Reference implementation delivered 2026-08-04 (PROVIDER_MARQUEE
+   SNIPPET, tokenized): the CHANNEL is the dark ground (--field) with a
+   full --line-soft border; TILES are raised --bg2 with --line-soft
+   borders, 22px icons directly on them, 11.5px --ink-dim labels. Track:
+   sequence duplicated, gap-spaced, width max-content, -50% loop. */
+.fr-marquee { overflow: hidden; margin-top: 18px; max-width: 560px;
+  border: 1px solid var(--line-soft); background: var(--field); padding: 8px 0;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-.mq-track { display: flex; width: max-content; animation: mq-scroll 36s linear infinite; }
-/* User-corrected 2026-08-04 (third pass, final): the tile ITSELF is the
-   dark ground (#0f1114 = --field, user-stated), normal --line border,
-   and the icons are LARGE and sit directly on it — no backing plates. */
-.mq-tile { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line);
-  background: var(--field); padding: 9px 16px; margin-right: 8px; font-size: 13px;
+.mq-track { display: flex; gap: 8px; width: max-content; animation: mq-scroll 36s linear infinite; }
+.mq-tile { display: inline-flex; align-items: center; gap: 8px; flex: none;
+  border: 1px solid var(--line-soft); background: var(--bg2);
+  padding: 6px 12px 6px 6px; font-size: 11.5px;
   color: var(--ink-dim); white-space: nowrap; }
-.mq-tile img { width: 22px; height: 22px; object-fit: contain; }
+.mq-tile img { display: block; width: 22px; height: 22px; object-fit: contain; }
 @keyframes mq-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mq-track { animation: none; } }
 @media (max-width: 980px) {
