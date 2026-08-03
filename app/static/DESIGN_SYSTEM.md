@@ -687,6 +687,15 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-04** — F6 backend shipped: the narrative role now runs on
+  the Anthropic key or the OpenRouter connection as well as OpenAI and
+  Gemini. The credential row's STORED — USED ONCE… interim copy retires
+  (it now tests and states NARRATIVE · <model>); the narrative role
+  select lists every usable home and persists `narrative_provider`; the
+  research selects (Scene Scan, breakdown draft) get their own narrative
+  filler — image-model ids had leaked into them since the connectors
+  rewrite, where every pick was a server-side 422.
+
 - **2026-08-03** — First-run rebuilt (SETTINGS_FIRST_RUN_PLAN F1–F7): the
   AI & engines page gains two lives — a setup form before any credential
   (OpenRouter quick-start hero with the page's only amber, provider

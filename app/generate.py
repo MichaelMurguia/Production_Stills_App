@@ -292,6 +292,15 @@ def _openai_client(timeout_s: float = 300.0):
 
 
 def test_connection(provider: str = DEFAULT_PROVIDER) -> dict:
+    if provider == "anthropic":
+        # Narrative-only credential (F6 backend): the models list proves
+        # the key without spending a token.
+        from . import narrative
+        try:
+            model = narrative.anthropic_test()
+        except narrative.NarrativeError as e:
+            raise GenerationError(str(e)) from e
+        return {"ok": True, "provider": "anthropic", "model": model}
     if provider not in all_providers():
         raise GenerationError(f"unknown provider: {provider}")
     if provider.startswith("custom:"):

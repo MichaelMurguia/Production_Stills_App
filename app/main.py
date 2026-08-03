@@ -822,6 +822,12 @@ def api_get_settings() -> dict:
                         "model": e["model"], "base_url": e.get("base_url", ""),
                         "key_hint": f"…{e['api_key'][-4:]}"})
     akey = s.get("anthropic_api_key", "")
+    if akey:
+        # Narrative credential (F6 backend now live): same honest-status
+        # grammar as the image engines.
+        engines["anthropic"] = {"configured": True, "source": "settings",
+                                "last_test": tests.get("anthropic")}
+    from . import narrative
     provider_meta = generate.all_providers()
     return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "anthropic_api_key_set": bool(akey),
@@ -842,6 +848,10 @@ def api_get_settings() -> dict:
             "debug_tools": generate.debug_tools_enabled(),
             "default_provider": generate.DEFAULT_PROVIDER,
             "preferred_provider": generate.preferred_provider(),
+            "narrative_provider": (s.get("narrative_provider") or "openai"),
+            "anthropic_model": narrative.anthropic_model(),
+            "openrouter_narrative_ready": narrative.usable("openrouter"),
+            "openrouter_narrative_model": narrative.OPENROUTER_NARRATIVE_MODEL,
             "roles": _role_states(engines),
             "engines": engines}
 
@@ -887,9 +897,13 @@ async def api_save_settings(body: dict) -> dict:
     if "openai_api_key" in body:
         s["openai_api_key"] = str(body["openai_api_key"]).strip()
     if "anthropic_api_key" in body:
-        # F6: stored now, used once the narrative role learns a second
-        # provider — the Authenticate modal states exactly that.
+        # F6 backend live: the key now powers the narrative role directly.
         s["anthropic_api_key"] = str(body["anthropic_api_key"]).strip()
+    if "narrative_provider" in body:
+        p = str(body["narrative_provider"]).strip()
+        if p not in {"openai", "gemini", "anthropic", "openrouter"}:
+            raise HTTPException(422, f"unknown narrative provider: {p}")
+        s["narrative_provider"] = p
     if "debug_mock" in body:
         if not generate.debug_tools_enabled():
             raise HTTPException(404)  # the feature does not exist here

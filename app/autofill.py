@@ -227,6 +227,33 @@ def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
     }
 
 
+def narrative_choices() -> set[str]:
+    """Every provider the narrative role can run on right now — the two
+    built-ins plus whichever F6 backends have a live credential."""
+    from . import narrative
+    out = {"gemini", "openai"}
+    if narrative.usable("anthropic"):
+        out.add("anthropic")
+    if narrative.usable("openrouter"):
+        out.add("openrouter")
+    return out
+
+
+def _draft(provider: str, doc: bytes, mime: str,
+           instructions: str) -> tuple[dict, str]:
+    """One narrative dispatch for every JSON research pass."""
+    if provider == "openai":
+        return _draft_openai(doc, mime, instructions)
+    if provider == "gemini":
+        return _draft_gemini(doc, mime, instructions)
+    from . import narrative
+    try:
+        text, model = narrative.complete(provider, doc, mime, instructions)
+    except narrative.NarrativeError as e:
+        raise AutofillError(str(e)) from e
+    return _parse_json(text), model
+
+
 def _parse_json(raw: str) -> dict:
     raw = (raw or "").strip()
     if not raw:
@@ -287,9 +314,10 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise AutofillError(f"invalid mode: {mode}")
     from . import generate as _gen
-    if provider not in {"gemini", "openai"} and not (
+    if provider not in narrative_choices() and not (
             provider == "mock" and _gen.mock_enabled()):
-        raise AutofillError(f"provider must be gemini or openai, not: {provider}")
+        raise AutofillError(
+            f"provider must be one of {sorted(narrative_choices())}, not: {provider}")
     if not re.fullmatch(r"[A-Za-z0-9._-]+", spec_id):
         raise AutofillError("spec ID may only contain letters, numbers, dot, dash, underscore")
     if store.get_spec(spec_id) is not None:
@@ -309,8 +337,7 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                         mockflow.MODEL_NAME)
     else:
         instructions = _instructions(subject_prompt.strip(), mode, prohibited)
-        draft_fn = _draft_openai if provider == "openai" else _draft_gemini
-        draft, model = draft_fn(doc, mime, instructions)
+        draft, model = _draft(provider, doc, mime, instructions)
 
     spec = _coerce(draft, spec_id, mode)
     spec["autofill"] = {"prompt": subject_prompt.strip(), "model": model,

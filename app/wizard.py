@@ -74,8 +74,7 @@ def analyze_screenplay(provider: str = "gemini") -> dict:
         "You are the production designer's research assistant. Read the attached "
         "screenplay and identify the visual worlds a film art department would "
         "need to design.\n\n" + ANALYZE_SCHEMA_NOTE + loc_note)
-    draft_fn = autofill._draft_openai if provider == "openai" else autofill._draft_gemini
-    result, model = draft_fn(doc, mime, instructions)
+    result, model = autofill._draft(provider, doc, mime, instructions)
     result["model"] = model
     return result
 
@@ -141,8 +140,7 @@ def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
           "that no listed language covers. Do not re-litigate, rename, or "
           'include the listed languages. If everything is covered, return '
           '{"missing": []}.')
-    draft_fn = autofill._draft_openai if provider == "openai" else autofill._draft_gemini
-    result, _model = draft_fn(doc, mime, instructions)
+    result, _model = autofill._draft(provider, doc, mime, instructions)
     known = {c.casefold() for c in covered}
     out = []
     for m in result.get("missing", []):
@@ -300,7 +298,14 @@ def draft_bible(answers: dict, provider: str = "gemini") -> dict:
     answers["reference_roles"] = roles
     instructions = _bible_instructions(answers)
 
-    if provider == "openai":
+    if provider in ("anthropic", "openrouter"):
+        from . import narrative
+        try:
+            text, model = narrative.complete(
+                provider, doc, mime, instructions, tuple(ref_paths))
+        except narrative.NarrativeError as e:
+            raise autofill.AutofillError(str(e)) from e
+    elif provider == "openai":
         import base64
         import mimetypes
         client = generate._openai_client()

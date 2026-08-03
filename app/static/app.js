@@ -343,9 +343,8 @@ const AUTH_PROVIDERS = {
             link: "https://platform.openai.com/api-keys", linkText: "platform.openai.com/api-keys" },
   gemini: { name: "Google Gemini", icon: "gemini-color", field: "gemini_api_key", test: "gemini",
             link: "https://aistudio.google.com/apikey", linkText: "aistudio.google.com/apikey" },
-  anthropic: { name: "Anthropic Claude", icon: "claude-color", field: "anthropic_api_key", test: null,
-               link: "https://console.anthropic.com/settings/keys", linkText: "console.anthropic.com/settings/keys",
-               note: "STORED — USED ONCE NARRATIVE MODEL SELECTION SHIPS" },
+  anthropic: { name: "Anthropic Claude", icon: "claude-color", field: "anthropic_api_key", test: "anthropic",
+               link: "https://console.anthropic.com/settings/keys", linkText: "console.anthropic.com/settings/keys" },
 };
 
 function authModal(key) {
@@ -1139,6 +1138,47 @@ function engineFacts(pid, s) {
   bits.push(`VIA ${(m.connector || "").toUpperCase()}`);
   return { refs: !!m.refs, maxPx: m.max_px || null, price: m.price || null,
            facts: bits.join(" · ") };
+}
+
+/* Research passes (Scene Scan, breakdown draft, bible draft) list
+   NARRATIVE homes only — never image engines. The connectors rewrite let
+   or:/fal: image ids leak into these selects, where every pick was a
+   server-side 422 (F6 fix, 2026-08-04). */
+async function fillNarrativeSelect(sel) {
+  if (!sel) return false;
+  let s = {};
+  try { s = await api("/api/settings"); } catch { /* stated below */ }
+  const eng = s.engines || {};
+  const usable = [], failed = [];
+  const put = (id, label) =>
+    (eng[id]?.last_test?.ok === false ? failed : usable).push([id, label]);
+  if (eng.gemini?.configured) put("gemini", "Gemini (research pass)");
+  if (eng.openai?.configured)
+    put("openai", `ChatGPT — ${s.openai_chat_model || s.openai_chat_model_default || "gpt-5.6"}`);
+  if (eng.anthropic?.configured)
+    put("anthropic", `Anthropic — ${s.anthropic_model || "Claude"}`);
+  if (s.openrouter_narrative_ready)
+    usable.push(["openrouter", `OpenRouter — ${s.openrouter_narrative_model}`]);
+  if (eng.mock?.configured) usable.push(["mock", "MOCK ENGINE — no cost (debug)"]);
+  if (!usable.length) {
+    sel.innerHTML = failed.length
+      ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
+      : `<option value="">NO NARRATIVE MODEL — ADD A KEY OR CONNECT OPENROUTER</option>`;
+    sel.disabled = true;
+    sel.title = failed.length
+      ? "Every configured key failed its last test — retest or replace it in Settings."
+      : "Narrative passes need an OpenAI, Gemini or Anthropic key, or the OpenRouter connection.";
+    return false;
+  }
+  const prev = sel.value;
+  sel.disabled = false;
+  sel.innerHTML = usable.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")
+    + failed.map(([v, l]) =>
+      `<option value="${esc(v)}" disabled>${esc(l)} — KEY FAILED ITS TEST</option>`).join("");
+  if (usable.some(([v]) => v === prev)) sel.value = prev;
+  else if (usable.some(([v]) => v === s.narrative_provider))
+    sel.value = s.narrative_provider;  // the Settings role is the default
+  return true;
 }
 
 async function fillProviderSelect(sel, labels) {
@@ -2067,45 +2107,64 @@ async function renderSettings() {
         ? ` <span class="rec-gate">${esc(gateText)}</span>` : ""}</span>`;
   };
 
-  // Role 01 — narrative & content evaluation (openai_chat_model).
+  // Role 01 — narrative & content evaluation. Four possible homes now
+  // (F6 backend, 2026-08-04): the OpenAI key (default), the Gemini key,
+  // the Anthropic key, or the OpenRouter connector.
   const nSel = $("#role-narrative");
   const nDefault = settings.openai_chat_model_default;
   const nCur = settings.openai_chat_model || nDefault;
   const oaiConfigured = !!engAll.openai?.configured;
-  if (!oaiConfigured) {
+  const nUsable = [];
+  if (oaiConfigured) {
+    nUsable.push(["openai", `ChatGPT — ${nCur}`]);
+    nUsable.push(["openai:__custom", "ChatGPT — custom model id…"]);
+  }
+  if (engAll.gemini?.configured) nUsable.push(["gemini", "Gemini (research pass)"]);
+  if (engAll.anthropic?.configured && engAll.anthropic?.last_test?.ok !== false)
+    nUsable.push(["anthropic", `Anthropic — ${settings.anthropic_model}`]);
+  if (settings.openrouter_narrative_ready)
+    nUsable.push(["openrouter", `OpenRouter — ${settings.openrouter_narrative_model}`]);
+  if (!nUsable.length) {
     // F1: a dropdown is never an error message — the withheld-verb tag
     // states the unmet condition instead of a disabled control.
-    nSel.closest(".role-sel").innerHTML = `<p class="wv-tag">NEEDS THE OPENAI KEY</p>`;
+    nSel.closest(".role-sel").innerHTML =
+      `<p class="wv-tag">NEEDS A KEY OR THE OPENROUTER CONNECTION</p>`;
   } else {
-    const opts = [[nDefault, `ChatGPT — ${nDefault}`]];
-    if (nCur !== nDefault) opts.push([nCur, `Custom — ${nCur}`]);
-    opts.push(["__custom", "Custom model id…"]);
-    nSel.innerHTML = opts.map(([v, l]) =>
+    nSel.innerHTML = nUsable.map(([v, l]) =>
       `<option value="${esc(v)}">${esc(l)}</option>`).join("");
-    nSel.value = nCur;
-    $("#role-narrative-meta").textContent = "RUNS ON THE OPENAI KEY BELOW";
+    nSel.value = nUsable.some(([v]) => v === settings.narrative_provider)
+      ? settings.narrative_provider : nUsable[0][0];
+    $("#role-narrative-meta").textContent = {
+      openai: "RUNS ON THE OPENAI KEY BELOW",
+      gemini: "RUNS ON THE GEMINI KEY BELOW",
+      anthropic: "RUNS ON THE ANTHROPIC KEY BELOW",
+      openrouter: "RUNS THROUGH THE OPENROUTER CONNECTION",
+    }[nSel.value] || "";
     nSel.onchange = async () => {
       let v = nSel.value;
-      if (v === "__custom") {
+      const json = {};
+      if (v === "openai:__custom") {
         const r = await modal({
           title: "Narrative model id",
           body: "The exact OpenAI model id this install should use for every screenplay read, draft and rewrite.",
           fields: [{ name: "id", label: "Model id", placeholder: nDefault }],
           confirmLabel: "Use this model",
         });
-        if (r === null || !r.id.trim()) { nSel.value = nCur; return; }
-        v = r.id.trim();
+        if (r === null || !r.id.trim()) { nSel.value = settings.narrative_provider || "openai"; return; }
+        json.openai_chat_model = r.id.trim() === nDefault ? "" : r.id.trim();
+        v = "openai";
       }
+      json.narrative_provider = v;
       try {
-        await api("/api/settings", { method: "POST", json: { openai_chat_model: v === nDefault ? "" : v } });
-        toast(`Narrative model: ${v}.`);
+        await api("/api/settings", { method: "POST", json });
+        toast(`Narrative runs on ${nSel.options[nSel.selectedIndex]?.textContent || v}.`);
         renderSettings();
       } catch (err) { toast(err.message, true); }
     };
   }
   recRow($("#rec-narrative"),
     "It holds canon across a 124-page read better than anything else we have tested in this framework.",
-    !oaiConfigured, "GATED — no OpenAI key yet; add one in section 02.");
+    !nUsable.length, "GATED — add a key below or connect OpenRouter.");
 
   // Role 02 — image generation: the STARTING engine (preferred_provider).
   const iSel = $("#role-image");
@@ -2202,10 +2261,12 @@ async function renderSettings() {
                  NO_NETWORK: [] }[orRow.status] },
     ...(settings.anthropic_api_key_set ? [
       { key: "anthropic", tile: "ANT", name: "Anthropic Claude", tag: "BUILT IN",
-        meta: "NARRATIVE (COMING) · STORED — USED ONCE NARRATIVE MODEL SELECTION SHIPS",
-        state: ["hold", "KEY STORED"],
+        meta: `NARRATIVE · ${(settings.anthropic_model || "claude").toUpperCase()}`,
+        state: engAll.anthropic?.last_test
+          ? (engAll.anthropic.last_test.ok ? ["ok", "TESTED"] : ["bad", "TEST FAILED"])
+          : ["hold", "KEY STORED — UNTESTED"],
         identity: settings.anthropic_api_key_hint || "",
-        actions: [["Replace", "auth-anthropic"]] }] : []),
+        actions: [["Test", "test-anthropic"], ["Replace", "auth-anthropic"]] }] : []),
     { key: "custom", tile: "+", name: "Your own endpoints", tag: "",
       meta: "ANY OPENAI-IMAGES-CONTRACT URL · BASE URL + MODEL + KEY",
       state: null, identity: "", custom: true,
@@ -2248,6 +2309,13 @@ async function renderSettings() {
       renderSettings();
     } else if (act === "auth-anthropic") {
       authModal("anthropic");
+    } else if (act === "test-anthropic") {
+      try {
+        const r = await api("/api/settings/test", { method: "POST",
+                                                    json: { provider: "anthropic" } });
+        toast(`Anthropic connection OK — ${r.model}`);
+      } catch (err) { toast(err.message, true); }
+      renderSettings();
     } else if (act === "replace" || act === "connect" || act === "add-custom") {
       openCredExpand(key, act);
     } else if (act === "refresh") {
@@ -2680,7 +2748,7 @@ async function renderWizard() {
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
   // and lists only engines that actually have a key.
-  const engReady = await fillProviderSelect($("#wiz-provider"));
+  const engReady = await fillNarrativeSelect($("#wiz-provider"));
   if (!engReady) {
     $("#wiz-analyze").disabled = true;
     $("#wiz-analyze").title = "Add a Gemini or OpenAI key in Settings first.";
@@ -4035,7 +4103,7 @@ async function renderSpecs(openId = null) {
   persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt", "spec-auto-mode", "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode", "spec-new-btype"]);
 
-  await fillProviderSelect($("#spec-auto-provider"));
+  await fillNarrativeSelect($("#spec-auto-provider"));
 
   // The instruction example speaks this production's screenplay, never a
   // hardcoded film's (user ruling 2026-08-01); the same fetch powers the
