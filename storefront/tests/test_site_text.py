@@ -158,3 +158,71 @@ class RenameDoorTruthTests(unittest.TestCase):
         r2 = tc.get("/", follow_redirects=False)
         self.assertEqual(r2.status_code, 200,
                          "a claimed name always wins over a forward")
+
+
+class ComingSoonGateTests(unittest.TestCase):
+    """Pre-launch gate (2026-08-05): pages serve the overlay until the
+    password lands; infrastructure never gates."""
+
+    def setUp(self):
+        self._saved = settings.PREVIEW_PASSWORD
+        settings.PREVIEW_PASSWORD = "open-sesame"
+        self.addCleanup(lambda: setattr(settings, "PREVIEW_PASSWORD", self._saved))
+
+    def test_pages_gate_until_unlocked(self):
+        c = TestClient(store)
+        for path in ("/", "/pipeline", "/signin", "/account"):
+            r = c.get(path)
+            self.assertEqual(r.status_code, 200)
+            self.assertIn("coming soon", r.text.lower(), path)
+            self.assertIn("HAVE THE KEY?", r.text, path)
+        self.assertEqual(c.post("/auth/email", data={"email": "x@y.z"})
+                         .status_code, 403)
+
+    def test_infrastructure_never_gates(self):
+        c = TestClient(store)
+        self.assertIn("rev", c.get("/healthz").json())
+        self.assertIn("overrides", c.get("/api/site-text").json())
+        self.assertEqual(c.get("/robots.txt").status_code, 200)
+
+    def test_wrong_password_stated_right_password_unlocks(self):
+        c = TestClient(store)
+        r = c.post("/preview/unlock", data={"password": "nope"})
+        self.assertIn("NOT IT", r.text)
+        r = c.post("/preview/unlock", data={"password": "open-sesame"},
+                   follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("sb_preview", r.headers.get("set-cookie", ""))
+        home = c.get("/")
+        self.assertNotIn("HAVE THE KEY?", home.text)
+        self.assertIn("pricing", home.text.lower())
+
+    def test_gate_off_when_unset(self):
+        settings.PREVIEW_PASSWORD = ""
+        c = TestClient(store)
+        self.assertNotIn("HAVE THE KEY?", c.get("/").text)
+
+    def test_tenant_studios_never_gate(self):
+        import uuid
+        import httpx
+        from app import db as adb
+        from app.tenant_proxy import TenantProxy
+        settings.TENANT_DOMAIN_BASE = "screenboardstudio.com"
+        self.addCleanup(lambda: setattr(settings, "TENANT_DOMAIN_BASE", ""))
+        sub = f"gate-{uuid.uuid4().hex[:6]}"
+        with adb.session() as s:
+            p = adb.Purchase(kind="cloud", email="gate@example.com",
+                             stripe_session_id=f"cs_gate_{uuid.uuid4().hex[:8]}")
+            s.add(p)
+            s.commit()
+            s.add(adb.Workspace(purchase_id=p.id, status="ACTIVE",
+                                subdomain=sub,
+                                railway_url="https://tenant-g.up.railway.app"))
+            s.commit()
+        proxy = TenantProxy(store, transport=httpx.MockTransport(
+            lambda req: httpx.Response(200, content=b"studio alive")))
+        r = TestClient(proxy,
+                       base_url=f"https://{sub}.screenboardstudio.com").get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.text, "studio alive",
+                         "a paying customer's studio never sees the gate")

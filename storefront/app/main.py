@@ -6,7 +6,8 @@ import hmac
 
 import stripe
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import (FileResponse, JSONResponse, RedirectResponse,
+                               Response)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete as sa_delete, select
@@ -46,6 +47,47 @@ async def security_headers(request: Request, call_next):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    return resp
+
+
+PREVIEW_COOKIE = "sb_preview"
+_PREVIEW_EXEMPT = ("/static", "/healthz", "/stripe/webhook", "/api/site-text",
+                   "/robots.txt", "/sitemap.xml", "/preview/unlock", "/admin")
+
+
+def _preview_open(request: Request) -> bool:
+    """True when the visitor may pass the coming-soon gate."""
+    if not settings.PREVIEW_PASSWORD:
+        return True
+    cookie = request.cookies.get(PREVIEW_COOKIE, "")
+    return hmac.compare_digest(cookie, auth._sign("preview:" + settings.PREVIEW_PASSWORD))
+
+
+@app.middleware("http")
+async def coming_soon_gate(request: Request, call_next):
+    path = request.url.path
+    if _preview_open(request) or path.startswith(_PREVIEW_EXEMPT):
+        return await call_next(request)
+    if request.method in ("GET", "HEAD"):
+        return templates.TemplateResponse(
+            request, "coming_soon.html", {"error": False}, status_code=200)
+    return JSONResponse({"detail": "coming soon"}, status_code=403)
+
+
+@app.post("/preview/unlock")
+def preview_unlock(request: Request, password: str = Form("")):
+    if not settings.PREVIEW_PASSWORD:
+        return RedirectResponse("/", status_code=303)
+    if not hmac.compare_digest(password.strip(), settings.PREVIEW_PASSWORD):
+        import time
+        time.sleep(0.5)  # guessing stays slow
+        return templates.TemplateResponse(
+            request, "coming_soon.html", {"error": True}, status_code=200)
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE,
+                    auth._sign("preview:" + settings.PREVIEW_PASSWORD),
+                    max_age=30 * 86400, httponly=True, samesite="lax",
+                    secure=_cookies_secure(request))
     return resp
 
 

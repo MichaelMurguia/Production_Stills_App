@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screenboard Studio — coming soon</title>
+<meta name="description" content="Screenboard Studio — canon-locked art direction for film, from screenplay to native-4K boards. Opening soon.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/store.css">
+<style>
+/* The coming-soon gate: the work glows beneath a translucent scrim; the
+   copy sits on it; the key entry stays quiet at the bottom. Tokens only. */
+.cs-stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); }
+.cs-art { position: absolute; inset: 0; background: url("/static/img/board-0001.png") center / cover no-repeat; }
+.cs-scrim { position: absolute; inset: 0;
+  background: rgba(10, 11, 13, .82); backdrop-filter: blur(3px); }
+.cs-copy { position: relative; z-index: 2; max-width: 680px;
+  margin: 0 auto; padding: 22vh 24px 0; text-align: center; }
+.cs-copy h1 { font-size: clamp(34px, 5.5vw, 58px); font-weight: 700;
+  letter-spacing: -0.01em; margin: 14px 0 18px; color: var(--ink); }
+.cs-copy .cs-para { font-size: 16px; line-height: 1.7; color: var(--ink-dim); margin: 0 0 26px; }
+.cs-copy .cs-para strong { color: var(--ink); font-weight: 600; }
+.cs-line { font-family: var(--mono); font-size: 10.5px; letter-spacing: .18em;
+  color: var(--ink-faint); }
+.cs-key { position: fixed; left: 0; right: 0; bottom: 34px; z-index: 2;
+  display: flex; justify-content: center; }
+.cs-key form { display: flex; gap: 10px; align-items: center; }
+.cs-key .cs-key-label { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .14em; color: var(--ink-faint); }
+.cs-key input { background: rgba(15, 17, 20, .9); border: 1px solid var(--line);
+  color: var(--ink); padding: 9px 14px; font: inherit; font-size: 13px; width: 210px; }
+.cs-key input:focus { outline: none; border-color: var(--accent); }
+.cs-err { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  color: var(--bad); margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="cs-stage">
+  <div class="cs-art" aria-hidden="true"></div>
+  <div class="cs-scrim" aria-hidden="true"></div>
+  <div class="cs-copy">
+    <p class="kicker">SCREENBOARD STUDIO</p>
+    <h1>Your movie, visualized.</h1>
+    <p class="cs-para">A film production's art department in software — it
+    reads the screenplay, builds the art direction bible with the director,
+    and renders <strong>native-4K concept boards</strong> where every frame
+    answers to canon. <strong>Opening soon.</strong></p>
+    <p class="cs-line">PRODUCTION TOOLING &middot; IN FINAL ASSEMBLY &middot; SCREENPLAY &rarr; BOARDS</p>
+  </div>
+  <div class="cs-key">
+    <form method="post" action="/preview/unlock">
+      <span class="cs-key-label">HAVE THE KEY?</span>
+      <input type="password" name="password" placeholder="enter" autocomplete="off" aria-label="Preview password">
+      <button class="btn btn-primary" type="submit">Enter</button>
+      {% if error %}<span class="cs-err">THAT'S NOT IT</span>{% endif %}
+    </form>
+  </div>
+</div>
+</body>
+</html>

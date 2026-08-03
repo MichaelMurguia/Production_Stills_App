@@ -63,6 +63,12 @@ SMTP_FROM = os.environ.get("SMTP_FROM", "")
 # SESSION_SECRET unset → per-boot ephemeral secret (sessions reset on each
 # deploy; set it in production). Google vars unset → the button hides.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+
+# Pre-launch gate: while set, every store page serves the coming-soon
+# overlay until the visitor enters this password (signed cookie, 30 days).
+# Unset -> no gate. Tenant studios, the webhook, health, admin, and the
+# site-text feed are never gated.
+PREVIEW_PASSWORD = os.environ.get("PREVIEW_PASSWORD", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
