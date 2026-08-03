@@ -20,12 +20,40 @@ NOT part of this project and must not be wired into it.
 | **Stripe** | All payments | Live + sandbox are parallel universes: 4 products each, webhook endpoint each (`/stripe/webhook`). Sole-proprietor activation. TODO: set support email to `support@screenboardstudio.com` | Keys in Railway variables only |
 | **Resend** | OUTBOUND transactional mail only (magic links, license recovery) — sends as `no-reply@`; **cannot receive mail** | Domain verified via GoDaddy DNS. **TODO: rotate the API key (exposed in a chat transcript 2026-08-03)** — new key → Railway `SMTP_PASS` → delete old | Key in Railway `SMTP_PASS` |
 | **Google Cloud** | "Continue with Google" sign-in (OIDC) | OAuth web client, redirect `…/auth/google/callback` | `GOOGLE_CLIENT_ID/SECRET` in Railway |
-| **Zoho Mail** (pending signup) | INBOUND mail — the human inbox | Free tier, own org (separate from the other company): `info@` mailbox + `help@`/`support@` aliases; Zoho MX records at GoDaddy. Makes the router page's `help@` promise real | Zoho account (Screenboard-owned) |
+| **Zoho Mail** (setup IN PROGRESS) | INBOUND mail — the human inbox | **Mail Lite purchased ($1/user/mo)**, own org, signup under the owner's personal address; `info@` is the mailbox, `help@`/`support@` to be aliases; destination workflow is forward-to-Gmail + Gmail Send-as via Zoho SMTP. Stalled at: Zoho refusing SMTP ("not available for your account") — the Mail Lite license is likely unassigned to the user. See "Open operational items" | Zoho account (Screenboard-owned) |
 | **OpenRouter / fal.ai / OpenAI / Google AI Studio** | Owner's OWN render/narrative keys for the house studio and testing | These are BYOK app credentials, not business infrastructure — every customer brings their own. Never in the repo; live in each install's `settings.json`/`connectors.json` | Per-install, owner's accounts |
 
 Renewal/billing sanity: GoDaddy (annual domain), Railway (monthly usage),
-Stripe (per-transaction), Resend/Zoho/GitHub/Google Cloud (free tiers at
-current volume).
+Stripe (per-transaction), Zoho Mail Lite ($1/user/mo),
+Resend/GitHub/Google Cloud (free tiers at current volume).
+
+## Open operational items (parked 2026-08-03)
+
+**Email completion** — where it stopped and the exact remaining steps:
+
+1. Zoho admin (mailadmin.zoho.com) → Subscription: confirm Mail Lite is
+   active, then Users → `info@` → assign the Mail Lite license (buying
+   and assigning are separate — the "SMTP not available for your
+   account" error is this).
+2. Zoho Mail → Settings → Mail Accounts → POP/IMAP → enable IMAP access.
+3. Confirm GoDaddy has Zoho's 3 MX records on `@` (mx/10, mx2/20,
+   mx3/50) + SPF merged + DKIM; test-mail `info@` lands in Zoho.
+4. Zoho forwarding → owner's Gmail (verify code, keep copy in Zoho).
+5. Gmail → Send mail as `info@screenboardstudio.com` via `smtp.zoho.com`
+   :465 (app password if MFA). Fallback if Zoho SMTP keeps refusing:
+   `smtp.resend.com`:465 user `resend` + the ROTATED key.
+6. Aliases `help@` + `support@` on the `info@` user; test all three.
+7. Stripe (live) → Business details → support email =
+   `support@screenboardstudio.com`.
+
+**Standing security item:** rotate the Resend API key (exposed in a chat
+transcript 2026-08-03): Resend → new key → Railway `SMTP_PASS` → delete
+old key.
+
+**Also parked:** tenant fleet update to the current release
+(`/admin/tenants/update` — house studio and tenant-5 run older builds);
+product roadmap items live in CONNECTORS_PLAN.md (N5 on demand, N6 truth
+pass, fal starter set, Role-01 Gemini fix, narrative-via-OpenRouter).
 
 ## The product
 
