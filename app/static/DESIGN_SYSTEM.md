@@ -555,6 +555,36 @@ dim the card — the rejection reason is the entire payload of a rejected card.
 
 ---
 
+## Verifying against mocks
+
+Every design mock is authored at **1360px content width**. A screen is not
+done until it passes this loop:
+
+1. **Seed the same data.** Load the app with demo state matching the mock's
+   content. Text/count differences are expected; structural ones are not.
+2. **Screenshot at the design width.** Headless browser, viewport 1360 wide
+   (plus page chrome), full-page capture.
+3. **Diff.** `pixelmatch`/`odiff` the capture against the mock. Read the
+   marked-up output image; fix; re-shoot. Iterate until only content-driven
+   regions differ.
+4. **Assert the tokens mechanically.** Image diff catches layout; computed
+   styles catch the rest. For each new component assert via
+   `getComputedStyle`: font-family, font-size, colors, border, padding,
+   letter-spacing against the mock's stated values. This is more reliable
+   than eyes for hex values and 1px differences.
+
+**What must match exactly:** tokens (hex, sizes, weights, spacing, borders),
+structure (order, alignment, grouping, fixed column widths), and
+**containment** — if the mock draws a bordered panel around a region, the
+region is inside a bordered panel, not floating on the page.
+**What never matches:** the demo content itself.
+
+The most common failure is not a wrong value but a **dropped wrapper**:
+content rendered at full page width because the mock's outer panel, its
+padding, or its internal hairline was skipped. Check containment first.
+
+---
+
 ## Sequence and gates
 
 The product is strictly sequential: screenplay → bible → breakdown → lock →
@@ -665,6 +695,7 @@ are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-04 | Authenticate opens the provider console (user-directed): clicking Authenticate opens the provider's own sign-in/key page in a new tab while the modal waits for the paste, and the modal copy states it (WE OPENED …'S CONSOLE IN A NEW TAB). These providers have no OAuth-for-API-keys; this is the closest honest login flow | First-run account rows + Authenticate modal | Designer should rule on the new-tab side effect and the modal copy |
 | 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
 | 2026-08-01 | Production-design gate tag (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved (the locked-stage layout itself was ruled by LOCKED_STAGE_PLAN and is canon) | Location finders (Screenplay + wizard) | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment |
 | 2026-08-01 | "Script Scene Scan" (user naming): the Production Design step 2 read is named Script Scene Scan ("Run the Scene Scan") so the second read of the screenplay states what it returns | Wizard step 2 | Pure copy — review naming only |
@@ -686,6 +717,13 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-04** — Verifying-against-mocks process added (MOCK_PARITY
+  ruling) and applied to the first-run Settings screen: outer panel
+  restored (the dropped-wrapper failure), notice divider at 34px, role
+  cards back to one row with text-sized chips, active tab marker moved
+  to a 2px bottom border on --bg, Add model set in Archivo, PRODUCTIONS
+  MOVED pointer hidden on first run, panel/section spacing per mock.
 
 - **2026-08-04** — F6 backend shipped: the narrative role now runs on
   the Anthropic key or the OpenRouter connection as well as OpenAI and

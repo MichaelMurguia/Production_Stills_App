@@ -457,12 +457,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 /* ================================================================== subnav */
 .subnav { display: flex; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }
 .subnav button {
-  background: var(--bg2); border: none; border-left: 2px solid transparent;
+  background: var(--bg2); border: none; border-bottom: 2px solid transparent;
   color: var(--ink-dim); padding: 10px 20px; cursor: pointer;
   font: inherit; font-size: 13px; letter-spacing: .02em;
 }
 .subnav button:hover { color: var(--ink); background: var(--panel); }
-.subnav button.active { color: var(--ink); background: var(--panel2); border-left-color: var(--accent); font-weight: 600; }
+/* MOCK_PARITY D5: the active marker is a 2px --accent BOTTOM border on a
+   --bg tab — the left-edge accent belongs to list rows, never tabs. */
+.subnav button.active { color: var(--ink); background: var(--bg); border-bottom-color: var(--accent); font-weight: 600; }
 /* C9 — the productions pointer rides the right end of the subnav bar */
 .subnav-end { margin-left: auto; align-self: center; padding: 0 12px;
   font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); background: var(--bg); white-space: nowrap; }
@@ -1824,7 +1826,12 @@ details.meta pre {
 @media (max-width: 980px) { .wiz-cols-board .wiz-col { max-width: none; } }
 
 /* SETTINGS_FIRST_RUN_PLAN (F1-F5) — the page has two lives */
-.fr-top { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 40px; margin-bottom: 30px; }
+/* MOCK_PARITY D1: the mock's outer panel — the whole first-run tab sits
+   INSIDE a bordered --bg panel with 30px padding; nothing floats on the
+   page (the dropped-wrapper failure). D8: hero columns 26px apart. */
+#settings-firstrun { background: var(--bg); border: 1px solid var(--line); padding: 30px; }
+#settings-firstrun .fact-head.sec-head { margin: 30px 0 12px; }
+.fr-top { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 26px; margin-bottom: 30px; }
 .fr-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--accent); }
 .fr-h { font-size: 32px; font-weight: 700; margin: 8px 0 20px; }
 .fr-connect-row { display: flex; align-items: center; gap: 16px; }
@@ -1835,7 +1842,7 @@ details.meta pre {
   border: 1px solid var(--line); padding: 3px 8px; }
 .fr-arrow { color: var(--ink-faint); font-size: 11px; }
 .fr-foot { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
-.fr-notice { border-left: 1px solid var(--line-soft); padding-left: 28px; }
+.fr-notice { border-left: 1px solid var(--line-soft); padding-left: 34px; }
 .fr-notice h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
 .fr-notice p { font-size: 13px; color: var(--ink-dim); margin-bottom: 18px; }
 .fr-rule { width: 34px; height: 2px; background: var(--accent); margin-bottom: 12px; }
@@ -1843,6 +1850,16 @@ details.meta pre {
 .prov-ico { width: 22px; height: 22px; object-fit: contain; display: block; }
 .wv-tag { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
   color: var(--ink-faint); border: 1px dashed var(--line); padding: 8px 12px; }
+/* MOCK_PARITY D3: title left, dashed withheld-verb chip right-aligned and
+   sized to its text — never a stacked full-width box. */
+#settings-firstrun .role-card { flex-direction: row; align-items: center;
+  justify-content: space-between; gap: 14px; }
+#settings-firstrun .role-card .role-kicker { margin: 0; }
+#settings-firstrun .role-card .wv-tag { flex: none; margin: 0; }
+/* MOCK_PARITY D6: an action speaks Archivo, not the machine voice. */
+#settings-firstrun .text-act { font-family: var(--sans); font-size: 12.5px;
+  font-weight: 400; letter-spacing: 0; text-decoration: underline; }
+#settings-firstrun .role-card .role-tag { float: none; margin-left: 10px; }
 .auth-modal .auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 
 /* F4 — provider marquee: duplicated sequence, seamless 36s loop, edge fade */

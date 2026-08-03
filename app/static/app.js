@@ -350,6 +350,12 @@ const AUTH_PROVIDERS = {
 function authModal(key) {
   const P = AUTH_PROVIDERS[key];
   if (!P) return;
+  // User expectation (2026-08-04): Authenticate should surface the
+  // provider's own login. These providers have no OAuth-for-API-keys, so
+  // the closest honest flow is opening their console sign-in in a new
+  // tab — the key is created there — while this modal waits for the
+  // paste. Inside the click gesture, so popup blockers stay quiet.
+  window.open(P.link, "_blank", "noopener");
   return new Promise(resolve => {
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
@@ -363,8 +369,8 @@ function authModal(key) {
           <input type="password" data-mf="key" placeholder="paste the key">
         </label>
         ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
-        <p class="cred-form-foot" style="margin:0 0 14px">GET ONE AT
-          <a href="${esc(P.link)}" target="_blank" rel="noopener">${esc(P.linkText)}</a></p>
+        <p class="cred-form-foot" style="margin:0 0 14px">WE OPENED ${esc(P.name.toUpperCase())}'S CONSOLE IN A NEW TAB —
+          SIGN IN THERE, CREATE A KEY, PASTE IT HERE. (POPUP BLOCKED? <a href="${esc(P.link)}" target="_blank" rel="noopener">${esc(P.linkText)}</a>)</p>
         <div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
@@ -2045,6 +2051,9 @@ async function renderSettings() {
     || cxRows.some(r => r.status !== "NOT_CONNECTED"));
   $("#settings-firstrun").classList.toggle("hidden", anyCred);
   $("#settings-steady").classList.toggle("hidden", !anyCred);
+  // MOCK_PARITY D7: first-run users have no productions to manage — the
+  // PRODUCTIONS MOVED pointer renders only in the configured state.
+  $(".subnav-end")?.classList.toggle("hidden", !anyCred);
   if (!anyCred) renderFirstRun();
 
   function renderFirstRun() {
