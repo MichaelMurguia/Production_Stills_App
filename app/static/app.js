@@ -6362,7 +6362,7 @@ async function renderAssembly() {
         </div>
         <div class="row" style="margin-top:12px;align-items:center">
           <span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span>
-          <span class="mini mono">${b.width}×${b.height} · ${esc(b.layout_variant || "aspect")} LAYOUT · PANELS STAY CLICKABLE — EXPORT FOR ONE FLAT IMAGE</span>
+          <span class="mini mono">${b.width}×${b.height} · ${esc(b.layout_variant || "aspect")} LAYOUT · CLICK ANY FRAME FOR THE FULL TAKE</span>
           <span style="flex:1"></span>
           ${b.status !== "APPROVED" ? `<button class="primary" data-bf="approve">Approve board</button>` : ""}
           ${b.status !== "REJECTED" ? `<button class="ghost" data-bf="reject">Reject</button>` : ""}

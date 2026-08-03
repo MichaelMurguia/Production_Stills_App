@@ -1495,7 +1495,7 @@ details.meta pre {
 .bf-title { color: #e8e5dd; font-weight: 700; font-size: clamp(14px, 2.4vw, 34px); letter-spacing: .02em; }
 .bf-sub { color: #9a978f; font-size: clamp(8px, 1vw, 13px); letter-spacing: .08em; margin-top: 4px; }
 .bf-rule { border-top: 3px solid var(--accent); margin-top: 8px; }
-.bf-slot { position: absolute; background: #232019; }
+.bf-slot { position: absolute; background: #232019; border: 1px solid var(--line); }  /* R12: frames are containment */
 .bf-slot img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
 .bf-pid {
   position: absolute; left: 6px; top: 6px; font-size: 9px; letter-spacing: .1em;
