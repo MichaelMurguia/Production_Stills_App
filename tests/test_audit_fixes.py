@@ -149,3 +149,41 @@ class AuditFixTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StaleOriginFixTests(unittest.TestCase):
+    """The railway-host origin can never pin an old build again (user-hit
+    twice, 2026-08-04): direct browser hits redirect to the branded
+    address, and index.html version-stamps its asset URLs."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-origin-"))
+        _redirect_home(self.tmp)
+        self.client = TestClient(appmain.app)
+
+    def tearDown(self):
+        appmain.PUBLIC_URL = ""
+        _restore_home()
+
+    def test_index_version_stamps_assets(self):
+        html = self.client.get("/").text
+        ver = (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
+        self.assertIn(f'src="/app.js?v={ver}"', html)
+        self.assertIn(f'href="/styles.css?v={ver}"', html)
+
+    def test_railway_host_redirects_to_branded(self):
+        appmain.PUBLIC_URL = "https://my-studio.screenboardstudio.com"
+        r = self.client.get("/?x=1", follow_redirects=False,
+                            headers={"host": "tenant-9.up.railway.app"})
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.headers["location"],
+                         "https://my-studio.screenboardstudio.com/?x=1")
+        # Proxied traffic (our router sets X-Forwarded-Host) passes.
+        r2 = self.client.get("/", follow_redirects=False,
+                             headers={"host": "tenant-9.up.railway.app",
+                                      "x-forwarded-host": "my-studio.screenboardstudio.com"})
+        self.assertNotEqual(r2.status_code, 301)
+        # /api stays direct — healthz probes and the door depend on it.
+        r3 = self.client.get("/api/healthz", follow_redirects=False,
+                             headers={"host": "tenant-9.up.railway.app"})
+        self.assertEqual(r3.status_code, 200)

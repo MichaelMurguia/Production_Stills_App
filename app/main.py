@@ -1740,6 +1740,40 @@ def api_list_boards(spec_id: str) -> list[dict]:
 
 # ------------------------------------------------------------------------ ui
 
+# The stale-origin fix (user-hit twice, 2026-08-04). Two layers:
+# 1. Direct browser hits on the internal *.up.railway.app host redirect
+#    permanently to the branded address when one exists — customers
+#    consolidate on ONE origin. Proxied traffic (X-Forwarded-Host set by
+#    our router) and /api/* (healthz probes, programmatic use) pass.
+# 2. "/" serves index.html with version-stamped asset URLs, so a cached
+#    document can never pin last month's app.js — the URL itself changes
+#    each release.
+PUBLIC_URL = os.environ.get("SCREENBOARD_PUBLIC_URL", "").rstrip("/")
+
+
+@app.middleware("http")
+async def canonical_host(request: Request, call_next):
+    host = request.headers.get("host", "").split(":", 1)[0].lower()
+    if (PUBLIC_URL and host.endswith(".up.railway.app")
+            and "x-forwarded-host" not in request.headers
+            and request.method in ("GET", "HEAD")
+            and not request.url.path.startswith("/api/")):
+        q = request.url.query
+        return RedirectResponse(
+            PUBLIC_URL + request.url.path + (f"?{q}" if q else ""),
+            status_code=301)
+    return await call_next(request)
+
+
+@app.get("/")
+def serve_index() -> HTMLResponse:
+    html = (paths.STATIC / "index.html").read_text(encoding="utf-8")
+    ver = paths.ROOT / "VERSION"
+    v = ver.read_text(encoding="utf-8").strip() if ver.exists() else "dev"
+    html = html.replace('src="/app.js"', f'src="/app.js?v={v}"')                .replace('href="/styles.css"', f'href="/styles.css?v={v}"')
+    return HTMLResponse(html)
+
+
 app.mount("/", StaticFiles(directory=str(paths.STATIC), html=True), name="static")
 
 

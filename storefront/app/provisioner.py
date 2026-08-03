@@ -203,6 +203,13 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
         ws.url = new_url
         ws.domain_live = 0  # the new address re-verifies before doors use it
     s.commit()
+    try:
+        # The tenant app redirects direct railway-host browser hits to
+        # this address (stale-origin fix) — applies on the next rebuild.
+        railway.upsert_variables(ws.railway_service_id,
+                                 {"SCREENBOARD_PUBLIC_URL": new_url})
+    except Exception:
+        pass  # next reconcile retries
 
 
 def _revoke(s, ws: db.Workspace, railway) -> None:
