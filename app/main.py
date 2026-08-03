@@ -1753,9 +1753,13 @@ PUBLIC_URL = os.environ.get("SCREENBOARD_PUBLIC_URL", "").rstrip("/")
 
 @app.middleware("http")
 async def canonical_host(request: Request, call_next):
-    host = request.headers.get("host", "").split(":", 1)[0].lower()
+    # The EFFECTIVE external host decides: Railway's edge fronts direct
+    # hits and forwards the railway hostname; our wildcard router
+    # forwards the BRANDED hostname. Presence of the header proves
+    # nothing (production-caught 2026-08-04) — its value does.
+    host = (request.headers.get("x-forwarded-host")
+            or request.headers.get("host", "")).split(":", 1)[0].lower()
     if (PUBLIC_URL and host.endswith(".up.railway.app")
-            and "x-forwarded-host" not in request.headers
             and request.method in ("GET", "HEAD")
             and not request.url.path.startswith("/api/")):
         q = request.url.query

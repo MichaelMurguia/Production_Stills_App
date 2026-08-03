@@ -178,6 +178,12 @@ class StaleOriginFixTests(unittest.TestCase):
         self.assertEqual(r.status_code, 301)
         self.assertEqual(r.headers["location"],
                          "https://my-studio.screenboardstudio.com/?x=1")
+        # Railway's edge forwards the railway hostname on DIRECT hits —
+        # those must redirect too (the presence-check bug, prod-caught).
+        r1b = self.client.get("/", follow_redirects=False,
+                              headers={"host": "tenant-9.up.railway.app",
+                                       "x-forwarded-host": "tenant-9.up.railway.app"})
+        self.assertEqual(r1b.status_code, 301)
         # Proxied traffic (our router sets X-Forwarded-Host) passes.
         r2 = self.client.get("/", follow_redirects=False,
                              headers={"host": "tenant-9.up.railway.app",
