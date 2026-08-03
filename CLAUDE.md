@@ -47,7 +47,10 @@ used, and what the designer should rule on (for pure-reuse features, note
 design-handoff plans and user-directed changes alike; only the designer's
 review moves a feature from that table into canon. ("Claude Design" = the
 user's separate design-review Claude chat, which has this project folder
-connected and delivers its rulings as `*_PLAN.md` files in the repo.)
+connected and delivers its rulings as `*_PLAN.md` files in the repo.
+**Folder sync can resurrect retired plans** — before implementing any plan
+or snippet file, check `docs/RETIRED_PLANS.md`; if listed, delete it again
+rather than re-implementing.)
 
 **When a feature genuinely needs a pattern the design system doesn't cover,
 additionally:**
