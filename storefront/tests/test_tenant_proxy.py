@@ -155,6 +155,47 @@ class TenantProxyTests(unittest.TestCase):
         # drops rather than guessing.
         self.assertNotIn("LAST ANSWERED", r.text)
 
+    def test_railway_edge_errors_never_reach_a_browser_raw(self):
+        """Regression (a12-oxcart, 2026-08-05): during a fleet update the
+        tenant answers through Railway's edge with the platform's bare
+        error page, and the proxy streamed it verbatim onto the branded
+        domain. Browser navigations must get the styled unreachable page;
+        API clients keep the true upstream status."""
+        _mk_workspace("mid-deploy")
+
+        def edge(request):
+            return httpx.Response(502, content=b"Application failed to respond")
+
+        proxy = TenantProxy(store, transport=httpx.MockTransport(edge))
+        c = TestClient(proxy, base_url=f"https://mid-deploy.{BASE}")
+        r = c.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("retry-after", r.headers)
+        self.assertNotIn(b"Application failed to respond", r.content,
+                         "raw infrastructure must never reach a browser")
+        r2 = c.get("/api/healthz", headers={"Accept": "application/json"})
+        self.assertEqual(r2.status_code, 502,
+                         "non-HTML clients keep the true status")
+
+    def test_edge_stamped_404_intercepted_but_app_404_passes(self):
+        _mk_workspace("edge-404")
+
+        def edge(request):
+            if request.url.path == "/gone":
+                return httpx.Response(404, content=b"app knows this is missing")
+            return httpx.Response(404, content=b"Application not found",
+                                  headers={"x-railway-fallback": "true"})
+
+        proxy = TenantProxy(store, transport=httpx.MockTransport(edge))
+        c = TestClient(proxy, base_url=f"https://edge-404.{BASE}")
+        r = c.get("/", headers={"Accept": "text/html"})
+        self.assertEqual(r.status_code, 503)
+        self.assertNotIn(b"Application not found", r.content)
+        r2 = c.get("/gone", headers={"Accept": "text/html"})
+        self.assertEqual(r2.status_code, 404)
+        self.assertIn(b"app knows", r2.content,
+                      "the app's own 404s are its business and pass through")
+
     def test_last_answered_appears_after_a_good_response(self):
         _mk_workspace("blinky-studio",
                       railway_url="https://tenant-blink.up.railway.app")

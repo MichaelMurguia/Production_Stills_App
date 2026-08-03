@@ -124,7 +124,14 @@ storefront itself, not by per-tenant Railway custom domains. `app` in
 hosts pass through untouched; a claimed, ACTIVE, PAID studio subdomain is
 reverse-proxied (streaming both ways, long read timeout for renders) to
 that workspace's `railway_url`. Unknown or revoked studio hosts get a
-stated 404 page, an unreachable tenant a stated 502. Safety invariant:
+stated 404 page, an unreachable tenant a stated 503 (styled, auto-retry).
+That styled page also replaces anything Railway's edge answers for a
+tenant mid-redeploy — upstream 502/503, or a 404 stamped
+`x-railway-fallback: true` — on browser navigations (GET/HEAD accepting
+HTML): raw platform error pages must never flash on a branded address
+(seen on a12-oxcart during the .60 fleet update). The app's own 404s
+carry no fallback stamp and pass through; non-HTML clients always keep
+the true upstream status. Safety invariant:
 the proxy only ever forwards to a `*.up.railway.app` host taken from the
 workspace row — never to a user-influenced or branded host (loop risk).
 The wildcard domain `*.<base>` is attached to the storefront service once

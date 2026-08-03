@@ -270,6 +270,31 @@ class TenantProxy:
                 extra_headers=[(b"retry-after", b"15"),
                                (b"x-robots-tag", b"noindex")])
             return
+        # A tenant mid-redeploy answers through Railway's edge with the
+        # platform's own bare error page — a 502/503, or a 404 stamped
+        # x-railway-fallback while the internal domain re-attaches. A
+        # customer must never see raw infrastructure on their branded
+        # address (flashed on a12-oxcart during the .60 fleet update), so
+        # browser navigations get the styled unreachable page instead.
+        # The app's own 404s carry no fallback stamp and pass through;
+        # non-HTML clients keep the true upstream status.
+        accept = next((v for k, v in scope["headers"]
+                       if k.lower() == b"accept"), b"").decode("latin-1", "replace")
+        edge_error = (resp.status_code in (502, 503)
+                      or (resp.status_code == 404
+                          and resp.headers.get("x-railway-fallback") == "true"))
+        if (edge_error and scope["method"] in ("GET", "HEAD")
+                and "text/html" in accept):
+            await resp.aclose()
+            seen = _last_answered.get(sub)
+            await _page(send, 503, _render(
+                "router_unreachable.html",
+                host=host.split(":", 1)[0],
+                studio_name=_studio_name(sub),
+                last_answered=_ago(time.time() - seen) if seen else ""),
+                extra_headers=[(b"retry-after", b"15"),
+                               (b"x-robots-tag", b"noindex")])
+            return
         _last_answered[sub] = time.time()
         try:
             # Private studios are never crawlable — every proxied tenant
