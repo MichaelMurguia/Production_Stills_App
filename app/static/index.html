@@ -446,6 +446,54 @@
     </nav>
 
     <div data-subview="api">
+      <!-- F1/F2 (SETTINGS_FIRST_RUN_PLAN) — the page has two lives: before
+           a credential exists it is a setup form; after one exists it is a
+           control panel. A dropdown is never an error message. -->
+      <div id="settings-firstrun" class="hidden">
+        <div class="fr-top">
+          <div class="fr-hero">
+            <p class="fr-eyebrow">RECOMMENDED QUICK START</p>
+            <h2 class="fr-h">Connect to many models.</h2>
+            <div class="fr-connect-row">
+              <button class="primary fr-connect" id="fr-connect">Connect OpenRouter &nbsp;&rarr;</button>
+              <span class="fr-oneclick">ONE CLICK &middot; NOTHING TO PASTE</span>
+            </div>
+            <div class="fr-chain">
+              <span class="fr-chip">SIGN IN AT OPENROUTER.AI</span><span class="fr-arrow">&rarr;</span>
+              <span class="fr-chip">APPROVE</span><span class="fr-arrow">&rarr;</span>
+              <span class="fr-chip">A KEY YOU CONTROL COMES BACK</span>
+            </div>
+            <div class="fr-marquee" id="fr-marquee" aria-hidden="true"></div>
+            <p class="fr-foot">400+ MODELS &middot; 70+ PROVIDERS &middot; ONE CREDIT BALANCE PAYS FOR ALL &middot; REVOKE ANY TIME</p>
+          </div>
+          <aside class="fr-notice">
+            <div class="fr-rule"></div>
+            <h3>New to using AI models?</h3>
+            <p>AI models power the narrative processing and image generation in
+            Screenboard Studio. We recommend <b>ChatGPT 5.6</b> for narrative and
+            <b>GPT Image 2</b> for images &mdash; connect with OpenRouter and these
+            are set as your defaults.</p>
+            <h3>AI model pro?</h3>
+            <p>Any model you set up is available for narrative or image work, so
+            you can fine-tune your production workflow.</p>
+          </aside>
+        </div>
+        <div class="fact-head sec-head">OR ADD YOUR ACCOUNTS</div>
+        <div class="cred-list" id="fr-accounts"></div>
+        <div class="fact-head sec-head">SET DEFAULT MODELS</div>
+        <div class="role-cards">
+          <div class="panel role-card">
+            <p class="role-kicker"><b>Narrative &amp; content evaluation</b></p>
+            <p class="wv-tag">WILL RUN ON ChatGPT gpt-5.6</p>
+          </div>
+          <div class="panel role-card">
+            <p class="role-kicker"><b>Image generation</b> <span class="role-tag">STARTING ENGINE</span></p>
+            <p class="wv-tag">WILL RUN ON THE FIRST ENGINE YOU ADD</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings-steady">
       <div class="panel ai-head" style="margin-bottom:20px">
         <div>
           <h2>AI &amp; engines</h2>
@@ -455,7 +503,7 @@
       </div>
 
       <!-- C1 — §01 WHAT WILL RUN: the two AI roles, chosen separately. -->
-      <div class="fact-head sec-head">01 &mdash; WHAT WILL RUN <span class="sec-sub">Two different kinds of AI. They are chosen separately.</span></div>
+      <div class="fact-head sec-head">SET DEFAULT MODELS <span class="sec-sub">Two different kinds of AI. They are chosen separately.</span></div>
       <div class="role-cards">
         <div class="panel role-card">
           <p class="role-kicker">ROLE 01 <b>Narrative &amp; content evaluation</b></p>
@@ -480,13 +528,13 @@
       <!-- C2 — §02 WHAT PAYS FOR IT: one credential list, one row per
            provider; a key pasted six months ago deserves a state and a
            Test link, not a card. Rows expand in place — no modal. -->
-      <div class="fact-head sec-head">02 &mdash; WHAT PAYS FOR IT <span class="sec-sub">Your accounts. Nothing is connected until you connect it.</span></div>
+      <div class="fact-head sec-head">WHAT PAYS FOR IT <span class="sec-sub">Your accounts. Nothing is connected until you connect it.</span></div>
       <div class="cred-list" id="cred-list"></div>
       <p class="cred-foot">NO NETWORK CALL IS MADE UNTIL A CONNECTOR IS CONFIGURED &mdash; THE STANDALONE BUILD STAYS AIR-GAPPED BY DEFAULT</p>
 
       <!-- C4 — §03 WHAT ELSE IS REACHABLE: the synced catalogs, and the
            one place a total model count appears. -->
-      <div class="fact-head sec-head">03 &mdash; WHAT ELSE IS REACHABLE
+      <div class="fact-head sec-head">WHAT ELSE IS REACHABLE
         <span class="sec-sub" id="reach-sub"></span>
         <button class="text-act sec-act hidden" id="open-catalog">Open the catalog</button></div>
       <div class="reach-tiles" id="reach-tiles"></div>
@@ -502,6 +550,7 @@
           <p class="eng-powers" style="font-family:var(--mono)">generation calls only</p>
           <p class="mini">nothing else is uploaded anywhere</p></div>
       </div>
+      </div><!-- /settings-steady -->
     </div>
 
     <div data-subview="workflow" class="hidden">

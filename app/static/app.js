@@ -335,6 +335,105 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
 const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
   (await modal({ title, body, confirmLabel, danger })) !== null;
 
+/* F5 (SETTINGS_FIRST_RUN_PLAN) — the Authenticate modal: icon, name, one
+   key field, Test & save, and a deep link to the provider's key page.
+   Pasted keys live here now. */
+const AUTH_PROVIDERS = {
+  openai: { name: "OpenAI", icon: "openai", field: "openai_api_key", test: "openai",
+            link: "https://platform.openai.com/api-keys", linkText: "platform.openai.com/api-keys" },
+  gemini: { name: "Google Gemini", icon: "gemini-color", field: "gemini_api_key", test: "gemini",
+            link: "https://aistudio.google.com/apikey", linkText: "aistudio.google.com/apikey" },
+  anthropic: { name: "Anthropic Claude", icon: "claude-color", field: "anthropic_api_key", test: null,
+               link: "https://console.anthropic.com/settings/keys", linkText: "console.anthropic.com/settings/keys",
+               note: "STORED — USED ONCE NARRATIVE MODEL SELECTION SHIPS" },
+};
+
+function authModal(key) {
+  const P = AUTH_PROVIDERS[key];
+  if (!P) return;
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal auth-modal" role="dialog" aria-modal="true">
+        <div class="auth-head">
+          <span class="cred-tile"><img class="prov-ico" src="/provider-icons/${P.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(P.name.slice(0, 3).toUpperCase())}'"></span>
+          <div class="modal-title" style="margin:0">${esc(P.name)}</div>
+        </div>
+        <label class="modal-field">API key
+          <input type="password" data-mf="key" placeholder="paste the key">
+        </label>
+        ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
+        <p class="cred-form-foot" style="margin:0 0 14px">GET ONE AT
+          <a href="${esc(P.link)}" target="_blank" rel="noopener">${esc(P.linkText)}</a></p>
+        <div class="modal-actions">
+          <button class="ghost" data-mf="cancel">Cancel</button>
+          <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
+        </div>
+      </div>`;
+    document.body.append(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    $("[data-mf=cancel]", ov).onclick = () => done(null);
+    ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
+    $("[data-mf=ok]", ov).onclick = async () => {
+      const k = $("[data-mf=key]", ov).value.trim();
+      if (!k) return toast("Paste the key first.", true);
+      try {
+        await api("/api/settings", { method: "POST", json: { [P.field]: k } });
+        if (P.test) {
+          await api("/api/settings/test", { method: "POST", json: { provider: P.test } });
+          toast(`${P.name} key saved and tested.`);
+        } else {
+          toast(`${P.name} key stored.`);
+        }
+        done(true);
+        renderSettings();
+      } catch (err) { toast(err.message, true); }
+    };
+    $("[data-mf=key]", ov).focus();
+  });
+}
+
+async function addCustomEngineModal() {
+  const r = await modal({
+    title: "Add your own image engine",
+    body: "The endpoint must speak the OpenAI Images API (images.generate / images.edit). The key is stored in settings.json and leaves this machine only to call this endpoint.",
+    fields: [
+      { name: "label", label: "Name", placeholder: "e.g. local SDXL, studio ComfyUI" },
+      { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
+      { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
+      { name: "api_key", label: "API key" },
+    ],
+    confirmLabel: "Add engine",
+  });
+  if (r === null) return;
+  try {
+    await api("/api/settings/engines", { method: "POST", json: r });
+    toast(`${r.label} added — it now appears in every Model dropdown.`);
+    renderSettings();
+  } catch (err) { toast(err.message, true); }
+}
+
+/* F4 — the provider marquee: ~16 tiles, duplicated for a seamless ~36s
+   loop, mask-faded at the edges. Icons are the LobeHub static set served
+   locally from /provider-icons/ — never hotlinked. */
+const MARQUEE_PROVIDERS = [
+  ["openai", "OpenAI"], ["claude-color", "Claude"], ["gemini-color", "Gemini"],
+  ["meta-color", "Meta"], ["mistral-color", "Mistral"], ["deepseek-color", "DeepSeek"],
+  ["qwen-color", "Qwen"], ["xai", "xAI"], ["nvidia-color", "NVIDIA"],
+  ["aws-color", "Amazon"], ["cohere-color", "Cohere"], ["perplexity-color", "Perplexity"],
+  ["minimax-color", "MiniMax"], ["moonshot", "Moonshot"], ["nousresearch", "Nous"],
+  ["liquid", "Liquid"],
+];
+
+function buildProviderMarquee(host) {
+  if (!host) return;
+  const tile = ([slug, name]) =>
+    `<span class="mq-tile"><img src="/provider-icons/${slug}.png" alt="" onerror="this.remove()">${esc(name)}</span>`;
+  const seq = MARQUEE_PROVIDERS.map(tile).join("");
+  host.innerHTML = `<div class="mq-track">${seq}${seq}</div>`;
+}
+
 /* Inline rename (PRODUCTIONS_PLAN A5, canonical): a label the user owns is
    renamed in place — the label becomes an input at the same position and
    type size, pre-filled and selected; Enter commits, Esc reverts, blur
@@ -1897,6 +1996,49 @@ async function renderSettings() {
     cxRows = cxState.connectors; cxStats = cxState.stats;
     catalogAll = (await api("/api/connectors/catalog?scope=all")).records;
   } catch { /* rows render NOT CONNECTED */ }
+
+  // F1 (SETTINGS_FIRST_RUN_PLAN) — the two lives. Before a credential
+  // exists the page is a setup form; after one exists it is a control
+  // panel. A dropdown is never an error message.
+  const anyCred = !!(engAll.openai?.configured || engAll.gemini?.configured
+    || customs.length || settings.anthropic_api_key_set
+    || cxRows.some(r => r.status !== "NOT_CONNECTED"));
+  $("#settings-firstrun").classList.toggle("hidden", anyCred);
+  $("#settings-steady").classList.toggle("hidden", !anyCred);
+  if (!anyCred) renderFirstRun();
+
+  function renderFirstRun() {
+    $("#fr-connect").onclick = async () => {
+      try {
+        const { url } = await api("/api/connectors/openrouter/auth");
+        location.href = url;
+      } catch (err) { toast(err.message, true); }
+    };
+    buildProviderMarquee($("#fr-marquee"));
+    const ACCOUNTS = [
+      { key: "openai", name: "OpenAI", icon: "openai" },
+      { key: "gemini", name: "Google Gemini", icon: "gemini-color" },
+      { key: "anthropic", name: "Anthropic Claude", icon: "claude-color" },
+    ];
+    $("#fr-accounts").innerHTML = ACCOUNTS.map(a => `
+      <div class="cred-row fr-row">
+        <span class="cred-tile"><img class="prov-ico" src="/provider-icons/${a.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(a.name.slice(0, 3).toUpperCase())}'"></span>
+        <span class="cred-id"><span class="cred-name">${esc(a.name)}</span></span>
+        <span class="cred-acts"><button class="ghost" data-auth="${a.key}">Authenticate</button></span>
+      </div>`).join("") + `
+      <div class="cred-row fr-row">
+        <span class="cred-tile plus">+</span>
+        <span class="cred-id"><span class="cred-name">Your own endpoints</span>
+          <span class="cred-meta">ADD ANY API KEY</span></span>
+        <span class="cred-acts"><button class="text-act" data-auth="custom">Add model</button></span>
+      </div>`;
+    $$("#fr-accounts [data-auth]").forEach(b => {
+      b.onclick = () => b.dataset.auth === "custom"
+        ? addCustomEngineModal() : authModal(b.dataset.auth);
+    });
+  }
+
+  if (anyCred) {
   const cxStatus = Object.fromEntries(cxRows.map(r => [r.id, r.status]));
   const usableProvider = pid => {
     if (pid.startsWith("or:")) return cxStatus.openrouter === "SYNCED";
@@ -1931,9 +2073,9 @@ async function renderSettings() {
   const nCur = settings.openai_chat_model || nDefault;
   const oaiConfigured = !!engAll.openai?.configured;
   if (!oaiConfigured) {
-    nSel.innerHTML = `<option value="">NO OPENAI KEY — ADD ONE IN 02 BELOW</option>`;
-    nSel.disabled = true;
-    $("#role-narrative-meta").textContent = "THE ROLE IS GATED UNTIL ITS CREDENTIAL EXISTS";
+    // F1: a dropdown is never an error message — the withheld-verb tag
+    // states the unmet condition instead of a disabled control.
+    nSel.closest(".role-sel").innerHTML = `<p class="wv-tag">NEEDS THE OPENAI KEY</p>`;
   } else {
     const opts = [[nDefault, `ChatGPT — ${nDefault}`]];
     if (nCur !== nDefault) opts.push([nCur, `Custom — ${nCur}`]);
@@ -1969,9 +2111,8 @@ async function renderSettings() {
   const iSel = $("#role-image");
   const usableProviders = Object.keys(settings.providers).filter(usableProvider);
   if (!usableProviders.length) {
-    iSel.innerHTML = `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN 02 BELOW</option>`;
-    iSel.disabled = true;
-    $("#role-image-meta").textContent = "THE ROLE IS GATED UNTIL A CREDENTIAL EXISTS";
+    iSel.closest(".role-sel").innerHTML =
+      `<p class="wv-tag">WILL RUN ON THE FIRST ENGINE YOU ADD</p>`;
   } else {
     iSel.innerHTML = usableProviders.map(v =>
       `<option value="${esc(v)}">${esc(settings.providers[v])}</option>`).join("");
@@ -2059,6 +2200,12 @@ async function renderSettings() {
                  SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
                  REJECTED: [["Reconnect", "connect"], [`Disable its ${orRow.enabled_count || 0} models`, "disable-all"]],
                  NO_NETWORK: [] }[orRow.status] },
+    ...(settings.anthropic_api_key_set ? [
+      { key: "anthropic", tile: "ANT", name: "Anthropic Claude", tag: "BUILT IN",
+        meta: "NARRATIVE (COMING) · STORED — USED ONCE NARRATIVE MODEL SELECTION SHIPS",
+        state: ["hold", "KEY STORED"],
+        identity: settings.anthropic_api_key_hint || "",
+        actions: [["Replace", "auth-anthropic"]] }] : []),
     { key: "custom", tile: "+", name: "Your own endpoints", tag: "",
       meta: "ANY OPENAI-IMAGES-CONTRACT URL · BASE URL + MODEL + KEY",
       state: null, identity: "", custom: true,
@@ -2099,6 +2246,8 @@ async function renderSettings() {
         toast(`${key} connection OK — ${r.model}`);
       } catch (err) { toast(err.message, true); }
       renderSettings();
+    } else if (act === "auth-anthropic") {
+      authModal("anthropic");
     } else if (act === "replace" || act === "connect" || act === "add-custom") {
       openCredExpand(key, act);
     } else if (act === "refresh") {
@@ -2401,6 +2550,8 @@ async function renderSettings() {
     };
     $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
   }
+
+  }  // end steady-state wiring (F1)
 
   // Debug tools (user request 2026-08-03): the mock engine and page-text
   // edit mode. Both state exactly what they are; neither touches canon.
