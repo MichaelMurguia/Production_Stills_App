@@ -285,18 +285,29 @@ the strip: approved = `--ok` border + label; promoted = `· REF` suffix on
 the tile and a `REFERENCE · REF-xxxx` bordered badge on the stage (status
 color border, never filled — the verdict-chip grammar).
 
-**Three-question Settings order** (CONNECTORS_UI_PLAN, ruled 2026-08-03).
-The AI & engines tab answers exactly three questions, in order, never
-mixed: 01 WHAT WILL RUN (the two AI roles and their selection) · 02 WHAT
-PAYS FOR IT (every credential — built-in keys and connectors in ONE list;
-splitting them would imply a hierarchy that does not exist) · 03 WHAT
-ELSE IS REACHABLE (the synced catalogs and the enabled set).
+**Three-question Settings order** (CONNECTORS_UI_PLAN, ruled 2026-08-03;
+headers renamed by SETTINGS_FIRST_RUN_PLAN F7). The AI & engines tab
+answers exactly three questions, in order, never mixed: SET DEFAULT
+MODELS (the two AI roles and their selection) · WHAT PAYS FOR IT (every
+credential — built-in keys and connectors in ONE list; splitting them
+would imply a hierarchy that does not exist) · WHAT ELSE IS REACHABLE
+(the synced catalogs and the enabled set). The numeric 01/02/03 prefixes
+retired with the rename — the order carries the meaning.
 
 **Capability before vendor** (ruled 2026-08-03). Wherever models list —
 the catalog browser, every Model dropdown, the engine picker — they group
 by what they can do (`ANCHORS REFERENCES` first, `STYLE STUDIES ONLY`
 second), never by who sells them. At the point of choice the question is
 whether this model can hold a subject, not who bills for it.
+
+**The two lives** (SETTINGS_FIRST_RUN_PLAN, ruled 2026-08-03). Before a
+credential exists the AI & engines page is a SETUP FORM (quick-start hero,
+account list, withheld-verb role tags); after one exists it is a CONTROL
+PANEL (the standing layout). A dropdown is never an error message, and a
+control that cannot act does not render as a control — an unmet role
+renders the dashed withheld-verb tag (`NEEDS THE OPENAI KEY`), never a
+disabled dropdown. First run carries required information only: no
+footnotes, no rationale cards, no zero-count stat tiles.
 
 ---
 
@@ -611,6 +622,12 @@ for the manifest's maskable purpose.
   the worst state among everything that role needs: green ok · amber
   degraded-still-runs · red blocked · hollow not configured. The count is
   fixed at two forever, however many connectors exist.
+- **Provider brand icons** (SETTINGS_FIRST_RUN_PLAN F4): the LobeHub
+  static set, dark variants, fetched once and served locally from
+  `app/static/provider-icons/` — never hotlinked, never favicons (they
+  vanish or mislead on dark). Used on the first-run account rows and the
+  provider marquee: a masked, duplicated, ~36s auto-scrolling strip (the
+  "there are many" widget), still under `prefers-reduced-motion`.
 - **Model imagery is the typographic tile** (ruled 2026-08-03): Courier
   developer initials on `--field` (`OAI`, `GGL`, `BFL`…). No vendor
   thumbnails ever — a grid of third-party marketing samples is a slot
@@ -670,6 +687,18 @@ are then deleted.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-03** — First-run rebuilt (SETTINGS_FIRST_RUN_PLAN F1–F7): the
+  AI & engines page gains two lives — a setup form before any credential
+  (OpenRouter quick-start hero with the page's only amber, provider
+  marquee from the locally-served LobeHub set, account list with
+  Authenticate modals, withheld-verb role tags) and the standing control
+  panel after. Connecting OpenRouter sets the recommended defaults
+  (gpt-5.6 narrative · GPT Image 2 via OpenRouter). Anthropic Claude row
+  ships ahead of its backend — the key stores with the condition stated.
+  Section headers renamed: SET DEFAULT MODELS / WHAT PAYS FOR IT / WHAT
+  ELSE IS REACHABLE (numeric prefixes retired). New canon: the two-lives
+  rule, the withheld-verb tag over disabled dropdowns, the marquee and
+  icon-source rules.
 - **2026-08-03** — The four-anchor ruling (user, adversarially reviewed):
   style anchors restructure as three MOVIE parameters (WORLD_TEXTURE,
   COLOR_PALETTE, CINEMATOGRAPHY_STYLE — palette explicitly outside
