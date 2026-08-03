@@ -1879,6 +1879,8 @@ details.meta pre {
 
 /* F4 — provider marquee: duplicated sequence, seamless 36s loop, edge fade */
 .fr-marquee { overflow: hidden; margin-top: 18px; max-width: 540px;
+  border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft);
+  padding: 8px 0;  /* the icon channel: hairline-bounded, sampled #23272c */
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .mq-track { display: flex; width: max-content; animation: mq-scroll 36s linear infinite; }
