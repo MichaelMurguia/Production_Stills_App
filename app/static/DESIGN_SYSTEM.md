@@ -695,6 +695,7 @@ are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-04 | Conformance-audit open questions (not a feature — rulings needed): amber `.fr-eyebrow`/`.fr-rule` in first-run vs "the page's only amber" (kicker canon conflicts); the tokenized `--accent-hover` #f0bc63; translucent-amber alphas (.06/.14) vs unused `--accent-soft`/`--accent-line`; the structural board's content-palette exemption; a dead-CSS deletion list (boards-empty family, engine-cards, subj-add, prod-moved, take-label states) awaiting an explicit OK against the preserve-every-class rule; remaining inline style-attribute promotions | styles.css, first-run Settings | Each needs a designer ruling, not a coder guess |
 | 2026-08-04 | Authenticate opens the provider console (user-directed): clicking Authenticate opens the provider's own sign-in/key page in a new tab while the modal waits for the paste, and the modal copy states it (WE OPENED …'S CONSOLE IN A NEW TAB). These providers have no OAuth-for-API-keys; this is the closest honest login flow | First-run account rows + Authenticate modal | Designer should rule on the new-tab side effect and the modal copy |
 | 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
 | 2026-08-01 | Production-design gate tag (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved (the locked-stage layout itself was ruled by LOCKED_STAGE_PLAN and is canon) | Location finders (Screenplay + wizard) | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment |
@@ -717,6 +718,19 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-04** — Conformance audit (21 findings, user-prompted): `.mono`
+  utility DEFINED at last — it was used ~45 times but never existed, so a
+  swath of canonized Courier (lock-popover steps, prod-card slugs, the
+  C2 line, SCOPE, bf-pid…) silently rendered Archivo. Card Approve
+  buttons stop multiplying amber (--ok approve grammar); `a.ghost`
+  styled; not-yet-done badges move REJECTED→LOCKED grammar; CANDIDATE
+  chip, held counts, open-production marks, `+ New production`, toast
+  border and pending counts leave the amber budget; warn states ride
+  `--warn`; Consolas→`var(--mono)`; wrong token fallbacks dropped;
+  `--accent-hover` tokenizes the pre-existing hover tint (ratify);
+  selection hygiene extended; structural-board palette marked as a
+  content exemption. Open questions logged in the Uncanonized table.
 
 - **2026-08-04** — Verifying-against-mocks process added (MOCK_PARITY
   ruling) and applied to the first-run Settings screen: outer panel

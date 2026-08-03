@@ -2894,7 +2894,7 @@ async function renderWizard() {
       const role = col.dataset.role;
       const mine = refs.filter(r => roleHead(r.role) === role);
       const badge = $("[data-f=state]", col);
-      badge.className = `badge ${mine.length ? "APPROVED" : "REJECTED"}`;
+      badge.className = `badge ${mine.length ? "APPROVED" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
       badge.textContent = mine.length ? `${mine.length} SET` : "NONE";
       const list = $("[data-f=list]", col);
       list.innerHTML = "";
