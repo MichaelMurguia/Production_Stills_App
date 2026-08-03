@@ -44,7 +44,6 @@
 
   /* status — never used as decoration, only to report state */
   --ok:   #6fae7a;
-  --warn: #e0a33f;
   --bad:  #cd6155;
   --hold: #7d8fd0;
   --bad-line: #46312e;
@@ -110,7 +109,7 @@ header {
    DEGRADED, STILL RUNS · RED BLOCKED · HOLLOW NOT CONFIGURED. */
 .edot i { width: 7px; height: 7px; display: inline-block; }
 .edot.ok i { background: var(--ok); }
-.edot.warn i { background: var(--warn); }
+.edot.warn i { background: var(--hold); }
 .edot.bad i { background: var(--bad); }
 .edot.env i { background: var(--hold); }
 .edot.none i { background: transparent; border: 1px solid var(--ink-faint); }
@@ -1047,7 +1046,7 @@ details.meta pre {
 .rail-pid { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rail-mark { flex: none; font-family: var(--mono); font-size: 10.5px; }
 .rail-mark.okdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
-.rail-mark.warn { color: var(--warn); }
+.rail-mark.warn { color: var(--hold); }
 .rail-mark.bad { color: var(--bad); }
 .rail-mark.none { color: var(--ink-faint); }
 .rail-note { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
@@ -1174,7 +1173,7 @@ details.meta pre {
 .eng-model { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .04em; }
 .eng-powers { margin: 4px 0; font-size: 13px; color: var(--ink-dim); }
 .eng-note { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
-.eng-note.warn { color: var(--warn); }
+.eng-note.warn { color: var(--hold); }
 .facts-row {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
   background: var(--line-soft); border: 1px solid var(--line-soft); margin-top: 20px;
@@ -1654,7 +1653,7 @@ details.meta pre {
   margin-right: 6px; vertical-align: 0;
 }
 .rail-legend .dot.ok { background: var(--ok); }
-.rail-legend .dot.warn { background: var(--warn); }
+.rail-legend .dot.warn { background: var(--hold); }
 .rail-legend .dot.none { border: 1px solid var(--ink-faint); }
 .rail-derived { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
 .rail-derived .drow { display: flex; justify-content: space-between; gap: 8px; }
@@ -1668,7 +1667,7 @@ details.meta pre {
 /* C1 — §01 WHAT WILL RUN */
 .ai-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
 .bill-warn { flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  color: var(--warn); border: 1px solid var(--warn); padding: 5px 10px; margin-top: 4px;
+  color: var(--hold); border: 1px solid var(--hold); padding: 5px 10px; margin-top: 4px;
   user-select: none; }
 .sec-head { margin: 28px 0 12px; }
 .sec-head .sec-sub { font-family: var(--sans); font-size: 13px; letter-spacing: 0;
@@ -1692,7 +1691,7 @@ details.meta pre {
   border: 1px solid var(--ink-dim); color: var(--ink-dim); padding: 2px 7px; }
 .rec-reason { font-size: 12.5px; color: var(--ink-dim); }
 .rec-gate { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
-  color: var(--warn); }
+  color: var(--hold); }
 .role-note { margin-top: auto; padding: 10px 12px; margin-top: 14px;
   background: var(--panel2); font-size: 12.5px; color: var(--ink-dim); }
 @media (max-width: 980px) { .role-cards { grid-template-columns: 1fr; } }
@@ -1795,7 +1794,7 @@ details.meta pre {
   border-top: 1px solid var(--line-soft); }
 .cat-strip .cred-tile { font-size: 8px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
 .cat-strip-txt { flex: 1; font-size: 12px; color: var(--ink-dim); }
-.cat-strip-cost { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--warn); white-space: nowrap; }
+.cat-strip-cost { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--hold); white-space: nowrap; }
 
 /* C7 — the engine picker: search first, capability on every row */
 .picker-open { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);

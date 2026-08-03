@@ -5215,7 +5215,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     <div class="body">
       <div><span class="badge ${c.status}">${esc(label)}</span> <b>${esc(c.candidate_id)}</b></div>
       <div class="meta">${meta}</div>
-      ${(c.warnings || []).map(w => `<div class="meta" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("")}
+      ${(c.warnings || []).map(w => `<div class="meta" style="color:var(--hold)">⚠ ${esc(w)}</div>`).join("")}
       ${c.model_notes || c.render_prompt ? `<details class="meta"><summary>${c.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">${esc(c.render_prompt ? `RENDER PROMPT (user-edited):\n${c.render_prompt}${c.model_notes ? "\n\n" + c.model_notes : ""}` : c.model_notes)}</pre></details>` : ""}
       <div class="meta">${esc(c.created_at)}</div>
     </div>
@@ -5482,7 +5482,7 @@ async function renderBoardPanels(specId) {
         <span class="act-zone act-right" data-f="act-danger"></span>
       </div>
       <div data-f="shot-busy"></div>
-      ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("")}
+      ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--hold)">⚠ ${esc(w)}</div>`).join("")}
       ${staged.status === "REJECTED" && staged.status_reason ? `<div class="meta" style="color:var(--bad)">rejected — ${esc(staged.status_reason)}</div>` : ""}
 `;
 
