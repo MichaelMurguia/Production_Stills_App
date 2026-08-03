@@ -207,3 +207,20 @@ class StaleOriginFixTests(unittest.TestCase):
         r3 = self.client.get("/api/healthz", follow_redirects=False,
                              headers={"host": "tenant-9.up.railway.app"})
         self.assertEqual(r3.status_code, 200)
+
+
+class StaleTabTests(unittest.TestCase):
+    """The tab knows what it booted with (stale-tab bar, 2026-08-05)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-tab-"))
+        _redirect_home(self.tmp)
+        self.client = TestClient(appmain.app)
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_index_embeds_the_boot_version(self):
+        ver = (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
+        html = self.client.get("/").text
+        self.assertIn(f"window.SB_BOOT_VERSION='{ver}'", html.replace('"', "'"))

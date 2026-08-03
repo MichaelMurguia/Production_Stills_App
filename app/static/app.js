@@ -1429,6 +1429,26 @@ async function updateBand() {
   _debugTools = !!settings.debug_tools;
   updateTextEditChip();
 
+  // A long-lived tab is a time capsule: the SPA re-renders from in-memory
+  // JS while the studio updates beneath it (user-hit three times,
+  // 2026-08-05). Every navigation compares the server's version to the
+  // one this tab booted with; a mismatch is STATED, never auto-reloaded —
+  // reloading is the user's act, mid-work.
+  api("/api/healthz").then(h => {
+    const boot = window.SB_BOOT_VERSION;
+    const stale = boot && h.version && h.version !== boot;
+    let bar = document.getElementById("update-bar");
+    if (!stale) { bar?.remove(); return; }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "update-bar";
+      bar.className = "update-bar mono";
+      bar.innerHTML = `THIS TAB IS ON ${esc(boot)} — THE STUDIO NOW SERVES ${esc(h.version)}. `
+        + `<button class="text-act mono" onclick="location.reload()">RELOAD TO GET IT</button>`;
+      document.body.prepend(bar);
+    }
+  }).catch(() => {});
+
   // C8 — one square per ROLE, not per provider: can this app do its two
   // jobs right now? Worst state among everything each role needs.
   const roles = settings.roles || {};

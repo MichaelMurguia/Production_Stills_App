@@ -1930,3 +1930,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   nav#nav button, body.tool-mode nav#nav button { transition: none; }
 }
+
+/* UNCANONIZED — 2026-08-05 — stale-tab update bar: a persistent stated
+   line when the server has moved past this tab's build. Notification-dot
+   grammar doesn't fit (the condition lives in the chrome, not a view);
+   reload is the user's act, never automatic. */
+.update-bar {
+  position: sticky; top: 0; z-index: 46; text-align: center;
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  color: var(--ink-dim); font-size: 10px; letter-spacing: .1em;
+  padding: 6px 10px;
+}
+.update-bar .text-act { font-size: 10px; letter-spacing: .1em; }

@@ -781,7 +781,7 @@ are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
-*(empty — CANONIZATION_PASS R1–R19 folded every row into the sections above, 2026-08-04)*
+| 2026-08-05 | Stale-tab update bar (user-hit three times, NEW PATTERN): when the server's version moves past the tab's booted build, a sticky Courier line under the header states both versions with a RELOAD TO GET IT text act — never an auto-reload mid-work. Notification-dot grammar didn't fit: the condition lives in the chrome, not a view | App-wide (every navigation checks healthz) | Designer should rule on placement (above vs below band), tone, and whether the fleet-update flow should announce proactively |
 
 ---
 

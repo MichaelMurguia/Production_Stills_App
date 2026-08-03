@@ -1787,7 +1787,12 @@ def serve_index() -> HTMLResponse:
     html = (paths.STATIC / "index.html").read_text(encoding="utf-8")
     ver = paths.ROOT / "VERSION"
     v = ver.read_text(encoding="utf-8").strip() if ver.exists() else "dev"
-    html = html.replace('src="/app.js"', f'src="/app.js?v={v}"')                .replace('href="/styles.css"', f'href="/styles.css?v={v}"')
+    html = html.replace('src="/app.js"', f'src="/app.js?v={v}"')
+    html = html.replace('href="/styles.css"', f'href="/styles.css?v={v}"')
+    # The tab remembers what it booted with, so a long-lived SPA tab can
+    # notice the studio moving on beneath it (stale-tab bar, 2026-08-05).
+    html = html.replace(
+        "</head>", f'<script>window.SB_BOOT_VERSION={v!r};</script></head>')
     # Freshness is the no-cache middleware's job (tested contract, all
     # three UI paths) — do not set a second, weaker rule here.
     return HTMLResponse(html)
