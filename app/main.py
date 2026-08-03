@@ -821,8 +821,11 @@ def api_get_settings() -> dict:
         customs.append({"id": e["id"], "label": e.get("label") or e["id"],
                         "model": e["model"], "base_url": e.get("base_url", ""),
                         "key_hint": f"…{e['api_key'][-4:]}"})
+    akey = s.get("anthropic_api_key", "")
     provider_meta = generate.all_providers()
     return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
+            "anthropic_api_key_set": bool(akey),
+            "anthropic_api_key_hint": f"…{akey[-4:]}" if akey else None,
             "gemini_api_key_set": bool(gkey),
             "gemini_api_key_hint": f"…{gkey[-4:]}" if gkey else None,
             "openai_api_key_set": bool(okey),
@@ -883,6 +886,10 @@ async def api_save_settings(body: dict) -> dict:
         s["gemini_api_key"] = str(body["gemini_api_key"]).strip()
     if "openai_api_key" in body:
         s["openai_api_key"] = str(body["openai_api_key"]).strip()
+    if "anthropic_api_key" in body:
+        # F6: stored now, used once the narrative role learns a second
+        # provider — the Authenticate modal states exactly that.
+        s["anthropic_api_key"] = str(body["anthropic_api_key"]).strip()
     if "debug_mock" in body:
         if not generate.debug_tools_enabled():
             raise HTTPException(404)  # the feature does not exist here
@@ -1044,6 +1051,19 @@ def api_openrouter_callback(code: str = ""):
             "<pre>OpenRouter connect did not complete: "
             f"{str(e)[:300]}\n\nReturn to the app and start again from "
             "Settings → AI &amp; engines.</pre>", status_code=400)
+    # F3 — the notice's promise: connecting sets the recommended defaults.
+    # gpt-image-2 via OpenRouter becomes the enabled starting engine (the
+    # narrative default is already gpt-5.6). A courtesy, never a failure.
+    try:
+        target = "or:openai/gpt-image-2"
+        if any(m["id"] == target for m in connectors.catalog_records()):
+            connectors.set_enabled(target, True)
+            s = generate.load_settings()
+            if not s.get("preferred_provider"):
+                s["preferred_provider"] = target
+                generate.save_settings(s)
+    except Exception:
+        pass
     # The app restores the last view (Settings) on load.
     return RedirectResponse("/", status_code=303)
 
