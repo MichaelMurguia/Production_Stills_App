@@ -1882,10 +1882,13 @@ details.meta pre {
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .mq-track { display: flex; width: max-content; animation: mq-scroll 36s linear infinite; }
-.mq-tile { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
-  background: var(--field); padding: 9px 16px; margin-right: 8px; font-size: 13px;
+/* Mock-sampled (2026-08-04): raised --bg2 tile, DARK border, and each
+   icon on its own darker --bg plate — the plate is what makes it pop. */
+.mq-tile { display: flex; align-items: center; gap: 9px; border: 1px solid var(--field);
+  background: var(--bg2); padding: 7px 14px 7px 7px; margin-right: 8px; font-size: 13px;
   color: var(--ink-dim); white-space: nowrap; }
-.mq-tile img { width: 18px; height: 18px; object-fit: contain; }
+.mq-tile img { width: 18px; height: 18px; object-fit: contain;
+  background: var(--field); padding: 5px; }  /* #0f1114 — user-specified icon plate */
 @keyframes mq-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mq-track { animation: none; } }
 @media (max-width: 980px) {
