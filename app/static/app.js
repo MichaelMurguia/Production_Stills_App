@@ -1400,6 +1400,11 @@ async function showView(name) {
   // Own keys only — #toString would otherwise "exist" via the prototype,
   // dispatch garbage, and persist a view name that renders nothing.
   if (!Object.hasOwn(views, name)) name = "status";
+  // BAND_CONDENSE B2: tools are not stages — the band condenses while a
+  // tool view is open. Keyed here in the one router chokepoint, so boot
+  // restores (persistent UI state) and both nav bars stay in sync free.
+  document.body.classList.toggle("tool-mode",
+    ["status", "references", "projects", "settings"].includes(name));
   activeView = name;
   uiSet("view", name);
   _roleCtx = null;  // suggestion sources refresh per navigation

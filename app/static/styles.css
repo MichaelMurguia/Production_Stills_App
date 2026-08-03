@@ -1903,3 +1903,30 @@ details.meta pre {
 
 /* R16 (CANONIZATION_PASS): the debug tail in every model dropdown. */
 option.opt-debug { color: var(--ink-faint); font-family: var(--mono); }
+
+/* The two-mode band (BAND_CONDENSE_SNIPPET, verbatim, 2026-08-05): tools
+   are not stages — in tool mode the band condenses to one row, recedes a
+   surface step, and no cell reads "current"; progress borders survive. */
+body.tool-mode nav#nav button {
+  padding: 7px 18px 8px;
+  background: var(--bg);
+  transition: padding 150ms ease-out, background 150ms ease-out;
+}
+nav#nav button { transition: padding 150ms ease-out, background 150ms ease-out; }
+body.tool-mode nav#nav .stage-sub,
+body.tool-mode nav#nav .here-chip { display: none; }
+body.tool-mode nav#nav .stage-l { color: var(--ink-faint); font-weight: 600; }
+body.tool-mode nav#nav button.s-cur {
+  background: var(--bg);          /* no cell reads "current" in tool mode… */
+}
+body.tool-mode nav#nav button.s-cur .stage-l { color: var(--ink-faint); }
+body.tool-mode nav#nav button.s-cur .stage-n { color: var(--ink-faint); }
+/* …but its progress border stays amber — the map still reports. */
+body.tool-mode nav#nav button:hover {
+  background: var(--panel);       /* hover still invites the return trip */
+  color: var(--ink);
+}
+body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  nav#nav button, body.tool-mode nav#nav button { transition: none; }
+}

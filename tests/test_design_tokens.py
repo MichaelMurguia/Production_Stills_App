@@ -138,6 +138,19 @@ class TokenContractTests(unittest.TestCase):
                           ["color: var(--ink-faint)", "font-family: var(--mono)"])
         self.assert_decls(".bf-slot", ["border: 1px solid var(--line)"])
 
+    def test_two_mode_band(self):
+        """BAND_CONDENSE snippet: condensed geometry, receded surfaces,
+        survived progress borders, reduced-motion snap."""
+        self.assert_decls("body.tool-mode nav#nav button", [
+            "padding: 7px 18px 8px", "background: var(--bg)",
+            "transition: padding 150ms ease-out, background 150ms ease-out"])
+        self.assert_decls("body.tool-mode nav#nav .stage-l",
+                          ["color: var(--ink-faint)", "font-weight: 600"])
+        self.assertIn("body.tool-mode nav#nav .stage-sub,\nbody.tool-mode nav#nav .here-chip { display: none; }",
+                      CSS)
+        self.assert_decls("body.tool-mode nav#nav button:hover",
+                          ["background: var(--panel)"])
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)

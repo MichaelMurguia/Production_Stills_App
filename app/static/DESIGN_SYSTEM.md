@@ -100,6 +100,19 @@ literal ceiling. Ladder: sticky band 44 · header 45 · toast 50 · popover
 55 · menus 60 · lightbox 100 · modal 400. New floating surfaces slot in;
 no new z-index value may be coined without a row here.
 
+**The two-mode band** (BAND_CONDENSE ruling, 2026-08-05): tools are not
+stages. While a tool view (Status / Reference / Productions / Settings)
+is open the band condenses to half height — sublines and the HERE chip
+leave, cells drop to one row (7/8px padding), backgrounds recede
+`--bg2` → `--bg`, labels fall to `--ink-faint` (dimmer, never
+unreadable). Progress top borders survive — the map keeps reporting —
+and no cell reads "current" in tool mode; that absence IS the signal you
+are outside the pipeline. Sticky position and z-order untouched; the
+condensed band stays fully clickable (it is the way back) and hover
+still lifts a cell to `--panel` + `--ink`. 150ms ease-out; snaps under
+reduced motion. Keyed on `body.tool-mode`, toggled at the router
+chokepoint so boot-restored views wake correct.
+
 **Main/side split.** Work goes left in `.dash-main` at generous width; counts,
 standing rules, and history recede into `.dash-side`. Counts are not the point
 of a screen — the next action is.
@@ -776,6 +789,9 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-05** — The two-mode band (BAND_CONDENSE_PLAN B1–B3, snippet
+  verbatim): the pipeline band condenses while a tool view is open.
 
 - **2026-08-04** — Canonization pass: Uncanonized table emptied under
   CANONIZATION_PASS.md R1–R19; --warn deleted (aliased accent),

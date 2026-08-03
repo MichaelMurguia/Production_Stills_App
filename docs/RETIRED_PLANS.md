@@ -22,3 +22,4 @@ delta as new instructions.
 | PROVIDER_MARQUEE_SNIPPET.html | 2026.08.04.52 | — |
 | AI_MODELS_NOTICE_SNIPPET.html | 2026.08.04.53 | — |
 | design_handoff/CANONIZATION_PASS.md (R1–R19) | 2026.08.04.57 | — (emptied the Uncanonized table) |
+| BAND_CONDENSE_PLAN.md (B1–B3) + BAND_CONDENSE_SNIPPET.html | 2026.08.04.58 | — |
