@@ -1480,6 +1480,10 @@ details.meta pre {
 .wiz-loc-row select { width: 100%; min-width: 0; }
 .wiz-loc-row .loc-state { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the Status tool's error breadcrumb — square, per canon */
+.tools button.has-hold::after {
+  content: ""; display: inline-block; width: 6px; height: 6px;
+  background: var(--hold); margin-left: 7px; vertical-align: 7px;
+}
 .tools button.has-err::after {
   content: ""; display: inline-block; width: 6px; height: 6px;
   background: var(--bad); margin-left: 7px; vertical-align: 7px;

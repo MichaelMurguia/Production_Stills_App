@@ -1439,11 +1439,16 @@ async function updateBand() {
     return `<span class="edot ${st}" title="${esc(full)} — ${ROLE_TITLES[st]}. Configure in Settings → AI & engines."><i></i>${lab}</span>`;
   }).join("");
 
-  // Errors in the flight recorder surface on the Status tool itself
-  // (user ruling 2026-08-01) — a breadcrumb, not a buried log line.
+  // R7 (CANONIZATION_PASS): notification = ONE filled square dot in the
+  // severity color — --bad for errors, --hold for holds. Two conditions
+  // never stack; the worse one wins.
   api("/api/activity?limit=10").then(rows => {
-    $('#tools-nav button[data-view="status"]')
-      ?.classList.toggle("has-err", rows.some(r => r.kind === "error"));
+    const btn = $('#tools-nav button[data-view="status"]');
+    if (!btn) return;
+    const err = rows.some(r => r.kind === "error");
+    const hold = (state.blocking || []).some(b => b.kind === "HOLD");
+    btn.classList.toggle("has-err", err);
+    btn.classList.toggle("has-hold", !err && hold);
   }).catch(() => {});
 
   const ss = state.stage_summary || {};
