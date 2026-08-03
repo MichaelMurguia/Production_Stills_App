@@ -350,12 +350,13 @@ const AUTH_PROVIDERS = {
 function authModal(key) {
   const P = AUTH_PROVIDERS[key];
   if (!P) return;
-  // User expectation (2026-08-04): Authenticate should surface the
-  // provider's own login. These providers have no OAuth-for-API-keys, so
-  // the closest honest flow is opening their console sign-in in a new
-  // tab — the key is created there — while this modal waits for the
-  // paste. Inside the click gesture, so popup blockers stay quiet.
-  window.open(P.link, "_blank", "noopener");
+  // Connector-grammar modal (user ruling 2026-08-04): the modal is the
+  // anchor — it never auto-opens anything (the focus-stealing tab read
+  // as "no modal appeared"). The provider's console CANNOT be iframed
+  // (frame-ancestors DENY on every auth page, by design) and none of
+  // these providers offer OAuth-for-API-keys, so the chain states the
+  // real steps and the user opens the key page when ready. Save/Test
+  // re-render in place — no page reload, ever.
   return new Promise(resolve => {
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
@@ -365,12 +366,17 @@ function authModal(key) {
           <span class="cred-tile"><img class="prov-ico" src="/provider-icons/${P.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(P.name.slice(0, 3).toUpperCase())}'"></span>
           <div class="modal-title" style="margin:0">${esc(P.name)}</div>
         </div>
+        <div class="fr-chain" style="margin:0 0 14px">
+          <span class="fr-chip">OPEN THE KEY PAGE</span><span class="fr-arrow">&rarr;</span>
+          <span class="fr-chip">SIGN IN &amp; CREATE A KEY</span><span class="fr-arrow">&rarr;</span>
+          <span class="fr-chip">PASTE IT HERE</span>
+        </div>
+        <p style="margin:0 0 14px"><button class="ghost" data-mf="console">Open ${esc(P.name)}'s key page &nbsp;&#8599;</button></p>
         <label class="modal-field">API key
           <input type="password" data-mf="key" placeholder="paste the key">
         </label>
         ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
-        <p class="cred-form-foot" style="margin:0 0 14px">WE OPENED ${esc(P.name.toUpperCase())}'S CONSOLE IN A NEW TAB —
-          SIGN IN THERE, CREATE A KEY, PASTE IT HERE. (POPUP BLOCKED? <a href="${esc(P.link)}" target="_blank" rel="noopener">${esc(P.linkText)}</a>)</p>
+        <p class="cred-form-foot" style="margin:0 0 14px">SAVES TO THIS STUDIO ONLY · ${P.test ? "TESTED BEFORE IT COUNTS · " : ""}THE PAGE UPDATES IN PLACE — NO RELOAD</p>
         <div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
@@ -379,6 +385,10 @@ function authModal(key) {
     document.body.append(ov);
     const done = v => { ov.remove(); resolve(v); };
     $("[data-mf=cancel]", ov).onclick = () => done(null);
+    // User-initiated only — the modal keeps focus until YOU reach for
+    // the console.
+    $("[data-mf=console]", ov).onclick = () =>
+      window.open(P.link, "_blank", "noopener");
     ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
     $("[data-mf=ok]", ov).onclick = async () => {
       const k = $("[data-mf=key]", ov).value.trim();
