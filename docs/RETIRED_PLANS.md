@@ -21,3 +21,4 @@ delta as new instructions.
 | MOCK_PARITY_PROCESS.md (D1–D8 + loop) | 2026.08.04.46; loop canonized | executable form: `.claude/skills/design-verify/` |
 | PROVIDER_MARQUEE_SNIPPET.html | 2026.08.04.52 | — |
 | AI_MODELS_NOTICE_SNIPPET.html | 2026.08.04.53 | — |
+| design_handoff/CANONIZATION_PASS.md (R1–R19) | 2026.08.04.57 | — (emptied the Uncanonized table) |

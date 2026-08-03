@@ -127,6 +127,17 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".pm-chip.open", ["color: var(--ok)"])
         self.assertNotIn(".toast { border-left: 3px solid var(--accent)", CSS.replace("\n", " "))
 
+    def test_canonization_pass_rulings_hold(self):
+        """R1/R2/R3/R16: two ambers only, tokenized alphas, no --warn,
+        the debug tail styled."""
+        self.assertNotIn("--warn:", CSS)
+        self.assertNotIn("var(--warn)", CSS)
+        self.assertNotIn("rgba(224, 163, 63, .06)", CSS)
+        self.assertNotIn("rgba(224, 163, 63, .14)", CSS)
+        self.assert_decls("option.opt-debug",
+                          ["color: var(--ink-faint)", "font-family: var(--mono)"])
+        self.assert_decls(".bf-slot", ["border: 1px solid var(--line)"])
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)

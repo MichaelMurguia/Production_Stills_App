@@ -39,13 +39,19 @@ surfaces   --bg #121417  --bg2 #15181b  --panel #1a1d21  --panel2 #21252a
 lines      --line #2b3037    --line-soft #23272c
 ink        --ink #eceef0     --ink-dim #9aa1a8    --ink-faint #6b7278
 accent     --accent #e0a33f  --accent-ink #0b0c0e (text on amber)
-status     --ok #6fae7a  --warn #e0a33f  --bad #cd6155  --hold #7d8fd0
+status     --ok #6fae7a  --bad #cd6155  --hold #7d8fd0   (--warn deleted R3:
+           it aliased the accent; --hold IS the warning color, hotter = --bad)
 type       --sans Archivo    --mono "Courier New"
 radius     --radius 0px      (square. do not add rounding)
 ```
 
 Surfaces layer `--bg` < `--bg2` < `--panel` < `--panel2`. Going deeper means
 "more active/selected", never "more important".
+
+Amber has exactly two values: `--accent` at rest, `--accent-hover` under
+the pointer — no third tint may be created (R1). Translucent amber is
+`--accent-soft`; bordered amber regions use `--accent-line`; no raw
+rgba(224,163,63,·) may appear in a rule (R2).
 
 Status colors report state only. `--ok` is not a "success accent" for
 decoration; `--bad` is not a red you reach for because something is loud.
@@ -78,6 +84,21 @@ only message is *there is nothing here*. Show what the user has, and make the
 act that fills the gap the primary action. A component with an empty life and
 a filled life ships as one component with two states — the empty state is a
 different layout, not the filled layout minus its content.
+
+**The verb is the form** (R8, canon with its boundary): a lead may carry
+the unblocking form itself only when ONE input satisfies the blocker.
+Two fields or more is a task, and tasks live in their stage — the lead
+then links, stated, to the stage.
+
+**One surface per document** (R11, canon): the Art Direction Bible has
+one editor; Draft is primary amber (it creates the thing the gate
+needs), Save is ghost bookkeeping, and the overwrite confirm protecting
+unsaved text is mandatory.
+
+**Sticky chrome & the z-ladder** (R13, canon): the pipeline band is the
+literal ceiling. Ladder: sticky band 44 · header 45 · toast 50 · popover
+55 · menus 60 · lightbox 100 · modal 400. New floating surfaces slot in;
+no new z-index value may be coined without a row here.
 
 **Main/side split.** Work goes left in `.dash-main` at generous width; counts,
 standing rules, and history recede into `.dash-side`. Counts are not the point
@@ -366,6 +387,51 @@ thing* and *derive from it* split by an internal rule, and the
 destructive act fenced right — never adjacent to a promotion. Buttons
 inside the bar are borderless text; the bar never wraps.
 
+**The withheld verb** (R9, canon): where an action would appear but its
+gate is unmet, a dashed `--ink-faint` bordered tag states the gate in
+Courier (`.wv-tag`, `.pd-lock`). It is never a disabled button, never
+clickable, and its copy names the act that unlocks it.
+
+**The credential modal** (R6, canon): a provider that offers true OAuth
+(OpenRouter) gets the one-click connect; a provider that doesn't gets the
+Courier step chain (`OPEN THE KEY PAGE → SIGN IN & CREATE A KEY → PASTE
+IT HERE`) with the console opening only on an explicit ghost click —
+never a connect-styled button over a paste flow.
+
+**Notification marks** (R7, canon): one filled square dot in the severity
+color after the tool label — `--bad` for errors, `--hold` for holds. No
+counts, no chips, no badges, anywhere, ever: a count is a queue and this
+product's queues live in the views; the dot points, the view states. Two
+conditions never stack — the worse one wins.
+
+**The stated refusal** (R14, canon): an engine's content-policy refusal
+is a third kind of stop — not an error (nothing broke), not a gate
+(nothing unlocks it): `--hold` border, stated meaning, the craft answer,
+the provider's own words in Courier. Refusal copy never speculates about
+why beyond the provider's words.
+
+**The mode chip** (R17, canon — binds all future modes): a mode that
+changes what clicks do MUST show a fixed bottom-left Courier chip with an
+amber left border (sanctioned — an armed mode is a primary state),
+stating the mode and its exit. One mode at a time; entering a second
+exits the first.
+
+**Debug quarantine** (R16, canon): a debug tool may be reachable but may
+never look like a peer of a paid feature — in dropdowns it renders last,
+after a disabled Courier `— DEBUG —` divider, in `--ink-faint`.
+
+**The structural board** (R12, canon): an assembled board renders as its
+layout frames (1px `--line` chrome — containment, not content) holding
+the real panels, click-through to the uncropped take, the composite
+demoted to "Export board". The click-through affordance is stated once
+per view in Courier `--ink-faint` (`CLICK ANY FRAME FOR THE FULL TAKE`).
+Content exemption: panel imagery and the drawn title block follow the
+production's own art, not the app tokens.
+
+**Wizard group labels** (R18, canon): Courier group labels inside one
+step (`.wiz-group-label`, THE MOVIE / THE BOARDS) — capability-before-
+vendor applied to parameters.
+
 **Intake row** (`.ref-add`, `.chip-add`). High-frequency entry into the
 list/library directly above it. Max 6 fields; placeholders name fields,
 tooltips explain them; only the one field a first-timer can't guess gets a
@@ -579,6 +645,12 @@ structure (order, alignment, grouping, fixed column widths), and
 region is inside a bordered panel, not floating on the page.
 **What never matches:** the demo content itself.
 
+**The truthful deviation** (R19): the one sanctioned reason to diverge
+from a mock without a designer round-trip is when the mock states a
+falsehood about the system (mock 16b's "NO KEY HELD" vs the PKCE key
+that really lives on this machine). The true statement ships; the
+deviation is reported. Worked example: the OpenRouter credential row.
+
 The most common failure is not a wrong value but a **dropped wrapper**:
 content rendered at full page width because the mock's outer panel, its
 padding, or its internal hairline was skipped. Check containment first.
@@ -695,22 +767,8 @@ are then deleted.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-04 | Conformance-audit open questions (not a feature — rulings needed): ~~amber `.fr-eyebrow`/`.fr-rule`~~ (RESOLVED 2026-08-04: the notice snippet ships the amber rule-sweep and block caret deliberately — typewriter grammar stands); the tokenized `--accent-hover` #f0bc63; translucent-amber alphas (.06/.14) vs unused `--accent-soft`/`--accent-line`; the structural board's content-palette exemption; a dead-CSS deletion list (boards-empty family, engine-cards, subj-add, prod-moved, take-label states) awaiting an explicit OK against the preserve-every-class rule; remaining inline style-attribute promotions | styles.css, first-run Settings | Each needs a designer ruling, not a coder guess |
-| 2026-08-04 | Authenticate modal, connector grammar (user-directed, revised same day): the modal is the anchor — OpenRouter-style step chain (OPEN THE KEY PAGE → SIGN IN & CREATE A KEY → PASTE IT HERE), a ghost act that opens the provider console only when clicked (the earlier auto-open stole focus and read as "no modal"), Test & save, and a footer stating in-place update. Providers' auth pages cannot be iframed (frame-ancestors DENY) and offer no OAuth-for-API-keys — stated constraint, not a choice | Authenticate modal (first-run rows + credential list) | Designer should ratify the chain-in-modal grammar and copy |
-| 2026-08-01 | The verb is the form (user ruling): with no screenplay, Status's DO-THIS-NEXT lead holds the upload form itself — never a button that only reaches another button; side column and Blocking untouched. The Screenplay stage's own empty state gets the same inline upload | Status lead, Screenplay view | Lead previously presented text + a jump button; a form inside the lead is new vocabulary — designer should rule on when a lead may carry a form |
-| 2026-08-01 | Production-design gate tag (user ruling): `.pd-lock` dashed faint tag "COMPLETE PRODUCTION DESIGN" replaces Create Breakdown wherever it would appear before the bible is saved (the locked-stage layout itself was ruled by LOCKED_STAGE_PLAN and is canon) | Location finders (Screenplay + wizard) | A dashed non-interactive tag standing in for a verb is new vocabulary; designer should rule on the tag treatment |
-| 2026-08-01 | "Script Scene Scan" (user naming): the Production Design step 2 read is named Script Scene Scan ("Run the Scene Scan") so the second read of the screenplay states what it returns | Wizard step 2 | Pure copy — review naming only |
-| 2026-08-01 | Status error breadcrumb (user-directed): a square `--bad` dot after the Status tool label whenever the activity log's recent window holds an error | Header tools nav | FIRST NOTIFICATION MARK IN THE PRODUCT — designer must rule on notification vocabulary (dot vs count vs chip) |
-| 2026-08-01 | Bible surface unified (user-flagged duplication; INTERIM unification shipped same day after the draft "vanished" into the hidden review box): step 5 is now the single Art Direction Bible panel — Draft (primary) writes into the editor with an overwrite confirm protecting unsaved text, Save (ghost) persists, status line reads NOT DRAFTED YET / DRAFTED BY <MODEL> / REV n. The separate Draft & review box is gone | Wizard step 5 | Designer should ratify the merged surface and rule on the Draft(primary)/Save(ghost) amber split |
-| 2026-08-02 | Structural board view (user-directed, NEW PATTERN): an assembled board renders as its layout frames holding the individual panel images — cover-cropped in frame, click-through to the full uncropped take in the lightbox — with an HTML title block matching the drawn grammar; the composite single image becomes an explicit "Export board" download. Assemble lands directly on this view. Legacy boards without recorded rects keep the composite card | Board solo view (Boards stage) | The living-board vs flat-export split is new vocabulary; designer should rule on frame chrome, label treatment, and the export affordance |
-| 2026-08-02 | Sticky chrome (user-directed): the header and pipeline band pin to the top (position: sticky, z 45/44); content scrolls beneath; the lock popover switches to fixed positioning so it stays attached to the band. Pipeline-band entry's "spine" role now literally holds the ceiling | App-wide | Built from canon — review only the z-order ladder (toast 50 · popover 55 · menus 60 · lightbox 100 · modal 400) |
-| 2026-08-02 | Content-policy refusal treatment (user-directed): when an engine's safety system declines a panel, the bench shows a --hold-bordered stated block — ENGINE REFUSED — CONTENT POLICY, what it means (nothing broken, nothing billed, cannot be bypassed), the craft answer (restage to imply, or another engine), and the provider's own words in Courier | Render bench report area | New failure-state vocabulary (a refusal is neither an error nor a gate); designer should ratify the treatment |
-| 2026-08-02 | Persistent UI state (user-directed, invisible — no new visuals): view, open sheet, judging-room panel/take, board & assembly pickers, generation model/size/aspect, settings tab all survive refresh and view switches, namespaced per production in localStorage | App-wide | Nothing to review visually; listed for completeness |
-| 2026-08-01 | Interview persistence (user-directed, built from canon — review copy only): the look interview saves per production on every field change, with a mini stamp "SAVED — THESE ANSWERS BIND EVERY BIBLE DRAFT"; answers backstop every draft server-side and the drafter treats them as binding | Wizard step 3 | — |
-| 2026-08-01 | QA batch (user-directed, built from canon — review placement/copy only): error activity rows gain `--bad` left border + `--panel2` fill; model selectors list only configured engines and state "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS" when none; busy meters name the running model; third anchor relabeled "Board Rendering Style"; bible editor moved above the bake-off; wizard's duplicate key forms removed (keys live in Settings only) | Status, wizard, Breakdowns | — |
-| 2026-08-03 | Debug tools tab (user-directed): Settings gains a fourth subnav tab holding the mock engine toggle (a no-key "engine" labeled `MOCK ENGINE — no cost (debug)` that joins every model dropdown while on; all its output is stamped MOCK) and the page-text edit controls. Built from canon (panel, checkbox rows, hint copy) | Settings → Debug tools | Review placement/copy, and rule on how a debug-only engine should read inside production dropdowns |
-| 2026-08-03 | Text-edit mode chip (user-directed, NEW PATTERN): while Alt-click rewriting is armed, a fixed bottom-left Courier chip with an amber left border states the mode and its exit; Alt-click opens the standard modal prefilled with the clicked text | App-wide (debug mode) | First persistent mode indicator in the product — designer should rule on mode-chip vocabulary (position, dismissal, amber usage as active-mode signal) |
-| 2026-08-03 | Four-anchor shelf (user ruling, adversarially reviewed): Production Design step 1 groups anchors under Courier labels THE MOVIE (World Texture · Color Palette · Cinematography) and THE BOARDS (Board Rendering Style); board LAYOUT leaves the step for Assembly. `.wiz-group-label` + a narrowed single-column board group | Production Design step 1 | The movie/presentation grouping inside one step is new vocabulary — designer should rule on the group-label treatment and the four-up column rhythm |
+
+*(empty — CANONIZATION_PASS R1–R19 folded every row into the sections above, 2026-08-04)*
 
 ---
 
@@ -718,6 +776,15 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-04** — Canonization pass: Uncanonized table emptied under
+  CANONIZATION_PASS.md R1–R19; --warn deleted (aliased accent),
+  translucent ambers tokenized, mock-16b deviation ratified as the
+  truthful-deviation example, notification/mode/refusal/withheld-verb
+  vocabularies ruled. Dead CSS deleted (grep-proofed):
+  boards-empty/be-*/path-box/path-row, engine-cards/eng-head/eng-model,
+  prod-moved, take-label state rules; kept .subj-add and .take-label
+  base (still generated).
 
 - **2026-08-04** — Reference snippets delivered and adopted (marquee +
   AI-models notice), all hexes mapped to tokens: the marquee's channel/

@@ -1900,3 +1900,6 @@ details.meta pre {
   .fr-top { grid-template-columns: 1fr; }
   .fr-notice { border-left: none; border-top: 1px solid var(--line-soft); padding: 16px 0 0; }
 }
+
+/* R16 (CANONIZATION_PASS): the debug tail in every model dropdown. */
+option.opt-debug { color: var(--ink-faint); font-family: var(--mono); }
