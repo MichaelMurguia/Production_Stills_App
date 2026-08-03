@@ -174,7 +174,7 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
    label, one line per failing validate condition, jump link. */
 .gate-strip {
   border: 1px solid var(--line); border-left: 3px solid var(--accent);
-  background: rgba(224, 163, 63, .06); padding: 9px 13px; margin: 4px 0 14px;
+  background: var(--accent-soft); padding: 9px 13px; margin: 4px 0 14px;  /* R2 */
   display: flex; flex-direction: column; gap: 5px;
 }
 .gate-row { display: flex; align-items: baseline; gap: 12px; }
@@ -614,7 +614,7 @@ label.check {
 .crop-stage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 20px; }
 .crop-wrap { position: relative; cursor: crosshair; }
 .crop-wrap img { max-width: 92vw; max-height: calc(100vh - 120px); display: block; user-select: none; }
-.crop-box { position: absolute; pointer-events: none; border: 2px dashed var(--accent); background: rgba(224, 163, 63, .14); }
+.crop-box { position: absolute; pointer-events: none; border: 2px dashed var(--accent); background: var(--accent-soft); }  /* R2 */
 .repair-canvas { position: absolute; inset: 0; touch-action: none; }
 
 /* ================================================ wizard style anchors */
