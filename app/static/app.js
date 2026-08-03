@@ -345,6 +345,11 @@ const AUTH_PROVIDERS = {
             link: "https://aistudio.google.com/apikey", linkText: "aistudio.google.com/apikey" },
   anthropic: { name: "Anthropic Claude", icon: "claude-color", field: "anthropic_api_key", test: "anthropic",
                link: "https://console.anthropic.com/settings/keys", linkText: "console.anthropic.com/settings/keys" },
+  // fal has no dark mark in the icon set — the Courier initials tile is
+  // the stated fallback (P3). Its key lands at the connector endpoint,
+  // which syncs the catalog as its own proof-of-key.
+  fal: { name: "fal.ai", icon: null, connector: "fal",
+         link: "https://fal.ai/dashboard/keys", linkText: "fal.ai/dashboard/keys" },
 };
 
 function authModal(key) {
@@ -363,7 +368,9 @@ function authModal(key) {
     ov.innerHTML = `
       <div class="modal auth-modal" role="dialog" aria-modal="true">
         <div class="auth-head">
-          <span class="cred-tile"><img class="prov-ico" src="/provider-icons/${P.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(P.name.slice(0, 3).toUpperCase())}'"></span>
+          <span class="cred-tile">${P.icon
+            ? `<img class="prov-ico" src="/provider-icons/${P.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(P.name.slice(0, 3).toUpperCase())}'">`
+            : esc(P.name.slice(0, 3).toUpperCase())}</span>
           <div class="modal-title" style="margin:0">${esc(P.name)}</div>
         </div>
         <div class="fr-chain" style="margin:0 0 14px">
@@ -394,12 +401,20 @@ function authModal(key) {
       const k = $("[data-mf=key]", ov).value.trim();
       if (!k) return toast("Paste the key first.", true);
       try {
-        await api("/api/settings", { method: "POST", json: { [P.field]: k } });
-        if (P.test) {
-          await api("/api/settings/test", { method: "POST", json: { provider: P.test } });
-          toast(`${P.name} key saved and tested.`);
+        if (P.connector) {
+          const pub = await api(`/api/connectors/${P.connector}/key`, { method: "POST", json: { key: k } });
+          toast(pub.status === "SYNCED"
+            ? `${pub.label}: ${pub.model_count} models synced.`
+            : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
+            pub.status !== "SYNCED");
         } else {
-          toast(`${P.name} key stored.`);
+          await api("/api/settings", { method: "POST", json: { [P.field]: k } });
+          if (P.test) {
+            await api("/api/settings/test", { method: "POST", json: { provider: P.test } });
+            toast(`${P.name} key saved and tested.`);
+          } else {
+            toast(`${P.name} key stored.`);
+          }
         }
         done(true);
         renderSettings();
@@ -433,7 +448,9 @@ async function addCustomEngineModal() {
    loop, mask-faded at the edges. Icons are the LobeHub static set served
    locally from /provider-icons/ — never hotlinked. */
 const MARQUEE_PROVIDERS = [
-  ["openai", "OpenAI"], ["claude-color", "Claude"], ["gemini-color", "Gemini"],
+  // Tile names follow mock 18a (re-exported with SETTINGS_CONTROL_PANEL,
+  // 2026-08-05): the developer's name, not the product's.
+  ["openai", "OpenAI"], ["claude-color", "Anthropic"], ["gemini-color", "Google"],
   ["meta-color", "Meta"], ["mistral-color", "Mistral"], ["deepseek-color", "DeepSeek"],
   ["qwen-color", "Qwen"], ["xai", "xAI"], ["nvidia-color", "NVIDIA"],
   ["aws-color", "Amazon"], ["cohere-color", "Cohere"], ["perplexity-color", "Perplexity"],
@@ -2160,27 +2177,6 @@ async function renderSettings() {
     const e = engAll[pid];
     return !!(e?.configured && e?.last_test?.ok !== false);
   };
-  const provMeta = pid => {
-    const m = settings.provider_meta?.[pid] || {};
-    if (pid === "openai-chat") return `${settings.openai_chat_model} REWRITE → ${settings.openai_model} · REFS ≤14 · 1.5K PRESET CAP`;
-    if (pid === "gemini") return `${settings.model} · REFS ≤14 · NATIVE 4K`;
-    if (pid === "openai") return `${settings.openai_model} · REFS ≤14 · FLAGS OUTPUT ABOVE 2560×1440`;
-    if (pid === "mock") return "debug dry-run — no cost, watermarked MOCK";
-    if (pid.startsWith("custom:")) return `${m.model} · YOUR ENDPOINT`;
-    if (m.connector) {
-      const bits = [`${m.model}`, `VIA ${m.connector.toUpperCase()}`,
-        m.refs ? "ANCHORS REFERENCES" : "NO REFERENCES"];
-      if (m.price) bits.push(`$${m.price}/IMG`);
-      return bits.join(" · ");
-    }
-    return m.model || "";
-  };
-  const recRow = (el, reason, gated, gateText) => {
-    el.innerHTML = `<span class="rec-chip">RECOMMENDED</span>`
-      + `<span class="rec-reason">${esc(reason)}${gated
-        ? ` <span class="rec-gate">${esc(gateText)}</span>` : ""}</span>`;
-  };
-
   // Role 01 — narrative & content evaluation. Four possible homes now
   // (F6 backend, 2026-08-04): the OpenAI key (default), the Gemini key,
   // the Anthropic key, or the OpenRouter connector.
@@ -2208,12 +2204,9 @@ async function renderSettings() {
       `<option value="${esc(v)}">${esc(l)}</option>`).join("");
     nSel.value = nUsable.some(([v]) => v === settings.narrative_provider)
       ? settings.narrative_provider : nUsable[0][0];
-    $("#role-narrative-meta").textContent = {
-      openai: "RUNS ON THE OPENAI KEY BELOW",
-      gemini: "RUNS ON THE GEMINI KEY BELOW",
-      anthropic: "RUNS ON THE ANTHROPIC KEY BELOW",
-      openrouter: "RUNS THROUGH THE OPENROUTER CONNECTION",
-    }[nSel.value] || "";
+    // P1 — a live role wears one --ok square inside the field; the words
+    // about what runs where belong to first run and the modal.
+    nSel.closest(".role-sel").classList.add("live");
     nSel.onchange = async () => {
       let v = nSel.value;
       const json = {};
@@ -2236,9 +2229,6 @@ async function renderSettings() {
       } catch (err) { toast(err.message, true); }
     };
   }
-  recRow($("#rec-narrative"),
-    "It holds canon across a 124-page read better than anything else we have tested in this framework.",
-    !nUsable.length, "GATED — add a key below or connect OpenRouter.");
 
   // Role 02 — image generation: the STARTING engine (preferred_provider).
   const iSel = $("#role-image");
@@ -2251,119 +2241,101 @@ async function renderSettings() {
       `<option value="${esc(v)}">${esc(settings.providers[v])}</option>`).join("");
     iSel.value = usableProviders.includes(settings.preferred_provider)
       ? settings.preferred_provider : usableProviders[0];
-    $("#role-image-meta").textContent = provMeta(iSel.value).toUpperCase();
+    iSel.closest(".role-sel").classList.add("live");
     iSel.onchange = async () => {
       try {
         await api("/api/settings", { method: "POST", json: { preferred_provider: iSel.value } });
-        $("#role-image-meta").textContent = provMeta(iSel.value).toUpperCase();
         toast(`Starting engine: ${settings.providers[iSel.value]}.`);
       } catch (err) { toast(err.message, true); }
     };
   }
-  recRow($("#rec-image"),
-    "It rewrites the spec into render prose under zero-invention rules before painting, which holds forbidden content out most reliably.",
-    !oaiConfigured, "GATED — the pipeline needs the OpenAI key in section 02.");
 
-  // C2 (CONNECTORS_UI_PLAN) — §02, one credential list. From the user's
-  // side an OpenAI key and a fal key are the same kind of thing: a
-  // credential they own that costs them money. Fixed columns; every row
-  // the same height; NOT CONNECTED is the only disconnected term.
+  // SETTINGS_CONTROL_PANEL P1 — one credential list, all rows equal. A
+  // connected row carries Courier machine facts, its state square and
+  // text acts; a row that isn't connected carries nothing but its name
+  // and Authenticate — no status chip for something that hasn't
+  // happened. Failing states stay: they are machine facts.
   const stamp = t => (t || "").slice(0, 16).replace("T", " ");
-  const credState = pid => {
+  const mark = kind => `<span class="cred-mark ${kind}"></span>`;
+  const keyState = pid => {
     const e = engAll[pid] || {};
-    if (e.last_test?.ok) return ["ok", "KEY OK"];
+    if (e.last_test?.ok) return ["ok", "SYNCED"];
     if (e.last_test && !e.last_test.ok) return ["bad", `KEY FAILED ${stamp(e.last_test.at)}`];
-    if (e.source === "settings") return ["hold", "KEY SET — UNTESTED"];
     if (e.source === "env") return ["hold", "ENV VAR — UNTESTED"];
-    return ["none", "NO KEY"];
+    return ["hold", "KEY SET — UNTESTED"];
   };
-  const cxRowState = r => ({
-    NOT_CONNECTED: ["none", "NOT CONNECTED"],
+  const keyActs = pid => [["Replace", "replace"],
+    ...((engAll[pid] || {}).source === "env" ? [] : [["Disconnect", "disconnect-key"]])];
+  const cxState = r => ({
     SYNCED: ["ok", "SYNCED"],
     REJECTED: ["bad", `401 — REJECTED ${stamp(r.last_error?.at)}`],
     NO_NETWORK: ["hold", "NO NETWORK"],
   })[r.status];
-  const mark = kind => `<span class="cred-mark ${kind}"></span>`;
+  const cxActs = st => ({
+    SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
+    REJECTED: [["Reconnect", "auth"], ["Disable models", "disable-all"]],
+    NO_NETWORK: [],
+  })[st] || [];
 
-  const builtinMeta = {
-    openai: `POWERS BOTH ROLES · ${settings.openai_chat_model} · ${settings.openai_model} · FLAGS OUTPUT ABOVE 2560×1440 — PREFER A 4K-NATIVE ENGINE`,
-    gemini: `IMAGE GENERATION · ${settings.model} · NATIVE 4K`,
-  };
-  const cxMeta = r => [
-    `${r.model_count || "NO"} MODELS`,
-    r.prices_published ? "PRICES PUBLISHED" : "NO PRICES PUBLISHED",
-    r.last_sync ? `LAST SYNC ${stamp(r.last_sync)}` : "NEVER SYNCED",
-  ].join(" · ");
-
-  const builtinIdentity = pid => {
-    const e = engAll[pid] || {};
-    const hint = pid === "openai"
-      ? (settings.openai_api_key_hint || settings.openai_env_key_hint)
-      : settings.gemini_api_key_hint;
-    const tested = e.last_test ? ` · TESTED ${stamp(e.last_test.at)}` : "";
-    return hint ? `${esc(hint)}${tested}` : "—";
-  };
-  const cxIdentity = r => {
-    if (r.status === "NOT_CONNECTED") return "—";
-    if (r.id === "openrouter" && r.identity)
-      return `${esc(r.identity)} · SCOPED KEY ${esc(r.key_hint)}`;
-    return esc(r.key_hint || "—");
-  };
-
-  const orRow = cxRows.find(r => r.id === "openrouter") || { status: "NOT_CONNECTED", auth: "oauth", tile: "ORT", label: "OpenRouter", prices_published: true };
-  const falRow = cxRows.find(r => r.id === "fal") || { status: "NOT_CONNECTED", auth: "key", tile: "FAL", label: "fal.ai", prices_published: false };
+  const orRow = cxRows.find(r => r.id === "openrouter") || { status: "NOT_CONNECTED" };
+  const falRow = cxRows.find(r => r.id === "fal") || { status: "NOT_CONNECTED" };
   const credRows = [
-    { key: "openai", tile: "OAI", name: "OpenAI", tag: "BUILT IN",
-      meta: builtinMeta.openai, state: credState("openai"),
-      identity: builtinIdentity("openai"),
-      actions: [["Test", "test"], ["Replace", "replace"]] },
-    { key: "gemini", tile: "GGL", name: "Google Gemini", tag: "BUILT IN",
-      meta: builtinMeta.gemini, state: credState("gemini"),
-      identity: builtinIdentity("gemini"),
-      actions: [["Test", "test"], ["Replace", "replace"]] },
-    { key: "fal", tile: "FAL", name: "fal.ai", tag: "CONNECTOR",
-      meta: cxMeta(falRow), state: cxRowState(falRow), identity: cxIdentity(falRow),
-      actions: { NOT_CONNECTED: [["Connect", "connect"]],
-                 SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
-                 REJECTED: [["Replace key", "connect"], [`Disable its ${falRow.enabled_count || 0} models`, "disable-all"]],
-                 NO_NETWORK: [] }[falRow.status] },
-    { key: "openrouter", tile: "ORT", name: "OpenRouter", tag: "CONNECTOR",
-      meta: cxMeta(orRow), state: cxRowState(orRow), identity: cxIdentity(orRow),
-      actions: { NOT_CONNECTED: [["Connect", "connect"]],
-                 SYNCED: [["Refresh", "refresh"], ["Disconnect", "disconnect"]],
-                 REJECTED: [["Reconnect", "connect"], [`Disable its ${orRow.enabled_count || 0} models`, "disable-all"]],
-                 NO_NETWORK: [] }[orRow.status] },
-    ...(settings.anthropic_api_key_set ? [
-      { key: "anthropic", tile: "ANT", name: "Anthropic Claude", tag: "BUILT IN",
-        meta: `NARRATIVE · ${(settings.anthropic_model || "claude").toUpperCase()}`,
-        state: engAll.anthropic?.last_test
-          ? (engAll.anthropic.last_test.ok ? ["ok", "TESTED"] : ["bad", "TEST FAILED"])
-          : ["hold", "KEY STORED — UNTESTED"],
-        identity: settings.anthropic_api_key_hint || "",
-        actions: [["Test", "test-anthropic"], ["Replace", "auth-anthropic"]] }] : []),
-    { key: "custom", tile: "+", name: "Your own endpoints", tag: "",
-      meta: "ANY OPENAI-IMAGES-CONTRACT URL · BASE URL + MODEL + KEY",
-      state: null, identity: "", custom: true,
-      actions: [["Add engine", "add-custom"]] },
+    { key: "openrouter", tile: "ORT", name: "OpenRouter",
+      connected: orRow.status !== "NOT_CONNECTED",
+      facts: (orRow.identity ? `${esc(orRow.identity)} · ` : "")
+        + "SCOPED KEY — REVOKE FROM THEIR DASHBOARD",
+      state: cxState(orRow), actions: cxActs(orRow.status) },
+    { key: "openai", tile: "OAI", icon: "openai", name: "OpenAI",
+      connected: !!engAll.openai?.configured,
+      facts: esc(settings.openai_api_key_hint || settings.openai_env_key_hint || ""),
+      state: keyState("openai"), actions: keyActs("openai") },
+    { key: "gemini", tile: "GGL", icon: "gemini-color", name: "Google Gemini",
+      connected: !!engAll.gemini?.configured,
+      facts: esc(settings.gemini_api_key_hint || ""),
+      state: keyState("gemini"), actions: keyActs("gemini") },
+    { key: "anthropic", tile: "ANT", icon: "claude-color", name: "Anthropic Claude",
+      connected: !!settings.anthropic_api_key_set,
+      facts: esc(settings.anthropic_api_key_hint || ""),
+      state: keyState("anthropic"), actions: keyActs("anthropic") },
+    { key: "fal", tile: "FAL", name: "fal.ai",
+      connected: falRow.status !== "NOT_CONNECTED",
+      facts: esc(falRow.key_hint || ""),
+      state: cxState(falRow), actions: cxActs(falRow.status) },
+    { key: "custom", tile: "+", name: "Your own endpoints", custom: true,
+      facts: "ADD ANY API KEY", actions: [["Add model", "add-custom"]] },
   ];
 
-  $("#cred-list").innerHTML = credRows.map(r => `
+  $("#cred-list").innerHTML = credRows.map(r => {
+    // P3 — a third-party service rides its real brand icon; Courier
+    // initials are the stated fallback (and ORT stands: no dark mark).
+    const tileHtml = r.custom
+      ? `<span class="cred-tile plus">+</span>`
+      : r.icon
+        ? `<span class="cred-tile"><img class="prov-ico" src="/provider-icons/${r.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(r.tile)}'"></span>`
+        : `<span class="cred-tile">${esc(r.tile)}</span>`;
+    if (!r.connected && !r.custom) return `
+    <div class="cred-row bare" data-cred="${esc(r.key)}">
+      ${tileHtml}
+      <span class="cred-id"><span class="cred-name">${esc(r.name)}</span></span>
+      <span class="cred-state"></span>
+      <span class="cred-acts"><button class="ghost" data-act="auth">Authenticate</button></span>
+    </div>
+    <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`;
+    const chips = r.custom ? customs.map(e =>
+      `<button class="cchip" data-cid="${esc(e.id)}">${esc((e.label || e.id).toUpperCase().slice(0, 14))}</button>`).join(" ") : "";
+    return `
     <div class="cred-row" data-cred="${esc(r.key)}">
-      <span class="cred-tile${r.custom ? " plus" : ""}">${esc(r.tile)}</span>
+      ${tileHtml}
       <span class="cred-id">
-        <span class="cred-name">${esc(r.name)}${r.tag ? ` <i class="cred-tag">${esc(r.tag)}</i>` : ""}</span>
-        <span class="cred-meta">${esc(r.meta)}</span>
+        <span class="cred-name">${esc(r.name)}</span>
+        ${r.facts || chips ? `<span class="cred-meta">${r.facts}${chips ? " " + chips : ""}</span>` : ""}
       </span>
       <span class="cred-state">${r.state ? mark(r.state[0]) + esc(r.state[1]) : ""}</span>
-      <span class="cred-ident">${r.custom
-        ? customs.map(e => `<button class="cchip" data-cid="${esc(e.id)}">${esc((e.label || e.id).toUpperCase().slice(0, 14))}</button>`).join(" ")
-        : r.identity}</span>
       <span class="cred-acts">${(r.actions || []).map(([l, a]) =>
         `<button class="text-act" data-act="${esc(a)}">${esc(l)}</button>`).join(" ")}</span>
     </div>
-    <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`).join("");
-
-  const settingsField = { openai: "openai_api_key", gemini: "gemini_api_key" };
+    <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`;
+  }).join("");
   $$("#cred-list .cred-row").forEach(row => {
     const key = row.dataset.cred;
     $$("button[data-act]", row).forEach(btn => {
@@ -2375,23 +2347,27 @@ async function renderSettings() {
   });
 
   async function credAction(key, act, row) {
-    if (act === "test") {
-      try {
-        const r = await api("/api/settings/test", { method: "POST", json: { provider: key } });
-        toast(`${key} connection OK — ${r.model}`);
-      } catch (err) { toast(err.message, true); }
+    if (act === "auth" || act === "replace") {
+      // One grammar for every credential: OpenRouter's true OAuth goes
+      // straight to their authorisation page; everyone else gets the
+      // connector-grammar Authenticate modal.
+      if (key === "openrouter") {
+        try {
+          const { url } = await api("/api/connectors/openrouter/auth");
+          location.href = url;
+        } catch (err) { toast(err.message, true); }
+      } else authModal(key);
+    } else if (act === "disconnect-key") {
+      const field = { openai: "openai_api_key", gemini: "gemini_api_key",
+                      anthropic: "anthropic_api_key" }[key];
+      if (!field || !(await askConfirm(`Disconnect ${key}`,
+        "The key is deleted from settings.json on this machine. Work it generated keeps its records.",
+        "Disconnect", true))) return;
+      try { await api("/api/settings", { method: "POST", json: { [field]: "" } }); }
+      catch (err) { toast(err.message, true); }
       renderSettings();
-    } else if (act === "auth-anthropic") {
-      authModal("anthropic");
-    } else if (act === "test-anthropic") {
-      try {
-        const r = await api("/api/settings/test", { method: "POST",
-                                                    json: { provider: "anthropic" } });
-        toast(`Anthropic connection OK — ${r.model}`);
-      } catch (err) { toast(err.message, true); }
-      renderSettings();
-    } else if (act === "replace" || act === "connect" || act === "add-custom") {
-      openCredExpand(key, act);
+    } else if (act === "add-custom") {
+      addCustomEngineModal();
     } else if (act === "refresh") {
       try {
         const r = await api(`/api/connectors/${key}/refresh`, { method: "POST" });
@@ -2416,121 +2392,23 @@ async function renderSettings() {
     }
   }
 
-  // C3 — the two auth kinds are stated, never blurred: the row expands in
-  // place (no modal); one-click gets a Connect button, paste-a-key gets a
-  // paste field and says why. Deep links go to each provider's key page.
-  function openCredExpand(key, act) {
-    $$(".cred-expand").forEach(b => b.classList.add("hidden"));
-    const box = $(`.cred-expand[data-expand="${CSS.escape(key)}"]`);
-    if (!box) return;
-    box.classList.remove("hidden");
-
-    if (act === "add-custom") {
-      box.innerHTML = `
-        <div class="cred-form">
-          <p class="cred-form-kicker">YOUR OWN ENDPOINT — OPENAI IMAGES CONTRACT</p>
-          <p class="mini">The endpoint must speak images.generate / images.edit. The key is stored in settings.json and leaves this machine only to call this endpoint.</p>
-          <div class="cred-grid4">
-            <input data-f="label" placeholder="Name — e.g. local SDXL, studio ComfyUI">
-            <input data-f="base_url" placeholder="Base URL — https://api.example.com/v1">
-            <input data-f="model" placeholder="Model id this endpoint expects">
-            <input data-f="api_key" type="password" placeholder="API key">
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button class="primary" data-f="go">Add engine</button>
-            <button class="ghost" data-f="x">Cancel</button>
-          </div>
-        </div>`;
-      $("[data-f=go]", box).onclick = async () => {
-        const body = Object.fromEntries(["label", "base_url", "model", "api_key"]
-          .map(f => [f, $(`[data-f=${f}]`, box).value.trim()]));
-        if (!body.label || !body.base_url || !body.model || !body.api_key)
-          return toast("All four fields are needed.", true);
-        try {
-          await api("/api/settings/engines", { method: "POST", json: body });
-          toast(`${body.label} added — it now appears in every Model dropdown.`);
-          renderSettings();
-        } catch (err) { toast(err.message, true); }
-      };
-      $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
-      return;
-    }
-
-    if (key === "openrouter") {
-      box.innerHTML = `
-        <div class="cred-form">
-          <p class="cred-form-kicker ok-k">ONE-CLICK — OPENROUTER</p>
-          <p class="mini">Connect opens OpenRouter's own authorisation page and a scoped key comes back. Nothing is pasted.</p>
-          <div class="cred-connect">
-            <span>A browser window will open at <span class="mono">openrouter.ai</span>.</span>
-            <button class="primary" data-f="go">Connect</button>
-          </div>
-          <p class="cred-form-foot">THE KEY STAYS YOURS &middot; SCOPED TO THIS APP &middot; REVOKE IT AT ANY TIME FROM THEIR DASHBOARD</p>
-        </div>`;
-      $("[data-f=go]", box).onclick = async () => {
-        try {
-          const { url } = await api("/api/connectors/openrouter/auth");
-          location.href = url;  // returns via /connectors/openrouter/callback
-        } catch (err) { toast(err.message, true); }
-      };
-      return;
-    }
-
-    const PASTE = {
-      fal: { name: "FAL.AI", why: "fal offers no one-click authorisation, so this row says so rather than dressing a paste field as a connect button.",
-             link: "https://fal.ai/dashboard/keys", linkText: "fal.ai/dashboard/keys" },
-      openai: { name: "OPENAI", why: "API billing is separate from ChatGPT Plus. The key powers both AI roles.",
-                link: "https://platform.openai.com/api-keys", linkText: "platform.openai.com/api-keys" },
-      gemini: { name: "GOOGLE GEMINI", why: "The key comes from Google AI Studio and bills your Google account per render.",
-                link: "https://aistudio.google.com/apikey", linkText: "aistudio.google.com/apikey" },
-    }[key];
-    box.innerHTML = `
-      <div class="cred-form">
-        <p class="cred-form-kicker">PASTE A KEY — ${esc(PASTE.name)}</p>
-        <p class="mini">${esc(PASTE.why)}</p>
-        <div class="row" style="margin-top:8px">
-          <input type="password" data-f="key" placeholder="key_…" style="flex:1;min-width:0">
-          <button class="primary" data-f="go">Test and save</button>
-          <button class="ghost" data-f="x">Cancel</button>
-        </div>
-        <p class="cred-form-foot">GET ONE AT <a href="${esc(PASTE.link)}" target="_blank" rel="noopener">${esc(PASTE.linkText)}</a> — TAKES ABOUT A MINUTE.</p>
-      </div>`;
-    $("[data-f=x]", box).onclick = () => box.classList.add("hidden");
-    $("[data-f=go]", box).onclick = async () => {
-      const k = $("[data-f=key]", box).value.trim();
-      if (!k) return toast("Paste the key first.", true);
-      try {
-        const field = settingsField[key];
-        if (field) {
-          await api("/api/settings", { method: "POST", json: { [field]: k } });
-          await api("/api/settings/test", { method: "POST", json: { provider: key } });
-          toast(`${PASTE.name} key saved and tested.`);
-        } else {
-          const pub = await api(`/api/connectors/${key}/key`, { method: "POST", json: { key: k } });
-          toast(pub.status === "SYNCED"
-            ? `${pub.label}: ${pub.model_count} models synced.`
-            : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
-            pub.status !== "SYNCED");
-        }
-      } catch (err) { toast(err.message, true); }
-      renderSettings();
-    };
-  }
-
-  // C4 — §03 the catalog summary. The tiles and the browser count read
-  // from the same /api/connectors stats — one source, one truth.
-  $("#reach-sub").textContent = cxStats.total
-    ? `${cxStats.total} models in the synced catalogs. Only the ones you enable reach a dropdown.`
-    : "No catalogs synced yet — connect fal.ai or OpenRouter in 02 and the models list themselves.";
-  $("#reach-tiles").innerHTML = [
-    [cxStats.enabled, "Enabled and in the selector", ""],
-    [cxStats.anchor_refs, "Anchor references — usable for canon work", ""],
-    [cxStats.fourk, "Reach 4K natively", ""],
-    [cxStats.deprecated_enabled, "Enabled but now deprecated upstream",
-     cxStats.deprecated_enabled ? "bad" : ""],
-  ].map(([n, lab, cls]) => `
-    <div class="reach-tile ${cls}"><span class="reach-num">${n}</span>
-    <span class="reach-lab">${esc(lab)}</span></div>`).join("");
+  // SETTINGS_CONTROL_PANEL P1 — the catalog is one line of counts. The
+  // stat tiles were furniture; the counts are the required information.
+  // A deprecated-but-enabled count is a failing state and stays, in
+  // --bad, only when it is nonzero.
+  const lastSync = cxRows.map(r => r.last_sync).filter(Boolean).sort().pop();
+  const ago = t => {
+    const m = Math.max(1, Math.round((Date.now() - Date.parse(t)) / 60000));
+    if (m < 60) return `${m} MIN AGO`;
+    const h = Math.round(m / 60);
+    return h < 48 ? `${h} H AGO` : `${Math.round(h / 24)} D AGO`;
+  };
+  $("#models-facts").innerHTML =
+    `${cxStats.enabled || 0} ENABLED · ${cxStats.total || 0} IN CATALOG · `
+    + (lastSync ? `SYNCED ${esc(ago(lastSync))}` : "NO CATALOG SYNCED")
+    + (cxStats.deprecated_enabled
+      ? ` · <span class="m-bad">${cxStats.deprecated_enabled} ENABLED BUT DEPRECATED UPSTREAM</span>`
+      : "");
   const catBtn = $("#open-catalog");
   if (cxStats.total) {
     catBtn.classList.remove("hidden");
@@ -2547,6 +2425,21 @@ async function renderSettings() {
     "x-ai": "XAI", "xai": "XAI", "nvidia": "NVD", "hidream": "HDR" };
   const devTile = d => DEVTILES[(d || "").toLowerCase()]
     || ((d || "").split(/[\s-]+/).filter(Boolean).map(w => w[0]).join("").slice(0, 3).toUpperCase() || "???");
+  // P3 (SETTINGS_CONTROL_PANEL) — wherever a third-party service appears
+  // it rides its real brand icon; Courier initials are the stated
+  // fallback for developers with no dark mark in the local set.
+  const PROV_ICONS = { openai: "openai", google: "gemini-color",
+    anthropic: "claude-color", qwen: "qwen-color", "x-ai": "xai", xai: "xai",
+    nvidia: "nvidia-color", meta: "meta-color", deepseek: "deepseek-color",
+    mistral: "mistral-color", moonshot: "moonshot", minimax: "minimax-color",
+    cohere: "cohere-color", perplexity: "perplexity-color",
+    nousresearch: "nousresearch", "liquid ai": "liquid", amazon: "aws-color" };
+  const devTileHtml = d => {
+    const ico = PROV_ICONS[(d || "").toLowerCase()];
+    return ico
+      ? `<img class="prov-ico" src="/provider-icons/${ico}.png" alt="" onerror="this.parentNode.textContent='${esc(devTile(d))}'">`
+      : esc(devTile(d));
+  };
   const badges = m => {
     const b = [];
     if (m.status !== "active") b.push(`<span class="cbadge bad">DEPRECATED UPSTREAM</span>`);
@@ -2580,8 +2473,8 @@ async function renderSettings() {
         ${m.preview
           ? `<img class="cat-thumb" src="${esc(m.preview)}" alt="" title="Witnessed test frame — rendered through your key">`
           : m.enabled && m.supported
-            ? `<button class="cred-tile cat-prevbtn" data-prev="${esc(m.id)}" title="Render a test frame — ${m.price_per_image ? `~$${esc(m.price_per_image)}` : "engine rate"}, billed to your key">${esc(devTile(m.developer))}</button>`
-            : `<span class="cred-tile">${esc(devTile(m.developer))}</span>`}
+            ? `<button class="cred-tile cat-prevbtn" data-prev="${esc(m.id)}" title="Render a test frame — ${m.price_per_image ? `~$${esc(m.price_per_image)}` : "engine rate"}, billed to your key">${devTileHtml(m.developer)}</button>`
+            : `<span class="cred-tile">${devTileHtml(m.developer)}</span>`}
         <span class="cat-id">
           <span class="cat-name">${esc(m.label)}</span>
           <span class="cat-meta">${esc((m.developer || "").toUpperCase())} · VIA ${esc(m.connector.toUpperCase())} · ${esc(m.provider_model_id)}${!m.supported ? " · PARAMETER SHAPE NOT YET MAPPED" : ""}</span>

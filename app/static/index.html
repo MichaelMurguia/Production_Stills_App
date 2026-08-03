@@ -498,50 +498,31 @@
       </div>
 
       <div id="settings-steady">
-      <div class="panel ai-head" style="margin-bottom:20px">
-        <div>
-          <h2>AI &amp; engines</h2>
-          <p class="hint">Keys are written to <code>settings.json</code> on this machine and leave it only to call the provider you gave them to. Nothing is proxied through us and no render credit is resold.</p>
-        </div>
-        <span class="bill-warn">BILLED PER RENDER &mdash; REJECTED TAKES COST THE SAME</span>
-      </div>
-
-      <!-- C1 — §01 WHAT WILL RUN: the two AI roles, chosen separately. -->
-      <div class="fact-head sec-head">SET DEFAULT MODELS <span class="sec-sub">Two different kinds of AI. They are chosen separately.</span></div>
+      <!-- SETTINGS_CONTROL_PANEL P1 — the control panel states, it never
+           explains: three sections, two Courier footnotes, zero
+           paragraphs. Explanation lives in first run and the modal. -->
+      <div class="fact-head sec-head">SET DEFAULT MODELS</div>
       <div class="role-cards">
         <div class="panel role-card">
-          <p class="role-kicker">ROLE 01 <b>Narrative &amp; content evaluation</b></p>
-          <p class="role-jobs">SCRIPT SCAN &middot; BIBLE DRAFTING &middot; BREAKDOWN AUTOFILL &middot; PROMPT COMPILE &amp; REWRITE &middot; INSIGHTS</p>
-          <div class="role-sel">
-            <select id="role-narrative"></select>
-            <p class="role-sel-meta" id="role-narrative-meta"></p>
-          </div>
-          <div class="rec-row" id="rec-narrative"></div>
+          <p class="role-kicker"><b>Narrative &amp; content evaluation</b></p>
+          <div class="role-sel"><select id="role-narrative"></select></div>
         </div>
         <div class="panel role-card">
-          <p class="role-kicker">ROLE 02 <b>Image generation</b> <span class="role-tag">STARTING ENGINE</span></p>
-          <p class="role-jobs">PANEL TAKES &middot; REPAIR REGION &middot; FULL-SIZE RE-RENDER &middot; DERIVED MATERIALS</p>
-          <div class="role-sel">
-            <select id="role-image"></select>
-            <p class="role-sel-meta" id="role-image-meta"></p>
-          </div>
-          <div class="rec-row" id="rec-image"></div>
-          <p class="role-note">&rarr; This is only where a new take <i>starts</i>. Every panel keeps its own picker on the <b>Panels</b> tab &mdash; switching engines per panel is how you get the best frame.</p>
+          <p class="role-kicker"><b>Image generation</b> <span class="role-tag">STARTING ENGINE</span></p>
+          <div class="role-sel"><select id="role-image"></select></div>
         </div>
       </div>
-      <!-- C2 — §02 WHAT PAYS FOR IT: one credential list, one row per
-           provider; a key pasted six months ago deserves a state and a
-           Test link, not a card. Rows expand in place — no modal. -->
-      <div class="fact-head sec-head">WHAT PAYS FOR IT <span class="sec-sub">Your accounts. Nothing is connected until you connect it.</span></div>
-      <div class="cred-list" id="cred-list"></div>
-      <p class="cred-foot">NO NETWORK CALL IS MADE UNTIL A CONNECTOR IS CONFIGURED &mdash; THE STANDALONE BUILD STAYS AIR-GAPPED BY DEFAULT</p>
+      <p class="sec-foot">EACH PANEL KEEPS ITS OWN PICKER</p>
 
-      <!-- C4 — §03 WHAT ELSE IS REACHABLE: the synced catalogs, and the
-           one place a total model count appears. -->
-      <div class="fact-head sec-head">WHAT ELSE IS REACHABLE
-        <span class="sec-sub" id="reach-sub"></span>
-        <button class="text-act sec-act hidden" id="open-catalog">Open the catalog</button></div>
-      <div class="reach-tiles" id="reach-tiles"></div>
+      <div class="fact-head sec-head">YOUR ACCOUNTS</div>
+      <div class="cred-list" id="cred-list"></div>
+      <p class="sec-foot">BILLED PER RENDER &mdash; REJECTED TAKES COST THE SAME</p>
+
+      <div class="models-line">
+        <span class="models-label">MODELS</span>
+        <span class="models-facts" id="models-facts"></span>
+        <button class="text-act hidden" id="open-catalog">Browse catalog</button>
+      </div>
       <div id="catalog-host"></div>
       <div class="facts-row">
         <div><div class="fact-head" style="border-top:none;margin-top:0;padding-top:0">EVERYTHING LIVES HERE</div>

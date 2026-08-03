@@ -151,6 +151,30 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls("body.tool-mode nav#nav button:hover",
                           ["background: var(--panel)"])
 
+    # -- settings control panel (SETTINGS_CONTROL_PANEL_PLAN, 2026-08-05) --
+
+    def test_control_panel_economy(self):
+        """P1: two Courier footnotes, a one-line MODELS summary, a live
+        --ok square inside a role selector. The stat tiles and the role
+        prose are deleted — a red on the NotIns means furniture crept
+        back."""
+        self.assert_decls(".sec-foot", [
+            "font-family: var(--mono)", "color: var(--ink-faint)"])
+        self.assert_decls(".models-line", [
+            "border-top: 1px solid var(--line)", "font-family: var(--mono)"])
+        self.assert_decls(".models-facts .m-bad", ["color: var(--bad)"])
+        self.assert_decls(".role-sel.live::before", ["background: var(--ok)"])
+        for gone in (".reach-tile", ".rec-chip", ".bill-warn", ".role-jobs",
+                     ".cred-tag", ".cred-ident", ".cred-foot"):
+            self.assertNotIn(gone, CSS)
+
+    def test_brand_icon_tile_grammar(self):
+        """P3: a third-party mark rides a transparent icon on a --field
+        tile with a --line border; inline icons are 22px."""
+        self.assert_decls(".cred-tile", [
+            "background: var(--field)", "border: 1px solid var(--line)"])
+        self.assert_decls(".prov-ico", ["width: 22px", "height: 22px"])
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)

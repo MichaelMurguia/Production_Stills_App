@@ -85,6 +85,20 @@ act that fills the gap the primary action. A component with an empty life and
 a filled life ships as one component with two states — the empty state is a
 different layout, not the filled layout minus its content.
 
+**The control panel states, it never explains** (SETTINGS_CONTROL_PANEL
+P1/P4, designer-ruled 2026-08-05): once a surface's setup life has done
+the persuading, its configured life carries required information only —
+machine facts in Courier, at most one Courier footnote per section, zero
+paragraphs. Explanation lives in first run and in the modal a row opens.
+Worked example: the configured AI & engines tab — two role cards with
+live selectors (`EACH PANEL KEEPS ITS OWN PICKER`), one equal-row
+credential list (`BILLED PER RENDER — REJECTED TAKES COST THE SAME`),
+and a one-line MODELS summary (`N ENABLED · N IN CATALOG · SYNCED
+<AGE>`). A row that isn't connected shows a name and Authenticate —
+never a status chip for something that hasn't happened. Failing states
+(`401 — REJECTED`, `NO NETWORK`, `KEY FAILED`) are machine facts and
+always stay.
+
 **The verb is the form** (R8, canon with its boundary): a lead may carry
 the unblocking form itself only when ONE input satisfies the blocker.
 Two fields or more is a task, and tasks live in their stage — the lead
@@ -737,20 +751,30 @@ for the manifest's maskable purpose.
   the worst state among everything that role needs: green ok · amber
   degraded-still-runs · red blocked · hollow not configured. The count is
   fixed at two forever, however many connectors exist.
-- **Provider brand icons** (SETTINGS_FIRST_RUN_PLAN F4): the LobeHub
-  static set, dark variants, fetched once and served locally from
-  `app/static/provider-icons/` — never hotlinked, never favicons (they
-  vanish or mislead on dark). Used on the first-run account rows and the
-  provider marquee: a masked, duplicated, ~36s auto-scrolling strip (the
-  "there are many" widget), still under `prefers-reduced-motion`.
-- **Model imagery is the typographic tile** (ruled 2026-08-03): Courier
-  developer initials on `--field` (`OAI`, `GGL`, `BFL`…). No vendor
-  thumbnails ever — a grid of third-party marketing samples is a slot
-  machine and other people's marketing presented as our evidence. The
-  only image a model may wear is a **witnessed test frame**: one
-  standardised in-house prompt rendered through the user's own key (cost
-  stated before the click), cached to disk, served from disk. Empty state
-  is a stated `NO PREVIEW`, never a broken image.
+- **Third-party marks ride transparent icons — app-wide** (SETTINGS_
+  CONTROL_PANEL P3, designer-ruled 2026-08-05, extending F4): wherever a
+  third-party service appears in the product — credential rows, model
+  pickers, the marquee, connector modals, activity lines that name a
+  provider — it is represented by its real brand icon: the LobeHub
+  static set, dark variants, transparent PNG, served locally from
+  `app/static/provider-icons/`, set on a `--field` tile with a `--line`
+  border (36px in lists, 22px inline). Never favicons, never recolored,
+  never on a light backing, never hotlinked. The Courier initials tile
+  (`OAI`, `ORT`…) is the stated fallback when no icon exists in the set —
+  and the only place initials may appear once an icon does exist is the
+  OpenRouter tile, which has no dark mark (`ORT` stands). The marquee
+  stays a masked, duplicated, ~36s auto-scrolling strip, still under
+  `prefers-reduced-motion`.
+- **Model imagery is the typographic tile plus the witnessed frame**
+  (ruled 2026-08-03; developer mark upgraded by P3): a model tile's
+  developer mark rides the brand icon where the set has one, Courier
+  initials on `--field` otherwise (`BFL`, `IDG`…). No vendor thumbnails
+  ever — a grid of third-party marketing samples is a slot machine and
+  other people's marketing presented as our evidence. The only image a
+  model may wear is a **witnessed test frame**: one standardised
+  in-house prompt rendered through the user's own key (cost stated
+  before the click), cached to disk, served from disk. Empty state is a
+  stated `NO PREVIEW`, never a broken image.
 
 ## Do not
 
@@ -789,6 +813,16 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-05** — Settings control panel (SETTINGS_CONTROL_PANEL_PLAN
+  P1–P4, mock 18b): the configured AI & engines tab rebuilt to the
+  states-never-explains economy — role cards stripped to name + live
+  selector, one equal-row credential list (unconnected rows carry only
+  Authenticate), stat tiles replaced by the one-line MODELS summary.
+  Third-party brand icons canonized app-wide (P3); dead CSS deleted
+  (grep-proofed): ai-head/bill-warn/sec-sub/role-jobs/role-sel-meta/
+  rec-*/role-note/cred-tag/cred-ident/cred-foot/cred-mark.none/sec-act/
+  reach-*/cred-grid4/cred-connect/ok-k.
 
 - **2026-08-05** — The two-mode band (BAND_CONDENSE_PLAN B1–B3, snippet
   verbatim): the pipeline band condenses while a tool view is open.

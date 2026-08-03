@@ -1650,14 +1650,14 @@ details.meta pre {
    the unified credential list, the catalog. C1 block first.
    ================================================================== */
 
-/* C1 — §01 WHAT WILL RUN */
-.ai-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
-.bill-warn { flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  color: var(--hold); border: 1px solid var(--hold); padding: 5px 10px; margin-top: 4px;
-  user-select: none; }
+/* C1 — §01 the two AI roles.
+   SETTINGS_CONTROL_PANEL P1 (designer-ruled 2026-08-05): the control
+   panel states, it never explains — role cards carry a name and a live
+   selector, nothing else; a live role wears one --ok square inside the
+   field; each section closes with at most one Courier footnote. */
 .sec-head { margin: 28px 0 12px; }
-.sec-head .sec-sub { font-family: var(--sans); font-size: 13px; letter-spacing: 0;
-  text-transform: none; color: var(--ink-dim); margin-left: 10px; font-weight: 400; }
+.sec-foot { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  color: var(--ink-faint); margin: 10px 2px 0; }
 .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .role-card { display: flex; flex-direction: column; }
 .role-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
@@ -1666,25 +1666,17 @@ details.meta pre {
   letter-spacing: 0; color: var(--ink); margin-left: 8px; }
 .role-tag { float: right; font-family: var(--mono); font-size: 9px;
   letter-spacing: .12em; color: var(--ink-faint); }
-.role-jobs { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
-  color: var(--ink-faint); margin: 6px 0 14px; }
+.role-sel { position: relative; margin-top: 10px; }
 .role-sel select { width: 100%; }
-.role-sel-meta { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
-  color: var(--ink-faint); margin-top: 5px; min-height: 13px; }
-.rec-row { display: flex; gap: 10px; align-items: baseline; margin-top: 14px;
-  border-left: 2px solid var(--line); padding-left: 12px; }
-.rec-chip { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
-  border: 1px solid var(--ink-dim); color: var(--ink-dim); padding: 2px 7px; }
-.rec-reason { font-size: 12.5px; color: var(--ink-dim); }
-.rec-gate { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
-  color: var(--hold); }
-.role-note { margin-top: auto; padding: 10px 12px; margin-top: 14px;
-  background: var(--panel2); font-size: 12.5px; color: var(--ink-dim); }
+.role-sel.live::before { content: ""; position: absolute; left: 12px; top: 50%;
+  margin-top: -4px; width: 8px; height: 8px; background: var(--ok);
+  pointer-events: none; }
+.role-sel.live select { padding-left: 30px; }
 @media (max-width: 980px) { .role-cards { grid-template-columns: 1fr; } }
 
 /* C2 — §02 one credential list; fixed columns are load-bearing */
 .cred-list { border: 1px solid var(--line); background: var(--panel); }
-.cred-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 104px 172px 120px;
+.cred-row { display: grid; grid-template-columns: 36px minmax(0,1fr) auto auto;
   gap: 14px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line-soft); }
 .cred-row:first-child { border-top: none; }
 .cred-tile { width: 36px; height: 36px; background: var(--field); border: 1px solid var(--line);
@@ -1692,8 +1684,6 @@ details.meta pre {
   font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--ink-dim); }
 .cred-tile.plus { color: var(--ink-faint); font-size: 14px; }
 .cred-name { font-weight: 600; font-size: 14px; display: block; }
-.cred-tag { font-style: normal; font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em;
-  color: var(--ink-faint); border: 1px solid var(--line); padding: 1px 5px; margin-left: 8px; vertical-align: 1px; }
 .cred-meta { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-faint);
   display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-state { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--ink-dim); }
@@ -1701,10 +1691,8 @@ details.meta pre {
 .cred-mark.ok { background: var(--ok); }
 .cred-mark.bad { background: var(--bad); }
 .cred-mark.hold { background: var(--hold); }
-.cred-mark.none { border: 1px solid var(--ink-faint); }
-.cred-ident { font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint); text-align: right; }
 .cred-acts { text-align: right; white-space: nowrap; }
-.cred-foot { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; color: var(--ink-faint); margin: 10px 2px 0; }
+.cred-acts .text-act + .text-act { margin-left: 16px; }
 .cchip { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);
   font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; padding: 2px 6px; cursor: pointer; }
 .cchip:hover { border-color: var(--ink-faint); }
@@ -1712,28 +1700,25 @@ details.meta pre {
 .cred-form-kicker { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; color: var(--ink-dim); margin-bottom: 4px; }
 @media (max-width: 980px) {
   .cred-row { grid-template-columns: 36px minmax(0,1fr); }
-  .cred-state, .cred-ident, .cred-acts { grid-column: 2; text-align: left; }
+  .cred-state, .cred-acts { grid-column: 2; text-align: left; }
 }
 
-/* C3 — in-place auth expansions; the two auth kinds read differently */
-.cred-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.cred-connect { display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  border: 1px solid var(--line); background: var(--field); padding: 12px 14px; margin-top: 10px;
-  font-size: 13px; color: var(--ink-dim); }
-.cred-form-kicker.ok-k { color: var(--ok); }
+/* C3 — the expand strip survives for your-own-endpoint chips; every
+   other credential act goes through the Authenticate modal (P1). */
 .cred-form-foot { font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
   color: var(--ink-faint); margin-top: 10px; }
 .cred-form-foot a { color: var(--ink-dim); }
 
-/* C4 — §03 catalog summary tiles */
-.sec-act { float: right; }
-.reach-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.reach-tile { background: var(--panel); border: 1px solid var(--line); padding: 16px 18px; }
-.reach-num { display: block; font-size: 26px; font-weight: 700; line-height: 1.1; }
-.reach-lab { display: block; font-size: 12px; color: var(--ink-dim); margin-top: 3px; }
-.reach-tile.bad { border-color: var(--bad); }
-.reach-tile.bad .reach-num { color: var(--bad); }
-@media (max-width: 980px) { .reach-tiles { grid-template-columns: 1fr 1fr; } }
+/* C4 — SETTINGS_CONTROL_PANEL P1: the catalog is one Courier line of
+   counts. The stat tiles were furniture; the counts are the required
+   information. Deprecated-but-enabled is a failing state and reads
+   --bad. */
+.models-line { display: flex; align-items: baseline; gap: 14px;
+  border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 2px 0;
+  font-family: var(--mono); }
+.models-label { font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.models-facts { flex: 1; font-size: 10px; letter-spacing: .06em; color: var(--ink-dim); }
+.models-facts .m-bad { color: var(--bad); }
 
 /* C5 — the model browser: capability before vendor */
 .cat-wrap { border: 1px solid var(--line); background: var(--panel); margin-top: 16px; }
