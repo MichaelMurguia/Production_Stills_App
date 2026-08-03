@@ -1,6 +1,6 @@
 # Screenboard Studio — Product Intent & Usage
 
-*Current to 2026-08-02 (release 2026.08.01.33). This is the "why and how"
+*Current to 2026-08-04 (release 2026.08.04.43). This is the "why and how"
 document; the technical companion is `docs/ARCHITECTURE.md`.*
 
 ## What this product is
@@ -19,7 +19,12 @@ has said "this is canon."
 The product ships two ways, same code: a **standalone app** (buyer's
 machine, buyer's disk, air-gap capable) and a **cloud studio**
 (`<name>.screenboardstudio.com`, one isolated service + volume per
-subscriber). Both render through the customer's own model API keys.
+subscriber). Both render through the customer's own credentials — pasted
+provider keys, or one OpenRouter/fal connection that unlocks a synced
+catalog of models. First run states this as a setup form: connect once
+and the recommended defaults land automatically (narrative on gpt-5.6,
+GPT Image 2 as the starting engine); narrative passes can also run on a
+stored Anthropic key.
 
 ## The convictions the product is built on
 

@@ -1,11 +1,17 @@
 # Test Completeness Review
 
 *2026-08-02, against release 2026.08.01.33; counts updated through
-2026-08-03. Suites: `tests/` (85 tests, 11 files) and
-`storefront/tests/` (57 tests, 7 files). P1 items 1–3 below are now
-closed by `tests/test_p1_lifecycle.py` (13 route-driven tests);
-`tests/test_debug_tools.py` covers the mock engine (including a full
-zero-cost pipeline walkthrough) and text overrides. Both run in CI on every push;
+2026-08-04 (release 2026.08.04.43). Suites: `tests/` (116 tests, 14
+files) and `storefront/tests/` (68 tests, 10 files). Since the original
+review: P1 items 1–3 closed by `test_p1_lifecycle.py` (13 route-driven
+tests); `test_debug_tools.py` (mock engine incl. a full zero-cost
+pipeline walkthrough, text overrides, owner gating); the connectors
+session's catalog/enable/generate coverage; `test_narrative.py` (F6
+backend — Anthropic/OpenRouter dispatch, gating, settings surface);
+storefront gained `test_seo.py` and `test_site_text.py`. Known flake:
+one provisioner test can reach the real network through the
+`_domain_serves` probe when a row's url/railway_url diverge — seen once;
+stub it if it recurs. Both run in CI on every push;
 the convention (CLAUDE.md) is that every feature/bugfix updates tests in
 the same commit. The audit batch (`docs/AUDIT_2026-08-02.md`) added
 `test_audit_fixes.py` to both suites: traversal guards, canvas bounds,

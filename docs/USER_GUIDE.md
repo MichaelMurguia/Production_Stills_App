@@ -3,7 +3,9 @@
 *Working draft toward the full manual. Written 2026-07-29 (plan v3 UI);
 core mechanics remain accurate, but the app has since gained productions
 (multi-project), locked-stage gates, persistent UI state, structural
-boards and cloud studios — see [`INTENT.md`](INTENT.md) for the current
+boards, cloud studios, provider connectors (one OpenRouter/fal
+connection unlocks a model catalog; first run is a setup form), and a
+narrative role that runs on OpenAI, Gemini, Anthropic or OpenRouter — see [`INTENT.md`](INTENT.md) for the current
 shape and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the technicals.*
 
 ---

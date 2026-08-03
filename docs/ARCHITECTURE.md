@@ -1,6 +1,6 @@
 # Screenboard Studio — Architecture
 
-*Current to 2026-08-02 (release 2026.08.01.33). Companion to
+*Current to 2026-08-04 (release 2026.08.04.43). Companion to
 `docs/INTENT.md` (why), `docs/WEBAPP_GUIDE.md` (storefront specifics),
 `docs/DEPLOYMENT.md` (infra runbook), `docs/SECURITY.md`.*
 
@@ -31,6 +31,7 @@ Hard boundary: no imports across the two; nothing from `data/` or
 | `assemble.py` | Board math + composition: `_variant_rects` (aspect-first default: justified rows, aspect > scale > crop; grid; hero; allocation), `slot_map()` (same geometry + verdicts, incl. TOO_SMALL — the no-upscale rule made visible), `assemble()` (records `rects` + `panels_used` for the structural view AND draws the 4K composite with `_type_scale` typography) |
 | `backup.py` | One-zip-per-production backup (never `settings.json`), zip-slip-guarded restore that always creates a NEW production, `days_since_backup` care data |
 | `mockflow.py` | The debug dry-run engine (Settings → Debug tools): scan/bible/breakdown text derived deterministically from the screenplay, renders drawn or reused from the library — everything stamped MOCK, no model calls, no cost. Owner-linked: exists only where `SCREENBOARD_DEBUG_TOOLS` is set (the provisioner sets it for OWNER_EMAILS studios); customers never see the tab, endpoints, or provider |
+| `connectors.py` | Provider connectors (CONNECTORS_PLAN, 2026-08-03): one credential unlocks a synced catalog of image models. OpenRouter (PKCE one-click; `or:` ids render via chat-completions image path) and fal.ai (`fal:` ids via the async queue; unsupported parameter families listed but not enableable — a stated gate). State in install-level `connectors.json` (gitignored — holds live keys); enabled records join `all_providers()`; injected HTTP for tests |
 | `narrative.py` | The narrative role's extra homes (F6 backend, 2026-08-04): Anthropic Messages API on the stored key, OpenRouter chat completions on the connector key — stdlib HTTP, injected for tests. `autofill._draft` dispatches every JSON research pass; `wizard.draft_bible` adds both for markdown. Settings: `narrative_provider`, `anthropic_model` |
 | `activity.py` | Append-only `data/activity_log.jsonl` per production, secrets redacted |
 | `validation.py` + `scripts/` | The canon rule engine (stdlib-only): `validate_spec` (structure, budgets, PASS coverage, project presence), `audit_spec`, `compile_prompt` (stable spec hash) — the app imports these rather than reimplementing rules |
@@ -101,8 +102,8 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
 
 ## Extension points
 
-- **New engine**: Settings → custom engines (OpenAI-compatible base URL);
-  `PROVIDERS` + aspect contracts in `generate.py`.
+- **New image engine**: three routes — a connector (`connectors.py` REGISTRY + adapter), a custom OpenAI-Images endpoint (Settings → your own endpoints), or a built-in in `generate.PROVIDERS` + aspect contracts.
+- **New narrative home**: `narrative.py` backend + `autofill.narrative_choices()` + the role select and `fillNarrativeSelect` in `app.js`.
 - **New pipeline stage**: nav band markup + `STAGE_ORDER` + `gateChain` +
   `stage_summary` + DESIGN_SYSTEM entry (band numbering is documented).
 - **New reference role**: `store.SUGGESTED_ROLES` (+ jurisdiction copy);
