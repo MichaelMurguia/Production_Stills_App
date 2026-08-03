@@ -1156,6 +1156,14 @@ function engineFacts(pid, s) {
            facts: bits.join(" · ") };
 }
 
+/* R16 (CANONIZATION_PASS): the mock engine is reachable but never a
+   peer of a paid engine — in every dropdown it renders LAST, after a
+   disabled Courier divider, in --ink-faint. */
+const MOCK_OPT = s => (s.engines || {}).mock?.configured
+  ? `<option disabled class="opt-debug">&mdash; DEBUG &mdash;</option>`
+    + `<option value="mock" class="opt-debug">MOCK ENGINE &middot; no cost</option>`
+  : "";
+
 /* Research passes (Scene Scan, breakdown draft, bible draft) list
    NARRATIVE homes only — never image engines. The connectors rewrite let
    or:/fal: image ids leak into these selects, where every pick was a
@@ -1175,7 +1183,13 @@ async function fillNarrativeSelect(sel) {
     put("anthropic", `Anthropic — ${s.anthropic_model || "Claude"}`);
   if (s.openrouter_narrative_ready)
     usable.push(["openrouter", `OpenRouter — ${s.openrouter_narrative_model}`]);
-  if (eng.mock?.configured) usable.push(["mock", "MOCK ENGINE — no cost (debug)"]);
+  if (!usable.length && eng.mock?.configured) {
+    // Only the debug engine exists: it may serve, quarantined, alone.
+    sel.disabled = false;
+    sel.innerHTML = MOCK_OPT(s);
+    sel.value = "mock";
+    return true;
+  }
   if (!usable.length) {
     sel.innerHTML = failed.length
       ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
@@ -1190,8 +1204,9 @@ async function fillNarrativeSelect(sel) {
   sel.disabled = false;
   sel.innerHTML = usable.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")
     + failed.map(([v, l]) =>
-      `<option value="${esc(v)}" disabled>${esc(l)} — KEY FAILED ITS TEST</option>`).join("");
-  if (usable.some(([v]) => v === prev)) sel.value = prev;
+      `<option value="${esc(v)}" disabled>${esc(l)} — KEY FAILED ITS TEST</option>`).join("")
+    + MOCK_OPT(s);
+  if (prev && (usable.some(([v]) => v === prev) || prev === "mock")) sel.value = prev;
   else if (usable.some(([v]) => v === s.narrative_provider))
     sel.value = s.narrative_provider;  // the Settings role is the default
   return true;
@@ -1204,6 +1219,7 @@ async function fillProviderSelect(sel, labels) {
   const eng = s.engines || {};
   const usable = [], failed = [];
   for (const pid of Object.keys(s.providers || {})) {
+    if (pid === "mock") continue;  // R16: quarantined to the debug tail
     if (pid.startsWith("or:") || pid.startsWith("fal:")) {
       usable.push(pid);  // stays listed; a dead key fails loudly at render
       continue;
@@ -1211,6 +1227,12 @@ async function fillProviderSelect(sel, labels) {
     const e = eng[pid];
     if (!e?.configured) continue;
     (e.last_test?.ok === false ? failed : usable).push(pid);
+  }
+  if (!usable.length && eng.mock?.configured) {
+    sel.disabled = false;
+    sel.innerHTML = MOCK_OPT(s);
+    sel.value = "mock";
+    return true;
   }
   if (!usable.length) {
     sel.innerHTML = failed.length
@@ -1234,9 +1256,12 @@ async function fillProviderSelect(sel, labels) {
     (anchors.length ? `<optgroup label="ANCHORS REFERENCES">${anchors.map(opt).join("")}</optgroup>` : "")
     + (styleOnly.length ? `<optgroup label="STYLE STUDIES ONLY">${styleOnly.map(opt).join("")}</optgroup>` : "")
     + failed.map(pid =>
-      `<option value="${esc(pid)}" disabled>${esc(s.providers[pid])} — KEY FAILED ITS TEST</option>`).join("");
-  if (usable.includes(prev)) sel.value = prev;
+      `<option value="${esc(pid)}" disabled>${esc(s.providers[pid])} — KEY FAILED ITS TEST</option>`).join("")
+    + MOCK_OPT(s);
+  if (prev && (usable.includes(prev) || prev === "mock")) sel.value = prev;
   else if (usable.includes(s.preferred_provider)) sel.value = s.preferred_provider;
+  else if (s.preferred_provider === "mock" && (s.engines || {}).mock?.configured)
+    sel.value = "mock";
   // The picker button rides beside every model select, once.
   if (!sel._sbPicker) {
     sel._sbPicker = true;
@@ -5131,8 +5156,13 @@ const providerUsable = (settings, v) => {
   return !!e?.configured && e.last_test?.ok !== false;
 };
 const providerOptions = (settings, selected) => {
-  const entries = Object.entries(settings.providers || {});
+  const entries = Object.entries(settings.providers || {})
+    .filter(([v]) => v !== "mock");  // R16: quarantined to the debug tail
   const usable = entries.filter(([v]) => providerUsable(settings, v));
+  if (!usable.length && settings.engines?.mock?.configured) {
+    return `<option disabled class="opt-debug">&mdash; DEBUG &mdash;</option>`
+      + `<option value="mock" class="opt-debug" selected>MOCK ENGINE &middot; no cost</option>`;
+  }
   const failed = entries.filter(([v]) => settings.engines?.[v]?.configured
     && settings.engines?.[v]?.last_test?.ok === false);
   if (!usable.length) {
@@ -5140,11 +5170,16 @@ const providerOptions = (settings, selected) => {
       ? "KEY FAILED ITS TEST — RETEST IN SETTINGS"
       : "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS"}</option>`;
   }
-  const sel = usable.some(([v]) => v === selected) ? selected : usable[0][0];
+  const sel = (selected === "mock" && settings.engines?.mock?.configured) ? "mock"
+    : usable.some(([v]) => v === selected) ? selected : usable[0][0];
   return usable.map(([v, label]) =>
     `<option value="${esc(v)}" ${v === sel ? "selected" : ""}>${esc(label)}</option>`).join("")
     + failed.map(([v, label]) =>
-      `<option value="${esc(v)}" disabled>${esc(label)} — KEY FAILED ITS TEST</option>`).join("");
+      `<option value="${esc(v)}" disabled>${esc(label)} — KEY FAILED ITS TEST</option>`).join("")
+    + (settings.engines?.mock?.configured
+      ? `<option disabled class="opt-debug">&mdash; DEBUG &mdash;</option>`
+        + `<option value="mock" class="opt-debug" ${sel === "mock" ? "selected" : ""}>MOCK ENGINE &middot; no cost</option>`
+      : "");
 };
 
 async function renderBoards() {
