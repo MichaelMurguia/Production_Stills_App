@@ -23,7 +23,14 @@ paths.ensure_dirs()
 # Unset — every standalone install — none of this exists and the app stays
 # fully offline-capable.
 ACCESS_TOKEN = os.environ.get("SCREENBOARD_ACCESS_TOKEN", "")
-_AUTH_EXEMPT = {"/login", "/api/login", "/api/healthz", "/styles.css", "/favicon.ico"}
+# The OAuth callback is exempt like every OAuth callback must be: the
+# browser arrives from the provider, possibly on a host that never held
+# the session cookie. Safe unauthenticated: pkce_finish only completes
+# with the single-use server-stored verifier that an AUTHENTICATED
+# /api/connectors/openrouter/auth call created, and a foreign code can
+# never satisfy our challenge.
+_AUTH_EXEMPT = {"/login", "/api/login", "/api/healthz", "/styles.css",
+                "/favicon.ico", "/connectors/openrouter/callback"}
 
 _LOGIN_HTML = """<!doctype html>
 <html><head><meta charset="utf-8"><title>Screenboard Studio — workspace login</title>
@@ -1052,8 +1059,13 @@ def api_connector_preview_image(name: str):
 
 @app.get("/api/connectors/openrouter/auth")
 def api_openrouter_auth(request: Request) -> dict:
-    callback = str(request.base_url).rstrip("/") + "/connectors/openrouter/callback"
-    return {"url": connectors.pkce_start(callback)}
+    # The callback must name the address the BROWSER is on — behind the
+    # cloud studio's wildcard router that is X-Forwarded-Host (set by our
+    # proxy, which strips any inbound copy), never request.base_url
+    # (the internal railway host, where the session cookie doesn't live).
+    fwd_host = request.headers.get("x-forwarded-host", "").strip()
+    base = f"https://{fwd_host}" if fwd_host else str(request.base_url).rstrip("/")
+    return {"url": connectors.pkce_start(base + "/connectors/openrouter/callback")}
 
 
 @app.get("/connectors/openrouter/callback")

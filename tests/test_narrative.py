@@ -145,5 +145,43 @@ class NarrativeTests(unittest.TestCase):
         eng = self.client.get("/api/settings").json()["engines"]["anthropic"]
         self.assertTrue(eng["last_test"]["ok"])
 
+
+
+class OpenRouterConnectFlowTests(unittest.TestCase):
+    """The one-click connect must survive the cloud studio's proxy: the
+    callback names the browser-facing host, and the callback route is
+    reachable without a session cookie on that host."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-orc-"))
+        _redirect_home(self.tmp)
+        self.client = TestClient(appmain.app)
+
+    def tearDown(self):
+        appmain.ACCESS_TOKEN = ""
+        _restore_home()
+
+    def test_auth_url_uses_forwarded_host(self):
+        r = self.client.get("/api/connectors/openrouter/auth", headers={
+            "x-forwarded-host": "my-studio.screenboardstudio.com"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(
+            "callback_url=https%3A%2F%2Fmy-studio.screenboardstudio.com"
+            "%2Fconnectors%2Fopenrouter%2Fcallback", r.json()["url"])
+
+    def test_auth_url_falls_back_to_base_url(self):
+        url = self.client.get("/api/connectors/openrouter/auth").json()["url"]
+        self.assertIn("callback_url=http%3A%2F%2Ftestserver", url)
+
+    def test_callback_is_reachable_without_a_session(self):
+        appmain.ACCESS_TOKEN = "sekrit"  # cloud studio: whole app gated
+        r = self.client.get("/connectors/openrouter/callback?code=bogus",
+                            follow_redirects=False)
+        # NOT a login redirect: the callback answers itself. With no
+        # pending verifier the exchange fails STATED.
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("start again", r.text)
+
+
 if __name__ == "__main__":
     unittest.main()
