@@ -79,3 +79,82 @@ class SiteTextTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RenameDoorTruthTests(unittest.TestCase):
+    """A rename must be true on the very next render, and the released
+    name forwards until reclaimed (user-caught 2026-08-04: renamed,
+    refreshed, was handed the old address, then a 404)."""
+
+    BASE = "screenboardstudio.com"
+
+    def setUp(self):
+        import uuid
+        from app import db as adb
+        settings.TENANT_DOMAIN_BASE = self.BASE
+        self.addCleanup(lambda: setattr(settings, "TENANT_DOMAIN_BASE", ""))
+        uid = uuid.uuid4().hex[:8]
+        self.old_name = f"old-slug-{uid}"
+        self.new_name = f"oxcart-{uid}"
+        with adb.session() as s:
+            p = adb.Purchase(kind="cloud", email="rename@example.com",
+                             stripe_session_id=f"cs_rename_{uid}")
+            s.add(p)
+            s.commit()
+            self.ws = adb.Workspace(
+                purchase_id=p.id, status="ACTIVE", subdomain=self.old_name,
+                railway_url="https://tenant-r.up.railway.app",
+                url=f"https://{self.old_name}.{self.BASE}", domain_live=1)
+            s.add(self.ws)
+            s.commit()
+            self.wid = self.ws.id
+
+    def _row(self):
+        from app import db as adb
+        with adb.session() as s:
+            w = s.get(adb.Workspace, self.wid)
+            _ = (w.url, w.subdomain, w.prev_subdomain, w.domain_live)
+            s.expunge_all()
+            return w
+
+    def test_rename_updates_the_door_in_the_same_commit(self):
+        c = _client("rename@example.com")
+        r = c.post("/studio/name", data={"workspace_id": self.wid,
+                                         "name": self.new_name},
+                   follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("named=1", r.headers["location"])
+        w = self._row()
+        self.assertEqual(w.subdomain, self.new_name)
+        self.assertEqual(w.url, f"https://{self.new_name}.{self.BASE}",
+                         "the door must be true before any reconcile runs")
+        self.assertEqual(w.prev_subdomain, self.old_name)
+
+    def test_released_name_forwards_until_reclaimed(self):
+        import httpx
+        from app import db as adb
+        from app.tenant_proxy import TenantProxy
+        c = _client("rename@example.com")
+        c.post("/studio/name", data={"workspace_id": self.wid,
+                                     "name": self.new_name})
+        proxy = TenantProxy(store, transport=httpx.MockTransport(
+            lambda req: httpx.Response(200, content=b"studio")))
+        tc = TestClient(proxy, base_url=f"https://{self.old_name}.{self.BASE}")
+        r = tc.get("/api/state?x=1", follow_redirects=False)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.headers["location"],
+                         f"https://{self.new_name}.{self.BASE}/api/state?x=1")
+        # The moment someone claims the released name, they own it.
+        with adb.session() as s:
+            import uuid as _u
+            p2 = adb.Purchase(kind="cloud", email="claimer@example.com",
+                              stripe_session_id=f"cs_claim_{_u.uuid4().hex[:8]}")
+            s.add(p2)
+            s.commit()
+            s.add(adb.Workspace(purchase_id=p2.id, status="ACTIVE",
+                                subdomain=self.old_name,
+                                railway_url="https://tenant-c.up.railway.app"))
+            s.commit()
+        r2 = tc.get("/", follow_redirects=False)
+        self.assertEqual(r2.status_code, 200,
+                         "a claimed name always wins over a forward")

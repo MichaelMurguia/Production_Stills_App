@@ -114,6 +114,18 @@ class TenantProxy:
             return target.rstrip("/")
         return ""
 
+    def _renamed_to(self, sub: str):
+        """The current subdomain of an ACTIVE studio that last released
+        `sub`, or None. Only consulted when `sub` itself matched nothing —
+        a claimed name always wins over a forward."""
+        with db.session() as s:
+            row = s.scalar(select(db.Workspace).join(db.Purchase).where(
+                db.Workspace.prev_subdomain == sub,
+                db.Workspace.subdomain != "",
+                db.Workspace.status == "ACTIVE",
+                db.Purchase.status == "PAID"))
+            return row.subdomain if row else None
+
     # -- proxying ----------------------------------------------------------
 
     def _client_for(self) -> httpx.AsyncClient:
@@ -155,6 +167,20 @@ class TenantProxy:
             return
         sub = host.split(":", 1)[0].lower().split(".", 1)[0]
         if not target:
+            # A renamed studio's released name forwards to its new address
+            # while unclaimed — stale doors and old bookmarks keep working
+            # (2026-08-04). The moment someone claims the name, they own it.
+            moved = await run_in_threadpool(self._renamed_to, sub)
+            if moved:
+                path = (scope.get("raw_path") or scope["path"].encode("latin-1")).decode("latin-1")
+                q = scope.get("query_string") or b""
+                loc = f"https://{moved}.{settings.TENANT_DOMAIN_BASE}{path}" + (
+                    "?" + q.decode("latin-1") if q else "")
+                await send({"type": "http.response.start", "status": 302,
+                            "headers": [(b"location", loc.encode("latin-1")),
+                                        (b"x-robots-tag", b"noindex")]})
+                await send({"type": "http.response.body", "body": b""})
+                return
             # The one failure page that sells (T1): a stranger, a typo, or
             # someone guessing — full store chrome, the address as the H1.
             await _page(send, 404, _render(

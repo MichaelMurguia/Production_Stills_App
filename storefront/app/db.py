@@ -70,6 +70,10 @@ class Workspace(Base):
     # unique index (WHERE subdomain <> '' — see init_db); pre-claim '' rows
     # stay exempt. The app-level clash check remains for friendly errors.
     subdomain: Mapped[str] = mapped_column(String(63), default="")
+    # The name this studio last released (rename). While unclaimed, the
+    # router forwards it to the current address — stale doors and old
+    # bookmarks keep working instead of landing on the unclaimed page.
+    prev_subdomain: Mapped[str] = mapped_column(String(63), default="")
     access_token: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
     railway_service_id: Mapped[str] = mapped_column(String(64), default="")
     railway_url: Mapped[str] = mapped_column(String(255), default="")
@@ -150,6 +154,7 @@ def init_db() -> None:
                 "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN railway_url VARCHAR(255) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN domain_live INTEGER DEFAULT 0",
+                "ALTER TABLE workspaces ADD COLUMN prev_subdomain VARCHAR(63) DEFAULT ''",
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_workspaces_subdomain "
                 "ON workspaces (subdomain) WHERE subdomain <> ''"):
         try:

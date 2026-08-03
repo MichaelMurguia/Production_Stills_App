@@ -42,8 +42,8 @@
     <span class="mono">{{ p.workspace.subdomain or "yourname" }}.{{ tenant_base }}</span></p>
     <p class="hero-sub name-terms">If you rename your studio, only the URL
     and studio name change &mdash; your productions are not touched. Your
-    previous name is released so others may claim it. One studio per
-    license.</p>
+    previous name is released so others may claim it; until someone does,
+    old links forward to the new address. One studio per license.</p>
     {% endif %}
     {% elif p.status == "PAID" and p.workspace and p.workspace.status == "FAILED" %}
     <p class="license-token">setup hit a snag — it retries automatically and your studio appears right here the moment it's ready. stuck for more than an hour? write help@screenboardstudio.com</p>

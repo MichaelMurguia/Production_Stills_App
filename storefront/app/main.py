@@ -572,7 +572,16 @@ def name_studio(request: Request, background: BackgroundTasks,
             if clash:
                 err = "that name is taken"
             else:
+                old_name = ws.subdomain
                 ws.subdomain = name
+                # The door must tell the truth on the very next render —
+                # never wait for the background reconcile (a user renamed,
+                # refreshed, and was handed their OLD address, 2026-08-04).
+                if settings.TENANT_DOMAIN_BASE:
+                    ws.url = f"https://{name}.{settings.TENANT_DOMAIN_BASE}"
+                    ws.domain_live = 0  # re-probed by reconcile before doors prefer it
+                if old_name and old_name != name:
+                    ws.prev_subdomain = old_name  # forwards until reclaimed
                 try:
                     s.commit()
                 except IntegrityError:
