@@ -4,6 +4,29 @@ Written 2026-07-31 by the DevOps agent. This is the operational truth for how
 this project is sold, hosted, and deployed. The app development agent must
 read this before touching `storefront/` or anything deployment-related.
 
+## Service registry (as of 2026-08-03)
+
+Every external account this business runs on, why it exists, and where its
+credentials live. Keep this table current when a service is added or
+dropped. **Screenboard's services are deliberately separate from the
+owner's other company** — SendGrid and the other org's Google Workspace are
+NOT part of this project and must not be wired into it.
+
+| Service | Role | Key facts | Credentials live |
+|---|---|---|---|
+| **GoDaddy** | Registrar + DNS for `screenboardstudio.com` | Records: `www` CNAME → Railway, `_railway-verify.www` TXT, Resend sending records, apex 301-forward → www. Free email forwarding NOT available on this domain | GoDaddy account |
+| **Railway** (railway.com) | All hosting | Project "studioboards": storefront service (root dir `storefront`) + Postgres. Separate tenants project for cloud studios (project token). Deploys on push to `main`; usage-billed incl. ~$2–5/mo per tenant | Railway dashboard; every app secret is a service Variable |
+| **GitHub** | Repo + CI | `MichaelMurguia/Production_Stills_App`; Actions run both suites + release-zip + verify-deploy on every push; Railway watches `main` | GitHub account |
+| **Stripe** | All payments | Live + sandbox are parallel universes: 4 products each, webhook endpoint each (`/stripe/webhook`). Sole-proprietor activation. TODO: set support email to `support@screenboardstudio.com` | Keys in Railway variables only |
+| **Resend** | OUTBOUND transactional mail only (magic links, license recovery) — sends as `no-reply@`; **cannot receive mail** | Domain verified via GoDaddy DNS. **TODO: rotate the API key (exposed in a chat transcript 2026-08-03)** — new key → Railway `SMTP_PASS` → delete old | Key in Railway `SMTP_PASS` |
+| **Google Cloud** | "Continue with Google" sign-in (OIDC) | OAuth web client, redirect `…/auth/google/callback` | `GOOGLE_CLIENT_ID/SECRET` in Railway |
+| **Zoho Mail** (pending signup) | INBOUND mail — the human inbox | Free tier, own org (separate from the other company): `info@` mailbox + `help@`/`support@` aliases; Zoho MX records at GoDaddy. Makes the router page's `help@` promise real | Zoho account (Screenboard-owned) |
+| **OpenRouter / fal.ai / OpenAI / Google AI Studio** | Owner's OWN render/narrative keys for the house studio and testing | These are BYOK app credentials, not business infrastructure — every customer brings their own. Never in the repo; live in each install's `settings.json`/`connectors.json` | Per-install, owner's accounts |
+
+Renewal/billing sanity: GoDaddy (annual domain), Railway (monthly usage),
+Stripe (per-transaction), Resend/Zoho/GitHub/Google Cloud (free tiers at
+current volume).
+
 ## The product
 
 Screenboard Studio itself is the product, sold to other filmmakers two ways,
