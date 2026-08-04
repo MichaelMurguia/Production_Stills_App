@@ -3241,16 +3241,26 @@ async function renderWizard() {
     .replace(/[—–−]/g, "-").replace(/\s+/g, " ").toLowerCase().trim();
   const wordIn = (needle, hay) => !!needle && new RegExp(
     `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
+  // D4 (PRODUCTION_DESIGN_V3) — labelled columns, fixed tracks; the gate
+  // is a withheld verb (NEEDS THE BIBLE), never a button; once the Bible
+  // exists the cell is the real verb.
   const wizLocRow = (name, sheet, extraCell = "") => `
-    <div class="loc-row wiz-loc-row${extraCell ? " grouped" : ""}">
+    <div class="loc-row wiz-loc-row">
       <span class="loc-slug" title="${esc(name)}">${esc(name)}</span>
-      ${extraCell}
-      <span class="loc-state">${sheet ? `SHEET — ${esc(sheet.spec_id)}` : "NO SHEET"}</span>
+      ${extraCell || `<span class="loc-env-blank">&mdash;</span>`}
+      <span class="loc-state">${sheet ? esc(sheet.spec_id) : "NONE"}</span>
       ${sheet
-        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open Breakdown</button>`
+        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open sheet</button>`
         : state.stage_summary?.production_design?.bible_saved
-          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Create Breakdown</button>`
-          : PD_LOCK_TAG}
+          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Make sheet</button>`
+          : `<span class="wv-tag loc-gate">NEEDS THE BIBLE</span>`}
+    </div>`;
+  const WIZ_LOC_THEAD = `
+    <div class="loc-thead">
+      <span>LOCATION</span>
+      <span>ENVIRONMENT — ITS VISUAL RULES</span>
+      <span>SHEET</span>
+      <span></span>
     </div>`;
   const renderWizLocs = async () => {
     const secHost = $("#wiz-locs-sec");
@@ -3278,10 +3288,9 @@ async function renderWizard() {
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       const envNames = envs.map(e => e.name);
       buildLocFinder(secHost, {
-        head: `<div class="loc-head"><span class="f-label">Locations — ${total}</span>
-          <span class="hint">grouped by environment · reassign any row — saved immediately</span></div>`,
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN SHEET</span></div>`,
+        headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
-        maxHeight: 340,
         rows: (needle, q) => grouped.map(g => {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
@@ -3323,10 +3332,9 @@ async function renderWizard() {
       }) || null;
     };
     buildLocFinder(secHost, {
-      head: `<div class="loc-head"><span class="f-label">Locations — ${keyLocs.length}</span>
-        <span class="hint">from the read · screenplay order</span></div>`,
+      head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${keyLocs.length} · EACH BECOMES ONE BREAKDOWN SHEET</span></div>`,
+      headRow: WIZ_LOC_THEAD,
       placeholder: "find a location…",
-      maxHeight: 340,
       rows: (needle, q) => keyLocs
         .filter(n => !needle || n.toUpperCase().includes(needle))
         .map(n => wizLocRow(n, matchOf(n)?.sheet))
