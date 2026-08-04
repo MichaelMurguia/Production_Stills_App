@@ -141,7 +141,23 @@ class SwatchTests(unittest.TestCase):
                                 "mock proposals must be MOCK-stamped")
                 self.assertRegex(s["hex"], r"^#[0-9A-F]{6}$")
                 self.assertTrue(s["cite"])
+                self.assertTrue(s["ref_id"].startswith("REF-"),
+                                "D8: every proposal persists as a reference")
         self.assertEqual(data["model"], "mock/static-content")
+        # D8 ruling: proposals are PROVISIONAL refs with provenance, and a
+        # rejection is a status record — a judgement the product keeps.
+        total = sum(len(g["swatches"]) for g in data["groups"])
+        refs = self.client.get("/api/references").json()
+        pend = [x for x in refs if x.get("source") == "swatch-proposal"]
+        self.assertEqual(len(pend), total)
+        self.assertTrue(all(x["status"] == "PROVISIONAL" for x in pend))
+        first = pend[0]["id"]
+        r2 = self.client.post(f"/api/references/{first}/status",
+                              json={"status": "REJECTED",
+                                    "reason": "swatch proposal rejected in review"})
+        self.assertEqual(r2.status_code, 200, r2.text)
+        again = {x["id"]: x for x in self.client.get("/api/references").json()}
+        self.assertEqual(again[first]["status"], "REJECTED")
 
 
 if __name__ == "__main__":

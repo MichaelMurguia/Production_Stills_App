@@ -438,6 +438,40 @@ def parse_swatch_proposals(text: str) -> list[dict]:
     return groups
 
 
+def render_swatch_png(hexv: str, pair: str | None = None) -> bytes:
+    """Pure color, no text ever — engines study these pixels. A value-key
+    pair renders as two vertical halves."""
+    import io as _io
+
+    from PIL import Image
+
+    img = Image.new("RGB", (640, 400), hexv)
+    if pair:
+        img.paste(Image.new("RGB", (320, 400), pair), (320, 0))
+    buf = _io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def persist_swatch_proposals(groups: list[dict]) -> list[dict]:
+    """D8 ruling: proposals persist as PROVISIONAL references so a
+    rejection leaves a record. Each swatch gains the ref id it landed
+    under; notes carry language · name · hex · cite; provenance is
+    source: swatch-proposal until the user's verdict."""
+    for g in groups:
+        for sw in g["swatches"]:
+            notes = " · ".join(x for x in [
+                g["language"].upper(), sw["name"],
+                sw["hex"] + (f" / {sw['pair_hex']}" if sw.get("pair_hex") else ""),
+                sw.get("cite", "")] if x)
+            ref = store.add_reference(
+                f"{sw['name'].lower().replace(' ', '-')}.png",
+                render_swatch_png(sw["hex"], sw.get("pair_hex")),
+                "COLOR_PALETTE", [], [], notes, source="swatch-proposal")
+            sw["ref_id"] = ref["id"]
+    return groups
+
+
 def generate_swatches(provider: str = "gemini") -> dict:
     """Bible-cited palette proposals. Nothing is persisted here — the
     client holds the proposals and each approval creates a reference."""
@@ -451,7 +485,7 @@ def generate_swatches(provider: str = "gemini") -> dict:
 
     if provider == "mock" and generate.mock_enabled():
         from . import mockflow
-        return {"groups": mockflow.mock_swatches(bible_text),
+        return {"groups": persist_swatch_proposals(mockflow.mock_swatches(bible_text)),
                 "model": mockflow.MODEL_NAME}
 
     instructions = (
@@ -486,4 +520,5 @@ def generate_swatches(provider: str = "gemini") -> dict:
             model=model, contents=[bible_text, instructions])
         text = (response.text or "").strip()
 
-    return {"groups": parse_swatch_proposals(text), "model": model}
+    return {"groups": persist_swatch_proposals(parse_swatch_proposals(text)),
+            "model": model}

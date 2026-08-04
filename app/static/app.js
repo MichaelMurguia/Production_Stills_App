@@ -1462,7 +1462,15 @@ async function updateBand() {
       bar.className = "update-bar mono";
       bar.innerHTML = `THIS TAB IS ON ${esc(boot)} — THE STUDIO NOW SERVES ${esc(h.version)}. `
         + `<button class="text-act mono" onclick="location.reload()">RELOAD TO GET IT</button>`;
-      document.body.prepend(bar);
+      // D8 ruling: below the band — the product's map is not pushed down
+      // for a condition that is not about the production.
+      const nav = document.querySelector("nav#nav");
+      if (nav) {
+        nav.insertAdjacentElement("afterend", bar);
+        bar.style.top = `${nav.offsetHeight}px`;
+      } else {
+        document.body.prepend(bar);
+      }
     }
   }).catch(() => {});
 
@@ -2759,38 +2767,38 @@ async function renderWizard() {
 
     const renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
-      const tile = s => s.pair_hex
-        ? `<span class="sw-pair"><i style="background:${esc(s.hex)}"></i><i style="background:${esc(s.pair_hex)}"></i></span>`
-        : `<span class="sw-tile" style="background:${esc(s.hex)}"></span>`;
+      if (!total) { strip.innerHTML = ""; return; }
+      const tile = sw => sw.pair_hex
+        ? `<span class="sw-pair"><i style="background:${esc(sw.hex)}"></i><i style="background:${esc(sw.pair_hex)}"></i></span>`
+        : `<span class="sw-tile" style="background:${esc(sw.hex)}"></span>`;
+      const headTxt = n =>
+        `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} — NOT CANON UNTIL APPROVED`;
       strip.innerHTML = `
-        <p class="prop-head">${total} PROPOSED BY ${esc((r.model || "").toUpperCase())} — NOT CANON UNTIL APPROVED</p>
-        ${r.groups.map((g, gi) => `
+        <p class="prop-head">${esc(headTxt(total))}</p>
+        ${r.groups.map(g => `
           <p class="lang-label">${esc(g.language.toUpperCase())} — ${g.swatches.length}</p>
-          <div class="sw-grid">${g.swatches.map((s, si) => `
-            <div class="sw-card" data-sw="${gi}:${si}">
-              ${tile(s)}
-              <span class="sw-name">${esc(s.name)}</span>
-              <span class="sw-hex">${esc(s.hex)}${s.pair_hex ? " · " + esc(s.pair_hex) : ""}</span>
-              ${s.cite ? `<span class="sw-cite">${esc(s.cite)}</span>` : ""}
+          <div class="sw-grid">${g.swatches.map(sw => `
+            <div class="sw-card" data-ref="${esc(sw.ref_id)}">
+              ${tile(sw)}
+              <span class="sw-name">${esc(sw.name)}</span>
+              <span class="sw-hex">${esc(sw.hex)}${sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
+              ${sw.cite ? `<span class="sw-cite">${esc(sw.cite)}</span>` : ""}
               <span class="sw-acts">
                 <button class="text-act ok-act" data-f="ap">Approve</button>
                 <button class="text-act" data-f="rj">Reject</button>
               </span>
             </div>`).join("")}</div>`).join("")}
         <div class="sw-bar">
-          <button class="primary" data-f="ap-all">Approve all ${total}</button>
+          <button class="ghost" data-f="ap-all">Approve all ${total}</button>
           <button class="text-act" data-f="discard">Discard the rest</button>
         </div>`;
-      const lookup = card => {
-        const [gi, si] = card.dataset.sw.split(":").map(Number);
-        return r.groups[gi].swatches[si];
-      };
-      const approve = async (card, s) => {
-        await api("/api/references/swatch", { method: "POST",
-          json: { hex: s.hex, pair_hex: s.pair_hex, name: s.name,
-                  cite: s.cite, approve: true } });
-        card.remove();
-      };
+      // D8 ruling: a verdict is a reference-status record — approvals and
+      // rejections both land in the approval log, never in thin air.
+      const verdict = (card, status) =>
+        api(`/api/references/${card.dataset.ref}/status`, { method: "POST",
+          json: { status, reason: status === "REJECTED"
+            ? "swatch proposal rejected in review" : "" } })
+          .then(() => card.remove());
       const tidy = () => {
         $$(".lang-label", strip).forEach(l => {
           const grid = l.nextElementSibling;
@@ -2798,29 +2806,56 @@ async function renderWizard() {
             grid.remove(); l.remove();
           }
         });
-        // Counts are machine data — they stay true as cards leave.
         const left = $$(".sw-card", strip).length;
         if (!left) { strip.innerHTML = ""; return; }
-        $(".prop-head", strip).textContent =
-          `${left} PROPOSED BY ${(r.model || "").toUpperCase()} — NOT CANON UNTIL APPROVED`;
+        $(".prop-head", strip).textContent = headTxt(left);
         $("[data-f=ap-all]", strip).textContent = `Approve all ${left}`;
       };
       $$(".sw-card", strip).forEach(card => {
         $("[data-f=ap]", card).onclick = async () => {
-          try { await approve(card, lookup(card)); } catch (err) { toast(err.message, true); }
+          try { await verdict(card, "APPROVED"); } catch (err) { toast(err.message, true); }
           refreshRefs(); tidy();
         };
-        $("[data-f=rj]", card).onclick = () => { card.remove(); tidy(); };
+        $("[data-f=rj]", card).onclick = async () => {
+          try { await verdict(card, "REJECTED"); } catch (err) { toast(err.message, true); }
+          tidy();
+        };
       });
       $("[data-f=ap-all]", strip).onclick = async () => {
         for (const card of $$(".sw-card", strip)) {
-          try { await approve(card, lookup(card)); }
+          try { await verdict(card, "APPROVED"); }
           catch (err) { toast(err.message, true); break; }
         }
         refreshRefs(); tidy();
       };
-      $("[data-f=discard]", strip).onclick = () => { strip.innerHTML = ""; };
+      $("[data-f=discard]", strip).onclick = async () => {
+        for (const card of $$(".sw-card", strip)) {
+          try { await verdict(card, "REJECTED"); }
+          catch (err) { toast(err.message, true); break; }
+        }
+        tidy();
+      };
     };
+
+    // Pending proposals from an earlier run survive reload — rebuild the
+    // strip from the persisted PROVISIONAL refs.
+    const restoreStrip = async () => {
+      const pend = (await api("/api/references").catch(() => []))
+        .filter(x => x.source === "swatch-proposal" && x.status === "PROVISIONAL");
+      if (!pend.length) return;
+      const groups = {};
+      pend.forEach(x => {
+        const parts = (x.notes || "").split(" · ");
+        const [hex, pair] = (parts[2] || "").split(" / ");
+        (groups[parts[0] || "PALETTE"] ||= []).push({
+          ref_id: x.id, name: parts[1] || hex || x.id,
+          hex: hex || "#000000", pair_hex: pair || null,
+          cite: parts.slice(3).join(" · ") });
+      });
+      renderSwatchStrip({ groups: Object.entries(groups)
+        .map(([language, swatches]) => ({ language, swatches })) });
+    };
+    restoreStrip();
 
     const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
     if (!engReady || !bible.text.trim()) {
@@ -3004,7 +3039,11 @@ async function renderWizard() {
 
   let wizAnchorIds = [];
   const refreshRefs = async () => {
-    const refs = (await api("/api/references")).filter(r => r.status !== "REJECTED");
+    // Pending swatch proposals live in the review strip, not the anchor
+    // rows (D8: they persist as PROVISIONAL refs so verdicts are records).
+    const refs = (await api("/api/references")).filter(r =>
+      r.status !== "REJECTED"
+      && !(r.source === "swatch-proposal" && r.status === "PROVISIONAL"));
     // Every anchor in a column rides the bible draft (user ruling
     // 2026-08-05: inclusion IS the selection — no per-row checkbox).
     wizAnchorIds = refs.filter(r =>

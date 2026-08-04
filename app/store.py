@@ -394,7 +394,7 @@ def _render_safe(content: bytes, original_name: str) -> tuple[bytes, str]:
 
 def add_reference(original_name: str, content: bytes, role: str,
                   controls: list[str], does_not_control: list[str],
-                  notes: str = "") -> dict:
+                  notes: str = "", source: str = "") -> dict:
     paths.ensure_dirs()
     # Allocated-and-persisted atomically — a crash after the file write
     # can never reuse this id and overwrite the previous image.
@@ -423,6 +423,7 @@ def add_reference(original_name: str, content: bytes, role: str,
         "does_not_control": does_not_control,
         "status": "PROVISIONAL",
         "notes": notes,
+        "source": source,
         "sha256": sha256_file(dest),
         "added_at": utcnow(),
         "updated_at": utcnow(),

@@ -666,13 +666,9 @@ async def api_add_reference(
 
 @app.post("/api/references/swatch")
 async def api_add_swatch(body: dict) -> dict:
-    """NON-CANON (2026-08-05): a swatch reference — pure solid color (or a
-    value-key pair, two halves), rendered locally at zero cost. No text is
-    ever baked into the pixels; name/hex/citation ride the notes."""
-    import io as _io
-
-    from PIL import Image
-
+    """NON-CANON (2026-08-05, D8-ratified): a swatch reference — pure
+    solid color (or a value-key pair, two halves), rendered locally at
+    zero cost. No text in the pixels; name/hex/citation ride the notes."""
     from . import wizard
 
     hexv = wizard._clean_hex(body.get("hex"))
@@ -681,18 +677,13 @@ async def api_add_swatch(body: dict) -> dict:
     pair = wizard._clean_hex(body.get("pair_hex")) or None
     name = str(body.get("name") or f"SWATCH {hexv}").strip()[:48].upper()
     cite = str(body.get("cite") or "").strip()[:220]
-
-    img = Image.new("RGB", (640, 400), hexv)
-    if pair:
-        img.paste(Image.new("RGB", (320, 400), pair), (320, 0))
-    buf = _io.BytesIO()
-    img.save(buf, "PNG")
     notes = " · ".join(x for x in
                        [name, hexv + (f" / {pair}" if pair else ""), cite] if x)
     try:
         ref = store.add_reference(f"{name.lower().replace(' ', '-')}.png",
-                                  buf.getvalue(), "COLOR_PALETTE",
-                                  [], [], notes)
+                                  wizard.render_swatch_png(hexv, pair),
+                                  "COLOR_PALETTE", [], [], notes,
+                                  source="swatch-manual")
     except ValueError as e:
         raise _err(e)
     if body.get("approve"):
