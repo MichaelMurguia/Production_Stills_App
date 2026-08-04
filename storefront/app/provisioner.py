@@ -212,7 +212,7 @@ def _ensure_custom_domain(s, ws: db.Workspace, purchase: db.Purchase,
         pass  # next reconcile retries
 
 
-def _revoke(s, ws: db.Workspace, railway) -> None:
+def _revoke(s, ws: db.Workspace, railway, reason: str = "") -> None:
     """Subscription gone → service deleted. REVOKED is only ever stamped
     after the delete succeeds — a terminal status on a still-running
     service would host it unbilled forever. The workspace row (and its
@@ -224,7 +224,7 @@ def _revoke(s, ws: db.Workspace, railway) -> None:
             railway.delete_service(ws.railway_service_id)
         ws.status = "REVOKED"
         ws.subdomain = ""
-        ws.detail = "subscription canceled — service deleted"
+        ws.detail = reason or "subscription canceled — service deleted"
     except Exception as e:
         ws.detail = f"revoke failed, will retry: {str(e)[:500]}"
     s.commit()
@@ -271,7 +271,8 @@ _reconcile_lock = threading.Lock()
 def reconcile(railway=railway_client) -> dict:
     """Converge workspaces toward the purchases table. Returns a small
     summary for logs/ops. Never raises."""
-    out = {"provisioned": 0, "revoked": 0, "pending": 0, "failed": 0}
+    out = {"provisioned": 0, "revoked": 0, "pending": 0, "failed": 0,
+           "expired": 0}
     if not _reconcile_lock.acquire(blocking=False):
         return {**out, "skipped": "reconcile already running"}
     try:
@@ -282,6 +283,13 @@ def reconcile(railway=railway_client) -> dict:
 
 def _reconcile(railway, out: dict) -> dict:
     with db.session() as s:
+        # Code trials have no external clock — nothing but this sweep will
+        # ever end one. It runs FIRST so a trial that lapsed since the last
+        # pass is revoked in the same run, not the next one.
+        from . import trials
+        expired = trials.expire_due(s)
+        if expired:
+            out["expired"] = len(expired)
         cloud = s.scalars(select(db.Purchase).where(
             db.Purchase.kind == "cloud")).all()
         for purchase in cloud:
@@ -321,11 +329,13 @@ def _reconcile(railway, out: dict) -> dict:
                             and _domain_serves(ws.url.replace("https://", ""))):
                         ws.domain_live = 1
                         s.commit()
-            elif (purchase.status in ("CANCELED", "REFUNDED")
+            elif (purchase.status in ("CANCELED", "REFUNDED", "EXPIRED")
                   and ws.status in ("ACTIVE", "FAILED", "PENDING")):
                 if ws.railway_service_id:
                     if settings.railway_configured():
-                        _revoke(s, ws, railway)
+                        _revoke(s, ws, railway,
+                                "trial ended — service deleted"
+                                if purchase.status == "EXPIRED" else "")
                     else:
                         # A real service exists but Railway credentials are
                         # missing — REVOKED here would be terminal while the
@@ -335,7 +345,9 @@ def _reconcile(railway, out: dict) -> dict:
                 else:
                     ws.status = "REVOKED"
                     ws.subdomain = ""
-                    ws.detail = "subscription canceled before provisioning"
+                    ws.detail = ("trial ended before provisioning"
+                                 if purchase.status == "EXPIRED"
+                                 else "subscription canceled before provisioning")
                     s.commit()
                 if ws.status == "REVOKED":
                     out["revoked"] += 1

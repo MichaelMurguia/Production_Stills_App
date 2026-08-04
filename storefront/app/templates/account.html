@@ -8,6 +8,9 @@
 
   {% if email is defined and email %}
   <h1>{{ email }}</h1>
+  {% if trial_started is defined and trial_started %}
+  <p class="license-label" style="color:var(--ok)">TRIAL REDEEMED — YOUR STUDIO IS BEING BUILT, IT APPEARS BELOW WITHIN A MINUTE</p>
+  {% endif %}
   {% if purchases %}
   {% for p in purchases %}
   <div class="license-box">
@@ -24,7 +27,29 @@
     </details>
     {% endif %}
     {% elif p.kind == "cloud" %}
-    <p class="license-label">CLOUD {{ (p.tier or "personal")|upper }} · {{ "ACTIVE" if p.status == "PAID" else p.status }}</p>
+    <p class="license-label">CLOUD {{ (p.tier or "personal")|upper }} ·
+      {% if p.on_trial %}TRIAL — {{ p.trial_days_left }} DAY{{ "" if p.trial_days_left == 1 else "S" }} LEFT{% else %}{{ "ACTIVE" if p.status == "PAID" else p.status }}{% endif %}</p>
+    {% if p.on_trial %}
+    {# The end of a trial is a date, not a vibe: state it, and state what
+       happens on it, because those are two different facts. #}
+    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint);margin-top:0">
+      {% if p.trial_kind == "card" %}
+      CONVERTS {{ p.trial_ends_at.strftime("%d %b %Y") }} &middot; YOUR CARD IS CHARGED THEN AND THE STUDIO KEEPS RUNNING &middot; CANCEL ANY TIME BEFORE
+      {% else %}
+      ENDS {{ p.trial_ends_at.strftime("%d %b %Y") }} &middot; NO CARD ON FILE &middot; THE STUDIO STOPS SERVING ON THAT DATE
+      {% endif %}
+    </p>
+    {% if p.trial_kind == "code" and p.trial_days_left <= 3 %}
+    {# Not an amber fill: the download button on this page already holds
+       one, and the urgency is carried by the stated date above. #}
+    <p style="margin-top:10px"><a class="btn btn-secondary" href="/#pricing">Subscribe to keep this studio</a></p>
+    {% endif %}
+    {% endif %}
+    {% if p.status == "EXPIRED" %}
+    <p class="hero-sub">This trial has ended and the studio was taken down.
+    Subscribing builds a fresh studio under this account &mdash;
+    <a href="/#pricing" style="color:var(--ink)">the editions are here</a>.</p>
+    {% endif %}
     {% if p.workspace and p.workspace.status == "ACTIVE" and p.status == "PAID" %}
     {% set ws = p.workspace %}
     {% include "_workspace_door.html" %}

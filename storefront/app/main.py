@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
+import threading
 from pathlib import Path
+from urllib.parse import quote
 
 import hmac
 
@@ -14,7 +17,7 @@ from sqlalchemy import delete as sa_delete, select
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
-from . import auth, db, mailer, provisioner, settings
+from . import auth, db, mailer, provisioner, settings, trials
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -105,6 +108,52 @@ def _set_session(resp, request: Request, email: str) -> None:
                     samesite="lax", secure=_cookies_secure(request))
 
 
+# A code held across the sign-in round trip. Redeeming needs an identity,
+# but asking someone to find their code again after signing in is the kind
+# of small cruelty that loses a trial. The cookie is signed (a forged one
+# could only redeem a code the forger already knows) and short-lived.
+TRIAL_COOKIE = "sb_trial"
+TRIAL_COOKIE_TTL = 1800
+
+
+def _stash_trial_code(resp, request: Request, code: str) -> None:
+    code = (code or "").strip()[:32]
+    resp.set_cookie(TRIAL_COOKIE, f"{code}|{auth._sign('trial:' + code)}",
+                    max_age=TRIAL_COOKIE_TTL, httponly=True, samesite="lax",
+                    secure=_cookies_secure(request))
+
+
+def _consume_trial_code(request: Request, resp, email: str) -> str:
+    """Redeem a stashed code the moment an identity exists. Returns the
+    redirect path the caller should use instead of its own. Failures are
+    carried to /trial as stated errors — never swallowed, never fatal to
+    the sign-in itself."""
+    raw = request.cookies.get(TRIAL_COOKIE, "")
+    code, _, sig = raw.partition("|")
+    if not code or not hmac.compare_digest(sig, auth._sign("trial:" + code)):
+        return ""
+    resp.delete_cookie(TRIAL_COOKIE)
+    with db.session() as s:
+        try:
+            purchase = trials.redeem(s, code, email)
+            provisioner.ensure_workspace_row(s, purchase)
+        except trials.TrialError as e:
+            return f"/trial?error={quote(str(e))}&code={quote(code)}"
+    threading.Thread(target=provisioner.reconcile, daemon=True).start()
+    return "/account?trial=1"
+
+
+def _redirect_keeping(resp, location: str):
+    """Change where a prepared response points without losing the cookies
+    already set on it (the session — losing it would sign the user
+    straight back out)."""
+    out = RedirectResponse(location, status_code=303)
+    for key, value in resp.raw_headers:
+        if key.lower() == b"set-cookie":
+            out.raw_headers.append((key, value))
+    return out
+
+
 def _login_account(email: str, name: str = "", google_sub: str = "",
                    picture: str = "") -> None:
     """First sign-in creates the account; later ones refresh it. Signup and
@@ -181,6 +230,8 @@ def index(request: Request):
     return templates.TemplateResponse(request, "index.html", {
         "ready": ready,
         "all_ready": all(ready.values()),
+        "trials_open": settings.trials_open(),
+        "trial_days": settings.TRIAL_DAYS,
     })
 
 
@@ -319,6 +370,11 @@ def _fulfill(checkout_session) -> db.Purchase:
         plan = _sget(checkout_session.metadata, "plan") or (
             "cloud" if checkout_session.mode == "subscription" else "download")
         kind, _, tier = plan.partition("-")
+        # Card trial: the window is carried on the session's metadata so
+        # fulfillment needs no extra Stripe call. Stripe's own trial_end
+        # is authoritative and corrects this date on the first
+        # customer.subscription.updated event.
+        trial_days = int(_sget(checkout_session.metadata, "trial_days") or 0)
         purchase = db.Purchase(
             kind=kind,
             tier=tier,
@@ -327,6 +383,9 @@ def _fulfill(checkout_session) -> db.Purchase:
             stripe_customer_id=checkout_session.customer or "",
             stripe_subscription_id=checkout_session.subscription or "",
             stripe_payment_intent=_sget(checkout_session, "payment_intent") or "",
+            trial_kind="card" if trial_days else "",
+            trial_ends_at=(dt.datetime.utcnow() + dt.timedelta(days=trial_days)
+                           if trial_days else None),
         )
         s.add(purchase)
         if kind == "download":
@@ -468,10 +527,10 @@ def _auth_page(request: Request, mode: str, **ctx):
 
 
 @app.get("/signin")
-def signin_page(request: Request):
+def signin_page(request: Request, trial: int = 0):
     if request.state.account_email:
         return RedirectResponse("/account")
-    return _auth_page(request, "signin")
+    return _auth_page(request, "signin", trial_pending=bool(trial))
 
 
 @app.get("/signup")
@@ -535,6 +594,9 @@ def auth_verify(request: Request, token: str = ""):
     _login_account(email)
     resp = RedirectResponse("/account", status_code=303)
     _set_session(resp, request, email)
+    pending = _consume_trial_code(request, resp, email)
+    if pending:
+        return _redirect_keeping(resp, pending)
     return resp
 
 
@@ -569,6 +631,9 @@ def auth_google_callback(request: Request, code: str = "", state: str = ""):
     resp = RedirectResponse("/account", status_code=303)
     resp.delete_cookie(auth.STATE_COOKIE)
     _set_session(resp, request, ident["email"])
+    pending = _consume_trial_code(request, resp, ident["email"])
+    if pending:
+        return _redirect_keeping(resp, pending)
     return resp
 
 
@@ -642,7 +707,7 @@ def name_studio(request: Request, background: BackgroundTasks,
 
 @app.get("/account")
 def account_page(request: Request, name_error: str = "", named: int = 0,
-                 claim: str = ""):
+                 claim: str = "", trial: int = 0):
     # ?claim=<name> arrives from the router's unclaimed-address page (T1):
     # it prefills the naming form so "Claim this name" lands ready to go.
     claim = claim.strip().lower()[:63]
@@ -654,6 +719,9 @@ def account_page(request: Request, name_error: str = "", named: int = 0,
         purchases = s.scalars(select(db.Purchase).where(
             db.Purchase.email == email).order_by(db.Purchase.id.desc())).all()
         for p in purchases:
+            # Detached-safe: touch every column the template reads while the
+            # session is still open (the DetachedInstanceError rule).
+            _ = (p.trial_kind, p.trial_ends_at, p.status)
             if p.license:
                 _ = p.license.token
             if p.workspace:
@@ -669,6 +737,7 @@ def account_page(request: Request, name_error: str = "", named: int = 0,
         "purchase": None, "missed": False, "purchases": purchases,
         "email": email, "tenant_base": settings.TENANT_DOMAIN_BASE,
         "name_error": name_error[:120], "named": named, "claim": claim,
+        "trial_started": bool(trial),
         "versions": [v for v, _ in available_versions()],
         "reserved_names": sorted(provisioner.RESERVED_SUBDOMAINS)})
 
@@ -855,6 +924,218 @@ def admin_export(request: Request, token: str = ""):
         }
 
 
+# ------------------------------------------------------------------ trials
+# Two doors into the same product: a card-backed trial that converts
+# itself, and an operator-granted code that expires on our clock. Both
+# produce an ordinary cloud entitlement — see app/trials.py.
+
+
+def _trial_context(request: Request, **extra) -> dict:
+    """Everything the trial page needs to state its own conditions."""
+    email = request.state.account_email
+    held = None
+    if email:
+        with db.session() as s:
+            held = trials.active_trial_for(s, email)
+            if held:
+                _ = (held.trial_ends_at, held.trial_kind, held.tier)
+                held.days_left = held.trial_days_left
+                if held.workspace:
+                    _ = (held.workspace.status, held.workspace.url,
+                         held.workspace.subdomain)
+                s.expunge_all()
+            elif trials.has_entitlement(s, email):
+                extra.setdefault("has_studio", True)
+    ctx = {"trial_days": settings.TRIAL_DAYS,
+           "trials_open": settings.trials_open(),
+           "email": email, "held": held,
+           "code_prefix": trials.CODE_PREFIX}
+    ctx.update(extra)
+    return ctx
+
+
+@app.get("/trial")
+def trial_page(request: Request, error: str = "", code: str = ""):
+    return templates.TemplateResponse(request, "trial.html", _trial_context(
+        request, error=error[:200], code=code[:32]))
+
+
+@app.get("/trial/start/{plan}")
+def trial_start(request: Request, plan: str):
+    """Card trial: an ordinary subscription that begins in trial. The
+    payment method is captured now and Stripe converts on day N with no
+    action from us — so the buyer's only decision at the end is whether
+    to cancel, which is the honest shape for a trial that says it will
+    charge. The plan's real price id is used; nothing separate exists."""
+    if plan not in PLANS or PLANS[plan]["mode"] != "subscription":
+        raise HTTPException(404)
+    if not settings.trials_open():
+        # Gates are stated, never errored (STORE_DESIGN_SYSTEM §5).
+        return RedirectResponse("/trial?error=" + quote(
+            "Free trials are not open right now."), status_code=303)
+    price = PLANS[plan]["price"]()
+    if not price:
+        return RedirectResponse("/trial?error=" + quote(
+            "That edition is not available for trial yet."), status_code=303)
+    email = request.state.account_email
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price, "quantity": 1}],
+            # The card is taken now; nothing is charged until the trial
+            # ends. Without this Stripe may skip collection entirely and
+            # the conversion silently fails on day N.
+            payment_method_collection="always",
+            subscription_data={"trial_period_days": settings.TRIAL_DAYS},
+            success_url=f"{settings.BASE_URL}/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.BASE_URL}/trial",
+            metadata={"plan": plan, "trial_days": str(settings.TRIAL_DAYS)},
+            **({"customer_email": email} if email else {}),
+        )
+    except stripe.StripeError as e:
+        raise HTTPException(503, f"Checkout is unavailable: "
+                                 f"{getattr(e, 'user_message', None) or str(e)}")
+    return RedirectResponse(checkout_session.url, status_code=303)
+
+
+@app.post("/trial/redeem")
+def trial_redeem(request: Request, background: BackgroundTasks,
+                 code: str = Form("")):
+    """Code trial: no payment method, no Stripe object — the operator
+    granted this time deliberately. Redemption needs a signed-in account
+    because the trial belongs to an identity, not to a browser."""
+    email = request.state.account_email
+    if not email:
+        # Keep the code across the sign-in round trip; it redeems itself
+        # the instant an identity exists (see _consume_trial_code).
+        resp = RedirectResponse("/signin?trial=1", status_code=303)
+        _stash_trial_code(resp, request, code)
+        return resp
+    with db.session() as s:
+        try:
+            purchase = trials.redeem(s, code, email)
+        except trials.TrialError as e:
+            return RedirectResponse(
+                f"/trial?error={quote(str(e))}&code={quote(code.strip()[:32])}",
+                status_code=303)
+        provisioner.ensure_workspace_row(s, purchase)
+    background.add_task(provisioner.reconcile)
+    return RedirectResponse("/account?trial=1", status_code=303)
+
+
+def _handle_subscription_updated(obj) -> None:
+    """Keep our copy of a card trial's window honest.
+
+    Stripe's subscription is the authority on both facts we display: when
+    the trial ends, and whether it still is one. This event carries the
+    end date while trialing, and reports the conversion by moving to
+    `active` with no trial_end — which is what makes the account page
+    stop counting down. Never touches entitlement: a conversion does not
+    change status, and only `customer.subscription.deleted` cancels.
+    """
+    sub_id = _sget(obj, "id") or ""
+    if not sub_id:
+        return
+    trial_end = _sget(obj, "trial_end")
+    sub_status = _sget(obj, "status") or ""
+    with db.session() as s:
+        purchase = s.scalar(select(db.Purchase).where(
+            db.Purchase.stripe_subscription_id == sub_id))
+        if not purchase:
+            return
+        if sub_status == "trialing" and trial_end:
+            purchase.trial_kind = "card"
+            purchase.trial_ends_at = dt.datetime.utcfromtimestamp(int(trial_end))
+        elif sub_status in ("active", "past_due", "unpaid"):
+            purchase.trial_kind = ""
+            purchase.trial_ends_at = None
+        s.commit()
+
+
+@app.get("/admin/trials")
+def admin_trials(request: Request, token: str = ""):
+    """Operator console: mint a code, see every code's state, and see who
+    is on a trial and how long they have left. Same gate as /admin/export
+    (ADMIN_EXPORT_TOKEN); the page keeps the token in its own forms so it
+    stays usable from a browser."""
+    _admin_gate(request, token)
+    supplied = token or request.headers.get(
+        "authorization", "").removeprefix("Bearer ").strip()
+    with db.session() as s:
+        codes = s.scalars(select(db.TrialCode).order_by(
+            db.TrialCode.id.desc())).all()
+        rows = [{"code": c.code, "days": c.days, "tier": c.tier,
+                 "uses": c.uses, "max_uses": c.max_uses, "note": c.note,
+                 "state": c.state(),
+                 "expires_at": c.expires_at.strftime("%Y-%m-%d") if c.expires_at else "",
+                 "created_at": c.created_at.strftime("%Y-%m-%d")}
+                for c in codes]
+        live = s.scalars(select(db.Purchase).where(
+            db.Purchase.kind == "cloud",
+            db.Purchase.trial_kind != "").order_by(
+                db.Purchase.id.desc())).all()
+        people = [{"email": p.email, "kind": p.trial_kind, "tier": p.tier,
+                   "status": p.status, "code": p.trial_code,
+                   "days_left": p.trial_days_left,
+                   "ends": p.trial_ends_at.strftime("%Y-%m-%d") if p.trial_ends_at else "",
+                   "studio": (p.workspace.subdomain if p.workspace else ""),
+                   "studio_state": (p.workspace.status if p.workspace else "NONE")}
+                  for p in live]
+    return templates.TemplateResponse(request, "admin_trials.html", {
+        "codes": rows, "people": people, "token": supplied,
+        "max_days": settings.TRIAL_CODE_MAX_DAYS,
+        "trial_days": settings.TRIAL_DAYS,
+        "trials_open": settings.trials_open()})
+
+
+@app.post("/admin/trials/new")
+def admin_trials_new(request: Request, token: str = Form(""),
+                     days: int = Form(14), tier: str = Form("personal"),
+                     max_uses: int = Form(1), valid_days: int = Form(0),
+                     note: str = Form("")):
+    _admin_gate(request, token)
+    with db.session() as s:
+        trials.create_code(s, days=days, tier=tier, max_uses=max_uses,
+                           note=note, valid_days=valid_days)
+    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+                            status_code=303)
+
+
+@app.post("/admin/trials/disable")
+def admin_trials_disable(request: Request, token: str = Form(""),
+                         code: str = Form("")):
+    """Withdraw a code. Trials already redeemed from it are untouched —
+    ending someone's granted time is a separate, deliberate act."""
+    _admin_gate(request, token)
+    with db.session() as s:
+        row = s.scalar(select(db.TrialCode).where(
+            db.TrialCode.code == trials.normalize(code)))
+        if row:
+            row.disabled = 1
+            s.commit()
+    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+                            status_code=303)
+
+
+@app.post("/admin/trials/end")
+def admin_trials_end(request: Request, background: BackgroundTasks,
+                     token: str = Form(""), email: str = Form("")):
+    """End a code trial now — the studio is revoked on the next reconcile
+    (which this schedules). Card trials are never ended here: Stripe owns
+    a subscription with a payment method on it."""
+    _admin_gate(request, token)
+    with db.session() as s:
+        for p in s.scalars(select(db.Purchase).where(
+                db.Purchase.email == email.strip().lower(),
+                db.Purchase.trial_kind == "code",
+                db.Purchase.status == "PAID")).all():
+            p.status = "EXPIRED"
+        s.commit()
+    background.add_task(provisioner.reconcile)
+    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+                            status_code=303)
+
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request, background: BackgroundTasks):
     payload = await request.body()
@@ -886,6 +1167,8 @@ async def stripe_webhook(request: Request, background: BackgroundTasks):
                     s.commit()
             # Download gate reads status; cloud studios get revoked.
             background.add_task(provisioner.reconcile)
+    elif event["type"] == "customer.subscription.updated":
+        _handle_subscription_updated(event["data"]["object"])
     elif event["type"] == "customer.subscription.deleted":
         sub_id = event["data"]["object"]["id"]
         with db.session() as s:

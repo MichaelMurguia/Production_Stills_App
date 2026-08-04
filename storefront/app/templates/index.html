@@ -175,6 +175,12 @@
       {% if not (ready["cloud-personal"] and ready["cloud-business"]) %}
       <p class="gate-line mono">UNAVAILABLE &mdash; CHECKOUT NOT CONFIGURED</p>
       {% endif %}
+      {% if trials_open %}
+      {# Not an amber fill: this page's two sanctioned fills are the hero
+         and the recommended Buy (STORE_DESIGN_SYSTEM §8). #}
+      <p class="gate-line mono" style="color:var(--ink-dim)">RUN A PRODUCTION THROUGH IT FIRST &mdash;
+        <a href="/trial" style="color:var(--ink)">{{ trial_days }}-DAY TRIAL, THE FULL EDITION</a></p>
+      {% endif %}
     </div>
   </div>
   <p class="editions-foot mono">NO PASSWORDS &mdash; SIGN IN WITH GOOGLE OR A

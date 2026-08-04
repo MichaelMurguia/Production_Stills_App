@@ -145,6 +145,43 @@ queue as PENDING workspaces with the condition stated on the row — nothing
 crashes, and the success page honestly says the workspace is being
 prepared. The SMTP and export variables are likewise optional gates.
 
+## Trials (built 2026-08-06)
+
+Two doors, both landing on an ordinary cloud studio. See
+`docs/WEBAPP_GUIDE.md` for how they work; this is what to set and how to
+run them.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `TRIAL_DAYS` | `14` | Length of the card-backed trial. **`0` closes card trials** — the store still sells normally and the page states the gate. |
+| `TRIAL_CODE_MAX_DAYS` | `365` | Ceiling on a minted code, so a typo in the console cannot grant a decade. |
+
+Card trials need nothing else: they run on `STRIPE_PRICE_CLOUD_*`, the
+same price ids the paid plans use. Stripe must be able to reach the
+webhook (already configured) — add **`customer.subscription.updated`** to
+the endpoint's event list so the trial's date and its conversion are
+recorded. Without it a converted subscription keeps counting down on the
+account page; entitlement is unaffected either way.
+
+**Granting a free trial by hand** (the operator flow):
+
+1. Open `https://www.screenboardstudio.com/admin/trials?token=$ADMIN_EXPORT_TOKEN`.
+2. Mint a code: days of access, edition, how many times it may be
+   redeemed, optional shelf life for the code itself, and a note saying
+   who it is for — the note is the only record of *why*, so write it.
+3. Send the person the code and `https://www.screenboardstudio.com/trial`.
+   They sign in (Google or a mailed link), paste the code, and their
+   studio provisions like any purchase.
+4. The console's second table shows every trial, its days left, and its
+   studio. **End now** expires a code trial immediately (the studio is
+   revoked on the next reconcile, which that button schedules).
+   **Withdraw** disables a code without touching trials already redeemed
+   from it.
+
+A code trial ends on our clock: `reconcile()` sweeps expired ones on every
+run (startup, webhook, `/admin/reconcile`, naming). A card trial ends on
+Stripe's — never end one from here; cancel it in Stripe if you must.
+
 ## House entitlements (decided 2026-08-03)
 
 Rows whose `stripe_session_id` starts `cs_test_` are the owner's sandbox-era

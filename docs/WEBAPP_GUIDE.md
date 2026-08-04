@@ -115,6 +115,54 @@ Schema changes: `create_all` creates tables but never alters them; additive
 columns go in the `init_db()` micro-migration block (see `tier`). Anything
 destructive requires introducing Alembic first.
 
+### Trials — two kinds, one entitlement machine (built 2026-08-06)
+
+`storefront/app/trials.py`. Both kinds create an ordinary cloud
+`Purchase`, so provisioning, naming, proxying and revocation are the
+paths already proven in production. A trial is an entitlement with an end
+date, never a separate product or a crippled mode — the trialist gets the
+whole cloud edition.
+
+**Card trial** (`trial_kind="card"`). `/trial/start/{plan}` opens a normal
+Stripe Checkout in `subscription` mode with `subscription_data.
+trial_period_days = TRIAL_DAYS` and, critically,
+`payment_method_collection="always"` — without that flag Stripe may skip
+collection and the day-N conversion silently fails. It runs on the plan's
+real price id; nothing separate is configured. Stripe converts it on its
+own: **we never end a card trial**, and `expire_due()` deliberately skips
+them so a clock skew can never revoke a studio someone is paying for.
+`customer.subscription.updated` (handled by `_handle_subscription_updated`,
+extracted so it is testable without a signed event) keeps our copy honest:
+Stripe's `trial_end` corrects the date while trialing, and the move to
+`active` clears the window so the account page stops counting down.
+Cancellation is unchanged — `customer.subscription.deleted` → CANCELED →
+revoked.
+
+**Code trial** (`trial_kind="code"`). An operator mints a code in
+`/admin/trials` (gated by `ADMIN_EXPORT_TOKEN`, like every other admin
+route) carrying its own length, edition, redemption count and optional
+shelf life. Codes are `SB-XXXX-XXXX` over an alphabet with no I/O/0/1 —
+they get read aloud and typed by hand. Redemption needs a signed-in
+account (a trial belongs to an identity), and one live studio per account
+is enforced. There is no payment method and no Stripe object, so **nothing
+external will ever end one**: `reconcile()` calls `trials.expire_due()`
+first on every run, past-date purchases become `EXPIRED`, and the existing
+revocation branch deletes the tenant service and releases the name.
+
+A visitor who submits a code while signed out does not lose it: it rides a
+signed 30-minute cookie (`sb_trial`) through the sign-in round trip and
+redeems itself the moment an identity exists (`_consume_trial_code`, called
+from both the magic-link and Google completions). The redirect rewrite
+preserves the `Set-Cookie` headers already on the response — losing them
+would sign the user straight back out.
+
+Tests: `tests/test_trials.py` (24) covers code shape and normalization,
+every stated refusal, one-studio-per-account, the expiry sweep revoking a
+real service through reconcile, the card-trial checkout arguments
+(including `payment_method_collection`), fulfillment recording the window,
+Stripe's date correcting ours, the conversion clearing the countdown, and
+the whole operator console.
+
 ### The wildcard tenant router (built 2026-08-01)
 
 Branded studio addresses (`<name>.TENANT_DOMAIN_BASE`) are served by the
@@ -197,6 +245,13 @@ base-template script for every visitor), owner-only PUT/DELETE
 receives the editor script). Overrides live in the `site_texts` table —
 never on disk (ephemeral). Owner controls sit on Your Screenboard;
 Alt-click rewrites in place. Tests: `tests/test_site_text.py`.
+
+**Trials never become a second product.** A trial is a cloud `Purchase`
+with an end date; anything that would give trialists a different app, a
+watermark, or a reduced feature set is out of scope by design. Two rules
+protect the money: we never end a card trial (Stripe owns any entitlement
+with a payment method behind it), and a code trial always has an operator
+name on it (redemption requires a signed-in account).
 
 ## Developing and shipping
 

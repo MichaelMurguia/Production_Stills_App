@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Try Screenboard Studio — Screenboard Studio{% endblock %}
+{% block meta_description %}Run a production through Screenboard Studio before you pay for it — a full cloud studio, your own model keys, for {{ trial_days }} days.{% endblock %}
+{% block content %}
+
+<section class="order">
+  <p class="price-kind">FREE TRIAL</p>
+
+  {% if held %}
+  {# Already trialing: the page's job is to say where they stand, not to
+     sell them something they are already using. #}
+  <h1>Your trial is running.</h1>
+  <p class="hero-sub">A full cloud studio, CLOUD {{ (held.tier or "personal")|upper }} —
+  everything the paid edition does, on your own model keys.</p>
+  <div class="license-box">
+    <p class="license-label">TRIAL · {{ held.trial_kind|upper }}</p>
+    <p class="license-token">{{ held.days_left }} DAY{{ "" if held.days_left == 1 else "S" }} LEFT
+      &middot; ENDS {{ held.trial_ends_at.strftime("%d %b %Y") }}</p>
+    <p class="hero-sub" style="margin-top:12px">
+      {% if held.trial_kind == "card" %}
+      On that date your card is charged and the studio simply keeps running.
+      Cancel any time before then and nothing is taken.
+      {% else %}
+      This time was granted directly — no card is on file and nothing will be
+      charged. When it ends the studio stops serving; subscribe before then to
+      keep working without a gap.
+      {% endif %}
+    </p>
+    <p style="margin-top:16px"><a class="btn btn-secondary" href="/account">Open your studio</a></p>
+  </div>
+
+  {% elif has_studio is defined and has_studio %}
+  <h1>You already have a studio.</h1>
+  <p class="hero-sub">Trials are for people who haven't started yet. Yours is
+  live on your account page.</p>
+  <p style="margin-top:20px"><a class="btn btn-secondary" href="/account">Open your studio</a></p>
+
+  {% else %}
+  <h1>Run a production through it first.</h1>
+  <p class="hero-sub">A trial is the whole cloud edition — the screenplay read,
+  the art direction bible, scene breakdowns with cited evidence, and native-4K
+  boards. Not a demo mode, not a watermark: the studio your art department
+  would actually use.</p>
+
+  {% if error %}
+  <p class="license-label" style="color:var(--bad);margin-top:22px">{{ error|upper }}</p>
+  {% endif %}
+
+  {# --- the card trial --------------------------------------------------- #}
+  <div class="license-box">
+    <p class="license-label">{{ trial_days }} DAYS &middot; CARD ON FILE</p>
+    {% if trials_open %}
+    <h2 style="font-size:20px;margin-bottom:10px">Start a {{ trial_days }}-day trial</h2>
+    <ul class="traits mono">
+      <li class="t-yes">THE FULL CLOUD EDITION &mdash; NOTHING IS HELD BACK</li>
+      <li class="t-yes">YOUR OWN MODEL KEYS &mdash; RENDER COSTS ARE YOURS, NEVER RESOLD</li>
+      <li class="t-yes">YOUR WORK STAYS YOURS IF YOU SUBSCRIBE</li>
+      <li class="t-yes">NOTHING IS CHARGED UNTIL DAY {{ trial_days }}</li>
+      <li class="t-no">A CARD IS TAKEN NOW AND CHARGED ON DAY {{ trial_days }} UNLESS YOU CANCEL</li>
+    </ul>
+    <p style="margin-top:4px">
+      <a class="btn btn-primary" href="/trial/start/cloud-personal">Start the trial</a>
+    </p>
+    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:14px;color:var(--ink-faint)">
+      NOTHING IS CHARGED TODAY &middot; CANCEL ANY TIME IN THE FIRST {{ trial_days }} DAYS &middot; STRIPE HOLDS THE CARD, WE NEVER SEE IT
+    </p>
+    {% else %}
+    {# Gates are stated, never errored (STORE_DESIGN_SYSTEM §5). #}
+    <h2 style="font-size:20px;margin-bottom:10px">Trials open shortly</h2>
+    <p class="license-label" style="color:var(--hold)">SETUP — FREE TRIALS ARE NOT SWITCHED ON YET</p>
+    <p class="hero-sub">The editions below are on sale now; a trial will appear
+    here the moment it opens.</p>
+    <p style="margin-top:16px"><a class="btn btn-secondary" href="/#pricing">See the editions</a></p>
+    {% endif %}
+  </div>
+
+  {# --- the code trial --------------------------------------------------- #}
+  <div class="license-box">
+    <p class="license-label">HAVE A CODE?</p>
+    <h2 style="font-size:20px;margin-bottom:10px">Redeem a trial code</h2>
+    <p class="hero-sub">A code carries its own length and needs no card at all.
+    If someone at Screenboard gave you one, it goes here.</p>
+    <form method="post" action="/trial/redeem" class="recover-form">
+      <input type="text" name="code" value="{{ code }}" spellcheck="false"
+             placeholder="{{ code_prefix }}-A1B2-C3D4" required
+             style="text-transform:uppercase;font-family:var(--mono)">
+      <button class="btn btn-secondary" type="submit">Redeem</button>
+    </form>
+    {% if not email %}
+    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:12px;color:var(--ink-faint)">
+      SIGNING IN COMES NEXT — A TRIAL BELONGS TO AN ACCOUNT, AND YOUR CODE IS KEPT WHILE YOU DO IT
+    </p>
+    {% endif %}
+  </div>
+
+  <p class="hero-sub">Rather just buy it? <a href="/#pricing" style="color:var(--ink)">The editions are here</a>.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import math
 import secrets
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, create_engine, text
@@ -31,11 +32,42 @@ class Purchase(Base):
     stripe_subscription_id: Mapped[str] = mapped_column(String(255), default="")
     # Lets charge.refunded / dispute events find their purchase.
     stripe_payment_intent: Mapped[str] = mapped_column(String(255), default="")
-    status: Mapped[str] = mapped_column(String(16), default="PAID")  # PAID | CANCELED | REFUNDED
+    # PAID | CANCELED | REFUNDED | EXPIRED (a code trial that ran out)
+    status: Mapped[str] = mapped_column(String(16), default="PAID")
+    # --- trials -----------------------------------------------------------
+    # Two kinds, deliberately different in who governs the ending:
+    #   "card" — a Stripe trial with a payment method captured. Stripe
+    #            converts it to a paid subscription on its own; we only
+    #            display the date. Its ending is a Stripe event.
+    #   "code" — an operator-granted duration with NO payment method.
+    #            Nothing external will ever end it, so reconcile does:
+    #            past trial_ends_at the purchase goes EXPIRED and the
+    #            studio is revoked like any other lapsed entitlement.
+    # Naive UTC (SQLite drops tzinfo) — compare against dt.datetime.utcnow(),
+    # the same convention LoginToken.expires_at proved.
+    trial_kind: Mapped[str] = mapped_column(String(8), default="")
+    trial_ends_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+    trial_code: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
 
     license: Mapped["License | None"] = relationship(back_populates="purchase", uselist=False)
     workspace: Mapped["Workspace | None"] = relationship(back_populates="purchase", uselist=False)
+
+    @property
+    def trial_days_left(self) -> int:
+        """Days remaining, rounded up so a part-day still reads as a day;
+        0 once it is over. Display only — entitlement is decided by
+        status, and the exact date is always shown beside this number."""
+        if not self.trial_ends_at:
+            return 0
+        seconds = (self.trial_ends_at - dt.datetime.utcnow()).total_seconds()
+        return math.ceil(seconds / 86400) if seconds > 0 else 0
+
+    @property
+    def on_trial(self) -> bool:
+        return bool(self.trial_kind and self.status == "PAID"
+                    and self.trial_ends_at
+                    and self.trial_ends_at > dt.datetime.utcnow())
 
 
 class License(Base):
@@ -87,6 +119,45 @@ class Workspace(Base):
         onupdate=lambda: dt.datetime.now(dt.timezone.utc))
 
     purchase: Mapped[Purchase] = relationship(back_populates="workspace")
+
+
+class TrialCode(Base):
+    """An operator-granted free trial of arbitrary duration — no payment
+    method, no Stripe object. The code is the capability: whoever holds it
+    can redeem it once per account, up to max_uses times in total, until
+    it is disabled or its own expires_at passes.
+
+    Redeeming creates an ordinary cloud Purchase carrying trial_kind
+    "code" and a trial_ends_at, so a code trial is provisioned, named,
+    proxied and revoked by exactly the machinery a paid studio uses.
+    """
+
+    __tablename__ = "trial_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True)
+    days: Mapped[int] = mapped_column(Integer, default=14)
+    tier: Mapped[str] = mapped_column(String(16), default="personal")
+    max_uses: Mapped[int] = mapped_column(Integer, default=1)
+    uses: Mapped[int] = mapped_column(Integer, default=0)
+    # The code's own shelf life (not the trial's). Null = never stale.
+    expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+    disabled: Mapped[int] = mapped_column(Integer, default=0)
+    note: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=lambda: dt.datetime.now(dt.timezone.utc))
+
+    def state(self) -> str:
+        """One word for the operator table — the row states itself."""
+        if self.disabled:
+            return "DISABLED"
+        if self.expires_at and self.expires_at <= dt.datetime.utcnow():
+            return "STALE"
+        if self.uses >= self.max_uses:
+            return "SPENT"
+        return "LIVE"
+
+    def redeemable(self) -> bool:
+        return self.state() == "LIVE"
 
 
 class Account(Base):
@@ -149,6 +220,9 @@ def init_db() -> None:
     # partial unique index enforces subdomain uniqueness at the DB (the
     # claim race), leaving pre-claim '' rows exempt.
     for ddl in ("ALTER TABLE purchases ADD COLUMN tier VARCHAR(16) DEFAULT ''",
+                "ALTER TABLE purchases ADD COLUMN trial_kind VARCHAR(8) DEFAULT ''",
+                "ALTER TABLE purchases ADD COLUMN trial_ends_at TIMESTAMP NULL",
+                "ALTER TABLE purchases ADD COLUMN trial_code VARCHAR(32) DEFAULT ''",
                 "ALTER TABLE purchases ADD COLUMN stripe_payment_intent VARCHAR(255) DEFAULT ''",
                 "ALTER TABLE accounts ADD COLUMN picture VARCHAR(500) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN subdomain VARCHAR(63) DEFAULT ''",

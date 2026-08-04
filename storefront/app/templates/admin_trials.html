@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Trials — operator console{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+
+<section class="order" style="max-width:1000px">
+  <p class="price-kind">OPERATOR CONSOLE</p>
+  <h1>Trials</h1>
+  <p class="hero-sub">Codes grant an arbitrary run of the full cloud edition
+  with no card and no Stripe object. Card trials are Stripe's — they appear
+  here for sight, but only Stripe ends one.</p>
+
+  <div class="license-box">
+    <p class="license-label">MINT A CODE</p>
+    <form method="post" action="/admin/trials/new" class="recover-form"
+          style="align-items:flex-end">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink-faint)">DAYS OF ACCESS<br>
+        <input type="number" name="days" value="30" min="1" max="{{ max_days }}" style="width:120px"></label>
+      <label class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink-faint)">EDITION<br>
+        <input type="text" name="tier" value="personal" style="width:130px"></label>
+      <label class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink-faint)">TIMES REDEEMABLE<br>
+        <input type="number" name="max_uses" value="1" min="1" max="1000" style="width:120px"></label>
+      <label class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink-faint)">CODE GOES STALE IN (DAYS, 0 = NEVER)<br>
+        <input type="number" name="valid_days" value="0" min="0" style="width:120px"></label>
+      <label class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink-faint)">WHO / WHY<br>
+        <input type="text" name="note" placeholder="e.g. Ridley — DP intro call" style="width:260px"></label>
+      <button class="btn btn-primary" type="submit">Mint</button>
+    </form>
+    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:12px;color:var(--ink-faint)">
+      MAX {{ max_days }} DAYS PER CODE &middot; THE HOLDER STILL SIGNS IN, SO EVERY TRIAL HAS A NAME ON IT
+    </p>
+  </div>
+
+  <div class="license-box">
+    <p class="license-label">CODES — {{ codes|length }}</p>
+    {% if codes %}
+    <div style="overflow-x:auto">
+    <table class="mono" style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <tr style="color:var(--ink-faint);text-align:left">
+        <th style="padding:6px 10px 6px 0">CODE</th><th>STATE</th><th>DAYS</th>
+        <th>EDITION</th><th>USED</th><th>STALE</th><th>NOTE</th><th></th>
+      </tr>
+      {% for c in codes %}
+      <tr style="border-top:1px solid var(--line-soft)">
+        <td style="padding:7px 10px 7px 0;color:var(--ink)">{{ c.code }}</td>
+        <td style="color:{% if c.state == 'LIVE' %}var(--ok){% elif c.state == 'SPENT' %}var(--ink-faint){% else %}var(--hold){% endif %}">{{ c.state }}</td>
+        <td>{{ c.days }}</td>
+        <td>{{ c.tier|upper }}</td>
+        <td>{{ c.uses }} / {{ c.max_uses }}</td>
+        <td style="color:var(--ink-faint)">{{ c.expires_at or "—" }}</td>
+        <td style="color:var(--ink-dim)">{{ c.note }}</td>
+        <td style="text-align:right">
+          {% if c.state == "LIVE" %}
+          <form method="post" action="/admin/trials/disable" style="display:inline">
+            <input type="hidden" name="token" value="{{ token }}">
+            <input type="hidden" name="code" value="{{ c.code }}">
+            <button class="btn btn-secondary" style="padding:3px 10px;font-size:10.5px" type="submit">Withdraw</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <p class="hero-sub">None minted yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="license-box">
+    <p class="license-label">ON TRIAL — {{ people|length }}</p>
+    {% if people %}
+    <div style="overflow-x:auto">
+    <table class="mono" style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <tr style="color:var(--ink-faint);text-align:left">
+        <th style="padding:6px 10px 6px 0">ACCOUNT</th><th>KIND</th><th>STATUS</th>
+        <th>LEFT</th><th>ENDS</th><th>STUDIO</th><th>CODE</th><th></th>
+      </tr>
+      {% for p in people %}
+      <tr style="border-top:1px solid var(--line-soft)">
+        <td style="padding:7px 10px 7px 0;color:var(--ink)">{{ p.email }}</td>
+        <td>{{ p.kind|upper }}</td>
+        <td style="color:{% if p.status == 'PAID' %}var(--ok){% else %}var(--ink-faint){% endif %}">{{ p.status }}</td>
+        <td>{{ p.days_left }}d</td>
+        <td style="color:var(--ink-faint)">{{ p.ends }}</td>
+        <td>{{ p.studio or "—" }} <span style="color:var(--ink-faint)">{{ p.studio_state }}</span></td>
+        <td style="color:var(--ink-dim)">{{ p.code }}</td>
+        <td style="text-align:right">
+          {% if p.kind == "code" and p.status == "PAID" %}
+          <form method="post" action="/admin/trials/end" style="display:inline">
+            <input type="hidden" name="token" value="{{ token }}">
+            <input type="hidden" name="email" value="{{ p.email }}">
+            <button class="btn btn-secondary" style="padding:3px 10px;font-size:10.5px" type="submit">End now</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <p class="hero-sub">Nobody is on a trial.</p>
+    {% endif %}
+  </div>
+
+  <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">
+    CARD TRIALS: {% if trials_open %}OPEN — {{ trial_days }} DAYS{% else %}CLOSED — SET TRIAL_DAYS AND THE STRIPE PRICE IDS{% endif %}
+    &middot; A CODE TRIAL ENDS ON OUR CLOCK, A CARD TRIAL ON STRIPE'S
+  </p>
+</section>
+
+{% endblock %}

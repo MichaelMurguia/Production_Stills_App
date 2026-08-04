@@ -14,6 +14,12 @@
   spot. No password exists, so there's nothing to forget or leak.</p>
 
   {% else %}
+  {% if trial_pending is defined and trial_pending %}
+  {# The code is already held (signed cookie); it redeems itself the
+     instant this sign-in completes, so say so rather than making the
+     visitor wonder whether they lost it. #}
+  <p class="license-label" style="color:var(--ok)">YOUR TRIAL CODE IS HELD — IT REDEEMS ITSELF THE MOMENT YOU SIGN IN</p>
+  {% endif %}
   <h1>{{ "No passwords here." if mode == "signup" else "Welcome back." }}</h1>
   <p class="hero-sub">{{ "Your account is just your verified email — prove the
   inbox is yours and you're in." if mode == "signup" else "Sign in with Google

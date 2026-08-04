@@ -42,6 +42,7 @@
         <a href="/pipeline"{% if request.url.path == "/pipeline" %} class="on"{% endif %}>The pipeline</a>
         <a href="/#gallery">Gallery</a>
         <a href="/#pricing">Pricing</a>
+        {% if not request.state.account_email %}<a href="/trial"{% if request.url.path == "/trial" %} class="on"{% endif %}>Try free</a>{% endif %}
       </nav>
       {% if request.state.account_email %}
       <a class="head-account" href="/account" title="Your purchases ({{ request.state.account_email }})">

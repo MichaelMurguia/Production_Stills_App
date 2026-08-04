@@ -72,6 +72,24 @@ PREVIEW_PASSWORD = os.environ.get("PREVIEW_PASSWORD", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
+# --- Trials ---------------------------------------------------------------
+# Card trial: a real Stripe subscription that starts in trial. The payment
+# method is captured at signup and Stripe converts it on day TRIAL_DAYS
+# with no action from us. 0 disables the free-trial CTAs (checkout still
+# sells normally). The trial rides the SAME price ids as the paid plans —
+# there is nothing separate to configure.
+TRIAL_DAYS = max(0, int(os.environ.get("TRIAL_DAYS", "14") or 0))
+
+# Code trial: operator-granted duration, no payment method. Bounded so a
+# typo in the admin form cannot mint a decade.
+TRIAL_CODE_MAX_DAYS = max(1, int(os.environ.get("TRIAL_CODE_MAX_DAYS", "365") or 365))
+
+
+def trials_open() -> bool:
+    """Card trials need Stripe configured AND a nonzero window."""
+    return bool(TRIAL_DAYS and STRIPE_SECRET_KEY and STRIPE_PRICE_CLOUD_PERSONAL)
+
+
 # --- Entitlement-data export (operator backup) ----------------------------
 # Unset = the endpoint does not exist (404). Long random value; treat like
 # the Stripe secret key.
