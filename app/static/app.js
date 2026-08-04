@@ -2740,6 +2740,7 @@ async function renderWizard() {
   // proposals are grounded in the saved Bible, grouped by its Design
   // Languages, and stay client-side until each approval creates the
   // reference.
+  let syncSwatchGen = () => {};
   {
     const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
     const colorIn = $("[data-f=sw-color]", col);
@@ -2857,14 +2858,18 @@ async function renderWizard() {
     };
     restoreStrip();
 
-    const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
-    if (!engReady || !bible.text.trim()) {
-      // Gate readable before it is hit (product rule): the withheld verb
-      // states the nearer unmet condition, never a disabled control.
-      genHost.innerHTML = `<p class="wv-tag">${!bible.text.trim()
-        ? "GENERATE SWATCHES NEEDS A SAVED BIBLE — DRAFT IT IN STEP 5"
-        : "GENERATE SWATCHES NEEDS A NARRATIVE MODEL — ADD ONE IN SETTINGS"}</p>`;
-    } else {
+    // Gate readable before it is hit AND kept true afterwards (a stale
+    // gate is a lying gate — user-hit 2026-08-06 after saving the Bible):
+    // re-synced on every Bible save/draft via syncSwatchGen.
+    syncSwatchGen = async () => {
+      const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
+      if (!genHost.isConnected) return;
+      if (!engReady || !bible.text.trim()) {
+        genHost.innerHTML = `<p class="wv-tag">${!bible.text.trim()
+          ? "GENERATE SWATCHES NEEDS A SAVED BIBLE — DRAFT IT IN STEP 5"
+          : "GENERATE SWATCHES NEEDS A NARRATIVE MODEL — ADD ONE IN SETTINGS"}</p>`;
+        return;
+      }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate swatches</button>
         <p class="swatch-note">READS THE SAVED BIBLE · PROPOSES ONLY — NOTHING IS CANON UNTIL YOU APPROVE</p>`;
@@ -2880,7 +2885,8 @@ async function renderWizard() {
         go.disabled = false;
         go.textContent = "Generate swatches";
       };
-    }
+    };
+    await syncSwatchGen();
   }
 
   // D2 (PRODUCTION_DESIGN_V3) — the six-step rail: numbered chips in the
@@ -3911,6 +3917,7 @@ async function renderWizard() {
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
+      syncSwatchGen();  // the step-1 swatch gate arms itself right now too
       toast(`Art Direction Bible saved — Breakdowns are open.`);
     } catch (err) { toast(err.message, true); }
   };

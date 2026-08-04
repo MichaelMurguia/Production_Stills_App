@@ -836,7 +836,7 @@ are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
-*(empty — PRODUCTION_DESIGN_V3 D8 ruled all five rows, 2026-08-06)*
+| 2026-08-06 | Swatch-generate flow inversion (user-flagged): the generator lives in step 1 but depends on step 5's saved Bible, so the honest flow walks up and back down the page (scan → interview → draft → save → return to step 1 → generate → re-draft). The stale gate is fixed (it now arms on save), but the placement question stands | PD step 1, Color Palette column | Designer to rule: move generation to a post-save moment (e.g. offered beside the saved Bible), keep it in the column, or fold it into the draft itself |
 
 ---
 
