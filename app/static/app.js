@@ -3347,43 +3347,47 @@ async function renderWizard() {
     const qN = (analysis.unresolved || []).length;
     const answeredN = (analysis.unresolved || [])
       .filter(q => analysis.question_answers?.[q]?.answer).length;
-    const seg = (goto, n, label, suffix = "") =>
-      `<a class="reveal-count" data-goto="${goto}"><b>${n}</b> ${label}${suffix}</a>`;
-    const counts = [
-      seg("langs", worlds.length, `DESIGN LANGUAGE${worlds.length === 1 ? "" : "S"}`,
-        proposedN ? ` <span class="seg-proposed">· ${proposedN} PROPOSED</span>` : ""),
-      envN ? seg("envs", envN, `ENVIRONMENT${envN === 1 ? "" : "S"}`) : "",
-      seg("locs", (analysis.key_locations || []).length, "LOCATIONS"),
-      seg("subjects", (analysis.subjects || []).length, "SUBJECTS"),
-      seg("questions", qN, "OPEN QUESTIONS",
-        answeredN ? ` <span class="seg-faint">· ${answeredN} ANSWERED</span>` : ""),
-    ].filter(Boolean).join("");
+    // D3 (PRODUCTION_DESIGN_V3) — the read presents as five stat tiles
+    // plus the logline in its own accent-ruled column; one box made the
+    // logline read as a footnote to the counts. Open questions carry the
+    // only colored number: --accent while any remain.
+    const tile = (goto, n, label, cls = "") =>
+      `<a class="read-tile" data-goto="${goto}"><b class="read-num ${cls}">${n}</b>
+       <span class="read-lab">${label}</span></a>`;
+    const tiles = [
+      tile("langs", worlds.length, `DESIGN LANGUAGE${worlds.length === 1 ? "" : "S"}`),
+      tile("envs", envN, `ENVIRONMENT${envN === 1 ? "" : "S"}`),
+      tile("locs", (analysis.key_locations || []).length, "LOCATIONS"),
+      tile("subjects", (analysis.subjects || []).length, "SUBJECTS"),
+      tile("questions", qN, "OPEN QUESTIONS", qN - answeredN > 0 ? "attn" : ""),
+    ].join("");
     host.innerHTML = `
-      <div class="reveal-strip">
-        <div class="reveal-kicker">THE READ FOUND</div>
-        <div class="reveal-counts">${counts}</div>
-        ${analysis.logline ? `<p class="reveal-logline"><b>Logline</b> — ${esc(analysis.logline)}</p>` : ""}
+      <div class="read-strip">
+        <div class="read-tiles">${tiles}</div>
+        ${analysis.logline ? `<div class="read-logline">
+          <span class="read-log-kicker">LOGLINE</span>
+          <p>${esc(analysis.logline)}</p></div>` : ""}
       </div>
-      <div class="fgroup" id="wiz-langs-sec" style="margin-top:14px"><span class="f-label">Design languages — click one to review or edit</span>
+      <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
+        <span class="uncast-label">DESIGN LANGUAGES — EACH BECOMES A BIBLE SECTION</span>
         <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
         <div id="wiz-worlds"></div>
       </div>
       <div id="wiz-envs-sec" style="margin-top:16px">
-        <div class="uncast-label">ENVIRONMENTS — WHAT WORLD IS THIS IN?</div>
+        <div class="uncast-label">ENVIRONMENTS — THE VISUAL RULES A PLACE INHERITS</div>
         <div id="wiz-envs"></div>
       </div>
       ${(analysis.key_locations || []).length || (analysis.environments || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
-        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} ANSWERED OF ${qN}</div>
-        <p class="mini">The read couldn't settle these. Answers are appended to the interview and honored by the Bible draft.</p>
-        <div id="wiz-questions"></div>
+        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED · ANSWERS RIDE THE BIBLE DRAFT</div>
+        <div id="wiz-questions" class="q-grid"></div>
       </div>` : ""}`;
     const GOTO = {
       langs: () => $("#wiz-langs-sec"), envs: () => $("#wiz-envs-sec"),
       locs: () => $("#wiz-locs-sec"), questions: () => $("#wiz-questions-sec"),
       subjects: () => $('.panel.step[data-step="3"]'),
     };
-    $$(".reveal-count", host).forEach(a => a.onclick = () => {
+    $$(".read-tile", host).forEach(a => a.onclick = () => {
       const el = GOTO[a.dataset.goto]?.();
       if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80,
                                 behavior: "smooth" });

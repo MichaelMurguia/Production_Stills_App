@@ -736,15 +736,6 @@ label.check {
    one lead: the panel-lead vocabulary (amber left border, --panel2, amber
    Courier kicker) applied inside step 2. Counts are text links to their
    sections; the logline closes the strip. */
-.reveal-strip { background: var(--panel2); border-left: 3px solid var(--accent); padding: 12px 16px; margin-top: 14px; }
-.reveal-kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; color: var(--accent); margin-bottom: 8px; }
-.reveal-counts { display: flex; flex-wrap: wrap; gap: 4px 24px; }
-.reveal-count { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--ink-dim); cursor: pointer; }
-.reveal-count b { color: var(--ink); font-size: 13px; }
-.reveal-count:hover { text-decoration: underline; text-underline-offset: 3px; }
-.reveal-count .seg-proposed { color: var(--hold); }
-.reveal-count .seg-faint { color: var(--ink-faint); }
-.reveal-logline { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-dim); max-width: 74ch; }
 
 /* Open questions as the interview (mock 6a) — plan P2/R3. Every row carries
    the ledger border box; --ok marks answered; deferred rows dim their text
@@ -1806,6 +1797,30 @@ details.meta pre {
    the grid's first row, THE MOVIE spanning its three columns. Replaces
    the separate boards group whose lone card collapsed to a third of a
    third of the page. */
+/* D3 — THE READ FOUND: five stat tiles + the logline in its own
+   accent-ruled column. Open questions carry the only colored number. */
+.read-strip { display: flex; gap: 16px; align-items: stretch; margin-top: 14px; }
+.read-tiles { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.read-tile { background: var(--panel); border: 1px solid var(--line);
+  padding: 14px 16px; cursor: pointer; }
+.read-tile:hover { border-color: var(--ink-faint); }
+.read-num { display: block; font-size: 24px; font-weight: 700; line-height: 1.1;
+  color: var(--ink); }
+.read-num.attn { color: var(--accent); }
+.read-lab { display: block; font-family: var(--mono); font-size: 9px;
+  letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
+.read-logline { flex: none; width: 360px; border-left: 2px solid var(--accent);
+  background: var(--panel); padding: 12px 16px; }
+.read-log-kicker { font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  color: var(--accent); }
+.read-logline p { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55;
+  margin-top: 5px; }
+@media (max-width: 980px) {
+  .read-strip { flex-direction: column; }
+  .read-tiles { grid-template-columns: repeat(2, 1fr); }
+  .read-logline { width: auto; }
+}
+
 /* PRODUCTION_DESIGN_V3 (designer-ruled 2026-08-06) — the header strip,
    the six-step rail, Courier step headings and condition lines: a step
    states what it does to the movie, never what it is. */
