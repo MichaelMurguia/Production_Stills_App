@@ -1809,12 +1809,19 @@ details.meta pre {
 /* UNCANONIZED — 2026-08-05 — color swatches (user-directed, wireframe
    approved): manual add row, Bible-cited generate widget, proposal
    strip. Swatch tiles are pure color — no text in the pixels. */
-.swatch-add { display: flex; gap: 7px; align-items: center;
+.swatch-add { display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
   border: 1px dashed var(--line); padding: 8px; margin-top: 10px; }
 .swatch-add input[type=color] { width: 30px; height: 30px; padding: 0;
   border: 1px solid var(--line); background: var(--field); flex: none; cursor: pointer; }
-.swatch-add input[type=text] { flex: 1; min-width: 0; background: var(--field);
-  border: 1px solid var(--line); color: var(--ink-dim); font-size: 11px; padding: 6px 8px; }
+.swatch-add input[type=text] { background: var(--field); border: 1px solid var(--line);
+  color: var(--ink-dim); font-size: 11px; padding: 6px 8px; min-width: 0; }
+.swatch-add .sw-hex-in { width: 76px; flex: none; }
+/* The name gets its own full-width line — squeezed beside the hex it
+   collapsed to nothing at the 4-up column width. */
+.swatch-add .sw-name-in { flex: 1 1 100%; }
+.wiz-thumb-note { display: block; font-family: var(--mono); font-size: 8.5px;
+  letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .swatch-gen { border-top: 1px solid var(--line-soft); margin-top: 12px; padding-top: 12px; }
 .swatch-note { font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
   color: var(--ink-faint); margin-top: 7px; line-height: 1.6; }

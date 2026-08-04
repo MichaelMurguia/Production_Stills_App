@@ -2744,10 +2744,12 @@ async function renderWizard() {
     $("[data-f=sw-add]", col).onclick = async () => {
       const hex = hexIn.value.trim();
       if (!HEXOK.test(hex)) return toast("A swatch needs a full hex — like #8A4B2E.", true);
+      const name = $("[data-f=sw-name]", col).value.trim();
       try {
         const ref = await api("/api/references/swatch",
-          { method: "POST", json: { hex, approve: true } });
-        toast(`${ref.id} — ${hex.toUpperCase()} added as an approved palette swatch.`);
+          { method: "POST", json: { hex, name: name || undefined, approve: true } });
+        toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added as an approved palette swatch.`);
+        $("[data-f=sw-name]", col).value = "";
         refreshRefs();
       } catch (err) { toast(err.message, true); }
     };
@@ -2967,8 +2969,13 @@ async function renderWizard() {
     } finally { busy.done(); btn.disabled = false; }
   };
 
+  let wizAnchorIds = [];
   const refreshRefs = async () => {
     const refs = (await api("/api/references")).filter(r => r.status !== "REJECTED");
+    // Every anchor in a column rides the bible draft (user ruling
+    // 2026-08-05: inclusion IS the selection — no per-row checkbox).
+    wizAnchorIds = refs.filter(r =>
+      $(`.wiz-col[data-role="${CSS.escape(roleHead(r.role))}"]`)).map(r => r.id);
     for (const col of $$(".wiz-col[data-role]")) {
       const role = col.dataset.role;
       const mine = refs.filter(r => roleHead(r.role) === role);
@@ -2982,12 +2989,12 @@ async function renderWizard() {
       mine.forEach((r, i) => {
         const item = document.createElement("div");
         item.className = "wiz-thumb";
+        // No use-in-draft checkbox (user ruling 2026-08-05): if an anchor
+        // is in the column, it is used — inclusion IS the selection.
         item.innerHTML = `
           <img src="/api/references/${esc(r.id)}/image?thumb=1" loading="lazy" alt="${esc(r.id)}">
-          <span class="meta mini">${esc(r.id)}
-            <label class="mini check" style="margin:0;display:flex" title="Checked images are attached to the bible draft so the model can study them.">
-              <input type="checkbox" class="wiz-ref-use" value="${esc(r.id)}" checked> use in draft
-            </label>
+          <span class="meta mini">${esc(r.id)}${r.notes && r.role === "COLOR_PALETTE"
+            ? `<span class="wiz-thumb-note">${esc(r.notes.split(" · ").slice(0, 2).join(" · "))}</span>` : ""}
           </span>
           <button class="danger" data-f="del" title="Permanently delete this image">×</button>`;
         $("img", item).onclick = () => openLightbox(lbItems, i);
@@ -3679,7 +3686,7 @@ async function renderWizard() {
         palette: $("#wiz-palette").value.trim(),
         never: $("#wiz-never").value.trim(),
         notes: [$("#wiz-notes").value.trim(), ...qaLines].filter(Boolean).join("\n"),
-        ref_ids: $$(".wiz-ref-use:checked").map(x => x.value),
+        ref_ids: wizAnchorIds,
       };
       const r = await api("/api/wizard/draft-bible", {
         method: "POST", json: { answers, provider: $("#wiz-provider").value } });
@@ -3696,6 +3703,7 @@ async function renderWizard() {
         }
       }
       editor.value = r.markdown;
+      syncBibleSave();
       $("#style-status").innerHTML =
         `DRAFTED BY ${esc(r.model || "the model").toUpperCase()} — REVIEW, EDIT, THEN SAVE`;
       toast(`Bible drafted by ${r.model} — review below, then save. Search for (PROPOSED) to find its guesses.`);
@@ -3704,6 +3712,18 @@ async function renderWizard() {
   };
 
   // ---- the Bible itself + project-wide lessons (the PD's living documents) ----
+  // Save is disabled while the editor is empty (user-directed 2026-08-05):
+  // the gate is readable as state — disabled control + the stated
+  // condition beside it — instead of a 422 after the click.
+  const syncBibleSave = () => {
+    const empty = !$("#style-bible").value.trim();
+    const btn = $("#style-save");
+    btn.disabled = empty;
+    btn.title = empty
+      ? "Nothing to save yet — the Draft button above writes the Bible here for review."
+      : "";
+  };
+  $("#style-bible").addEventListener("input", syncBibleSave);
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
     $("#style-bible").value = bible.text;
@@ -3712,6 +3732,7 @@ async function renderWizard() {
     $("#style-status").innerHTML = !bible.text.trim()
       ? "NOT DRAFTED YET — the Draft button above writes it here for review"
       : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> every future prompt uses this` : "");
+    syncBibleSave();
     return bible;
   };
   // Step-state badges (plan v3 C13): each step's h2 states where it stands,
