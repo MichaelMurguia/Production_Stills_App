@@ -2848,6 +2848,39 @@ async function renderWizard() {
     }
   }
 
+  // D2 (PRODUCTION_DESIGN_V3) — the six-step rail: numbered chips in the
+  // header strip; done numbers go --ok (same truth as the step badges),
+  // the current chip is bordered; clicking scrolls with the band offset.
+  const RAIL = [[1, "Anchors"], [2, "Scan"], [3, "Interview"],
+                [4, "Cast"], [5, "Bible"], [6, "Bake-off"]];
+  const rail = $("#wiz-rail");
+  rail.innerHTML = RAIL.map(([n, l]) =>
+    `<button class="rail-chip" data-goto-step="${n}"><span class="rail-num">${n}</span> ${esc(l)}</button>`).join("");
+  const railCurrent = () => {
+    let cur = 1;
+    for (const [n] of RAIL) {
+      const el = $(`.panel.step[data-step="${n}"]`);
+      if (el && el.getBoundingClientRect().top <= 140) cur = n;
+    }
+    $$(".rail-chip", rail).forEach(c =>
+      c.classList.toggle("current", +c.dataset.gotoStep === cur));
+  };
+  rail.onclick = e => {
+    const chip = e.target.closest(".rail-chip");
+    if (!chip) return;
+    const el = $(`.panel.step[data-step="${chip.dataset.gotoStep}"]`);
+    if (el) window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - 80,
+      behavior: "smooth" });
+  };
+  const onRailScroll = () => {
+    if (!rail.isConnected)
+      return window.removeEventListener("scroll", onRailScroll);
+    railCurrent();
+  };
+  window.addEventListener("scroll", onRailScroll, { passive: true });
+  railCurrent();
+
   // ---- Step 6: model bake-off (after the production design is set) ----
   // Every engine renders the same screenplay location; suggestions come from
   // the Step 2 analysis's recurring locations.
@@ -3746,6 +3779,9 @@ async function renderWizard() {
       $(".step-badge", h)?.remove();
       h.insertAdjacentHTML("beforeend",
         ` <span class="badge ${cls} step-badge">${esc(text)}</span>`);
+      // D2 — the rail's done mark is the badge's truth, never its own.
+      $(`#wiz-rail .rail-chip[data-goto-step="${n}"]`)
+        ?.classList.toggle("done", cls === "APPROVED");
     };
     try {
       const [refs, subjects, samples, bible] = await Promise.all([
