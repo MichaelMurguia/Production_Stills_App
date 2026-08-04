@@ -466,6 +466,75 @@ def derive_keywords(name: str, limit: int = 20) -> dict:
             "keywords": (name_tokens + ranked)[:limit]}
 
 
+def scene_anchor(subject: str, max_chars: int = 7000) -> dict:
+    """Deterministic subject→slugline anchor for breakdowns (user-hit
+    2026-08-06: a run for INT_BRIEFING_ROOM_DAY_V01 drafted the crash
+    site — a machine slug left to model fuzzy-matching, and it lost).
+    The subject is de-slugged (underscores, INT/EXT, times, Vnn stripped)
+    and matched against the screenplay's own slugline parse; on a match
+    the actual scene text is returned for verbatim quoting into the
+    instructions, so the model never has to find the scene itself."""
+    text = screenplay_text()
+    if not text.strip():
+        return {"matched": False}
+    lines = text.splitlines()
+    scenes: list[dict] = []
+    for i, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not stripped or len(stripped) > 90 or stripped != stripped.upper():
+            continue
+        m = _SLUG_RE.match(stripped)
+        if not m:
+            continue
+        place = re.split(r"\s+[-–—]\s+", m.group(2))[0].strip(" .-–—")
+        place = _strip_time_tail(place)
+        if place:
+            scenes.append({"line": i, "heading": stripped, "location": place})
+    if not scenes:
+        return {"matched": False}
+
+    def norm(v: str) -> str:
+        return " ".join(re.sub(r"[^a-z0-9]+", " ", v.lower()).split())
+
+    subj = re.sub(r"\bv\d+\b", " ", norm(subject))
+    subj = re.sub(r"\b(int|ext|i e|day|night|dawn|dusk|morning|evening|"
+                  r"continuous|later)\b", " ", subj)
+    subj = " ".join(subj.split())
+    if len(subj) < 3:
+        return {"matched": False}
+    subj_words = set(subj.split())
+
+    best = None
+    for sc in scenes:
+        loc = norm(sc["location"])
+        if loc and (f" {loc} " in f" {subj} " or f" {subj} " in f" {loc} "):
+            best = sc["location"]
+            break
+    if best is None:
+        # every substantial location token present in the subject
+        for sc in scenes:
+            toks = [t for t in norm(sc["location"]).split() if len(t) >= 3]
+            if toks and all(t in subj_words for t in toks):
+                best = sc["location"]
+                break
+    if best is None:
+        return {"matched": False}
+
+    chunks = []
+    picked = 0
+    for idx, sc in enumerate(scenes):
+        if sc["location"] != best:
+            continue
+        picked += 1
+        end = scenes[idx + 1]["line"] if idx + 1 < len(scenes) else len(lines)
+        chunks.append("\n".join(lines[sc["line"]:end]).strip())
+    quoted = "\n\n".join(chunks)
+    if len(quoted) > max_chars:
+        quoted = quoted[:max_chars] + "\n[… scene text truncated …]"
+    return {"matched": True, "location": best, "scenes": picked,
+            "text": quoted}
+
+
 def locations() -> dict:
     """Slugline coverage map: every location the screenplay names, scene
     count, and a stated detail heuristic (non-empty lines inside its scenes —

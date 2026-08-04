@@ -337,6 +337,22 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                         mockflow.MODEL_NAME)
     else:
         instructions = _instructions(subject_prompt.strip(), mode, prohibited)
+        # Deterministic scene anchor (user-hit 2026-08-06): when the
+        # subject names a slugline location, the actual scene text is
+        # quoted into the instructions — the model reads the scene, it
+        # never has to find it.
+        from . import insights
+        anchor = insights.scene_anchor(subject_prompt)
+        if anchor.get("matched"):
+            instructions += (
+                f"\n\nSCENE ANCHOR — DETERMINISTIC, NOT OPTIONAL. The subject "
+                f"names the screenplay location \"{anchor['location']}\" "
+                f"({anchor['scenes']} scene{'s' if anchor['scenes'] != 1 else ''}). "
+                "This board is about THESE scenes, quoted below verbatim from "
+                "the attached screenplay. Every panel, evidence row and "
+                "citation must anchor to them; any other location in the "
+                "screenplay is context only and never the subject.\n\n"
+                + anchor["text"])
         draft, model = _draft(provider, doc, mime, instructions)
 
     spec = _coerce(draft, spec_id, mode)
