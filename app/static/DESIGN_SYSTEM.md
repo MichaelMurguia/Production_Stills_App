@@ -99,6 +99,20 @@ never a status chip for something that hasn't happened. Failing states
 (`401 — REJECTED`, `NO NETWORK`, `KEY FAILED`) are machine facts and
 always stay.
 
+**A step states what it does to the movie, never what it is**
+(PRODUCTION_DESIGN_V3, designer-ruled 2026-08-06, app-wide): prose that
+explains the app's own architecture to the user is cut; prose that tells
+the user what a control will do to their film stays. When a sentence can
+become a section label, it becomes the label. Courier condition lines on
+step headings carry the surviving conditions; jurisdiction pairs read
+`SETS … / NOT …`.
+
+**The labelled table** (D4, canon): a data table gets a Courier header
+row on the same fixed grid tracks as its rows (worked example: the
+locations table, `minmax(0,1fr) 240px 120px 190px`), group headers on
+`--field`, and it never scrolls inside a fixed-height box — the page
+scrolls, the table does not.
+
 **The verb is the form** (R8, canon with its boundary): a lead may carry
 the unblocking form itself only when ONE input satisfies the blocker.
 Two fields or more is a task, and tasks live in their stage — the lead
@@ -417,7 +431,13 @@ inside the bar are borderless text; the bar never wraps.
 **The withheld verb** (R9, canon): where an action would appear but its
 gate is unmet, a dashed `--ink-faint` bordered tag states the gate in
 Courier (`.wv-tag`, `.pd-lock`). It is never a disabled button, never
-clickable, and its copy names the act that unlocks it.
+clickable, and its copy names the act that unlocks it. Worked
+example (D4): the locations table once showed a per-row COMPLETE
+PRODUCTION DESIGN button — a gate wearing a verb. It is the tag `NEEDS
+THE BIBLE` until the Bible exists; only then does the cell hold the real
+verb (`Make sheet` / `Open sheet`). A disabled control may also carry
+the tag beside it (the Bible editor's Save + `NOTHING TO SAVE UNTIL A
+DRAFT EXISTS`).
 
 **The credential modal** (R6, canon): a provider that offers true OAuth
 (OpenRouter) gets the one-click connect; a provider that doesn't gets the
@@ -458,6 +478,17 @@ production's own art, not the app tokens.
 **Wizard group labels** (R18, canon): Courier group labels inside one
 step (`.wiz-group-label`, THE MOVIE / THE BOARDS) — capability-before-
 vendor applied to parameters.
+
+**Preset looks** (D7, canon ahead of its library): a look is five
+pre-rendered plates the product ships — never a text prompt. Three
+rules: (1) selecting a look adds real reference images, so the Bible
+cites images rather than adjectives; (2) looks filter to the column that
+opened the browser — a cinematography look can never land in board
+rendering; (3) selecting never destroys user uploads — plates land as
+approved refs alongside them, individually removable, and the footer
+states it verbatim. Plates live in `app/static/look_library/<slug>/`
+with a `looks.json` manifest and enter the library with
+`source: "look:<slug>"` so provenance survives.
 
 **Intake row** (`.ref-add`, `.chip-add`). High-frequency entry into the
 list/library directly above it. Max 6 fields; placeholders name fields,
@@ -805,11 +836,7 @@ are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
-| 2026-08-05 | Anchor rows lose "use in draft" (user ruling: inclusion IS the selection — an anchor in a column is used, full stop); the bible draft attaches every non-rejected anchor. Manual swatches gain an optional name field; a swatch row shows its name · hex as a Courier note line | PD step 1, all four anchor columns | Built from canon — review the note-line density and confirm the no-checkbox ruling app-wide |
-| 2026-08-05 | Save-gate on the Bible editor (user-directed): Save Art Direction Bible is disabled while the editor is empty, with the condition stated beside it (NOT DRAFTED YET…) and in the button title — replacing a 422 after the click. Built from canon (CLAUDE.md gate grammar: disabled control + stated condition) — review only whether this or the withheld-verb tag is the right form here | PD step 5 | The empty-editor Save previously failed only after the act |
-| 2026-08-05 | Color swatches (user-directed, wireframe-approved): manual add row (color well + hex + Add swatch, lands approved — the user's act is the evidence) and a Bible-cited Generate widget at the bottom of the Color Palette column — proposals grouped by the Bible's Design Languages, each card a pure-color tile (no text in pixels) with name/hex/citation and per-swatch Approve/Reject plus an amber Approve-all bar; value-key pairs instead of time-of-day sets; withheld-verb gate until a saved Bible + narrative model exist | PD step 1, Color Palette column | Designer to rule: citation density on cards, the amber Approve-all against the one-primary budget, whether generated proposals should persist as PROVISIONAL refs (currently client-side only, so rejections leave no record) |
-| 2026-08-05 | Four-anchor row (user-directed): the four style-anchor roles share one 4-track grid on PD step 1; the R18 group labels (THE MOVIE / THE BOARDS) ride the grid's label row, THE MOVIE spanning three columns. Built from canon — review the label-spanning treatment and the 4-up card width | Production Design step 1 | The previous two-group layout collapsed the lone BOARD_RENDERING_STYLE card to ~150px (33% cap inside a 3-track grid) and its rows corrupted |
-| 2026-08-05 | Stale-tab update bar (user-hit three times, NEW PATTERN): when the server's version moves past the tab's booted build, a sticky Courier line under the header states both versions with a RELOAD TO GET IT text act — never an auto-reload mid-work. Notification-dot grammar didn't fit: the condition lives in the chrome, not a view | App-wide (every navigation checks healthz) | Designer should rule on placement (above vs below band), tone, and whether the fleet-update flow should announce proactively |
+*(empty — PRODUCTION_DESIGN_V3 D8 ruled all five rows, 2026-08-06)*
 
 ---
 
@@ -817,6 +844,17 @@ are then deleted.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-06** — Production Design v3 (PRODUCTION_DESIGN_V3_PLAN D1–D6,
+  D8, D9; mock pd3-full-page): states-not-explains canonized app-wide;
+  Courier step headings + condition lines; six-step rail; READ FOUND
+  stat tiles + accent-ruled logline; labelled locations table (fixed
+  tracks, withheld-verb gate, no inner scroll); open questions two-up;
+  interview two-column. D8 rulings: swatch proposals persist as
+  PROVISIONAL refs, approve-all ghosted, Save gate as dashed tag, update
+  bar below the band, four-anchor row and no-use-in-draft ratified —
+  Uncanonized table emptied. Preset-look pattern canonized ahead of its
+  plate library (D7 pending). Dead reveal-strip CSS deleted.
 
 - **2026-08-05** — Settings control panel (SETTINGS_CONTROL_PANEL_PLAN
   P1–P4, mock 18b): the configured AI & engines tab rebuilt to the

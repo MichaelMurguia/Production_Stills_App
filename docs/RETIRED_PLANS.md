@@ -24,3 +24,4 @@ delta as new instructions.
 | design_handoff/CANONIZATION_PASS.md (R1–R19) | 2026.08.04.57 | — (emptied the Uncanonized table) |
 | BAND_CONDENSE_PLAN.md (B1–B3) + BAND_CONDENSE_SNIPPET.html | 2026.08.04.58 | — |
 | SETTINGS_CONTROL_PANEL_PLAN.md (P1–P4) | 2026.08.04.60 | mock 18b adopted; 18a re-export (marquee developer names) applied; brand-icon rule app-wide (P3) |
+| PRODUCTION_DESIGN_V3_PLAN.md (D1–D6, D8, D9) | 2026.08.04.64 | D7 preset looks pending the plate library (plan file trimmed to D7; PRESET_LOOKS_SHOT_LIST.md kept); five uncanonized rows ruled and emptied |

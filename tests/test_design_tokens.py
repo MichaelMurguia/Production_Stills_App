@@ -196,6 +196,38 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".sw-cite", ["border-left: 2px solid var(--line)"])
         self.assert_decls(".sw-acts .ok-act", ["color: var(--ok)"])
 
+    # -- production design v3 (PRODUCTION_DESIGN_V3_PLAN, 2026-08-06) ------
+
+    def test_pd_v3_rail_and_headings(self):
+        """D2: current chip bordered accent-line on --panel2, done numbers
+        --ok; D1: Courier step headings and faint condition lines."""
+        self.assert_decls(".rail-chip.current", [
+            "border: 1px solid var(--accent-line)", "background: var(--panel2)"])
+        self.assert_decls(".rail-chip.done .rail-num", ["color: var(--ok)"])
+        self.assert_decls(".wiz-v3 h2", ["font-family: var(--mono)"])
+        self.assert_decls(".step-cond", ["color: var(--ink-faint)"])
+
+    def test_pd_v3_read_strip(self):
+        """D3: five tiles, the only colored number is open questions, the
+        logline rides an accent rule; the old reveal strip is gone."""
+        self.assert_decls(".read-tiles", ["grid-template-columns: repeat(5, 1fr)"])
+        self.assert_decls(".read-num.attn", ["color: var(--accent)"])
+        self.assert_decls(".read-logline", ["border-left: 2px solid var(--accent)"])
+        self.assertNotIn(".reveal-strip", CSS)
+
+    def test_pd_v3_labelled_table(self):
+        """D4: one fixed track set for header row and rows; group headers
+        on --field; the inner scroll cage is gone."""
+        self.assert_decls(".wiz-loc-row, .loc-thead",
+                          ["grid-template-columns: minmax(0,1fr) 240px 120px 190px"])
+        self.assert_decls(".wiz-v3 .loc-group", ["background: var(--field)"])
+        self.assert_decls(".wiz-v3 .loc-scroll", ["max-height: none"])
+
+    def test_pd_v3_questions_grid(self):
+        self.assert_decls(".q-grid", ["grid-template-columns: 1fr 1fr"])
+        self.assert_decls(".q-grid .q-row.answered",
+                          ["border-left: 2px solid var(--ok)"])
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)
