@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Admin — Screenboard Studio{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+
+<section class="order" style="max-width:1000px">
+  <p class="price-kind">OPERATOR CONSOLE</p>
+  <h1>Admin</h1>
+  <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">
+    {{ counts.purchases }} PURCHASE{{ "" if counts.purchases == 1 else "S" }} &middot;
+    {{ counts.studios }} LIVE STUDIO{{ "" if counts.studios == 1 else "S" }} &middot;
+    {{ counts.rewrites }} TEXT REWRITE{{ "" if counts.rewrites == 1 else "S" }} &middot;
+    STORE {{ "BEHIND THE COMING-SOON GATE" if preview_gate else "PUBLIC" }} &middot;
+    CARD TRIALS {{ (trial_days|string) + " DAYS" if trials_open else "CLOSED" }}
+  </p>
+  {% if ok %}
+  <p class="license-label" style="color:var(--ok);margin-top:18px">{{ ok|upper }}</p>
+  {% endif %}
+
+  {# ---------------------------------------------------------- debug --- #}
+  <div class="license-box">
+    <p class="license-label">DEBUG TOOLS <span class="mono" style="color:var(--ink-faint)">VISIBLE ONLY TO YOU</span></p>
+    <p class="hero-sub">While text edit is on, <b>Alt-click</b> any text on any
+    store page to rewrite it. Rewrites apply for every visitor and survive
+    deploys; clearing restores the authored copy.</p>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px">
+      <input type="checkbox" id="owner-textedit">
+      <span>Store text edit mode (Alt-click to rewrite)</span>
+    </label>
+    <p style="margin-top:12px">
+      <button class="btn btn-secondary" id="owner-text-clear">Clear all rewrites</button>
+      <span class="mono" id="owner-text-count" style="font-size:10px;letter-spacing:.08em;color:var(--ink-faint);margin-left:10px"></span>
+    </p>
+  </div>
+
+  {# --------------------------------------------------------- trials --- #}
+  <div class="license-box">
+    <p class="license-label">MINT A TRIAL CODE</p>
+    <p class="hero-sub">A code grants an arbitrary run of the full cloud
+    edition &mdash; no card, no Stripe object. Card trials are Stripe's and
+    only Stripe ends one.</p>
+    <form method="post" action="/admin/trials/new" class="recover-form"
+          style="align-items:flex-end;margin-top:16px">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label class="admin-field mono">DAYS OF ACCESS<br>
+        <input type="number" name="days" value="30" min="1" max="{{ max_days }}" style="width:120px"></label>
+      <label class="admin-field mono">EDITION<br>
+        <input type="text" name="tier" value="personal" style="width:130px"></label>
+      <label class="admin-field mono">TIMES REDEEMABLE<br>
+        <input type="number" name="max_uses" value="1" min="1" max="1000" style="width:130px"></label>
+      <label class="admin-field mono">CODE STALE IN (DAYS, 0 = NEVER)<br>
+        <input type="number" name="valid_days" value="0" min="0" style="width:130px"></label>
+      <label class="admin-field mono" style="flex:1;min-width:220px">WHO / WHY<br>
+        <input type="text" name="note" placeholder="e.g. Ridley - DP intro call" style="width:100%"></label>
+      <button class="btn btn-primary" type="submit">Mint</button>
+    </form>
+    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:14px;color:var(--ink-faint)">
+      MAX {{ max_days }} DAYS PER CODE &middot; THE HOLDER STILL SIGNS IN, SO EVERY TRIAL HAS A NAME ON IT
+      {% if preview_gate %}<br>THE STORE IS GATED — A CODE HOLDER NEEDS THE PREVIEW PASSWORD TOO UNTIL THE STORE GOES LIVE{% endif %}
+    </p>
+  </div>
+
+  <div class="license-box">
+    <p class="license-label">CODES — {{ codes|length }}</p>
+    {% if codes %}
+    <div style="overflow-x:auto">
+    <table class="admin-table mono">
+      <tr><th>CODE</th><th>STATE</th><th>DAYS</th><th>EDITION</th>
+        <th>USED</th><th>STALE</th><th>NOTE</th><th></th></tr>
+      {% for c in codes %}
+      <tr>
+        <td style="color:var(--ink)">{{ c.code }}</td>
+        <td class="{% if c.state == 'LIVE' %}st-live{% elif c.state == 'SPENT' %}st-spent{% else %}st-held{% endif %}">{{ c.state }}</td>
+        <td>{{ c.days }}</td>
+        <td>{{ c.tier|upper }}</td>
+        <td>{{ c.uses }} / {{ c.max_uses }}</td>
+        <td style="color:var(--ink-faint)">{{ c.expires_at or "—" }}</td>
+        <td style="color:var(--ink-dim)">{{ c.note }}</td>
+        <td style="text-align:right">
+          {% if c.state == "LIVE" %}
+          <form method="post" action="/admin/trials/disable" style="display:inline">
+            <input type="hidden" name="token" value="{{ token }}">
+            <input type="hidden" name="code" value="{{ c.code }}">
+            <button class="btn btn-secondary admin-act" type="submit">Withdraw</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <p class="hero-sub">None minted yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="license-box">
+    <p class="license-label">ON TRIAL — {{ people|length }}</p>
+    {% if people %}
+    <div style="overflow-x:auto">
+    <table class="admin-table mono">
+      <tr><th>ACCOUNT</th><th>KIND</th><th>STATUS</th><th>LEFT</th>
+        <th>ENDS</th><th>STUDIO</th><th>CODE</th><th></th></tr>
+      {% for p in people %}
+      <tr>
+        <td style="color:var(--ink)">{{ p.email }}</td>
+        <td>{{ p.kind|upper }}</td>
+        <td class="{% if p.status == 'PAID' %}st-live{% else %}st-spent{% endif %}">{{ p.status }}</td>
+        <td>{{ p.days_left }}d</td>
+        <td style="color:var(--ink-faint)">{{ p.ends }}</td>
+        <td>{{ p.studio or "—" }} <span style="color:var(--ink-faint)">{{ p.studio_state }}</span></td>
+        <td style="color:var(--ink-dim)">{{ p.code }}</td>
+        <td style="text-align:right">
+          {% if p.kind == "code" and p.status == "PAID" %}
+          <form method="post" action="/admin/trials/end" style="display:inline">
+            <input type="hidden" name="token" value="{{ token }}">
+            <input type="hidden" name="email" value="{{ p.email }}">
+            <button class="btn btn-secondary admin-act" type="submit">End now</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <p class="hero-sub">Nobody is on a trial.</p>
+    {% endif %}
+  </div>
+
+  {# ----------------------------------------------------- operations --- #}
+  <div class="license-box">
+    <p class="license-label">OPERATIONS</p>
+    <p class="hero-sub">The same functions the runbook calls by curl.
+    Reconcile is idempotent and safe any time; a fleet update rebuilds every
+    live studio from the current repo head.</p>
+    <p style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <form method="post" action="/admin/ops" style="display:inline">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="action" value="reconcile">
+        <button class="btn btn-secondary" type="submit">Reconcile now</button>
+      </form>
+      <form method="post" action="/admin/ops" style="display:inline"
+            onsubmit="return confirm('Rebuild every live studio from the current repo head? Studios stay up during the rolling deploy.')">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="action" value="update-tenants">
+        <button class="btn btn-secondary" type="submit">Update the fleet</button>
+      </form>
+      <a class="btn btn-secondary" href="/admin/export{% if token %}?token={{ token }}{% endif %}">Download entitlement backup</a>
+    </p>
+  </div>
+</section>
+
+<script>
+(() => {
+  const box = document.getElementById("owner-textedit");
+  box.checked = localStorage.getItem("sbStoreTextEdit") === "1";
+  box.onchange = () => {
+    localStorage.setItem("sbStoreTextEdit", box.checked ? "1" : "0");
+    window.sbStoreTextChip && window.sbStoreTextChip();
+  };
+  const count = async () => {
+    try {
+      const o = (await (await fetch("/api/site-text")).json()).overrides || {};
+      const n = Object.keys(o).length;
+      document.getElementById("owner-text-count").textContent =
+        n ? n + " REWRITE" + (n > 1 ? "S" : "") + " ACTIVE" : "NO REWRITES YET";
+    } catch (e) {}
+  };
+  count();
+  document.getElementById("owner-text-clear").onclick = async () => {
+    if (!confirm("Every rewritten string returns to its authored text, for all visitors.")) return;
+    await fetch("/api/site-text", { method: "DELETE" });
+    window.SB_SITE_TEXT = {};
+    count();
+    location.reload();
+  };
+})();
+</script>
+
+{% endblock %}

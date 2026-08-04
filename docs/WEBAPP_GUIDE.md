@@ -115,6 +115,23 @@ Schema changes: `create_all` creates tables but never alters them; additive
 columns go in the `init_db()` micro-migration block (see `tier`). Anything
 destructive requires introducing Alembic first.
 
+### The admin hub (built 2026-08-06)
+
+`GET /admin` is the owner's one page: debug tools (store text editing),
+trial codes, and the operations that were previously curl-only
+(`reconcile`, fleet update, entitlement export). `_admin_gate()` is
+satisfied **two ways** — a signed-in `OWNER_EMAILS` session, or the
+shared `ADMIN_EXPORT_TOKEN` as query param or bearer header. The session
+path is what makes the page usable in a browser without pasting a secret
+into the address bar; the token path keeps every existing runbook and
+curl command working unchanged. Both are closed sets and failure is
+always 404 — an admin surface must not confirm its own existence.
+
+The header renders an `ADMIN` link only for an owner session
+(`request.state.is_owner`, already computed by the security-headers
+middleware for every request). `/admin/trials` redirects to `/admin`
+because it is in the runbook.
+
 ### Trials — two kinds, one entitlement machine (built 2026-08-06)
 
 `storefront/app/trials.py`. Both kinds create an ordinary cloud

@@ -13,7 +13,7 @@ from fastapi.responses import (FileResponse, JSONResponse, RedirectResponse,
                                Response)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import delete as sa_delete, select
+from sqlalchemy import delete as sa_delete, func, select
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
@@ -829,15 +829,90 @@ def recover(request: Request, email: str = Form("")):
 
 
 def _admin_gate(request: Request, token: str) -> None:
-    """One gate for every /admin endpoint. The token still works as a
-    query param (curl-friendly, existing runbooks), but an Authorization
-    bearer header is preferred — query strings land in access logs."""
+    """One gate for every /admin endpoint, satisfied two ways.
+
+    A signed-in OWNER_EMAILS account passes — that is what makes the
+    browser console usable without pasting a secret into the address bar.
+    Otherwise the shared token is required, as a query param (curl-
+    friendly, existing runbooks) or, preferred, an Authorization bearer
+    header; query strings land in access logs.
+
+    Both are closed sets: OWNER_EMAILS is operator-configured and the
+    session is HMAC-signed. Failure is always 404 — an admin surface must
+    not confirm its own existence.
+    """
+    if getattr(request.state, "is_owner", False):
+        return
     supplied = token or request.headers.get(
         "authorization", "").removeprefix("Bearer ").strip()
     if not settings.ADMIN_EXPORT_TOKEN:
         raise HTTPException(404)
     if not hmac.compare_digest(supplied, settings.ADMIN_EXPORT_TOKEN):
         raise HTTPException(404)
+
+
+@app.get("/admin")
+def admin_home(request: Request, token: str = "", ok: str = ""):
+    """The owner's one page: debug tools, trial codes, and the operations
+    that were previously curl-only. Signed in as an owner, no token is
+    needed anywhere on it — every form posts back with the session."""
+    _admin_gate(request, token)
+    supplied = "" if getattr(request.state, "is_owner", False) else (
+        token or request.headers.get(
+            "authorization", "").removeprefix("Bearer ").strip())
+    with db.session() as s:
+        codes = [{"code": c.code, "days": c.days, "tier": c.tier,
+                  "uses": c.uses, "max_uses": c.max_uses, "note": c.note,
+                  "state": c.state(),
+                  "expires_at": c.expires_at.strftime("%Y-%m-%d") if c.expires_at else "",
+                  "created_at": c.created_at.strftime("%Y-%m-%d")}
+                 for c in s.scalars(select(db.TrialCode).order_by(
+                     db.TrialCode.id.desc())).all()]
+        people = [{"email": p.email, "kind": p.trial_kind, "tier": p.tier,
+                   "status": p.status, "code": p.trial_code,
+                   "days_left": p.trial_days_left,
+                   "ends": p.trial_ends_at.strftime("%Y-%m-%d") if p.trial_ends_at else "",
+                   "studio": (p.workspace.subdomain if p.workspace else ""),
+                   "studio_state": (p.workspace.status if p.workspace else "NONE")}
+                  for p in s.scalars(select(db.Purchase).where(
+                      db.Purchase.kind == "cloud",
+                      db.Purchase.trial_kind != "").order_by(
+                          db.Purchase.id.desc())).all()]
+        counts = {
+            "purchases": s.scalar(select(func.count()).select_from(db.Purchase)) or 0,
+            "studios": s.scalar(select(func.count()).select_from(
+                db.Workspace).where(db.Workspace.status == "ACTIVE")) or 0,
+            "rewrites": s.scalar(select(func.count()).select_from(db.SiteText)) or 0,
+        }
+    return templates.TemplateResponse(request, "admin.html", {
+        "codes": codes, "people": people, "token": supplied, "counts": counts,
+        "max_days": settings.TRIAL_CODE_MAX_DAYS,
+        "trial_days": settings.TRIAL_DAYS,
+        "trials_open": settings.trials_open(),
+        "preview_gate": bool(settings.PREVIEW_PASSWORD),
+        "ok": ok[:120]})
+
+
+@app.post("/admin/ops")
+def admin_ops(request: Request, background: BackgroundTasks,
+              token: str = Form(""), action: str = Form("")):
+    """The operations that used to be curl-only, as buttons. Each one is
+    the same function the token endpoints call — nothing new can happen
+    here that could not happen before."""
+    _admin_gate(request, token)
+    if action == "reconcile":
+        out = provisioner.reconcile()
+        msg = (f"reconcile — {out['provisioned']} provisioned, "
+               f"{out['revoked']} revoked, {out.get('expired', 0)} trials expired")
+    elif action == "update-tenants":
+        out = provisioner.update_tenants()
+        msg = (f"fleet update — {len(out['updated'])} studios rebuilding"
+               + (f", {len(out['failed'])} failed" if out["failed"] else ""))
+    else:
+        msg = "unknown action"
+    return RedirectResponse(f"/admin?ok={quote(msg)}"
+                            + (f"&token={quote(token)}" if token else ""),
+                            status_code=303)
 
 
 @app.get("/admin/wildcard")
@@ -1023,6 +1098,12 @@ def trial_redeem(request: Request, background: BackgroundTasks,
     return RedirectResponse("/account?trial=1", status_code=303)
 
 
+def _admin_back(token: str, msg: str) -> str:
+    """Admin forms return to the hub. A token-authenticated caller keeps
+    carrying its token; an owner session needs nothing."""
+    return f"/admin?ok={quote(msg)}" + (f"&token={quote(token)}" if token else "")
+
+
 def _handle_subscription_updated(obj) -> None:
     """Keep our copy of a card trial's window honest.
 
@@ -1054,38 +1135,11 @@ def _handle_subscription_updated(obj) -> None:
 
 @app.get("/admin/trials")
 def admin_trials(request: Request, token: str = ""):
-    """Operator console: mint a code, see every code's state, and see who
-    is on a trial and how long they have left. Same gate as /admin/export
-    (ADMIN_EXPORT_TOKEN); the page keeps the token in its own forms so it
-    stays usable from a browser."""
+    """The trial console moved into the one admin page; the old address
+    keeps working because it is in the runbook."""
     _admin_gate(request, token)
-    supplied = token or request.headers.get(
-        "authorization", "").removeprefix("Bearer ").strip()
-    with db.session() as s:
-        codes = s.scalars(select(db.TrialCode).order_by(
-            db.TrialCode.id.desc())).all()
-        rows = [{"code": c.code, "days": c.days, "tier": c.tier,
-                 "uses": c.uses, "max_uses": c.max_uses, "note": c.note,
-                 "state": c.state(),
-                 "expires_at": c.expires_at.strftime("%Y-%m-%d") if c.expires_at else "",
-                 "created_at": c.created_at.strftime("%Y-%m-%d")}
-                for c in codes]
-        live = s.scalars(select(db.Purchase).where(
-            db.Purchase.kind == "cloud",
-            db.Purchase.trial_kind != "").order_by(
-                db.Purchase.id.desc())).all()
-        people = [{"email": p.email, "kind": p.trial_kind, "tier": p.tier,
-                   "status": p.status, "code": p.trial_code,
-                   "days_left": p.trial_days_left,
-                   "ends": p.trial_ends_at.strftime("%Y-%m-%d") if p.trial_ends_at else "",
-                   "studio": (p.workspace.subdomain if p.workspace else ""),
-                   "studio_state": (p.workspace.status if p.workspace else "NONE")}
-                  for p in live]
-    return templates.TemplateResponse(request, "admin_trials.html", {
-        "codes": rows, "people": people, "token": supplied,
-        "max_days": settings.TRIAL_CODE_MAX_DAYS,
-        "trial_days": settings.TRIAL_DAYS,
-        "trials_open": settings.trials_open()})
+    return RedirectResponse("/admin" + (f"?token={quote(token)}" if token else ""),
+                            status_code=303)
 
 
 @app.post("/admin/trials/new")
@@ -1097,7 +1151,7 @@ def admin_trials_new(request: Request, token: str = Form(""),
     with db.session() as s:
         trials.create_code(s, days=days, tier=tier, max_uses=max_uses,
                            note=note, valid_days=valid_days)
-    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+    return RedirectResponse(_admin_back(token, "code minted"),
                             status_code=303)
 
 
@@ -1113,7 +1167,7 @@ def admin_trials_disable(request: Request, token: str = Form(""),
         if row:
             row.disabled = 1
             s.commit()
-    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+    return RedirectResponse(_admin_back(token, "code withdrawn"),
                             status_code=303)
 
 
@@ -1132,7 +1186,7 @@ def admin_trials_end(request: Request, background: BackgroundTasks,
             p.status = "EXPIRED"
         s.commit()
     background.add_task(provisioner.reconcile)
-    return RedirectResponse(f"/admin/trials?token={quote(token)}",
+    return RedirectResponse(_admin_back(token, "trial ended"),
                             status_code=303)
 
 

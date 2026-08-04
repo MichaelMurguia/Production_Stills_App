@@ -19,6 +19,12 @@ BEFORE release. Delivered `*_SNIPPET.html` files are authoritative for
 their element: transliterate (hex → existing token), never reinterpret,
 delete when done.
 
+**This applies to `storefront/` too** (ruled 2026-08-06). The store is a
+separate design system, not an exempt one: its UI changes run the same
+loop against `STORE_DESIGN_SYSTEM.md`, capture a booted storefront
+instead of the app, and assert `storefront/tests/test_store_tokens.py`.
+See the skill's store section for the recipe.
+
 Two rules govern everything, both explained in full in that file:
 
 1. **Amber (`--accent`) is a signal, not a decoration.** It marks the current
@@ -66,6 +72,15 @@ this folder connected (re-syncing it so it sees the current files) and ask it to
 review the Uncanonized table; it answers with a plan file to implement. Then
 keep working — do not block on it.
 
+**The store has the same cycle with a different ledger** (ruled
+2026-08-06). `STORE_DESIGN_SYSTEM.md` has no Uncanonized table; its
+convention is a dated `**Non-canon:**` entry in that file's Changelog,
+written in the same commit as the feature and naming what the designer
+should rule on. `RULED (...)` entries are the answers. When ~4
+`Non-canon:` entries have accumulated, tell the user the store is due a
+design review the same way — the resulting plan implements against
+`STORE_DESIGN_SYSTEM.md`, never the app's.
+
 **Also update `DESIGN_SYSTEM.md` when you:** add or reorder a pipeline stage
 (the nav band and its numbering are documented there), add a token, change a
 gate, or retire a pattern. Keep edits surgical — amend the relevant section, add
@@ -108,8 +123,10 @@ Hard boundary: no imports across `app/` ↔ `storefront/`; nothing from
 release zip; secrets live only in Railway variables and local shells, never
 in the repo. Store UI must follow `STORE_DESIGN_SYSTEM.md` (its own binding system:
 imagery-as-argument, motion rules, trait-list pricing, stated gates,
-profession vocabulary, a two-amber page budget). It is a separate surface —
-it does not add rows to the app DESIGN_SYSTEM.md's Uncanonized table.
+profession vocabulary, the four sanctioned amber roles). It is a separate
+surface — it does not add rows to the app DESIGN_SYSTEM.md's Uncanonized
+table; store work logs `Non-canon:` Changelog entries in its own file and
+runs `/design-verify` against the booted storefront (see "UI work").
 
 ## Product model
 

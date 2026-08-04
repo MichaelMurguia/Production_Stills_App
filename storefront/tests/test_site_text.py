@@ -70,11 +70,17 @@ class SiteTextTests(unittest.TestCase):
                          "the editor must be invisible to visitors")
         owner = _client(OWNER).get("/").text
         self.assertIn("sbStoreTextEdit", owner)
-        # And the account page carries the owner controls.
-        acct = _client(OWNER).get("/account").text
-        self.assertIn("PAGE TEXT EDITING", acct)
-        self.assertNotIn("PAGE TEXT EDITING",
-                         _client("stranger@example.com").get("/account").text)
+        # The controls live on /admin (moved 2026-08-06 — the account page
+        # is the customer's view of their purchases, not a console); the
+        # editor SCRIPT still ships on every page so Alt-click works
+        # wherever the owner is standing.
+        admin = _client(OWNER).get("/admin").text
+        self.assertIn("DEBUG TOOLS", admin)
+        self.assertIn("owner-textedit", admin)
+        self.assertEqual(
+            _client("stranger@example.com").get("/admin").status_code, 404)
+        self.assertNotIn("owner-textedit",
+                         _client(OWNER).get("/account").text)
 
 
 if __name__ == "__main__":

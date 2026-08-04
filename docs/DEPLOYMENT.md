@@ -165,7 +165,11 @@ account page; entitlement is unaffected either way.
 
 **Granting a free trial by hand** (the operator flow):
 
-1. Open `https://www.screenboardstudio.com/admin/trials?token=$ADMIN_EXPORT_TOKEN`.
+1. Open `https://www.screenboardstudio.com/admin`. **Signed in with an
+   `OWNER_EMAILS` account, no token is needed** — an `ADMIN` link appears
+   in the header, left of your avatar. Otherwise append
+   `?token=$ADMIN_EXPORT_TOKEN` (or send it as a bearer header). The old
+   `/admin/trials` address redirects here.
 2. Mint a code: days of access, edition, how many times it may be
    redeemed, optional shelf life for the code itself, and a note saying
    who it is for — the note is the only record of *why*, so write it.

@@ -116,6 +116,32 @@ reader is.
 
 ## Changelog
 
+- **2026-08-06** — CORRECTION (not a new pattern): `--hold` was used by the
+  engine band's condition row (`.eb-hold`, ruled by STORE_PRICING_PLAN K1),
+  the setup notice, the router status blocks and one template, and was
+  **never defined** in `store.css` — those rules fell back to inherited ink,
+  so a ruling that shipped on 2026-08-03 was not actually rendering. Defined
+  as `#7d8fd0`, inherited unchanged from the app system. `--warn` deleted in
+  the same pass for the reason the app deleted it (R3): it aliased the
+  accent, and a second amber token is how a fill budget quietly breaks. Its
+  one user (the header Debug chip) is now `--hold`, which is what an armed
+  debug mode is. `storefront/tests/test_store_tokens.py` now fails the build
+  if any `var(--x)` has no `--x`.
+- **2026-08-06** — Non-canon: the operator console (`/admin`, user-directed).
+  A **new surface class for this store**: an internal, owner-only page
+  wearing full store chrome — facts line, debug tools, trial minting, two
+  Courier state tables (one-word states in status colors, never amber), and
+  the operations that were previously curl-only as buttons. Its one amber
+  fill is Mint. Reached by an **`ADMIN` header link in Courier amber, left
+  of the avatar**, rendered only for an `OWNER_EMAILS` session — the first
+  time the store's chrome has carried a role-conditional item. The debug
+  tools moved here off `/account`, which returns to being purely the
+  customer's view of their own purchases. Designer to rule on: whether an
+  internal console should wear the sales chrome at all (it may want reduced
+  chrome or its own header treatment), the amber `ADMIN` link against §8's
+  four roles (it is arguably a fifth: a role marker, not a fill/kicker/
+  highlight/state), and the facts-line density.
+
 - **2026-08-06** — Non-canon: the trial surfaces (TRIALS_BUILT, user-directed).
   Four store-side pieces need a ruling. (1) `/trial` is a **two-door page** —
   a card-trial box carrying a §4 trait list (four ■, one □ naming the charge)

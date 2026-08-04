@@ -85,6 +85,46 @@ archives HEAD — running it before the commit ships stale content; this
 happened twice) → commit zips → push → fleet update → verify tenant
 version.
 
+## The store (`storefront/`) — same loop, different subject
+
+Ruled 2026-08-06: store UI is not exempt. Authority is
+`STORE_DESIGN_SYSTEM.md` (a different system — its amber has four
+sanctioned roles, and the app's scarcity rule does NOT apply here).
+
+**Seed and boot** a throwaway store rather than the app:
+
+```bash
+SCRATCH=<session scratchpad>
+cd <repo>/storefront && DATABASE_URL="sqlite:///$(cygpath -m "$SCRATCH")/store.db" \
+  SESSION_SECRET=demo ADMIN_EXPORT_TOKEN=tok-demo OWNER_EMAILS=you@example.com \
+  TRIAL_DAYS=14 STRIPE_SECRET_KEY=sk_test_demo STRIPE_PRICE_CLOUD_PERSONAL=price_demo \
+  BASE_URL=http://127.0.0.1:8110 python -m uvicorn app.main:app --port 8110 &
+```
+
+- Grep the log for `10048` before trusting a capture — a leaked server
+  from an earlier session on the same port will serve you STALE UI and
+  you will "verify" the wrong build (this happened).
+- Set the Stripe/price vars to open the paid paths; leave them unset to
+  capture the stated gates instead. Both lives deserve a look.
+- Owner-only surfaces need a session: mint one with
+  `auth.make_session(email)` and set it via CDP `Network.setCookie`
+  (`sb_account`), or drive the page with `TestClient`.
+
+**Capture** at 1420 wide (the store wraps at 1180 + chrome), same Edge
+recipe as the app. **Compare** against `design_mocks/` where a store mock
+exists; where none does, compare against the system's rules directly —
+fills counted, kickers one per section, trait lists with their one
+tradeoff, gates stated not errored.
+
+**Assert** `storefront/tests/test_store_tokens.py` (the store's standing
+contracts — every token used must be defined; a `var(--x)` with no `--x`
+renders as inherited ink and silently drops a designer's ruling, which is
+exactly how `--hold` was lost for five days).
+
+**Log** the feature as a dated `**Non-canon:**` entry in
+`STORE_DESIGN_SYSTEM.md`'s Changelog, in the same commit, naming what the
+designer should rule on.
+
 ## Interaction states a screenshot cannot show — check by reading code
 
 - No focusable/editable element inside chrome copy (caret risk).

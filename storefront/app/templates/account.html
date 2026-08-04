@@ -88,44 +88,11 @@
   {% endif %}
 
   {% if request.state.is_owner %}
-  <div class="license-box" style="margin-top:26px">
-    <p class="license-label">OWNER · PAGE TEXT EDITING <span class="mono" style="color:var(--ink-faint)">DEBUG TOOL — VISIBLE ONLY TO YOU</span></p>
-    <p class="hero-sub">While on, <b>Alt-click</b> any text on any store page to
-    rewrite it. Rewrites apply for every visitor and survive deploys; clearing
-    restores the authored copy.</p>
-    <label style="display:flex;gap:8px;align-items:center;margin-top:10px">
-      <input type="checkbox" id="owner-textedit">
-      <span>Store text edit mode (Alt-click to rewrite)</span>
-    </label>
-    <p style="margin-top:10px"><button class="btn btn-secondary" id="owner-text-clear">Clear all rewrites</button>
-    <span class="mono" id="owner-text-count" style="font-size:10px;letter-spacing:.08em;color:var(--ink-faint)"></span></p>
-  </div>
-  <script>
-  (() => {
-    const box = document.getElementById("owner-textedit");
-    box.checked = localStorage.getItem("sbStoreTextEdit") === "1";
-    box.onchange = () => {
-      localStorage.setItem("sbStoreTextEdit", box.checked ? "1" : "0");
-      window.sbStoreTextChip && window.sbStoreTextChip();
-    };
-    const count = async () => {
-      try {
-        const o = (await (await fetch("/api/site-text")).json()).overrides || {};
-        const n = Object.keys(o).length;
-        document.getElementById("owner-text-count").textContent =
-          n ? n + " REWRITE" + (n > 1 ? "S" : "") + " ACTIVE" : "NO REWRITES YET";
-      } catch (e) {}
-    };
-    count();
-    document.getElementById("owner-text-clear").onclick = async () => {
-      if (!confirm("Every rewritten string returns to its authored text, for all visitors.")) return;
-      await fetch("/api/site-text", { method: "DELETE" });
-      window.SB_SITE_TEXT = {};
-      count();
-      location.reload();
-    };
-  })();
-  </script>
+  {# Debug tools live on /admin now — this page is the customer's view of
+     their own purchases, and an owner is a customer here too. #}
+  <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">
+    OWNER &middot; DEBUG TOOLS AND TRIAL CODES MOVED TO <a href="/admin" style="color:var(--ink)">/ADMIN</a>
+  </p>
   {% endif %}
 
   {% elif purchase %}

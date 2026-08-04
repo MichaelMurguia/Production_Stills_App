@@ -44,6 +44,9 @@
         <a href="/#pricing">Pricing</a>
         {% if not request.state.account_email %}<a href="/trial"{% if request.url.path == "/trial" %} class="on"{% endif %}>Try free</a>{% endif %}
       </nav>
+      {% if request.state.is_owner %}
+      <a class="head-admin" href="/admin" title="Operator console — visible only to you">Admin</a>
+      {% endif %}
       {% if request.state.account_email %}
       <a class="head-account" href="/account" title="Your purchases ({{ request.state.account_email }})">
         <img class="head-avatar" src="{{ request.state.account_avatar }}" alt="" referrerpolicy="no-referrer">

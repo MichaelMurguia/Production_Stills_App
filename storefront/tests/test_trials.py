@@ -490,3 +490,85 @@ class AdminTrialTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------- the admin hub
+
+class AdminHubTests(unittest.TestCase):
+    """The store's operator console: one page, two ways in. A signed-in
+    owner needs no token; everyone else needs the shared one; everything
+    else 404s (an admin surface must not confirm its own existence)."""
+
+    def setUp(self):
+        self.saved_tok = settings.ADMIN_EXPORT_TOKEN
+        self.saved_owners = settings.OWNER_EMAILS
+        settings.ADMIN_EXPORT_TOKEN = "hub-token-for-tests"
+        self.owner = f"owner-{uuid.uuid4().hex[:8]}@example.com"
+        settings.OWNER_EMAILS = {self.owner}
+        self.addCleanup(setattr, settings, "ADMIN_EXPORT_TOKEN", self.saved_tok)
+        self.addCleanup(setattr, settings, "OWNER_EMAILS", self.saved_owners)
+
+    def test_owner_session_opens_the_hub_without_a_token(self):
+        c = _signed_in(self.owner)
+        r = c.get("/admin")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("MINT A TRIAL CODE", r.text)
+        self.assertIn("DEBUG TOOLS", r.text)
+        self.assertIn("OPERATIONS", r.text)
+        # No secret is ever printed into the page for a session owner.
+        self.assertNotIn(settings.ADMIN_EXPORT_TOKEN, r.text)
+
+    def test_a_signed_in_stranger_gets_nothing(self):
+        c = _signed_in(f"stranger-{uuid.uuid4().hex[:8]}@example.com")
+        self.assertEqual(c.get("/admin").status_code, 404)
+
+    def test_signed_out_needs_the_token(self):
+        c = TestClient(store)
+        self.assertEqual(c.get("/admin").status_code, 404)
+        self.assertEqual(
+            c.get(f"/admin?token={settings.ADMIN_EXPORT_TOKEN}").status_code, 200)
+        self.assertEqual(
+            c.get("/admin", headers={
+                "authorization": f"Bearer {settings.ADMIN_EXPORT_TOKEN}"}
+            ).status_code, 200)
+
+    def test_the_admin_link_shows_only_for_an_owner(self):
+        self.assertIn('href="/admin"', _signed_in(self.owner).get("/").text)
+        self.assertNotIn(
+            'class="head-admin"',
+            _signed_in(f"buyer-{uuid.uuid4().hex[:8]}@example.com").get("/").text)
+        self.assertNotIn('class="head-admin"', TestClient(store).get("/").text)
+
+    def test_minting_from_the_hub_needs_no_token_for_an_owner(self):
+        c = _signed_in(self.owner)
+        r = c.post("/admin/trials/new", data={
+            "token": "", "days": 21, "tier": "personal", "max_uses": 1,
+            "valid_days": 0, "note": "hub mint"}, follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertTrue(r.headers["location"].startswith("/admin?ok="))
+        self.assertIn("hub mint", c.get("/admin").text)
+
+    def test_the_old_console_address_still_works(self):
+        """It is in the runbook — it redirects to the hub."""
+        c = _signed_in(self.owner)
+        r = c.get("/admin/trials", follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertEqual(r.headers["location"], "/admin")
+
+    def test_ops_buttons_call_the_same_functions_as_the_runbook(self):
+        c = _signed_in(self.owner)
+        r = c.post("/admin/ops", data={"token": "", "action": "reconcile"},
+                   follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("reconcile", r.headers["location"])
+        # Unknown actions are stated, never executed.
+        r = c.post("/admin/ops", data={"token": "", "action": "rm -rf"},
+                   follow_redirects=False)
+        self.assertIn("unknown", r.headers["location"])
+
+    def test_debug_tools_left_the_account_page(self):
+        c = _signed_in(self.owner)
+        page = c.get("/account").text
+        self.assertNotIn("owner-textedit", page,
+                         "the customer view is not the operator console")
+        self.assertIn("/ADMIN", page.upper())
