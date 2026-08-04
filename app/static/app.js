@@ -3121,7 +3121,9 @@ async function renderWizard() {
     const host = $("#wiz-subj-tags");
     api("/api/subjects").then(existing => {
       const fresh = uncastRecommendations(existing);
-      const label = $(".uncast-label");
+      // Scoped to the cast step — the step-2 section labels share the
+      // class now (D3), and a global query grabbed the wrong one.
+      const label = $('.panel.step[data-step="4"] .uncast-label');
       if (label) label.textContent = fresh.length
         ? `FOUND IN THE SCREENPLAY — ${fresh.length} UNCAST`
         : "FOUND IN THE SCREENPLAY — UNCAST";
