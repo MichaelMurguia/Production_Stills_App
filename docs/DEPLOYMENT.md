@@ -237,8 +237,13 @@ render-engine keys and is a different concern entirely).
   Stripe-hosted Checkout. PCI stays Stripe's problem; no card data ever
   touches this code.
 - Webhook: `POST /stripe/webhook`, signature-verified. Events subscribed:
-  `checkout.session.completed` (fulfill) and
-  `customer.subscription.deleted` (mark purchase CANCELED).
+  `checkout.session.completed` (fulfill),
+  `customer.subscription.deleted` (mark purchase CANCELED), and
+  `customer.subscription.updated` (a card trial's date and its conversion —
+  see the Trials section; without it a converted subscription keeps
+  counting down on the account page, though entitlement is unaffected).
+  `charge.refunded` / `charge.dispute.created` are also handled if
+  subscribed.
 - **Fulfillment is idempotent on `stripe_session_id`** — both the webhook and
   the `/success` page attempt it; first writer wins. Preserve this when
   editing: it is what makes local dev work without a webhook tunnel and

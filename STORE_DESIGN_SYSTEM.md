@@ -116,6 +116,27 @@ reader is.
 
 ## Changelog
 
+- **2026-08-06** — Non-canon: the trial surfaces (TRIALS_BUILT, user-directed).
+  Four store-side pieces need a ruling. (1) `/trial` is a **two-door page** —
+  a card-trial box carrying a §4 trait list (four ■, one □ naming the charge)
+  with the page's single fill, above a code-redemption box; when a trial is
+  already running the page stops selling and reports the state instead
+  (days left, the date, and what happens on it). (2) A **stated date pair**
+  on the account page: the license label carries `TRIAL — N DAYS LEFT` and a
+  Courier line under it states the date AND the consequence separately
+  (`CONVERTS 18 SEP · YOUR CARD IS CHARGED THEN` vs `ENDS 18 SEP · NO CARD
+  ON FILE · THE STUDIO STOPS SERVING`), because those are two different
+  facts. (3) `/admin/trials` is a **new surface type** — an internal
+  table-driven operator console on store chrome (mint form, codes table with
+  a one-word state column, people table with per-row acts). Nothing like it
+  existed; it may deserve its own reduced chrome. (4) Two entry points: a
+  `Try free` header link for signed-out visitors, and a Courier line on the
+  cloud edition card (deliberately not a third fill). Built from canon
+  vocabulary throughout — no new tokens, no new amber fills on any page.
+  Designer to rule on: the two-door page's order and whether the code box
+  belongs on the same page at all, the console's chrome, and the date-pair
+  copy.
+
 - **2026-08-01** — Storefront system established with the homepage rebuild:
   the Wall hero, Standalone/Cloud trait-list pricing, filmstrip, and the
   five-stage pipeline dissolve.
