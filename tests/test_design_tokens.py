@@ -175,6 +175,16 @@ class TokenContractTests(unittest.TestCase):
             "background: var(--field)", "border: 1px solid var(--line)"])
         self.assert_decls(".prov-ico", ["width: 22px", "height: 22px"])
 
+    def test_four_anchor_row(self):
+        """User-directed 2026-08-05: the four style-anchor roles share
+        one 4-track grid, THE MOVIE label spans its three columns, and
+        the old boards group (whose lone card collapsed to a third of a
+        third of the page) is gone."""
+        self.assert_decls(".wiz-cols-anchors",
+                          ["grid-template-columns: repeat(4, minmax(0,1fr))"])
+        self.assert_decls(".wiz-span3", ["grid-column: span 3"])
+        self.assertNotIn(".wiz-cols-board", CSS)
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)

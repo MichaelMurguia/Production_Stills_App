@@ -1801,8 +1801,21 @@ details.meta pre {
 /* Four-anchor shelf (ruled 2026-08-03): movie group vs board group */
 .wiz-group-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 14px 0 8px; }
-.wiz-cols-board .wiz-col { max-width: 33%; }
-@media (max-width: 980px) { .wiz-cols-board .wiz-col { max-width: none; } }
+/* UNCANONIZED — 2026-08-05 — four-anchor row (user-directed): the four
+   style-anchor roles share one 4-track grid; the R18 group labels ride
+   the grid's first row, THE MOVIE spanning its three columns. Replaces
+   the separate boards group whose lone card collapsed to a third of a
+   third of the page. */
+.wiz-cols-anchors { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.wiz-cols-anchors .wiz-group-label { margin: 0; align-self: end; }
+.wiz-span3 { grid-column: span 3; }
+@media (max-width: 980px) {
+  .wiz-span3 { grid-column: auto; }
+  /* One column: keep each label above its own cards. */
+  .wiz-cols-anchors .wiz-col { order: 1; }
+  .wiz-cols-anchors .wiz-label-boards { order: 2; }
+  .wiz-cols-anchors .wiz-col[data-role="BOARD_RENDERING_STYLE"] { order: 3; }
+}
 
 /* SETTINGS_FIRST_RUN_PLAN (F1-F5) — the page has two lives */
 /* MOCK_PARITY D1: the mock's outer panel — the whole first-run tab sits

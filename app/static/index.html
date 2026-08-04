@@ -161,8 +161,12 @@
     <div class="panel step" data-step="1">
       <h2>Style reference images <span class="hint">(three movie parameters · one board parameter)</span></h2>
       <p class="hint">Four anchors, four jurisdictions. The first three define <b>the movie</b>; the fourth defines only <b>how boards are presented</b> — the film would be the same film in a different medium. Every render studies these. Subject photos (cast, vehicles, props) are research, not style: add them in step 4. Board <i>layout</i> lives at Assembly now, where real panels exist.</p>
-      <p class="wiz-group-label">THE MOVIE</p>
-      <div class="wiz-cols">
+      <!-- User-directed 2026-08-05: four anchor cells on one row — the
+           fourth role had collapsed in its own undersized group grid.
+           Group labels ride the same grid, spanning their columns. -->
+      <div class="wiz-cols wiz-cols-anchors">
+        <p class="wiz-group-label wiz-span3">THE MOVIE</p>
+        <p class="wiz-group-label wiz-label-boards">THE BOARDS</p>
         <div class="wiz-col" data-role="WORLD_TEXTURE">
           <div class="wiz-col-head">
             <span class="f-label" title="The world's condition — how worn, patched, dusty, or pristine everything is allowed to look. Pristine is a texture philosophy too.">World Texture</span>
@@ -190,9 +194,6 @@
           <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more film stills — they upload immediately as approved CINEMATOGRAPHY_STYLE anchors.">
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
-      </div>
-      <p class="wiz-group-label">THE BOARDS</p>
-      <div class="wiz-cols wiz-cols-board">
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
           <div class="wiz-col-head">
             <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want. Presentation only: nothing about the film.">Board Rendering Style</span>

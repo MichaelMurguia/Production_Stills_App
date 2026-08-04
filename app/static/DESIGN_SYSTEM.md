@@ -805,6 +805,7 @@ are then deleted.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
+| 2026-08-05 | Four-anchor row (user-directed): the four style-anchor roles share one 4-track grid on PD step 1; the R18 group labels (THE MOVIE / THE BOARDS) ride the grid's label row, THE MOVIE spanning three columns. Built from canon — review the label-spanning treatment and the 4-up card width | Production Design step 1 | The previous two-group layout collapsed the lone BOARD_RENDERING_STYLE card to ~150px (33% cap inside a 3-track grid) and its rows corrupted |
 | 2026-08-05 | Stale-tab update bar (user-hit three times, NEW PATTERN): when the server's version moves past the tab's booted build, a sticky Courier line under the header states both versions with a RELOAD TO GET IT text act — never an auto-reload mid-work. Notification-dot grammar didn't fit: the condition lives in the chrome, not a view | App-wide (every navigation checks healthz) | Designer should rule on placement (above vs below band), tone, and whether the fleet-update flow should announce proactively |
 
 ---
