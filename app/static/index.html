@@ -183,7 +183,16 @@
           </div>
           <p class="hint">CONTROLS hue, value key, saturation<br>NEVER framing, light source, or medium</p>
           <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more palette boards or color-script frames — they upload immediately as approved COLOR_PALETTE anchors.">
+          <!-- NON-CANON (user-directed 2026-08-05) — swatch add + Bible-cited
+               generate; awaiting the designer's UI/UX pass. -->
+          <div class="swatch-add">
+            <input type="color" data-f="sw-color" value="#8a4b2e" title="Pick a color — it lands as an approved COLOR_PALETTE swatch">
+            <input type="text" data-f="sw-hex" class="mono" value="#8a4b2e" maxlength="7" spellcheck="false">
+            <button class="ghost" data-f="sw-add">Add swatch</button>
+          </div>
           <div class="wiz-thumbs" data-f="list"></div>
+          <div class="swatch-gen" id="swatch-gen"></div>
+          <div id="swatch-strip"></div>
         </div>
         <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
           <div class="wiz-col-head">

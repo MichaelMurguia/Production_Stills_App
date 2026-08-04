@@ -664,6 +664,53 @@ async def api_add_reference(
         raise _err(e)
 
 
+@app.post("/api/references/swatch")
+async def api_add_swatch(body: dict) -> dict:
+    """NON-CANON (2026-08-05): a swatch reference — pure solid color (or a
+    value-key pair, two halves), rendered locally at zero cost. No text is
+    ever baked into the pixels; name/hex/citation ride the notes."""
+    import io as _io
+
+    from PIL import Image
+
+    from . import wizard
+
+    hexv = wizard._clean_hex(body.get("hex"))
+    if not hexv:
+        raise HTTPException(422, "hex must look like #8A4B2E")
+    pair = wizard._clean_hex(body.get("pair_hex")) or None
+    name = str(body.get("name") or f"SWATCH {hexv}").strip()[:48].upper()
+    cite = str(body.get("cite") or "").strip()[:220]
+
+    img = Image.new("RGB", (640, 400), hexv)
+    if pair:
+        img.paste(Image.new("RGB", (320, 400), pair), (320, 0))
+    buf = _io.BytesIO()
+    img.save(buf, "PNG")
+    notes = " · ".join(x for x in
+                       [name, hexv + (f" / {pair}" if pair else ""), cite] if x)
+    try:
+        ref = store.add_reference(f"{name.lower().replace(' ', '-')}.png",
+                                  buf.getvalue(), "COLOR_PALETTE",
+                                  [], [], notes)
+    except ValueError as e:
+        raise _err(e)
+    if body.get("approve"):
+        ref = store.set_reference_status(ref["id"], "APPROVED")
+    return ref
+
+
+@app.post("/api/wizard/swatches")
+async def api_wizard_swatches(body: dict) -> dict:
+    """Bible-cited palette proposals (NON-CANON widget) — proposals only;
+    each approval lands through /api/references/swatch."""
+    try:
+        return await run_in_threadpool(
+            wizard.generate_swatches, str(body.get("provider") or "gemini"))
+    except autofill.AutofillError as e:
+        raise HTTPException(409, str(e))
+
+
 @app.patch("/api/references/{ref_id}")
 async def api_update_reference(ref_id: str, fields: dict) -> dict:
     try:

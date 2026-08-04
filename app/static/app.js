@@ -2725,6 +2725,127 @@ async function renderWizard() {
       "NO ENGINE CONFIGURED — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
   }
 
+  // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
+  // A swatch is an ordinary COLOR_PALETTE reference: pure solid pixels
+  // (engines study these images — name/hex live in the notes, never the
+  // pixels). Manual add is the user's act and lands approved; generated
+  // proposals are grounded in the saved Bible, grouped by its Design
+  // Languages, and stay client-side until each approval creates the
+  // reference.
+  {
+    const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
+    const colorIn = $("[data-f=sw-color]", col);
+    const hexIn = $("[data-f=sw-hex]", col);
+    const HEXOK = /^#[0-9a-fA-F]{6}$/;
+    colorIn.oninput = () => { hexIn.value = colorIn.value; };
+    hexIn.oninput = () => {
+      if (HEXOK.test(hexIn.value.trim())) colorIn.value = hexIn.value.trim();
+    };
+    $("[data-f=sw-add]", col).onclick = async () => {
+      const hex = hexIn.value.trim();
+      if (!HEXOK.test(hex)) return toast("A swatch needs a full hex — like #8A4B2E.", true);
+      try {
+        const ref = await api("/api/references/swatch",
+          { method: "POST", json: { hex, approve: true } });
+        toast(`${ref.id} — ${hex.toUpperCase()} added as an approved palette swatch.`);
+        refreshRefs();
+      } catch (err) { toast(err.message, true); }
+    };
+
+    const genHost = $("#swatch-gen");
+    const strip = $("#swatch-strip");
+
+    const renderSwatchStrip = r => {
+      const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
+      const tile = s => s.pair_hex
+        ? `<span class="sw-pair"><i style="background:${esc(s.hex)}"></i><i style="background:${esc(s.pair_hex)}"></i></span>`
+        : `<span class="sw-tile" style="background:${esc(s.hex)}"></span>`;
+      strip.innerHTML = `
+        <p class="prop-head">${total} PROPOSED BY ${esc((r.model || "").toUpperCase())} — NOT CANON UNTIL APPROVED</p>
+        ${r.groups.map((g, gi) => `
+          <p class="lang-label">${esc(g.language.toUpperCase())} — ${g.swatches.length}</p>
+          <div class="sw-grid">${g.swatches.map((s, si) => `
+            <div class="sw-card" data-sw="${gi}:${si}">
+              ${tile(s)}
+              <span class="sw-name">${esc(s.name)}</span>
+              <span class="sw-hex">${esc(s.hex)}${s.pair_hex ? " · " + esc(s.pair_hex) : ""}</span>
+              ${s.cite ? `<span class="sw-cite">${esc(s.cite)}</span>` : ""}
+              <span class="sw-acts">
+                <button class="text-act ok-act" data-f="ap">Approve</button>
+                <button class="text-act" data-f="rj">Reject</button>
+              </span>
+            </div>`).join("")}</div>`).join("")}
+        <div class="sw-bar">
+          <button class="primary" data-f="ap-all">Approve all ${total}</button>
+          <button class="text-act" data-f="discard">Discard the rest</button>
+        </div>`;
+      const lookup = card => {
+        const [gi, si] = card.dataset.sw.split(":").map(Number);
+        return r.groups[gi].swatches[si];
+      };
+      const approve = async (card, s) => {
+        await api("/api/references/swatch", { method: "POST",
+          json: { hex: s.hex, pair_hex: s.pair_hex, name: s.name,
+                  cite: s.cite, approve: true } });
+        card.remove();
+      };
+      const tidy = () => {
+        $$(".lang-label", strip).forEach(l => {
+          const grid = l.nextElementSibling;
+          if (grid && grid.classList.contains("sw-grid") && !grid.children.length) {
+            grid.remove(); l.remove();
+          }
+        });
+        // Counts are machine data — they stay true as cards leave.
+        const left = $$(".sw-card", strip).length;
+        if (!left) { strip.innerHTML = ""; return; }
+        $(".prop-head", strip).textContent =
+          `${left} PROPOSED BY ${(r.model || "").toUpperCase()} — NOT CANON UNTIL APPROVED`;
+        $("[data-f=ap-all]", strip).textContent = `Approve all ${left}`;
+      };
+      $$(".sw-card", strip).forEach(card => {
+        $("[data-f=ap]", card).onclick = async () => {
+          try { await approve(card, lookup(card)); } catch (err) { toast(err.message, true); }
+          refreshRefs(); tidy();
+        };
+        $("[data-f=rj]", card).onclick = () => { card.remove(); tidy(); };
+      });
+      $("[data-f=ap-all]", strip).onclick = async () => {
+        for (const card of $$(".sw-card", strip)) {
+          try { await approve(card, lookup(card)); }
+          catch (err) { toast(err.message, true); break; }
+        }
+        refreshRefs(); tidy();
+      };
+      $("[data-f=discard]", strip).onclick = () => { strip.innerHTML = ""; };
+    };
+
+    const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
+    if (!engReady || !bible.text.trim()) {
+      // Gate readable before it is hit (product rule): the withheld verb
+      // states the nearer unmet condition, never a disabled control.
+      genHost.innerHTML = `<p class="wv-tag">${!bible.text.trim()
+        ? "GENERATE SWATCHES NEEDS A SAVED BIBLE — DRAFT IT IN STEP 5"
+        : "GENERATE SWATCHES NEEDS A NARRATIVE MODEL — ADD ONE IN SETTINGS"}</p>`;
+    } else {
+      genHost.innerHTML = `
+        <button class="ghost" data-f="sw-go">Generate swatches</button>
+        <p class="swatch-note">READS THE SAVED BIBLE · PROPOSES ONLY — NOTHING IS CANON UNTIL YOU APPROVE</p>`;
+      const go = $("[data-f=sw-go]", genHost);
+      go.onclick = async () => {
+        go.disabled = true;
+        go.textContent = "Reading the Bible…";
+        try {
+          const r = await api("/api/wizard/swatches", { method: "POST",
+            json: { provider: $("#wiz-provider").value } });
+          renderSwatchStrip(r);
+        } catch (err) { toast(err.message, true); }
+        go.disabled = false;
+        go.textContent = "Generate swatches";
+      };
+    }
+  }
+
   // ---- Step 6: model bake-off (after the production design is set) ----
   // Every engine renders the same screenplay location; suggestions come from
   // the Step 2 analysis's recurring locations.

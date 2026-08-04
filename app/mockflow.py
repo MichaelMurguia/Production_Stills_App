@@ -294,3 +294,34 @@ Lessons accumulate from rejections.
 Render only what the approved specification requires. Omit unspecified
 content rather than filling space. (This rule is real even in a mock.)
 """
+
+
+def mock_swatches(bible_text: str) -> list[dict]:
+    """Deterministic swatch proposals for the debug engine: one group per
+    parsed Design Language, colors cycled from a fixed film-plausible set,
+    cites quoting the section's own first line. MOCK-stamped names so a
+    mock proposal can never pass for a researched one."""
+    from . import bible
+
+    palette = ["#8A4B2E", "#3E4A52", "#C2803D", "#D8D3C4", "#1D6E63",
+               "#5A564A", "#704838", "#2E3A44"]
+    names = ["OXIDE RUST", "GUNMETAL BLUE", "SODIUM WORKLIGHT", "BONE WHITE",
+             "LEDGER GREEN", "SOOT GREY", "LEATHER BROWN", "VOID STEEL"]
+    langs = bible.design_language_names(
+        bible.parse_sections(bible_text)) or ["PALETTE"]
+    groups = []
+    for li, lang in enumerate(langs[:4]):
+        body = bible.parse_sections(bible_text).get(lang, "")
+        line = next((ln.replace("**", "").strip("-* ").strip()
+                     for ln in body.splitlines()
+                     if ln.strip() and not ln.strip().lower()
+                     .startswith("keywords:")), "from the saved bible")
+        swatches = []
+        for i in range(4):
+            k = (li * 4 + i) % len(palette)
+            swatches.append({"name": f"MOCK {names[k]}",
+                             "hex": palette[k],
+                             "pair_hex": "#5A564A" if i == 3 else None,
+                             "cite": line[:120]})
+        groups.append({"language": lang, "swatches": swatches})
+    return groups

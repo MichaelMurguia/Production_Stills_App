@@ -12,6 +12,8 @@ overwrites the bible silently.
 """
 from __future__ import annotations
 
+import re
+
 from . import autofill, generate, store
 
 ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
@@ -349,3 +351,139 @@ def draft_bible(answers: dict, provider: str = "gemini") -> dict:
         raise autofill.AutofillError(
             "The model did not return a bible in the expected structure. Try again.")
     return {"markdown": text, "model": model}
+
+
+# --------------------------------------------------------------- swatches
+# NON-CANON (user-directed 2026-08-05, awaiting the designer's UI/UX
+# pass). A swatch is an ordinary COLOR_PALETTE reference whose pixels are
+# pure color — never text, since engines study these images. Generation
+# is Bible-cited: the narrative model may only propose colors it can
+# ground in a line of the saved Bible, grouped by Design Language, and
+# nothing is persisted until the user approves a proposal.
+
+_SWATCH_SCHEMA_NOTE = """Return ONLY a JSON array (no prose, no code fence) with this shape:
+[
+  {"language": "<a ## Design Language section title, verbatim>",
+   "swatches": [
+     {"name": "OXIDE RUST",
+      "hex": "#8A4B2E",
+      "pair_hex": null,
+      "cite": "<the Bible line, quoted, that grounds this color>"}
+   ]}
+]
+Rules:
+- 4 to 8 swatches per design language, nothing outside the Bible's languages.
+- Every swatch MUST quote a real line from the Bible in "cite" — a color
+  the Bible cannot support is not proposed.
+- "pair_hex" is for a VALUE-KEY PAIR only: the same hue at the opposite
+  value key (light-key/dark-key). Use it sparingly, null otherwise.
+- Never propose time-of-day sets — a panel's hour is per-panel lighting,
+  not palette.
+- Uppercase hex like #8A4B2E. Names are short and concrete."""
+
+_HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _clean_hex(v) -> str:
+    v = str(v or "").strip()
+    if v and not v.startswith("#"):
+        v = "#" + v
+    return v.upper() if _HEX_RE.match(v) else ""
+
+
+def parse_swatch_proposals(text: str) -> list[dict]:
+    """Strict parse of the model's JSON: bad hexes are dropped, groups are
+    clamped to 8 swatches, empty groups vanish. Raises AutofillError when
+    nothing usable survives."""
+    import json
+
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t.lower().startswith("json"):
+            t = t[4:]
+        t = t.strip()
+    start, end = t.find("["), t.rfind("]")
+    if start < 0 or end <= start:
+        raise autofill.AutofillError(
+            "The model did not return the swatch JSON shape. Try again.")
+    try:
+        raw = json.loads(t[start:end + 1])
+    except ValueError as e:
+        raise autofill.AutofillError(
+            "The model returned unreadable swatch JSON. Try again.") from e
+    groups = []
+    for g in raw if isinstance(raw, list) else []:
+        if not isinstance(g, dict):
+            continue
+        swatches = []
+        for s in (g.get("swatches") or [])[:8]:
+            if not isinstance(s, dict):
+                continue
+            hexv = _clean_hex(s.get("hex"))
+            if not hexv:
+                continue
+            pair = _clean_hex(s.get("pair_hex")) or None
+            swatches.append({
+                "name": str(s.get("name") or hexv).strip()[:48].upper(),
+                "hex": hexv, "pair_hex": pair,
+                "cite": str(s.get("cite") or "").strip()[:220],
+            })
+        if swatches:
+            groups.append({"language": str(g.get("language") or "PALETTE")
+                          .strip()[:64], "swatches": swatches})
+    if not groups:
+        raise autofill.AutofillError(
+            "The model proposed no swatches the Bible could ground. Try again.")
+    return groups
+
+
+def generate_swatches(provider: str = "gemini") -> dict:
+    """Bible-cited palette proposals. Nothing is persisted here — the
+    client holds the proposals and each approval creates a reference."""
+    from . import bible
+
+    bible_text = bible.load_text().strip()
+    if not bible_text:
+        raise autofill.AutofillError(
+            "No saved Art Direction Bible yet — swatches are grounded in it. "
+            "Draft and save the Bible first (step 5).")
+
+    if provider == "mock" and generate.mock_enabled():
+        from . import mockflow
+        return {"groups": mockflow.mock_swatches(bible_text),
+                "model": mockflow.MODEL_NAME}
+
+    instructions = (
+        "You are the film's production designer. The saved Art Direction "
+        "Bible follows. Propose the film's color swatches — grouped by its "
+        "## Design Language sections, every color grounded in a quoted "
+        "Bible line.\n\n" + _SWATCH_SCHEMA_NOTE)
+    doc = bible_text.encode("utf-8")
+    mime = "text/plain"
+
+    if provider in ("anthropic", "openrouter"):
+        from . import narrative
+        try:
+            text, model = narrative.complete(provider, doc, mime,
+                                             instructions, ())
+        except narrative.NarrativeError as e:
+            raise autofill.AutofillError(str(e)) from e
+    elif provider == "openai":
+        client = generate._openai_client()
+        model = generate._chat_model()
+        response = client.responses.create(
+            model=model,
+            input=[{"role": "user", "content": [
+                {"type": "input_text",
+                 "text": "ART DIRECTION BIBLE FOLLOWS\n" + bible_text},
+                {"type": "input_text", "text": instructions}]}])
+        text = (getattr(response, "output_text", "") or "").strip()
+    else:
+        client = generate._client()
+        model = autofill.pick_text_model(client)
+        response = client.models.generate_content(
+            model=model, contents=[bible_text, instructions])
+        text = (response.text or "").strip()
+
+    return {"groups": parse_swatch_proposals(text), "model": model}

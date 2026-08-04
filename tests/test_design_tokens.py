@@ -185,6 +185,17 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".wiz-span3", ["grid-column: span 3"])
         self.assertNotIn(".wiz-cols-board", CSS)
 
+    def test_swatch_widget_tokens(self):
+        """NON-CANON swatch widget (user-directed 2026-08-05): proposal
+        chrome is Courier on tokens; the PROVISIONAL strip header is
+        --hold (a proposal is a hold, not an error)."""
+        self.assert_decls(".swatch-add", ["border: 1px dashed var(--line)"])
+        self.assert_decls(".prop-head", [
+            "color: var(--hold)", "border: 1px solid var(--hold)",
+            "font-family: var(--mono)"])
+        self.assert_decls(".sw-cite", ["border-left: 2px solid var(--line)"])
+        self.assert_decls(".sw-acts .ok-act", ["color: var(--ok)"])
+
     def test_no_undocumented_hex_in_hover(self):
         # #f0bc63 exists exactly once: as the --accent-hover token itself.
         self.assertEqual(CSS.count("#f0bc63"), 1)
