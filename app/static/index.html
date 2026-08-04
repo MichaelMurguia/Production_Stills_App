@@ -151,19 +151,18 @@
      the gutter. Reference documents (bible, lessons, keys) are parked at the
      bottom, out of the step sequence — they are not steps. -->
 <template id="tpl-wizard">
-  <section class="view">
-    <div class="panel">
-      <h2>Production design — the visual concept</h2>
-      <p class="hint">Six steps produce your <b>Art Direction Bible</b> — the locked lookbook every render obeys. Work down the page; each step's output feeds the next.</p>
-      <div id="wiz-screenplay" class="mini"></div>
+  <section class="view wiz-v3">
+    <!-- PRODUCTION_DESIGN_V3 D1/D2 — a step states what it does to the
+         movie, never what it is. The header strip carries the page's one
+         sentence, the screenplay fact, and the six-step rail. -->
+    <div class="panel wiz-head">
+      <span class="wiz-head-label">SIX STEPS &rarr; ART DIRECTION BIBLE</span>
+      <div id="wiz-screenplay" class="wiz-head-file"></div>
+      <div class="step-rail" id="wiz-rail"></div>
     </div>
 
     <div class="panel step" data-step="1">
-      <h2>Style reference images <span class="hint">(three movie parameters · one board parameter)</span></h2>
-      <p class="hint">Four anchors, four jurisdictions. The first three define <b>the movie</b>; the fourth defines only <b>how boards are presented</b> — the film would be the same film in a different medium. Every render studies these. Subject photos (cast, vehicles, props) are research, not style: add them in step 4. Board <i>layout</i> lives at Assembly now, where real panels exist.</p>
-      <!-- User-directed 2026-08-05: four anchor cells on one row — the
-           fourth role had collapsed in its own undersized group grid.
-           Group labels ride the same grid, spanning their columns. -->
+      <h2>Style anchors</h2>
       <div class="wiz-cols wiz-cols-anchors">
         <p class="wiz-group-label wiz-span3">THE MOVIE</p>
         <p class="wiz-group-label wiz-label-boards">THE BOARDS</p>
@@ -172,8 +171,9 @@
             <span class="f-label" title="The world's condition — how worn, patched, dusty, or pristine everything is allowed to look. Pristine is a texture philosophy too.">World Texture</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS wear, patina, entropy<br>NEVER subjects, palette, or light</p>
-          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more images — they upload immediately as approved WORLD_TEXTURE anchors.">
+          <p class="hint">SETS wear, patina, entropy<br>NOT subjects &middot; palette &middot; light</p>
+          <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
+          <input type="file" accept="image/*" multiple data-f="files" hidden>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="COLOR_PALETTE">
@@ -181,10 +181,9 @@
             <span class="f-label" title="The film's color language — a palette board or color-script frames: permitted hues, how dark it keys, how far saturation travels.">Color Palette</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS hue, value key, saturation<br>NEVER framing, light source, or medium</p>
-          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more palette boards or color-script frames — they upload immediately as approved COLOR_PALETTE anchors.">
-          <!-- NON-CANON (user-directed 2026-08-05) — swatch add + Bible-cited
-               generate; awaiting the designer's UI/UX pass. -->
+          <p class="hint">SETS hue, value key, saturation<br>NOT framing &middot; light source &middot; medium</p>
+          <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
+          <input type="file" accept="image/*" multiple data-f="files" hidden>
           <div class="swatch-add">
             <input type="color" data-f="sw-color" value="#8a4b2e" title="Pick a color — it lands as an approved COLOR_PALETTE swatch">
             <input type="text" data-f="sw-hex" class="mono sw-hex-in" value="#8a4b2e" maxlength="7" spellcheck="false">
@@ -200,25 +199,26 @@
             <span class="f-label" title="How the film is photographed — stills whose light behaviour and framing you want. If a still's grade is loud, use it in black and white; palette belongs to the Color Palette anchor.">Cinematography</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS light behaviour, lens, framing<br>NEVER palette — nor a panel's hour: upload dawn, dusk, night</p>
-          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more film stills — they upload immediately as approved CINEMATOGRAPHY_STYLE anchors.">
+          <p class="hint">SETS light behaviour, lens, framing<br>NOT palette &middot; a panel's hour</p>
+          <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
+          <input type="file" accept="image/*" multiple data-f="files" hidden>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
           <div class="wiz-col-head">
-            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want. Presentation only: nothing about the film.">Board Rendering Style</span>
+            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want. Presentation only: nothing about the film.">Board Rendering</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">CONTROLS medium, brushwork, finish — how the work is PRESENTED<br>NEVER content, palette, or the world</p>
-          <input type="file" accept="image/*" multiple data-f="files" title="Choose one or more artworks — they upload immediately as approved BOARD_RENDERING_STYLE anchors.">
+          <p class="hint">SETS medium, brushwork, finish<br>NOT content &middot; palette &middot; the world</p>
+          <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
+          <input type="file" accept="image/*" multiple data-f="files" hidden>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
       </div>
     </div>
 
     <div class="panel step" data-step="2">
-      <h2>Script Scene Scan</h2>
-      <p class="hint">The research model scans every scene of the screenplay and returns the film's raw material for design: its <b>design languages</b> — the distinct visual cultures (factions, eras, technology families) that must each stay internally consistent — plus environments, key locations and open questions. Confirm, rename, or drop what it proposes; each language becomes a Bible section, selectable per board.</p>
+      <h2>Script scene scan</h2>
       <div class="row">
         <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
           <select id="wiz-provider">
@@ -237,24 +237,20 @@
          the look interview precedes casting — a card's photos are
          reference gathering, not a precondition for drafting the bible. -->
     <div class="panel step" data-step="3">
-      <h2>Interview <span class="hint">(skip anything — blanks come back marked PROPOSED)</span></h2>
-      <p class="hint">Questions you answered in step 2 are already included.</p>
+      <h2>Look interview <span class="step-cond">BLANKS COME BACK MARKED PROPOSED &middot; STEP 2 ANSWERS ALREADY INCLUDED</span></h2>
       <div class="grid-form">
-        <label class="wide" title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="films, artists, or eras this should feel like…"></label>
+        <label title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="films, artists, or eras this should feel like…"></label>
         <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
         <label title="Color palette and light bias — becomes the Lighting Language section.">Palette &amp; light <input type="text" id="wiz-palette" placeholder="palette and light bias…"></label>
-        <label class="wide" title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
+        <label title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
         <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
       </div>
       <div class="mini" id="wiz-iv-state" aria-live="polite"></div>
     </div>
 
-    <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf —
-         the extraction proposes uncast subjects; casting creates the card
-         in the library. The wizard owns the moment; the library owns the data. -->
+    <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf. -->
     <div class="panel step" data-step="4">
-      <h2>Cast the film <span class="hint">(cards live in Reference / SUBJECTS — this step is the door)</span></h2>
-      <p class="hint">The screenplay read found these. Casting one creates its card in the library and carries the screenplay's identity text into every prompt it appears in. Upload photos into the card — they enter the library already approved, grouped under this exact name.</p>
+      <h2>Cast the film <span class="step-cond">CASTING MAKES A CARD IN REFERENCE / SUBJECTS &middot; ITS SCREENPLAY IDENTITY RIDES EVERY PROMPT</span></h2>
       <div class="uncast-block">
         <div class="uncast-label">FOUND IN THE SCREENPLAY — UNCAST</div>
         <div id="wiz-subj-tags"></div>
@@ -269,27 +265,23 @@
       <div id="wiz-subj-grid" class="subj-grid"></div>
     </div>
 
-    <!-- One bible surface (user-flagged duplication, 2026-08-01): the
-         draft lands in the same editor it saves from. Interim unification
-         ahead of the design ruling logged in DESIGN_SYSTEM.md. -->
     <div class="panel step" data-step="5">
-      <h2>Art Direction Bible <span class="hint">(draft it, review it, save it — the single source every prompt draws from)</span></h2>
-      <p class="hint">This is <code>context/01_ART_DIRECTION_BIBLE.md</code>. The compiler injects the sections that apply to each panel: global rendering language always; design-language and material sections when a board's scope selects them; scene-locked lessons when they match. Edits reach every future prompt immediately.</p>
+      <h2>Art Direction Bible <span class="step-cond">context/01_ART_DIRECTION_BIBLE.md &middot; EDITS REACH EVERY FUTURE PROMPT</span></h2>
       <div class="row" style="margin-top:0">
         <button id="wiz-draft" class="primary">Draft Art Direction Bible</button>
-        <span class="hint">from screenplay + design languages + interview + attached reference photos — the draft appears below for review</span>
+        <span class="step-cond">FROM STEPS 1&ndash;4 &mdash; THE DRAFT APPEARS BELOW FOR REVIEW</span>
       </div>
       <div id="wiz-draft-busy"></div>
       <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
       <div class="row">
-        <button class="ghost" id="style-save">Save Art Direction Bible</button>
+        <button class="ghost" id="style-save" disabled>Save Art Direction Bible</button>
+        <span class="wv-tag hidden" id="style-save-gate">NOTHING TO SAVE UNTIL A DRAFT EXISTS</span>
         <span id="style-status" class="mini"></span>
       </div>
     </div>
 
     <div class="panel step" data-step="6">
-      <h2>Model bake-off <span class="hint">(pick your default engine by looking, not guessing)</span></h2>
-      <p class="hint">Every engine renders the <b>same location from your screenplay</b> under your saved Bible and approved anchors — the exact conditions real panel generations run under. Recommended locations come from step 2.</p>
+      <h2>Model bake-off <span class="step-cond">SAME LOCATION &middot; SAME BIBLE &middot; SAME ANCHORS &mdash; THE CONDITIONS REAL PANELS RUN UNDER</span></h2>
       <div class="row" style="margin-top:0">
         <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 Script Scene Scan; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
           <input type="text" id="wiz-sample-loc" list="wiz-sample-locs" placeholder="run the Step 2 Scene Scan for suggestions, or type a location…">
@@ -301,10 +293,8 @@
       <div class="wiz-cols" id="wiz-samples" style="margin-top:12px"></div>
     </div>
 
-
     <div class="panel">
-      <h2>Lessons learned <span class="hint">(standing project-wide rules, added by hand)</span></h2>
-      <p class="hint">These go into every future render prompt across all boards. Rejection reasons do <b>not</b> land here automatically — they become REJECTION FEEDBACK on that specific panel's future prompts. Use this list for rules that should apply everywhere.</p>
+      <h2>Lessons learned <span class="step-cond">RIDES EVERY FUTURE PROMPT ON EVERY BOARD &middot; REJECTIONS DO NOT LAND HERE</span></h2>
       <div id="lessons-list"></div>
     </div>
   </section>

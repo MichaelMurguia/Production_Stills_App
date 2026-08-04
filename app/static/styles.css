@@ -1806,6 +1806,30 @@ details.meta pre {
    the grid's first row, THE MOVIE spanning its three columns. Replaces
    the separate boards group whose lone card collapsed to a third of a
    third of the page. */
+/* PRODUCTION_DESIGN_V3 (designer-ruled 2026-08-06) — the header strip,
+   the six-step rail, Courier step headings and condition lines: a step
+   states what it does to the movie, never what it is. */
+.wiz-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.wiz-head-label { font-family: var(--mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .12em; color: var(--ink); white-space: nowrap; }
+.wiz-head-file { flex: 1; min-width: 0; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .04em; color: var(--ink-dim); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.step-rail { display: flex; margin-left: auto; }
+.rail-chip { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+  color: var(--ink-dim); background: none; border: 1px solid transparent;
+  border-left: 1px solid var(--line-soft); padding: 6px 12px; cursor: pointer;
+  white-space: nowrap; }
+.step-rail .rail-chip:first-child { border-left-color: transparent; }
+.rail-chip.current { border: 1px solid var(--accent-line);
+  background: var(--panel2); color: var(--ink); }
+.rail-chip.done .rail-num { color: var(--ok); }
+.rail-num { font-weight: 700; }
+.wiz-v3 h2 { font-family: var(--mono); font-size: 12.5px; letter-spacing: .1em;
+  text-transform: uppercase; font-weight: 700; }
+.step-cond { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  color: var(--ink-faint); font-weight: 400; margin-left: 12px; }
+
 /* UNCANONIZED — 2026-08-05 — color swatches (user-directed, wireframe
    approved): manual add row, Bible-cited generate widget, proposal
    strip. Swatch tiles are pure color — no text in the pixels. */

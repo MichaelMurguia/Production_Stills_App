@@ -2981,7 +2981,7 @@ async function renderWizard() {
       const mine = refs.filter(r => roleHead(r.role) === role);
       const badge = $("[data-f=state]", col);
       badge.className = `badge ${mine.length ? "APPROVED" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
-      badge.textContent = mine.length ? `${mine.length} SET` : "NONE";
+      badge.textContent = mine.length ? `${mine.length}` : "NONE";
       const list = $("[data-f=list]", col);
       list.innerHTML = "";
       const lbItems = mine.map(r => ({
@@ -3015,6 +3015,9 @@ async function renderWizard() {
   await refreshRefs();
 
   for (const col of $$(".wiz-col[data-role]")) {
+    // D1 — the raw file input hides behind a styled Add images act.
+    const addBtn = $("[data-f=addbtn]", col);
+    if (addBtn) addBtn.onclick = () => $("[data-f=files]", col).click();
     $("[data-f=files]", col).addEventListener("change", async (e) => {
       const files = e.target.files;
       if (!files.length) return;
@@ -3717,11 +3720,10 @@ async function renderWizard() {
   // condition beside it — instead of a 422 after the click.
   const syncBibleSave = () => {
     const empty = !$("#style-bible").value.trim();
-    const btn = $("#style-save");
-    btn.disabled = empty;
-    btn.title = empty
-      ? "Nothing to save yet — the Draft button above writes the Bible here for review."
-      : "";
+    $("#style-save").disabled = empty;
+    // D8 ruling: the disabled control stays, its condition is the dashed
+    // withheld tag beside it — a tag, not a sentence.
+    $("#style-save-gate").classList.toggle("hidden", !empty);
   };
   $("#style-bible").addEventListener("input", syncBibleSave);
   const loadBibleEditor = async () => {
@@ -3730,7 +3732,7 @@ async function renderWizard() {
     // No template default exists (director's ruling 2026-08-01) — empty
     // means not yet drafted, and says so.
     $("#style-status").innerHTML = !bible.text.trim()
-      ? "NOT DRAFTED YET — the Draft button above writes it here for review"
+      ? ""
       : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> every future prompt uses this` : "");
     syncBibleSave();
     return bible;
@@ -3754,7 +3756,7 @@ async function renderWizard() {
       const set = roles.filter(role => refs.some(r =>
         r.status === "APPROVED" && roleHead(r.role) === role)).length;
       setB(1, set === roles.length ? "APPROVED" : "PROVISIONAL",
-        `${set} OF ${roles.length} ANCHOR ROLES SET`);
+        `${set} OF ${roles.length} SET`);
       // Step 2 reflects review debt: proposed languages AND environments
       // hold the badge at PROVISIONAL until confirmed or dropped (plan P9).
       const proposedN =
