@@ -52,6 +52,17 @@ class MediumGuardTests(unittest.TestCase):
                          "a photoreal Bible is a legitimate choice — the "
                          "guard exists only to honor an attached board anchor")
 
+    def test_bible_instructions_fence_rendering_language(self):
+        """The drafting instructions fence Rendering Language to a single
+        panel's paint; board architecture is sent to Production Board
+        Presentation (user-hit 2026-08-06: a draft wrote the whole board
+        grammar into the globally-injected section)."""
+        from app import wizard
+        text = wizard._bible_instructions({})
+        self.assertIn("SECTION FENCE", text)
+        self.assertIn("SINGLE panel's artwork only", text)
+        self.assertIn("take only its paint from it", text)
+
     def test_sample_probe_prompt_demands_board_artwork(self):
         import os
         os.environ["SCREENBOARD_DEBUG_TOOLS"] = "1"

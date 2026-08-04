@@ -193,6 +193,19 @@ HARD RULE: the movie sections describe the FILM, never the medium — no
 language outside Rendering Language and Production Board Presentation.
 The film would be the same film boarded in a different medium.
 
+SECTION FENCE (user-hit 2026-08-06): Rendering Language describes the
+medium and finish of a SINGLE panel's artwork only — how one image is
+painted: medium, brushwork, surface, finish. Board architecture — title
+blocks, grids, modules, image cells, hero layouts, captions, callouts,
+palette bars, annotations, information hierarchy — belongs ONLY in
+Production Board Presentation. The app assembles boards and draws their
+typography itself; the model renders single full-bleed panels. A
+Rendering Language bullet that describes a board SHEET rather than a
+panel's paint is wrong and will corrupt every render prompt. If an
+attached BOARD_RENDERING_STYLE reference shows a full board layout,
+take only its paint from it for Rendering Language; its layout goes to
+Production Board Presentation.
+
 DIRECTOR'S ANSWERS — BINDING. These are decisions, not suggestions: build
 the Overall Visual Identity, Rendering Language and Lighting sections
 AROUND them, carry their concrete vocabulary into the bible verbatim, and
@@ -225,7 +238,7 @@ OUTPUT FORMAT — return ONLY markdown in EXACTLY this section structure
 
 ## Rendering Language
 ### Required
-(bullets)
+(bullets — a single panel's medium and finish ONLY, per the SECTION FENCE)
 ### Avoid
 (bullets — seed from the director's never-list)
 
