@@ -750,6 +750,16 @@ label.check {
 .q-text { margin: 0; font-size: 13px; color: var(--ink-dim); max-width: 74ch; }
 .q-answer { margin: 4px 0 0; font-family: var(--mono); font-size: 12px; color: var(--ink); }
 .q-actions { flex: none; display: flex; gap: 12px; align-items: center; padding-top: 1px; }
+
+/* D5 (PRODUCTION_DESIGN_V3) — open questions in two columns: bordered
+   cards, four visible, actions stacked on the right. */
+.q-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.q-grid .q-row, .q-grid .q-row:first-child { border: 1px solid var(--line-soft);
+  background: var(--bg2); padding: 10px 12px; }
+.q-grid .q-row.answered { border-left: 2px solid var(--ok); }
+.q-grid .q-actions { flex-direction: column; align-items: flex-end; gap: 6px; }
+.q-grid .q-more { grid-column: 1 / -1; justify-self: start; }
+@media (max-width: 980px) { .q-grid { grid-template-columns: 1fr; } }
 .q-more { margin: 8px 0 0 10px; }
 
 /* Object suggestion chips (mock 5c) — plan D5, the vocabulary-picker

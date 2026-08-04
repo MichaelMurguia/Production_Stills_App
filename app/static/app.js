@@ -3553,7 +3553,7 @@ async function renderWizard() {
     const qHost = $("#wiz-questions", host);
     if (qHost) {
       const qs = analysis.unresolved || [];
-      const Q_CAP = 5;
+      const Q_CAP = 4;  // D5 — four visible, two columns
       const shown = qShowAll ? qs : qs.slice(0, Q_CAP);
       shown.forEach(q => {
         const st = (analysis.question_answers || {})[q] || {};
@@ -3604,7 +3604,7 @@ async function renderWizard() {
       if (qs.length > shown.length || qShowAll) {
         const more = document.createElement("button");
         more.className = "text-act q-more";
-        more.textContent = qShowAll ? "▴ show fewer" : `▾ ${qs.length - shown.length} more`;
+        more.textContent = qShowAll ? "▴ SHOW FEWER" : `▾ ${qs.length - shown.length} MORE`;
         more.onclick = () => { qShowAll = !qShowAll; renderWorlds(); };
         qHost.append(more);
       }
