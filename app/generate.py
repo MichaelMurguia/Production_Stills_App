@@ -555,6 +555,14 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
                   "Each attached reference image controls ONLY its assigned scope. "
                   "Match its subject closely within that scope; it controls nothing else."]
         lines += _reference_role_lines(refs)
+    # Board-medium enforcement (user-hit 2026-08-06, bake-off — same guard
+    # here so real panels can't drift photo-real past the board anchor).
+    if any(store.role_head(r.get("role", "")) == "BOARD_RENDERING_STYLE" for r in refs):
+        lines += ["",
+                  "THE MEDIUM IS NOT NEGOTIABLE: the finished image must read "
+                  "as the attached BOARD_RENDERING_STYLE reference's medium — "
+                  "its brushwork, finish and surface — applied to this "
+                  "subject. A photographic result is a failed render."]
 
     lines += ["", f"SCALE: {panel.get('scale', 'unspecified')}",
               f"COMPOSITION ROLE: {panel.get('composition_role', 'distinct production question')}",
@@ -1126,10 +1134,11 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
         "",
         "SUBJECT",
         (f"A location from this screenplay: {subject}.\n"
-         "Render this location as one production concept panel — the place "
-         "itself as it would appear in the film, composed and lit per the art "
-         "direction above. Show only content the art direction and the "
-         "location's name support; invent nothing else.")
+         "Render this location as ONE PANEL OF A PRODUCTION DESIGN BOARD — "
+         "concept artwork in the rendering medium the art direction above "
+         "locks, NEVER a photograph or a film still. The place itself, "
+         "composed and lit per the art direction. Show only content the art "
+         "direction and the location's name support; invent nothing else.")
         if subject else SAMPLE_PROBE_SUBJECT,
     ]
     if style_refs:
@@ -1137,6 +1146,16 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
                   "Each attached reference image controls ONLY its assigned scope. "
                   "Match it closely within that scope; it controls nothing else."]
         parts += _reference_role_lines(style_refs)
+    # Board-medium enforcement (user-hit 2026-08-06: a bake-off sample came
+    # back photo-real past an attached board-rendering anchor). When the
+    # board anchor rides, the medium is restated as non-negotiable AFTER
+    # the roles — the last thing an engine reads about finish.
+    if any(store.role_head(r["role"]) == "BOARD_RENDERING_STYLE" for r in style_refs):
+        parts += ["",
+                  "THE MEDIUM IS NOT NEGOTIABLE: the finished image must read "
+                  "as the attached BOARD_RENDERING_STYLE reference's medium — "
+                  "its brushwork, finish and surface — applied to this "
+                  "subject. A photographic result is a failed render."]
     parts += ["", "Render a single full-bleed image. No text, labels, or borders."]
     prompt = "\n".join(parts)
     out = _samples_dir() / f"{provider}.png"
