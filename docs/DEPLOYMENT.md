@@ -145,6 +145,35 @@ queue as PENDING workspaces with the condition stated on the row — nothing
 crashes, and the success page honestly says the workspace is being
 prepared. The SMTP and export variables are likewise optional gates.
 
+## Transactional mail
+
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. Unset →
+`mailer.configured()` is False and the sign-in/recovery pages render the
+stated gate instead of failing.
+
+**The port decides the handshake, and getting it wrong looks exactly like
+a dead host.** Port **465** is implicit TLS — the server speaks TLS from
+the first byte, so the client must open `SMTP_SSL` and must NOT call
+`starttls()`. Ports **587** and **25** are plaintext-then-STARTTLS.
+Calling `starttls()` against 465 hangs until the timeout and surfaces as
+`Connection unexpectedly closed: timed out`, which says nothing about the
+real cause. This shipped broken and cost a 20-second sign-in that never
+delivered (2026-08-06); `mailer.send()` now picks by port. Note also that
+many cloud hosts block outbound **25** entirely — prefer 587 or 465.
+
+**Diagnosing it:** `/admin` → OPERATIONS → **Send a test email** runs the
+real code path to the signed-in owner's address and reports the SMTP
+error verbatim, including the host, port and handshake attempted. The
+same block lists the last 10 sends with their outcome. This exists
+because visitor-facing responses are deliberately uniform — a magic link
+that fails looks identical to one that succeeds, by design, so the owner
+needs a window that visitors do not get. The log is in memory and clears
+on deploy; addresses are masked in it.
+
+Both mail sends run as background tasks: the response goes out first and
+the SMTP round trip happens after, so a slow or dead mail host can never
+hold a page open again.
+
 ## Trials (built 2026-08-06)
 
 Two doors, both landing on an ordinary cloud studio. See
