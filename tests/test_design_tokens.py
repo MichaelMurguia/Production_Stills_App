@@ -185,6 +185,23 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".wiz-span3", ["grid-column: span 3"])
         self.assertNotIn(".wiz-cols-board", CSS)
 
+    def test_hidden_always_wins(self):
+        """A hiding utility that a component can out-order is not a
+        utility. .wv-tag beat .hidden on source order and the Bible's
+        save gate rendered on a saved Bible — the class was applied and
+        the element still showed."""
+        self.assertIn(".hidden { display: none !important; }", CSS)
+
+    def test_swatch_act_sits_under_the_bible(self):
+        """SWATCH_GENERATE_RULING: the act moved to step 5 as a bordered
+        ghost row — it must not read as a column control any more, and
+        it renders only when it has something to sit under (:not(:empty))."""
+        self.assert_decls(".swatch-gen:not(:empty)", [
+            "border: 1px solid var(--line)", "background: var(--bg2)",
+            "display: flex"])
+        self.assertNotIn("swatch-gen {", CSS,
+                         "the old column-strip rule must be gone")
+
     def test_swatch_widget_tokens(self):
         """NON-CANON swatch widget (user-directed 2026-08-05): proposal
         chrome is Courier on tokens; the PROVISIONAL strip header is

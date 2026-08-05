@@ -526,7 +526,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
   border-radius: var(--radius); box-shadow: 0 8px 28px rgba(0, 0, 0, .5);
 }
 .toast.error { border-left-color: var(--bad); }
-.hidden { display: none; }
+/* A hiding utility must always win. `.hidden` and a component's own
+   display rule have equal specificity, so source order decided it — and
+   .wv-tag (line ~1976) silently beat it, leaving the Bible's save gate
+   reading NOTHING TO SAVE on a saved Bible (caught 2026-08-06 by probing
+   the live DOM: the class was applied, the element still rendered).
+   This is the one legitimate !important: the rule's entire job is to
+   override whatever the element would otherwise be. */
+.hidden { display: none !important; }
 
 /* ===================================================== busy / in progress */
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1885,9 +1892,15 @@ details.meta pre {
 .wiz-thumb-note { display: block; font-family: var(--mono); font-size: 8.5px;
   letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.swatch-gen { border-top: 1px solid var(--line-soft); margin-top: 12px; padding-top: 12px; }
-.swatch-note { font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
-  color: var(--ink-faint); margin-top: 7px; line-height: 1.6; }
+/* SWATCH_GENERATE_RULING — the act sits under the saved Bible (step 5),
+   a bordered ghost row: Draft owns this page's amber, and generating
+   swatches is a follow-on, not the primary act. */
+.swatch-gen:not(:empty) { display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap; border: 1px solid var(--line); background: var(--bg2);
+  padding: 12px 14px; margin-top: 14px; }
+.swatch-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
+  color: var(--ink-faint); line-height: 1.6; }
+.swatch-note .text-act { font-size: 9.5px; letter-spacing: .05em; }
 .prop-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
   color: var(--hold); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
 .lang-label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;

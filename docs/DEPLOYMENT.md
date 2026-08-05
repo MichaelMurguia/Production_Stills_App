@@ -153,7 +153,7 @@ run them.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `TRIAL_DAYS` | `14` | Length of the card-backed trial. **`0` closes card trials** — the store still sells normally and the page states the gate. |
+| `TRIAL_DAYS` | `5` | Length of the card-backed trial. **`0` closes card trials** — the store still sells normally and the page states the gate. |
 | `TRIAL_CODE_MAX_DAYS` | `365` | Ceiling on a minted code, so a typo in the console cannot grant a decade. |
 
 Card trials need nothing else: they run on `STRIPE_PRICE_CLOUD_*`, the

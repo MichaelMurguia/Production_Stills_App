@@ -233,6 +233,23 @@ remaining steps in Courier, current `→` amber, rest `·` faint; footer
 `03 UNLOCKS ITSELF THE MOMENT …`. Dismiss on ×, Esc, outside click. The
 view behind never changes.
 
+**An act lives where its precondition is met; its result lives where it
+belongs** (SWATCH_GENERATE_RULING, ruled 2026-08-06 — the pair to the
+anchored explanation above, and reading them together is what makes
+either memorable). When those are different places, the act states where
+its output landed and links there. **Never place a verb next to its
+result if the verb cannot run there.** Worked example: `Generate palette
+swatches` reads the SAVED Bible, so it stands under the Bible in step 5
+as a bordered ghost row (Draft owns that page's amber; generation is a
+follow-on) with the Courier line `FROM THE SAVED BIBLE · LANDS IN STEP
+1 / COLOR PALETTE`; on completion it states `N SWATCHES PROPOSED IN
+COLOR PALETTE` with a link that scrolls there. The swatches themselves —
+and their approve/reject controls — stay in the Color Palette column,
+because judging a swatch happens where the swatch is. Before the
+precondition exists the row does not render at all: the stage's own gate
+already explains the situation, and stating it twice on one screen is
+verbosity.
+
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
 Courier `--ink` (`monoIds()`). No icons, no dots — the timestamp column is
@@ -843,7 +860,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
-| 2026-08-06 | Swatch-generate flow inversion (user-flagged): the generator lives in step 1 but depends on step 5's saved Bible, so the honest flow walks up and back down the page (scan → interview → draft → save → return to step 1 → generate → re-draft). The stale gate is fixed (it now arms on save), but the placement question stands | PD step 1, Color Palette column | Designer to rule: move generation to a post-save moment (e.g. offered beside the saved Bible), keep it in the column, or fold it into the draft itself |
+*(empty — NON_CANON_REVIEW_2026-08-06 A1 ruled the one open row, 2026-08-06)*
 
 ---
 
@@ -851,6 +868,10 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-06** — Swatch generation moved to step 5 beside the saved
+  Bible; act-where-condition-is-met canonized as the pair to anchored
+  explanation. The Uncanonized table is empty.
 
 - **2026-08-06** — Production Design v3 (PRODUCTION_DESIGN_V3_PLAN D1–D6,
   D8, D9; mock pd3-full-page): states-not-explains canonized app-wide;

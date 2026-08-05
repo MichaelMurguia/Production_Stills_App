@@ -77,8 +77,9 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 # method is captured at signup and Stripe converts it on day TRIAL_DAYS
 # with no action from us. 0 disables the free-trial CTAs (checkout still
 # sells normally). The trial rides the SAME price ids as the paid plans —
-# there is nothing separate to configure.
-TRIAL_DAYS = max(0, int(os.environ.get("TRIAL_DAYS", "14") or 0))
+# there is nothing separate to configure. Default 5 days (user, 2026-08-06);
+# the env var still wins wherever it is set.
+TRIAL_DAYS = max(0, int(os.environ.get("TRIAL_DAYS", "5") or 0))
 
 # Code trial: operator-granted duration, no payment method. Bounded so a
 # typo in the admin form cannot mint a decade.

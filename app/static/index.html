@@ -191,7 +191,6 @@
             <button class="ghost" data-f="sw-add">Add swatch</button>
           </div>
           <div class="wiz-thumbs" data-f="list"></div>
-          <div class="swatch-gen" id="swatch-gen"></div>
           <div id="swatch-strip"></div>
         </div>
         <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
@@ -278,6 +277,14 @@
         <span class="wv-tag hidden" id="style-save-gate">NOTHING TO SAVE UNTIL A DRAFT EXISTS</span>
         <span id="style-status" class="mini"></span>
       </div>
+      <!-- SWATCH_GENERATE_RULING: an act lives where its precondition is
+           met; its result lives where it belongs. Generation reads the
+           SAVED Bible, so it stands here; the swatches land in step 1's
+           Color Palette column and this states so. Renders only once a
+           save exists — step 5's own gate explains the situation two
+           lines above, and saying it twice on one screen is the
+           verbosity D1 cut. -->
+      <div class="swatch-gen" id="swatch-gen"></div>
     </div>
 
     <div class="panel step" data-step="6">

@@ -25,3 +25,6 @@ delta as new instructions.
 | BAND_CONDENSE_PLAN.md (B1–B3) + BAND_CONDENSE_SNIPPET.html | 2026.08.04.58 | — |
 | SETTINGS_CONTROL_PANEL_PLAN.md (P1–P4) | 2026.08.04.60 | mock 18b adopted; 18a re-export (marquee developer names) applied; brand-icon rule app-wide (P3) |
 | PRODUCTION_DESIGN_V3_PLAN.md (D1–D6, D8, D9) | 2026.08.04.64 | D7 preset looks pending the plate library (plan file trimmed to D7; PRESET_LOOKS_SHOT_LIST.md kept); five uncanonized rows ruled and emptied |
+| ADMIN_CONSOLE_FIX.md (X1–X4) | 2026.08.04.73 | mocks 12a/12b adopted; supersedes S1's density ratification |
+| NON_CANON_REVIEW_2026-08-06.md (A1, S1–S3) | 2026.08.04.73 | emptied BOTH queues — app Uncanonized table and store Non-canon table |
+| SWATCH_GENERATE_RULING.md (A1) | 2026.08.04.73 | act-where-condition-is-met canonized as the pair to anchored explanation |

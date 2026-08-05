@@ -2858,21 +2858,17 @@ async function renderWizard() {
     };
     restoreStrip();
 
-    // Gate readable before it is hit AND kept true afterwards (a stale
-    // gate is a lying gate — user-hit 2026-08-06 after saving the Bible):
-    // re-synced on every Bible save/draft via syncSwatchGen.
+    // SWATCH_GENERATE_RULING (2026-08-06): the act moved to step 5, where
+    // its precondition — a SAVED Bible — is met. Before a save exists the
+    // row does not render at all: step 5's own gate already explains the
+    // situation two lines above.
     syncSwatchGen = async () => {
       const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
-      if (!genHost.isConnected) return;
-      if (!engReady || !bible.text.trim()) {
-        genHost.innerHTML = `<p class="wv-tag">${!bible.text.trim()
-          ? "GENERATE SWATCHES NEEDS A SAVED BIBLE — DRAFT IT IN STEP 5"
-          : "GENERATE SWATCHES NEEDS A NARRATIVE MODEL — ADD ONE IN SETTINGS"}</p>`;
-        return;
-      }
+      if (!genHost?.isConnected) return;
+      if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
-        <button class="ghost" data-f="sw-go">Generate swatches</button>
-        <p class="swatch-note">READS THE SAVED BIBLE · PROPOSES ONLY — NOTHING IS CANON UNTIL YOU APPROVE</p>`;
+        <button class="ghost" data-f="sw-go">Generate palette swatches</button>
+        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>`;
       const go = $("[data-f=sw-go]", genHost);
       go.onclick = async () => {
         go.disabled = true;
@@ -2881,9 +2877,21 @@ async function renderWizard() {
           const r = await api("/api/wizard/swatches", { method: "POST",
             json: { provider: $("#wiz-provider").value } });
           renderSwatchStrip(r);
+          // The result is stated where the act was taken, and links to
+          // where the output actually landed.
+          const n = r.groups.reduce((t, g) => t + g.swatches.length, 0);
+          $("[data-f=sw-result]", genHost).innerHTML =
+            `${n} SWATCH${n === 1 ? "" : "ES"} PROPOSED IN COLOR PALETTE · `
+            + `<button class="text-act" data-f="sw-goto">REVIEW THEM</button>`;
+          $("[data-f=sw-goto]", genHost).onclick = () => {
+            const el = $('.wiz-col[data-role="COLOR_PALETTE"]');
+            if (el) window.scrollTo({
+              top: el.getBoundingClientRect().top + window.scrollY - 80,
+              behavior: "smooth" });
+          };
         } catch (err) { toast(err.message, true); }
         go.disabled = false;
-        go.textContent = "Generate swatches";
+        go.textContent = "Generate palette swatches";
       };
     };
     await syncSwatchGen();
