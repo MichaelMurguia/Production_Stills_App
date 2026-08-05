@@ -508,9 +508,14 @@ body {
 /* Operator console (/admin, 2026-08-06) — internal surface: store chrome,
    Courier tables, no amber beyond the one Mint fill. NON-CANON, logged in
    STORE_DESIGN_SYSTEM.md for the storefront design batch. */
-.head-admin { color: var(--accent); text-decoration: none;
-  font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase;
-  font-size: 11px; }
+/* X1 (ADMIN_CONSOLE_FIX, mock 12a) — a header link is a header link.
+   Mono + uppercase + tracking + amber were four signals saying "this one
+   is special", and the only special thing about it is who can see it,
+   which not rendering it for anyone else already handles. Identical to
+   .head-links-nav a — not one ink tier down, which is just a quieter
+   mismatch. A hairline does the separating. */
+.head-admin { color: var(--ink-dim); font-size: 13px; text-decoration: none;
+  border-left: 1px solid var(--line); padding-left: 16px; }
 .head-admin:hover { color: var(--ink); }
 .admin-field { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }

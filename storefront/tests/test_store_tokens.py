@@ -95,7 +95,12 @@ class StoreTokenTests(unittest.TestCase):
         Courier, one-word states in status colors, never amber."""
         self.assert_decl(".admin-table .st-live", "color: var(--ok)")
         self.assert_decl(".admin-table .st-held", "color: var(--hold)")
-        self.assert_decl(".head-admin", "font-family: var(--mono)")
+        # X1: the link into the console is styled exactly like the public
+        # links beside it — access is not a visual style.
+        self.assert_decl(".head-admin", "color: var(--ink-dim)")
+        self.assert_decl(".head-admin", "font-size: 13px")
+        self.assertNotIn("var(--mono)", block(".head-admin"))
+        self.assertNotIn("var(--accent)", block(".head-admin"))
 
     # -- helper ------------------------------------------------------------
 
