@@ -1023,6 +1023,13 @@ def _trial_context(request: Request, **extra) -> dict:
                 extra.setdefault("has_studio", True)
     ctx = {"trial_days": settings.TRIAL_DAYS,
            "trials_open": settings.trials_open(),
+           # Each edition is offered only when its own price exists —
+           # same readiness rule the pricing cards use.
+           "trial_ready": {
+               "personal": bool(settings.TRIAL_DAYS and settings.STRIPE_SECRET_KEY
+                                and settings.STRIPE_PRICE_CLOUD_PERSONAL),
+               "business": bool(settings.TRIAL_DAYS and settings.STRIPE_SECRET_KEY
+                                and settings.STRIPE_PRICE_CLOUD_BUSINESS)},
            "email": email, "held": held,
            "code_prefix": trials.CODE_PREFIX}
     ctx.update(extra)

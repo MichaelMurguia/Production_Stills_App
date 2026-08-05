@@ -583,3 +583,8 @@ body {
   text-underline-offset: 3px; }
 .hatch-note { font-size: 10px; letter-spacing: .06em; color: var(--ink-faint);
   line-height: 1.7; margin-top: 10px; }
+
+/* Two trial acts, one fill: Personal is the common path and takes the
+   amber, Business sits beside it as a ghost (§8 — never two fills side
+   by side). */
+.trial-acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }

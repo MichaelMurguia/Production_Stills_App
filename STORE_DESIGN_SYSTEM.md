@@ -186,6 +186,15 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 
 ## Changelog
 
+- **2026-08-06** — RULED (user, reversing S2's Business position): **both
+  editions trial.** The trial page offers `Start Personal Trial` and
+  `Start Business Trial`; §8 still holds — Personal takes the page's one
+  fill as the common path and Business sits beside it as a ghost, never
+  two fills side by side. Each edition renders only when its own price id
+  exists, the same readiness rule the pricing cards use. The cloud card's
+  "Business is not self-serve trialable" line is deleted: it was true for
+  four hours and is now false. Trial length default 5 days.
+
 - **2026-08-06** — RULED (ADMIN_CONSOLE_FIX X1–X4, mocks 12a/12b): the
   console's density was **corrected on review of the built page, not
   ratified** — S1 had ratified it from the queue's description. The header

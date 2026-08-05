@@ -572,3 +572,61 @@ class AdminHubTests(unittest.TestCase):
         self.assertNotIn("owner-textedit", page,
                          "the customer view is not the operator console")
         self.assertIn("/ADMIN", page.upper())
+
+
+class BothEditionsTrialTests(unittest.TestCase):
+    """User ruling 2026-08-06: both editions trial. Personal takes the
+    page's one amber fill as the common path; Business sits beside it as
+    a ghost — §8 forbids two fills side by side."""
+
+    def setUp(self):
+        self.saved = (settings.TRIAL_DAYS, settings.STRIPE_SECRET_KEY,
+                      settings.STRIPE_PRICE_CLOUD_PERSONAL,
+                      settings.STRIPE_PRICE_CLOUD_BUSINESS)
+        settings.TRIAL_DAYS = 5
+        settings.STRIPE_SECRET_KEY = "sk_test"
+        settings.STRIPE_PRICE_CLOUD_PERSONAL = "price_p"
+        settings.STRIPE_PRICE_CLOUD_BUSINESS = "price_b"
+
+        def restore():
+            (settings.TRIAL_DAYS, settings.STRIPE_SECRET_KEY,
+             settings.STRIPE_PRICE_CLOUD_PERSONAL,
+             settings.STRIPE_PRICE_CLOUD_BUSINESS) = self.saved
+        self.addCleanup(restore)
+
+    def test_both_acts_render_with_one_fill(self):
+        page = TestClient(store).get("/trial").text
+        self.assertIn("Start Personal Trial", page)
+        self.assertIn("Start Business Trial", page)
+        self.assertIn('btn-primary" href="/trial/start/cloud-personal"', page)
+        self.assertIn('btn-secondary" href="/trial/start/cloud-business"', page)
+        self.assertEqual(page.count("btn-primary"), 1,
+                         "two fills side by side is exactly what §8 forbids")
+
+    def test_business_trial_opens_a_business_subscription(self):
+        captured = {}
+
+        class FakeSession:
+            url = "https://stripe.test/s"
+
+            @staticmethod
+            def create(**kw):
+                captured.update(kw)
+                return FakeSession()
+
+        real = main.stripe.checkout.Session
+        main.stripe.checkout.Session = FakeSession
+        self.addCleanup(setattr, main.stripe.checkout, "Session", real)
+        r = TestClient(store).get("/trial/start/cloud-business",
+                                  follow_redirects=False)
+        self.assertEqual(r.status_code, 303)
+        self.assertEqual(captured["line_items"][0]["price"], "price_b")
+        self.assertEqual(captured["metadata"]["plan"], "cloud-business")
+        self.assertEqual(captured["subscription_data"]["trial_period_days"], 5)
+        self.assertEqual(captured["payment_method_collection"], "always")
+
+    def test_an_edition_without_a_price_is_simply_not_offered(self):
+        settings.STRIPE_PRICE_CLOUD_BUSINESS = ""
+        page = TestClient(store).get("/trial").text
+        self.assertIn("Start Personal Trial", page)
+        self.assertNotIn("Start Business Trial", page)

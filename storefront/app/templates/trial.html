@@ -48,18 +48,27 @@
 
   {# --- the card trial --------------------------------------------------- #}
   <div class="license-box">
-    <p class="license-label">{{ trial_days }} DAYS &middot; CARD ON FILE</p>
+    <p class="license-label">{{ trial_days }} DAYS &middot; CARD ON FILE &middot; EITHER EDITION</p>
     {% if trials_open %}
     <h2 style="font-size:20px;margin-bottom:10px">Start a {{ trial_days }}-day trial</h2>
     <ul class="traits mono">
-      <li class="t-yes">THE FULL CLOUD EDITION &mdash; NOTHING IS HELD BACK</li>
+      <li class="t-yes">THE FULL CLOUD EDITION, PERSONAL OR BUSINESS &mdash; NOTHING IS HELD BACK</li>
       <li class="t-yes">YOUR OWN MODEL KEYS &mdash; RENDER COSTS ARE YOURS, NEVER RESOLD</li>
       <li class="t-yes">YOUR WORK STAYS YOURS IF YOU SUBSCRIBE</li>
       <li class="t-yes">NOTHING IS CHARGED UNTIL DAY {{ trial_days }}</li>
       <li class="t-no">A CARD IS TAKEN NOW AND CHARGED ON DAY {{ trial_days }} UNLESS YOU CANCEL</li>
     </ul>
-    <p style="margin-top:4px">
-      <a class="btn btn-primary" href="/trial/start/cloud-personal">Start the trial</a>
+    {# Both editions trial (user, 2026-08-06 — reverses S2's ruling that
+       Business is not self-serve trialable). §8 still caps the page:
+       Personal takes the one fill as the common path, Business sits
+       beside it as a ghost — never two fills side by side. #}
+    <p class="trial-acts">
+      {% if trial_ready.personal %}
+      <a class="btn btn-primary" href="/trial/start/cloud-personal">Start Personal Trial</a>
+      {% endif %}
+      {% if trial_ready.business %}
+      <a class="btn btn-secondary" href="/trial/start/cloud-business">Start Business Trial</a>
+      {% endif %}
     </p>
     <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:14px;color:var(--ink-faint)">
       NOTHING IS CHARGED TODAY &middot; CANCEL ANY TIME IN THE FIRST {{ trial_days }} DAYS &middot; STRIPE HOLDS THE CARD, WE NEVER SEE IT
