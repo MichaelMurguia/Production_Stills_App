@@ -160,6 +160,57 @@ class OwnerChromeTests(unittest.TestCase):
                       self._client(self.owner).get("/").text)
 
 
+class HatchMirrorTests(unittest.TestCase):
+    """H3: the store mirrors the app's three hatch definitions. Two
+    copies of a pattern drift the moment one is edited alone, so the
+    contract is a comparison, not a restatement — nothing here hardcodes
+    the values, it reads both stylesheets and demands they agree."""
+
+    APP_CSS = (ROOT.parent / "app/static/styles.css").read_text(encoding="utf-8")
+
+    def _defs(self, css: str) -> dict:
+        out = {}
+        for name in ("hatch", "hatch-fine", "hatch-bad"):
+            m = re.search(
+                rf"^\.{re.escape(name)} \{{ background: (repeating-linear-gradient\([^;]+\)); \}}",
+                css, re.MULTILINE)
+            if m:
+                out[name] = m.group(1)
+        return out
+
+    def test_all_three_exist_in_both(self):
+        self.assertEqual(sorted(self._defs(self.APP_CSS)),
+                         ["hatch", "hatch-bad", "hatch-fine"])
+        self.assertEqual(sorted(self._defs(CSS)),
+                         ["hatch", "hatch-bad", "hatch-fine"])
+
+    def test_the_two_copies_are_identical(self):
+        self.assertEqual(self._defs(CSS), self._defs(self.APP_CSS),
+                         "the store's hatch drifted from the app's — edit "
+                         "both or neither (HATCH_RULE H3)")
+
+    def test_the_pattern_holds_its_ruled_shape(self):
+        d = self._defs(CSS)
+        for name, grad in d.items():
+            self.assertIn("135deg", grad, f".{name} must be 135°, never 45°")
+        self.assertIn("0 7px", d["hatch"])
+        self.assertIn("0 5px", d["hatch-fine"])
+        self.assertIn("#211b1b", d["hatch-bad"])
+
+    def test_no_inline_gradient_anywhere_in_the_store(self):
+        """Re-declaring is a conformance failure even when the values
+        match — the next hand-copy is where they stop matching."""
+        for html in TEMPLATES.glob("*.html"):
+            self.assertNotIn("repeating-linear-gradient",
+                             html.read_text(encoding="utf-8"),
+                             f"{html.name} hand-rolled the hatch")
+        stray = [ln for ln in CSS.splitlines()
+                 if "repeating-linear-gradient" in ln
+                 and not ln.lstrip().startswith((".hatch ", ".hatch-fine",
+                                                 ".hatch-bad"))]
+        self.assertEqual(stray, [], f"inline hatch in store.css: {stray}")
+
+
 class ReviewLedgerTests(unittest.TestCase):
     """The store's review queue must live where a design review looks.
 

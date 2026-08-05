@@ -607,3 +607,19 @@ body {
    the hard way when an equal-specificity component rule out-ordered it
    (2026-08-06). */
 .hidden { display: none !important; }
+
+/* The empty-image surface (HATCH_RULE H3, 2026-08-06). MIRRORED from
+   app/static/styles.css with identical values — the store is a separate
+   stylesheet but not a separate pattern. Do not edit one without the
+   other: storefront/tests/test_store_tokens.py compares them and fails
+   the build if they diverge. Never re-declare the gradient inline. */
+.hatch { background: repeating-linear-gradient(135deg, #21252a 0 7px, #1c1f23 7px 14px); }
+.hatch-fine { background: repeating-linear-gradient(135deg, #21252a 0 5px, #1c1f23 5px 10px); }
+.hatch-bad { background: repeating-linear-gradient(135deg, #211b1b 0 7px, #1b1717 7px 14px); }
+/* A hatch block never renders bare: it states its condition. */
+.hatch-chip { position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%); background: var(--panel);
+  border: 1px solid var(--line); color: var(--ink-dim);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  padding: 6px 12px; white-space: nowrap; max-width: calc(100% - 24px);
+  overflow: hidden; text-overflow: ellipsis; }

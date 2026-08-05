@@ -507,6 +507,28 @@ states it verbatim. Plates live in `app/static/look_library/<slug>/`
 with a `looks.json` manifest and enter the library with
 `source: "look:<slug>"` so provenance survives.
 
+**The hatch is the only empty-image surface** (HATCH_RULE, ruled
+2026-08-06). Wherever an image is expected and absent — panel slots, take
+thumbs, board frames, reference rows, the storefront's workspace-door
+preview — the surface is one of three canonical classes, never an inline
+gradient:
+
+| class | pattern | use |
+|---|---|---|
+| `.hatch` | `repeating-linear-gradient(135deg, #21252a 0 7px, #1c1f23 7px 14px)` | blocks ≥ 60px |
+| `.hatch-fine` | same at 5px/10px | thumbs < 60px |
+| `.hatch-bad` | `#211b1b`/`#1b1717` at 7px | TOO-SMALL and error surfaces |
+
+Always **135°**, always two near-equal thick bands — not hairlines, not
+45°. Re-declaring the gradient inline is a conformance failure even when
+the values match, because the next hand-copy is where they stop matching.
+A hatch block states its condition in a bordered Courier chip on
+`--panel` in `--ink-dim` (`NO RENDERS YET — THE FIRST APPROVED PANEL
+LANDS HERE`); it never renders bare and never shows a broken-image glyph.
+`storefront/` mirrors the three definitions with identical values
+(H3) — `storefront/tests/test_store_tokens.py` compares them to this
+stylesheet's and fails the build if they diverge.
+
 **Intake row** (`.ref-add`, `.chip-add`). High-frequency entry into the
 list/library directly above it. Max 6 fields; placeholders name fields,
 tooltips explain them; only the one field a first-timer can't guess gets a
@@ -868,6 +890,11 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-06** — The hatch canonized as the only empty-image surface
+  (HATCH_RULE H1–H3): three classes, always 135°, never re-declared
+  inline. Audit found zero drift in `app/`; the storefront gained a
+  mirrored copy with a contract comparing the two stylesheets.
 
 - **2026-08-06** — Swatch generation moved to step 5 beside the saved
   Bible; act-where-condition-is-met canonized as the pair to anchored
