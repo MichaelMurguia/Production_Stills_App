@@ -16,8 +16,12 @@ context/01_ART_DIRECTION_BIBLE.md
 project_state/
 settings.json
 
-# design-drop staging (copied into storefront/app/static/img)
-storefront_img/
+# design-drop staging (copied into storefront/app/static/…). ANCHORED:
+# an unanchored `storefront_img/` matches that directory name at ANY
+# depth, which silently swallowed the SERVED copy at
+# storefront/app/static/storefront_img/ — google-g.svg was never
+# committed and 404'd in production while working locally (2026-08-06).
+/storefront_img/
 
 # Design handoff bundles are local working files, not repo content
 design_handoff/

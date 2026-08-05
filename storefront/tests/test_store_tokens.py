@@ -289,3 +289,25 @@ class GoogleButtonTests(unittest.TestCase):
         """The snippet forbids adding one; Roboto is meant to be bundled."""
         base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
         self.assertNotIn("Roboto", base)
+
+
+class ServedAssetTests(unittest.TestCase):
+    """An asset that exists locally but is not committed serves fine in
+    development and 404s in production. google-g.svg did exactly that:
+    an unanchored `storefront_img/` gitignore rule matched the served
+    directory as well as the staging one (2026-08-06)."""
+
+    def test_every_referenced_static_asset_is_tracked_by_git(self):
+        import subprocess
+        tracked = set(subprocess.run(
+            ["git", "ls-files", "storefront/app/static"],
+            cwd=ROOT.parent, capture_output=True, text=True,
+            check=True).stdout.split())
+        referenced = set()
+        for html in TEMPLATES.glob("*.html"):
+            for m in re.finditer(r'src="/static/([^"?]+)', html.read_text(encoding="utf-8")):
+                referenced.add(f"storefront/app/static/{m.group(1)}")
+        missing = sorted(r for r in referenced if r not in tracked)
+        self.assertEqual(missing, [],
+                         f"referenced but not committed — will 404 in "
+                         f"production: {missing}")
