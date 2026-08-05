@@ -116,6 +116,15 @@ reader is.
 
 ## Changelog
 
+- **2026-08-06** — RULED (user): the header carries the `ADMIN` link and
+  nothing else. The Debug toggle added to the header on 2026-08-03 is
+  removed — a debug control belongs inside the admin section, not in the
+  chrome every page wears. The armed chip stays and now names its real
+  exit (`EXIT ON /ADMIN`): a mode that changes what a click does must
+  state itself and its exit wherever the owner is standing. Dead
+  `.head-debug` CSS deleted, grep-proofed; a store contract asserts the
+  header stays clean.
+
 - **2026-08-06** — CORRECTION (not a new pattern): `--hold` was used by the
   engine band's condition row (`.eb-hold`, ruled by STORE_PRICING_PLAN K1),
   the setup notice, the router status blocks and one template, and was

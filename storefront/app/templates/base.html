@@ -55,11 +55,6 @@
       <form method="post" action="/auth/logout" class="head-logout">
         <button class="btn btn-secondary head-signin" type="submit">Sign out</button>
       </form>
-      {% if request.state.is_owner %}
-      <button class="btn btn-secondary head-signin head-debug" id="head-debug-toggle"
-              type="button" aria-pressed="false"
-              title="Store text editing — Alt-click any text while on">Debug</button>
-      {% endif %}
       {% else %}
       <a class="btn btn-secondary head-signin" href="/signin">Sign in</a>
       {% endif %}
@@ -109,7 +104,7 @@
         "background:#141210;color:#e8e5dd;border:1px solid #d8a24a;" +
         "border-left-width:4px;padding:7px 12px;font:10px/1.4 'Courier New',monospace;" +
         "letter-spacing:.08em";
-      c.textContent = "STORE TEXT EDIT ON — ALT-CLICK ANY TEXT · EXIT ON YOUR SCREENBOARD";
+      c.textContent = "STORE TEXT EDIT ON — ALT-CLICK ANY TEXT · EXIT ON /ADMIN";
       document.body.append(c);
     }
   };
@@ -156,21 +151,10 @@
   });
   window.sbStoreTextChip = chip;
   chip();
-  // Header Debug toggle (owner request 2026-08-03): arms/disarms the same
-  // edit mode the account page controls; button reports the state.
-  const dbg = document.getElementById("head-debug-toggle");
-  const syncDbg = () => {
-    if (!dbg) return;
-    const on = armed();
-    dbg.classList.toggle("on", on);
-    dbg.setAttribute("aria-pressed", String(on));
-    dbg.textContent = on ? "Debug on" : "Debug";
-  };
-  dbg?.addEventListener("click", () => {
-    localStorage.setItem("sbStoreTextEdit", armed() ? "0" : "1");
-    chip(); syncDbg();
-  });
-  syncDbg();
+  // The debug toggle lives on /admin only (user ruling 2026-08-06) — the
+  // header carries the ADMIN link and nothing else. The armed chip stays:
+  // a mode that changes what clicks do must always state itself and its
+  // exit, wherever the owner is standing.
   document.addEventListener("click", async e => {
     if (!armed() || !e.altKey) return;
     e.preventDefault(); e.stopPropagation();

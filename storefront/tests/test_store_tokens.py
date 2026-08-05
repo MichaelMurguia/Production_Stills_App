@@ -105,3 +105,48 @@ class StoreTokenTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OwnerChromeTests(unittest.TestCase):
+    """User ruling 2026-08-06: the header carries the ADMIN link and
+    nothing else — debug lives inside the admin section. The armed chip
+    still appears wherever the owner stands, because a mode that changes
+    what a click does must state itself and its exit."""
+
+    def setUp(self):
+        from app import settings
+        self._saved = settings.OWNER_EMAILS
+        self.owner = "chrome-owner@example.com"
+        settings.OWNER_EMAILS = {self.owner}
+        self.addCleanup(setattr, settings, "OWNER_EMAILS", self._saved)
+
+    def _client(self, email=None):
+        from fastapi.testclient import TestClient
+
+        from app import auth, db
+        from app.main import store
+        from sqlalchemy import select
+        c = TestClient(store)
+        if email:
+            with db.session() as s:
+                if not s.scalar(select(db.Account).where(
+                        db.Account.email == email)):
+                    s.add(db.Account(email=email))
+                    s.commit()
+            c.cookies.set(auth.SESSION_COOKIE, auth.make_session(email))
+        return c
+
+    def test_no_debug_button_in_the_header(self):
+        page = self._client(self.owner).get("/").text
+        self.assertNotIn("head-debug-toggle", page)
+        self.assertNotIn(">Debug<", page)
+        self.assertIn('class="head-admin"', page,
+                      "the ADMIN link is the owner's header chrome")
+
+    def test_the_toggle_lives_on_admin(self):
+        self.assertIn("owner-textedit",
+                      self._client(self.owner).get("/admin").text)
+
+    def test_the_armed_chip_states_its_real_exit(self):
+        self.assertIn("EXIT ON /ADMIN",
+                      self._client(self.owner).get("/").text)
