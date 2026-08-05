@@ -185,6 +185,30 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".wiz-span3", ["grid-column: span 3"])
         self.assertNotIn(".wiz-cols-board", CSS)
 
+    def test_two_doors_one_section(self):
+        """B1: amber marks only the recommended door; the alternative is
+        a plain --line card."""
+        self.assert_decls(".intake .intake-doors", [
+            "grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)"])
+        self.assert_decls(".door", ["border: 1px solid var(--line)"])
+        self.assert_decls(".door-auto", [
+            "border-color: var(--accent-line)",
+            "border-top: 2px solid var(--accent)"])
+        self.assertNotIn("var(--accent)", block(".door-blank")
+                         if ".door-blank {" in CSS else "",
+                         "the blank door carries no amber")
+
+    def test_the_help_affordance_is_discoverable(self):
+        """B3: a tooltip nobody knows exists is not documentation."""
+        self.assert_decls(".q-help", ["border: 1px solid var(--line)",
+                                      "font-family: var(--mono)"])
+        self.assert_decls(".q-card", ["background: var(--panel)",
+                                      "border: 1px solid var(--line)"])
+
+    def test_the_sheets_table_is_labelled(self):
+        self.assert_decls(".spec-table thead th", [
+            "background: var(--field)", "font-family: var(--mono)"])
+
     def test_take_row_wraps_and_its_verbs_are_peers(self):
         """T1/T2: horizontal scroll on navigation hides actions the user
         then cannot find, and six verbs that are all ghost in the source

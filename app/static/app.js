@@ -4331,10 +4331,12 @@ async function renderSpecs(openId = null) {
       const top = locs[0]?.location;
       if (top) {
         const t = titleCase(top);
+        // B2: the example IS the placeholder — a trailing italic
+        // sentence is prose the field can carry itself.
         const ex = $("#spec-auto-example");
         if (ex) ex.textContent = `"${t} — the scenes the script sets there"`;
         const ta0 = $("#spec-auto-prompt");
-        if (ta0 && !ta0.value) ta0.placeholder = `Auto-fill for ${t}…`;
+        if (ta0 && !ta0.value) ta0.placeholder = `${t} — the scenes the script sets there`;
       }
       if (!locHint) return;
       const norm = x => String(x).toUpperCase().trim();
@@ -4408,6 +4410,51 @@ async function renderSpecs(openId = null) {
   // legal ID as it is typed ("Charlie's cabin v1" → CHARLIES_CABIN_V1).
   const slugSpecId = raw => raw.toUpperCase().replace(/\s+/g, "_")
     .replace(/[^A-Z0-9._-]/g, "").replace(/_{2,}/g, "_");
+  // B3 (BREAKDOWN_INTAKE) — the Spec ID help. The copy leads with the
+  // reassurance and then states the permanence: users were stalling on a
+  // pure-bookkeeping field because the old text opened with "used in
+  // filenames, prompts, and the audit trail", which reads as though it
+  // steers the render. It does not — the brief and the anchors do.
+  //
+  // Deviation from mock 13a, reported: the mock's card ends "Auto-filled
+  // from the subject if left blank." This install only auto-fills the id
+  // from a LOCATION hint (arriving via a location's Create Breakdown),
+  // never from the subject field — so that sentence would be false here
+  // and is left out rather than shipped as a promise.
+  const HELP_TEXT = {
+    "spec-id": "<b>Just a name. Does not affect generation.</b> The filing "
+      + "label this sheet, its panels, and its boards sort under — pick "
+      + "something you'll recognise in a list. CAPS_WITH_UNDERSCORES, "
+      + "versioned. It cannot be renamed later.",
+  };
+  const closeHelp = () => {
+    $$(".q-card").forEach(c => c.remove());
+    $$(".q-help[aria-expanded=true]").forEach(b => b.setAttribute("aria-expanded", "false"));
+  };
+  $$(".q-help").forEach(btn => {
+    btn.setAttribute("aria-expanded", "false");
+    btn.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const open = btn.getAttribute("aria-expanded") === "true";
+      closeHelp();
+      if (open) return;
+      const card = document.createElement("div");
+      card.className = "q-card";
+      card.innerHTML = HELP_TEXT[btn.dataset.help] || "";
+      document.body.append(card);
+      const r = btn.getBoundingClientRect();
+      card.style.top = `${r.bottom + window.scrollY + 8}px`;
+      card.style.left =
+        `${Math.min(r.left + window.scrollX, window.innerWidth - card.offsetWidth - 16)}px`;
+      btn.setAttribute("aria-expanded", "true");
+    };
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".q-card") && !e.target.closest(".q-help")) closeHelp();
+  });
+  window.addEventListener("keydown", e => { if (e.key === "Escape") closeHelp(); });
+
   const bindSpecIdField = el => el && el.addEventListener("input", () => {
     const slug = slugSpecId(el.value);
     if (slug === el.value) return;
@@ -4472,8 +4519,10 @@ async function renderSpecs(openId = null) {
 
   const specs = await api("/api/specs");
   const tbody = $("#spec-table tbody");
+  const countEl = $("#spec-count");
+  if (countEl) countEl.textContent = specs.length || "";
   tbody.innerHTML = specs.length ? "" :
-    `<tr><td colspan="6" class="mini">No breakdown sheets yet.</td></tr>`;
+    `<tr><td colspan="6" class="mini">NO BREAKDOWN SHEETS YET — RUN A BREAKDOWN ABOVE</td></tr>`;
   for (const s of specs) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -4484,7 +4533,9 @@ async function renderSpecs(openId = null) {
       <td><span class="badge ${s.status}">${s.status}</span>${s.locked ? ' <span class="badge LOCKED">LOCKED</span>' : ""}</td>
       <td style="white-space:nowrap">
         <button class="ghost" data-f="open">Open</button>
-        <button class="danger" data-f="del" title="Permanently delete this breakdown sheet and its candidates">Delete</button>
+        <!-- B4: Delete is not this row's primary verb — the confirm dialog
+           carries the danger at length. -->
+        <button class="ghost" data-f="del" title="Permanently delete this breakdown sheet and its candidates">Delete</button>
       </td>`;
     $("[data-f=open]", tr).onclick = () => openSpecEditor(s.specification_id);
     $("[data-f=del]", tr).onclick = async () => {

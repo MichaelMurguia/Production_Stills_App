@@ -107,6 +107,20 @@ become a section label, it becomes the label. Courier condition lines on
 step headings carry the surviving conditions; jurisdiction pairs read
 `SETS … / NOT …`.
 
+**Two doors, one section** (B1, ruled 2026-08-06). When two controls
+perform the same act by different means, they sit **side by side in one
+section** — never one at the top of the page and the other hidden under
+a table. Amber marks the recommended door only (`--accent` top border,
+`--accent-line` frame); the alternative is a plain `--line` card with a
+ghost submit. Each door states its nature once, in Courier, beside its
+name (`READS THE WHOLE SCREENPLAY` / `YOU FILL EVERYTHING`). Worked
+example: Breakdowns' auto-breakdown and blank-sheet doors.
+
+**A table holds data; a create form never renders as its last rows**
+(B4). A form living inside a table's panel reads as another row and is
+found by nobody looking for it. Move it to the section that owns the
+act; the table keeps its heading, its count, and its rows.
+
 **Tags ride the image; verbs sit beneath it** (T1, ruled 2026-08-06).
 Where a picture is the evidence, its state and identity overlay the
 picture — state chip top-left, identity bottom-right, each on
@@ -400,6 +414,16 @@ footnotes, no rationale cards, no zero-count stat tiles.
 ---
 
 ## Copy
+
+**A reassurance precedes its consequence** (B3, ruled 2026-08-06). When a
+field is bookkeeping, say so *before* stating what is permanent about it.
+Worked example: the Spec ID help opens `Just a name. Does not affect
+generation.` and only then names the permanence. The previous copy led
+with "used in filenames, prompts, and the audit trail", which reads as
+*this steers the render* — and users stalled on a field that decides
+nothing. A help affordance is the canonical `?` beside the label, never a
+bare `title`: a tooltip nobody knows exists is not documentation.
+
 
 Prose was ~3:1 over interface by area in v1. Rules:
 
@@ -906,6 +930,12 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-06** — Breakdown intake (BREAKDOWN_INTAKE B1–B5, mock 13a):
+  the two ways to make a sheet became one section of two doors with amber
+  on the recommended one; the brief leads the auto door; the Spec ID help
+  became a `?` card that reassures before it warns; the sheets table is
+  data only, with the labelled-table treatment and a count.
 
 - **2026-08-06** — Take viewer (TAKE_ACTIONS T1–T3): state and identity
   moved onto the image, the action row carries verbs only and wraps

@@ -2074,3 +2074,62 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   padding: 6px 10px;
 }
 .update-bar .text-act { font-size: 10px; letter-spacing: .1em; }
+
+/* BREAKDOWN_INTAKE B1-B4 (designer-ruled 2026-08-06) — two doors, one
+   section: auto breakdown and blank sheet perform the same act by
+   different means, so they sit side by side, and amber marks only the
+   recommended one. */
+.intake .intake-doors { display: grid; gap: 18px; margin-top: 14px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.door { border: 1px solid var(--line); background: var(--bg2); padding: 16px 18px;
+  display: flex; flex-direction: column; }
+.door-auto { border-color: var(--accent-line); border-top: 2px solid var(--accent); }
+.door-head { font-size: 15px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.door-nature { font-size: 9px; letter-spacing: .1em; color: var(--ink-faint);
+  border: 1px solid var(--line); padding: 2px 7px; }
+.door-auto .door-nature { color: var(--accent); border-color: var(--accent-line); }
+.door form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px;
+  flex: 1; }
+.door label { display: flex; flex-direction: column; gap: 5px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint); text-transform: uppercase; }
+.door label input, .door label select, .door label textarea {
+  font-family: var(--sans); font-size: 13px; letter-spacing: 0;
+  text-transform: none; color: var(--ink); }
+.door textarea { min-height: 62px; resize: vertical; }
+.door-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.door-two { display: flex; gap: 8px; }
+.door-two select { flex: 1; min-width: 0; }
+.door-run { display: flex; align-items: flex-end; gap: 12px; }
+.door-run label { flex: 1; min-width: 0; }
+.door-run .primary, .door-run .ghost { flex: none; }
+.door-run-end { margin-top: auto; justify-content: flex-end; }
+.door-foot { font-size: 9px; letter-spacing: .06em; color: var(--ink-faint);
+  line-height: 1.6; }
+@media (max-width: 980px) { .intake .intake-doors { grid-template-columns: 1fr; } }
+
+/* B3 — the ? affordance. A tooltip nobody knows exists is not
+   documentation, so the question mark is the discoverability and the
+   card is the answer. */
+/* The label's own row, so the ? sits beside its name rather than
+   becoming another child of the column flex. */
+.door .f-lab { display: flex; align-items: center; }
+.q-help { display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; padding: 0; margin-left: 6px; vertical-align: 1px;
+  border: 1px solid var(--line); background: transparent; color: var(--ink-faint);
+  font-family: var(--mono); font-size: 9px; line-height: 1; cursor: pointer; }
+.q-help:hover, .q-help[aria-expanded="true"] { color: var(--ink);
+  border-color: var(--ink-faint); }
+.q-card { position: absolute; z-index: 55; max-width: 320px;
+  background: var(--panel); border: 1px solid var(--line); padding: 12px 14px;
+  font-size: 12.5px; line-height: 1.55; color: var(--ink-dim);
+  font-family: var(--sans); letter-spacing: 0; text-transform: none; }
+.q-card b { color: var(--ink); font-weight: 600; }
+
+/* B4 — the sheets table is data only, with the labelled-table treatment. */
+.sheet-count { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint);
+  font-weight: 400; margin-left: 8px; }
+.spec-table thead th { background: var(--field); font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: .1em; color: var(--ink-faint);
+  font-weight: 400; }
