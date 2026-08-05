@@ -547,7 +547,8 @@ _magic_last: dict[str, float] = {}
 
 
 @app.post("/auth/email")
-def auth_email(request: Request, email: str = Form(""), mode: str = Form("signin")):
+def auth_email(request: Request, background: BackgroundTasks,
+               email: str = Form(""), mode: str = Form("signin")):
     """Send a magic link. Uniform response for any address; creating vs
     signing in converges at the link — the inbox is the proof."""
     import datetime as dt
@@ -570,14 +571,29 @@ def auth_email(request: Request, email: str = Form(""), mode: str = Form("signin
             s.add(t)
             s.commit()
             link = f"{settings.BASE_URL}/auth/verify?token={t.token}"
-        try:
-            mailer.send(email, "Sign in to Screenboard Studio",
-                        "Click to sign in (valid 30 minutes, single use):\n\n"
-                        f"{link}\n\nNot you? Ignore this mail — nothing "
-                        "happens without the link.\n\n— Screenboard Studio")
-        except mailer.MailError as e:
-            print(f"[auth] magic link send failed for {email}: {e}")
+        # The SMTP round trip — connect, STARTTLS, AUTH, send — ran inline
+        # and the browser waited for all of it (user-hit 2026-08-06: 20
+        # seconds to reach "check your inbox"; the 30s timeout was the
+        # worst case). It goes out AFTER the response now. Nothing is
+        # lost: the response never depended on the send succeeding,
+        # because it must be identical for every address.
+        background.add_task(_send_magic_link, email, link)
     return _auth_page(request, mode, sent=True)
+
+
+def _send_magic_link(email: str, link: str) -> None:
+    """Runs after the response. A failure is recorded for the owner and
+    never reaches the visitor — telling them the send failed would leak
+    which addresses exist."""
+    try:
+        mailer.send(email, "Sign in to Screenboard Studio",
+                    "Click to sign in (valid 30 minutes, single use):\n\n"
+                    f"{link}\n\nNot you? Ignore this mail — nothing "
+                    "happens without the link.\n\n— Screenboard Studio")
+        mailer.record("magic link", email, "")
+    except mailer.MailError as e:
+        mailer.record("magic link", email, str(e))
+        print(f"[auth] magic link send failed for {email}: {e}")
 
 
 @app.get("/auth/verify")
@@ -798,7 +814,8 @@ def _recovery_body(purchases: list[db.Purchase]) -> str:
 
 
 @app.post("/recover")
-def recover(request: Request, email: str = Form("")):
+def recover(request: Request, background: BackgroundTasks,
+            email: str = Form("")):
     """Anti-enumeration by construction: the response is identical whether
     the address has purchases or not — details only ever travel to the
     address itself."""
@@ -819,13 +836,20 @@ def recover(request: Request, email: str = Form("")):
                          p.workspace.access_token)
             s.expunge_all()
         if purchases:
-            try:
-                mailer.send(email, "Your Screenboard Studio licenses",
-                            _recovery_body(purchases))
-            except mailer.MailError as e:
-                print(f"[recover] send failed for {email}: {e}")  # ops-only
+            # After the response, for the same reason as the magic link.
+            background.add_task(_send_recovery, email,
+                                _recovery_body(purchases))
     return templates.TemplateResponse(request, "recover.html", {
         "mail_ready": True, "sent": True})
+
+
+def _send_recovery(email: str, body: str) -> None:
+    try:
+        mailer.send(email, "Your Screenboard Studio licenses", body)
+        mailer.record("recovery", email, "")
+    except mailer.MailError as e:
+        mailer.record("recovery", email, str(e))
+        print(f"[recover] send failed for {email}: {e}")  # ops-only
 
 
 def _admin_gate(request: Request, token: str) -> None:
@@ -886,6 +910,7 @@ def admin_home(request: Request, token: str = "", ok: str = ""):
         }
     return templates.TemplateResponse(request, "admin.html", {
         "codes": codes, "people": people, "token": supplied, "counts": counts,
+        "mail_ready": mailer.configured(), "mail_log": mailer.recent(),
         "max_days": settings.TRIAL_CODE_MAX_DAYS,
         "trial_days": settings.TRIAL_DAYS,
         "trials_open": settings.trials_open(),
@@ -904,6 +929,27 @@ def admin_ops(request: Request, background: BackgroundTasks,
         out = provisioner.reconcile()
         msg = (f"reconcile — {out['provisioned']} provisioned, "
                f"{out['revoked']} revoked, {out.get('expired', 0)} trials expired")
+    elif action == "test-mail":
+        # The one place the real SMTP error is visible. Same code path as
+        # a magic link, sent to the owner who pressed the button.
+        to = request.state.account_email or (settings.OWNER_EMAILS
+                                             and sorted(settings.OWNER_EMAILS)[0])
+        if not to:
+            msg = "mail test needs a signed-in owner address"
+        elif not mailer.configured():
+            msg = "mail test — SMTP is not configured (SMTP_HOST / SMTP_FROM unset)"
+        else:
+            try:
+                mailer.send(to, "Screenboard Studio — mail test",
+                            "This is the mail self-test from /admin.\n\n"
+                            "If you are reading it, sign-in links and "
+                            "license recovery can reach this inbox.\n\n"
+                            "— Screenboard Studio")
+                mailer.record("self-test", to, "")
+                msg = f"mail test sent to {to} — check that inbox"
+            except mailer.MailError as e:
+                mailer.record("self-test", to, str(e))
+                msg = f"mail test FAILED — {e}"
     elif action == "update-tenants":
         out = provisioner.update_tenants()
         msg = (f"fleet update — {len(out['updated'])} studios rebuilding"

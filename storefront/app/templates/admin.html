@@ -166,8 +166,32 @@
         <button class="btn btn-secondary" type="submit">Update the fleet</button>
       </form>
       <a class="btn btn-secondary" href="/admin/export{% if token %}?token={{ token }}{% endif %}">Download entitlement backup</a>
+      <form method="post" action="/admin/ops" style="display:inline">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="action" value="test-mail">
+        <button class="btn btn-secondary" type="submit">Send a test email</button>
+      </form>
     </p>
-    <p class="admin-note mono">RECONCILE IS IDEMPOTENT &middot; FLEET UPDATE REBUILDS EVERY LIVE STUDIO FROM REPO HEAD</p>
+    <p class="admin-note mono">RECONCILE IS IDEMPOTENT &middot; FLEET UPDATE REBUILDS EVERY LIVE STUDIO FROM REPO HEAD<br>
+      MAIL {{ "CONFIGURED" if mail_ready else "NOT CONFIGURED — SMTP_HOST / SMTP_FROM UNSET" }} &middot; A TEST GOES TO YOUR OWN ADDRESS</p>
+    {% if mail_log %}
+    {# The only place a send failure is visible: visitors get a uniform
+       response by design, so the owner needs its own window. #}
+    <table class="admin-table mono" style="margin-top:14px">
+      <colgroup><col style="width:130px"><col style="width:110px"><col style="width:170px"><col></colgroup>
+      <tr><th>WHEN</th><th>KIND</th><th>TO</th><th>RESULT</th></tr>
+      {% for m in mail_log %}
+      <tr>
+        <td style="color:var(--ink-faint)">{{ m.at }}</td>
+        <td>{{ m.kind|upper }}</td>
+        <td style="color:var(--ink-dim)">{{ m.to }}</td>
+        <td class="{{ 'st-live' if not m.error else '' }}"
+            style="{{ '' if not m.error else 'color:var(--bad)' }};white-space:normal">{{ m.error or "SENT" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="admin-note mono">LAST 10 SENDS &middot; IN MEMORY, CLEARED ON DEPLOY</p>
+    {% endif %}
   </div>
 </section>
 

@@ -703,3 +703,91 @@ class ExpiryPickerTests(unittest.TestCase):
             self.assertEqual(trials.expire_due(s), [],
                              "a stale code must not end a running trial")
             self.assertEqual(s.get(db.Purchase, p.id).status, "PAID")
+
+
+class MailPathTests(unittest.TestCase):
+    """A magic link must not make the visitor wait on SMTP (user-hit
+    2026-08-06: 20 seconds), and a failed send must be visible to the
+    owner — the visitor's response is uniform by design, so a failure
+    otherwise vanishes into the platform log."""
+
+    def setUp(self):
+        from app import mailer
+        self.mailer = mailer
+        self.saved_owners = settings.OWNER_EMAILS
+        self.saved_tok = settings.ADMIN_EXPORT_TOKEN
+        self.saved_host, self.saved_from = settings.SMTP_HOST, settings.SMTP_FROM
+        settings.SMTP_HOST, settings.SMTP_FROM = "smtp.test", "no-reply@test"
+        self.owner = f"mail-{uuid.uuid4().hex[:8]}@example.com"
+        settings.OWNER_EMAILS = {self.owner}
+        settings.ADMIN_EXPORT_TOKEN = "mail-token"
+        mailer._recent.clear()
+
+        def restore():
+            settings.OWNER_EMAILS = self.saved_owners
+            settings.ADMIN_EXPORT_TOKEN = self.saved_tok
+            settings.SMTP_HOST, settings.SMTP_FROM = self.saved_host, self.saved_from
+        self.addCleanup(restore)
+
+    def test_the_send_happens_after_the_response(self):
+        """The route must hand the send to a background task, never call
+        it inline — that is the whole 20-second defect."""
+        calls = []
+        real = self.mailer.send
+        self.mailer.send = lambda *a, **k: calls.append(a)
+        self.addCleanup(setattr, self.mailer, "send", real)
+
+        import starlette.background as sb
+        seen = []
+        real_add = sb.BackgroundTasks.add_task
+
+        def spy(self_, fn, *a, **k):
+            seen.append(fn.__name__)
+            return real_add(self_, fn, *a, **k)
+        sb.BackgroundTasks.add_task = spy
+        self.addCleanup(setattr, sb.BackgroundTasks, "add_task", real_add)
+
+        r = TestClient(store).post("/auth/email", data={
+            "email": f"visitor-{uuid.uuid4().hex[:6]}@example.com",
+            "mode": "signin"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("_send_magic_link", seen,
+                      "the send must be deferred, not inline")
+
+    def test_a_failed_send_is_recorded_for_the_owner(self):
+        real = self.mailer.send
+
+        def boom(*a, **k):
+            raise self.mailer.MailError("535 authentication failed")
+        self.mailer.send = boom
+        self.addCleanup(setattr, self.mailer, "send", real)
+
+        TestClient(store).post("/auth/email", data={
+            "email": "someone@example.com", "mode": "signin"})
+        log = self.mailer.recent()
+        self.assertTrue(log)
+        self.assertIn("535", log[0]["error"])
+        self.assertNotIn("someone@example.com", log[0]["to"],
+                         "the log is a diagnostic, not a mailing list")
+
+    def test_the_visitor_never_learns_the_send_failed(self):
+        real = self.mailer.send
+        self.mailer.send = lambda *a, **k: (_ for _ in ()).throw(
+            self.mailer.MailError("nope"))
+        self.addCleanup(setattr, self.mailer, "send", real)
+        r = TestClient(store).post("/auth/email", data={
+            "email": "quiet@example.com", "mode": "signin"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Check your inbox", r.text)
+        self.assertNotIn("nope", r.text)
+
+    def test_the_self_test_reports_the_real_error(self):
+        real = self.mailer.send
+        self.mailer.send = lambda *a, **k: (_ for _ in ()).throw(
+            self.mailer.MailError("535 authentication failed"))
+        self.addCleanup(setattr, self.mailer, "send", real)
+        c = _signed_in(self.owner)
+        r = c.post("/admin/ops", data={"token": "", "action": "test-mail"},
+                   follow_redirects=False)
+        self.assertIn("FAILED", r.headers["location"])
+        self.assertIn("535", r.headers["location"])
