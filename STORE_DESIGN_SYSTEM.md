@@ -158,6 +158,24 @@ the Courier kicker is the heading; no `<h1>` beside it. Machine tables
 get fixed column tracks so values stop reflowing; row action buttons are
 verbs and render in Archivo, not the table's Courier.
 
+### 10. Provider marks
+
+Ruled 2026-08-06 (SIGNIN_BRANDING G3).
+
+**A sign-in option wears its provider's official button** where the
+provider publishes branding guidelines (Google does:
+developers.google.com/identity/branding-guidelines). The button is the
+provider's mark, not ours to restyle — no token colours, no Courier, no
+amber, and its hexes are deliberately outside the token system. Providers
+without published guidelines get our own secondary-button grammar with
+their brand icon. **Our amber stays on our own actions**: with Google
+wearing its own mark, `Email me a sign-in link` is the page's fill in
+both configurations, and the two no longer compete in one visual voice.
+
+Sibling to the app's icon rule (LobeHub tiles): *tiles identify a
+provider inside our chrome; sign-in buttons are the provider's chrome and
+follow the provider's guidelines.*
+
 ---
 
 ## Non-canon — awaiting review
@@ -185,6 +203,18 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 ---
 
 ## Changelog
+
+- **2026-08-06** — RULED (SIGNIN_BRANDING G1–G3): `### 10. Provider marks`
+  established. The Google button is Google's official dark-neutral variant
+  with the full-colour G at 18px, its values deliberately outside the token
+  system; our amber returns to `Email me a sign-in link` in both
+  configurations, with a two-hairline Courier `OR` between them.
+  **Deviation reported:** the plan said to ship Roboto 500 locally and never
+  hotlink. The store has never shipped a font locally — `base.html` has
+  always loaded Archivo from the Google Fonts CDN — so Roboto 500 rides that
+  same existing link rather than becoming the one local font. Shipping one
+  and hotlinking the other is the inconsistency the rule guards against. If
+  the designer wants both local, that is an asset task, not a markup one.
 
 - **2026-08-06** — RULED (user, reversing S2's Business position): **both
   editions trial.** The trial page offers `Start Personal Trial` and

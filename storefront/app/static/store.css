@@ -623,3 +623,38 @@ body {
   font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
   padding: 6px 12px; white-space: nowrap; max-width: calc(100% - 24px);
   overflow: hidden; text-overflow: ellipsis; }
+
+/* G1 (SIGNIN_BRANDING) — Google's official dark-neutral button. These
+   values come from Google's branding guidelines and are deliberately NOT
+   tokens: restyling a provider's mark to our palette is exactly what the
+   guidelines forbid. Do not "fix" the hexes to match the design system.
+   Roboto is requested in the font link with var(--sans) as the fallback. */
+.btn-google {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 10px; height: 40px; padding: 0 12px; min-width: 220px;
+  background: #131314; border: 1px solid #8E918F; border-radius: 0;
+  font-family: 'Roboto', var(--sans); font-size: 14px; font-weight: 500;
+  color: #E3E3E3; text-decoration: none; cursor: pointer;
+}
+.btn-google:hover { border-color: #E3E3E3; }
+.btn-google svg { width: 18px; height: 18px; flex: none; }
+/* The OR divider: two hairlines and a Courier word. */
+.or-rule { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px;
+  max-width: 420px; }
+.or-rule::before, .or-rule::after { content: ""; flex: 1;
+  border-top: 1px solid var(--line); }
+.or-rule span { font-family: var(--mono); font-size: 10px;
+  letter-spacing: .12em; color: var(--ink-faint); }
+
+/* Inline links in prose. Without this they inherit the browser's blue,
+   which is glaring on a dark page — it was being patched per-element
+   with style="color:var(--ink)" on four templates, which is the
+   re-declaration problem HATCH_RULE names, one layer up. */
+.order a, .order .hero-sub a, .hatch-note a { color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: var(--line); }
+.order a:hover, .hatch-note a:hover { text-decoration-color: var(--ink-faint); }
+/* Buttons are not prose links. */
+.order a.btn, .order a.btn-google { text-decoration: none; }
+.order a.btn-primary { color: var(--accent-ink); }
+.order a.btn-secondary { color: var(--ink); }

@@ -48,7 +48,7 @@
     {% if p.status == "EXPIRED" %}
     <p class="hero-sub">This trial has ended and the studio was taken down.
     Subscribing builds a fresh studio under this account &mdash;
-    <a href="/#pricing" style="color:var(--ink)">the editions are here</a>.</p>
+    <a href="/#pricing">the editions are here</a>.</p>
     {% endif %}
     {% if p.workspace and p.workspace.status == "ACTIVE" and p.status == "PAID" %}
     {% set ws = p.workspace %}
@@ -94,7 +94,7 @@
   {# Debug tools live on /admin now — this page is the customer's view of
      their own purchases, and an owner is a customer here too. #}
   <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">
-    OWNER &middot; DEBUG TOOLS AND TRIAL CODES MOVED TO <a href="/admin" style="color:var(--ink)">/ADMIN</a>
+    OWNER &middot; DEBUG TOOLS AND TRIAL CODES MOVED TO <a href="/admin">/ADMIN</a>
   </p>
   {% endif %}
 
