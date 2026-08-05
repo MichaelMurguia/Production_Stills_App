@@ -115,6 +115,44 @@ Schema changes: `create_all` creates tables but never alters them; additive
 columns go in the `init_db()` micro-migration block (see `tier`). Anything
 destructive requires introducing Alembic first.
 
+### Mail — and how it is tested (2026-08-06)
+
+Both sends (magic link, license recovery) are **background tasks**: the
+response goes out first and SMTP happens after, so a slow or dead mail
+host can never hold a page open. The port picks the handshake —
+`SMTP_SSL` for 465 (implicit TLS), `SMTP` + `starttls()` for 587/25 —
+because calling STARTTLS against 465 hangs until the timeout and reads
+exactly like a dead host. `mailer.record()` keeps the last 10 sends in
+memory (masked address, error or SENT) for the owner-only panel on
+`/admin`; visitor responses stay uniform, so that panel is the only
+window into a failure.
+
+`tests/test_mail_paths.py` covers **both halves**, and fakes only the
+socket — `mailer.send()` runs its real message construction, handshake
+choice, login and recipients:
+
+- **Send path**: the message is well-formed and addressed, the right
+  handshake runs for the configured port (465 must never negotiate), no
+  credentials means no login attempt, an unconfigured mailer sends
+  nothing and does not claim it did, and the SMTP password never appears
+  in a body.
+- **Receive path** — previously untested entirely: the URL is extracted
+  from the captured body and followed, and must produce a working
+  session; it works exactly once; expired and forged tokens are refused;
+  and one person's link never signs in another.
+- **Recovery**: the mail carries the real credential and never another
+  account's.
+- **Failure**: a dead host never changes what the visitor sees, while the
+  owner's log names the endpoint that failed.
+
+Two harness facts that will bite anyone extending these tests. Starlette
+**quotes** the session cookie (it contains `|` and `@`), so the jar's
+stored value is not what the server parses — unquote before asserting, or
+better, assert that the next request is authenticated. And because
+`BASE_URL` is https, the cookie is issued `Secure`, so the TestClient
+must speak `https://testserver` or it will refuse to send it back and the
+round trip will fail against working code.
+
 ### The admin hub (built 2026-08-06)
 
 `GET /admin` is the owner's one page: debug tools (store text editing),
