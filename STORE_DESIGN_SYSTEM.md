@@ -223,6 +223,18 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 
 ## Changelog
 
+- **2026-08-06** — S1 completed (user-caught): the door was showing
+  `NO RENDERS YET` on a studio that **had** an approved panel. A surface
+  may claim "nothing here" only when it has looked. The studio now exposes
+  `GET /api/preview-render` (behind its own access token — never public:
+  that would publish a customer's artwork to anyone who guessed a
+  subdomain), the store asks it server-side with the token it already
+  holds and proxies the bytes, and the door fills its hatch in
+  asynchronously so the account page never waits on a customer's service.
+  Until the answer lands the chip states what is true — that it is
+  looking — rather than asserting an emptiness it has not verified. An
+  unreachable studio leaves the door working with a stated condition.
+
 - **2026-08-06** — CORRECTION (GOOGLE_SIGNIN_SNIPPET.html, delivered): the
   first pass at §10 was built from the plan's prose and got three things
   wrong. The snippet is the authority for its element and now ships

@@ -137,6 +137,41 @@ def api_login(body: dict, request: Request):
     return resp
 
 
+@app.get("/api/preview-render")
+def api_preview_render():
+    """One approved panel, for the store's workspace door (S1).
+
+    Deliberately NOT auth-exempt: this is the customer's artwork, and an
+    open endpoint would publish it to anyone who guessed the subdomain.
+    The storefront calls it server-to-server with the workspace access
+    token it already holds.
+
+    Returns the panel's identity, not its bytes — the caller fetches the
+    image through the existing candidate route with the same credential.
+    """
+    import random
+
+    approved = []
+    for meta in store.list_specs():
+        sid = meta["specification_id"]
+        for c in generate.list_candidates(sid):
+            if c.get("status") == "APPROVED":
+                approved.append((sid, c))
+    if not approved:
+        # A stated empty, not a 404: "looked, found none" is a different
+        # fact from "this studio has no such endpoint".
+        return {"found": False, "production": store.project_name()}
+    sid, cand = random.choice(approved)
+    return {
+        "found": True,
+        "production": store.project_name(),
+        "board": sid,
+        "candidate": cand.get("candidate_id", ""),
+        "image": f"/api/specs/{sid}/candidates/{cand.get('candidate_id', '')}/image",
+        "count": len(approved),
+    }
+
+
 @app.get("/api/healthz")
 def api_healthz():
     """Liveness, serving revision, and product version — the provisioner's

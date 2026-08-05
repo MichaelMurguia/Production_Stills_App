@@ -721,6 +721,92 @@ def name_studio(request: Request, background: BackgroundTasks,
     return RedirectResponse(f"{back}{sep}named=1", status_code=303)
 
 
+# --------------------------------------------- the door's render preview
+# The store cannot read a tenant's disk, so it asks the studio — with the
+# studio's own access token, server-side. The token never reaches a
+# browser and the tenant is never called from one. Cached briefly so a
+# page reload does not hammer a customer's service.
+
+_preview_cache: dict[int, tuple[float, dict]] = {}
+_PREVIEW_TTL = 300
+
+
+def _studio_for(request: Request, ws_id: int):
+    """The workspace this signed-in account owns, or None. Ownership is
+    the gate on every preview route — a studio's work is nobody else's."""
+    email = request.state.account_email
+    if not email:
+        return None
+    with db.session() as s:
+        ws = s.get(db.Workspace, ws_id)
+        if not ws or ws.purchase.email != email or ws.status != "ACTIVE":
+            return None
+        door = ws.railway_url or ws.url
+        return {"id": ws.id, "door": door, "token": ws.access_token}
+
+
+def _ask_studio(studio: dict) -> dict:
+    """One brief server-to-server call, cached. Any failure is 'no
+    preview' — a door that cannot reach its studio still renders."""
+    import time
+
+    hit = _preview_cache.get(studio["id"])
+    if hit and time.time() - hit[0] < _PREVIEW_TTL:
+        return hit[1]
+    out = {"found": False}
+    try:
+        import httpx
+        r = httpx.get(f"{studio['door']}/api/preview-render",
+                      cookies={"sb_session": studio["token"]},
+                      timeout=4.0, follow_redirects=False)
+        if r.status_code == 200:
+            out = r.json()
+    except Exception:
+        pass  # the hatch is the correct fallback, stated by the caller
+    _preview_cache[studio["id"]] = (time.time(), out)
+    return out
+
+
+@app.get("/studio/{ws_id}/preview")
+def studio_preview(request: Request, ws_id: int):
+    """What the door should show. Never blocks the account page — the
+    page renders its hatch first and this fills it in."""
+    studio = _studio_for(request, ws_id)
+    if not studio:
+        raise HTTPException(404)
+    info = _ask_studio(studio)
+    if not info.get("found"):
+        return {"found": False}
+    return {"found": True, "src": f"/studio/{ws_id}/preview.img",
+            "production": info.get("production", ""),
+            "board": info.get("board", "")}
+
+
+@app.get("/studio/{ws_id}/preview.img")
+def studio_preview_image(request: Request, ws_id: int):
+    """Streams the panel through the store so the studio's credential
+    stays server-side. Owner-gated exactly like the JSON above."""
+    studio = _studio_for(request, ws_id)
+    if not studio:
+        raise HTTPException(404)
+    info = _ask_studio(studio)
+    if not info.get("found"):
+        raise HTTPException(404)
+    try:
+        import httpx
+        r = httpx.get(f"{studio['door']}{info['image']}",
+                      cookies={"sb_session": studio["token"]}, timeout=8.0)
+        if r.status_code != 200:
+            raise HTTPException(404)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(404)
+    return Response(content=r.content,
+                    media_type=r.headers.get("content-type", "image/png"),
+                    headers={"Cache-Control": "private, max-age=300"})
+
+
 @app.get("/account")
 def account_page(request: Request, name_error: str = "", named: int = 0,
                  claim: str = "", trial: int = 0):

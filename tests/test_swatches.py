@@ -160,5 +160,53 @@ class SwatchTests(unittest.TestCase):
         self.assertEqual(again[first]["status"], "REJECTED")
 
 
+class PreviewRenderTests(unittest.TestCase):
+    """The studio's side of the door preview (S1). It is the customer's
+    artwork, so the endpoint sits behind the workspace token like
+    everything else — never auth-exempt."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-preview-"))
+        _redirect_home(self.tmp)
+        self.addCleanup(_restore_home)
+        self.client = TestClient(appmain.app)
+        self.client.post("/api/projects", json={"name": "The Oxcart"})
+
+    def test_it_is_not_in_the_auth_exempt_set(self):
+        """An open endpoint would publish a customer's approved artwork
+        to anyone who guessed the subdomain."""
+        self.assertNotIn("/api/preview-render", appmain._AUTH_EXEMPT)
+
+    def test_no_approved_panels_is_a_stated_empty(self):
+        r = self.client.get("/api/preview-render")
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["found"])
+        self.assertEqual(r.json()["production"], "The Oxcart",
+                         "'looked and found none' still names the studio")
+
+    def test_an_approved_panel_is_returned_with_its_identity(self):
+        from app import generate, paths, store as appstore
+        spec = {"specification_id": "BOARD-0001", "subject": "diner",
+                "mode": "CANON_EXTRACTION", "panels": [{"id": "P01"}]}
+        appstore.create_spec_from_dict(spec)
+        d = paths.BOARDS_DIR / "BOARD-0001"
+        d.mkdir(parents=True, exist_ok=True)
+        import json as _json
+        for cid, status in (("CAND-0001", "REJECTED"), ("CAND-0002", "APPROVED")):
+            (d / f"{cid}.json").write_text(_json.dumps({
+                "candidate_id": cid, "status": status}), encoding="utf-8")
+        r = self.client.get("/api/preview-render")
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertTrue(body["found"])
+        self.assertEqual(body["candidate"], "CAND-0002",
+                         "only APPROVED work goes on the door")
+        self.assertEqual(body["board"], "BOARD-0001")
+        self.assertEqual(body["production"], "The Oxcart")
+        self.assertIn("/api/specs/BOARD-0001/candidates/CAND-0002/image",
+                      body["image"])
+        self.assertEqual(body["count"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

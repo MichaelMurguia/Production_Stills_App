@@ -59,8 +59,11 @@
    correct rather than a placeholder — so it ships as the hatch, using
    the canonical class (HATCH_RULE), never a re-declared gradient. #}
 <div class="license-box door-box">
-  <div class="door-preview hatch">
-    <span class="hatch-chip">NO RENDERS YET &mdash; THE FIRST APPROVED PANEL LANDS HERE</span>
+  {# The hatch renders first and the preview fills it in — the page never
+     waits on a customer's studio. Until the answer arrives the chip says
+     what is true (we are asking), not what is unverified. #}
+  <div class="door-preview hatch" data-preview="{{ ws.id }}">
+    <span class="hatch-chip">LOOKING FOR YOUR LATEST APPROVED PANEL&hellip;</span>
   </div>
   <p class="door-name">{{ ws.subdomain }}{% if ws.domain_live %}
     <span class="live-chip mono">LIVE</span>{% endif %}</p>
@@ -72,3 +75,39 @@
 {% endif %}
 <p style="margin-top:12px"><a class="btn {{ "btn-secondary" if naming else "btn-primary" }}" target="_blank" rel="noopener"
    href="{{ door }}/login#{{ ws.access_token }}">Open your workspace</a></p>
+<script>
+// S1 — ask the store, which asks the studio. A failure leaves the hatch
+// standing with a stated condition; nothing here can break the door.
+(() => {
+  document.querySelectorAll("[data-preview]").forEach(async box => {
+    const id = box.dataset.preview;
+    const chip = box.querySelector(".hatch-chip");
+    try {
+      const r = await fetch(`/studio/${id}/preview`);
+      const d = r.ok ? await r.json() : { found: false };
+      if (!d.found) {
+        chip.textContent = "NO RENDERS YET \u2014 THE FIRST APPROVED PANEL LANDS HERE";
+        return;
+      }
+      const img = new Image();
+      img.alt = "";
+      img.onload = () => {
+        box.classList.remove("hatch");
+        box.innerHTML = "";
+        box.append(img);
+        const prov = document.createElement("span");
+        prov.className = "door-prov";
+        prov.textContent = [d.production, d.board].filter(Boolean)
+          .join(" \u00b7 ").toUpperCase();
+        box.append(prov);
+      };
+      img.onerror = () => {
+        chip.textContent = "NO RENDERS YET \u2014 THE FIRST APPROVED PANEL LANDS HERE";
+      };
+      img.src = d.src;
+    } catch (e) {
+      chip.textContent = "COULD NOT REACH YOUR STUDIO \u2014 THE DOOR STILL WORKS";
+    }
+  });
+})();
+</script>

@@ -153,6 +153,29 @@ better, assert that the next request is authenticated. And because
 must speak `https://testserver` or it will refuse to send it back and the
 round trip will fail against working code.
 
+### The workspace door's render preview (built 2026-08-06)
+
+The store cannot read a tenant's disk, so it asks. `GET
+/api/preview-render` on the **studio** returns one random approved
+panel's identity (production, board, candidate, image path) — and is
+deliberately **not** in `_AUTH_EXEMPT`, because an open endpoint would
+publish a customer's approved artwork to anyone who guessed the
+subdomain. The storefront authenticates server-to-server with the
+`sb_session` cookie set to that workspace's `access_token`, which it
+already holds.
+
+Two storefront routes, both owner-gated by `_studio_for()` (the
+signed-in account must own an ACTIVE workspace): `/studio/{id}/preview`
+returns the metadata, `/studio/{id}/preview.img` streams the bytes
+through the store so the studio's credential never reaches a browser.
+Answers are cached 5 minutes per workspace — a page reload must not
+hammer a customer's service.
+
+The door renders its hatch first and fills it in asynchronously: the
+account page never blocks on a tenant. Every failure — unreachable
+studio, no approved panels, a 404 on the image — lands on the hatch as a
+stated condition, and the door's Open button keeps working regardless.
+
 ### The admin hub (built 2026-08-06)
 
 `GET /admin` is the owner's one page: debug tools (store text editing),
