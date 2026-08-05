@@ -150,3 +150,32 @@ class OwnerChromeTests(unittest.TestCase):
     def test_the_armed_chip_states_its_real_exit(self):
         self.assertIn("EXIT ON /ADMIN",
                       self._client(self.owner).get("/").text)
+
+
+class ReviewLedgerTests(unittest.TestCase):
+    """The store's review queue must live where a design review looks.
+
+    Store items were logged only as changelog entries for one day
+    (2026-08-06) and the review could not find them — a changelog is
+    history, a table is a queue. This asserts the structure that fixed
+    it, so it cannot quietly regress."""
+
+    STORE_DOC = ROOT.parent / "STORE_DESIGN_SYSTEM.md"
+    APP_DOC = ROOT.parent / "app/static/DESIGN_SYSTEM.md"
+
+    def test_the_store_has_a_review_table_before_its_changelog(self):
+        text = self.STORE_DOC.read_text(encoding="utf-8")
+        self.assertIn("## Non-canon — awaiting review", text)
+        self.assertLess(text.index("## Non-canon — awaiting review"),
+                        text.index("## Changelog"),
+                        "the queue reads before the history, as in the app")
+        head = text.split("## Non-canon — awaiting review", 1)[1]
+        self.assertIn("| Date | What it is | Where |", head,
+                      "it must be a table, not prose")
+
+    def test_the_app_table_routes_a_reviewer_to_the_store(self):
+        text = self.APP_DOC.read_text(encoding="utf-8")
+        section = text.split("## Uncanonized patterns", 1)[1]
+        self.assertIn("STORE_DESIGN_SYSTEM.md", section,
+                      "a review that starts in the app's table must be "
+                      "told the store keeps its own")

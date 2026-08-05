@@ -114,6 +114,31 @@ reader is.
 
 ---
 
+## Non-canon — awaiting review
+
+**The store's review queue.** Same job as the app's `## Uncanonized
+patterns` table and deliberately in the same structural position — a
+designer asked to "review the non-canon items" reads THIS table, not the
+changelog. (The changelog records what changed; it is history, not a
+queue. Store items lived only there until 2026-08-06, and a design
+review could not find them.)
+
+Every new store feature lands here in the same commit that ships it —
+genuinely new patterns and pure reuse alike. At ~4 rows, tell the user
+the store has accumulated work worth a design review: they open their
+design-review Claude chat with this folder connected (re-synced so it
+sees current files) and ask it to review this table. The resulting plan
+implements against THIS file, never the app's. Ruled rows are deleted
+here and recorded as a dated `RULED (...)` changelog entry below.
+
+| Date | What it is | Where | What the designer should rule on |
+|---|---|---|---|
+| 2026-08-06 | **The operator console.** A new surface class for this store: an internal, owner-only page wearing full sales chrome — facts line, debug tools, trial minting, two Courier state tables (one-word states in status colors, never amber), and the previously curl-only operations as buttons. One amber fill (Mint). Reached by an `ADMIN` header link in Courier amber, left of the avatar, rendered only for an `OWNER_EMAILS` session — the first role-conditional item the store's chrome has carried | `/admin` (`admin.html`, `.admin-*` in store.css, `head-admin` in base.html) | Whether an internal console should wear the sales chrome at all (reduced chrome? its own header?); the amber `ADMIN` link against §8's four roles — it is arguably a fifth, a *role marker*, not fill/kicker/highlight/state; facts-line density |
+| 2026-08-06 | **The trial surfaces.** `/trial` is a two-door page: a card-trial box carrying a §4 trait list (four ■, one □ naming the charge) with the page's single fill, above a code-redemption box; a running trial replaces both with its state. The account page carries a **stated date pair** — the label reads `TRIAL — N DAYS LEFT` and a Courier line under it states the date AND the consequence separately (`CONVERTS … YOUR CARD IS CHARGED THEN` vs `ENDS … NO CARD ON FILE · THE STUDIO STOPS SERVING`), because those are two different facts. Entry points: a `Try free` header link for signed-out visitors and a Courier line on the cloud edition card (deliberately not a third fill) | `/trial` (`trial.html`), `account.html`, `index.html`, `base.html` | The two-door page's order, and whether the code box belongs on the same page at all; the date-pair copy; whether Business should also be trialable (only Personal is offered today) |
+| 2026-08-01 | **Studio naming terms + Claim/Rename button.** The account form's button reads "Claim name" while the studio wears its auto-assigned slug and "Rename" after; a faint terms line under the form states what a rename does and does not do. Built from canon — review copy/placement only. (The 2026-08-03 ruling covered the *success page* door; this account-page treatment was never ruled) | `account.html` | Copy and placement only |
+
+---
+
 ## Changelog
 
 - **2026-08-06** — RULED (user): the header carries the `ADMIN` link and

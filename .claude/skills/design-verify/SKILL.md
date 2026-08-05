@@ -121,9 +121,11 @@ contracts — every token used must be defined; a `var(--x)` with no `--x`
 renders as inherited ink and silently drops a designer's ruling, which is
 exactly how `--hold` was lost for five days).
 
-**Log** the feature as a dated `**Non-canon:**` entry in
-`STORE_DESIGN_SYSTEM.md`'s Changelog, in the same commit, naming what the
-designer should rule on.
+**Log** the feature as a row in `STORE_DESIGN_SYSTEM.md` →
+`## Non-canon — awaiting review`, in the same commit, naming what the
+designer should rule on. That table is the queue a review reads; the
+changelog below it is history. Logging to the changelog alone hides the
+work from the review (it did, 2026-08-06).
 
 ## Interaction states a screenshot cannot show — check by reading code
 

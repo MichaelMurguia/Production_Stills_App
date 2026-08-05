@@ -72,13 +72,14 @@ this folder connected (re-syncing it so it sees the current files) and ask it to
 review the Uncanonized table; it answers with a plan file to implement. Then
 keep working — do not block on it.
 
-**The store has the same cycle with a different ledger** (ruled
-2026-08-06). `STORE_DESIGN_SYSTEM.md` has no Uncanonized table; its
-convention is a dated `**Non-canon:**` entry in that file's Changelog,
-written in the same commit as the feature and naming what the designer
-should rule on. `RULED (...)` entries are the answers. When ~4
-`Non-canon:` entries have accumulated, tell the user the store is due a
-design review the same way — the resulting plan implements against
+**The store has the same cycle in its own file** (ruled 2026-08-06,
+corrected same day). Store features land in `STORE_DESIGN_SYSTEM.md` →
+`## Non-canon — awaiting review`, a table in the same structural position
+as this app's, written in the same commit as the feature. **Do not log
+store items only in that file's Changelog** — they were, and a design
+review could not find them: a changelog is history, a table is a queue.
+`RULED (...)` changelog entries record the answers as rows leave the
+table. Same ~4-row trigger; the resulting plan implements against
 `STORE_DESIGN_SYSTEM.md`, never the app's.
 
 **Also update `DESIGN_SYSTEM.md` when you:** add or reorder a pipeline stage

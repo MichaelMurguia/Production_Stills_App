@@ -833,6 +833,13 @@ files), re-sync the folder so it sees current files, and ask it to review this
 table. The resulting plan folds patterns into the sections above, and the rows
 are then deleted.
 
+**The store keeps its own queue.** This table covers the product app only.
+Storefront work lands in `STORE_DESIGN_SYSTEM.md` → `## Non-canon —
+awaiting review`, and is reviewed against that file's rules (its amber has
+four sanctioned roles; this file's scarcity rule does not apply there). A
+review pass should read both tables — they are different systems with
+different vocabularies, and a ruling for one is not a ruling for the other.
+
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
