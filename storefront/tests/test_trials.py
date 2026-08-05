@@ -791,3 +791,84 @@ class MailPathTests(unittest.TestCase):
                    follow_redirects=False)
         self.assertIn("FAILED", r.headers["location"])
         self.assertIn("535", r.headers["location"])
+
+
+class SmtpHandshakeTests(unittest.TestCase):
+    """Port decides the handshake. Calling starttls() on 465 hangs until
+    the timeout and reads exactly like a dead host — which is what
+    production was doing (2026-08-06)."""
+
+    def setUp(self):
+        from app import mailer
+        self.mailer = mailer
+        self.saved = (settings.SMTP_HOST, settings.SMTP_FROM,
+                      settings.SMTP_PORT, settings.SMTP_USER)
+        settings.SMTP_HOST, settings.SMTP_FROM = "smtp.test", "no-reply@test"
+        settings.SMTP_USER = ""
+
+        def restore():
+            (settings.SMTP_HOST, settings.SMTP_FROM,
+             settings.SMTP_PORT, settings.SMTP_USER) = self.saved
+        self.addCleanup(restore)
+
+    def _spy(self):
+        used = {}
+
+        class Fake:
+            def __init__(self, host, port, timeout=None):
+                used["cls"] = type(self).__name__
+                used["host"], used["port"] = host, port
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def starttls(self):
+                used["starttls"] = True
+
+            def login(self, *a):
+                pass
+
+            def send_message(self, m):
+                used["sent"] = True
+
+        class FakeSSL(Fake):
+            pass
+
+        import smtplib
+        real = (smtplib.SMTP, smtplib.SMTP_SSL)
+        smtplib.SMTP, smtplib.SMTP_SSL = Fake, FakeSSL
+        self.addCleanup(lambda: setattr(smtplib, "SMTP", real[0]))
+        self.addCleanup(lambda: setattr(smtplib, "SMTP_SSL", real[1]))
+        return used
+
+    def test_465_uses_implicit_tls_and_never_calls_starttls(self):
+        settings.SMTP_PORT = 465
+        used = self._spy()
+        self.mailer.send("a@b.test", "s", "b")
+        self.assertEqual(used["cls"], "FakeSSL")
+        self.assertNotIn("starttls", used)
+        self.assertTrue(used["sent"])
+
+    def test_587_stays_starttls(self):
+        settings.SMTP_PORT = 587
+        used = self._spy()
+        self.mailer.send("a@b.test", "s", "b")
+        self.assertEqual(used["cls"], "Fake")
+        self.assertTrue(used["starttls"])
+
+    def test_the_error_names_the_endpoint_it_tried(self):
+        settings.SMTP_PORT = 587
+        import smtplib
+        real = smtplib.SMTP
+
+        def boom(*a, **k):
+            raise OSError("timed out")
+        smtplib.SMTP = boom
+        self.addCleanup(setattr, smtplib, "SMTP", real)
+        with self.assertRaises(self.mailer.MailError) as ctx:
+            self.mailer.send("a@b.test", "s", "b")
+        self.assertIn("smtp.test:587", str(ctx.exception))
+        self.assertIn("STARTTLS", str(ctx.exception))

@@ -28,17 +28,28 @@ def send(to: str, subject: str, body: str) -> None:
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
+    # Port decides the handshake, and getting it wrong looks exactly like
+    # a dead host: 465 is implicit TLS (the server speaks TLS from the
+    # first byte), 587/25 are plaintext-then-STARTTLS. Calling starttls()
+    # on 465 hangs until the timeout — which is what production was
+    # doing (2026-08-06: "Connection unexpectedly closed: timed out").
+    implicit_tls = int(settings.SMTP_PORT) == 465
+    # Sends run in background tasks now, so this bounds a worker rather
+    # than a page load — but a wedged connection still holds a thread.
+    opener = smtplib.SMTP_SSL if implicit_tls else smtplib.SMTP
     try:
-        # Sends run in background tasks now, so this bounds a worker
-        # rather than a page load — but a wedged connection still holds a
-        # thread, so keep it short.
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as s:
-            s.starttls()
+        with opener(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as s:
+            if not implicit_tls:
+                s.starttls()
             if settings.SMTP_USER:
                 s.login(settings.SMTP_USER, settings.SMTP_PASS)
             s.send_message(msg)
     except Exception as e:
-        raise MailError(f"mail send failed: {e}") from e
+        # The host and port are not secrets, and without them the error
+        # is unactionable — a timeout says nothing about WHICH endpoint.
+        raise MailError(
+            f"mail send failed via {settings.SMTP_HOST}:{settings.SMTP_PORT} "
+            f"({'implicit TLS' if implicit_tls else 'STARTTLS'}): {e}") from e
 
 
 # --- what actually happened, for the owner --------------------------------
