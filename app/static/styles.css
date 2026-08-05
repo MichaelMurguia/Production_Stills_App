@@ -1611,9 +1611,12 @@ details.meta pre {
 /* One action bar (PANEL_CARD_PLAN P7): status fenced left, use-this-take
    and derive-from-it split by an internal rule, Reject fenced right —
    a destructive action never sits adjacent to a promotion. Must not wrap. */
+/* T1/T2 (TAKE_ACTIONS, 2026-08-06): the row WRAPS, never scrolls —
+   horizontal scroll on navigation hides actions the user cannot then
+   find. It carries verbs only; state and identity moved onto the image. */
 .act-bar {
   display: flex; align-items: center; border: 1px solid var(--line);
-  margin-top: 10px; min-height: 42px; overflow-x: auto; white-space: nowrap;
+  margin-top: 10px; min-height: 42px; flex-wrap: wrap;
 }
 .act-zone { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; }
 .act-left { border-right: 1px solid var(--line); }
@@ -1621,13 +1624,27 @@ details.meta pre {
 .act-use { margin-left: 2px; }
 .act-derive { flex: 1; }
 .act-right { border-left: 1px solid var(--line); margin-left: auto; }
+/* T2: peer verbs render in one grammar. They are all mk(…, "ghost") in
+   the source, so they are all ghost BUTTONS on screen — a bare text link
+   in a button row states a hierarchy the code does not have. */
 .act-bar .ghost, .act-bar .danger {
-  border: none; background: transparent; padding: 4px 2px;
+  border: 1px solid var(--line); background: transparent; padding: 4px 12px;
 }
-.act-bar .ghost:hover { color: var(--ink); text-decoration: underline; background: transparent; }
-.act-bar .danger { color: var(--bad); }
-.act-bar .danger:hover { text-decoration: underline; background: transparent; }
+.act-bar .ghost:hover { color: var(--ink); border-color: var(--ink-faint);
+  background: transparent; }
+.act-bar .danger { color: var(--bad); border-color: var(--line); }
+.act-bar .danger:hover { border-color: var(--bad); background: transparent; }
+/* Approve is the row's consequential act; --ok is its state colour, not
+   an emphasis, so it keeps the border it already had. */
 .act-bar .act-approve-btn { border: 1px solid var(--ok); color: var(--ok); padding: 4px 12px; }
+
+/* T1: the tags themselves — legible on any take, on their own ground. */
+.stage-shot { position: relative; }
+.shot-tag { position: absolute; background: rgba(11, 12, 14, .82);
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .06em; padding: 4px 8px; }
+.shot-tag-state { top: 10px; left: 10px; }
+.shot-tag-id { right: 10px; bottom: 10px; color: var(--ink-dim); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;

@@ -53,9 +53,21 @@
 </div>
 {% endif %}
 {% if claimed %}
-<div class="license-box">
-  <p class="license-label">YOUR STUDIO{% if ws.domain_live %} <span class="live-chip mono">LIVE</span>{% endif %}</p>
-  <p class="license-token">{{ ws.url }}</p>
+{# S1/S2 (TAKE_ACTIONS, mock store-14a): the door shows the work and the
+   NAME leads. The render preview needs an endpoint on the studio that
+   does not exist yet, and the plan is explicit that the hatch state is
+   correct rather than a placeholder — so it ships as the hatch, using
+   the canonical class (HATCH_RULE), never a re-declared gradient. #}
+<div class="license-box door-box">
+  <div class="door-preview hatch">
+    <span class="hatch-chip">NO RENDERS YET &mdash; THE FIRST APPROVED PANEL LANDS HERE</span>
+  </div>
+  <p class="door-name">{{ ws.subdomain }}{% if ws.domain_live %}
+    <span class="live-chip mono">LIVE</span>{% endif %}</p>
+  {# An address is machine data: Courier, faint, beneath the name it
+     serves — it was only loud because it held the biggest type. #}
+  <p class="door-url mono"><a href="{{ door }}/login#{{ ws.access_token }}"
+     target="_blank" rel="noopener">{{ ws.url | replace("https://", "") }} &#8599;</a></p>
 </div>
 {% endif %}
 <p style="margin-top:12px"><a class="btn {{ "btn-secondary" if naming else "btn-primary" }}" target="_blank" rel="noopener"

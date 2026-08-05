@@ -63,8 +63,9 @@
       <button class="btn btn-secondary" type="submit">{{ "Rename" if p.workspace.name_claimed else "Claim name" }}</button>
     </form>
     <p class="name-preview mono" aria-live="polite"></p>
-    <p class="hero-sub" style="margin-top:8px">Your studio's address is
-    <span class="mono">{{ p.workspace.subdomain or "yourname" }}.{{ tenant_base }}</span></p>
+    {# The address led the door two blocks up (S2) — stating it a third
+       time, after WILL BE already previews it live, is the kind of
+       repetition the mock deliberately does not have. #}
     {# S3 ruling: lead with the consequence that costs something. A user
        skimming a faint line reads the first clause only, and the clause
        that can surprise them later is the release, not the reassurance. #}

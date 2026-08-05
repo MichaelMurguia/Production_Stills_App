@@ -658,3 +658,19 @@ body {
 .order a.btn, .order a.btn-google { text-decoration: none; }
 .order a.btn-primary { color: var(--accent-ink); }
 .order a.btn-secondary { color: var(--ink); }
+
+/* S1/S2 — the workspace door. The studio NAME is the card's headline:
+   it is what the user chose, what they rename, and how they refer to the
+   place. The URL demotes to a Courier line beneath it. */
+.door-box { padding: 0; overflow: hidden; }
+.door-preview { position: relative; height: 180px; }
+.door-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.door-prov { position: absolute; right: 10px; bottom: 10px;
+  background: rgba(11, 12, 14, .82); border: 1px solid var(--line);
+  color: var(--ink-dim); font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .06em; padding: 4px 8px; }
+.door-name { font-size: 22px; font-weight: 600; color: var(--ink);
+  padding: 16px 20px 0; display: flex; align-items: center; gap: 10px; }
+.door-url { padding: 4px 20px 18px; font-size: 11.5px; }
+.door-url a { color: var(--ink-faint); text-decoration: none; }
+.door-url a:hover { color: var(--ink-dim); }

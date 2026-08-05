@@ -185,6 +185,27 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".wiz-span3", ["grid-column: span 3"])
         self.assertNotIn(".wiz-cols-board", CSS)
 
+    def test_take_row_wraps_and_its_verbs_are_peers(self):
+        """T1/T2: horizontal scroll on navigation hides actions the user
+        then cannot find, and six verbs that are all ghost in the source
+        must all be ghost buttons on screen."""
+        b = block(".act-bar")
+        self.assertIn("flex-wrap: wrap", b)
+        self.assertNotIn("overflow-x: auto", b,
+                         "the row must wrap, never scroll")
+        self.assert_decls(".act-bar .ghost, .act-bar .danger",
+                          ["border: 1px solid var(--line)"])
+        self.assert_decls(".act-bar .act-approve-btn",
+                          ["border: 1px solid var(--ok)", "color: var(--ok)"])
+
+    def test_take_tags_ride_the_image(self):
+        self.assert_decls(".stage-shot", ["position: relative"])
+        self.assert_decls(".shot-tag", [
+            "position: absolute", "background: rgba(11, 12, 14, .82)",
+            "border: 1px solid var(--line)", "font-family: var(--mono)"])
+        self.assert_decls(".shot-tag-state", ["top: 10px", "left: 10px"])
+        self.assert_decls(".shot-tag-id", ["right: 10px", "bottom: 10px"])
+
     def test_hidden_always_wins(self):
         """A hiding utility that a component can out-order is not a
         utility. .wv-tag beat .hidden on source order and the Bible's

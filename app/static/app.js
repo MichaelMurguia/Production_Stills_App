@@ -5675,11 +5675,14 @@ async function renderBoardPanels(specId) {
     const stagedHtml = !staged ? "" : `
       <div class="stage-shot" title="Click to open at full size">
         <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
+        <!-- T1 (TAKE_ACTIONS): state and identity ride the image so the
+             row beneath carries verbs only and can fit. A chip swallows
+             its own click; the picture opens the lightbox. -->
+        <span class="shot-tag shot-tag-state shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
+        <span class="shot-tag shot-tag-id">${esc(staged.candidate_id)}${stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
       </div>
       <div class="act-bar">
         <span class="act-zone act-left">
-          <span class="shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
-          ${stagedRef ? `<span class="badge LOCKED" title="This take was promoted into the reference library — it anchors future generations">REF · ${esc(stagedRef)}</span>` : ""}
           <span data-f="act-approve"></span>
         </span>
         <span class="act-zone act-use" data-f="act-use"></span>

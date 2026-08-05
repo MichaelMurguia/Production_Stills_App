@@ -107,6 +107,15 @@ become a section label, it becomes the label. Courier condition lines on
 step headings carry the surviving conditions; jurisdiction pairs read
 `SETS … / NOT …`.
 
+**Tags ride the image; verbs sit beneath it** (T1, ruled 2026-08-06).
+Where a picture is the evidence, its state and identity overlay the
+picture — state chip top-left, identity bottom-right, each on
+`rgba(11,12,14,.82)` with a `--line` border so they read on any render —
+and the row below carries verbs only. **Horizontal scroll on navigation
+is never acceptable**: an action that scrolls out of view is an action
+the user cannot find, so a row of verbs wraps to a second line and never
+scrolls. A chip swallows its own click; the picture opens the lightbox.
+
 **The labelled table** (D4, canon): a data table gets a Courier header
 row on the same fixed grid tracks as its rows (worked example: the
 locations table, `minmax(0,1fr) 240px 120px 190px`), group headers on
@@ -507,6 +516,13 @@ states it verbatim. Plates live in `app/static/look_library/<slug>/`
 with a `looks.json` manifest and enter the library with
 `source: "look:<slug>"` so provenance survives.
 
+**A row of peer verbs renders in one grammar** (T2, ruled 2026-08-06).
+If they are all `mk(…, "ghost")` in the source they are all ghost buttons
+on screen; a bare text link in a button row states a hierarchy the code
+does not have. The row's one consequential act may carry a status colour
+(Approve keeps its `--ok` border and text) — that is its state, not an
+emphasis.
+
 **The hatch is the only empty-image surface** (HATCH_RULE, ruled
 2026-08-06). Wherever an image is expected and absent — panel slots, take
 thumbs, board frames, reference rows, the storefront's workspace-door
@@ -890,6 +906,12 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
+
+- **2026-08-06** — Take viewer (TAKE_ACTIONS T1–T3): state and identity
+  moved onto the image, the action row carries verbs only and wraps
+  instead of scrolling, and the six peer verbs all render as ghost
+  buttons — they were one button and five bare text links, which read as
+  one action plus five footnotes.
 
 - **2026-08-06** — The hatch canonized as the only empty-image surface
   (HATCH_RULE H1–H3): three classes, always 135°, never re-declared

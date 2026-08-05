@@ -204,6 +204,21 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 
 ## Changelog
 
+- **2026-08-06** — RULED (TAKE_ACTIONS S1–S2, mock store-14a): the workspace
+  door leads with the **studio name** at 22px Archivo 600 — it is what the
+  user chose, what they rename, and how they refer to the place — with
+  `LIVE` beside it and the URL demoted to a faint Courier line beneath.
+  An address is machine data; it was only loud because it held the biggest
+  type. The account page's third statement of the same address is deleted.
+  **S1 ships its hatch state, deliberately:** the render preview needs a
+  `GET /api/preview-render` on the studio that does not exist yet, and the
+  plan is explicit that the hatch is correct rather than a placeholder. It
+  uses the canonical `.hatch` class per HATCH_RULE with its stated chip.
+  Note for whoever builds the endpoint: it must NOT be unauthenticated —
+  it would publish a customer's approved artwork — so it needs the
+  workspace access token and the store must proxy the image, which is why
+  it is a follow-up rather than a line of markup.
+
 - **2026-08-06** — RULED (SIGNIN_BRANDING G1–G3): `### 10. Provider marks`
   established. The Google button is Google's official dark-neutral variant
   with the full-colour G at 18px, its values deliberately outside the token
