@@ -74,24 +74,22 @@
     {% endif %}
   </div>
 
-  {# --- the code trial --------------------------------------------------- #}
-  <div class="license-box">
-    <p class="license-label">HAVE A CODE?</p>
-    <h2 style="font-size:20px;margin-bottom:10px">Redeem a trial code</h2>
-    <p class="hero-sub">A code carries its own length and needs no card at all.
-    If someone at Screenboard gave you one, it goes here.</p>
+  {# --- the escape hatch (S2) ---------------------------------------------
+     Not a peer of the card trial: a second box of equal weight asks every
+     visitor to choose between paths, and redemption is only available to
+     someone who already knows they have a code. Presented as a peer it
+     plants "do I need a code?" in everyone who doesn't. One line,
+     expanding in place. #}
+  <details class="code-hatch"{% if code or error %} open{% endif %}>
+    <summary>Have a code? <span class="hatch-act">Redeem it</span></summary>
     <form method="post" action="/trial/redeem" class="recover-form">
       <input type="text" name="code" value="{{ code }}" spellcheck="false"
              placeholder="{{ code_prefix }}-A1B2-C3D4" required
              style="text-transform:uppercase;font-family:var(--mono)">
       <button class="btn btn-secondary" type="submit">Redeem</button>
     </form>
-    {% if not email %}
-    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;margin-top:12px;color:var(--ink-faint)">
-      SIGNING IN COMES NEXT — A TRIAL BELONGS TO AN ACCOUNT, AND YOUR CODE IS KEPT WHILE YOU DO IT
-    </p>
-    {% endif %}
-  </div>
+    <p class="hatch-note mono">A CODE CARRIES ITS OWN LENGTH AND NEEDS NO CARD AT ALL{% if not email %}<br>SIGNING IN COMES NEXT — A TRIAL BELONGS TO AN ACCOUNT, AND YOUR CODE IS KEPT WHILE YOU DO IT{% endif %}</p>
+  </details>
 
   <p class="hero-sub">Rather just buy it? <a href="/#pricing" style="color:var(--ink)">The editions are here</a>.</p>
   {% endif %}

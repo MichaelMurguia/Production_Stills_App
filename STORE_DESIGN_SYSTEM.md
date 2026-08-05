@@ -68,6 +68,15 @@ stated condition (SETUP notice in `--hold`, disabled control, Courier
 `UNAVAILABLE — …` line). Never a toast, never a red error, never a
 hidden control.
 
+**A dated future state names the date and the consequence as two facts**
+(S2, ruled 2026-08-06). "Ends" alone is not a consequence. Worked
+example: a trial's account line reads `TRIAL — N DAYS LEFT` with a
+Courier line beneath stating both — `CONVERTS 18 SEP 2026 · YOUR CARD IS
+CHARGED THEN AND THE STUDIO KEEPS RUNNING` for a card trial versus
+`ENDS 18 SEP 2026 · NO CARD ON FILE · THE STUDIO STOPS SERVING ON THAT
+DATE` for a granted one. The two futures are different and a single
+"ends" sentence would flatten them.
+
 ### 6. Provenance lines
 A faint Courier line naming what is shown accompanies gallery sections
 (`SHOWN — THE BELTMINERS · EXT. CHARLIE'S CABIN · KYRA COSTUME AND ACTION
@@ -112,6 +121,43 @@ is a **status** kicker, not an amber one. Use the status color when the
 label names a state the software enforces, amber when it names where the
 reader is.
 
+### 9. Internal surfaces
+
+Ruled 2026-08-06 (S1 + ADMIN_CONSOLE_FIX), from the operator console.
+
+**An owner-only page wears the store's shell and none of its
+persuasion.** Header, footer and type scale stay — it is the same site,
+one nav, one account session, and inventing a second chrome for one page
+is a maintenance tax with no reader benefit. The sales furniture does
+not come with it: no hero rhythm, no trait lists, no provenance lines,
+no marquee. The body is a Courier console — facts line, state tables,
+buttons. **One fill maximum**, on the page's single consequential act.
+
+**A link into an internal surface is styled exactly like the public
+links beside it.** Access is not a visual style. The console's `Admin`
+link is 13px `--ink-dim` sans, sentence case, identical to its
+neighbours, separated by a hairline rather than by typeface — and *not*
+one ink tier down, which is a quieter version of the same mismatch. Who
+may see a link is handled by not rendering it for anyone else. An amber
+"role marker" would be the first amber whose meaning is *who you are*
+rather than *what to do* — which is how a four-role budget becomes six.
+
+**A field with a known answer set is a picker.** Free text is for names,
+notes and addresses only. A text input for a two-value enum lets a typo
+create a record for something that does not exist. A parenthetical
+instruction inside a label (`CODE STALE IN (DAYS, 0 = NEVER)`) is prose
+in disguise: the picker states the same fact as a control.
+
+**The console states and acts.** It is the one surface with nobody to
+persuade, so explanatory paragraphs are deleted outright; what survives
+is the operational fact each was burying, as a Courier line placed where
+it answers a question at the moment it is asked (`CARD TRIALS ARE
+STRIPE'S · ONLY STRIPE ENDS ONE` belongs under the trials table, where a
+reader is wondering why some rows have no End now). One title per page —
+the Courier kicker is the heading; no `<h1>` beside it. Machine tables
+get fixed column tracks so values stop reflowing; row action buttons are
+verbs and render in Archivo, not the table's Courier.
+
 ---
 
 ## Non-canon — awaiting review
@@ -133,13 +179,36 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 
 | Date | What it is | Where | What the designer should rule on |
 |---|---|---|---|
-| 2026-08-06 | **The operator console.** A new surface class for this store: an internal, owner-only page wearing full sales chrome — facts line, debug tools, trial minting, two Courier state tables (one-word states in status colors, never amber), and the previously curl-only operations as buttons. One amber fill (Mint). Reached by an `ADMIN` header link in Courier amber, left of the avatar, rendered only for an `OWNER_EMAILS` session — the first role-conditional item the store's chrome has carried | `/admin` (`admin.html`, `.admin-*` in store.css, `head-admin` in base.html) | Whether an internal console should wear the sales chrome at all (reduced chrome? its own header?); the amber `ADMIN` link against §8's four roles — it is arguably a fifth, a *role marker*, not fill/kicker/highlight/state; facts-line density |
-| 2026-08-06 | **The trial surfaces.** `/trial` is a two-door page: a card-trial box carrying a §4 trait list (four ■, one □ naming the charge) with the page's single fill, above a code-redemption box; a running trial replaces both with its state. The account page carries a **stated date pair** — the label reads `TRIAL — N DAYS LEFT` and a Courier line under it states the date AND the consequence separately (`CONVERTS … YOUR CARD IS CHARGED THEN` vs `ENDS … NO CARD ON FILE · THE STUDIO STOPS SERVING`), because those are two different facts. Entry points: a `Try free` header link for signed-out visitors and a Courier line on the cloud edition card (deliberately not a third fill) | `/trial` (`trial.html`), `account.html`, `index.html`, `base.html` | The two-door page's order, and whether the code box belongs on the same page at all; the date-pair copy; whether Business should also be trialable (only Personal is offered today) |
-| 2026-08-01 | **Studio naming terms + Claim/Rename button.** The account form's button reads "Claim name" while the studio wears its auto-assigned slug and "Rename" after; a faint terms line under the form states what a rename does and does not do. Built from canon — review copy/placement only. (The 2026-08-03 ruling covered the *success page* door; this account-page treatment was never ruled) | `account.html` | Copy and placement only |
+
+*(empty — NON_CANON_REVIEW_2026-08-06 + ADMIN_CONSOLE_FIX ruled all three rows, 2026-08-06)*
 
 ---
 
 ## Changelog
+
+- **2026-08-06** — RULED (ADMIN_CONSOLE_FIX X1–X4, mocks 12a/12b): the
+  console's density was **corrected on review of the built page, not
+  ratified** — S1 had ratified it from the queue's description. The header
+  link drops mono/uppercase/tracking/amber for an exact match with its
+  neighbours plus a hairline; every explanatory paragraph is deleted (three
+  out, three Courier lines in, one relocated to the table it explains); the
+  duplicate `<h1>` goes and the kicker becomes the heading; EDITION and CODE
+  EXPIRES become pickers on a fixed-track grid; both tables get fixed column
+  tracks and their row acts render in Archivo. Folded into `### 9`.
+- **2026-08-06** — RULED (S1): `### 9. Internal surfaces` established — an
+  owner-only page wears the store's shell and none of its persuasion, one
+  fill maximum, state tables in status colors. The `ADMIN` link is not a
+  fifth amber role: §8's four roles all answer "where should the reader look
+  next", and an owner already knows they are an owner.
+- **2026-08-06** — RULED (S2): the trial page's two doors become one door
+  and an escape hatch — the code box collapses to a single expanding line,
+  because a peer box plants "do I need a code?" in every visitor who does
+  not have one. The date pair is canon (§5). Entry points ratified as built.
+  Business is deliberately not self-serve trialable and the cloud card now
+  states that position rather than leaving it to be discovered.
+- **2026-08-06** — RULED (S3): studio naming copy and placement ratified;
+  the terms line now leads with the consequence that costs something (the
+  released name), because a skimmed faint line is read first-clause-only.
 
 - **2026-08-06** — RULED (user): the header carries the `ADMIN` link and
   nothing else. The Debug toggle added to the header on 2026-08-03 is

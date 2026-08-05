@@ -568,3 +568,18 @@ body {
 .people-table col.p-studio { width: 170px; }
 .people-table col.p-act { width: 104px; }
 .admin-act { padding: 3px 10px; font-size: 10.5px; font-family: var(--sans); }
+
+/* S2 — the code door is an escape hatch, not a second front door. One
+   line that expands in place; no box, no weight of its own. */
+.code-hatch { margin-top: 22px; border-top: 1px solid var(--line-soft);
+  padding-top: 18px; }
+.code-hatch > summary { cursor: pointer; color: var(--ink-dim); font-size: 14px;
+  list-style: none; }
+.code-hatch > summary::-webkit-details-marker { display: none; }
+.code-hatch > summary::before { content: "+ "; color: var(--ink-faint); }
+.code-hatch[open] > summary::before { content: "− "; }
+.code-hatch > summary:hover { color: var(--ink); }
+.hatch-act { color: var(--ink); text-decoration: underline;
+  text-underline-offset: 3px; }
+.hatch-note { font-size: 10px; letter-spacing: .06em; color: var(--ink-faint);
+  line-height: 1.7; margin-top: 10px; }
