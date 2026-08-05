@@ -238,3 +238,54 @@ class ReviewLedgerTests(unittest.TestCase):
         self.assertIn("STORE_DESIGN_SYSTEM.md", section,
                       "a review that starts in the app's table must be "
                       "told the store keeps its own")
+
+
+class GoogleButtonTests(unittest.TestCase):
+    """GOOGLE_SIGNIN_SNIPPET.html is the authority for this element. The
+    branding values are not ours to tune — an approved button that has
+    been "adjusted to fit" is no longer an approved button — so the
+    contract pins them literally, including the radius this
+    square-cornered product yields on."""
+
+    def test_the_branding_values_are_exact(self):
+        b = block(".btn-google")
+        for decl in ("background: #131314", "border: 1px solid #8E918F",
+                     "color: #E3E3E3", "font-size: 14px", "font-weight: 500",
+                     "gap: 12px", "min-height: 40px",
+                     "font-family: 'Roboto', 'Archivo', sans-serif"):
+            self.assertIn(decl, b, f".btn-google: missing '{decl}'")
+
+    def test_the_radius_exception_holds(self):
+        """The one place --radius: 0 yields. A modified sign-in button
+        reads as a phishing affordance to the users trained to trust the
+        real one."""
+        self.assertIn("border-radius: 4px", block(".btn-google"))
+
+    def test_the_radius_never_leaks_to_anything_else(self):
+        stray = [ln.strip() for ln in CSS.splitlines()
+                 if "border-radius" in ln and "0" not in ln.split("border-radius")[1][:6]]
+        self.assertEqual(len(stray), 1,
+                         f"only the Google button may be round: {stray}")
+
+    def test_the_mark_is_the_shipped_asset_not_a_rebuild(self):
+        svg = ROOT / "app/static/storefront_img/google-g.svg"
+        self.assertTrue(svg.exists(), "the official G asset must be served locally")
+        body = svg.read_text(encoding="utf-8")
+        for colour in ("#EA4335", "#4285F4", "#FBBC05", "#34A853"):
+            self.assertIn(colour, body, "the G is full-colour, never mono")
+        signin = (TEMPLATES / "signin.html").read_text(encoding="utf-8")
+        self.assertIn("/static/storefront_img/google-g.svg", signin)
+        self.assertNotIn("<svg", signin, "the mark is never inlined by hand")
+
+    def test_only_googles_approved_strings_are_used(self):
+        signin = (TEMPLATES / "signin.html").read_text(encoding="utf-8")
+        self.assertIn("Sign in with Google", signin)
+        self.assertIn("Sign up with Google", signin)
+        self.assertNotIn("Continue with Google", signin,
+                         "the snippet names this string forbidden")
+        self.assertNotIn("Log in with Google", signin)
+
+    def test_no_google_fonts_link_for_roboto(self):
+        """The snippet forbids adding one; Roboto is meant to be bundled."""
+        base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
+        self.assertNotIn("Roboto", base)

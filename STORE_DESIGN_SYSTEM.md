@@ -172,6 +172,25 @@ their brand icon. **Our amber stays on our own actions**: with Google
 wearing its own mark, `Email me a sign-in link` is the page's fill in
 both configurations, and the two no longer compete in one visual voice.
 
+**The branding values are not ours to tune.** An approved button that has
+been "adjusted to fit" is no longer an approved button. Ship the delivered
+snippet's values literally: `#131314` fill, `#8E918F` 1px stroke, `#E3E3E3`
+Roboto Medium 14px, the 18×18 full-colour G — never mono, never on a
+coloured chip — 40px minimum height, 12px gap and padding.
+
+**The radius exception, stated.** This product is square-cornered
+(`--radius: 0`). Google's mark specifies **4px**, and the third-party brand
+wins inside its own button: a modified sign-in button reads as a phishing
+affordance to exactly the users trained to trust the real one. **Nothing
+else on the page borrows this radius**, and a contract asserts it stays the
+only rounded rule in the stylesheet.
+
+**The mark is a shipped asset, never rebuilt.** `google-g.svg` is served
+locally from `storefront_img/` — never hotlinked, never recoloured, never
+hand-inlined as paths. **Only Google's own strings**: `Sign in with Google`
+and `Sign up with Google` by context; the alternatives the guidelines
+exclude are excluded here too, and the contract fails the build on them.
+
 Sibling to the app's icon rule (LobeHub tiles): *tiles identify a
 provider inside our chrome; sign-in buttons are the provider's chrome and
 follow the provider's guidelines.*
@@ -203,6 +222,20 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 ---
 
 ## Changelog
+
+- **2026-08-06** — CORRECTION (GOOGLE_SIGNIN_SNIPPET.html, delivered): the
+  first pass at §10 was built from the plan's prose and got three things
+  wrong. The snippet is the authority for its element and now ships
+  transliterated: **4px radius** (the stated exception — the one place this
+  square-cornered product yields), the **shipped `google-g.svg` asset**
+  instead of hand-written paths, and Google's **approved string** — the
+  earlier build used the one the snippet names forbidden, which the mock
+  still shows. Snippet outranks mock. Also removed the Google Fonts
+  `<link>` for Roboto that the first pass added: the snippet forbids it.
+  **Still outstanding:** Roboto is not bundled — no font binary exists in
+  the repo and none can be authored here — so the button renders in
+  Archivo via the snippet's own fallback stack until the two .woff2 files
+  are added to the storefront. Everything else about the button is exact.
 
 - **2026-08-06** — RULED (TAKE_ACTIONS S1–S2, mock store-14a): the workspace
   door leads with the **studio name** at 22px Archivo 600 — it is what the

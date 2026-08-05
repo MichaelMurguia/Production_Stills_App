@@ -29,6 +29,6 @@ delta as new instructions.
 | NON_CANON_REVIEW_2026-08-06.md (A1, S1–S3) | 2026.08.04.73 | emptied BOTH queues — app Uncanonized table and store Non-canon table |
 | SWATCH_GENERATE_RULING.md (A1) | 2026.08.04.73 | act-where-condition-is-met canonized as the pair to anchored explanation |
 | HATCH_RULE.md (H1–H3) | 2026.08.04.79 | audit found zero drift in app/; store gained a mirrored copy + drift contract |
-| SIGNIN_BRANDING_PLAN.md (G1–G3) | 2026.08.04.79 | Roboto deviation reported in STORE_DESIGN_SYSTEM changelog |
+| SIGNIN_BRANDING_PLAN.md (G1–G3) | 2026.08.04.79, corrected .80 | first pass built from prose; GOOGLE_SIGNIN_SNIPPET.html + google-g.svg later delivered and shipped verbatim (radius, asset, approved string). Roboto still unbundled |
 | TAKE_ACTIONS_PLAN.md (T1–T3, S1–S2) | 2026.08.04.79 | S1 shipped as the hatch state; render preview needs a tenant endpoint (see changelog) |
 | README_2026-08-06.md (bundle index) | 2026.08.04.79 | 3 of its 6 entries were resurrected ghosts already shipped in .73 |

@@ -624,20 +624,41 @@ body {
   padding: 6px 12px; white-space: nowrap; max-width: calc(100% - 24px);
   overflow: hidden; text-overflow: ellipsis; }
 
-/* G1 (SIGNIN_BRANDING) — Google's official dark-neutral button. These
-   values come from Google's branding guidelines and are deliberately NOT
-   tokens: restyling a provider's mark to our palette is exactly what the
-   guidelines forbid. Do not "fix" the hexes to match the design system.
-   Roboto is requested in the font link with var(--sans) as the fallback. */
+/* G1 (SIGNIN_BRANDING) — GOOGLE_SIGNIN_SNIPPET.html, transliterated.
+   THE BRANDING VALUES ARE NOT OURS TO TUNE: Google's guidelines fix
+   them, and an approved button that has been "adjusted to fit" is no
+   longer an approved button. Do not convert these hexes to tokens.
+
+   THE RADIUS EXCEPTION, STATED: this product is square-cornered
+   (--radius: 0). Google's mark specifies 4px and the third-party brand
+   wins inside its own button, because a modified sign-in button reads
+   as a phishing affordance to exactly the users trained to trust the
+   real one. Nothing else on the page borrows this radius. */
 .btn-google {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 10px; height: 40px; padding: 0 12px; min-width: 220px;
-  background: #131314; border: 1px solid #8E918F; border-radius: 0;
-  font-family: 'Roboto', var(--sans); font-size: 14px; font-weight: 500;
-  color: #E3E3E3; text-decoration: none; cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  background: #131314;
+  border: 1px solid #8E918F;
+  border-radius: 4px;              /* Google's spec — see note above */
+  font-family: 'Roboto', 'Archivo', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #E3E3E3;
+  cursor: pointer;
+  text-decoration: none;
 }
-.btn-google:hover { border-color: #E3E3E3; }
-.btn-google svg { width: 18px; height: 18px; flex: none; }
+.btn-google:hover  { background: #1c1c1e; }
+.btn-google:active { background: #26262a; }
+.btn-google:focus-visible { outline: 2px solid #8E918F; outline-offset: 2px; }
+.btn-google img { display: block; width: 18px; height: 18px; flex: none; }
+/* The snippet's button is width:100%; the mock shows it at the width of
+   the form beside it, so its wrapper — not the button — carries that. */
+.google-slot { max-width: 420px; margin-top: 26px; }
 /* The OR divider: two hairlines and a Courier word. */
 .or-rule { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px;
   max-width: 420px; }
