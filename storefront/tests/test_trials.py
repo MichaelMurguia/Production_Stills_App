@@ -630,3 +630,76 @@ class BothEditionsTrialTests(unittest.TestCase):
         page = TestClient(store).get("/trial").text
         self.assertIn("Start Personal Trial", page)
         self.assertNotIn("Start Business Trial", page)
+
+
+class ExpiryPickerTests(unittest.TestCase):
+    """CODE EXPIRES is the code's own shelf life, counted from minting —
+    a different clock from DAYS, which is the trial's length counted from
+    redemption. The picker offers the common answers and defers to a
+    number field for anything else (user, 2026-08-06)."""
+
+    def setUp(self):
+        self.saved_tok = settings.ADMIN_EXPORT_TOKEN
+        self.saved_owners = settings.OWNER_EMAILS
+        settings.ADMIN_EXPORT_TOKEN = "expiry-token"
+        self.owner = f"expiry-{uuid.uuid4().hex[:8]}@example.com"
+        settings.OWNER_EMAILS = {self.owner}
+        self.addCleanup(setattr, settings, "ADMIN_EXPORT_TOKEN", self.saved_tok)
+        self.addCleanup(setattr, settings, "OWNER_EMAILS", self.saved_owners)
+        self.c = _signed_in(self.owner)
+
+    def _mint(self, **form):
+        self.c.post("/admin/trials/new", data={
+            "token": "", "days": 30, "tier": "personal", "max_uses": 1,
+            "note": f"probe {uuid.uuid4().hex[:6]}", **form})
+        with db.session() as s:
+            row = s.scalars(select(db.TrialCode).order_by(
+                db.TrialCode.id.desc())).first()
+            s.expunge_all()
+            return row
+
+    def test_the_picker_offers_five_ten_and_custom(self):
+        page = self.c.get("/admin").text
+        for value in ('value="0"', 'value="5"', 'value="10"',
+                      'value="30"', 'value="90"', 'value="custom"'):
+            self.assertIn(value, page)
+        self.assertIn("valid_days_custom", page)
+
+    def test_a_picked_value_sets_the_shelf_life(self):
+        row = self._mint(valid_days="5")
+        self.assertIsNotNone(row.expires_at)
+        days = round((row.expires_at - dt.datetime.utcnow()).total_seconds() / 86400)
+        self.assertEqual(days, 5)
+        self.assertEqual(row.state(), "LIVE")
+
+    def test_custom_defers_to_the_number_beside_it(self):
+        row = self._mint(valid_days="custom", valid_days_custom=17)
+        days = round((row.expires_at - dt.datetime.utcnow()).total_seconds() / 86400)
+        self.assertEqual(days, 17)
+
+    def test_never_leaves_the_code_without_an_expiry(self):
+        self.assertIsNone(self._mint(valid_days="0").expires_at)
+
+    def test_the_shelf_life_is_bounded_and_garbage_is_never_a_500(self):
+        row = self._mint(valid_days="custom", valid_days_custom=99999)
+        days = round((row.expires_at - dt.datetime.utcnow()).total_seconds() / 86400)
+        self.assertEqual(days, settings.TRIAL_CODE_MAX_DAYS)
+        # An unparseable pick means no expiry, never a crash.
+        self.assertIsNone(self._mint(valid_days="tuesday").expires_at)
+
+    def test_the_two_clocks_stay_independent(self):
+        """A code that goes stale cannot shorten a trial already redeemed
+        from it — the trial's end date is stamped at redemption."""
+        row = self._mint(valid_days="5", days=30)
+        email = f"clocks-{uuid.uuid4().hex[:8]}@example.com"
+        with db.session() as s:
+            p = trials.redeem(s, row.code, email)
+            self.assertEqual(p.trial_days_left, 30)
+            # Now age the CODE past its shelf life.
+            s.get(db.TrialCode, row.id).expires_at = (
+                dt.datetime.utcnow() - dt.timedelta(days=1))
+            s.commit()
+            self.assertEqual(s.get(db.TrialCode, row.id).state(), "STALE")
+            self.assertEqual(trials.expire_due(s), [],
+                             "a stale code must not end a running trial")
+            self.assertEqual(s.get(db.Purchase, p.id).status, "PAID")

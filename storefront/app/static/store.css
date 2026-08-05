@@ -528,7 +528,18 @@ body {
 /* X3 — one baseline for every field and the button; tracks fixed so the
    form does not reflow as a note grows. */
 .mint-form { display: grid; gap: 14px; align-items: end; margin-top: 14px;
-  grid-template-columns: 120px 160px 130px 150px minmax(0,1fr) auto; }
+  grid-template-columns: 120px 160px 130px 150px auto minmax(0,1fr) auto; }
+/* Explicit placement, not auto-flow: the custom-expiry field occupies its
+   own auto track, which collapses to nothing while the field is hidden.
+   Auto-flow would have shuffled every later field one track left when it
+   appeared and wrapped Mint onto a second row. */
+.mint-form > :nth-child(2) { grid-column: 1; }   /* DAYS (1 is the hidden token) */
+.mint-form > :nth-child(3) { grid-column: 2; }   /* EDITION */
+.mint-form > :nth-child(4) { grid-column: 3; }   /* REDEMPTIONS */
+.mint-form > :nth-child(5) { grid-column: 4; }   /* CODE EXPIRES */
+.mint-form > :nth-child(6) { grid-column: 5; }   /* EXPIRES IN (DAYS) */
+.mint-form > :nth-child(7) { grid-column: 6; }   /* WHO / WHY */
+.mint-form > :nth-child(8) { grid-column: 7; }   /* Mint */
 .mint-form input, .mint-form select { width: 100%; background: var(--field);
   border: 1px solid var(--line); color: var(--ink); padding: 8px 10px;
   font-family: var(--sans); font-size: 13px; }
@@ -540,7 +551,10 @@ body {
   padding-right: 28px; }
 .mint-form input:focus, .mint-form select:focus { outline: 2px solid var(--accent);
   outline-offset: -1px; }
-@media (max-width: 900px) { .mint-form { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) {
+  .mint-form { grid-template-columns: 1fr 1fr; }
+  .mint-form > * { grid-column: auto !important; }
+}
 /* X4 — fixed tracks so CODE/STATE do not reflow as notes change length;
    act buttons are verbs, so Archivo, not the table's Courier. */
 .admin-table { width: 100%; border-collapse: collapse; font-size: 11.5px;
@@ -588,3 +602,8 @@ body {
    amber, Business sits beside it as a ghost (§8 — never two fills side
    by side). */
 .trial-acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* A hiding utility must always win — the app's stylesheet learned this
+   the hard way when an equal-specificity component rule out-ordered it
+   (2026-08-06). */
+.hidden { display: none !important; }

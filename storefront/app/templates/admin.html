@@ -51,11 +51,21 @@
       <label class="admin-field mono">REDEMPTIONS
         <input type="number" name="max_uses" value="1" min="1" max="1000"></label>
       <label class="admin-field mono">CODE EXPIRES
-        <select name="valid_days">
+        <select name="valid_days" id="mint-expires">
           <option value="0">Never</option>
+          <option value="5">5 days</option>
+          <option value="10">10 days</option>
           <option value="30">30 days</option>
           <option value="90">90 days</option>
+          <option value="custom">Custom…</option>
         </select></label>
+      {# A day count is a genuinely open range, so Custom reveals a
+         number field rather than widening the picker forever — the same
+         reason DAYS and REDEMPTIONS are numeric (§9). Hidden until
+         chosen; the server resolves it, so the picker path still works
+         with no JS at all. #}
+      <label class="admin-field mono hidden" id="mint-expires-custom">EXPIRES IN (DAYS)
+        <input type="number" name="valid_days_custom" value="14" min="1" max="{{ max_days }}"></label>
       <label class="admin-field mono">WHO / WHY
         <input type="text" name="note" placeholder="e.g. Ridley — DP intro call"></label>
       <button class="btn btn-primary" type="submit">Mint</button>
@@ -162,6 +172,15 @@
 </section>
 
 <script>
+(() => {
+  // Custom expiry reveals its own field; the select keeps the value the
+  // server reads, so nothing depends on this script having run.
+  const sel = document.getElementById("mint-expires");
+  const custom = document.getElementById("mint-expires-custom");
+  const sync = () => custom.classList.toggle("hidden", sel.value !== "custom");
+  sel.addEventListener("change", sync);
+  sync();
+})();
 (() => {
   const box = document.getElementById("owner-textedit");
   box.checked = localStorage.getItem("sbStoreTextEdit") === "1";

@@ -1152,12 +1152,24 @@ def admin_trials(request: Request, token: str = ""):
 @app.post("/admin/trials/new")
 def admin_trials_new(request: Request, token: str = Form(""),
                      days: int = Form(14), tier: str = Form("personal"),
-                     max_uses: int = Form(1), valid_days: int = Form(0),
+                     max_uses: int = Form(1), valid_days: str = Form("0"),
+                     valid_days_custom: int = Form(0),
                      note: str = Form("")):
+    """`valid_days` is the code's own shelf life, counted from minting —
+    a different clock from `days`, which is the trial's length counted
+    from redemption. "custom" defers to the number beside the picker."""
     _admin_gate(request, token)
+    if str(valid_days).strip().lower() == "custom":
+        shelf = max(0, int(valid_days_custom or 0))
+    else:
+        try:
+            shelf = max(0, int(valid_days or 0))
+        except ValueError:
+            shelf = 0  # an unparseable pick means no expiry, never a 500
+    shelf = min(shelf, settings.TRIAL_CODE_MAX_DAYS)
     with db.session() as s:
         trials.create_code(s, days=days, tier=tier, max_uses=max_uses,
-                           note=note, valid_days=valid_days)
+                           note=note, valid_days=shelf)
     return RedirectResponse(_admin_back(token, "code minted"),
                             status_code=303)
 
