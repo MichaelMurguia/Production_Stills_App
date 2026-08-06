@@ -296,6 +296,8 @@ const AUTO_ATTACH_HEADS = ["WORLD_TEXTURE", "COLOR_PALETTE",
    confirm(). Resolves to an object of field values on confirm, null on
    cancel/Escape/scrim click. Same endpoints, same rules — only the box
    belongs to the app now. */
+const HEXOK = /^#[0-9a-fA-F]{6}$/;
+
 function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger = false }) {
   return new Promise(resolve => {
     const ov = document.createElement("div");
@@ -308,6 +310,12 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
           <label class="modal-field">${esc(f.label)}
             ${f.textarea
               ? `<textarea data-mf="${i}" placeholder="${esc(f.placeholder || "")}">${esc(f.value || "")}</textarea>`
+              : f.color
+              ? `<span class="mf-color${HEXOK.test((f.value || "").trim()) ? "" : " is-unset"}">
+                   <input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">
+                   <input type="color" data-mfc="${i}" value="${HEXOK.test((f.value || "").trim()) ? esc(f.value.trim()) : "#000000"}"
+                          title="Pick a colour — the hex beside it follows" aria-label="${esc(f.label)} picker">
+                 </span>`
               : `<input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">`}
             ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
           </label>`).join("")}
@@ -320,6 +328,20 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
     const done = val => { window.removeEventListener("keydown", onKey, true); ov.remove(); resolve(val); };
     const collect = () => Object.fromEntries(
       fields.map((f, i) => [f.name, $(`[data-mf="${i}"]`, ov).value.trim()]));
+    // A colour field is two views of ONE value: the hex is what gets
+    // collected, the picker is a way to reach it (user 2026-08-06). Each
+    // follows the other, and a half-typed hex never resets the picker.
+    $$("[data-mfc]", ov).forEach(pick => {
+      const txt = $(`[data-mf="${pick.dataset.mfc}"]`, ov);
+      const mark = () => pick.closest(".mf-color")
+        .classList.toggle("is-unset", !HEXOK.test(txt.value.trim()));
+      pick.oninput = () => { txt.value = pick.value.toUpperCase(); mark(); };
+      txt.oninput = () => {
+        const v = txt.value.trim();
+        if (HEXOK.test(v)) pick.value = v;
+        mark();
+      };
+    });
     const onKey = e => {
       if (e.key === "Escape") { e.stopPropagation(); done(null); }
       else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); done(collect()); }
@@ -2856,7 +2878,6 @@ async function renderWizard() {
     const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
     const colorIn = $("[data-f=sw-color]", col);
     const hexIn = $("[data-f=sw-hex]", col);
-    const HEXOK = /^#[0-9a-fA-F]{6}$/;
     colorIn.oninput = () => { hexIn.value = colorIn.value; };
     hexIn.oninput = () => {
       if (HEXOK.test(hexIn.value.trim())) colorIn.value = hexIn.value.trim();
@@ -2958,9 +2979,9 @@ async function renderWizard() {
               + "and its place in this review, and only its pixels change.",
             fields: [
               { name: "hex", label: "Colour", value: card.dataset.hex,
-                placeholder: "#8A4B2E" },
+                placeholder: "#8A4B2E", color: true },
               { name: "pair", label: "Value-key pair", value: card.dataset.pair || "",
-                placeholder: "leave empty for one flat colour",
+                placeholder: "leave empty for one flat colour", color: true,
                 hint: "The same hue at the opposite value key — renders as two halves." },
             ],
             confirmLabel: "Repaint swatch",

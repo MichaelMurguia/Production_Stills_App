@@ -1231,6 +1231,30 @@ details.meta pre {
 .modal-body { margin: 0; font-size: 13.5px; color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
 .modal-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
+/* UNCANONIZED — 2026-08-06 — colour field (hex + native picker).
+   Two views of one value: the hex is what the form collects, the picker
+   is a way to reach it. A hex is machine data, so the text half is
+   Courier. The native swatch is stripped of its OS chrome and given the
+   field's own border so it reads as part of the form, not a browser
+   widget dropped into it; it stretches to the text input's height rather
+   than guessing a number. */
+.mf-color { display: flex; gap: 8px; align-items: stretch; }
+.mf-color input[type=text] { font-family: var(--mono); letter-spacing: .04em; }
+.mf-color input[type=color] {
+  -webkit-appearance: none; appearance: none;
+  width: 46px; flex: none; padding: 3px; cursor: pointer;
+  background: var(--field); border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.mf-color input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.mf-color input[type=color]::-webkit-color-swatch {
+  border: 1px solid var(--line-soft); border-radius: 1px; }
+.mf-color input[type=color]:focus-visible { border-color: var(--accent); }
+/* An empty field has NO colour, and a picker defaulted to #000000 states
+   black — the app's hatch is how it says "nothing here" everywhere else,
+   at the fine gauge because the swatch is under 60px. */
+.mf-color.is-unset input[type=color]::-webkit-color-swatch {
+  background-image: repeating-linear-gradient(135deg, #21252a 0 5px, #1c1f23 5px 10px); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
 /* Vocabulary picker — canonical (design review 2026-07-30b): suggestion
    chips fill the field and never stay lit; multi-select facets are .set,

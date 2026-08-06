@@ -343,5 +343,27 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".swatch-gen .busy", ["margin-top: 0"])
 
 
+    def test_colour_field_pairs_a_hex_with_a_picker(self):
+        """Two views of one value. The hex half is Courier (machine data),
+        and the native picker is stripped of OS chrome so it reads as part
+        of the form — it stretches rather than guessing a height."""
+        self.assert_decls(".mf-color", ["display: flex", "align-items: stretch"])
+        self.assert_decls(".mf-color input[type=text]", ["font-family: var(--mono)"])
+        self.assert_decls(".mf-color input[type=color]", [
+            "appearance: none", "background: var(--field)",
+            "border: 1px solid var(--line)"])
+        self.assertIn(".mf-color input[type=color]::-webkit-color-swatch", CSS)
+        self.assertIn(".mf-color input[type=color]:focus-visible", CSS,
+                      "a picker reachable by keyboard must show focus")
+
+    def test_an_unset_colour_is_hatched_not_black(self):
+        """A picker defaulted to #000000 states black. The app's hatch is
+        how it says "nothing here" everywhere else — fine gauge, since the
+        swatch is under 60px."""
+        b = block(".mf-color.is-unset input[type=color]::-webkit-color-swatch")
+        self.assertIn("repeating-linear-gradient", b)
+        self.assertIn("5px", b, "fine gauge for a surface under 60px")
+
+
 if __name__ == "__main__":
     unittest.main()
