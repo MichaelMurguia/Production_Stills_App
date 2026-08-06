@@ -2090,8 +2090,17 @@ async function renderProjectsView() {
       const inp = document.createElement("input");
       inp.type = "file";
       inp.accept = ".zip,application/zip";
+      // The input MUST be in the document before click(): a DETACHED file
+      // input's click() is silently ignored — no picker, no error, no
+      // feedback of any kind (user 2026-08-06). Every other file field in
+      // this app is markup that already lives in the page, which is why
+      // this was the first place it bit.
+      inp.className = "hidden";
+      document.body.append(inp);
+      inp.oncancel = () => inp.remove();
       inp.onchange = async () => {
         const f = inp.files[0];
+        inp.remove();
         if (!f) return;
         const look = new FormData();
         look.append("file", f);
