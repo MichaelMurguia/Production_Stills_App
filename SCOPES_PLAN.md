@@ -1,3 +1,38 @@
+> **PARKED — user ruling 2026-08-06. Do not build from this file as written.**
+>
+> The user's direction: *"what this is is the concept of an Organization,
+> which has an administrator of the org. A user. That's common practice, and
+> probably the direction we would want to go."*
+>
+> That is a material reframe, not a rename. This plan's **studio** is one
+> license held by one user, who may hold several. An **organization** is the
+> inverse: one entity holding **many users**, one of whom administers it.
+> Everything downstream changes — the model gains members and roles, the
+> account menu gains invitations and seats, and "Add a license" becomes
+> "add a seat" or "add an org" depending on which is being sold.
+>
+> Two questions to settle before any of this is built, both raised
+> 2026-08-06 and neither answered:
+>
+> 1. **One tenant or many?** This plan puts several studios inside one
+>    install (`data/` gains a level, `POST /api/studios/create`). The
+>    storefront provisions **one Railway service per cloud purchase** and the
+>    account page shows one workspace per purchase. Those are different
+>    builds; the plan does not say which.
+> 2. **How does an org relate to the Business tier?** The store already sells
+>    "Business — the art department, one production". If an org has members,
+>    that tier is arguably already the org SKU, and its copy would need to say
+>    so.
+>
+> A1 also moves `settings.json` (live API keys) and restructures `data/` on
+> running tenants — that migration wants its own verification pass and a
+> backup taken first, not a ride-along with a UI release.
+>
+> Kept catalogued deliberately: the reasoning in A6 (a production never
+> leaves the scope it was approved under; standalone shows the hierarchy
+> inert) survives the reframe intact and is worth keeping whatever the model
+> ends up being called.
+
 # SCOPES_PLAN.md — user ▸ studio ▸ production
 
 **For the coding agent.** Mocks: `design_mocks/11a-address-line.png`,
