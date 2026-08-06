@@ -6448,6 +6448,7 @@ async function renderBoardPanels(specId) {
           <span style="display:inline-flex;gap:10px">
             <button class="block-act" data-f="copy" style="font-size:11px;padding:0" title="Copy the full prompt to the clipboard">Copy</button>
             <button class="block-act" data-f="detach" style="font-size:11px;padding:0" title="Open the full prompt in a reading view">Expand</button>
+            <button class="block-act" data-f="dl" style="font-size:11px;padding:0" title="Download this prompt as a .md file — the exact text this take was rendered from, with its conditions in the header">Download</button>
             <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button>
           </span>
         </div>
@@ -6467,6 +6468,45 @@ async function renderBoardPanels(specId) {
         fullBtn.textContent = capped ? "Full" : "Less";
       };
       $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
+      // A 16k-character prompt is a file, not a clipboard payload (user
+      // 2026-08-06). The header carries what the prompt text itself does
+      // not: the engine, the size, and WHICH references were actually
+      // attached — the first thing to check when a render appears to
+      // ignore a reference.
+      $("[data-f=dl]", el).onclick = () => {
+        const attached = c.references || [];
+        const lines = [
+          `# ${c.candidate_id} — compiled prompt`,
+          "",
+          `- **Panel** — ${c.panel_id}`,
+          `- **Sheet** — ${specId}`,
+          `- **Engine** — ${c.model || "unrecorded"}`,
+          `- **Size** — ${c.image_size || "unrecorded"}${c.aspect_ratio ? " · " + c.aspect_ratio : ""}`,
+          `- **Rendered** — ${c.created_at || "unrecorded"}`,
+          `- **Status** — ${c.status || "unrecorded"}`,
+          "",
+        ];
+        if (attached.length) {
+          lines.push(`## Attached references — ${attached.length}`, "");
+          attached.forEach(r => lines.push(
+            `- ${r.id} — ${r.role || "role unrecorded"}`));
+        } else {
+          lines.push("## Attached references — none", "",
+                     "This take rendered from the written spec and the style",
+                     "anchors alone. No subject reference was attached.");
+        }
+        lines.push("", "---", "", "```text", promptText, "```", "");
+        const blob = new Blob([lines.join("\n")],
+                              { type: "text/markdown;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${c.candidate_id || "prompt"}.md`;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        toast(`${a.download} downloaded.`);
+      };
       $("[data-f=detach]", el).onclick = () => promptOverlay(
         "COMPILED PROMPT", promptText,
         [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),

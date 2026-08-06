@@ -931,6 +931,12 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-06** — The compiled prompt gains Download (user): a
+  16,000-character prompt is a file, not a clipboard payload. It writes a
+  .md whose header carries what the prompt body cannot — engine, size,
+  and the references actually attached, or a stated "none, this rendered
+  from the spec and style anchors alone".
+
 - **2026-08-06** — Intake widths corrected (user): the blank door's Mode
   and Board type truncated. Mode options shed their explanatory suffixes
   (a select is only as wide as its longest option), the door ratio went
