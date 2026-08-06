@@ -605,17 +605,35 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
             "panel's actual light and palette from THE SCENE, the panel "
             "purpose, and the Lighting Language, not from this image's "
             "specific hour or color"),
+        # SCENE_REFERENCE reached renders with NO jurisdiction text until
+        # 2026-08-06 — it is the picker's FIRST option, so a subject photo
+        # filed here was attached and then described as controlling nothing
+        # nameable. That is how a P-38 cockpit photo produced invented gauges.
+        "SCENE_REFERENCE": (
+            "this scene's CONTENT and COMPOSITION — what is present in it, how "
+            "it is arranged, and the camera setup. Where this panel covers the "
+            "same subject or place, match the image closely: the same objects, "
+            "the same layout, the same proportions and positions",
+            "this panel's stated time of day, weather, or purpose where THE "
+            "SCENE and the sheet state them differently"),
         "LOCATION_GEOMETRY": (
             "the location's geometry, structure, layout, and composition — "
             "match them closely; this is the SAME place and camera setup",
             "lighting, palette, atmosphere, time of day, or weather — those "
             "are set by SETTING and vary per study panel"),
         "VEHICLE_GEOMETRY": (
-            "this EXACT vehicle's body geometry — proportions, panel shapes, "
-            "intakes, lights, wheels, details. It is this specific vehicle, "
-            "not a generic vehicle of its type; where the panel shows an angle "
-            "an attached image covers, match that image closely",
-            "the vehicle's placement, viewing angle, lighting, or the scene"),
+            "this EXACT vehicle's geometry — proportions, panel shapes, "
+            "intakes, lights, wheels, details, AND its interior wherever an "
+            "attached image shows one: instrument and control layout, the "
+            "position and face of every gauge and dial, seating, and canopy or "
+            "window framing. It is this specific vehicle, not a generic vehicle "
+            "of its type; where the panel shows an angle or an interior an "
+            "attached image covers, match that image closely",
+            # Was "viewing angle" alone, which an interior render read as
+            # license to rearrange the instrument panel (2026-08-06).
+            "the vehicle's placement in the scene, which angle this panel is "
+            "drawn from, lighting, or the scene — but where an attached image "
+            "does cover this panel's angle, its layout is binding"),
         "CHARACTER_LIKENESS": (
             "this character's facial likeness, build, hair, and age — the "
             "same recognizable person in every render",
@@ -627,7 +645,15 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
     lines: list[str] = []
     for i, r in enumerate(refs, 1):
         head = store.role_head(r.get("role", ""))
-        d_controls, d_not = style_defaults.get(head, ("its assigned role", ""))
+        # Roles are free-form, so an unrecognized head is legitimate — but it
+        # must never render as "controls its assigned role", which attaches an
+        # image and instructs the model in nothing. The conservative reading of
+        # ANY attached anchor: match what it depicts, take no light from it.
+        d_controls, d_not = style_defaults.get(head, (
+            "the subject it depicts — its structure, layout, proportions and "
+            "detail. Match them closely; this is that exact thing, not "
+            "something of its type",
+            "this panel's lighting, palette, time of day, or the scene"))
         controls = ", ".join(r.get("controls", [])) or d_controls
         lines.append(f"- Attached image {i} ({r['id']}, role {r['role']}): "
                      f"controls {controls}.")
