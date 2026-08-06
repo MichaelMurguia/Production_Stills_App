@@ -1,37 +1,41 @@
-> **PARKED — user ruling 2026-08-06. Do not build from this file as written.**
+> **PARKED — user ruling 2026-08-06. Read this before building.**
 >
-> The user's direction: *"what this is is the concept of an Organization,
-> which has an administrator of the org. A user. That's common practice, and
-> probably the direction we would want to go."*
+> Not now, and the top level gets a name. The user's model, verbatim:
+> *"An org has many studios. A user admins the org. Maybe the admin adds
+> another admin. Maybe not. No roles."*
 >
-> That is a material reframe, not a rename. This plan's **studio** is one
-> license held by one user, who may hold several. An **organization** is the
-> inverse: one entity holding **many users**, one of whom administers it.
-> Everything downstream changes — the model gains members and roles, the
-> account menu gains invitations and seats, and "Add a license" becomes
-> "add a seat" or "add an org" depending on which is being sold.
+> **This is a smaller change than this plan, not a bigger one.** An earlier
+> note here guessed at members, seats, invitations and role tiers; that was
+> wrong and the user corrected it — *"I'm trying to scope less, not more."*
+> There is no membership system, no seats, no permission matrix. Admin is
+> binary: a user either administers the org or does not, and a second admin
+> is a maybe, not a requirement.
 >
-> Two questions to settle before any of this is built, both raised
-> 2026-08-06 and neither answered:
+> The resulting hierarchy is this plan's, with the top level named:
 >
-> 1. **One tenant or many?** This plan puts several studios inside one
->    install (`data/` gains a level, `POST /api/studios/create`). The
->    storefront provisions **one Railway service per cloud purchase** and the
->    account page shows one workspace per purchase. Those are different
->    builds; the plan does not say which.
-> 2. **How does an org relate to the Business tier?** The store already sells
->    "Business — the art department, one production". If an org has members,
->    that tier is arguably already the org SKU, and its copy would need to say
->    so.
+> | scope | what it is | owns |
+> |---|---|---|
+> | **Organization** | the account-level container, administered by one user (possibly more later) | many studios |
+> | **Studio** | one license | credentials, enabled catalog, default models per role, workflow instructions; contains productions |
+> | **Production** | unchanged | its screenplay, bible, sheets, panels, boards |
+>
+> So A2–A5 stand largely as drawn — the address line's first segment is the
+> org rather than "you", and A5's *user scope* becomes *org scope* (identity,
+> billing, which studios the org holds). What must NOT be built: roles,
+> invitations, seat counts, or any per-user permission on a studio.
+>
+> **The one question still open:** does a second studio mean a second Railway
+> service (today's model — one service per cloud purchase, one workspace per
+> purchase on the account page) or a second folder inside one install (what
+> A1 describes)? Those are different builds and the plan does not say which.
 >
 > A1 also moves `settings.json` (live API keys) and restructures `data/` on
 > running tenants — that migration wants its own verification pass and a
 > backup taken first, not a ride-along with a UI release.
 >
-> Kept catalogued deliberately: the reasoning in A6 (a production never
-> leaves the scope it was approved under; standalone shows the hierarchy
-> inert) survives the reframe intact and is worth keeping whatever the model
-> ends up being called.
+> A6's reasoning survives unchanged and is the part worth keeping whatever
+> the naming settles on: a production never leaves the scope it was approved
+> under, and standalone shows the hierarchy inert rather than hidden.
 
 # SCOPES_PLAN.md — user ▸ studio ▸ production
 
