@@ -347,8 +347,8 @@
                 <input type="text" id="spec-auto-id" placeholder="MAIN_LOCATION_V001" required></label>
               <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
                 <select id="spec-auto-mode">
-                  <option value="CANON_EXTRACTION">CANON_EXTRACTION — strict evidence</option>
-                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION — pitch me options</option>
+                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
                 </select>
               </label>
             </div>
@@ -374,17 +374,22 @@
           <form id="spec-new-form">
             <label class="f-wide">Subject
               <input type="text" id="spec-new-subject" placeholder="what this sheet covers…" required title="What this board is about — a short human-readable name for the location, scene, prop, or character."></label>
+            <!-- Spec ID takes its own row: CANON_EXTRACTION and
+                 LIGHTING_STUDY need ~300px together, which no honest
+                 split of a shared row affords at this column width.
+                 Deviation from mock 13a's row grouping, so that nothing
+                 truncates. -->
+            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
+              <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required></label>
             <div class="door-pair">
-              <label><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-                <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required></label>
-              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode &middot; Board type
-                <span class="door-two">
-                  <select id="spec-new-mode">
-                    <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
-                    <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
-                  </select>
-                  <select id="spec-new-btype" title="The board type seeds the sheet with its board grammar — panel count and allocations only (hero + supports), never content. Change it later and an untouched sheet re-templates on request."></select>
-                </span>
+              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+                <select id="spec-new-mode">
+                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+                </select>
+              </label>
+              <label title="The board type seeds the sheet with its board grammar — panel count and allocations only (hero + supports), never content. Change it later and an untouched sheet re-templates on request.">Board type
+                <select id="spec-new-btype"></select>
               </label>
             </div>
             <div class="door-run door-run-end">

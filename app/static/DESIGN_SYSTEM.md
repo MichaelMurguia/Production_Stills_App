@@ -931,6 +931,13 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-06** — Intake widths corrected (user): the blank door's Mode
+  and Board type truncated. Mode options shed their explanatory suffixes
+  (a select is only as wide as its longest option), the door ratio went
+  1.5fr → 1.15fr, and Spec ID took its own row so the two machine-value
+  selects have a full half each — mock 13a grouped them on one row, which
+  no honest split of that column affords.
+
 - **2026-08-06** — Breakdown intake (BREAKDOWN_INTAKE B1–B5, mock 13a):
   the two ways to make a sheet became one section of two doors with amber
   on the recommended one; the brief leads the auto door; the Spec ID help

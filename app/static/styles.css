@@ -2079,8 +2079,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    section: auto breakdown and blank sheet perform the same act by
    different means, so they sit side by side, and amber marks only the
    recommended one. */
+/* 1.15fr, not the plan's 1.5fr (user 2026-08-06): the blank door holds
+   two selects on one row and they truncated at the narrower ratio. The
+   auto door lost nothing — its mode options shed their explanatory
+   suffixes in the same pass, and a select is as wide as its longest
+   option. */
 .intake .intake-doors { display: grid; gap: 18px; margin-top: 14px;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
 .door { border: 1px solid var(--line); background: var(--bg2); padding: 16px 18px;
   display: flex; flex-direction: column; }
 .door-auto { border-color: var(--accent-line); border-top: 2px solid var(--accent); }
@@ -2099,8 +2104,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   text-transform: none; color: var(--ink); }
 .door textarea { min-height: 62px; resize: vertical; }
 .door-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.door-two { display: flex; gap: 8px; }
-.door-two select { flex: 1; min-width: 0; }
+
+
 .door-run { display: flex; align-items: flex-end; gap: 12px; }
 .door-run label { flex: 1; min-width: 0; }
 .door-run .primary, .door-run .ghost { flex: none; }

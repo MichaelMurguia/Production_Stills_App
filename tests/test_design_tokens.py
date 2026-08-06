@@ -189,7 +189,7 @@ class TokenContractTests(unittest.TestCase):
         """B1: amber marks only the recommended door; the alternative is
         a plain --line card."""
         self.assert_decls(".intake .intake-doors", [
-            "grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)"])
+            "grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr)"])
         self.assert_decls(".door", ["border: 1px solid var(--line)"])
         self.assert_decls(".door-auto", [
             "border-color: var(--accent-line)",
