@@ -1957,6 +1957,9 @@ async function renderProjectsView() {
     return { text, cls: d >= 30 ? "care-bad" : d >= 14 ? "care-hold" : "" };
   };
 
+  const mbs = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(n / 1024))} KB`;
+
   const renderCards = async () => {
     const pr = await api("/api/projects/summary");
     $("#prod-count").textContent =
@@ -1989,6 +1992,7 @@ async function renderProjectsView() {
             <button class="ghost" data-more="${esc(p.slug)}" title="Duplicate or delete this production">&hellip;</button>
           </span>
         </div>
+        <div data-busy="${esc(p.slug)}"></div>
       </div>`;
     }).join("");
 
@@ -1998,9 +2002,47 @@ async function renderProjectsView() {
         location.reload();
       } catch (err) { toast(err.message, true); }
     });
-    $$("#prod-cards [data-backup]").forEach(b => b.onclick = () => {
-      location.href = `/api/projects/backup?slug=${encodeURIComponent(b.dataset.backup)}`;
-      setTimeout(renderCards, 1500);  // pick up the fresh last-backup stamp
+    // A backup is a server-side zip of a whole production, and on a large
+    // one the wait is real — it used to be a bare location.href with nothing
+    // on screen (user 2026-08-06). Streaming it through fetch lets the wait
+    // state itself in the canon .busy vocabulary and counts the bytes.
+    $$("#prod-cards [data-backup]").forEach(b => b.onclick = async () => {
+      const slug = b.dataset.backup;
+      const card = b.closest(".prod-card");
+      const busy = startBusy($("[data-busy]", card), "Packing the backup…",
+        "API keys are never included.");
+      $$(".prod-actions button", card).forEach(x => x.disabled = true);
+      try {
+        const res = await fetch(`/api/projects/backup?slug=${encodeURIComponent(slug)}`);
+        if (!res.ok) throw new Error((await res.text()) || `backup failed (${res.status})`);
+        const total = Number(res.headers.get("Content-Length") || 0);
+        const fname = /filename="([^"]+)"/.exec(
+          res.headers.get("Content-Disposition") || "")?.[1] || "screenboard-backup.zip";
+        const chunks = [];
+        let got = 0;
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          got += value.length;
+          busy.label(total ? `Downloading — ${mbs(got)} of ${mbs(total)}`
+                           : `Downloading — ${mbs(got)}`);
+        }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob(chunks, { type: "application/zip" }));
+        a.download = fname;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        toast(`${fname} downloaded — ${mbs(got)}.`);
+      } catch (err) {
+        toast(err.message, true);
+      } finally {
+        busy.done();
+        renderCards();  // pick up the fresh last-backup stamp
+      }
     });
     $$("#prod-cards [data-rename]").forEach(b => b.onclick = () => {
       const slug = b.dataset.rename;
@@ -2027,6 +2069,7 @@ async function renderProjectsView() {
     menu.className = "card-menu";
     menu.innerHTML = `
       <button class="proj-item" data-act="dup">Duplicate</button>
+      <button class="proj-item" data-act="imp">Import backup&hellip;</button>
       <button class="proj-item danger-act" data-act="del" ${p.active ? "disabled" : ""}
         ${p.active ? 'title="The open production cannot be deleted — open another first."' : ""}>Delete&hellip;</button>`;
     btn.closest(".prod-actions").appendChild(menu);
@@ -2038,6 +2081,58 @@ async function renderProjectsView() {
         toast(`"${r.name}" added to the shelf.`);
         refresh();
       } catch (err) { toast(err.message, true); }
+    };
+    // Import sets an existing production to the version in a zip — the
+    // destructive twin of restore, which only ever made a NEW production
+    // (user 2026-08-06). The zip is read before the warning is written, so
+    // the modal names what is actually in it rather than guessing.
+    $('[data-act="imp"]', menu).onclick = () => {
+      const inp = document.createElement("input");
+      inp.type = "file";
+      inp.accept = ".zip,application/zip";
+      inp.onchange = async () => {
+        const f = inp.files[0];
+        if (!f) return;
+        const look = new FormData();
+        look.append("file", f);
+        let info;
+        try {
+          info = await api("/api/projects/import/inspect", { method: "POST", body: look });
+        } catch (err) { return toast(err.message, true); }
+        const when = (info.backed_up_at || "").slice(0, 10);
+        const vals = await modal({
+          title: `Import a backup into "${p.name}"?`,
+          body: `That zip holds "${info.name}" — ${info.files} files, `
+            + `${mbs(info.bytes)}${when ? `, backed up ${when}` : ""}. `
+            + "Importing replaces this production's screenplay, bible, reference "
+            + "library, breakdown sheets, boards and approval log with what the zip "
+            + "carries; anything here that the zip does not contain is removed. "
+            + `"${p.name}" keeps its own name and its place on the shelf. A safety `
+            + "copy of the current state is saved beside the production first, but "
+            + "it is not a download — back up now if you want one in hand. Type the "
+            + "production's name to confirm.",
+          fields: [{ name: "confirm", label: "Production name", placeholder: p.name }],
+          confirmLabel: "Import and replace", danger: true,
+        });
+        if (vals === null) return;
+        const card = $(`#prod-cards [data-card="${CSS.escape(p.slug)}"]`);
+        const busy = startBusy($("[data-busy]", card), "Importing the backup…",
+          "A safety copy is packed first.");
+        const fd = new FormData();
+        fd.append("file", f);
+        fd.append("slug", p.slug);
+        fd.append("confirm_name", vals.confirm);
+        try {
+          const r = await api("/api/projects/import", { method: "POST", body: fd });
+          toast(`"${r.name}" set to the version from "${r.imported_from}" — `
+                + `${r.files} files. Back it up when you are happy with it.`);
+          if (r.was_active) return location.reload();
+          refresh();
+        } catch (err) {
+          toast(err.message, true);
+        } finally { busy.done(); }
+      };
+      inp.click();
     };
     $('[data-act="del"]', menu).onclick = async () => {
       if (p.active) return;

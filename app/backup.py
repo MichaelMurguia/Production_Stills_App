@@ -36,9 +36,13 @@ def _project_base(slug: str) -> Path:
     return base
 
 
-def make_backup(slug: str) -> tuple[bytes, str]:
+def make_backup(slug: str, record: bool = True) -> tuple[bytes, str]:
     """Zip the project → (bytes, filename). Records last_backup_at in the
-    project's project.json (best effort — the zip is the point)."""
+    project's project.json (best effort — the zip is the point).
+
+    record=False is for the safety zip an import takes on the user's behalf:
+    it is a real archive, but it is not the user's own backup and must not
+    make the shelf's care line read BACKED UP TODAY."""
     base = _project_base(slug)
     name = paths._project_name(base, slug or "main-project")
     buf = io.BytesIO()
@@ -56,7 +60,8 @@ def make_backup(slug: str) -> tuple[bytes, str]:
                     if rel == "data/settings.json":
                         continue  # legacy key location — never in a backup
                     z.write(p, rel)
-    _record_backup(base)
+    if record:
+        _record_backup(base)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "project"
     return buf.getvalue(), f"screenboard-backup-{safe}-{stamp}.zip"
@@ -104,18 +109,20 @@ def _safe_member(name: str) -> str:
     return name
 
 
-def restore_backup(payload: bytes) -> dict:
-    """Create a NEW project from a backup zip; returns {slug, name}.
-    Existing projects are never touched — a name collision gets a numeric
-    suffix. Every member is validated before extraction."""
+def _open_archive(payload: bytes) -> zipfile.ZipFile:
     try:
-        z = zipfile.ZipFile(io.BytesIO(payload))
+        return zipfile.ZipFile(io.BytesIO(payload))
     except zipfile.BadZipFile as e:
         raise BackupError("that file is not a production backup zip") from e
 
+
+def _validated_members(payload_z: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+    """Every member checked for zip-slip and declared size before a single
+    byte is written. Shared by restore (new project) and import (overwrite)
+    so the two paths can never drift apart on safety."""
     total = 0
     members = []
-    for info in z.infolist():
+    for info in payload_z.infolist():
         if info.is_dir():
             continue
         _safe_member(info.filename)
@@ -127,13 +134,139 @@ def restore_backup(payload: bytes) -> dict:
         members.append(info)
     if not members:
         raise BackupError("the archive is empty")
+    return members
 
-    name = "Restored project"
+
+def _archive_meta(z: zipfile.ZipFile) -> dict:
     try:
-        meta = json.loads(z.read("project.json").decode("utf-8"))
-        name = str(meta.get("name") or name)
+        return json.loads(z.read("project.json").decode("utf-8"))
     except Exception:
-        pass
+        return {}
+
+
+def _extract_members(z: zipfile.ZipFile, members: list[zipfile.ZipInfo],
+                     staging: Path) -> None:
+    """Size caps are enforced on the DECOMPRESSED stream, not the
+    attacker-controlled header sizes."""
+    total_out = 0
+    for info in members:
+        target = staging / info.filename
+        # Belt and braces on top of _safe_member.
+        if not target.resolve().is_relative_to(staging.resolve()):
+            raise BackupError(f"unsafe archive member: {info.filename}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        written = 0
+        with z.open(info) as src, target.open("wb") as out:
+            while chunk := src.read(1 << 20):
+                written += len(chunk)
+                total_out += len(chunk)
+                if written > MAX_MEMBER_BYTES or total_out > MAX_TOTAL_BYTES:
+                    raise BackupError(
+                        f"archive member exceeds its declared size: {info.filename}")
+                out.write(chunk)
+
+
+def inspect_backup(payload: bytes) -> dict:
+    """Read a backup zip and write NOTHING — what the archive holds, so an
+    overwrite can be described accurately before it is confirmed rather
+    than reported after it has happened."""
+    z = _open_archive(payload)
+    members = _validated_members(z)
+    meta = _archive_meta(z)
+    return {
+        "name": str(meta.get("name") or "Unnamed production"),
+        "created_at": str(meta.get("created_at") or ""),
+        "backed_up_at": str(meta.get("last_backup_at") or ""),
+        "files": len(members),
+        "bytes": sum(m.file_size for m in members),
+        "counts": {top: sum(1 for m in members
+                            if m.filename.startswith(f"{top}/"))
+                   for top in BACKUP_DIRS},
+    }
+
+
+def import_into(slug: str, payload: bytes) -> dict:
+    """Set an EXISTING production to the version a backup holds.
+
+    The production keeps its identity — name, slug, place on the shelf; only
+    what a backup carries (data/, project_state/, context/) is replaced. It
+    is destructive, so two things happen before anything is removed: the
+    current state is packed to a safety zip beside the production, and the
+    archive is extracted to a staging dir. The swap is renames only, and a
+    failure mid-swap puts back what it moved — a half-written import never
+    becomes the production.
+    """
+    base = _project_base(slug)
+    z = _open_archive(payload)
+    members = _validated_members(z)
+    source_name = str(_archive_meta(z).get("name") or "Unnamed production")
+
+    # Two imports inside one second must not collide — the second safety zip
+    # is the one you want when the first import was the mistake.
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
+    safety = base / f"pre-import-{stamp}.zip"
+    n = 2
+    while safety.exists():
+        safety = base / f"pre-import-{stamp}-{n}.zip"
+        n += 1
+    safety.write_bytes(make_backup(slug, record=False)[0])
+    _prune_safety_zips(base)
+
+    staging = base / ".import-staging"
+    trash = base / ".import-replaced"
+    for d in (staging, trash):
+        if d.exists():
+            shutil.rmtree(d)
+    staging.mkdir(parents=True)
+    try:
+        _extract_members(z, members, staging)
+        trash.mkdir(parents=True)
+        moved: list[str] = []
+        try:
+            for top in BACKUP_DIRS:
+                if (base / top).exists():
+                    (base / top).rename(trash / top)
+                    moved.append(top)
+                if (staging / top).exists():
+                    (staging / top).rename(base / top)
+        except BaseException:
+            for top in moved:
+                shutil.rmtree(base / top, ignore_errors=True)
+                (trash / top).rename(base / top)
+            raise
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+        shutil.rmtree(trash, ignore_errors=True)
+
+    meta = _read_project_meta(base)
+    meta["name"] = paths._project_name(base, slug or "Untitled Production")
+    meta["imported_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    meta["imported_from"] = source_name
+    # The incoming content has never been backed up BY THIS PRODUCTION, and
+    # the old stamp described work that is no longer here. Clearing it makes
+    # the shelf's care line tell the truth and asks for a fresh backup.
+    meta.pop("last_backup_at", None)
+    (base / "project.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+    return {"slug": slug, "name": meta["name"], "imported_from": source_name,
+            "files": len(members), "safety_zip": safety.name}
+
+
+def _prune_safety_zips(base: Path, keep: int = 3) -> None:
+    """Safety zips are insurance, not an archive — keep the newest few."""
+    zips = sorted(base.glob("pre-import-*.zip"))
+    for old in zips[:-keep] if len(zips) > keep else []:
+        old.unlink(missing_ok=True)
+
+
+def restore_backup(payload: bytes) -> dict:
+    """Create a NEW project from a backup zip; returns {slug, name}.
+    Existing projects are never touched — a name collision gets a numeric
+    suffix. Every member is validated before extraction."""
+    z = _open_archive(payload)
+    members = _validated_members(z)
+    name = str(_archive_meta(z).get("name") or "Restored project")
 
     slug_base = re.sub(r"[^a-z0-9._-]+", "-", name.lower()).strip("-._") or "restored"
     slug = slug_base
@@ -143,31 +276,14 @@ def restore_backup(payload: bytes) -> dict:
         n += 1
 
     # Extract into a hidden staging dir renamed into place on success — a
-    # half-written tree must never appear on the shelf as a real
-    # production. Size caps are enforced on the DECOMPRESSED stream, not
-    # the attacker-controlled header sizes.
+    # half-written tree must never appear on the shelf as a real production.
     dest = paths.PROJECTS_DIR / slug
     staging = paths.PROJECTS_DIR / f".restore-{slug}"
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
     try:
-        total_out = 0
-        for info in members:
-            target = staging / info.filename
-            # Belt and braces on top of _safe_member.
-            if not target.resolve().is_relative_to(staging.resolve()):
-                raise BackupError(f"unsafe archive member: {info.filename}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            written = 0
-            with z.open(info) as src, target.open("wb") as out:
-                while chunk := src.read(1 << 20):
-                    written += len(chunk)
-                    total_out += len(chunk)
-                    if written > MAX_MEMBER_BYTES or total_out > MAX_TOTAL_BYTES:
-                        raise BackupError(
-                            f"archive member exceeds its declared size: {info.filename}")
-                    out.write(chunk)
+        _extract_members(z, members, staging)
         meta = _read_project_meta(staging)
         meta["name"] = name
         meta["restored_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")

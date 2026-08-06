@@ -1382,6 +1382,13 @@ details.meta pre {
 .prod-actions { margin-left: auto; display: flex; gap: 8px; }
 .prod-actions .ghost.urgent { border-color: var(--bad-line); }
 
+/* UNCANONIZED — 2026-08-06 — backup/import in-flight strip.
+   The card hosts the canon .busy vocabulary while a backup packs or an
+   import replaces. Absent when idle, not merely empty, so the card's 12px
+   column gap does not open a hole; the strip supplies its own spacing. */
+.prod-card [data-busy]:empty { display: none; }
+.prod-card .busy { margin-top: 0; }
+
 .prod-start .row { margin-top: 8px; }
 .prod-start-note { margin-top: 10px; letter-spacing: .06em; }
 

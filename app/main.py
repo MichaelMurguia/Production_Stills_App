@@ -220,6 +220,40 @@ def api_backup_project(slug: str = "") -> Response:
                              f'attachment; filename="{filename}"'})
 
 
+@app.post("/api/projects/import/inspect")
+async def api_inspect_import(file: UploadFile = File(...)) -> dict:
+    """What a zip holds — read-only, writes nothing. An overwrite has to be
+    describable BEFORE it is confirmed, not reported after."""
+    payload = await file.read()
+    try:
+        return await run_in_threadpool(backup.inspect_backup, payload)
+    except backup.BackupError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/projects/import")
+async def api_import_project(file: UploadFile = File(...), slug: str = Form(""),
+                             confirm_name: str = Form("")) -> dict:
+    """Set an EXISTING production to the version in a backup zip. Destructive
+    and confirmed by typed name, the same grammar as delete — this replaces
+    the production's screenplay, library, sheets, boards and approvals."""
+    if slug:
+        paths.safe_id(slug)
+    base = paths._project_base(slug)
+    if not base.exists() or (slug and not (paths.PROJECTS_DIR / slug).is_dir()):
+        raise HTTPException(404, f"unknown production: {slug}")
+    name = paths._project_name(base, slug or "Untitled Production")
+    if confirm_name.strip() != name:
+        raise HTTPException(400, f'type the production name exactly — "{name}"')
+    payload = await file.read()
+    try:
+        result = await run_in_threadpool(backup.import_into, slug, payload)
+    except backup.BackupError as e:
+        raise HTTPException(422, str(e))
+    return {**result, "active": paths.ACTIVE_PROJECT,
+            "was_active": slug == paths.ACTIVE_PROJECT}
+
+
 @app.post("/api/projects/restore")
 async def api_restore_project(file: UploadFile = File(...)) -> dict:
     """Restore a backup zip as a NEW project — existing projects are never

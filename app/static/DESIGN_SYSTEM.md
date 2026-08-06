@@ -921,8 +921,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-
-*(empty — NON_CANON_REVIEW_2026-08-06 A1 ruled the one open row, 2026-08-06)*
+| 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
+| 2026-08-06 | **Import backup as a card action.** Built from canon — a `.proj-item` in the existing ⋯ menu plus the typed-name `danger` modal, the same grammar as Delete. Review: is the ⋯ menu the right home for a destructive action the user asked to be "on the card", and should it sit above or below Delete? | Productions shelf, ⋯ menu | Restore only ever made a NEW production; setting an existing production to a backup's version had no surface at all |
 
 ---
 
@@ -931,6 +931,17 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-06** — Backing up a production states its wait (user): the
+  Back up button streamed nothing and showed nothing, so a large
+  production packed in silence. It now hosts the canon `.busy` strip on
+  its own card — "Packing …", then live bytes as the zip downloads.
+  Non-canon: see the Uncanonized table.
+- **2026-08-06** — Productions gain **Import backup** (user): restore has
+  always made a NEW production; import sets an EXISTING one to the version
+  in a zip. The zip is read before the warning is written, so the modal
+  names what the archive holds, and the confirmation is the typed
+  production name — the same grammar as Delete, because it destroys the
+  same things. Non-canon: see the Uncanonized table.
 - **2026-08-06** — The compiled prompt gains Download (user): a
   16,000-character prompt is a file, not a clipboard payload. It writes a
   .md whose header carries what the prompt body cannot — engine, size,

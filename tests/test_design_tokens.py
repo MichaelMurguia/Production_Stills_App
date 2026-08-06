@@ -298,3 +298,20 @@ class TokenContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    # -- backup / import in-flight strip (user-directed, 2026-08-06) -------
+
+    def test_card_busy_strip_is_absent_when_idle(self):
+        """The productions card hosts the canon .busy vocabulary while a
+        backup packs or an import replaces. An empty host must not open a
+        hole in the card's 12px column gap, and the strip supplies its own
+        spacing — so the host collapses and .busy loses its top margin."""
+        self.assert_decls(".prod-card [data-busy]:empty", ["display: none"])
+        self.assert_decls(".prod-card .busy", ["margin-top: 0"])
+
+    def test_the_busy_strip_it_reuses_is_unchanged(self):
+        """Reuse, not reinvention: no second progress vocabulary may
+        appear beside the canon one."""
+        self.assert_decls(".busy", [
+            "border-left: 3px solid var(--accent)", "background: var(--panel2)"])
+        self.assertEqual(CSS.count("@keyframes busy-sweep"), 1)
