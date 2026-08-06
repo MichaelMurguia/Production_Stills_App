@@ -295,10 +295,6 @@ class TokenContractTests(unittest.TestCase):
         self.assertEqual(CSS.count("#f0bc63"), 1)
         self.assertIn("--accent-hover: #f0bc63", CSS)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     # -- backup / import in-flight strip (user-directed, 2026-08-06) -------
 
     def test_card_busy_strip_is_absent_when_idle(self):
@@ -315,3 +311,37 @@ if __name__ == "__main__":
         self.assert_decls(".busy", [
             "border-left: 3px solid var(--accent)", "background: var(--panel2)"])
         self.assertEqual(CSS.count("@keyframes busy-sweep"), 1)
+
+    # -- swatch hero / recolour / generation wait (user-directed 2026-08-06) --
+
+    def test_hero_chip_is_not_the_pages_amber(self):
+        """A hero is a ROLE, not a status and not the primary action —
+        Draft owns this page's amber. Bordered Courier in --ink-dim."""
+        self.assert_decls(".sw-hero", [
+            "font-family: var(--mono)", "color: var(--ink-dim)",
+            "border: 1px solid var(--line)"])
+        self.assertNotIn("--accent", block(".sw-hero"))
+        self.assertNotIn("--accent", block(".sw-card.is-hero"))
+
+    def test_the_recolour_pencil_is_always_visible(self):
+        """An overlay you must hover to discover is not an affordance —
+        it is quiet (--ink-faint) but never opacity:0."""
+        b = block(".sw-edit")
+        self.assert_decls(".sw-edit", [
+            "position: absolute", "color: var(--ink-faint)",
+            "border: 1px solid var(--line)"])
+        self.assertNotIn("opacity: 0", b)
+        self.assert_decls(".sw-card", ["position: relative"])
+        self.assertIn(".sw-edit:hover, .sw-edit:focus-visible", CSS,
+                      "the pencil must answer keyboard focus, not only hover")
+
+    def test_the_generation_wait_takes_its_own_row(self):
+        """.swatch-gen wraps; the strip must break to a full row rather
+        than squeeze the button, and vanish when idle."""
+        self.assert_decls('.swatch-gen [data-f="sw-busy"]', ["flex-basis: 100%"])
+        self.assert_decls('.swatch-gen [data-f="sw-busy"]:empty', ["display: none"])
+        self.assert_decls(".swatch-gen .busy", ["margin-top: 0"])
+
+
+if __name__ == "__main__":
+    unittest.main()

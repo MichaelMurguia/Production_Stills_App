@@ -1944,6 +1944,27 @@ details.meta pre {
   border-left: 2px solid var(--line); padding-left: 6px; }
 .sw-acts { display: flex; gap: 10px; margin-top: 7px; }
 .sw-acts .ok-act { color: var(--ok); }
+
+/* UNCANONIZED — 2026-08-06 — swatch hero, recolour pencil, generation wait.
+   HERO is a bordered Courier chip in --ink-dim: a hero is a ROLE, not a
+   status and not this page's amber (Draft owns that). The pencil sits on
+   the colour it edits — the app's one action glyph, because a word there
+   would cover the swatch. It is quiet but always visible: an overlay the
+   user must hover to discover is not an affordance. */
+.sw-hero { font-family: var(--mono); font-size: 8px; letter-spacing: .1em;
+  color: var(--ink-dim); border: 1px solid var(--line); padding: 1px 4px;
+  margin-left: 6px; vertical-align: 1px; }
+.sw-card.is-hero { border-color: var(--line); }
+.sw-card { position: relative; }
+.sw-edit { position: absolute; top: 11px; right: 11px;
+  width: 19px; height: 19px; padding: 0; display: grid; place-items: center;
+  background: var(--bg2); border: 1px solid var(--line); color: var(--ink-faint);
+  cursor: pointer; }
+.sw-edit:hover, .sw-edit:focus-visible { color: var(--ink); border-color: var(--ink-dim); }
+.sw-edit svg { width: 11px; height: 11px; display: block; }
+.swatch-gen [data-f="sw-busy"] { flex-basis: 100%; }
+.swatch-gen [data-f="sw-busy"]:empty { display: none; }
+.swatch-gen .busy { margin-top: 0; }
 .sw-bar { display: flex; gap: 14px; align-items: center;
   border: 1px solid var(--line); padding: 8px 10px; margin-top: 12px; }
 

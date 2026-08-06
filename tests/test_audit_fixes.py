@@ -146,11 +146,6 @@ class AuditFixTests(unittest.TestCase):
         self.assertIn(out["slug"], slugs)
         self.assertNotIn(".restore-leftover", slugs)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
 class StaleOriginFixTests(unittest.TestCase):
     """The railway-host origin can never pin an old build again (user-hit
     twice, 2026-08-04): direct browser hits redirect to the branded
@@ -224,3 +219,7 @@ class StaleTabTests(unittest.TestCase):
         ver = (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
         html = self.client.get("/").text
         self.assertIn(f"window.SB_BOOT_VERSION='{ver}'", html.replace('"', "'"))
+
+
+if __name__ == "__main__":
+    unittest.main()

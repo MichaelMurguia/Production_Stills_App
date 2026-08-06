@@ -322,6 +322,14 @@ def mock_swatches(bible_text: str) -> list[dict]:
             swatches.append({"name": f"MOCK {names[k]}",
                              "hex": palette[k],
                              "pair_hex": "#5A564A" if i == 3 else None,
-                             "cite": line[:120]})
+                             # One hero per language, same rule the real
+                             # engine follows — the normalizer enforces it.
+                             "hero": i == 0,
+                             # A LABEL, the shape the real engine is asked
+                             # for — "GRM green", not a clipped sentence.
+                             # `line` still proves the section was read.
+                             "cite": f"{lang.split()[0]} "
+                                     f"{names[k].split()[-1].lower()}"
+                                     if line else ""})
         groups.append({"language": lang, "swatches": swatches})
     return groups

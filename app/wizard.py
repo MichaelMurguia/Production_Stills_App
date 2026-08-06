@@ -381,18 +381,47 @@ _SWATCH_SCHEMA_NOTE = """Return ONLY a JSON array (no prose, no code fence) with
      {"name": "OXIDE RUST",
       "hex": "#8A4B2E",
       "pair_hex": null,
-      "cite": "<the Bible line, quoted, that grounds this color>"}
+      "hero": false,
+      "cite": "GT40 yellow"}
    ]}
 ]
 Rules:
 - 4 to 8 swatches per design language, nothing outside the Bible's languages.
-- Every swatch MUST quote a real line from the Bible in "cite" — a color
-  the Bible cannot support is not proposed.
+- Every swatch must be grounded in the Bible — a color the Bible cannot
+  support is not proposed.
+- "cite" is a LABEL, not a quotation: the film's own short name for this
+  color, worded as the Bible words it. "cold GRM white light".
+  "GT40 yellow". "Onyx Unit black". TWO TO FIVE WORDS. Never a sentence,
+  never a clause with commas, no trailing punctuation. Prefer the film's
+  own proper nouns — units, factions, vehicles, materials — over generic
+  color talk. If the Bible gives the color no name, use the shortest
+  phrase that names where the color comes from.
+- Exactly ONE swatch per design language has "hero": true — the color a
+  production designer would splash through that faction's sets, vehicles
+  and costumes so the area reads on sight. Every other swatch is false.
 - "pair_hex" is for a VALUE-KEY PAIR only: the same hue at the opposite
   value key (light-key/dark-key). Use it sparingly, null otherwise.
 - Never propose time-of-day sets — a panel's hour is per-panel lighting,
   not palette.
 - Uppercase hex like #8A4B2E. Names are short and concrete."""
+
+# A label, not a paragraph (user 2026-08-06). The model is asked for the
+# film's own name for the colour; anything longer is cut down to a label
+# rather than shown as a run-on quote the eye skips.
+_CITE_WORDS = 6
+_CITE_CHARS = 44
+
+
+def short_cite(v) -> str:
+    """First clause, clamped to a label. Returns '' when nothing survives."""
+    t = re.sub(r"\s+", " ", str(v or "")).strip().strip('"“”\'')
+    t = re.split(r"[.;:—]|,\s", t)[0].strip()
+    words = t.split()
+    if len(words) > _CITE_WORDS:
+        t = " ".join(words[:_CITE_WORDS])
+    if len(t) > _CITE_CHARS:
+        t = t[:_CITE_CHARS].rstrip()
+    return t.strip(" ,;:-—\"'“”").strip()
 
 _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
@@ -425,6 +454,13 @@ def parse_swatch_proposals(text: str) -> list[dict]:
     except ValueError as e:
         raise autofill.AutofillError(
             "The model returned unreadable swatch JSON. Try again.") from e
+    return normalize_swatch_groups(raw)
+
+
+def normalize_swatch_groups(raw) -> list[dict]:
+    """The one shape swatches take, whatever produced them. The mock engine
+    runs through here too — otherwise the debug path drifts from the real
+    one and a capture taken against it proves nothing."""
     groups = []
     for g in raw if isinstance(raw, list) else []:
         if not isinstance(g, dict):
@@ -440,15 +476,63 @@ def parse_swatch_proposals(text: str) -> list[dict]:
             swatches.append({
                 "name": str(s.get("name") or hexv).strip()[:48].upper(),
                 "hex": hexv, "pair_hex": pair,
-                "cite": str(s.get("cite") or "").strip()[:220],
+                "hero": bool(s.get("hero")),
+                "cite": short_cite(s.get("cite")),
             })
         if swatches:
+            # Exactly one hero per language — the colour that gets splashed
+            # through that faction's sets. The model is asked for one; if it
+            # flags several the first wins, and if it flags none the group
+            # simply has no hero rather than one invented here.
+            seen_hero = False
+            for sw in swatches:
+                if sw["hero"] and not seen_hero:
+                    seen_hero = True
+                else:
+                    sw["hero"] = False
             groups.append({"language": str(g.get("language") or "PALETTE")
                           .strip()[:64], "swatches": swatches})
     if not groups:
         raise autofill.AutofillError(
             "The model proposed no swatches the Bible could ground. Try again.")
     return groups
+
+
+HERO_MARK = "HERO"
+
+
+def recolor_swatch(ref_id: str, hexv: str, pair: str | None = None) -> dict:
+    """Repaint an existing swatch (user 2026-08-06). The reference keeps its
+    id, its language, its name and its place in the review strip — only the
+    pixels and the hex in its notes change, because a swatch IS its color
+    and a new id would orphan every approval already recorded against it."""
+    hexv = _clean_hex(hexv)
+    if not hexv:
+        raise autofill.AutofillError("A swatch needs a full hex — like #8A4B2E.")
+    pair = _clean_hex(pair) or None
+
+    ref = store.get_reference(ref_id)
+    if ref is None:
+        raise KeyError(ref_id)
+    if store.role_head(ref.get("role", "")) != "COLOR_PALETTE":
+        raise autofill.AutofillError(
+            f"{ref_id} is not a palette swatch — only a swatch has a color to edit.")
+
+    store.replace_reference_image(
+        ref_id, render_swatch_png(hexv, pair),
+        f"{(ref.get('original_name') or ref_id).rsplit('.', 1)[0]}.png")
+
+    # Proposals note LANGUAGE · NAME · HEX · CITE, manual swatches note
+    # NAME · HEX · CITE — the hex is not at a fixed index, so it is found
+    # by shape. Nothing else in the notes is touched.
+    parts = str(ref.get("notes") or "").split(" · ")
+    swatch_hex = hexv + (f" / {pair}" if pair else "")
+    for i, seg in enumerate(parts):
+        if _HEX_RE.match(seg.split(" / ")[0].strip()):
+            parts[i] = swatch_hex
+            store.update_reference(ref_id, {"notes": " · ".join(parts)})
+            break
+    return {**store.get_reference(ref_id), "hex": hexv, "pair_hex": pair}
 
 
 def render_swatch_png(hexv: str, pair: str | None = None) -> bytes:
@@ -476,7 +560,10 @@ def persist_swatch_proposals(groups: list[dict]) -> list[dict]:
             notes = " · ".join(x for x in [
                 g["language"].upper(), sw["name"],
                 sw["hex"] + (f" / {sw['pair_hex']}" if sw.get("pair_hex") else ""),
-                sw.get("cite", "")] if x)
+                sw.get("cite", ""),
+                # Trailing marker so a reload can rebuild the hero without a
+                # second store — read and popped by the strip's restore.
+                HERO_MARK if sw.get("hero") else ""] if x)
             ref = store.add_reference(
                 f"{sw['name'].lower().replace(' ', '-')}.png",
                 render_swatch_png(sw["hex"], sw.get("pair_hex")),
@@ -498,7 +585,8 @@ def generate_swatches(provider: str = "gemini") -> dict:
 
     if provider == "mock" and generate.mock_enabled():
         from . import mockflow
-        return {"groups": persist_swatch_proposals(mockflow.mock_swatches(bible_text)),
+        return {"groups": persist_swatch_proposals(
+                    normalize_swatch_groups(mockflow.mock_swatches(bible_text))),
                 "model": mockflow.MODEL_NAME}
 
     instructions = (

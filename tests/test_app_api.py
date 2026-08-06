@@ -277,11 +277,6 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(names["alpha"], "Alpha Prime")
         self.assertEqual(names["beta"], "Beta", "only the named card renames")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RenameTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="sb-rename-"))
@@ -301,3 +296,7 @@ class RenameTests(unittest.TestCase):
         self.assertEqual(state["project"], "Dune But Cheaper")
         self.assertEqual(self.client.post("/api/projects/rename",
                                           json={"name": "  "}).status_code, 422)
+
+
+if __name__ == "__main__":
+    unittest.main()

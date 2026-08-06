@@ -2838,6 +2838,13 @@ async function renderWizard() {
   }
 
   // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
+  // The one action glyph in the app: everything else states its verb in
+  // words. A pencil sits ON the colour because that is the thing being
+  // edited, and a word there would cover it (user 2026-08-06).
+  const PENCIL = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">`
+    + `<path d="M2 12.6V14h1.4l7.9-7.9-1.4-1.4L2 12.6Z" fill="currentColor"/>`
+    + `<path d="m13.1 4.2-1.3-1.3.9-.9a.6.6 0 0 1 .9 0l.4.4a.6.6 0 0 1 0 .9l-.9.9Z" fill="currentColor"/>`
+    + `</svg>`;
   // A swatch is an ordinary COLOR_PALETTE reference: pure solid pixels
   // (engines study these images — name/hex live in the notes, never the
   // pixels). Manual add is the user's act and lands approved; generated
@@ -2870,22 +2877,39 @@ async function renderWizard() {
     const genHost = $("#swatch-gen");
     const strip = $("#swatch-strip");
 
+    // The colour block itself, without the card chrome — rebuilt in place
+    // by a recolour so the edit does not cost a re-render of the strip.
+    const swBlock = (hex, pair) => pair
+      ? `<span class="sw-pair"><i style="background:${esc(hex)}"></i><i style="background:${esc(pair)}"></i></span>`
+      : `<span class="sw-tile" style="background:${esc(hex)}"></span>`;
+    const paintCard = (card, hex, pair) => {
+      ($(".sw-tile", card) || $(".sw-pair", card)).outerHTML = swBlock(hex, pair);
+      $(".sw-hex", card).textContent = hex + (pair ? " · " + pair : "");
+      card.dataset.hex = hex;
+      card.dataset.pair = pair || "";
+    };
+
     const renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
-      const tile = sw => sw.pair_hex
-        ? `<span class="sw-pair"><i style="background:${esc(sw.hex)}"></i><i style="background:${esc(sw.pair_hex)}"></i></span>`
-        : `<span class="sw-tile" style="background:${esc(sw.hex)}"></span>`;
+      const tile = sw => swBlock(sw.hex, sw.pair_hex)
+        + `<button class="sw-edit" data-f="ed" title="Edit this colour — repaints the swatch in place, keeping its name and its place in this review">${PENCIL}</button>`;
       const headTxt = n =>
         `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} — NOT CANON UNTIL APPROVED`;
+      // A hero is the colour a designer splashes through that faction's
+      // sets so the area reads on sight (user 2026-08-06) — stated on the
+      // group so it can be found without reading every card.
+      const heroOf = g => g.swatches.find(sw => sw.hero);
       strip.innerHTML = `
         <p class="prop-head">${esc(headTxt(total))}</p>
         ${r.groups.map(g => `
-          <p class="lang-label">${esc(g.language.toUpperCase())} — ${g.swatches.length}</p>
+          <p class="lang-label">${esc(g.language.toUpperCase())} — ${g.swatches.length}${
+            heroOf(g) ? `<span class="sw-hero">HERO ${esc(heroOf(g).hex)}</span>` : ""}</p>
           <div class="sw-grid">${g.swatches.map(sw => `
-            <div class="sw-card" data-ref="${esc(sw.ref_id)}">
+            <div class="sw-card${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
+                 data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
               ${tile(sw)}
-              <span class="sw-name">${esc(sw.name)}</span>
+              <span class="sw-name">${esc(sw.name)}${sw.hero ? '<span class="sw-hero">HERO</span>' : ""}</span>
               <span class="sw-hex">${esc(sw.hex)}${sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
               ${sw.cite ? `<span class="sw-cite">${esc(sw.cite)}</span>` : ""}
               <span class="sw-acts">
@@ -2925,6 +2949,31 @@ async function renderWizard() {
           try { await verdict(card, "REJECTED"); } catch (err) { toast(err.message, true); }
           tidy();
         };
+        // Recolour in place: the reference keeps its id, so approvals
+        // already recorded against it are not orphaned by an edit.
+        $("[data-f=ed]", card).onclick = async () => {
+          const vals = await modal({
+            title: "Edit this swatch colour",
+            body: "Repaints the swatch where it stands — it keeps its id, its name "
+              + "and its place in this review, and only its pixels change.",
+            fields: [
+              { name: "hex", label: "Colour", value: card.dataset.hex,
+                placeholder: "#8A4B2E" },
+              { name: "pair", label: "Value-key pair", value: card.dataset.pair || "",
+                placeholder: "leave empty for one flat colour",
+                hint: "The same hue at the opposite value key — renders as two halves." },
+            ],
+            confirmLabel: "Repaint swatch",
+          });
+          if (vals === null) return;
+          try {
+            const rec = await api(`/api/references/${card.dataset.ref}/swatch`,
+              { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair } });
+            paintCard(card, rec.hex, rec.pair_hex);
+            toast(`${card.dataset.ref} repainted ${rec.hex}.`);
+            refreshRefs();
+          } catch (err) { toast(err.message, true); }
+        };
       });
       $("[data-f=ap-all]", strip).onclick = async () => {
         for (const card of $$(".sw-card", strip)) {
@@ -2951,10 +3000,14 @@ async function renderWizard() {
       const groups = {};
       pend.forEach(x => {
         const parts = (x.notes || "").split(" · ");
+        // wizard.HERO_MARK rides as the last segment — pop it before the
+        // rest is read positionally, or it lands in the citation.
+        const hero = parts[parts.length - 1] === "HERO";
+        if (hero) parts.pop();
         const [hex, pair] = (parts[2] || "").split(" / ");
         (groups[parts[0] || "PALETTE"] ||= []).push({
           ref_id: x.id, name: parts[1] || hex || x.id,
-          hex: hex || "#000000", pair_hex: pair || null,
+          hex: hex || "#000000", pair_hex: pair || null, hero,
           cite: parts.slice(3).join(" · ") });
       });
       renderSwatchStrip({ groups: Object.entries(groups)
@@ -2972,11 +3025,16 @@ async function renderWizard() {
       if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
-        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>`;
+        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>
+        <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
       go.onclick = async () => {
         go.disabled = true;
-        go.textContent = "Reading the Bible…";
+        // A model call over a whole Bible is a real wait, and swapping the
+        // button's label said almost nothing (user 2026-08-06). The canon
+        // .busy strip states it, with the elapsed clock.
+        const busy = startBusy($("[data-f=sw-busy]", genHost), "Reading the Bible…",
+          "Proposing only colours it can ground in your saved Bible.");
         try {
           const r = await api("/api/wizard/swatches", { method: "POST",
             json: { provider: $("#wiz-provider").value } });
@@ -2994,8 +3052,8 @@ async function renderWizard() {
               behavior: "smooth" });
           };
         } catch (err) { toast(err.message, true); }
+        busy.done();
         go.disabled = false;
-        go.textContent = "Generate palette swatches";
       };
     };
     await syncSwatchGen();

@@ -745,7 +745,8 @@ async def api_add_swatch(body: dict) -> dict:
         raise HTTPException(422, "hex must look like #8A4B2E")
     pair = wizard._clean_hex(body.get("pair_hex")) or None
     name = str(body.get("name") or f"SWATCH {hexv}").strip()[:48].upper()
-    cite = str(body.get("cite") or "").strip()[:220]
+    # A label, not a paragraph — same rule the proposals follow.
+    cite = wizard.short_cite(body.get("cite"))
     notes = " · ".join(x for x in
                        [name, hexv + (f" / {pair}" if pair else ""), cite] if x)
     try:
@@ -758,6 +759,23 @@ async def api_add_swatch(body: dict) -> dict:
     if body.get("approve"):
         ref = store.set_reference_status(ref["id"], "APPROVED")
     return ref
+
+
+@app.post("/api/references/{ref_id}/swatch")
+async def api_recolor_swatch(ref_id: str, body: dict) -> dict:
+    """Repaint an existing swatch in place (user 2026-08-06). The reference
+    keeps its id, name and review state — only its pixels change."""
+    from . import wizard
+
+    try:
+        return await run_in_threadpool(
+            wizard.recolor_swatch, ref_id, body.get("hex"), body.get("pair_hex"))
+    except KeyError:
+        raise HTTPException(404, f"unknown reference: {ref_id}")
+    except autofill.AutofillError as e:
+        raise HTTPException(422, str(e))
+    except ValueError as e:
+        raise _err(e)
 
 
 @app.post("/api/wizard/swatches")

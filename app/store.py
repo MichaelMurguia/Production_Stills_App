@@ -434,6 +434,33 @@ def add_reference(original_name: str, content: bytes, role: str,
     return record
 
 
+def replace_reference_image(ref_id: str, content: bytes,
+                            original_name: str) -> dict:
+    """Swap a reference's pixels, keeping its id, role, status and history.
+    Only the image, its thumb and its hash change — used by swatch recolour,
+    where a new id would orphan the approvals already recorded against it."""
+    refs = _load_refs()
+    for r in refs:
+        if r["id"] != ref_id:
+            continue
+        try:
+            content, ext = _render_safe(content, original_name)
+        except Exception:
+            raise ValueError(f"{original_name} is not a readable image")
+        old = paths.REF_ORIGINALS / r["file"]
+        dest = paths.REF_ORIGINALS / f"{ref_id}{ext}"
+        dest.write_bytes(content)
+        if old.name != dest.name:
+            old.unlink(missing_ok=True)
+        r["file"] = dest.name
+        r["thumb"] = _make_thumb(dest, ref_id)
+        r["sha256"] = sha256_file(dest)
+        r["updated_at"] = utcnow()
+        _save_refs(refs)
+        return r
+    raise KeyError(ref_id)
+
+
 def update_reference(ref_id: str, fields: dict) -> dict:
     refs = _load_refs()
     for r in refs:

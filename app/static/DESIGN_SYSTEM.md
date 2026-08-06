@@ -922,6 +922,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
+| 2026-08-06 | **Hero colour per design language.** A `HERO` chip — bordered Courier in `--ink-dim` — on the group label (`RESISTANCE — 4 · HERO #8A4B2E`) and on the one card that carries it. Deliberately NOT amber: a hero is a role, not a status, and Draft owns this page's amber. Review: is a chip enough, or should the hero read as a larger plate at the head of its group? | Production design step 1, swatch review strip | Nothing in the system marks "one of these is the primary" inside a set — badges are statuses, and this is a role a production designer assigns |
+| 2026-08-06 | **The recolour pencil — the app's first action glyph.** Every other action in the app states its verb in words; this one is an 11px pencil on the colour it edits, because a word there would cover the swatch. Quiet (`--ink-faint`) but always visible, not hover-revealed. Review: is a glyph acceptable here, and does it belong on the tile or beside the hex? | Production design step 1, swatch cards | The design system's Icons section covers provider marks and role squares — there is no vocabulary for a UI action glyph, and text acts do not fit on top of a 44px colour block |
 | 2026-08-06 | **Import backup as a card action.** Built from canon — a `.proj-item` in the existing ⋯ menu plus the typed-name `danger` modal, the same grammar as Delete. Review: is the ⋯ menu the right home for a destructive action the user asked to be "on the card", and should it sit above or below Delete? | Productions shelf, ⋯ menu | Restore only ever made a NEW production; setting an existing production to a backup's version had no surface at all |
 
 ---
@@ -931,6 +933,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-06** — Swatches gain a hero, a shorter tongue and an editable
+  colour (user): each design language names ONE hero colour — the one a
+  production designer splashes through that faction's sets so the area
+  reads on sight; citations become LABELS ("cold GRM white light",
+  "GT40 yellow") rather than quoted sentences, clamped to six words on the
+  way in; and a pencil on the swatch repaints it in place, keeping the
+  reference id so recorded approvals are not orphaned. Generating them now
+  states its wait in the canon `.busy` strip instead of swapping a button
+  label. Non-canon: see the Uncanonized table.
 - **2026-08-06** — Backing up a production states its wait (user): the
   Back up button streamed nothing and showed nothing, so a large
   production packed in silence. It now hosts the canon `.busy` strip on
