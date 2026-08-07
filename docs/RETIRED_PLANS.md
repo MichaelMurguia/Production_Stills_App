@@ -18,7 +18,7 @@ delta as new instructions.
 | CONNECTORS_PLAN / CONNECTORS_UI_PLAN (C1–C9) | 2026.08.03.40 | F-plan header renames |
 | SETTINGS_FIRST_RUN_PLAN.md (F1–F7) | 2026.08.03.42; F6 backend 2026.08.04.43 | marquee snippet (.52), notice snippet (.53), Authenticate connector grammar (.48). **Resurrected + committed 2026-08-03, retired again** |
 | PANEL_CARD_PLAN.md (P1–P9) | 2026.08.03.38 | — |
-| MOCK_PARITY_PROCESS.md (D1–D8 + loop) | 2026.08.04.46; loop canonized | executable form: `.claude/skills/design-verify/` |
+| MOCK_PARITY_PROCESS.md (D1–D8 + loop) | 2026.08.04.46; loop canonized | executable form: `.claude/skills/design-verify/`. **Resurrected by folder sync 2026-08-06 and deleted again** — D1–D8 describe a first-run Settings build that SETTINGS_CONTROL_PANEL_PLAN replaced in .60; D5's active-tab marker has no component left to move |
 | PROVIDER_MARQUEE_SNIPPET.html | 2026.08.04.52 | — |
 | AI_MODELS_NOTICE_SNIPPET.html | 2026.08.04.53 | — |
 | design_handoff/CANONIZATION_PASS.md (R1–R19) | 2026.08.04.57 | — (emptied the Uncanonized table) |
