@@ -1878,26 +1878,28 @@ details.meta pre {
    third of the page. */
 /* D3 — THE READ FOUND: five stat tiles + the logline in its own
    accent-ruled column. Open questions carry the only colored number. */
-.read-strip { display: flex; gap: 16px; align-items: stretch; margin-top: 14px; }
-.read-tiles { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+/* SCAN_CONSOLIDATION §1 — the sentence that explains the read sits ABOVE
+   the numbers it explains, not beside them, and the tiles give back a
+   third of their height: a count is one line, not a stacked card. */
+.read-strip { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.read-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .read-tile { background: var(--panel); border: 1px solid var(--line);
-  padding: 14px 16px; cursor: pointer; }
+  padding: 8px 14px; cursor: pointer;
+  display: flex; align-items: baseline; gap: 8px; }
 .read-tile:hover { border-color: var(--ink-faint); }
-.read-num { display: block; font-size: 24px; font-weight: 700; line-height: 1.1;
+.read-num { font-size: 16px; font-weight: 700; line-height: 1.1;
   color: var(--ink); }
 .read-num.attn { color: var(--accent); }
-.read-lab { display: block; font-family: var(--mono); font-size: 9px;
-  letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
-.read-logline { flex: none; width: 360px; border-left: 2px solid var(--accent);
-  background: var(--panel); padding: 12px 16px; }
-.read-log-kicker { font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
-  color: var(--accent); }
-.read-logline p { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55;
-  margin-top: 5px; }
+.read-lab { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .08em; color: var(--ink-faint); }
+.read-logline { border-left: 2px solid var(--accent);
+  background: var(--panel); padding: 12px 16px;
+  display: flex; align-items: baseline; gap: 12px; }
+.read-log-kicker { flex: none; font-family: var(--mono); font-size: 9px;
+  letter-spacing: .1em; color: var(--accent); }
+.read-logline p { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55; }
 @media (max-width: 980px) {
-  .read-strip { flex-direction: column; }
   .read-tiles { grid-template-columns: repeat(2, 1fr); }
-  .read-logline { width: auto; }
 }
 
 /* PRODUCTION_DESIGN_V3 (designer-ruled 2026-08-06) — the header strip,
@@ -2258,3 +2260,36 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .q-block .q-ans { display: block; color: var(--ink); margin: 2px 0 6px; }
 .q-bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .q-bar .mini { color: var(--ink-faint); letter-spacing: .08em; }
+
+/* SCAN_CONSOLIDATION §3 — a long list shows its head and states its tail. */
+.loc-more { display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 12px; border-top: 1px solid var(--line-soft); }
+.loc-more-lab { font-size: 9px; letter-spacing: .1em; color: var(--ink-faint); }
+.loc-showing { font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  color: var(--ink-faint); margin-left: 6px; }
+
+/* SCAN_CONSOLIDATION §2 — edit a paragraph in a room, not in a cell. */
+.envm { display: flex; flex-direction: column; }
+.modal.modal-custom:has(.envm) { width: min(960px, 94vw); }
+.envm-body { display: grid; grid-template-columns: 1fr 300px;
+  border-bottom: 1px solid var(--line-soft); }
+.envm-main { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.envm-side { padding: 18px; border-left: 1px solid var(--line-soft);
+  display: flex; flex-direction: column; }
+.envm-f { display: flex; flex-direction: column; gap: 6px; }
+.envm-lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-dim); }
+.envm-lab i { font-style: normal; color: var(--ink-faint); margin-left: 8px; }
+.envm-prose { min-height: 150px; line-height: 1.6; }
+.envm-2up { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.envm-lang { display: flex; align-items: center; gap: 12px; }
+.envm-ramp { height: 22px; margin-top: 0; flex: 1; max-width: 320px; cursor: default; }
+.envm-nolang { color: var(--ink-faint); }
+.envm-locs { display: flex; flex-direction: column; }
+.envm-loc { font-size: 11px; color: var(--ink-dim); padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft); }
+.envm-side .loc-more { padding: 8px 0; border-top: none; }
+.envm-blast { margin-top: auto; padding-top: 16px; font-size: 9.5px;
+  letter-spacing: .08em; color: var(--ink-faint); line-height: 1.6; }
+.envm-foot { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+.envm-del { margin-left: auto; }

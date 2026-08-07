@@ -3840,6 +3840,33 @@ async function renderWizard() {
   };
 
   const expandedWorlds = new Set();
+  // SCAN_CONSOLIDATION §3 — a long list shows its head and states its tail.
+  // Per-group expansion survives a re-render because the Set lives out here.
+  const expandedGroups = new Set();
+  const LOC_CAP = 5;
+
+  /* One capping rule for every list that has one (§3): the first n rows,
+     then a row that says how many more. `searching` lifts the cap outright
+     — a list that hides matches behind an Expand is a list that lies. */
+  const capList = (items, key, { cap = LOC_CAP, searching = false } = {}) => {
+    if (searching || items.length <= cap || expandedGroups.has(key)) {
+      return { shown: items, hidden: 0, expanded: expandedGroups.has(key),
+               capped: false };
+    }
+    return { shown: items.slice(0, cap), hidden: items.length - cap,
+             expanded: false, capped: true };
+  };
+  const capRow = (key, hidden, label = "") => hidden || expandedGroups.has(key)
+    ? `<div class="loc-more"><button class="text-act" data-more-key="${esc(key)}">${
+        expandedGroups.has(key) ? "Collapse" : `Expand — ${hidden} more`}</button>${
+        label ? `<span class="loc-more-lab mono">${esc(label)}</span>` : ""}</div>`
+    : "";
+  const wireCapRows = (host, redraw) =>
+    $$("[data-more-key]", host).forEach(b => b.onclick = () => {
+      const k = b.dataset.moreKey;
+      expandedGroups.has(k) ? expandedGroups.delete(k) : expandedGroups.add(k);
+      redraw();
+    });
   let qShowAll = false;
 
   // ---- read locations as a finder list (plan P4 / R2) ----
@@ -3873,6 +3900,136 @@ async function renderWizard() {
       <span>SHEET</span>
       <span></span>
     </div>`;
+  /* Which design language a place's palette comes from. There is no stored
+     link — environments carry name/notes/keywords, languages carry
+     name/keywords — so this is an INFERENCE, scored on shared tokens, and
+     the modal says "where its palette comes from" rather than claiming an
+     assignment the data does not hold. No match renders a stated blank. */
+  const languageFor = (env, worlds) => {
+    const hay = `${env.name || ""} ${env.notes || ""} `
+      + `${(env.keywords || []).join(" ")}`.toUpperCase();
+    let best = null, bestScore = 0;
+    for (const w of worlds || []) {
+      if (!w.name) continue;
+      const toks = w.name.toUpperCase().split(/[^A-Z0-9]+/).filter(t => t.length >= 3);
+      let score = toks.filter(t => hay.includes(t)).length * 2;
+      score += (w.keywords || []).filter(k => k && hay.includes(String(k).toUpperCase())).length;
+      if (score > bestScore) { best = w; bestScore = score; }
+    }
+    return best;
+  };
+
+  async function openEnvModal(env, idx, patchEnvs) {
+    const a = getAnalysis() || {};
+    const lang = languageFor(env, a.design_worlds || []);
+    let swatches = [];
+    if (lang) {
+      const refs = await api("/api/references").catch(() => []);
+      swatches = refs
+        .filter(r => roleHead(r.role) === "COLOR_PALETTE" && r.status !== "REJECTED")
+        .map(r => ({ ...swatchNotes(r.notes), ref_id: r.id }))
+        .filter(sw => sw.hex && sw.language
+          && sw.language.toUpperCase() === lang.name.toUpperCase());
+    }
+    const locs = env.locations || [];
+    const KEY = `envmodal:${env.name}`;
+
+    const draw = () => {
+      const cut = capList(locs, KEY);
+      const ordered = rampOrder(swatches);
+      return `<div class="envm">
+        <div class="sv-head">
+          <span class="sv-title">${esc(env.name || "(unnamed)")}</span>
+          <span class="sv-sub mono">ENVIRONMENT · ${locs.length} LOCATION${
+            locs.length === 1 ? "" : "S"} INHERIT THESE RULES</span>
+          <button class="sv-x" data-f="x" title="Close">&times;</button>
+        </div>
+        <div class="envm-body">
+          <div class="envm-main">
+            <label class="envm-f"><span class="envm-lab">NAME</span>
+              <input type="text" data-f="name" value="${esc(env.name || "")}"></label>
+            <label class="envm-f"><span class="envm-lab">THE VISUAL RULES
+              <i>WHAT EVERY PLACE HERE INHERITS — PALETTE, LIGHT, MATERIAL, ATMOSPHERE</i></span>
+              <textarea data-f="notes" class="envm-prose">${esc(env.notes || "")}</textarea></label>
+            <div class="envm-2up">
+              <label class="envm-f"><span class="envm-lab">LIGHT</span>
+                <input type="text" data-f="light" value="${esc(env.light || "")}"></label>
+              <label class="envm-f"><span class="envm-lab">MATERIAL</span>
+                <input type="text" data-f="material" value="${esc(env.material || "")}"></label>
+            </div>
+            <div class="envm-f">
+              <span class="envm-lab">DESIGN LANGUAGE — WHERE ITS PALETTE COMES FROM</span>
+              ${lang ? `<div class="envm-lang">
+                <button class="vchip" data-f="goto-lang">${esc(lang.name.toUpperCase())}</button>
+                ${ordered.length ? `<div class="sw-ramp envm-ramp">${ordered.map(sw =>
+                  `<i style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>
+                <span class="mini mono">${ordered.length} SWATCH${
+                  ordered.length === 1 ? "" : "ES"}</span>`
+                : `<span class="mini mono">NO SWATCHES YET</span>`}
+              </div>` : `<div class="mini mono envm-nolang">— NO DESIGN LANGUAGE ASSIGNED</div>`}
+            </div>
+          </div>
+          <div class="envm-side">
+            <p class="envm-lab">LOCATIONS THAT INHERIT THIS — ${locs.length}</p>
+            <div class="envm-locs">${cut.shown.map(l =>
+              `<span class="envm-loc mono">${esc(l)}</span>`).join("")
+              || `<span class="mini">none yet</span>`}</div>
+            ${capRow(KEY, cut.hidden)}
+            <p class="envm-blast mono">EDITING THE RULES REPAINTS ALL ${locs.length} SHEET${
+              locs.length === 1 ? "" : "S"} THAT HAVE NOT BEEN OVERRIDDEN</p>
+          </div>
+        </div>
+        <div class="envm-foot">
+          <button class="primary" data-f="save">Save environment</button>
+          <button class="ghost" data-f="cancel">Cancel</button>
+          <button class="text-act envm-del" data-f="del">Delete environment</button>
+        </div>
+      </div>`;
+    };
+
+    return modal({
+      custom: draw(),
+      mount: (ov, done) => {
+        const wire = () => {
+          $("[data-f=x]", ov).onclick = () => done(null);
+          $("[data-f=cancel]", ov).onclick = () => done(null);
+          wireCapRows(ov, () => { $(".envm", ov).outerHTML = draw(); wire(); });
+          $("[data-f=goto-lang]", ov)?.addEventListener("click", () => {
+            done(null);
+            const el = $("#wiz-langs-sec");
+            if (el) window.scrollTo({
+              top: el.getBoundingClientRect().top + window.scrollY - 80,
+              behavior: "smooth" });
+          });
+          $("[data-f=save]", ov).onclick = () => {
+            const v = f => $(`[data-f=${f}]`, ov).value.trim();
+            patchEnvs(list => {
+              const next = { ...list[idx], name: v("name") || env.name,
+                             notes: v("notes") };
+              // Empty is ABSENT, not "" — the Bible draft appends these as
+              // their own lines and a blank line is a lie about the world.
+              v("light") ? next.light = v("light") : delete next.light;
+              v("material") ? next.material = v("material") : delete next.material;
+              // Editing-and-saving a proposed environment = implicit confirm.
+              if (next.status === "PROPOSED") delete next.status;
+              list[idx] = next;
+            });
+            done(null);
+          };
+          $("[data-f=del]", ov).onclick = async () => {
+            if (!(await askConfirm(`Delete "${env.name}"?`,
+              `${locs.length} location${locs.length === 1 ? "" : "s"} inherit these `
+              + "rules and will fall back to UNASSIGNED. Sheets already drafted keep "
+              + "what they have.", "Delete environment", true))) return;
+            patchEnvs(list => list.splice(idx, 1));
+            done(null);
+          };
+        };
+        wire();
+      },
+    });
+  }
+
   const renderWizLocs = async () => {
     const secHost = $("#wiz-locs-sec");
     if (!secHost) return;
@@ -3899,20 +4056,26 @@ async function renderWizard() {
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       const envNames = envs.map(e => e.name);
       buildLocFinder(secHost, {
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN SHEET</span></div>`,
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN SHEET <span class="loc-showing">FIVE SHOWN PER ENVIRONMENT</span></span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
         rows: (needle, q) => grouped.map(g => {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
-          return `<div class="loc-group">${esc(g.name.toUpperCase())} — ${locs.length}</div>`
-            + locs.map(n => wizLocRow(n, byLoc[n]?.sheet, `
+          const cut = capList(locs, g.name, { searching: !!needle });
+          return `<div class="loc-group">${esc(g.name.toUpperCase())} — ${locs.length}${
+            cut.capped ? ` <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}</div>`
+            + cut.shown.map(n => wizLocRow(n, byLoc[n]?.sheet, `
               <select class="loc-reassign" data-loc="${esc(n)}" title="Move this location to another environment — saved to the analysis immediately.">
                 ${["UNASSIGNED", ...envNames].map(en =>
                   `<option${(assignedTo[n] || "UNASSIGNED") === en ? " selected" : ""}>${esc(en)}</option>`).join("")}
-              </select>`)).join("");
+              </select>`)).join("")
+            + capRow(g.name, cut.hidden, g.name.toUpperCase());
         }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
-        onDraw: () => {
+        onDraw: (redraw) => {
+          // Expanding a group redraws the finder in place — the needle and
+          // the scroll position stay where the user left them.
+          wireCapRows(secHost, redraw);
           $$(".loc-reassign", secHost).forEach(sel => sel.onchange = () => {
             const loc = sel.dataset.loc, to = sel.value;
             const a = getAnalysis();
@@ -3967,9 +4130,10 @@ async function renderWizard() {
     const answeredN = (analysis.unresolved || [])
       .filter(q => analysis.question_answers?.[q]?.answer).length;
     // D3 (PRODUCTION_DESIGN_V3) — the read presents as five stat tiles
-    // plus the logline in its own accent-ruled column; one box made the
-    // logline read as a footnote to the counts. Open questions carry the
-    // only colored number: --accent while any remain.
+    // SCAN_CONSOLIDATION §1 — the logline reads FIRST and full width: it
+    // is what the read understood, and the counts are the tally of what
+    // that understanding produced. Anchored explanation, doing its job.
+    // Open questions carry the only colored number: --accent while any remain.
     const tile = (goto, n, label, cls = "") =>
       `<a class="read-tile" data-goto="${goto}"><b class="read-num ${cls}">${n}</b>
        <span class="read-lab">${label}</span></a>`;
@@ -3982,10 +4146,10 @@ async function renderWizard() {
     ].join("");
     host.innerHTML = `
       <div class="read-strip">
-        <div class="read-tiles">${tiles}</div>
         ${analysis.logline ? `<div class="read-logline">
           <span class="read-log-kicker">LOGLINE</span>
           <p>${esc(analysis.logline)}</p></div>` : ""}
+        <div class="read-tiles">${tiles}</div>
       </div>
       <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
         <span class="uncast-label">DESIGN LANGUAGES — EACH BECOMES A BIBLE SECTION</span>
@@ -4258,19 +4422,11 @@ async function renderWizard() {
           ${proposed ? `<div class="env-facts prop-tail" style="margin-top:4px">· PROPOSED —
             <button class="prop-act" data-f="confirm" title="Keep this environment — it becomes a Bible entry on the next draft.">CONFIRM</button> /
             <button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button></div>` : ""}`;
-        $("[data-f=edit]", card).onclick = () => {
-          card.innerHTML = `
-            <input type="text" data-f="name" value="${esc(env.name || "")}" style="margin-bottom:6px" title="Environment name — its Bible entry heading.">
-            <input type="text" data-f="notes" value="${esc(env.notes || "")}" placeholder="palette, light, atmosphere…" style="margin-bottom:6px">
-            <button class="primary" data-f="save">Save</button>`;
-          $("[data-f=save]", card).onclick = () => patchEnvs(list => {
-            list[i] = { ...list[i],
-              name: $("[data-f=name]", card).value.trim() || env.name,
-              notes: $("[data-f=notes]", card).value.trim() };
-            // Editing-and-saving a proposed environment = implicit confirm.
-            if (list[i].status === "PROPOSED") delete list[i].status;
-          });
-        };
+        // SCAN_CONSOLIDATION §2 — a 30-word paragraph that other records
+        // INHERIT is not editable in a 14px field inside a 5-up grid cell.
+        // It opens a room that shows the prose, what inherits it, and the
+        // blast radius, and states that before the save.
+        $("[data-f=edit]", card).onclick = () => openEnvModal(env, i, patchEnvs);
         $("[data-f=confirm]", card)?.addEventListener("click", () => {
           patchEnvs(list => { delete list[i].status; });
           toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);

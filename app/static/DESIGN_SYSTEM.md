@@ -304,6 +304,31 @@ with a reason (D8), and removing a grouped row deletes each reference
 through the normal path so the log records every one. Grouping is a way of
 SEEING, never a way of acting on many things as if they were one.
 
+**A long list shows its head and states its tail**
+(SCAN_CONSOLIDATION, ruled 2026-08-07). Five rows per group, then one row
+that says how many more — `Expand — 35 more` with the group's name in
+Courier beside it, swapping to `Collapse` when open. Groups of five or
+fewer render no expand row at all, and a collapsed group states `SHOWING
+5` beside its count. **Search always ignores the cap:** while the finder
+has a needle every match renders, in every group, and the cap returns when
+the field clears. A list that hides matches behind an expand is a list
+that lies. Expansion is per group and lives outside the render, so a
+re-draw does not forget what the user opened. One helper (`capList` /
+`capRow`) serves every capped list, so two of them cannot drift apart.
+
+**Edit a paragraph in a room, not in a cell** (same ruling). When the
+thing being edited is prose that other records INHERIT, it opens a modal
+that shows both the prose and what inherits it, and states the blast
+radius before the save. The environment editor is the case that names the
+rule: `.envm` at 960px on the `modal({custom})` shell — a 150px textarea
+for the rules, the optional LIGHT and MATERIAL facts a designer always
+separates from the prose, the design language's palette ramp read-only at
+22px, and a right column listing the inheriting locations (capped by the
+rule above) over the Courier line `EDITING THE RULES REPAINTS ALL N SHEETS
+THAT HAVE NOT BEEN OVERRIDDEN`. The room's own primary act carries amber;
+a verdict on a PROPOSED record stays on the card, because a verdict
+happens where the proposal is.
+
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
 Courier `--ink` (`monoIds()`). No icons, no dots — the timestamp column is
@@ -983,6 +1008,10 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-07** — Step 2: logline above the counts, stat tiles cut a
+  third; environments edit in a full modal that names their inheriting
+  sheets; locations capped at five per environment with an expand row.
+  Head-and-tail lists and edit-in-a-room canonized.
 - **2026-08-07** — Swatches can be **rescanned** (user): aimed at one
   design language or run as a wider **Deep scan**, both taking an optional
   brief. Either way the engine is told what the palette already holds AND

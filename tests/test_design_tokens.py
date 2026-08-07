@@ -269,12 +269,39 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".step-cond", ["color: var(--ink-faint)"])
 
     def test_pd_v3_read_strip(self):
-        """D3: five tiles, the only colored number is open questions, the
-        logline rides an accent rule; the old reveal strip is gone."""
+        """D3, amended by SCAN_CONSOLIDATION §1: five tiles, the only
+        colored number is open questions, the logline rides an accent rule
+        — and it now sits ABOVE the counts it explains, full width."""
         self.assert_decls(".read-tiles", ["grid-template-columns: repeat(5, 1fr)"])
         self.assert_decls(".read-num.attn", ["color: var(--accent)"])
         self.assert_decls(".read-logline", ["border-left: 2px solid var(--accent)"])
         self.assertNotIn(".reveal-strip", CSS)
+        self.assert_decls(".read-strip", ["flex-direction: column"])
+        self.assertNotIn("width: 360px", block(".read-logline"),
+                         "the logline is not a sixth statistic in a column")
+
+    def test_scan_tiles_are_baseline_rows(self):
+        """§1 — a count is one line, not a stacked card: ~40px, a third off."""
+        b = block(".read-tile")
+        self.assert_decls(".read-tile", ["padding: 8px 14px", "align-items: baseline"])
+        self.assertIn("display: flex", b)
+        self.assert_decls(".read-num", ["font-size: 16px"])
+        self.assertNotIn("display: block", block(".read-num"),
+                         "number and label share a line now")
+
+    def test_the_expand_row_exists_and_is_square(self):
+        """§3 — the row that states a list's tail."""
+        b = block(".loc-more")
+        self.assertIn("display: flex", b)
+        self.assertNotIn("border-radius", b)
+
+    def test_the_environment_room_is_two_columns(self):
+        """§2 — prose on the left, what inherits it on the right, and the
+        blast radius pinned to the bottom of that column."""
+        self.assert_decls(".envm-body", ["grid-template-columns: 1fr 300px"])
+        self.assert_decls(".envm-prose", ["min-height: 150px"])
+        self.assert_decls(".envm-ramp", ["height: 22px"])
+        self.assert_decls(".envm-blast", ["margin-top: auto"])
 
     def test_pd_v3_labelled_table(self):
         """D4: one fixed track set for header row and rows; group headers
