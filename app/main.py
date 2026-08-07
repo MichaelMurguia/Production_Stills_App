@@ -778,6 +778,21 @@ async def api_recolor_swatch(ref_id: str, body: dict) -> dict:
         raise _err(e)
 
 
+@app.post("/api/references/{ref_id}/hero")
+async def api_set_swatch_hero(ref_id: str) -> dict:
+    """Name this swatch the hero of its design language — the colour
+    splashed through that faction's sets. Single-valued: setting it clears
+    the previous hero in the same language (PALETTE_GROUPS_PLAN §4)."""
+    from . import wizard
+
+    try:
+        return await run_in_threadpool(wizard.set_hero, ref_id)
+    except KeyError:
+        raise HTTPException(404, f"unknown reference: {ref_id}")
+    except autofill.AutofillError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/api/wizard/swatches")
 async def api_wizard_swatches(body: dict) -> dict:
     """Bible-cited palette proposals (NON-CANON widget) — proposals only;

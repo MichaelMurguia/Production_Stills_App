@@ -298,14 +298,57 @@ const AUTO_ATTACH_HEADS = ["WORLD_TEXTURE", "COLOR_PALETTE",
    belongs to the app now. */
 const HEXOK = /^#[0-9a-fA-F]{6}$/;
 
-function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger = false }) {
+/* PALETTE_GROUPS_PLAN — swatch helpers, module scope because both the
+   review strip and the step-1 column draw ramps from the same facts. */
+// Relative luminance on the sRGB values. Ties break on the hex string
+// so a ramp's order never shuffles between renders.
+const lumaOf = hex => {
+  const h = String(hex || "").replace("#", "");
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) || 0);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const rampOrder = sws => [...sws].sort((a, b) =>
+  (b.hero ? 1 : 0) - (a.hero ? 1 : 0)
+  || lumaOf(b.hex) - lumaOf(a.hex)
+  || (a.hex < b.hex ? -1 : a.hex > b.hex ? 1 : 0));
+
+// A pair is ONE swatch, so it gets one band's width — split into two
+// half-height stripes rather than two bands.
+const bandStyle = sw => sw.pair_hex
+  ? `background:linear-gradient(${esc(sw.hex)} 0 50%, ${esc(sw.pair_hex)} 50% 100%)`
+  : `background:${esc(sw.hex)}`;
+const band = sw =>
+  `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`;
+
+// The JS twin of wizard.parse_swatch_notes: proposals write
+// LANGUAGE · NAME · HEX · CITE, manual swatches write NAME · HEX · CITE,
+// so the hex is found by SHAPE and the rest placed around it.
+function swatchNotes(notes) {
+  let parts = String(notes || "").split(" · ").map(x => x.trim());
+  const hero = parts[parts.length - 1] === "HERO";
+  if (hero) parts = parts.slice(0, -1);
+  const hx = parts.findIndex(x => HEXOK.test(x.split(" / ")[0].trim()));
+  if (hx < 0) return { language: "", name: parts[0] || "", hex: "",
+                       pair_hex: null, cite: "", hero };
+  const hexes = parts[hx].split(" / ").map(x => x.trim());
+  return {
+    language: hx >= 2 ? parts[0] : "",
+    name: hx >= 1 ? parts[hx - 1] : "",
+    hex: hexes[0], pair_hex: hexes[1] || null,
+    cite: parts.slice(hx + 1).join(" · "), hero,
+  };
+}
+
+
+function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
+                danger = false, custom = "", mount = null }) {
   return new Promise(resolve => {
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
     ov.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-title">${esc(title)}</div>
-        ${body ? `<p class="modal-body">${esc(body)}</p>` : ""}
+      <div class="modal${custom ? " modal-custom" : ""}" role="dialog" aria-modal="true">
+        ${custom || `<div class="modal-title">${esc(title)}</div>`}
+        ${custom ? "" : body ? `<p class="modal-body">${esc(body)}</p>` : ""}
         ${fields.map((f, i) => `
           <label class="modal-field">${esc(f.label)}
             ${f.textarea
@@ -314,15 +357,15 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
               ? `<span class="mf-color${HEXOK.test((f.value || "").trim()) ? "" : " is-unset"}">
                    <input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">
                    <input type="color" data-mfc="${i}" value="${HEXOK.test((f.value || "").trim()) ? esc(f.value.trim()) : "#000000"}"
-                          title="Pick a colour — the hex beside it follows" aria-label="${esc(f.label)} picker">
+                          title="Pick a color — the hex beside it follows" aria-label="${esc(f.label)} picker">
                  </span>`
               : `<input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">`}
             ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
           </label>`).join("")}
-        <div class="modal-actions">
+        ${custom ? "" : `<div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="${danger ? "danger" : "primary"}" data-mf="ok">${esc(confirmLabel)}</button>
-        </div>
+        </div>`}
       </div>`;
     document.body.append(ov);
     const done = val => { window.removeEventListener("keydown", onKey, true); ov.remove(); resolve(val); };
@@ -344,10 +387,21 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm", danger
     });
     const onKey = e => {
       if (e.key === "Escape") { e.stopPropagation(); done(null); }
-      else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); done(collect()); }
+      else if (!custom && e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); done(collect()); }
     };
     window.addEventListener("keydown", onKey, true);
     ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
+    if (custom) {
+      // A custom body brings its own verbs; the shell supplies only the
+      // overlay, Esc and backdrop dismissal (PALETTE_GROUPS_PLAN §2).
+      if (mount) mount(ov, done);
+      // Focus the dialog itself, not its first button: focusing × paints
+      // the amber focus ring on the one control that is not the point.
+      const dlg = $(".modal", ov);
+      dlg.tabIndex = -1;
+      dlg.focus();
+      return;
+    }
     $("[data-mf=cancel]", ov).onclick = () => done(null);
     $("[data-mf=ok]", ov).onclick = () => done(collect());
     const first = $("input, textarea", ov);
@@ -2860,13 +2914,6 @@ async function renderWizard() {
   }
 
   // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
-  // The one action glyph in the app: everything else states its verb in
-  // words. A pencil sits ON the colour because that is the thing being
-  // edited, and a word there would cover it (user 2026-08-06).
-  const PENCIL = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">`
-    + `<path d="M2 12.6V14h1.4l7.9-7.9-1.4-1.4L2 12.6Z" fill="currentColor"/>`
-    + `<path d="m13.1 4.2-1.3-1.3.9-.9a.6.6 0 0 1 .9 0l.4.4a.6.6 0 0 1 0 .9l-.9.9Z" fill="currentColor"/>`
-    + `</svg>`;
   // A swatch is an ordinary COLOR_PALETTE reference: pure solid pixels
   // (engines study these images — name/hex live in the notes, never the
   // pixels). Manual add is the user's act and lands approved; generated
@@ -2900,116 +2947,237 @@ async function renderWizard() {
 
     // The colour block itself, without the card chrome — rebuilt in place
     // by a recolour so the edit does not cost a re-render of the strip.
+    // PALETTE_GROUPS_PLAN (2026-08-06): a design language renders as ONE
+    // contiguous ramp — the group is the swatch, the colour is a detail.
+    // Every per-colour fact and verb lives in the viewer, one click away.
     const swBlock = (hex, pair) => pair
       ? `<span class="sw-pair"><i style="background:${esc(hex)}"></i><i style="background:${esc(pair)}"></i></span>`
       : `<span class="sw-tile" style="background:${esc(hex)}"></span>`;
-    const paintCard = (card, hex, pair) => {
-      ($(".sw-tile", card) || $(".sw-pair", card)).outerHTML = swBlock(hex, pair);
-      $(".sw-hex", card).textContent = hex + (pair ? " · " + pair : "");
-      card.dataset.hex = hex;
-      card.dataset.pair = pair || "";
+
+    const rampLabel = g => {
+      const hero = g.swatches.find(s => s.hero);
+      return `<p class="sw-ramp-label">
+        <span class="lang">${esc(g.language.toUpperCase())}</span>
+        <span class="n">${g.swatches.length}</span>
+        <span class="hero${hero ? "" : " open"}">${
+          hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span></p>`;
+    };
+
+    // Repaint every element that shows this reference — a colour appears
+    // in the strip ramp and, while it is open, in the viewer too.
+    const paintSwatch = (refId, hex, pair) => {
+      $$(`[data-ref="${CSS.escape(refId)}"]`).forEach(el => {
+        if (el.tagName === "I" && el.parentElement.classList.contains("sw-ramp")) {
+          el.setAttribute("style", `flex:${el.style.flex || 1};`
+            + bandStyle({ hex, pair_hex: pair }));
+        }
+      });
+      $$(`.sv-row[data-ref="${CSS.escape(refId)}"]`).forEach(row => {
+        $(".sv-chip", row).outerHTML =
+          `<span class="sv-chip">${swBlock(hex, pair)}</span>`;
+        $(".sv-hex", row).textContent = hex + (pair ? " · " + pair : "");
+        row.dataset.hex = hex;
+        row.dataset.pair = pair || "";
+      });
+    };
+
+    // D8 still holds: a verdict is a per-reference status record with a
+    // reason. The group bar and the viewer footer run those records in
+    // sequence — they are not a new kind of verdict.
+    const verdictFor = (refId, status) =>
+      api(`/api/references/${refId}/status`, { method: "POST",
+        json: { status, reason: status === "REJECTED"
+          ? "swatch proposal rejected in review" : "" } });
+
+    const recolorSwatch = async (refId, hex, pair) => {
+      const vals = await modal({
+        title: "Edit this swatch color",
+        body: "Repaints the swatch where it stands — it keeps its id, its name "
+          + "and its place in this review, and only its pixels change.",
+        fields: [
+          { name: "hex", label: "Color", value: hex, placeholder: "#8A4B2E",
+            color: true },
+          { name: "pair", label: "Value-key pair", value: pair || "",
+            placeholder: "leave empty for one flat color", color: true,
+            hint: "The same hue at the opposite value key — renders as two halves." },
+        ],
+        confirmLabel: "Repaint swatch",
+      });
+      if (vals === null) return null;
+      const rec = await api(`/api/references/${refId}/swatch`,
+        { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair } });
+      paintSwatch(refId, rec.hex, rec.pair_hex);
+      toast(`${refId} repainted ${rec.hex}.`);
+      refreshRefs();
+      return rec;
+    };
+
+    // ---- the swatch viewer -------------------------------------------
+    // Opened from a ramp; holds every per-colour fact and verb. `group` is
+    // live — the viewer mutates it and the caller re-renders from it, so
+    // the strip and the viewer never disagree about what is left.
+    const openSwatchViewer = (group, focusRef, onChange) => {
+      const draw = () => {
+        const ordered = rampOrder(group.swatches);
+        const n = group.swatches.length;
+        return `<div class="sv">
+          <div class="sv-head">
+            <span class="sv-title">${esc(group.language)}</span>
+            <span class="sv-sub mono">${n} SWATCH${n === 1 ? "" : "ES"} · PROPOSED, NOT CANON</span>
+            <button class="sv-x" data-f="x" title="Close">&times;</button>
+          </div>
+          <div class="sv-rampwrap">
+            <div class="sw-ramp sv-ramp">${ordered.map(sw =>
+              `<i data-ref="${esc(sw.ref_id)}" class="${sw.hero ? "is-hero" : ""}"
+                  style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"
+                  title="Make this the hero"></i>`).join("")}</div>
+            <p class="sv-note mono">HERO — THE COLOR SPLASHED THROUGH THIS FACTION'S SETS, COSTUMES AND PROPS</p>
+          </div>
+          <div class="sv-rows">${ordered.map(sw => `
+            <div class="sv-row${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
+                 data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
+              <span class="sv-chip">${swBlock(sw.hex, sw.pair_hex)}</span>
+              <span class="sv-id">
+                <span class="sv-name">${esc(sw.name)}${
+                  sw.hero ? '<span class="sw-hero">HERO</span>' : ""}</span>
+                <span class="sv-hex mono">${esc(sw.hex)}${
+                  sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
+                ${sw.cite ? `<span class="sv-cite">&ldquo;${esc(sw.cite)}&rdquo;</span>` : ""}
+              </span>
+              <span class="sv-acts">
+                <button class="text-act" data-f="rc">Recolor</button>
+                <button class="text-act ok-act" data-f="ap">Approve</button>
+                <button class="text-act" data-f="rj">Reject</button>
+              </span>
+            </div>`).join("")}</div>
+          <div class="sv-foot">
+            <button class="ghost" data-f="ap-all">Approve all ${n}</button>
+            <button class="text-act" data-f="rj-all">Reject the group</button>
+            <span class="sv-footnote mono">EACH VERDICT IS ITS OWN REFERENCE RECORD</span>
+          </div>
+        </div>`;
+      };
+
+      return modal({
+        custom: draw(),
+        mount: (ov, done) => {
+          const wire = () => {
+            const drop = refId => {
+              group.swatches = group.swatches.filter(s => s.ref_id !== refId);
+              onChange();
+              if (!group.swatches.length) return done(null);
+              // A rejected hero leaves the group OPEN — the user chooses a
+              // hero, the app never guesses one after the fact.
+              $(".sv", ov).outerHTML = draw();
+              wire();
+            };
+            $("[data-f=x]", ov).onclick = () => done(null);
+            $$(".sv-ramp i", ov).forEach(b => b.onclick = async () => {
+              const refId = b.dataset.ref;
+              if (group.swatches.find(s => s.ref_id === refId)?.hero) return;
+              try {
+                await api(`/api/references/${refId}/hero`, { method: "POST" });
+              } catch (err) { return toast(err.message, true); }
+              group.swatches.forEach(s => { s.hero = s.ref_id === refId; });
+              onChange();
+              $(".sv", ov).outerHTML = draw();
+              wire();
+              refreshRefs();
+            });
+            $$(".sv-row", ov).forEach(row => {
+              const refId = row.dataset.ref;
+              $("[data-f=rc]", row).onclick = async () => {
+                try {
+                  const rec = await recolorSwatch(refId, row.dataset.hex, row.dataset.pair);
+                  if (!rec) return;
+                  const sw = group.swatches.find(s => s.ref_id === refId);
+                  if (sw) { sw.hex = rec.hex; sw.pair_hex = rec.pair_hex; }
+                  onChange();
+                } catch (err) { toast(err.message, true); }
+              };
+              $("[data-f=ap]", row).onclick = async () => {
+                try { await verdictFor(refId, "APPROVED"); refreshRefs(); drop(refId); }
+                catch (err) { toast(err.message, true); }
+              };
+              $("[data-f=rj]", row).onclick = async () => {
+                try { await verdictFor(refId, "REJECTED"); drop(refId); }
+                catch (err) { toast(err.message, true); }
+              };
+            });
+            $("[data-f=ap-all]", ov).onclick = async () => {
+              for (const sw of [...group.swatches]) {
+                try { await verdictFor(sw.ref_id, "APPROVED"); }
+                catch (err) { toast(err.message, true); break; }
+                group.swatches = group.swatches.filter(s => s.ref_id !== sw.ref_id);
+              }
+              refreshRefs(); onChange(); done(null);
+            };
+            $("[data-f=rj-all]", ov).onclick = async () => {
+              for (const sw of [...group.swatches]) {
+                try { await verdictFor(sw.ref_id, "REJECTED"); }
+                catch (err) { toast(err.message, true); break; }
+                group.swatches = group.swatches.filter(s => s.ref_id !== sw.ref_id);
+              }
+              onChange(); done(null);
+            };
+          };
+          wire();
+          if (focusRef) {
+            const row = $(`.sv-row[data-ref="${CSS.escape(focusRef)}"]`, ov);
+            if (row) {
+              row.classList.add("is-focus");
+              row.scrollIntoView({ block: "nearest" });
+            }
+          }
+        },
+      });
     };
 
     const renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
-      const tile = sw => swBlock(sw.hex, sw.pair_hex)
-        + `<button class="sw-edit" data-f="ed" title="Edit this colour — repaints the swatch in place, keeping its name and its place in this review">${PENCIL}</button>`;
       const headTxt = n =>
         `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} — NOT CANON UNTIL APPROVED`;
-      // A hero is the colour a designer splashes through that faction's
-      // sets so the area reads on sight (user 2026-08-06) — stated on the
-      // group so it can be found without reading every card.
-      const heroOf = g => g.swatches.find(sw => sw.hero);
       strip.innerHTML = `
         <p class="prop-head">${esc(headTxt(total))}</p>
-        ${r.groups.map(g => `
-          <p class="lang-label">${esc(g.language.toUpperCase())} — ${g.swatches.length}${
-            heroOf(g) ? `<span class="sw-hero">HERO ${esc(heroOf(g).hex)}</span>` : ""}</p>
-          <div class="sw-grid">${g.swatches.map(sw => `
-            <div class="sw-card${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
-                 data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
-              ${tile(sw)}
-              <span class="sw-name">${esc(sw.name)}${sw.hero ? '<span class="sw-hero">HERO</span>' : ""}</span>
-              <span class="sw-hex">${esc(sw.hex)}${sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
-              ${sw.cite ? `<span class="sw-cite">${esc(sw.cite)}</span>` : ""}
-              <span class="sw-acts">
-                <button class="text-act ok-act" data-f="ap">Approve</button>
-                <button class="text-act" data-f="rj">Reject</button>
-              </span>
-            </div>`).join("")}</div>`).join("")}
+        ${r.groups.map((g, i) => `
+          <div class="sw-ramp" data-lang="${esc(g.language)}" data-gi="${i}">${
+            rampOrder(g.swatches).map(band).join("")}</div>
+          ${rampLabel(g)}`).join("")}
         <div class="sw-bar">
           <button class="ghost" data-f="ap-all">Approve all ${total}</button>
           <button class="text-act" data-f="discard">Discard the rest</button>
         </div>`;
-      // D8 ruling: a verdict is a reference-status record — approvals and
-      // rejections both land in the approval log, never in thin air.
-      const verdict = (card, status) =>
-        api(`/api/references/${card.dataset.ref}/status`, { method: "POST",
-          json: { status, reason: status === "REJECTED"
-            ? "swatch proposal rejected in review" : "" } })
-          .then(() => card.remove());
-      const tidy = () => {
-        $$(".lang-label", strip).forEach(l => {
-          const grid = l.nextElementSibling;
-          if (grid && grid.classList.contains("sw-grid") && !grid.children.length) {
-            grid.remove(); l.remove();
-          }
-        });
-        const left = $$(".sw-card", strip).length;
-        if (!left) { strip.innerHTML = ""; return; }
-        $(".prop-head", strip).textContent = headTxt(left);
-        $("[data-f=ap-all]", strip).textContent = `Approve all ${left}`;
+
+      const reflow = () => {
+        r.groups = r.groups.filter(g => g.swatches.length);
+        renderSwatchStrip(r);
       };
-      $$(".sw-card", strip).forEach(card => {
-        $("[data-f=ap]", card).onclick = async () => {
-          try { await verdict(card, "APPROVED"); } catch (err) { toast(err.message, true); }
-          refreshRefs(); tidy();
-        };
-        $("[data-f=rj]", card).onclick = async () => {
-          try { await verdict(card, "REJECTED"); } catch (err) { toast(err.message, true); }
-          tidy();
-        };
-        // Recolour in place: the reference keeps its id, so approvals
-        // already recorded against it are not orphaned by an edit.
-        $("[data-f=ed]", card).onclick = async () => {
-          const vals = await modal({
-            title: "Edit this swatch colour",
-            body: "Repaints the swatch where it stands — it keeps its id, its name "
-              + "and its place in this review, and only its pixels change.",
-            fields: [
-              { name: "hex", label: "Colour", value: card.dataset.hex,
-                placeholder: "#8A4B2E", color: true },
-              { name: "pair", label: "Value-key pair", value: card.dataset.pair || "",
-                placeholder: "leave empty for one flat colour", color: true,
-                hint: "The same hue at the opposite value key — renders as two halves." },
-            ],
-            confirmLabel: "Repaint swatch",
-          });
-          if (vals === null) return;
-          try {
-            const rec = await api(`/api/references/${card.dataset.ref}/swatch`,
-              { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair } });
-            paintCard(card, rec.hex, rec.pair_hex);
-            toast(`${card.dataset.ref} repainted ${rec.hex}.`);
-            refreshRefs();
-          } catch (err) { toast(err.message, true); }
+
+      $$(".sw-ramp", strip).forEach(ramp => {
+        const g = r.groups[Number(ramp.dataset.gi)];
+        ramp.onclick = e => {
+          const hit = e.target.closest("i");
+          $$(".sw-ramp", strip).forEach(x => x.classList.remove("is-open"));
+          ramp.classList.add("is-open");
+          openSwatchViewer(g, hit?.dataset.ref, reflow)
+            .then(() => { ramp.classList.remove("is-open"); reflow(); });
         };
       });
-      $("[data-f=ap-all]", strip).onclick = async () => {
-        for (const card of $$(".sw-card", strip)) {
-          try { await verdict(card, "APPROVED"); }
-          catch (err) { toast(err.message, true); break; }
+
+      const sweep = async status => {
+        for (const g of r.groups) {
+          for (const sw of [...g.swatches]) {
+            try { await verdictFor(sw.ref_id, status); }
+            catch (err) { toast(err.message, true); return reflow(); }
+            g.swatches = g.swatches.filter(s => s.ref_id !== sw.ref_id);
+          }
         }
-        refreshRefs(); tidy();
+        if (status === "APPROVED") refreshRefs();
+        reflow();
       };
-      $("[data-f=discard]", strip).onclick = async () => {
-        for (const card of $$(".sw-card", strip)) {
-          try { await verdict(card, "REJECTED"); }
-          catch (err) { toast(err.message, true); break; }
-        }
-        tidy();
-      };
+      $("[data-f=ap-all]", strip).onclick = () => sweep("APPROVED");
+      $("[data-f=discard]", strip).onclick = () => sweep("REJECTED");
     };
 
     // Pending proposals from an earlier run survive reload — rebuild the
@@ -3020,16 +3188,10 @@ async function renderWizard() {
       if (!pend.length) return;
       const groups = {};
       pend.forEach(x => {
-        const parts = (x.notes || "").split(" · ");
-        // wizard.HERO_MARK rides as the last segment — pop it before the
-        // rest is read positionally, or it lands in the citation.
-        const hero = parts[parts.length - 1] === "HERO";
-        if (hero) parts.pop();
-        const [hex, pair] = (parts[2] || "").split(" / ");
-        (groups[parts[0] || "PALETTE"] ||= []).push({
-          ref_id: x.id, name: parts[1] || hex || x.id,
-          hex: hex || "#000000", pair_hex: pair || null, hero,
-          cite: parts.slice(3).join(" · ") });
+        const sw = swatchNotes(x.notes);
+        (groups[sw.language || "PALETTE"] ||= []).push({
+          ...sw, ref_id: x.id, name: sw.name || sw.hex || x.id,
+          hex: sw.hex || "#000000" });
       });
       renderSwatchStrip({ groups: Object.entries(groups)
         .map(([language, swatches]) => ({ language, swatches })) });
@@ -3055,7 +3217,7 @@ async function renderWizard() {
         // button's label said almost nothing (user 2026-08-06). The canon
         // .busy strip states it, with the elapsed clock.
         const busy = startBusy($("[data-f=sw-busy]", genHost), "Reading the Bible…",
-          "Proposing only colours it can ground in your saved Bible.");
+          "Proposing only colors it can ground in your saved Bible.");
         try {
           const r = await api("/api/wizard/swatches", { method: "POST",
             json: { provider: $("#wiz-provider").value } });
@@ -3235,6 +3397,68 @@ async function renderWizard() {
   };
 
   let wizAnchorIds = [];
+  // One ramp row per design language, drawn from notes rather than images.
+  const renderPaletteRows = (list, refs) => {
+    const rows = [];
+    const byLang = new Map();
+    refs.forEach(r => {
+      const sw = swatchNotes(r.notes);
+      sw.ref_id = r.id;
+      if (!sw.hex) {                       // not a swatch — an uploaded plate
+        rows.push({ label: r.id, single: r, swatches: [] });
+        return;
+      }
+      if (!sw.language) { rows.push({ label: sw.name || r.id, swatches: [sw] }); return; }
+      if (!byLang.has(sw.language)) {
+        const row = { label: sw.language, swatches: [] };
+        byLang.set(sw.language, row);
+        rows.push(row);
+      }
+      byLang.get(sw.language).swatches.push(sw);
+    });
+
+    rows.forEach(row => {
+      const el = document.createElement("div");
+      el.className = "pal-row";
+      const grouped = row.swatches.length > 1;
+      const hero = row.swatches.find(s => s.hero);
+      const ordered = rampOrder(row.swatches);
+      const refId = (hero || ordered[0])?.ref_id || row.single?.id || "";
+      el.innerHTML = `
+        ${row.single
+          ? `<div class="sw-ramp pal-plate"><img src="/api/references/${esc(row.single.id)}/image?thumb=1" alt=""></div>`
+          : `<div class="sw-ramp">${ordered.map(sw =>
+              `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>`}
+        <p class="sw-ramp-label">
+          <span class="lang">${esc(row.label.toUpperCase())}</span>
+          <span class="n">${grouped ? row.swatches.length : esc(ordered[0]?.hex || "")}</span>
+          <span class="hero mono">${esc(refId)}</span>
+          <button class="danger" data-f="del" title="${grouped
+            ? `Remove all ${row.swatches.length} references in this language`
+            : "Permanently delete this reference"}">&times;</button>
+        </p>`;
+      const ids = row.single ? [row.single.id] : ordered.map(s => s.ref_id);
+      $("[data-f=del]", el).onclick = async () => {
+        const many = ids.length > 1;
+        if (!(await askConfirm(
+          many ? `Remove ${ids.length} references?` : `Delete ${ids[0]} forever`,
+          many
+            ? `Every swatch in ${row.label} is deleted from the reference library `
+              + "and from future generations. Each removal is logged. This cannot be undone."
+            : "It is removed from the reference library and future generations. This cannot be undone.",
+          many ? `Remove ${ids.length}` : "Delete forever", true))) return;
+        try {
+          // Deleted one at a time through the existing path, so the log
+          // records every one (§3).
+          for (const id of ids) await api(`/api/references/${id}`, { method: "DELETE" });
+          toast(many ? `${ids.length} references removed.` : `${ids[0]} permanently deleted.`);
+          refreshRefs();
+        } catch (err) { toast(err.message, true); }
+      };
+      list.append(el);
+    });
+  };
+
   const refreshRefs = async () => {
     // Pending swatch proposals live in the review strip, not the anchor
     // rows (D8: they persist as PROVISIONAL refs so verdicts are records).
@@ -3253,6 +3477,15 @@ async function renderWizard() {
       badge.textContent = mine.length ? `${mine.length}` : "NONE";
       const list = $("[data-f=list]", col);
       list.innerHTML = "";
+      // PALETTE_GROUPS_PLAN §3 — the same rule above the review strip: a
+      // design language is one object, so approved swatches group into one
+      // ramp row per language. Bands come from the PARSED hexes, never the
+      // thumbnails. A swatch with no language segment (a manual one, an
+      // image-derived palette) is its own one-band row under its own name.
+      if (role === "COLOR_PALETTE") {
+        renderPaletteRows(list, mine);
+        continue;
+      }
       const lbItems = mine.map(r => ({
         src: `/api/references/${r.id}/image`, caption: `${r.id} — ${r.role}` }));
       mine.forEach((r, i) => {

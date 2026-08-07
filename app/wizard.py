@@ -501,6 +501,69 @@ def normalize_swatch_groups(raw) -> list[dict]:
 HERO_MARK = "HERO"
 
 
+def parse_swatch_notes(notes: str) -> dict:
+    """Read a swatch's notes back into fields.
+
+    Two shapes exist and neither is positional enough to trust blindly:
+    proposals write LANGUAGE · NAME · HEX · CITE, manual swatches write
+    NAME · HEX · CITE. The hex is the one segment with a fixed SHAPE, so
+    it is found first and everything else is placed relative to it.
+    """
+    parts = [p.strip() for p in str(notes or "").split(" · ")]
+    hero = bool(parts) and parts[-1] == HERO_MARK
+    if hero:
+        parts = parts[:-1]
+    hx = next((i for i, p in enumerate(parts)
+               if _HEX_RE.match(p.split(" / ")[0].strip())), None)
+    if hx is None:
+        return {"language": "", "name": parts[0] if parts else "",
+                "hex": "", "pair_hex": None, "cite": "", "hero": hero}
+    hexes = [x.strip() for x in parts[hx].split(" / ")]
+    return {
+        "language": parts[0] if hx >= 2 else "",
+        "name": parts[hx - 1] if hx >= 1 else "",
+        "hex": hexes[0],
+        "pair_hex": hexes[1] if len(hexes) > 1 else None,
+        "cite": " · ".join(parts[hx + 1:]),
+        "hero": hero,
+    }
+
+
+def _with_hero(notes: str, hero: bool) -> str:
+    parts = [p.strip() for p in str(notes or "").split(" · ") if p.strip()]
+    if parts and parts[-1] == HERO_MARK:
+        parts = parts[:-1]
+    if hero:
+        parts.append(HERO_MARK)
+    return " · ".join(parts)
+
+
+def set_hero(ref_id: str) -> dict:
+    """Name this swatch the hero of its design language (PALETTE_GROUPS_PLAN
+    §4). Single-valued: every other palette swatch sharing the language
+    loses the mark in the same pass. A swatch with no language segment is
+    its own group, so it only ever affects itself."""
+    ref = store.get_reference(ref_id)
+    if ref is None:
+        raise KeyError(ref_id)
+    if store.role_head(ref.get("role", "")) != "COLOR_PALETTE":
+        raise autofill.AutofillError(
+            f"{ref_id} is not a palette swatch — only a swatch can be a hero.")
+
+    language = parse_swatch_notes(ref.get("notes", ""))["language"]
+    updates = {ref_id: _with_hero(ref.get("notes", ""), True)}
+    if language:
+        for other in store.list_references():
+            if (other["id"] != ref_id
+                    and store.role_head(other.get("role", "")) == "COLOR_PALETTE"
+                    and parse_swatch_notes(other.get("notes", ""))["language"] == language
+                    and parse_swatch_notes(other.get("notes", ""))["hero"]):
+                updates[other["id"]] = _with_hero(other.get("notes", ""), False)
+    store.update_reference_notes(updates)
+    return {"language": language, "hero": ref_id,
+            "cleared": [k for k in updates if k != ref_id]}
+
+
 def recolor_swatch(ref_id: str, hexv: str, pair: str | None = None) -> dict:
     """Repaint an existing swatch (user 2026-08-06). The reference keeps its
     id, its language, its name and its place in the review strip — only the
@@ -558,7 +621,10 @@ def persist_swatch_proposals(groups: list[dict]) -> list[dict]:
     for g in groups:
         for sw in g["swatches"]:
             notes = " · ".join(x for x in [
-                g["language"].upper(), sw["name"],
+                # NOT uppercased: the viewer shows the language as the
+                # Bible words it, and uppercasing here loses "GRM" vs
+                # "Beltminer Technology" for good.
+                g["language"], sw["name"],
                 sw["hex"] + (f" / {sw['pair_hex']}" if sw.get("pair_hex") else ""),
                 sw.get("cite", ""),
                 # Trailing marker so a reload can rebuild the hero without a

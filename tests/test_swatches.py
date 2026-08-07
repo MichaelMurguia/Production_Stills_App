@@ -95,6 +95,42 @@ class SwatchTests(unittest.TestCase):
             r = self.client.post("/api/references/swatch", json={"hex": bad})
             self.assertEqual(r.status_code, 422, bad)
 
+    # ---- hero, through the route (PALETTE_GROUPS_PLAN §4) ---------------
+
+    def a_swatch(self, lang, name, hexv):
+        r = self.client.post("/api/references/swatch",
+                             json={"hex": hexv, "name": name, "approve": True})
+        ref = r.json()
+        # give it a language segment the way a proposal does
+        from app import store
+        store.update_reference_notes(
+            {ref["id"]: f"{lang} · {name.upper()} · {hexv.upper()} · a label"})
+        return ref["id"]
+
+    def test_hero_route_sets_and_moves_the_mark(self):
+        a = self.a_swatch("RESISTANCE", "A", "#111111")
+        b = self.a_swatch("RESISTANCE", "B", "#222222")
+        r = self.client.post(f"/api/references/{a}/hero")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["language"], "RESISTANCE")
+        r = self.client.post(f"/api/references/{b}/hero")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["cleared"], [a])
+        refs = {x["id"]: x["notes"] for x in self.client.get("/api/references").json()}
+        self.assertFalse(refs[a].endswith("HERO"))
+        self.assertTrue(refs[b].endswith("HERO"))
+
+    def test_hero_on_a_non_swatch_is_a_stated_400(self):
+        from app import store, wizard as wz
+        ref = store.add_reference("car.png", wz.render_swatch_png("#111111"),
+                                  "VEHICLE_GEOMETRY", [], [], "a car")
+        r = self.client.post(f"/api/references/{ref['id']}/hero")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("swatch", r.json()["detail"])
+
+    def test_hero_on_an_unknown_reference_is_404(self):
+        self.assertEqual(self.client.post("/api/references/REF-9999/hero").status_code, 404)
+
     # ---- proposal parsing ------------------------------------------------
 
     def test_parse_clamps_and_drops_bad_hexes(self):

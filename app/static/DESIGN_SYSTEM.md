@@ -273,6 +273,37 @@ precondition exists the row does not render at all: the stage's own gate
 already explains the situation, and stating it twice on one screen is
 verbosity.
 
+**A set that means something as a set renders as one object**
+(PALETTE_GROUPS_PLAN, ruled 2026-08-06) — the members live inside it, one
+click away, not spread beside it. Grids are for things that merely share a
+type; a ramp, a rig, a call sheet are single objects with an inside. A
+palette is the case that names the rule: the ramp IS the swatch, the
+colours are its inside.
+
+Worked example, and the shape to copy. A design language renders as one
+contiguous `.sw-ramp` — hero band leftmost at `flex:2`, the rest ordered
+light → dark by relative luminance (`0.2126R + 0.7152G + 0.0722B`, ties
+broken on the hex so the order never reshuffles), bands touching: no gap,
+no radius, an `outline` rather than a border so nothing insets them. A
+value-key pair is ONE swatch, so it takes one band split top/bottom. Under
+it, a Courier label — language, count, and either `HERO #4F766C` or
+`OPEN` in amber where no hero is set. Clicking anywhere opens the **swatch
+viewer**, which holds every per-colour fact and verb: the ramp again at
+92px where clicking a band sets the hero, one row per colour (chip, name,
+hex, citation, and `Recolor · Approve · Reject` as text acts), and a
+footer running the same per-reference status records the group bar runs.
+Amber does three jobs here and only these: the hero band's inset outline,
+the `HERO` chip, and `OPEN` on a group still asking for one — a hero is
+the single thing the page asks a designer to decide.
+
+Two consequences worth stating because they are easy to get wrong. **A
+rejected hero leaves the group `OPEN`** — the user chooses a hero, the app
+never guesses one after the fact. And the members are still individually
+governed: every approve and reject remains its own reference status record
+with a reason (D8), and removing a grouped row deletes each reference
+through the normal path so the log records every one. Grouping is a way of
+SEEING, never a way of acting on many things as if they were one.
+
 **Recent feed.** `.recent-row` — timestamp column flex-none Courier
 `--ink-faint`, text Archivo 13px `--ink-dim`, machine IDs inside the text in
 Courier `--ink` (`monoIds()`). No icons, no dots — the timestamp column is
@@ -922,8 +953,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
-| 2026-08-06 | **Hero colour per design language.** A `HERO` chip — bordered Courier in `--ink-dim` — on the group label (`RESISTANCE — 4 · HERO #8A4B2E`) and on the one card that carries it. Deliberately NOT amber: a hero is a role, not a status, and Draft owns this page's amber. Review: is a chip enough, or should the hero read as a larger plate at the head of its group? | Production design step 1, swatch review strip | Nothing in the system marks "one of these is the primary" inside a set — badges are statuses, and this is a role a production designer assigns |
-| 2026-08-06 | **The recolour pencil — the app's first action glyph.** Every other action in the app states its verb in words; this one is an 11px pencil on the colour it edits, because a word there would cover the swatch. Quiet (`--ink-faint`) but always visible, not hover-revealed. It opens a **colour field** — a new `modal()` field type pairing a Courier hex with a native `<input type="color">` stripped of its OS chrome and given the field's border; the two are views of one value and follow each other, and an empty one wears `.hatch-fine` rather than defaulting to a black that would read as a set colour. Review: is a glyph acceptable here, does it belong on the tile or beside the hex, and is a native picker admissible in a system this typographic? | Production design step 1, swatch cards and the edit modal | The Icons section covers provider marks and role squares — there is no vocabulary for a UI action glyph, text acts do not fit on top of a 44px colour block, and no form control in the system takes a colour |
+| 2026-08-06 | **Colour field** (`.mf-color`) — a `modal()` field type pairing a Courier hex with a native `<input type="color">` stripped of its OS chrome and given the field's border; the two are views of one value and follow each other, and an empty one wears `.hatch-fine` rather than a black that would read as a set colour. Survives PALETTE_GROUPS_PLAN, which kept `Recolor` and only moved it from a pencil to a text act. Review: is a native picker admissible in a system this typographic, and is 46px the right width beside the hex? | Swatch viewer, Recolor | No form control in the system takes a colour; a hex field alone made the user pick colours by typing |
 | 2026-08-06 | **Import backup as a card action.** Built from canon — a `.proj-item` in the existing ⋯ menu plus the typed-name `danger` modal, the same grammar as Delete. Review: is the ⋯ menu the right home for a destructive action the user asked to be "on the card", and should it sit above or below Delete? | Productions shelf, ⋯ menu | Restore only ever made a NEW production; setting an existing production to a backup's version had no surface at all |
 
 ---
@@ -933,6 +963,13 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-06** — Palette swatches group into one ramp per design
+  language (hero leftmost, double width); per-colour facts and verdicts
+  move into the swatch viewer. **Set-as-one-object canonized** — see the
+  composition section. RULED: the hero chip and `OPEN` carry amber after
+  all (the earlier non-canon build made them `--ink-dim`); the recolour
+  pencil is retired — `Recolor` is a text act in the viewer, so the app
+  still has no action glyph.
 - **2026-08-06** — Swatches gain a hero, a shorter tongue and an editable
   colour (user): each design language names ONE hero colour — the one a
   production designer splashes through that faction's sets so the area

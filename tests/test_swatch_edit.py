@@ -192,6 +192,115 @@ class SwatchStoreTests(unittest.TestCase):
         self.assertFalse(notes["A"].endswith(" · HERO"))
         # and the marker must be the LAST segment, so the client can pop it
         self.assertEqual(notes["B"].split(" · ")[-1], wizard.HERO_MARK)
+class SetHero(unittest.TestCase):
+    """PALETTE_GROUPS_PLAN §4 — hero is a stored, single-valued fact."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-hero-"))
+        self._saved = (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+                       paths.SETTINGS, paths.ACTIVE_PROJECT)
+        paths.HOME = self.tmp
+        paths.PROJECTS_DIR = self.tmp / "projects"
+        paths.ACTIVE_PROJECT_FILE = self.tmp / "active_project.json"
+        paths.SETTINGS = self.tmp / "settings.json"
+        paths.set_project("")
+        paths.ensure_dirs()
+
+    def tearDown(self):
+        (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+         paths.SETTINGS, slug) = self._saved
+        paths.set_project(slug)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def sw(self, lang, name, hexv, hero=False):
+        notes = f"{lang} · {name} · {hexv} · a label" + (" · HERO" if hero else "")
+        return store.add_reference(f"{name}.png", wizard.render_swatch_png(hexv),
+                                   "COLOR_PALETTE", [], [], notes,
+                                   source="swatch-proposal")["id"]
+
+    def hero_of(self, ref_id):
+        return wizard.parse_swatch_notes(store.get_reference(ref_id)["notes"])["hero"]
+
+    def test_setting_a_hero_clears_the_previous_one(self):
+        a = self.sw("RESISTANCE", "A", "#111111", hero=True)
+        b = self.sw("RESISTANCE", "B", "#222222")
+        wizard.set_hero(b)
+        self.assertFalse(self.hero_of(a))
+        self.assertTrue(self.hero_of(b))
+
+    def test_other_languages_are_untouched(self):
+        a = self.sw("RESISTANCE", "A", "#111111", hero=True)
+        b = self.sw("GRM", "B", "#222222", hero=True)
+        c = self.sw("GRM", "C", "#333333")
+        wizard.set_hero(c)
+        self.assertTrue(self.hero_of(a), "another language keeps its hero")
+        self.assertFalse(self.hero_of(b))
+        self.assertTrue(self.hero_of(c))
+
+    def test_the_rest_of_the_notes_survive(self):
+        a = self.sw("RESISTANCE", "OXIDE", "#111111")
+        wizard.set_hero(a)
+        self.assertEqual(store.get_reference(a)["notes"],
+                         "RESISTANCE · OXIDE · #111111 · a label · HERO")
+
+    def test_setting_twice_does_not_double_the_marker(self):
+        a = self.sw("RESISTANCE", "A", "#111111")
+        wizard.set_hero(a)
+        wizard.set_hero(a)
+        self.assertEqual(store.get_reference(a)["notes"].count("HERO"), 1)
+
+    def test_a_manual_swatch_is_its_own_group(self):
+        """No language segment — setting its hero must not disturb others."""
+        a = self.sw("RESISTANCE", "A", "#111111", hero=True)
+        manual = store.add_reference("m.png", wizard.render_swatch_png("#444444"),
+                                     "COLOR_PALETTE", [], [],
+                                     "LOOSE · #444444 · x", source="swatch-manual")["id"]
+        wizard.set_hero(manual)
+        self.assertTrue(self.hero_of(a))
+        self.assertTrue(self.hero_of(manual))
+
+    def test_a_non_swatch_is_refused(self):
+        ref = store.add_reference("car.png", wizard.render_swatch_png("#111111"),
+                                  "VEHICLE_GEOMETRY", [], [], "a car")
+        with self.assertRaises(Exception):
+            wizard.set_hero(ref["id"])
+
+    def test_unknown_reference_raises(self):
+        with self.assertRaises(KeyError):
+            wizard.set_hero("REF-9999")
+
+    def test_rejecting_the_hero_leaves_the_group_open(self):
+        """No auto-promotion — the app never guesses a hero after the fact."""
+        a = self.sw("RESISTANCE", "A", "#111111", hero=True)
+        b = self.sw("RESISTANCE", "B", "#222222")
+        store.set_reference_status(a, "REJECTED", "not wanted")
+        live = [r for r in store.list_references()
+                if r["status"] != "REJECTED"
+                and store.role_head(r["role"]) == "COLOR_PALETTE"]
+        self.assertEqual([r["id"] for r in live], [b])
+        self.assertFalse(any(self.hero_of(r["id"]) for r in live))
+
+
+class NotesParsing(unittest.TestCase):
+    def test_both_note_shapes_read_back(self):
+        prop = wizard.parse_swatch_notes("RESISTANCE · OXIDE · #8A4B2E · GT40 yellow")
+        self.assertEqual((prop["language"], prop["name"], prop["hex"]),
+                         ("RESISTANCE", "OXIDE", "#8A4B2E"))
+        manual = wizard.parse_swatch_notes("OXIDE · #8A4B2E · GT40 yellow")
+        self.assertEqual((manual["language"], manual["name"], manual["hex"]),
+                         ("", "OXIDE", "#8A4B2E"))
+
+    def test_a_pair_and_a_hero_read_back(self):
+        out = wizard.parse_swatch_notes(
+            "GRM · LEDGER · #1D6E63 / #0A2E2A · GRM green · HERO")
+        self.assertEqual(out["pair_hex"], "#0A2E2A")
+        self.assertTrue(out["hero"])
+        self.assertEqual(out["cite"], "GRM green")
+
+    def test_notes_that_are_not_a_swatch_do_not_crash(self):
+        out = wizard.parse_swatch_notes("style anchor added via setup wizard")
+        self.assertEqual(out["hex"], "")
+        self.assertEqual(out["language"], "")
 
 
 if __name__ == "__main__":

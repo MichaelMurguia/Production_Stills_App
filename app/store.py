@@ -434,6 +434,25 @@ def add_reference(original_name: str, content: bytes, role: str,
     return record
 
 
+def update_reference_notes(updates: dict[str, str]) -> list[dict]:
+    """Rewrite several references' notes in ONE load/save. Hero is a
+    single-valued fact across a design language, so setting it moves two
+    records at once — doing that as separate update_reference calls would
+    leave a window with two heroes, or none."""
+    refs = _load_refs()
+    touched = []
+    by_id = {r["id"]: r for r in refs}
+    missing = [k for k in updates if k not in by_id]
+    if missing:
+        raise KeyError(missing[0])
+    for ref_id, notes in updates.items():
+        by_id[ref_id]["notes"] = notes
+        by_id[ref_id]["updated_at"] = utcnow()
+        touched.append(by_id[ref_id])
+    _save_refs(refs)
+    return touched
+
+
 def replace_reference_image(ref_id: str, content: bytes,
                             original_name: str) -> dict:
     """Swap a reference's pixels, keeping its id, role, status and history.

@@ -1951,41 +1951,64 @@ details.meta pre {
 .swatch-note .text-act { font-size: 9.5px; letter-spacing: .05em; }
 .prop-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
   color: var(--hold); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
-.lang-label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  color: var(--ink-dim); margin: 12px 0 8px; }
-.sw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.sw-card { border: 1px solid var(--line-soft); background: var(--bg2); padding: 7px; }
-.sw-tile, .sw-pair { display: block; height: 44px; margin-bottom: 6px; }
+/* PALETTE_GROUPS_PLAN (2026-08-06) — a design language is ONE swatch.
+   The bands touch: no gap, no radius, no per-band margin, and an OUTLINE
+   rather than a border so nothing insets them from the ramp's edge. The
+   amber outline marks the ramp whose viewer is open. */
+.sw-ramp { display: flex; height: 44px; margin-top: 12px;
+  outline: 1px solid var(--line); cursor: pointer; }
+.sw-ramp i { display: block; min-width: 0; }
+.sw-ramp.is-open { outline-color: var(--accent); }
+.sw-ramp-label { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; }
+.sw-ramp-label .lang { color: var(--ink); }
+.sw-ramp-label .n { color: var(--ink-faint); }
+.sw-ramp-label .hero { margin-left: auto; color: var(--ink-faint); }
+/* OPEN is a group still asking for a hero — the one thing on the row a
+   designer is being asked to do, so it carries the amber. */
+.sw-ramp-label .hero.open { color: var(--accent); }
+
+/* the chip inside the viewer's rows (a pair splits left/right there, and
+   top/bottom in a ramp band — same swatch, different aspect) */
+.sw-tile, .sw-pair { display: block; height: 44px; }
 .sw-tile { border: 1px solid var(--line-soft); }
 .sw-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
 .sw-pair i { border: 1px solid var(--line-soft); }
-.sw-name { display: block; font-family: var(--mono); font-size: 9.5px;
-  letter-spacing: .06em; color: var(--ink); }
-.sw-hex { display: block; font-family: var(--mono); font-size: 9px;
-  color: var(--ink-faint); margin-top: 2px; }
-.sw-cite { display: block; font-family: var(--mono); font-size: 8.5px;
-  color: var(--ink-faint); margin-top: 5px; line-height: 1.5;
-  border-left: 2px solid var(--line); padding-left: 6px; }
-.sw-acts { display: flex; gap: 10px; margin-top: 7px; }
-.sw-acts .ok-act { color: var(--ok); }
-
-/* UNCANONIZED — 2026-08-06 — swatch hero, recolour pencil, generation wait.
-   HERO is a bordered Courier chip in --ink-dim: a hero is a ROLE, not a
-   status and not this page's amber (Draft owns that). The pencil sits on
-   the colour it edits — the app's one action glyph, because a word there
-   would cover the swatch. It is quiet but always visible: an overlay the
-   user must hover to discover is not an affordance. */
 .sw-hero { font-family: var(--mono); font-size: 8px; letter-spacing: .1em;
-  color: var(--ink-dim); border: 1px solid var(--line); padding: 1px 4px;
+  color: var(--accent); border: 1px solid var(--accent-line); padding: 1px 4px;
   margin-left: 6px; vertical-align: 1px; }
-.sw-card.is-hero { border-color: var(--line); }
-.sw-card { position: relative; }
-.sw-edit { position: absolute; top: 11px; right: 11px;
-  width: 19px; height: 19px; padding: 0; display: grid; place-items: center;
-  background: var(--bg2); border: 1px solid var(--line); color: var(--ink-faint);
-  cursor: pointer; }
-.sw-edit:hover, .sw-edit:focus-visible { color: var(--ink); border-color: var(--ink-dim); }
-.sw-edit svg { width: 11px; height: 11px; display: block; }
+
+/* ---- the swatch viewer (PALETTE_GROUPS_PLAN §2) -------------------- */
+.modal.modal-custom { padding: 0; width: min(880px, 92vw); max-width: 92vw; }
+.sv-head { display: flex; align-items: baseline; gap: 12px;
+  padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
+.sv-title { font-size: 18px; font-weight: 700; color: var(--ink); }
+.sv-sub { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); }
+.sv-x { margin-left: auto; background: none; border: 0; padding: 0 2px;
+  font-size: 17px; line-height: 1; color: var(--ink-faint); cursor: pointer; }
+.sv-x:hover { color: var(--ink); }
+.sv-rampwrap { padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
+.sv-ramp { height: 92px; margin-top: 0; }
+.sv-ramp i { cursor: pointer; }
+.sv-ramp i.is-hero { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sv-note { margin: 8px 0 0; font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); }
+.sv-rows { max-height: 46vh; overflow-y: auto; }
+.sv-row { display: flex; align-items: center; gap: 14px; padding: 11px 18px;
+  border-bottom: 1px solid var(--line-soft); }
+/* the mock's #191d21 row tint is --panel */
+.sv-row.is-hero { background: var(--panel); }
+.sv-row.is-focus { outline: 1px solid var(--line); outline-offset: -1px; }
+.sv-chip { flex: none; width: 44px; }
+.sv-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sv-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.sv-hex { font-size: 11px; color: var(--ink-faint); }
+.sv-cite { font-size: 12.5px; color: var(--ink-dim); }
+.sv-acts { margin-left: auto; flex: none; display: flex; gap: 16px; }
+.sv-acts .ok-act { color: var(--ok); }
+.sv-foot { display: flex; align-items: center; gap: 16px; padding: 13px 18px; }
+.sv-footnote { margin-left: auto; font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); }
 .swatch-gen [data-f="sw-busy"] { flex-basis: 100%; }
 .swatch-gen [data-f="sw-busy"]:empty { display: none; }
 .swatch-gen .busy { margin-top: 0; }
@@ -2190,3 +2213,20 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .spec-table thead th { background: var(--field); font-family: var(--mono);
   font-size: 9.5px; letter-spacing: .1em; color: var(--ink-faint);
   font-weight: 400; }
+
+/* PALETTE_GROUPS_PLAN §3 — approved palette references as ramp rows in
+   the step-1 column. Same object as the review strip's ramp; the label
+   carries the REF id where a thumb grid carried it per tile. */
+.pal-row { margin-bottom: 12px; }
+.pal-row .sw-ramp { cursor: default; margin-top: 0; }
+.pal-row .sw-ramp-label .hero { color: var(--ink-faint); }
+.pal-row .sw-ramp-label .danger { margin-left: 8px; }
+.pal-plate { padding: 0; }
+.pal-plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* The viewer's row chip is ONE swatch: a pair's halves touch, like the
+   bands in a ramp. (The old card grid spaced them; the ramp rule does not.) */
+.sv-chip .sw-pair { gap: 0; }
+.sv-chip .sw-pair i { border: 0; }
+.sv-chip .sw-tile { border: 0; }
+.modal.modal-custom:focus { outline: none; }

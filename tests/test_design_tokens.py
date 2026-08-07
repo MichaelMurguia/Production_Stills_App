@@ -255,8 +255,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".prop-head", [
             "color: var(--hold)", "border: 1px solid var(--hold)",
             "font-family: var(--mono)"])
-        self.assert_decls(".sw-cite", ["border-left: 2px solid var(--line)"])
-        self.assert_decls(".sw-acts .ok-act", ["color: var(--ok)"])
+        self.assert_decls(".sv-acts .ok-act", ["color: var(--ok)"])
 
     # -- production design v3 (PRODUCTION_DESIGN_V3_PLAN, 2026-08-06) ------
 
@@ -314,26 +313,34 @@ class TokenContractTests(unittest.TestCase):
 
     # -- swatch hero / recolour / generation wait (user-directed 2026-08-06) --
 
-    def test_hero_chip_is_not_the_pages_amber(self):
-        """A hero is a ROLE, not a status and not the primary action —
-        Draft owns this page's amber. Bordered Courier in --ink-dim."""
+    def test_hero_chip_is_amber(self):
+        """PALETTE_GROUPS_PLAN reversed the earlier reading: the hero IS
+        the amber on a palette row. It is the one thing being asked for —
+        a group with no hero says OPEN in amber, and the chosen band wears
+        the amber outline in the viewer."""
         self.assert_decls(".sw-hero", [
-            "font-family: var(--mono)", "color: var(--ink-dim)",
-            "border: 1px solid var(--line)"])
-        self.assertNotIn("--accent", block(".sw-hero"))
-        self.assertNotIn("--accent", block(".sw-card.is-hero"))
+            "font-family: var(--mono)", "color: var(--accent)",
+            "border: 1px solid var(--accent-line)"])
+        self.assert_decls(".sw-ramp-label .hero.open", ["color: var(--accent)"])
+        self.assert_decls(".sv-ramp i.is-hero", ["outline: 2px solid var(--accent)"])
 
-    def test_the_recolour_pencil_is_always_visible(self):
-        """An overlay you must hover to discover is not an affordance —
-        it is quiet (--ink-faint) but never opacity:0."""
-        b = block(".sw-edit")
-        self.assert_decls(".sw-edit", [
-            "position: absolute", "color: var(--ink-faint)",
-            "border: 1px solid var(--line)"])
-        self.assertNotIn("opacity: 0", b)
-        self.assert_decls(".sw-card", ["position: relative"])
-        self.assertIn(".sw-edit:hover, .sw-edit:focus-visible", CSS,
-                      "the pencil must answer keyboard focus, not only hover")
+    def test_the_ramp_is_one_object(self):
+        """A set that means something as a set renders as one object: the
+        bands touch. No gap, no radius, no per-band margin, and an OUTLINE
+        so nothing insets a band from the ramp's edge."""
+        b = block(".sw-ramp")
+        self.assertIn("display: flex", b)
+        self.assertNotIn("gap", b)
+        self.assertNotIn("border-radius", b)
+        self.assertIn("outline: 1px solid var(--line)", b)
+        self.assertNotIn("margin", block(".sw-ramp i"))
+        self.assert_decls(".sw-ramp.is-open", ["outline-color: var(--accent)"])
+
+    def test_the_card_grid_is_gone(self):
+        """The ramp replaced it — leaving the rules behind would let the
+        old 2-up grid come back on the next edit."""
+        for dead in (".sw-card", ".sw-grid", ".sw-edit", ".lang-label"):
+            self.assertNotIn(dead + " ", CSS, f"{dead} should have gone with the cards")
 
     def test_the_generation_wait_takes_its_own_row(self):
         """.swatch-gen wraps; the strip must break to a full row rather

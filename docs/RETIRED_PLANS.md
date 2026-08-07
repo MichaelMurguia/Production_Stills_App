@@ -33,3 +33,4 @@ delta as new instructions.
 | TAKE_ACTIONS_PLAN.md (T1–T3, S1–S2) | 2026.08.04.79 | S1 shipped as the hatch state; render preview needs a tenant endpoint (see changelog) |
 | README_2026-08-06.md (bundle index) | 2026.08.04.79 | 3 of its 6 entries were resurrected ghosts already shipped in .73 |
 | BREAKDOWN_INTAKE_PLAN.md (B1–B5) | 2026.08.04.83 | mock 13a-breakdown-intake; Spec ID help copy follows B3 not the mock's auto-fill line (see commit) |
+| PALETTE_GROUPS_PLAN.md (§1–§5) | 2026.08.04.92 | mocks 15a-palette-groups / 15a-swatch-viewer; **set-as-one-object canonized**; ruled the hero chip amber (reversing the non-canon build) and retired the recolour pencil for a `Recolor` text act; viewer verbs kept as `.text-act` (Courier) per the plan's naming rather than the mock's proportional rendering; column badge left counting references, not rows |
