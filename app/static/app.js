@@ -5064,7 +5064,14 @@ async function renderSpecs(openId = null) {
         Object.fromEntries(ids.map(i => [i, $("#" + i)?.value ?? ""])))));
     }
   };
-  persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt", "spec-auto-mode", "spec-auto-provider"]);
+  // The board's shape is a STATED input, from the same vocabulary the
+  // blank-sheet form offers (user-hit 2026-08-07).
+  const autoBtype = $("#spec-auto-btype");
+  if (autoBtype) autoBtype.innerHTML = BOARD_TYPES.map(t =>
+    `<option value="${t.value}">${esc(t.label)}</option>`).join("");
+  persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt",
+                                 "spec-auto-mode", "spec-auto-btype",
+                                 "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode", "spec-new-btype"]);
 
   await fillNarrativeSelect($("#spec-auto-provider"));
@@ -5106,6 +5113,11 @@ async function renderSpecs(openId = null) {
         while (taken.has(id)) { n += 1; id = `${base}_V${String(n).padStart(3, "0")}`; }
         idEl.value = id;
       }
+      // The same branch that writes the brief knows which it is, so the
+      // control arrives already saying what the click meant.
+      if (autoBtype && !autoBtype.dataset.touched) {
+        autoBtype.value = scene ? "SCENE" : "LOCATION";
+      }
       const promptEl = $("#spec-auto-prompt");
       if (!promptEl || promptEl.value.trim()) return;
       if (scene) {
@@ -5114,8 +5126,8 @@ async function renderSpecs(openId = null) {
           + `atmosphere the script gives this scene.`;
       } else if (rec) {
         const heads = (rec.scene_list || []).map(s2 => s2.heading);
-        promptEl.value = `${titleCase(rec.location)} — a `
-          + `${rec.int_ext ? rec.int_ext + " " : ""}location board covering the `
+        promptEl.value = `${titleCase(rec.location)} — `
+          + `${rec.int_ext ? "an " + rec.int_ext + " " : "a "}location board covering the `
           + `${rec.scenes} scene${rec.scenes === 1 ? "" : "s"} the script sets there`
           + (heads.length ? `: ${heads.slice(0, 4).join("; ")}`
             + (heads.length > 4 ? ` (+${heads.length - 4} more)` : "") : "")
@@ -5211,6 +5223,10 @@ async function renderSpecs(openId = null) {
     el.value = slug;
     el.setSelectionRange(caret, caret);
   });
+  // Once the user has chosen, the hint never overwrites them.
+  $("#spec-auto-btype")?.addEventListener("change", e => {
+    e.target.dataset.touched = "1";
+  });
   bindSpecIdField($("#spec-auto-id"));
   bindSpecIdField($("#spec-new-id"));
 
@@ -5229,6 +5245,7 @@ async function renderSpecs(openId = null) {
           specification_id: slugSpecId($("#spec-auto-id").value),
           prompt: $("#spec-auto-prompt").value,
           mode: $("#spec-auto-mode").value,
+          board_type: $("#spec-auto-btype")?.value || "",
           provider: $("#spec-auto-provider").value,
         },
       });

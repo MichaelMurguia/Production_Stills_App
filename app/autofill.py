@@ -69,7 +69,75 @@ def _screenplay_bytes() -> tuple[bytes, str]:
     return p.read_bytes(), mime
 
 
-def _instructions(subject_prompt: str, mode: str, prohibited: list[str]) -> str:
+def _anchor_block(anchor: dict, board_type: str = "") -> str:
+    """The deterministic scene quote, framed by the board's SHAPE.
+
+    The quoting itself fixed a real bug (a machine slug lost to model fuzzy
+    matching) and is kept absolute. What is NOT absolute is what the board
+    is *about*: the old frame said "This board is about THESE scenes" for
+    every board, derived only from the location name — so rewriting the
+    brief produced a byte-identical anchor, and a location study asked for
+    in prose came back as the seeded scene (user-hit 2026-08-07). The
+    anchor supplies the evidence base; the board type states the shape.
+    """
+    n = anchor["scenes"]
+    plural = "s" if n != 1 else ""
+    head = (f"\n\nSCENE ANCHOR — DETERMINISTIC, NOT OPTIONAL. The subject names "
+            f"the screenplay location \"{anchor['location']}\" ({n} scene{plural}). "
+            "All of its scenes are quoted below verbatim from the attached "
+            "screenplay.\n")
+    if board_type == "LOCATION":
+        shape = ("This is a LOCATION board: it is about THE PLACE across every "
+                 "scene set there — not any single one of these scenes. Draw the "
+                 "set, its structure, dressing and atmosphere from all of them "
+                 "together, and do not let the first or longest scene stand in "
+                 "for the location.\n")
+    elif board_type == "SCENE":
+        shape = ("This is a SCENE board: exactly one of the scenes below is the "
+                 "subject — the one the brief names. The others are quoted as "
+                 "context for the same set and are never the subject.\n")
+    elif board_type in BOARD_TYPES:
+        shape = (f"This is a {board_type} board. The scenes below are evidence "
+                 "for it, not its subject.\n")
+    else:
+        shape = ("These scenes are the subject's evidence base; the brief above "
+                 "states what shape the board takes.\n")
+    tail = ("Every panel, evidence row and citation must anchor to the scenes "
+            "below; any other location in the screenplay is context only and "
+            "never the subject.\n\n")
+    return head + shape + tail + anchor["text"]
+
+
+def _scene_field(board_type: str) -> str:
+    """The `scene` field's own wording. It said "describing the scene" for
+    every board, so a LOCATION board was asked to describe a scene and
+    obligingly described one (user-hit 2026-08-07)."""
+    tail = ("Only screenplay-supported details — where the screenplay is "
+            "silent, stay silent.")
+    if board_type == "LOCATION":
+        return ("one flowing paragraph (4-8 sentences) describing THE PLACE as "
+                "the screenplay establishes it across every scene set there: "
+                "its structure and layout, how it is dressed, what it contains "
+                "and how that is arranged, and the light and atmosphere it "
+                "carries. Do not narrate one scene's events. " + tail)
+    return ("one flowing paragraph (4-8 sentences) describing the scene as the "
+            "screenplay establishes it: the location and its structure, time of "
+            "day and light, atmosphere, and the key contents and their "
+            "arrangement. " + tail)
+
+
+def _board_rule(board_type: str) -> str:
+    """Stated board type as an absolute rule. Empty when the user left the
+    shape to the model, so nothing changes for that path."""
+    if board_type not in BOARD_TYPES:
+        return ""
+    return (f"\n- Board type for this board: {board_type}. This is the user's "
+            "decision, not yours — return exactly this board_type and shape "
+            "the panels for it.")
+
+
+def _instructions(subject_prompt: str, mode: str, prohibited: list[str],
+                  board_type: str = "") -> str:
     return f"""You are the research agent for a film production art department on the project "{store.project_name()}".
 The attached document is the current screenplay. Your task: draft a Production Generation
 Specification for an art direction board about: {subject_prompt}
@@ -92,7 +160,7 @@ GOVERNING RULES — these are absolute:
   central question, largest allocation (~50; ~60 for ASSET boards); remaining panels are
   supporting strips splitting the rest. Evidence rules the COUNT; this grammar rules the
   SHAPE.
-- Mode for this board: {mode}.
+- Mode for this board: {mode}.{_board_rule(board_type)}
 - Known prohibited inventions for this project (never include): {", ".join(prohibited) or "none recorded"}.
 
 Return ONLY a JSON object with exactly this shape:
@@ -104,7 +172,7 @@ Return ONLY a JSON object with exactly this shape:
     "location": "the location name as the screenplay names it, empty for ASSET boards",
     "time_of_day": "for SCENE boards only: the slugline time (DAY, NIGHT, DUSK, DAWN, ...) taken from the actual scene heading — empty if the screenplay does not say or this is not a SCENE board"
   }},
-  "scene": "one flowing paragraph (4-8 sentences) describing the scene as the screenplay establishes it: the location and its structure, time of day and light, atmosphere, and the key contents and their arrangement. Only screenplay-supported details — where the screenplay is silent, stay silent.",
+  "scene": "{_scene_field(board_type)}",
   "render_intent": "one-sentence painterly production-board treatment note",
   "panels": [
     {{
@@ -136,7 +204,14 @@ Every required object in every panel MUST have a matching evidence_ledger row wi
 panel_id and object text. Allocation percentages must total 100."""
 
 
-def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
+# The board's shape is the user's decision when they state one (user-hit
+# 2026-08-07: a scene-seeded draft was rewritten as a location study in
+# prose and came back as the original scene). Prose is the weakest signal
+# in the request; a stated type outranks the model's reading of it.
+BOARD_TYPES = {"SCENE", "LOCATION", "ASSET", "LIGHTING_STUDY", "MASTER"}
+
+
+def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
     """Coerce model output into a valid spec structure; never trust it blindly."""
     panels_in = draft.get("panels") or []
     if not panels_in:
@@ -211,9 +286,12 @@ def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
         "specification_id": spec_id,
         "project": store.project_name(),
         "subject": str(draft.get("subject", ""))[:200] or spec_id,
-        "board_type": (str(draft.get("board_type", "")).strip().upper()
-                       if str(draft.get("board_type", "")).strip().upper()
-                       in {"SCENE", "LOCATION", "ASSET"} else "LOCATION"),
+        # Stated wins; the model's reading is the fallback only when the
+        # user left it to the model.
+        "board_type": (board_type if board_type in BOARD_TYPES
+                       else (str(draft.get("board_type", "")).strip().upper()
+                             if str(draft.get("board_type", "")).strip().upper()
+                             in {"SCENE", "LOCATION", "ASSET"} else "LOCATION")),
         "setting": {
             "int_ext": str((draft.get("setting") or {}).get("int_ext", ""))[:10].upper(),
             "location": str((draft.get("setting") or {}).get("location", ""))[:120],
@@ -324,9 +402,12 @@ def _draft_openai(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
 
 def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
-                  provider: str = "gemini") -> dict:
+                  provider: str = "gemini", board_type: str = "") -> dict:
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise AutofillError(f"invalid mode: {mode}")
+    board_type = str(board_type or "").strip().upper()
+    if board_type and board_type not in BOARD_TYPES:
+        raise AutofillError(f"invalid board type: {board_type}")
     from . import generate as _gen
     if provider not in narrative_choices() and not (
             provider == "mock" and _gen.mock_enabled()):
@@ -349,8 +430,11 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
         from . import mockflow
         draft, model = (mockflow.autofill_draft(subject_prompt.strip(), mode),
                         mockflow.MODEL_NAME)
+        if board_type:
+            draft["board_type"] = board_type
     else:
-        instructions = _instructions(subject_prompt.strip(), mode, prohibited)
+        instructions = _instructions(subject_prompt.strip(), mode, prohibited,
+                                     board_type)
         # Deterministic scene anchor (user-hit 2026-08-06): when the
         # subject names a slugline location, the actual scene text is
         # quoted into the instructions — the model reads the scene, it
@@ -358,18 +442,10 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
         from . import insights
         anchor = insights.scene_anchor(subject_prompt)
         if anchor.get("matched"):
-            instructions += (
-                f"\n\nSCENE ANCHOR — DETERMINISTIC, NOT OPTIONAL. The subject "
-                f"names the screenplay location \"{anchor['location']}\" "
-                f"({anchor['scenes']} scene{'s' if anchor['scenes'] != 1 else ''}). "
-                "This board is about THESE scenes, quoted below verbatim from "
-                "the attached screenplay. Every panel, evidence row and "
-                "citation must anchor to them; any other location in the "
-                "screenplay is context only and never the subject.\n\n"
-                + anchor["text"])
+            instructions += _anchor_block(anchor, board_type)
         draft, model = _draft(provider, doc, mime, instructions)
 
-    spec = _coerce(draft, spec_id, mode)
+    spec = _coerce(draft, spec_id, mode, board_type)
     spec["autofill"] = {"prompt": subject_prompt.strip(), "model": model,
                         "provider": provider, "created_at": store.utcnow()}
     store.create_spec_from_dict(spec)

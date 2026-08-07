@@ -1037,7 +1037,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
-*(empty — NON_CANON_REVIEW_2026-08-07 ruled all seven rows)*
+| 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
 
 ---
 
@@ -1062,6 +1062,15 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-07** — The auto breakdown takes a **stated board type** (user
+  bug): a scene-seeded draft rewritten as a location study in prose came
+  back as the seeded scene. The brief was never dropped — it simply could
+  not outweigh a scene anchor that asserted "This board is about THESE
+  scenes" for every board, derived only from the location name, so a
+  rewritten brief produced a byte-identical anchor. The anchor now supplies
+  the evidence base and the board type states the shape; the `scene` field
+  stops asking a LOCATION board to describe a scene; and a stated type
+  outranks the model's reading of the prose.
 - **2026-08-07** — Canonization pass: all seven Uncanonized rows ruled.
   Verb-sits-with-its-object canonized as the pair to act-where-condition-
   is-met; bulk verdicts withheld until everything judged has been seen;

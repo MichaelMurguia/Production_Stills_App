@@ -151,10 +151,16 @@ class R7_AMenuReadsIntoConsequence(unittest.TestCase):
 
 
 class TheTableIsEmpty(unittest.TestCase):
-    def test_every_row_was_ruled(self):
+    def test_every_reviewed_row_was_ruled(self):
+        """The seven the review answered are gone. The table itself is a
+        live queue — later work is expected to add rows, so this asserts
+        the rulings landed, not that the queue stays empty forever."""
         table = between(DS, "| Date | Pattern | Used in |", "## Changelog")
-        rows = [l for l in table.splitlines() if l.startswith("| 2026-")]
-        self.assertEqual(rows, [], f"{len(rows)} rows still awaiting review")
+        for ruled in ("in-flight strip", "Design questions block",
+                      "Rescan / Deep scan", "Review all N in the approved column",
+                      "Review all N + the unopened count", "Colour field",
+                      "Import backup as a card action"):
+            self.assertNotIn(ruled, table, f"{ruled} was ruled and should be gone")
 
     def test_the_principle_is_canon(self):
         for phrase in ("a verb sits with the thing it acts on",
