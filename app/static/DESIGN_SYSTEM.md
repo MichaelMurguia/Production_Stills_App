@@ -953,6 +953,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
+| 2026-08-07 | **Review all N in the approved column.** A `.text-act` under the ramp rows, opening the viewer over every approved language at once — the proposal bar's Review all vanishes with the proposals, leaving no way to read a finished palette whole. Review: does it belong under the rows or beside the column's count, and **should the row `×` be that loud?** A delete-forever control is currently the most prominent thing on each ramp row. | Production design step 1, Color Palette column | The column had no verb at all once every swatch was approved |
 | 2026-08-07 | **Review all N + the unopened count.** Built from canon — the swatch viewer taking every group instead of one, plus a `.ghost` act and a Courier condition on the existing bar (`2 OF 5 LANGUAGES UNOPENED`, clearing as they are opened). Review: is `Review all` the right verb, does it belong left of `Approve all`, and should the count read as a warning rather than a fact? | Production design step 1, proposal bar | `Approve all 19` acted across languages the user could not have read without opening each ramp in turn |
 | 2026-08-06 | **Colour field** (`.mf-color`) — a `modal()` field type pairing a Courier hex with a native `<input type="color">` stripped of its OS chrome and given the field's border; the two are views of one value and follow each other, and an empty one wears `.hatch-fine` rather than a black that would read as a set colour. Survives PALETTE_GROUPS_PLAN, which kept `Recolor` and only moved it from a pencil to a text act. Review: is a native picker admissible in a system this typographic, and is 46px the right width beside the hex? | Swatch viewer, Recolor | No form control in the system takes a colour; a hex field alone made the user pick colours by typing |
 | 2026-08-06 | **Import backup as a card action.** Built from canon — a `.proj-item` in the existing ⋯ menu plus the typed-name `danger` modal, the same grammar as Delete. Review: is the ⋯ menu the right home for a destructive action the user asked to be "on the card", and should it sit above or below Delete? | Productions shelf, ⋯ menu | Restore only ever made a NEW production; setting an existing production to a backup's version had no surface at all |
@@ -964,6 +965,10 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-07** — **Review all N** reaches the approved column too
+  (user): the proposal bar's act disappears with the proposals, so a
+  finished palette could only be read one language at a time. A text act
+  under the ramp rows opens every approved language in one scroll.
 - **2026-08-07** — The palette review gains **Review all N** and reaches
   approved swatches (user): `Approve all 19` could act across languages
   nobody had opened, so the viewer now takes a LIST of groups — one for a

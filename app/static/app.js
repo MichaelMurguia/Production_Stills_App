@@ -3529,6 +3529,22 @@ async function renderWizard() {
       };
       list.append(el);
     });
+
+    // The proposal bar's Review all disappears with the proposals, and the
+    // approved column then had no way to read the whole palette at once
+    // (user 2026-08-07) — only one language at a time, a row at a time.
+    const groups = rows.filter(r => r.swatches.length)
+      .map(r => ({ language: r.label, swatches: r.swatches }));
+    const total = groups.reduce((n, g) => n + g.swatches.length, 0);
+    if (groups.length > 1) {
+      const bar = document.createElement("div");
+      bar.className = "pal-review";
+      bar.innerHTML = `<button class="text-act" data-f="review-all">Review all ${total}</button>`;
+      $("[data-f=review-all]", bar).onclick = () =>
+        openPaletteViewer(groups, { approved: true, onChange: () => {} })
+          .then(refreshRefs);
+      list.append(bar);
+    }
   };
 
   const refreshRefs = async () => {

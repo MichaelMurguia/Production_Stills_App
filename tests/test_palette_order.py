@@ -169,5 +169,17 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn("g.swatches.forEach(s => { s.hero = s.ref_id === refId; })", body)
 
 
+    def test_the_approved_column_can_read_the_whole_palette(self):
+        """The proposal bar's Review all vanishes with the proposals; the
+        approved column needs its own, or the only way to read 19 swatches
+        is one language at a time."""
+        body = self.column_fn()
+        self.assertIn('data-f="review-all"', body)
+        self.assertIn("Review all ${total}", body)
+        self.assertIn("approved: true", body)
+        self.assertIn("groups.length > 1", body,
+                      "one group is already one click — no act needed")
+
+
 if __name__ == "__main__":
     unittest.main()
