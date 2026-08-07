@@ -115,11 +115,23 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn("bandStyle(sw)", body)
         self.assertNotIn("thumb=1&", body)
 
-    def test_removing_a_grouped_row_deletes_each_reference_singly(self):
-        """So the approval log records every one."""
+    def test_the_ramp_row_carries_no_destructive_act(self):
+        """NON_CANON_REVIEW R4: a delete-forever control may not be the
+        loudest mark on a row it can destroy. Removal moved into the
+        viewer, where the whole group can be read before it goes."""
         body = self.column_fn()
+        self.assertNotIn('data-f="del"', body)
+        self.assertNotIn("&times;", body)
+        self.assertNotIn('class="danger"', body)
+        self.assertNotIn("askConfirm", body, "no confirm means no destruction here")
+
+    def test_removal_lives_in_the_viewer_and_deletes_singly(self):
+        """Still one at a time through the normal path, so the log records
+        every one."""
+        body = self.viewer_fn()
+        self.assertIn('data-f="rm-group"', body)
         self.assertIn("for (const id of ids)", body)
-        self.assertIn("Remove ${ids.length} references?", body)
+        self.assertIn("Remove ${ids.length} reference", body)
 
     def viewer_fn(self) -> str:
         i = JS.index("const openSwatchViewer")
@@ -169,13 +181,13 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn("g.swatches.forEach(s => { s.hero = s.ref_id === refId; })", body)
 
 
-    def test_the_approved_column_can_read_the_whole_palette(self):
-        """The proposal bar's Review all vanishes with the proposals; the
-        approved column needs its own, or the only way to read 19 swatches
-        is one language at a time."""
+    def test_review_all_sits_beside_the_columns_count(self):
+        """NON_CANON_REVIEW R4: the count is what the verb acts on, so the
+        header is where the two belong together — not under the rows."""
         body = self.column_fn()
-        self.assertIn('data-f="review-all"', body)
         self.assertIn("Review all ${total}", body)
+        self.assertIn("[data-f=state]", body, "anchored to the column's count badge")
+        self.assertIn("badge.after(act)", body)
         self.assertIn("approved: true", body)
         self.assertIn("groups.length > 1", body,
                       "one group is already one click — no act needed")

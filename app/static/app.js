@@ -26,6 +26,7 @@ function startBusy(host, label, hint = "", onCancel = null) {
     <div class="spinner"></div>
     <span class="busy-label">${esc(label)}</span>
     ${hint ? `<span class="busy-hint">${esc(hint)}</span>` : ""}
+    <span class="busy-prog mono"></span>
     <span class="elapsed">0:00</span>
     ${onCancel ? '<button class="ghost busy-cancel" title="Cancel — stops waiting for the result">Cancel</button>' : ""}
     <div class="busy-bar"></div>`;
@@ -40,6 +41,13 @@ function startBusy(host, label, hint = "", onCancel = null) {
   const timer = setInterval(tick, 1000);
   return {
     label(msg) { $(".busy-label", el).textContent = msg; },
+    // NON_CANON_REVIEW R1: the phase is a sentence, the progress is
+    // Courier beneath it — never one sentence carrying both.
+    progress(msg) {
+      const p = $(".busy-prog", el);
+      p.textContent = msg || "";
+      p.classList.toggle("hidden", !msg);
+    },
     done() { clearInterval(timer); el.remove(); },
   };
 }
@@ -361,6 +369,9 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
                  </span>`
               : `<input type="text" data-mf="${i}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}">`}
             ${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}
+            ${(f.recall || []).length ? `<span class="mf-recall">${
+              f.recall.map(rc => `<button type="button" class="text-act" data-mfr="${i}"
+                title="Use this brief again">${esc(rc)}</button>`).join("")}</span>` : ""}
           </label>`).join("")}
         ${custom ? "" : `<div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
@@ -371,6 +382,12 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
     const done = val => { window.removeEventListener("keydown", onKey, true); ov.remove(); resolve(val); };
     const collect = () => Object.fromEntries(
       fields.map((f, i) => [f.name, $(`[data-mf="${i}"]`, ov).value.trim()]));
+    // A recalled value fills its own field — recall, never constraint (R3).
+    $$("[data-mfr]", ov).forEach(b => b.onclick = () => {
+      const t = $(`[data-mf="${b.dataset.mfr}"]`, ov);
+      t.value = b.textContent.trim();
+      t.focus();
+    });
     // A colour field is two views of ONE value: the hex is what gets
     // collected, the picker is a way to reach it (user 2026-08-06). Each
     // follows the other, and a half-typed hex never resets the picker.
@@ -2085,7 +2102,7 @@ async function renderProjectsView() {
     $$("#prod-cards [data-backup]").forEach(b => b.onclick = async () => {
       const slug = b.dataset.backup;
       const card = b.closest(".prod-card");
-      const busy = startBusy($("[data-busy]", card), "Packing the backup…",
+      const busy = startBusy($("[data-busy]", card), "Packing the production…",
         "API keys are never included.");
       $$(".prod-actions button", card).forEach(x => x.disabled = true);
       try {
@@ -2102,8 +2119,9 @@ async function renderProjectsView() {
           if (done) break;
           chunks.push(value);
           got += value.length;
-          busy.label(total ? `Downloading — ${mbs(got)} of ${mbs(total)}`
-                           : `Downloading — ${mbs(got)}`);
+          busy.label("Downloading the backup…");
+          busy.progress(total ? `${mbs(got)} OF ${mbs(total)}`.toUpperCase()
+                              : `${mbs(got)}`.toUpperCase());
         }
         const a = document.createElement("a");
         a.href = URL.createObjectURL(new Blob(chunks, { type: "application/zip" }));
@@ -3079,6 +3097,8 @@ async function renderWizard() {
             <span class="sv-title">${esc(many
               ? `${groups.length} design languages` : groups[0].language)}</span>
             <span class="sv-sub mono">${n} SWATCH${n === 1 ? "" : "ES"} · ${state}</span>
+            ${many ? "" : `<button class="text-act sv-rescan" data-f="rescan"
+              title="Ask for the colors this design language is still missing">Rescan this language</button>`}
             <button class="sv-x" data-f="x" title="Close">&times;</button>
           </div>
           ${many ? '<p class="sv-note mono sv-note-top">HERO — THE COLOR SPLASHED THROUGH THAT FACTION\u2019S SETS, COSTUMES AND PROPS</p>' : ""}
@@ -3087,9 +3107,9 @@ async function renderWizard() {
             ${approved ? "" : `<button class="ghost" data-f="ap-all">Approve all ${n}</button>
             <button class="text-act" data-f="rj-all">${
               many ? `Reject all ${n}` : "Reject the group"}</button>`}
-            ${many ? "" : `<button class="text-act" data-f="rescan"
-              title="Ask for the colors this design language is still missing">Rescan this language</button>`}
             <span class="sv-footnote mono">EACH VERDICT IS ITS OWN REFERENCE RECORD</span>
+            ${approved && !many ? `<button class="text-act sv-remove" data-f="rm-group"
+              title="Delete these references for good — the ramp row no longer carries this act">Remove group</button>` : ""}
           </div>
         </div>`;
       };
@@ -3160,6 +3180,24 @@ async function renderWizard() {
               onChange();
               done(null);
             };
+            // R4 — a destructive act is only offered where its object can
+            // be read in full. The ramp row lost its ×; this is the only
+            // place the whole group is visible at once.
+            const rmBtn = $("[data-f=rm-group]", ov);
+            if (rmBtn) rmBtn.onclick = async () => {
+              const ids = groups[0].swatches.map(sw => sw.ref_id);
+              if (!(await askConfirm(`Remove ${ids.length} reference${
+                ids.length === 1 ? "" : "s"}?`,
+                `Every swatch in ${groups[0].language} is deleted from the reference `
+                + "library and from future generations. Each removal is logged. "
+                + "This cannot be undone.", `Remove ${ids.length}`, true))) return;
+              try {
+                for (const id of ids) await api(`/api/references/${id}`, { method: "DELETE" });
+                toast(`${ids.length} references removed.`);
+              } catch (err) { return toast(err.message, true); }
+              onChange();
+              done(null);
+            };
             const rescanBtn = $("[data-f=rescan]", ov);
             if (rescanBtn) rescanBtn.onclick = async () => {
               const lang = groups[0].language;
@@ -3216,12 +3254,20 @@ async function renderWizard() {
             + "signage, practical light sources, corrosion — the colors the Bible "
             + "names in passing. Existing swatches are excluded."
           : "Reads the saved Bible and proposes colors grouped by design language.",
+        // R3 — the brief stays FREE TEXT: a chip list cannot express "no
+        // Onyx Unit black, and no reds" — the negation and the proper noun
+        // are the whole value. Recall, not constraint.
         fields: [{ name: "note", label: "What is missing?", textarea: true,
                    placeholder: "optional — e.g. no Onyx Unit black, and no reds anywhere",
-                   hint: "Rides this pass as the brief; still grounded in the Bible." }],
+                   hint: "Rides this pass as the brief; still grounded in the Bible.",
+                   recall: uiGet("swatchBriefs", []) }],
         confirmLabel: languages ? "Rescan" : deep ? "Deep scan" : "Generate",
       });
       if (ask === null) return null;
+      if (ask.note.trim()) {
+        const prior = uiGet("swatchBriefs", []).filter(x => x !== ask.note.trim());
+        uiSet("swatchBriefs", [ask.note.trim(), ...prior].slice(0, 3));
+      }
       const busy = startBusy(host, label,
         "Proposing only colors it can ground in your saved Bible.");
       try {
@@ -3246,7 +3292,7 @@ async function renderWizard() {
           ${rampLabel(g)}`).join("")}
         <div class="sw-bar">
           <button class="ghost" data-f="review">Review all ${total}</button>
-          <button class="ghost" data-f="ap-all">Approve all ${total}</button>
+          <button class="ghost" data-f="ap-all"${unopened(r) ? " disabled" : ""}>Approve all ${total}</button>
           <button class="text-act" data-f="discard">Discard the rest</button>
           ${unopened(r) ? `<span class="sw-bar-note mono">${unopened(r)} OF ${
             r.groups.length} LANGUAGE${r.groups.length === 1 ? "" : "S"} UNOPENED</span>` : ""}
@@ -3280,9 +3326,12 @@ async function renderWizard() {
         if (status === "APPROVED") refreshRefs();
         reflow();
       };
-      // Approve all acts across languages the user may never have opened,
-      // so the bar states how many those are and offers the one scroll
-      // that reads every proposal (user 2026-08-07).
+      // R5 — a bulk verdict is WITHHELD until everything it judges has
+      // been seen: Approve all is disabled while any language is unopened
+      // and the condition line is its explanation. Do not warn about a
+      // judgment you are willing to permit anyway. Discard the rest is not
+      // withheld — rejecting unread proposals is legitimate, and every one
+      // is logged.
       $("[data-f=review]", strip).onclick = () => {
         r.groups.forEach(g => seen.add(g.language));
         openSwatchViewer(r.groups, { onChange: reflow }).then(reflow);
@@ -3545,9 +3594,7 @@ async function renderWizard() {
           <span class="lang">${esc(row.label.toUpperCase())}</span>
           <span class="n">${grouped ? row.swatches.length : esc(ordered[0]?.hex || "")}</span>
           <span class="hero mono">${esc(refId)}</span>
-          <button class="danger" data-f="del" title="${grouped
-            ? `Remove all ${row.swatches.length} references in this language`
-            : "Permanently delete this reference"}">&times;</button>
+
         </p>`;
       // PALETTE_GROUPS_PLAN §2.1 wrote the viewer's "· APPROVED" header but
       // nothing reached it: approved rows were inert, which breaks the rule
@@ -3561,24 +3608,9 @@ async function renderWizard() {
               onChange: () => {} }).then(refreshRefs);
         };
       }
-      const ids = row.single ? [row.single.id] : ordered.map(s => s.ref_id);
-      $("[data-f=del]", el).onclick = async () => {
-        const many = ids.length > 1;
-        if (!(await askConfirm(
-          many ? `Remove ${ids.length} references?` : `Delete ${ids[0]} forever`,
-          many
-            ? `Every swatch in ${row.label} is deleted from the reference library `
-              + "and from future generations. Each removal is logged. This cannot be undone."
-            : "It is removed from the reference library and future generations. This cannot be undone.",
-          many ? `Remove ${ids.length}` : "Delete forever", true))) return;
-        try {
-          // Deleted one at a time through the existing path, so the log
-          // records every one (§3).
-          for (const id of ids) await api(`/api/references/${id}`, { method: "DELETE" });
-          toast(many ? `${ids.length} references removed.` : `${ids[0]} permanently deleted.`);
-          refreshRefs();
-        } catch (err) { toast(err.message, true); }
-      };
+      // R4 — no × on the row. A delete-forever control may not be the
+      // loudest mark on a row it can destroy; removal lives in the viewer,
+      // where the whole group can be read before it goes.
       list.append(el);
     });
 
@@ -3588,14 +3620,17 @@ async function renderWizard() {
     const groups = rows.filter(r => r.swatches.length)
       .map(r => ({ language: r.label, swatches: r.swatches }));
     const total = groups.reduce((n, g) => n + g.swatches.length, 0);
-    if (groups.length > 1) {
-      const bar = document.createElement("div");
-      bar.className = "pal-review";
-      bar.innerHTML = `<button class="text-act" data-f="review-all">Review all ${total}</button>`;
-      $("[data-f=review-all]", bar).onclick = () =>
-        openPaletteViewer(groups, { approved: true, onChange: () => {} })
-          .then(refreshRefs);
-      list.append(bar);
+    // R4 — Review all sits beside the column's COUNT, not under the rows:
+    // the count is what the verb acts on, so they belong together.
+    const badge = list.closest(".wiz-col")?.querySelector("[data-f=state]");
+    badge?.parentElement?.querySelector(".pal-review")?.remove();
+    if (groups.length > 1 && badge) {
+      const act = document.createElement("button");
+      act.className = "text-act pal-review";
+      act.textContent = `Review all ${total}`;
+      act.onclick = () => openPaletteViewer(groups, { approved: true, onChange: () => {} })
+        .then(refreshRefs);
+      badge.after(act);
     }
   };
 

@@ -273,6 +273,41 @@ precondition exists the row does not render at all: the stage's own gate
 already explains the situation, and stating it twice on one screen is
 verbosity.
 
+**A verb sits with the thing it acts on, and never in the row of verbs
+that judge it** (NON_CANON_REVIEW_2026-08-07 — the pair to
+*act-where-condition-is-met* above; that one says a verb waits for its
+precondition, this one says it stands next to its object). Making,
+reading and judging are three different acts, and a bar that mixes them
+makes the user read every button before pressing any. **Generation lives
+in the header of what it regenerates** — `Rescan this language` sits in
+the swatch viewer's header, not its footer, because the footer is the
+verdict bar. **Verdicts live in the footer.** **Destruction lives wherever
+it can be read in full**, which is never a 44px row.
+
+Three consequences, all canon:
+
+- **A destructive act is only offered where its object can be read in
+  full.** Not in a row, not in a strip — in the view that shows what will
+  be lost. The approved ramp row carries no `×`; `Remove group` is a
+  right-aligned `.text-act` in the viewer's footer, confirming with the
+  count, because by then the user can see all eight swatches.
+- **A bulk verdict is withheld until everything it judges has been seen.**
+  State the condition beside the withheld verb; never state it and then
+  permit the act anyway. `Approve all 19` is disabled while any language
+  is unopened, with `2 OF 5 LANGUAGES UNOPENED` as its explanation.
+  `Discard the rest` is NOT withheld — rejecting unread proposals is
+  legitimate and every rejection is logged.
+- **Amber marks what blocks. A report has no amber**, however urgent it
+  reads. If a surface only tells you something, its verbs are
+  `.text-act`. The breakdown's design-questions block is the case: nothing
+  is blocked by an unanswered question, so its verb is not amber and its
+  count (`4 OF 7 ANSWERED`) is a fact in Courier `--ink-faint`.
+
+**A resolved item fades its label and keeps its answer.** An answered
+design question stays inline — collapsing it would hide the answer, and
+the answer is the only part worth re-reading; the question is just its
+label. Question to `--ink-faint`, answer below it in `--ink`.
+
 **A set that means something as a set renders as one object**
 (PALETTE_GROUPS_PLAN, ruled 2026-08-06) — the members live inside it, one
 click away, not spread beside it. Grids are for things that merely share a
@@ -434,6 +469,13 @@ project name — there is no project context before auth. Errors render as
 the field's own state (`input.bad`) plus one `--bad` line, never a toast.
 The gate is the only screen allowed to be vertically centered; the
 centering lives in `.gate-page`, never inline.
+
+**An in-card wait states its phase in sentence case and its progress in
+Courier beneath** (ruled 2026-08-07). Two facts, two voices — never one
+sentence carrying both. `Packing the production…` on `.busy-label`, then
+`12.4 MB OF 88.1 MB` on `.busy-prog` in `--ink-faint`. The strip belongs
+to the card it describes, at its foot, collapsed when idle: the wait
+belongs to one production and the shelf shows several.
 
 **Pending take tile + take state tags** (`.take.pending/.take-spin`).
 In-flight work holds its place: a pending tile sits in the filmstrip with
@@ -794,6 +836,23 @@ STAYS enabled — we report upstream, we do not overrule the user) ·
 `UNSUPPORTED SHAPE` dashed `--hold` (dimmed row, reason line never dimmer
 than the name it explains).
 
+**`modal()` field kinds.** Text, `textarea`, and **colour** (`.mf-color`,
+ruled 2026-08-07): a Courier hex beside a native `<input type="color">`
+stripped of its OS chrome and given the field's border — square at the
+field's own height, so the pair reads as one control rather than a
+control and an ornament. The hex remains the value of record; the picker
+is a second view of it. A colour is the one value no amount of type can
+show, which is why the native control is admissible in a system this
+typographic. An empty one wears `.hatch-fine` — the pattern for any field
+whose real value is a rendered thing, not text. A free-text field may
+also carry **recall**: the last three values as `.text-act` beneath it,
+filling the field when clicked. Recall, never constraint — a chip list
+cannot express "no Onyx Unit black, and no reds".
+
+**Card menus read top to bottom in increasing consequence** (ruled
+2026-08-07). Duplicate, then Import backup, then Delete — terminal and
+last, separated from what precedes it by the menu's own rule.
+
 ## Scrollbars
 
 Scrollbars are chrome, not content. The global rules in `styles.css` cover
@@ -977,13 +1036,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
-| 2026-08-07 | **Design questions block** (`.q-block`) — the questions a breakdown could not answer, with a `.text-act` opening a modal of one field each. An answered question reads settled: the answer below it in `--ink`, the question faded to `--ink-faint`. Deliberately NOT `.block-act` — that amber verb belongs to blocking rows and this is a report. Review: does an answered question belong inline like this or collapsed, and is the count line the right state to show? | Breakdowns, sheet editor | The block only listed questions and contradicted itself about how to resolve them; nothing could answer one, and nothing carried an answer to the prompt |
-| 2026-08-07 | **Rescan / Deep scan** — the swatch generator aimed at one design language, or run a second wider pass, both through one modal that takes an optional brief ("no Onyx Unit black, and no reds"). `Rescan this language` sits in the swatch viewer's footer; `Deep scan` beside Generate. Review: is the viewer's footer the right home for a rescan, and should the brief field be a chip list rather than free text? | Production design step 1 and the swatch viewer | Generation was all-or-nothing and had no way to be told what it missed |
-| 2026-08-07 | **Review all N in the approved column.** A `.text-act` under the ramp rows, opening the viewer over every approved language at once — the proposal bar's Review all vanishes with the proposals, leaving no way to read a finished palette whole. Review: does it belong under the rows or beside the column's count, and **should the row `×` be that loud?** A delete-forever control is currently the most prominent thing on each ramp row. | Production design step 1, Color Palette column | The column had no verb at all once every swatch was approved |
-| 2026-08-07 | **Review all N + the unopened count.** Built from canon — the swatch viewer taking every group instead of one, plus a `.ghost` act and a Courier condition on the existing bar (`2 OF 5 LANGUAGES UNOPENED`, clearing as they are opened). Review: is `Review all` the right verb, does it belong left of `Approve all`, and should the count read as a warning rather than a fact? | Production design step 1, proposal bar | `Approve all 19` acted across languages the user could not have read without opening each ramp in turn |
-| 2026-08-06 | **Colour field** (`.mf-color`) — a `modal()` field type pairing a Courier hex with a native `<input type="color">` stripped of its OS chrome and given the field's border; the two are views of one value and follow each other, and an empty one wears `.hatch-fine` rather than a black that would read as a set colour. Survives PALETTE_GROUPS_PLAN, which kept `Recolor` and only moved it from a pencil to a text act. Review: is a native picker admissible in a system this typographic, and is 46px the right width beside the hex? | Swatch viewer, Recolor | No form control in the system takes a colour; a hex field alone made the user pick colours by typing |
-| 2026-08-06 | **Import backup as a card action.** Built from canon — a `.proj-item` in the existing ⋯ menu plus the typed-name `danger` modal, the same grammar as Delete. Review: is the ⋯ menu the right home for a destructive action the user asked to be "on the card", and should it sit above or below Delete? | Productions shelf, ⋯ menu | Restore only ever made a NEW production; setting an existing production to a backup's version had no surface at all |
+
+*(empty — NON_CANON_REVIEW_2026-08-07 ruled all seven rows)*
 
 ---
 
@@ -1008,6 +1062,12 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-07** — Canonization pass: all seven Uncanonized rows ruled.
+  Verb-sits-with-its-object canonized as the pair to act-where-condition-
+  is-met; bulk verdicts withheld until everything judged has been seen;
+  destructive acts only offered where their object can be read in full;
+  amber confirmed as blocking-only, never a report. The approved ramp
+  row's × is removed; Rescan leaves the verdict bar.
 - **2026-08-07** — Step 2: logline above the counts, stat tiles cut a
   third; environments edit in a full modal that names their inheriting
   sheets; locations capped at five per environment with an expand row.

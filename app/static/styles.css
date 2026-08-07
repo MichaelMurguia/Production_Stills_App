@@ -1242,7 +1242,7 @@ details.meta pre {
 .mf-color input[type=text] { font-family: var(--mono); letter-spacing: .04em; }
 .mf-color input[type=color] {
   -webkit-appearance: none; appearance: none;
-  width: 46px; flex: none; padding: 3px; cursor: pointer;
+  width: 40px; aspect-ratio: 1; flex: none; padding: 3px; cursor: pointer;
   background: var(--field); border: 1px solid var(--line);
   border-radius: var(--radius);
 }
@@ -1426,7 +1426,8 @@ details.meta pre {
   box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
 .card-menu .proj-item { display: block; width: 100%; text-align: left; }
-.card-menu .danger-act { color: var(--bad); }
+.card-menu .danger-act { color: var(--bad);
+  border-top: 1px solid var(--line-soft); }
 .card-menu .danger-act[disabled] { color: var(--ink-faint); cursor: default; }
 .inline-rename {
   font: inherit; color: var(--ink); background: var(--field);
@@ -2293,3 +2294,21 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   letter-spacing: .08em; color: var(--ink-faint); line-height: 1.6; }
 .envm-foot { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
 .envm-del { margin-left: auto; }
+
+/* NON_CANON_REVIEW R1 — an in-card wait states its phase in sentence case
+   and its progress in Courier beneath. Two facts, two voices. */
+.busy .busy-prog { flex-basis: 100%; font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint); }
+
+/* R3 — recall beneath a free-text field: the last three briefs, filling
+   the field when clicked. Recall, never constraint. */
+.mf-recall { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+.mf-recall .text-act { font-size: 11px; color: var(--ink-faint); text-align: left; }
+.mf-recall .text-act:hover { color: var(--ink); }
+/* R4 — Review all stands beside the column's count, not under the rows. */
+.pal-review { margin-left: 8px; font-size: 11px; }
+/* R3 — Rescan left the verdict bar for the viewer's header. */
+.sv-rescan { margin-left: auto; }
+.sv-head .sv-x { margin-left: 12px; }
+/* R4 — removal lives in the footer, where the whole group can be read. */
+.sv-remove { margin-left: 16px; color: var(--bad); }
