@@ -638,9 +638,69 @@ def persist_swatch_proposals(groups: list[dict]) -> list[dict]:
     return groups
 
 
-def generate_swatches(provider: str = "gemini") -> dict:
+def swatches_in_play(languages: list[str] | None = None) -> tuple[dict, dict]:
+    """What the palette already holds, and what it has already refused.
+
+    A rescan that re-proposes an approved colour is noise; one that
+    re-proposes a rejected colour is worse — it asks the designer to make
+    the same decision twice. Both lists go into the prompt.
+    """
+    live: dict[str, list[dict]] = {}
+    dead: dict[str, list[dict]] = {}
+    for r in store.list_references():
+        if store.role_head(r.get("role", "")) != "COLOR_PALETTE":
+            continue
+        p = parse_swatch_notes(r.get("notes", ""))
+        if not p["hex"]:
+            continue
+        if languages and p["language"] not in languages:
+            continue
+        (dead if r.get("status") == "REJECTED" else live).setdefault(
+            p["language"], []).append(p)
+    return live, dead
+
+
+def rescan_note(languages: list[str] | None = None, note: str = "",
+                deep: bool = False) -> str:
+    """The part of the instruction that makes a pass a RESCAN rather than a
+    repeat of the first one (user 2026-08-07)."""
+    live, dead = swatches_in_play(languages)
+    out = []
+    if languages:
+        out.append("Propose swatches ONLY for these design languages, and "
+                   "nothing else: " + ", ".join(languages) + ".")
+    have = [f"{p['hex']} ({p['name']})" for ps in live.values() for p in ps]
+    if have:
+        out.append("The palette ALREADY HOLDS these — do not propose them "
+                   "again, and do not propose near-duplicates. Propose what "
+                   "is MISSING: " + ", ".join(have) + ".")
+    refused = [f"{p['hex']} ({p['name']})" for ps in dead.values() for p in ps]
+    if refused:
+        out.append("These were already REJECTED by the designer. Do not "
+                   "propose them again: " + ", ".join(refused) + ".")
+    if deep:
+        out.append("This is a DEEP pass — the obvious colours are already "
+                   "found. Read for the ones the Bible mentions in passing: "
+                   "materials and their finish, uniforms and insignia, "
+                   "signage and hazard markings, practical light sources, "
+                   "corrosion and staining, and any colour named as a "
+                   "faction's own. Propose 4 to 8 per design language.")
+    if note.strip():
+        out.append('The production designer says: "' + note.strip()[:400]
+                   + '" — treat that as the brief for this pass. Propose '
+                     "colours that answer it, still grounded in the Bible.")
+    return ("\n\n" + "\n".join(out)) if out else ""
+
+
+def generate_swatches(provider: str = "gemini",
+                      languages: list[str] | None = None,
+                      note: str = "", deep: bool = False) -> dict:
     """Bible-cited palette proposals. Nothing is persisted here — the
-    client holds the proposals and each approval creates a reference."""
+    client holds the proposals and each approval creates a reference.
+
+    languages / note / deep make it a RESCAN: the same act aimed at one
+    design language, told what the designer thinks is missing, and told
+    what the palette already holds so it stops re-proposing it."""
     from . import bible
 
     bible_text = bible.load_text().strip()
@@ -651,15 +711,23 @@ def generate_swatches(provider: str = "gemini") -> dict:
 
     if provider == "mock" and generate.mock_enabled():
         from . import mockflow
-        return {"groups": persist_swatch_proposals(
-                    normalize_swatch_groups(mockflow.mock_swatches(bible_text))),
+        groups = normalize_swatch_groups(mockflow.mock_swatches(bible_text))
+        if languages:
+            groups = [g for g in groups if g["language"] in languages]
+        if not groups:
+            raise autofill.AutofillError(
+                "The mock engine has nothing for "
+                + (", ".join(languages) if languages else "this Bible") + ".")
+        return {"groups": persist_swatch_proposals(groups),
                 "model": mockflow.MODEL_NAME}
 
     instructions = (
         "You are the film's production designer. The saved Art Direction "
         "Bible follows. Propose the film's color swatches — grouped by its "
         "## Design Language sections, every color grounded in a quoted "
-        "Bible line.\n\n" + _SWATCH_SCHEMA_NOTE)
+        "Bible line."
+        + rescan_note(languages, note, deep)
+        + "\n\n" + _SWATCH_SCHEMA_NOTE)
     doc = bible_text.encode("utf-8")
     mime = "text/plain"
 

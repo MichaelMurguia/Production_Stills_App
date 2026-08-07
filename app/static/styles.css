@@ -2250,3 +2250,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* Reading the whole approved palette — sits under the rows it reviews,
    never in the header: the badge beside the title is state, not a verb. */
 .pal-review { padding-top: 4px; border-top: 1px solid var(--line-soft); }
+
+/* Design questions on a breakdown (user 2026-08-07). An answered question
+   is a DECISION that reaches the prompt, so it reads as settled — the
+   answer sits under it in --ink, the question fades to --ink-faint. */
+.q-block .answered { color: var(--ink-faint); }
+.q-block .q-ans { display: block; color: var(--ink); margin: 2px 0 6px; }
+.q-bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.q-bar .mini { color: var(--ink-faint); letter-spacing: .08em; }

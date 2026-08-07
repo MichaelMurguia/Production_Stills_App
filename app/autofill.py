@@ -36,6 +36,19 @@ def pick_text_model(client) -> str:
     return TEXT_MODEL_PREFERENCES[0]
 
 
+# SAME / CONTINUOUS / LATER are screenplay CONTINUITY markers, not hours —
+# a slugline that says SAME is deferring to the scene before it. Recording
+# one as the board's time of day states a light the script never gave
+# (user 2026-08-07); the field stays empty and the designer picks.
+_CONTINUITY = {"SAME", "CONTINUOUS", "LATER", "MOMENTS LATER", "MOMENTS",
+               "SAME TIME", "CONT", "CONT'D", "PRESENT"}
+
+
+def _real_hour(v) -> str:
+    t = str(v or "").strip()[:60].upper()
+    return "" if t in _CONTINUITY else t
+
+
 def _screenplay_bytes() -> tuple[bytes, str]:
     state = store.load_app_state()
     rec = state.get("screenplay")
@@ -204,7 +217,8 @@ def _coerce(draft: dict, spec_id: str, mode: str) -> dict:
         "setting": {
             "int_ext": str((draft.get("setting") or {}).get("int_ext", ""))[:10].upper(),
             "location": str((draft.get("setting") or {}).get("location", ""))[:120],
-            "time_of_day": str((draft.get("setting") or {}).get("time_of_day", ""))[:60].upper(),
+            "time_of_day": _real_hour(
+                (draft.get("setting") or {}).get("time_of_day", "")),
         },
         "scene": str(draft.get("scene", ""))[:2000],
         "mode": mode,

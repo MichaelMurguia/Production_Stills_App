@@ -953,6 +953,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-06 | **Backup/import in-flight strip on a production card.** Built from canon — the `.busy` strip verbatim, hosted per card and collapsed when idle (`[data-busy]:empty`). Review placement and copy only: does an in-card strip read right beside the card's own foot, and is "Packing … / Downloading — 12.4 MB of 88.1 MB" the wording you want? | Productions shelf, Back up button and the ⋯ menu's Import backup | Backup was a bare `location.href` with nothing on screen; the wait on a large production is real and was silent |
+| 2026-08-07 | **Design questions block** (`.q-block`) — the questions a breakdown could not answer, with a `.text-act` opening a modal of one field each. An answered question reads settled: the answer below it in `--ink`, the question faded to `--ink-faint`. Deliberately NOT `.block-act` — that amber verb belongs to blocking rows and this is a report. Review: does an answered question belong inline like this or collapsed, and is the count line the right state to show? | Breakdowns, sheet editor | The block only listed questions and contradicted itself about how to resolve them; nothing could answer one, and nothing carried an answer to the prompt |
+| 2026-08-07 | **Rescan / Deep scan** — the swatch generator aimed at one design language, or run a second wider pass, both through one modal that takes an optional brief ("no Onyx Unit black, and no reds"). `Rescan this language` sits in the swatch viewer's footer; `Deep scan` beside Generate. Review: is the viewer's footer the right home for a rescan, and should the brief field be a chip list rather than free text? | Production design step 1 and the swatch viewer | Generation was all-or-nothing and had no way to be told what it missed |
 | 2026-08-07 | **Review all N in the approved column.** A `.text-act` under the ramp rows, opening the viewer over every approved language at once — the proposal bar's Review all vanishes with the proposals, leaving no way to read a finished palette whole. Review: does it belong under the rows or beside the column's count, and **should the row `×` be that loud?** A delete-forever control is currently the most prominent thing on each ramp row. | Production design step 1, Color Palette column | The column had no verb at all once every swatch was approved |
 | 2026-08-07 | **Review all N + the unopened count.** Built from canon — the swatch viewer taking every group instead of one, plus a `.ghost` act and a Courier condition on the existing bar (`2 OF 5 LANGUAGES UNOPENED`, clearing as they are opened). Review: is `Review all` the right verb, does it belong left of `Approve all`, and should the count read as a warning rather than a fact? | Production design step 1, proposal bar | `Approve all 19` acted across languages the user could not have read without opening each ramp in turn |
 | 2026-08-06 | **Colour field** (`.mf-color`) — a `modal()` field type pairing a Courier hex with a native `<input type="color">` stripped of its OS chrome and given the field's border; the two are views of one value and follow each other, and an empty one wears `.hatch-fine` rather than a black that would read as a set colour. Survives PALETTE_GROUPS_PLAN, which kept `Recolor` and only moved it from a pencil to a text act. Review: is a native picker admissible in a system this typographic, and is 46px the right width beside the hex? | Swatch viewer, Recolor | No form control in the system takes a colour; a hex field alone made the user pick colours by typing |
@@ -981,6 +983,22 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-07** — Swatches can be **rescanned** (user): aimed at one
+  design language or run as a wider **Deep scan**, both taking an optional
+  brief. Either way the engine is told what the palette already holds AND
+  what was already rejected, so a rescan proposes what is missing instead
+  of re-asking a settled question.
+- **2026-08-07** — Breakdown **design questions can be answered**, and the
+  answers are canon (user): they ride every panel's prompt as DESIGN
+  DECISIONS. Unanswered ones are never sent — an open question in a prompt
+  is an invitation to invent. The block's copy is mode-aware now; it used
+  to tell the user to run a design exploration while they were reading one.
+- **2026-08-07** — **Time of day is a select** (user bug): it was an input
+  with a datalist, and a datalist filters itself away against a value like
+  `SAME`, leaving nothing to pick. `SAME` / `CONTINUOUS` / `LATER` are
+  screenplay continuity markers, not hours, and no longer become one at
+  extraction; an unrecognised stored value is still offered so opening a
+  sheet never silently changes it.
 - **2026-08-07** — **Review all N** reaches the approved column too
   (user): the proposal bar's act disappears with the proposals, so a
   finished palette could only be read one language at a time. A text act

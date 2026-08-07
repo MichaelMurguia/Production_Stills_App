@@ -797,9 +797,11 @@ async def api_set_swatch_hero(ref_id: str) -> dict:
 async def api_wizard_swatches(body: dict) -> dict:
     """Bible-cited palette proposals (NON-CANON widget) — proposals only;
     each approval lands through /api/references/swatch."""
+    langs = [str(x).strip() for x in (body.get("languages") or []) if str(x).strip()]
     try:
         return await run_in_threadpool(
-            wizard.generate_swatches, str(body.get("provider") or "gemini"))
+            wizard.generate_swatches, str(body.get("provider") or "gemini"),
+            langs or None, str(body.get("note") or ""), bool(body.get("deep")))
     except autofill.AutofillError as e:
         raise HTTPException(409, str(e))
 

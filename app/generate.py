@@ -483,6 +483,19 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         lines += ["THE SCENE",
                   str(spec["scene"]).strip(),
                   ""]
+    # Answered design questions are DECISIONS, not suggestions (user
+    # 2026-08-07). The screenplay could not answer them; the designer has,
+    # so they bind exactly like the sheet's own fields. Unanswered ones are
+    # never sent — an open question in a prompt is an invitation to invent.
+    answered = [(q, str(a).strip())
+                for q, a in (spec.get("question_answers") or {}).items()
+                if str(a).strip()]
+    if answered:
+        lines += ["DESIGN DECISIONS — the screenplay does not answer these; "
+                  "the production designer has. Treat each answer as canon "
+                  "for this board."]
+        lines += [f"- {q} → {a}" for q, a in answered]
+        lines += [""]
     lines += [
         "PANEL PURPOSE",
         panel.get("purpose", ""),

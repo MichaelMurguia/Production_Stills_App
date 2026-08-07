@@ -3087,6 +3087,8 @@ async function renderWizard() {
             ${approved ? "" : `<button class="ghost" data-f="ap-all">Approve all ${n}</button>
             <button class="text-act" data-f="rj-all">${
               many ? `Reject all ${n}` : "Reject the group"}</button>`}
+            ${many ? "" : `<button class="text-act" data-f="rescan"
+              title="Ask for the colors this design language is still missing">Rescan this language</button>`}
             <span class="sv-footnote mono">EACH VERDICT IS ITS OWN REFERENCE RECORD</span>
           </div>
         </div>`;
@@ -3158,6 +3160,22 @@ async function renderWizard() {
               onChange();
               done(null);
             };
+            const rescanBtn = $("[data-f=rescan]", ov);
+            if (rescanBtn) rescanBtn.onclick = async () => {
+              const lang = groups[0].language;
+              let r;
+              try {
+                r = await runSwatchScan($(".sv-foot", ov),
+                  { languages: [lang], label: `Rescanning ${lang}…` });
+              } catch (err) { return toast(err.message, true); }
+              if (!r) return;
+              const found = r.groups.reduce((t, g) => t + g.swatches.length, 0);
+              toast(found
+                ? `${found} more proposed for ${lang} — review them in the strip.`
+                : "Nothing more found.");
+              onChange();
+              done(null);
+            };
             const apAll = $("[data-f=ap-all]", ov);
             if (apAll) apAll.onclick = () => sweepAll("APPROVED");
             const rjAll = $("[data-f=rj-all]", ov);
@@ -3179,6 +3197,39 @@ async function renderWizard() {
     // so a re-flow does not forget.
     const seen = new Set();
     const unopened = r => r.groups.filter(g => !seen.has(g.language)).length;
+
+    // One place that asks for swatches, however the ask is aimed (user
+    // 2026-08-07): the whole Bible, one design language, or a deep pass.
+    // The server names what the palette already holds and already refused,
+    // so a rescan proposes what is MISSING.
+    const runSwatchScan = async (host, opts = {}) => {
+      const { languages = null, deep = false, label = "Reading the Bible…" } = opts;
+      const ask = await modal({
+        title: languages ? `Rescan ${languages.join(", ")}`
+          : deep ? "Deep scan the Bible" : "Generate palette swatches",
+        body: languages
+          ? "Proposes colors this design language is still missing. What the "
+            + "palette already holds — and anything already rejected — is named "
+            + "to the engine, so it will not offer them again."
+          : deep
+          ? "A second, wider read: materials and finishes, uniforms and insignia, "
+            + "signage, practical light sources, corrosion — the colors the Bible "
+            + "names in passing. Existing swatches are excluded."
+          : "Reads the saved Bible and proposes colors grouped by design language.",
+        fields: [{ name: "note", label: "What is missing?", textarea: true,
+                   placeholder: "optional — e.g. no Onyx Unit black, and no reds anywhere",
+                   hint: "Rides this pass as the brief; still grounded in the Bible." }],
+        confirmLabel: languages ? "Rescan" : deep ? "Deep scan" : "Generate",
+      });
+      if (ask === null) return null;
+      const busy = startBusy(host, label,
+        "Proposing only colors it can ground in your saved Bible.");
+      try {
+        return await api("/api/wizard/swatches", { method: "POST",
+          json: { provider: $("#wiz-provider").value, note: ask.note, deep,
+                  ...(languages ? { languages } : {}) } });
+      } finally { busy.done(); }
+    };
 
     openPaletteViewer = openSwatchViewer;
 
@@ -3268,19 +3319,17 @@ async function renderWizard() {
       if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
+        <button class="text-act" data-f="sw-deep"
+          title="A second, wider read for the colors the Bible only mentions in passing — existing swatches excluded">Deep scan</button>
         <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 2 / COLOR PALETTE</span>
         <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
-      go.onclick = async () => {
+      const runGen = async deep => {
         go.disabled = true;
-        // A model call over a whole Bible is a real wait, and swapping the
-        // button's label said almost nothing (user 2026-08-06). The canon
-        // .busy strip states it, with the elapsed clock.
-        const busy = startBusy($("[data-f=sw-busy]", genHost), "Reading the Bible…",
-          "Proposing only colors it can ground in your saved Bible.");
         try {
-          const r = await api("/api/wizard/swatches", { method: "POST",
-            json: { provider: $("#wiz-provider").value } });
+          const r = await runSwatchScan($("[data-f=sw-busy]", genHost),
+            { deep, label: deep ? "Reading the Bible again, deeper…" : "Reading the Bible…" });
+          if (!r) return;
           renderSwatchStrip(r);
           // The result is stated where the act was taken, and links to
           // where the output actually landed.
@@ -3295,9 +3344,10 @@ async function renderWizard() {
               behavior: "smooth" });
           };
         } catch (err) { toast(err.message, true); }
-        busy.done();
         go.disabled = false;
       };
+      go.onclick = () => runGen(false);
+      $("[data-f=sw-deep]", genHost).onclick = () => runGen(true);
     };
     await syncSwatchGen();
   }
@@ -5161,10 +5211,27 @@ async function openSpecEditor(specId) {
       <button class="block-act" data-f="lock-unlock">Unlock &amp; edit</button>
     </div>` : ""}
     <div id="sp-gate"></div>
-    ${(spec.unresolved_questions || []).length ? `
-      <div class="report" style="margin-bottom:12px"><b>Unresolved design questions</b> — the screenplay does not answer these; decide them yourself or run a DESIGN_EXPLORATION board:
-        <ul>${spec.unresolved_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>
-      </div>` : ""}
+    ${(spec.unresolved_questions || []).length ? (() => {
+      // The old copy told the user to "run a DESIGN_EXPLORATION board"
+      // while they were reading one (user 2026-08-07). What is true
+      // depends on the mode, so say the true thing.
+      const ans = spec.question_answers || {};
+      const open = spec.unresolved_questions.filter(q => !String(ans[q] || "").trim());
+      const explore = spec.mode === "DESIGN_EXPLORATION";
+      return `<div class="report q-block" style="margin-bottom:12px">
+        <b>Design questions</b> — ${explore
+          ? "these do not need answers on a design exploration: exploring is how you decide them. Answer any you have already settled and every panel will obey."
+          : "the screenplay does not answer these. Answer one and it becomes canon for this board; leave it open and the render is told not to invent one."}
+        <ul>${spec.unresolved_questions.map(q => `<li${ans[q] ? ' class="answered"' : ""}>${esc(q)}${
+          String(ans[q] || "").trim() ? `<span class="q-ans">${esc(ans[q])}</span>` : ""}</li>`).join("")}</ul>
+        <div class="q-bar">
+          <button class="text-act" data-f="answer-qs"${locked ? " disabled" : ""}>${
+            open.length === spec.unresolved_questions.length ? "Answer these" : "Edit answers"}</button>
+          <span class="mini mono">${spec.unresolved_questions.length - open.length} OF ${
+            spec.unresolved_questions.length} ANSWERED${open.length ? "" : " · ALL DECIDED"}</span>
+        </div>
+      </div>`;
+    })() : ""}
     <div class="spec-section" style="margin-top:14px;border-top:none;padding-top:0">
       <h4>Identity <span class="hint">(what this sheet is)</span></h4>
       <div class="grid-form">
@@ -5192,8 +5259,14 @@ async function openSpecEditor(specId) {
         </select>
       </label>
       <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${locked ? "disabled" : ""}></label>
-      <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day, exactly as the script's scene heading says it (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue.">Time of day <input type="text" id="sp-tod" list="tod-list" placeholder="DAY, DUSK, NIGHT…" value="${esc(spec.setting?.time_of_day || "")}" ${locked ? "disabled" : ""}>
-        <datalist id="tod-list">${[...TIMES_OF_DAY, "MAGIC HOUR"].map(t => `<option value="${esc(t)}">`).join("")}</datalist>
+      <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
+        <select id="sp-tod" ${locked ? "disabled" : ""}>
+          ${[...new Set(["", ...TIMES_OF_DAY, "MAGIC HOUR",
+                         ...(bible_catalog?.atmospheres || []),
+                         ...(spec.setting?.time_of_day ? [spec.setting.time_of_day] : [])])]
+            .map(t => `<option value="${esc(t)}"${
+              (spec.setting?.time_of_day || "") === t ? " selected" : ""}>${esc(t) || "—"}</option>`).join("")}
+        </select>
       </label>
       <label class="setf" data-setf="atmo" title="Optional weather / light character layered on the hour — one of the Bible's approved atmosphere studies (or your own words). DUSK is the hour; 'dusk and lanterns' is the atmosphere.">Atmosphere <input type="text" id="sp-atmo" list="atmo-list" placeholder="e.g. dusk and lanterns, storm approach…" value="${esc(spec.setting?.atmosphere || "")}" ${locked ? "disabled" : ""}>
         <datalist id="atmo-list">${(bible_catalog?.atmospheres || []).map(t => `<option value="${esc(t)}">`).join("")}</datalist>
@@ -5857,6 +5930,46 @@ REMOVE — marked for removal from the board.">
     $("#sp-unlock", panel).onclick = doUnlock;
     $("[data-f=lock-unlock]", panel).onclick = async () => { await doUnlock(); updateBand(); };
   }
+
+  // Answering a design question is a DECISION that reaches the image
+  // prompt (user 2026-08-07). Wired at the tail, NOT inside either lock
+  // branch: the button renders in both states (disabled when locked), and
+  // it first went into the locked-only branch, where it could never fire.
+  const answerBtn = $("[data-f=answer-qs]", panel);
+  if (answerBtn) answerBtn.onclick = async () => {
+    const qs = spec.unresolved_questions || [];
+    const have = spec.question_answers || {};
+    const vals = await modal({
+      title: "Answer the design questions",
+      body: spec.mode === "DESIGN_EXPLORATION"
+        ? "A design exploration is where these get decided, so none is required. "
+          + "Anything you answer becomes canon for this board and rides every "
+          + "panel's prompt; anything left blank stays open."
+        : "The screenplay does not answer these. An answer becomes canon for this "
+          + "board and rides every panel's prompt. Left blank, the question stays "
+          + "open and the render is told not to invent one.",
+      fields: qs.map((q, n) => ({
+        name: `q${n}`, label: q, value: have[q] || "", textarea: true,
+        placeholder: "leave blank to keep it open",
+      })),
+      confirmLabel: "Save answers",
+    });
+    if (vals === null) return;
+    const answers = {};
+    qs.forEach((q, n) => {
+      const v = (vals[`q${n}`] || "").trim();
+      if (v) answers[q] = v;
+    });
+    try {
+      await api(`/api/specs/${specId}`, { method: "PUT",
+        json: { ...collect(), question_answers: answers } });
+      const n = Object.keys(answers).length;
+      toast(n ? `${n} of ${qs.length} answered — they ride every panel's prompt.`
+              : "Answers cleared — the questions stay open.");
+      renderSpecs(specId);
+    } catch (err) { toast(err.message, true); }
+  };
+
 }
 
 /* ----------------------------------------------------------------- boards */
