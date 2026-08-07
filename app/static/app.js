@@ -2921,6 +2921,11 @@ async function renderWizard() {
   // Languages, and stay client-side until each approval creates the
   // reference.
   let syncSwatchGen = () => {};
+  // The swatch machinery lives in the block below; the step-1 column
+  // renders outside it and needs the viewer to open an APPROVED group.
+  // Same holder pattern as syncSwatchGen above — a const inside that
+  // block is invisible out here (it was, and the click threw).
+  let openPaletteViewer = () => Promise.resolve(null);
   {
     const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
     const colorIn = $("[data-f=sw-color]", col);
@@ -3016,43 +3021,72 @@ async function renderWizard() {
     // Opened from a ramp; holds every per-colour fact and verb. `group` is
     // live — the viewer mutates it and the caller re-renders from it, so
     // the strip and the viewer never disagree about what is left.
-    const openSwatchViewer = (group, focusRef, onChange) => {
-      const draw = () => {
-        const ordered = rampOrder(group.swatches);
-        const n = group.swatches.length;
-        return `<div class="sv">
-          <div class="sv-head">
-            <span class="sv-title">${esc(group.language)}</span>
-            <span class="sv-sub mono">${n} SWATCH${n === 1 ? "" : "ES"} · PROPOSED, NOT CANON</span>
-            <button class="sv-x" data-f="x" title="Close">&times;</button>
-          </div>
+    // The viewer takes a LIST of groups: one for a ramp click, all of them
+    // for Review all. `approved` swaps the verbs — Approve is meaningless
+    // on a swatch that already is, and Reject there means demote out of
+    // canon (which is NOT the row's ×: that deletes the reference).
+    const openSwatchViewer = (groups, opts = {}) => {
+      const { focusRef = null, onChange = () => {}, approved = false } = opts;
+      const many = groups.length > 1;
+      const count = () => groups.reduce((n, g) => n + g.swatches.length, 0);
+      const groupOf = refId => groups.find(g =>
+        g.swatches.some(sw => sw.ref_id === refId));
+
+      const rows = g => rampOrder(g.swatches).map(sw => `
+        <div class="sv-row${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
+             data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
+          <span class="sv-chip">${swBlock(sw.hex, sw.pair_hex)}</span>
+          <span class="sv-id">
+            <span class="sv-name">${esc(sw.name)}${
+              sw.hero ? '<span class="sw-hero">HERO</span>' : ""}</span>
+            <span class="sv-hex mono">${esc(sw.hex)}${
+              sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
+            ${sw.cite ? `<span class="sv-cite">&ldquo;${esc(sw.cite)}&rdquo;</span>` : ""}
+          </span>
+          <span class="sv-acts">
+            <button class="text-act" data-f="rc">Recolor</button>
+            ${approved ? "" : '<button class="text-act ok-act" data-f="ap">Approve</button>'}
+            <button class="text-act" data-f="rj"${approved
+              ? ' title="Demote out of canon — a status record with a reason, not a deletion"' : ""
+              }>Reject</button>
+          </span>
+        </div>`).join("");
+
+      const section = g => {
+        const hero = g.swatches.find(sw => sw.hero);
+        return `<div class="sv-group">
+          ${many ? `<p class="sw-ramp-label sv-grouphead">
+            <span class="lang">${esc(g.language.toUpperCase())}</span>
+            <span class="n">${g.swatches.length}</span>
+            <span class="hero${hero ? "" : " open"}">${
+              hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span></p>` : ""}
           <div class="sv-rampwrap">
-            <div class="sw-ramp sv-ramp">${ordered.map(sw =>
+            <div class="sw-ramp sv-ramp">${rampOrder(g.swatches).map(sw =>
               `<i data-ref="${esc(sw.ref_id)}" class="${sw.hero ? "is-hero" : ""}"
                   style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"
                   title="Make this the hero"></i>`).join("")}</div>
-            <p class="sv-note mono">HERO — THE COLOR SPLASHED THROUGH THIS FACTION'S SETS, COSTUMES AND PROPS</p>
+            ${many ? "" : '<p class="sv-note mono">HERO — THE COLOR SPLASHED THROUGH THIS FACTION\u2019S SETS, COSTUMES AND PROPS</p>'}
           </div>
-          <div class="sv-rows">${ordered.map(sw => `
-            <div class="sv-row${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
-                 data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
-              <span class="sv-chip">${swBlock(sw.hex, sw.pair_hex)}</span>
-              <span class="sv-id">
-                <span class="sv-name">${esc(sw.name)}${
-                  sw.hero ? '<span class="sw-hero">HERO</span>' : ""}</span>
-                <span class="sv-hex mono">${esc(sw.hex)}${
-                  sw.pair_hex ? " · " + esc(sw.pair_hex) : ""}</span>
-                ${sw.cite ? `<span class="sv-cite">&ldquo;${esc(sw.cite)}&rdquo;</span>` : ""}
-              </span>
-              <span class="sv-acts">
-                <button class="text-act" data-f="rc">Recolor</button>
-                <button class="text-act ok-act" data-f="ap">Approve</button>
-                <button class="text-act" data-f="rj">Reject</button>
-              </span>
-            </div>`).join("")}</div>
+          <div class="sv-rows">${rows(g)}</div>
+        </div>`;
+      };
+
+      const draw = () => {
+        const n = count();
+        const state = approved ? "APPROVED" : "PROPOSED, NOT CANON";
+        return `<div class="sv${many ? " sv-many" : ""}">
+          <div class="sv-head">
+            <span class="sv-title">${esc(many
+              ? `${groups.length} design languages` : groups[0].language)}</span>
+            <span class="sv-sub mono">${n} SWATCH${n === 1 ? "" : "ES"} · ${state}</span>
+            <button class="sv-x" data-f="x" title="Close">&times;</button>
+          </div>
+          ${many ? '<p class="sv-note mono sv-note-top">HERO — THE COLOR SPLASHED THROUGH THAT FACTION\u2019S SETS, COSTUMES AND PROPS</p>' : ""}
+          <div class="sv-body">${groups.map(section).join("")}</div>
           <div class="sv-foot">
-            <button class="ghost" data-f="ap-all">Approve all ${n}</button>
-            <button class="text-act" data-f="rj-all">Reject the group</button>
+            ${approved ? "" : `<button class="ghost" data-f="ap-all">Approve all ${n}</button>
+            <button class="text-act" data-f="rj-all">${
+              many ? `Reject all ${n}` : "Reject the group"}</button>`}
             <span class="sv-footnote mono">EACH VERDICT IS ITS OWN REFERENCE RECORD</span>
           </div>
         </div>`;
@@ -3063,9 +3097,13 @@ async function renderWizard() {
         mount: (ov, done) => {
           const wire = () => {
             const drop = refId => {
-              group.swatches = group.swatches.filter(s => s.ref_id !== refId);
+              const g = groupOf(refId);
+              if (g) g.swatches = g.swatches.filter(s => s.ref_id !== refId);
+              for (let k = groups.length - 1; k >= 0; k--) {
+                if (!groups[k].swatches.length) groups.splice(k, 1);
+              }
               onChange();
-              if (!group.swatches.length) return done(null);
+              if (!count()) return done(null);
               // A rejected hero leaves the group OPEN — the user chooses a
               // hero, the app never guesses one after the fact.
               $(".sv", ov).outerHTML = draw();
@@ -3074,11 +3112,14 @@ async function renderWizard() {
             $("[data-f=x]", ov).onclick = () => done(null);
             $$(".sv-ramp i", ov).forEach(b => b.onclick = async () => {
               const refId = b.dataset.ref;
-              if (group.swatches.find(s => s.ref_id === refId)?.hero) return;
+              const g = groupOf(refId);
+              if (!g || g.swatches.find(s => s.ref_id === refId)?.hero) return;
               try {
                 await api(`/api/references/${refId}/hero`, { method: "POST" });
               } catch (err) { return toast(err.message, true); }
-              group.swatches.forEach(s => { s.hero = s.ref_id === refId; });
+              // Single-valued within its OWN language only — the server
+              // clears the rest of that language, never another's.
+              g.swatches.forEach(s => { s.hero = s.ref_id === refId; });
               onChange();
               $(".sv", ov).outerHTML = draw();
               wire();
@@ -3090,12 +3131,13 @@ async function renderWizard() {
                 try {
                   const rec = await recolorSwatch(refId, row.dataset.hex, row.dataset.pair);
                   if (!rec) return;
-                  const sw = group.swatches.find(s => s.ref_id === refId);
+                  const sw = groupOf(refId)?.swatches.find(s => s.ref_id === refId);
                   if (sw) { sw.hex = rec.hex; sw.pair_hex = rec.pair_hex; }
                   onChange();
                 } catch (err) { toast(err.message, true); }
               };
-              $("[data-f=ap]", row).onclick = async () => {
+              const ap = $("[data-f=ap]", row);
+              if (ap) ap.onclick = async () => {
                 try { await verdictFor(refId, "APPROVED"); refreshRefs(); drop(refId); }
                 catch (err) { toast(err.message, true); }
               };
@@ -3104,22 +3146,22 @@ async function renderWizard() {
                 catch (err) { toast(err.message, true); }
               };
             });
-            $("[data-f=ap-all]", ov).onclick = async () => {
-              for (const sw of [...group.swatches]) {
-                try { await verdictFor(sw.ref_id, "APPROVED"); }
-                catch (err) { toast(err.message, true); break; }
-                group.swatches = group.swatches.filter(s => s.ref_id !== sw.ref_id);
+            const sweepAll = async status => {
+              for (const g of [...groups]) {
+                for (const sw of [...g.swatches]) {
+                  try { await verdictFor(sw.ref_id, status); }
+                  catch (err) { toast(err.message, true); break; }
+                  g.swatches = g.swatches.filter(s => s.ref_id !== sw.ref_id);
+                }
               }
-              refreshRefs(); onChange(); done(null);
+              if (status === "APPROVED") refreshRefs();
+              onChange();
+              done(null);
             };
-            $("[data-f=rj-all]", ov).onclick = async () => {
-              for (const sw of [...group.swatches]) {
-                try { await verdictFor(sw.ref_id, "REJECTED"); }
-                catch (err) { toast(err.message, true); break; }
-                group.swatches = group.swatches.filter(s => s.ref_id !== sw.ref_id);
-              }
-              onChange(); done(null);
-            };
+            const apAll = $("[data-f=ap-all]", ov);
+            if (apAll) apAll.onclick = () => sweepAll("APPROVED");
+            const rjAll = $("[data-f=rj-all]", ov);
+            if (rjAll) rjAll.onclick = () => sweepAll("REJECTED");
           };
           wire();
           if (focusRef) {
@@ -3133,6 +3175,13 @@ async function renderWizard() {
       });
     };
 
+    // Which languages the user has actually looked at. Outside the render
+    // so a re-flow does not forget.
+    const seen = new Set();
+    const unopened = r => r.groups.filter(g => !seen.has(g.language)).length;
+
+    openPaletteViewer = openSwatchViewer;
+
     const renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
@@ -3145,8 +3194,11 @@ async function renderWizard() {
             rampOrder(g.swatches).map(band).join("")}</div>
           ${rampLabel(g)}`).join("")}
         <div class="sw-bar">
+          <button class="ghost" data-f="review">Review all ${total}</button>
           <button class="ghost" data-f="ap-all">Approve all ${total}</button>
           <button class="text-act" data-f="discard">Discard the rest</button>
+          ${unopened(r) ? `<span class="sw-bar-note mono">${unopened(r)} OF ${
+            r.groups.length} LANGUAGE${r.groups.length === 1 ? "" : "S"} UNOPENED</span>` : ""}
         </div>`;
 
       const reflow = () => {
@@ -3160,7 +3212,8 @@ async function renderWizard() {
           const hit = e.target.closest("i");
           $$(".sw-ramp", strip).forEach(x => x.classList.remove("is-open"));
           ramp.classList.add("is-open");
-          openSwatchViewer(g, hit?.dataset.ref, reflow)
+          seen.add(g.language);
+          openSwatchViewer([g], { focusRef: hit?.dataset.ref, onChange: reflow })
             .then(() => { ramp.classList.remove("is-open"); reflow(); });
         };
       });
@@ -3175,6 +3228,13 @@ async function renderWizard() {
         }
         if (status === "APPROVED") refreshRefs();
         reflow();
+      };
+      // Approve all acts across languages the user may never have opened,
+      // so the bar states how many those are and offers the one scroll
+      // that reads every proposal (user 2026-08-07).
+      $("[data-f=review]", strip).onclick = () => {
+        r.groups.forEach(g => seen.add(g.language));
+        openSwatchViewer(r.groups, { onChange: reflow }).then(reflow);
       };
       $("[data-f=ap-all]", strip).onclick = () => sweep("APPROVED");
       $("[data-f=discard]", strip).onclick = () => sweep("REJECTED");
@@ -3437,6 +3497,18 @@ async function renderWizard() {
             ? `Remove all ${row.swatches.length} references in this language`
             : "Permanently delete this reference"}">&times;</button>
         </p>`;
+      // PALETTE_GROUPS_PLAN §2.1 wrote the viewer's "· APPROVED" header but
+      // nothing reached it: approved rows were inert, which breaks the rule
+      // the ramp itself canonized — the members are one click away.
+      if (row.swatches.length) {
+        $(".sw-ramp", el).style.cursor = "pointer";
+        $(".sw-ramp", el).onclick = e => {
+          const hit = e.target.closest("i");
+          openPaletteViewer([{ language: row.label, swatches: row.swatches }],
+            { focusRef: hit?.dataset.ref, approved: true,
+              onChange: () => {} }).then(refreshRefs);
+        };
+      }
       const ids = row.single ? [row.single.id] : ordered.map(s => s.ref_id);
       $("[data-f=del]", el).onclick = async () => {
         const many = ids.length > 1;

@@ -372,5 +372,19 @@ class TokenContractTests(unittest.TestCase):
         self.assertIn("5px", b, "fine gauge for a surface under 60px")
 
 
+    def test_review_all_gives_the_ramp_back_some_height(self):
+        """Multi-language read: the ramp is context, the rows are the work."""
+        self.assert_decls(".sv-many .sv-ramp", ["height: 56px"])
+        self.assert_decls(".sv-body", ["overflow-y: auto"])
+        self.assert_decls(".sv-many .sv-rows", ["overflow: visible"])
+
+    def test_the_unopened_note_is_quiet_courier(self):
+        """A stated condition, not an alarm — it is not amber and not --bad."""
+        b = block(".sw-bar-note")
+        self.assertIn("var(--ink-faint)", b)
+        self.assertNotIn("--accent", b)
+        self.assertNotIn("--bad", b)
+
+
 if __name__ == "__main__":
     unittest.main()

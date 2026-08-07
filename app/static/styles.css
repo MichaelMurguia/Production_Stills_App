@@ -1994,6 +1994,7 @@ details.meta pre {
 .sv-note { margin: 8px 0 0; font-size: 9.5px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .sv-rows { max-height: 46vh; overflow-y: auto; }
+.sv-many .sv-rows { max-height: none; overflow: visible; }
 .sv-row { display: flex; align-items: center; gap: 14px; padding: 11px 18px;
   border-bottom: 1px solid var(--line-soft); }
 /* the mock's #191d21 row tint is --panel */
@@ -2230,3 +2231,18 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sv-chip .sw-pair i { border: 0; }
 .sv-chip .sw-tile { border: 0; }
 .modal.modal-custom:focus { outline: none; }
+
+/* Review all (user 2026-08-07) — the viewer over every language at once,
+   so a blanket Approve is never a blind one. Sections stack in one scroll;
+   the per-language head reuses the ramp label's own grammar. */
+.sv-body { max-height: 62vh; overflow-y: auto; }
+/* In the all-languages read the ramp is context and the rows are the
+   review, so the ramp gives back height — at 92px each, five
+   languages is mostly scrolling past colour you have already seen. */
+.sv-many .sv-ramp { height: 56px; }
+.sv-many .sv-group { border-bottom: 1px solid var(--line); }
+.sv-many .sv-group:last-child { border-bottom: 0; }
+.sv-grouphead { padding: 14px 18px 0; margin: 0; }
+.sv-note-top { padding: 10px 18px 0; margin: 0; }
+.sw-bar-note { margin-left: auto; font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); }
