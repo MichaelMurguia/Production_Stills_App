@@ -359,7 +359,7 @@ Shelf header (`.shelf-head`): Courier bold shelf name · faint Courier
 ride-along line (`RIDES ALONG — …`) · right-aligned Courier counts
 (`.shelf-count`). Intake lives behind `+ Add reference` (the role
 dialog); the search field uses the finder-list vocabulary and filters
-every shelf. Production Design step 3 ("Cast the film", `.uncast-block`)
+every shelf. Production Design step 4 ("Cast the film", `.uncast-block`)
 is a *door* into SUBJECTS: extraction proposals grouped CHARACTERS /
 VEHICLES / PROPS under Courier faint fixed-width row labels; casting a
 chip creates the card in the library. The wizard owns the moment and the
@@ -611,7 +611,7 @@ input is the widest element, selects are capped. Anything needing
 explanation beyond a tooltip belongs in a dialog instead.
 
 **Subject card** (`.subj-card`, built once by `buildSubjectCard` — one
-component, two hosts: the SUBJECTS shelf and wizard step 3). Anatomy:
+component, two hosts: the SUBJECTS shelf and wizard step 4). Anatomy:
 Courier bold name · bordered grey kind badge (`.kind-badge`) ·
 CAST/UNCAST badge (`.cast-badge`, `--ok`/`--hold` border, never filled)
 · editable identity text (sans 12px `--ink-dim`; click to edit — it
@@ -622,7 +622,7 @@ dashed-border cards with a `Cast this subject` ghost button. In the
 wizard the facts line ends with a `VIEW IN REFERENCE` text link
 (`.text-act` — Courier bold, ink, never amber).
 
-**Environment card** (`.env-card`, wizard step 2 — mock 6a). Registry-card
+**Environment card** (`.env-card`, wizard step 3 — mock 6a). Registry-card
 family: Courier bold name · sans notes (palette / light / atmosphere) ·
 Courier facts line (`n LOCATIONS`). While proposed: dashed `--hold` border
 and a `· PROPOSED — CONFIRM / DROP` facts line; edit-and-save is an
@@ -965,6 +965,22 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-07** — **The look interview leads Production Design** (user):
+  the rail is now `01 Interview · 02 Anchors · 03 Scan · 04 Cast ·
+  05 Bible · 06 Bake-off`. What the director wants it to feel like is
+  stated before the machine reads anything; the interview is five
+  free-text fields with no dependency on the scan, so nothing gates it.
+  Steps 3 and 4 remain swapped per LOCKED_STAGE_PLAN L3 — the interview
+  still precedes casting. Also corrected here: three step numbers in this
+  file had drifted (Cast documented as 3, implemented as 4; the
+  environment card as 2, implemented in the scan step), and the SUBJECTS
+  read-tile had been scrolling to the interview instead of Cast since that
+  swap.
+- **2026-08-07** — One act, one name (user): the link that creates a
+  breakdown from a location read `Create Breakdown` on Screenplay and
+  `Make sheet` on Production Design. Both are `Create breakdown` now, and
+  `Open sheet` is `Open breakdown` — sentence case, like every other
+  button. `tests/test_vocabulary.py` holds it.
 - **2026-08-07** — **Review all N** reaches the approved column too
   (user): the proposal bar's act disappears with the proposals, so a
   finished palette could only be read one language at a time. A text act

@@ -1943,12 +1943,12 @@ async function renderLocations(state = null, langs = 0) {
   const pdReady = !!state?.stage_summary?.production_design?.bible_saved;
   const sheetCell = l => {
     if (!l.sheet) return pdReady
-      ? `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create Breakdown</button>`
+      ? `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create breakdown</button>`
       : PD_LOCK_TAG;
     const held = heldBySpec[l.sheet.spec_id];
     return `<span class="loc-sheet">
       <span class="badge ${l.sheet.locked ? "LOCKED" : "DRAFT"}">${l.sheet.locked ? "LOCKED" : esc(l.sheet.status)}</span>
-      <button class="loc-open${held ? " held" : ""}" data-open="${esc(l.sheet.spec_id)}">${held ? `${held} held row${held > 1 ? "s" : ""}` : "Open Breakdown"}</button>
+      <button class="loc-open${held ? " held" : ""}" data-open="${esc(l.sheet.spec_id)}">${held ? `${held} held row${held > 1 ? "s" : ""}` : "Open breakdown"}</button>
     </span>`;
   };
 
@@ -1974,7 +1974,7 @@ async function renderLocations(state = null, langs = 0) {
           .map(s => `
             <div class="scene-row">
               <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
-              ${pdReady ? `<button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create Breakdown</button>` : PD_LOCK_TAG}
+              ${pdReady ? `<button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create breakdown</button>` : PD_LOCK_TAG}
             </div>`).join("") : "";
         return `
           <div class="loc-row" data-exp="${esc(l.location)}" style="cursor:pointer" title="click to ${open ? "collapse" : "list"} this location's scenes">
@@ -3268,7 +3268,7 @@ async function renderWizard() {
       if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
-        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>
+        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 2 / COLOR PALETTE</span>
         <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
       go.onclick = async () => {
@@ -3305,7 +3305,9 @@ async function renderWizard() {
   // D2 (PRODUCTION_DESIGN_V3) — the six-step rail: numbered chips in the
   // header strip; done numbers go --ok (same truth as the step badges),
   // the current chip is bordered; clicking scrolls with the band offset.
-  const RAIL = [[1, "Anchors"], [2, "Scan"], [3, "Interview"],
+  // Interview leads (user 2026-08-07) — the director states the look
+  // before the machine reads anything; it has no dependency on the scan.
+  const RAIL = [[1, "Interview"], [2, "Anchors"], [3, "Scan"],
                 [4, "Cast"], [5, "Bible"], [6, "Bake-off"]];
   const rail = $("#wiz-rail");
   rail.innerHTML = RAIL.map(([n, l]) =>
@@ -3809,9 +3811,9 @@ async function renderWizard() {
       ${extraCell || `<span class="loc-env-blank">&mdash;</span>`}
       <span class="loc-state">${sheet ? esc(sheet.spec_id) : "NONE"}</span>
       ${sheet
-        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open sheet</button>`
+        ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open breakdown</button>`
         : state.stage_summary?.production_design?.bible_saved
-          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Make sheet</button>`
+          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Create breakdown</button>`
           : `<span class="wv-tag loc-gate">NEEDS THE BIBLE</span>`}
     </div>`;
   const WIZ_LOC_THEAD = `
@@ -3952,7 +3954,10 @@ async function renderWizard() {
     const GOTO = {
       langs: () => $("#wiz-langs-sec"), envs: () => $("#wiz-envs-sec"),
       locs: () => $("#wiz-locs-sec"), questions: () => $("#wiz-questions-sec"),
-      subjects: () => $('.panel.step[data-step="3"]'),
+      // Cast the film, not the interview — this pointed at step 3 from
+      // before LOCKED_STAGE_PLAN L3 swapped the two, so the SUBJECTS tile
+      // has been scrolling to the wrong panel since (found 2026-08-07).
+      subjects: () => $('.panel.step[data-step="4"]'),
     };
     $$(".read-tile", host).forEach(a => a.onclick = () => {
       const el = GOTO[a.dataset.goto]?.();
@@ -4362,22 +4367,21 @@ async function renderWizard() {
       const roles = AUTO_ATTACH_HEADS;  // the four-anchor shelf
       const set = roles.filter(role => refs.some(r =>
         r.status === "APPROVED" && roleHead(r.role) === role)).length;
-      setB(1, set === roles.length ? "APPROVED" : "PROVISIONAL",
+      setB(2, set === roles.length ? "APPROVED" : "PROVISIONAL",
         `${set} OF ${roles.length} SET`);
-      // Step 2 reflects review debt: proposed languages AND environments
+      // The scan step reflects review debt: proposed languages AND environments
       // hold the badge at PROVISIONAL until confirmed or dropped (plan P9).
       const proposedN =
         (wizAnalysis?.design_worlds || []).filter(w => w.status === "PROPOSED").length +
         (wizAnalysis?.environments || []).filter(e => e.status === "PROPOSED").length;
-      setB(2, !wizAnalysis ? "LOCKED" : proposedN ? "PROVISIONAL" : "APPROVED",
+      setB(3, !wizAnalysis ? "LOCKED" : proposedN ? "PROVISIONAL" : "APPROVED",
         !wizAnalysis ? "NOT RUN"
           : `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES`
             + (proposedN ? ` · ${proposedN} PROPOSED` : " FOUND"));
-      // Step 3 counts the interview itself (mock 2a; swapped ahead of
-      // casting per LOCKED_STAGE_PLAN L3) — answered = non-blank.
+      // Step 1 counts the interview itself (mock 2a) — answered = non-blank.
       const ivFields = ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"];
       const ivDone = ivFields.filter(id => $(id)?.value.trim()).length;
-      setB(3, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
+      setB(1, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
         `${ivDone} OF ${ivFields.length} ANSWERED`);
       // Cast the film: --hold border while anything stays uncast, --ok when
       // the whole read is cast (plan D4; existing badge classes carry it).
