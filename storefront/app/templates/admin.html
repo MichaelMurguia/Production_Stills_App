@@ -150,6 +150,18 @@
     <p class="admin-note mono">CARD TRIALS ARE STRIPE'S &middot; ONLY STRIPE ENDS ONE</p>
   </div>
 
+  {# --------------------------------------------------------- storage ---
+     Every live studio's volume. /api/storage on a tenant answers only
+     that studio's own session, so a full disk could previously only be
+     found by opening each studio in turn (2026-08-07). Fetched after
+     load so the hub is not held up by a slow or dead studio. #}
+  <div class="license-box">
+    <p class="license-label">STORAGE <span class="mono" style="color:var(--ink-faint)">EVERY LIVE STUDIO</span></p>
+    <div id="fleet-storage"><p class="admin-note mono">READING EVERY STUDIO&hellip;</p></div>
+    <p class="admin-note mono">A RENDER IS REFUSED BELOW 350 MB FREE &middot;
+      A STUDIO THAT WILL NOT ANSWER READS UNREACHABLE, NEVER EMPTY</p>
+  </div>
+
   {# ----------------------------------------------------- operations --- #}
   <div class="license-box">
     <p class="license-label">OPERATIONS</p>
@@ -228,6 +240,41 @@
     count();
     location.reload();
   };
+})();
+</script>
+
+<script>
+(function () {
+  const host = document.getElementById("fleet-storage");
+  if (!host) return;
+  const token = {{ token|tojson }};
+  const gb = n => n == null ? "—"
+    : n >= (1 << 30) ? (n / (1 << 30)).toFixed(1) + " GB"
+    : n >= (1 << 20) ? Math.round(n / (1 << 20)) + " MB"
+    : n + " B";
+  fetch("/admin/storage" + (token ? "?token=" + encodeURIComponent(token) : ""))
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => {
+      const rows = d.studios || [];
+      if (!rows.length) {
+        host.innerHTML = '<p class="admin-note mono">NO LIVE STUDIOS</p>';
+        return;
+      }
+      host.innerHTML = '<table class="admin-table mono">'
+        + "<tr><th>STUDIO</th><th>FREE</th><th>OF</th><th>USED</th>"
+        + "<th>LARGEST</th><th>STATE</th></tr>"
+        + rows.map(r =>
+            "<tr><td>" + r.studio + "</td><td>" + gb(r.free) + "</td><td>"
+            + gb(r.total) + "</td><td>"
+            + (r.used_pct == null ? "—" : r.used_pct + "%") + "</td><td>"
+            + (r.top || "—") + "</td><td"
+            + (r.state === "REFUSING" ? ' style="color:var(--bad)"' : "")
+            + ">" + r.state + "</td></tr>").join("")
+        + "</table>";
+    })
+    .catch(() => {
+      host.innerHTML = '<p class="admin-note mono">STORAGE COULD NOT BE READ</p>';
+    });
 })();
 </script>
 

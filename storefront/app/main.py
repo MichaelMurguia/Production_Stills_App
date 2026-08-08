@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import threading
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -1045,6 +1047,84 @@ def admin_ops(request: Request, background: BackgroundTasks,
     return RedirectResponse(f"/admin?ok={quote(msg)}"
                             + (f"&token={quote(token)}" if token else ""),
                             status_code=303)
+
+
+# The product refuses a render below this; the fleet view must not
+# disagree with it about when a studio has stopped working.
+STORAGE_REFUSING = 350 * 1024 * 1024
+STORAGE_TIGHT = 1024 * 1024 * 1024
+_storage_cache: dict[str, tuple[float, list]] = {}
+_STORAGE_TTL = 30.0
+
+
+async def _ask_storage(client, ws) -> dict:
+    """One studio's volume, server-to-server. A studio that will not answer
+    is UNREACHABLE — never 0 bytes free. A dead studio must not read as a
+    critically full one, which is the mistake that would send someone to
+    fix the wrong thing during an incident."""
+    door = ws["door"]
+    row = {"studio": ws["subdomain"] or str(ws["id"]), "state": "UNREACHABLE",
+           "free": None, "total": None, "used_pct": None, "top": ""}
+    if not door:
+        return row
+    try:
+        r = await client.get(f"{door}/api/storage",
+                             cookies={"sb_session": ws["token"]}, timeout=6.0)
+        if r.status_code != 200:
+            return row
+        d = r.json()
+    except Exception:
+        return row
+    total, free = int(d.get("total") or 0), int(d.get("free") or 0)
+    if not total:
+        return row          # the studio itself could not measure its volume
+    top = (d.get("breakdown") or [{}])[0]
+    row.update({
+        "free": free, "total": total,
+        "used_pct": round((total - free) / total * 100),
+        "top": f"{top.get('kind', '')} {_gb(top.get('bytes', 0))}".strip(),
+        "state": ("REFUSING" if free < STORAGE_REFUSING
+                  else "TIGHT" if free < STORAGE_TIGHT else "OK"),
+    })
+    return row
+
+
+def _gb(n: int) -> str:
+    n = int(n or 0)
+    for unit, size in (("GB", 1 << 30), ("MB", 1 << 20), ("KB", 1 << 10)):
+        if n >= size:
+            return f"{n / size:.1f} {unit}"
+    return f"{n} B"
+
+
+@app.get("/admin/storage")
+async def admin_storage(request: Request, token: str = ""):
+    """Every live studio's volume on one page. /api/storage on a tenant
+    answers only that studio's own session, so a full disk could only be
+    found by opening each studio in turn (2026-08-07). Same gate and same
+    server-to-server call the preview door already uses."""
+    _admin_gate(request, token)
+    hit = _storage_cache.get("all")
+    if hit and time.time() - hit[0] < _STORAGE_TTL:
+        return {"studios": hit[1], "cached": True}
+
+    with db.session() as s:
+        live = [{"id": w.id, "subdomain": w.subdomain,
+                 "door": w.railway_url or w.url, "token": w.access_token}
+                for w in s.scalars(select(db.Workspace).where(
+                    db.Workspace.status == "ACTIVE")).all()]
+    rows: list = []
+    if live:
+        import httpx
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            rows = list(await asyncio.gather(
+                *[_ask_storage(client, w) for w in live]))
+    # Worst first: the reason to open this is to find the studio in trouble.
+    order = {"REFUSING": 0, "TIGHT": 1, "UNREACHABLE": 2, "OK": 3}
+    rows.sort(key=lambda r: (order.get(r["state"], 9),
+                             r["free"] if r["free"] is not None else 1 << 62))
+    _storage_cache["all"] = (time.time(), rows)
+    return {"studios": rows, "cached": False}
 
 
 @app.get("/admin/wildcard")

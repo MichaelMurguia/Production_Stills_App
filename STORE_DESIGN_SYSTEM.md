@@ -217,11 +217,18 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 | Date | What it is | Where | What the designer should rule on |
 |---|---|---|---|
 
-*(empty — NON_CANON_REVIEW_2026-08-06 + ADMIN_CONSOLE_FIX ruled all three rows, 2026-08-06)*
+| 2026-08-07 | **Fleet storage table** on the admin page — every live studio's free space, largest consumer, and a state (`OK` / `TIGHT` / `REFUSING` / `UNREACHABLE`), fetched after page load and sorted worst-first. Built from canon: `.license-box`, `.admin-table.mono`, `.admin-note`. Only `REFUSING` carries colour, and it is `--bad`, not one of the four amber roles. | Admin, between trials and operations | Is a table right, or should a healthy fleet collapse to one line and only expand when a studio is in trouble? And is `UNREACHABLE` the right word for a studio that answers but cannot measure itself? |
 
 ---
 
 ## Changelog
+
+- **2026-08-07** — Admin gains a **fleet storage table**: every live studio's
+  free space, largest consumer and state, read server-to-server the same way
+  the preview door reads a studio. A studio that will not answer reads
+  UNREACHABLE, never 0 bytes — a dead studio must not look like a full one.
+  The refusal threshold is the product's own, so the two cannot disagree
+  about when a studio has stopped rendering.
 
 - **2026-08-06** — S1 completed (user-caught): the door was showing
   `NO RENDERS YET` on a studio that **had** an approved panel. A surface
