@@ -7527,7 +7527,16 @@ async function renderBoardPanels(specId) {
       ${rejectedTakes.length ? `
       <div class="side-sec">
         <div class="rail-label bad">CARRIED REJECTIONS · ${rejectedTakes.length}</div>
-        ${rejectedTakes.map(t => `<div class="carried">${esc(t.candidate_id)} — ${esc(t.status_reason.toUpperCase())}</div>`).join("")}
+        ${rejectedTakes.map(t => `<div class="carried${t.feedback_retired ? " retired" : ""}">
+          <span>${esc(t.candidate_id)} — ${esc(t.status_reason.toUpperCase())}${
+            t.feedback_retired ? " · RETIRED" : ""}</span>
+          <button class="text-act" data-retire="${esc(t.candidate_id)}"
+            data-retired="${t.feedback_retired ? "1" : ""}"
+            title="${t.feedback_retired
+              ? "Carry this correction into future prompts again"
+              : "Stop carrying this correction into future prompts — the rejection and its history stay. Retire a note once it is satisfied, or when it contradicts a newer one (an old ‘closer adherence’ can stand as a counter-order against ‘remove X’)."}">${
+            t.feedback_retired ? "Reinstate" : "Retire"}</button>
+        </div>`).join("")}
       </div>` : ""}
       </div>`;
     const fullBtn = $("[data-f=full]", el);
@@ -7538,6 +7547,16 @@ async function renderBoardPanels(specId) {
         fullBtn.textContent = capped ? "Full" : "Less";
       };
       $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
+      $$("[data-retire]", el).forEach(b => b.onclick = async () => {
+        try {
+          await api(`/api/specs/${specId}/candidates/${b.dataset.retire}/feedback-retire`,
+            { method: "POST", json: { retired: !b.dataset.retired } });
+          toast(b.dataset.retired
+            ? `${b.dataset.retire} reinstated — it carries into future prompts again.`
+            : `${b.dataset.retire} retired — future prompts no longer carry it.`);
+          renderBoardPanels(specId);
+        } catch (err) { toast(err.message, true); }
+      });
       // A 16k-character prompt is a file, not a clipboard payload (user
       // 2026-08-06). The header carries what the prompt text itself does
       // not: the engine, the size, and WHICH references were actually

@@ -377,19 +377,32 @@ def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
             seen.add(reason.casefold())
             out.append(reason)
 
+    # (source_id, reason) pairs so corrections can be ORDERED newest-first
+    # — the latest note is the director's current mind — and so a RETIRED
+    # correction (satisfied or superseded, user 2026-08-08) stops carrying:
+    # two live corrections can contradict ("get rid of the person" vs an
+    # older "closer adherence to the reference" whose reference contains
+    # the person), and permanence turned every stale note into a standing
+    # counter-order.
+    pairs: list[tuple[str, str]] = []
     p = _feedback_archive_path()
     if p.exists():
         for i in json.loads(p.read_text(encoding="utf-8")):
-            if i.get("base") == base and i.get("panel_id") == panel_id:
-                add(i.get("reason", ""))
+            if (i.get("base") == base and i.get("panel_id") == panel_id
+                    and not i.get("feedback_retired")):
+                pairs.append((str(i.get("source", "")), i.get("reason", "")))
     if paths.BOARDS_DIR.exists():
         for d in sorted(paths.BOARDS_DIR.iterdir()):
             if not d.is_dir() or re.sub(r"_R\d+$", "", d.name) != base:
                 continue
             for meta in sorted(d.glob("CAND-*.json")):
                 r = json.loads(meta.read_text(encoding="utf-8"))
-                if r.get("status") == "REJECTED" and r.get("panel_id") == panel_id:
-                    add(str(r.get("status_reason", "")))
+                if (r.get("status") == "REJECTED" and r.get("panel_id") == panel_id
+                        and not r.get("feedback_retired")):
+                    pairs.append((str(r.get("candidate_id", "")),
+                                  str(r.get("status_reason", ""))))
+    for _, reason in sorted(pairs, key=lambda x: x[0], reverse=True):
+        add(reason)
     return out
 
 
@@ -1693,6 +1706,41 @@ def mark_promoted(spec_id: str, cand_id: str, ref_id: str) -> None:
     record["promoted_ref"] = ref_id
     (paths.BOARDS_DIR / spec_id / f"{cand_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def retire_feedback(spec_id: str, cand_id: str, retired: bool = True) -> dict:
+    """Stop (or resume) a rejection reason carrying into future prompts.
+    The rejection itself is untouched — status, reason and history stay;
+    only its standing order to future takes ends. Covers the live record
+    and, for deleted takes, the archive rows it left behind."""
+    touched = False
+    record = get_candidate(spec_id, cand_id)
+    if record is not None:
+        record["feedback_retired"] = bool(retired)
+        d = _spec_board_dir(spec_id)
+        (d / f"{cand_id}.json").write_text(
+            json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        touched = True
+    p = _feedback_archive_path()
+    if p.exists():
+        items = json.loads(p.read_text(encoding="utf-8"))
+        hit = False
+        for i in items:
+            if i.get("source") == cand_id:
+                i["feedback_retired"] = bool(retired)
+                hit = True
+        if hit:
+            p.write_text(json.dumps(items, indent=2, ensure_ascii=False) + "\n",
+                         encoding="utf-8")
+            touched = True
+    if not touched:
+        raise KeyError(cand_id)
+    store.append_approval_log(
+        f"{cand_id} ({spec_id}) rejection feedback "
+        + ("retired — no longer carried into future prompts"
+           if retired else "reinstated — carried into future prompts again"))
+    return {"candidate_id": cand_id, "feedback_retired": bool(retired)}
 
 
 def delete_candidate(spec_id: str, cand_id: str) -> dict:

@@ -245,6 +245,79 @@ class RejectionReasonsArePrimaryRules(unittest.TestCase):
             out = generate.compile_panel_prompt(self.spec(), self.panel(), [])
         self.assertEqual(out.count("never photoreal"), 1)
         self.assertIn("no anime", out)
+class CorrectionsCanRetire(unittest.TestCase):
+    """A correction that was satisfied or superseded stops carrying (user
+    2026-08-08): CAND-0072 followed "shoot into a corner" but kept the
+    person at the window, because an OLDER carried note — "closer
+    adherence to the reference provided" — stood as a counter-order.
+    Corrections were permanent; every stale note fought every new one."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-retire-"))
+        self._saved = (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+                       paths.SETTINGS, paths.ACTIVE_PROJECT)
+        paths.HOME = self.tmp
+        paths.PROJECTS_DIR = self.tmp / "projects"
+        paths.ACTIVE_PROJECT_FILE = self.tmp / "active_project.json"
+        paths.SETTINGS = self.tmp / "settings.json"
+        paths.set_project("")
+        paths.ensure_dirs()
+
+    def tearDown(self):
+        (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+         paths.SETTINGS, slug) = self._saved
+        paths.set_project(slug)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def cand(self, cid, reason, retired=False):
+        import json as _json
+        d = paths.BOARDS_DIR / "SPEC_X"
+        d.mkdir(parents=True, exist_ok=True)
+        rec = {"candidate_id": cid, "panel_id": "P1", "status": "REJECTED",
+               "status_reason": reason}
+        if retired:
+            rec["feedback_retired"] = True
+        (d / f"{cid}.json").write_text(_json.dumps(rec), encoding="utf-8")
+
+    def test_a_retired_correction_stops_carrying(self):
+        self.cand("CAND-0068", "closer adherence to the reference")
+        self.cand("CAND-0071", "get rid of the person at the window")
+        generate.retire_feedback("SPEC_X", "CAND-0068")
+        out = generate.rejection_feedback("SPEC_X", "P1")
+        self.assertEqual(out, ["get rid of the person at the window"])
+
+    def test_reinstating_brings_it_back(self):
+        self.cand("CAND-0068", "closer adherence", retired=True)
+        generate.retire_feedback("SPEC_X", "CAND-0068", retired=False)
+        self.assertEqual(generate.rejection_feedback("SPEC_X", "P1"),
+                         ["closer adherence"])
+
+    def test_the_rejection_itself_is_untouched(self):
+        self.cand("CAND-0068", "a reason")
+        generate.retire_feedback("SPEC_X", "CAND-0068")
+        rec = generate.get_candidate("SPEC_X", "CAND-0068")
+        self.assertEqual(rec["status"], "REJECTED")
+        self.assertEqual(rec["status_reason"], "a reason")
+
+    def test_newest_correction_leads_the_list(self):
+        """The latest note is the director's current mind."""
+        self.cand("CAND-0068", "older note")
+        self.cand("CAND-0071", "newest note")
+        self.assertEqual(generate.rejection_feedback("SPEC_X", "P1"),
+                         ["newest note", "older note"])
+
+    def test_retiring_an_unknown_candidate_raises(self):
+        with self.assertRaises(KeyError):
+            generate.retire_feedback("SPEC_X", "CAND-9999")
+
+    def test_a_deleted_takes_archived_reason_retires_too(self):
+        self.cand("CAND-0068", "archived note")
+        generate.archive_feedback("SPEC_X", "P1", "archived note", "CAND-0068")
+        (paths.BOARDS_DIR / "SPEC_X" / "CAND-0068.json").unlink()
+        self.assertEqual(generate.rejection_feedback("SPEC_X", "P1"),
+                         ["archived note"])
+        generate.retire_feedback("SPEC_X", "CAND-0068")
+        self.assertEqual(generate.rejection_feedback("SPEC_X", "P1"), [])
 
 
 if __name__ == "__main__":

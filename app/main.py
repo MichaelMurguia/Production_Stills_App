@@ -1430,6 +1430,19 @@ def api_list_candidates(spec_id: str) -> list[dict]:
     return generate.list_candidates(spec_id)
 
 
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/feedback-retire")
+def api_retire_feedback(spec_id: str, cand_id: str, body: dict) -> dict:
+    """A rejection reason that was satisfied or superseded stops carrying
+    into future prompts (user 2026-08-08: a stale "closer adherence"
+    correction stood as a counter-order against the newer "remove the
+    person"). The rejection and its history are untouched."""
+    try:
+        return generate.retire_feedback(spec_id, cand_id,
+                                        bool(body.get("retired", True)))
+    except KeyError as e:
+        raise _err(e)
+
+
 @app.delete("/api/specs/{spec_id}/candidates/{cand_id}")
 def api_delete_candidate(spec_id: str, cand_id: str) -> dict:
     try:

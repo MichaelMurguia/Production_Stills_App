@@ -2353,3 +2353,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    scene count and an environment name are machine facts. */
 .loc-uncast .subj-identity { font-family: var(--mono); font-size: 10.5px;
   letter-spacing: .04em; line-height: 1.6; }
+
+/* A retired correction stays readable as history but no longer commands. */
+.carried { display: flex; align-items: baseline; gap: 10px; }
+.carried .text-act { flex: none; font-size: 10px; }
+.carried.retired > span { color: var(--ink-faint); text-decoration: line-through; }

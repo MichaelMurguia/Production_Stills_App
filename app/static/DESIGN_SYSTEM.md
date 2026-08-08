@@ -1079,6 +1079,15 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-08** — Carried rejections become **retirable** (user): a
+  correction that was satisfied — or that a newer note supersedes — can be
+  retired from the provenance rail and stops entering future prompts; the
+  rejection and its history stay, the retirement is logged, and Reinstate
+  reverses it. Corrections also order newest-first in the prompt: the
+  latest note is the director's current mind. Found when two carried notes
+  contradicted — "get rid of the person at the window" lost to an older
+  "closer adherence to the reference provided" whose reference contained
+  the person; an image plus adhere-closer beats a text negation.
 - **2026-08-08** — Take action bar: Approve panel becomes the filled
   amber verdict, the six remaining verbs become text acts in labelled USE
   and DERIVE groups, arrows dropped, DERIVE collapses to ⋯ before the row
