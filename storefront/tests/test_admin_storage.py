@@ -173,5 +173,41 @@ class TheSizeFormat(unittest.TestCase):
         self.assertEqual(m._gb(0), "0 B")
 
 
+class TheCapabilityProbe(unittest.TestCase):
+    """Asked of Railway's schema rather than assumed — and narrow enough
+    that it can never become arbitrary GraphQL behind the admin token."""
+
+    def source(self) -> str:
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "app", "railway.py")
+        with open(p, encoding="utf-8") as f:
+            return f.read()
+
+    def test_the_query_takes_no_caller_input(self):
+        src = self.source()
+        i = src.index("def volume_capabilities")
+        body = src[i:src.index("\ndef ", i + 1)]
+        self.assertIn('_gql("""query {', body)
+        self.assertIn("{})", body, "no variables are passed")
+        self.assertNotIn("format(", body)
+        self.assertNotIn("f\"\"\"", body, "the query is a literal, never built")
+
+    def test_it_asks_for_the_three_things_that_decide_the_answer(self):
+        body = self.source()
+        for probe in ('__type(name: "Mutation")', '__type(name: "VolumeUpdateInput")',
+                      '__type(name: "Volume")'):
+            self.assertIn(probe, body)
+
+    def test_the_endpoint_is_gated_and_states_an_unconfigured_account(self):
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "app", "main.py")
+        with open(p, encoding="utf-8") as f:
+            body = f.read()
+        i = body.index("def admin_railway_capabilities")
+        block = body[i:i + 900]
+        self.assertIn("_admin_gate(request, token)", block)
+        self.assertIn('"configured": False', block)
+
+
 if __name__ == "__main__":
     unittest.main()

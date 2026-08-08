@@ -157,6 +157,31 @@ def create_volume(service_id: str, mount_path: str) -> str:
     return data["volumeCreate"]["id"]
 
 
+def volume_capabilities() -> dict:
+    """What Railway's API actually offers for volumes, asked of the schema
+    rather than assumed (2026-08-07: one studio's volume is 108x smaller
+    than another's and needs growing — the question is whether we can do
+    it from here or whether it is a dashboard action).
+
+    A FIXED introspection query: no caller input reaches it, so this can
+    never become an arbitrary-GraphQL hole behind the admin token.
+    """
+    data = _gql("""query {
+        mutationType: __type(name: "Mutation") { fields { name } }
+        updateInput: __type(name: "VolumeUpdateInput") {
+          inputFields { name type { name kind ofType { name } } } }
+        volume: __type(name: "Volume") { fields { name } }
+      }""", {})
+    names = [f["name"] for f in (data.get("mutationType") or {}).get("fields", [])]
+    return {
+        "volume_mutations": sorted(n for n in names if "olume" in n),
+        "update_input": [f["name"] for f in
+                         (data.get("updateInput") or {}).get("inputFields", [])],
+        "volume_fields": [f["name"] for f in
+                          (data.get("volume") or {}).get("fields", [])],
+    }
+
+
 def create_domain(service_id: str) -> str:
     """Generate the tenant's *.up.railway.app domain; returns the hostname."""
     data = _gql(

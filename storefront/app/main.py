@@ -1127,6 +1127,21 @@ async def admin_storage(request: Request, token: str = ""):
     return {"studios": rows, "cached": False}
 
 
+@app.get("/admin/railway-capabilities")
+def admin_railway_capabilities(request: Request, token: str = ""):
+    """What Railway's API offers for volumes. Read-only introspection with
+    a fixed query — asked because one studio's volume is far smaller than
+    another's and the fix depends on whether it can be grown from here."""
+    _admin_gate(request, token)
+    from . import railway
+    if not settings.railway_configured():
+        return {"configured": False}
+    try:
+        return {"configured": True, **railway.volume_capabilities()}
+    except Exception as e:
+        return {"configured": True, "error": str(e)[:400]}
+
+
 @app.get("/admin/wildcard")
 def admin_wildcard(request: Request, token: str = "", attach: str = ""):
     """One-time ops tool for the wildcard tenant router: list the Railway
