@@ -1037,6 +1037,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
+| 2026-08-08 | **Unanchored locations on the SCENES shelf.** The screenplay's slugline register joins the Reference library: places with no matching SCENE-shelf anchor render as uncast-style cards (`N SCENES · ENVIRONMENT`, the stated consequence, one `Add reference` act prefilling `LOCATION_GEOMETRY — <NAME>`), the shelf count states `M LOCATIONS UNANCHORED`, and library search covers location names and environments. Casting stays subjects-only by design. **User: needs a FULL design pass, not placement-only review** — how a place reads in the library, the card's anatomy, and whether the register deserves its own shelf are all open. | Reference, SCENES shelf | Searching a place the script names returned NOTHING — no way to see it lacked imagery, no act to give it any |
 | 2026-08-08 | **Swatch ramps on the Reference STYLE shelf.** Built from canon — the same `.pal-row` ramps and the same viewer the Production Design column uses, in a `.pal-shelf` grid above the card grid. Quarantined swatches keep their card (the SUBJECTS shelf's governance rule); a mixed group's label states `N PROVISIONAL` and its viewer offers Approve only on the rows that need it. Review placement only: above the cards, or should the ramps BE the shelf with plates behind a disclosure? | Reference, STYLE shelf | Nineteen swatch cards said in a wall what three ramps say in a strip |
 | 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
 | 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
@@ -1064,6 +1065,14 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-08** — The screenplay's **locations reach the Reference
+  library** (user): the SCENES shelf gains the uncast pattern's twin —
+  unanchored places as cards with one act that prefills a titled
+  `LOCATION_GEOMETRY` role, anchored-ness judged by the panel matcher's
+  own two-way containment so shelf and pre-check cannot disagree, and
+  library search covering location names and environments. Casting stays
+  subjects-only: subjects ride per panel appearance, places ride per
+  scene coverage. Flagged for a full design pass, per the user.
 - **2026-08-08** — Take action bar brought to **corrected mock 14a**
   (comparison pass, pending since the mock arrived after T1/T2 shipped
   from written spec): the identity tag moves to the TOP right and states

@@ -4911,6 +4911,37 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
 
 // An uncast recommendation: dashed card, no photos yet — casting it creates
 // the library card (the only write path, same as the wizard's).
+// The place the screenplay names and no anchor holds — the SCENES twin
+// of the uncast card. Locations are DELIBERATELY not castable: subjects
+// ride when their subject appears on a panel; places ride when a board
+// covers their scene, and their imagery lives here under titled
+// LOCATION_GEOMETRY / SCENE_REFERENCE roles. The one act is the one that
+// closes the gap.
+function buildUnanchoredLocCard(l) {
+  const card = document.createElement("div");
+  card.className = "subj-card uncast loc-uncast";
+  const env = (() => {
+    const a = wizACache();
+    const hit = (a?.environments || []).find(e =>
+      (e.locations || []).some(x =>
+        String(x).toUpperCase() === String(l.location).toUpperCase()));
+    return hit?.name || "";
+  })();
+  card.innerHTML = `
+    <div class="subj-head">
+      <span class="subj-name">${esc(String(l.location).toUpperCase())}</span>
+      <span class="kind-badge">LOCATION</span>
+      <span class="cast-badge uncast">UNANCHORED</span>
+    </div>
+    <div class="subj-identity">${l.scenes || 0} SCENE${(l.scenes || 0) === 1 ? "" : "S"}${
+      env ? ` · ${esc(env.toUpperCase())}` : ""} — no reference yet. Panels
+      render this place from text and style alone until one is anchored.</div>
+    <div><button type="button" class="ghost" data-f="anchor">Add reference</button></div>`;
+  $("[data-f=anchor]", card).onclick = () =>
+    addReferenceDialog({ head: "LOCATION_GEOMETRY", title: l.location });
+  return card;
+}
+
 function buildUncastCard(rec, onChange) {
   const card = document.createElement("div");
   card.className = "subj-card uncast";
@@ -4938,11 +4969,12 @@ function buildUncastCard(rec, onChange) {
 
 // Adding to the library is a dialog now (the intake row moved behind the
 // button per ONE_LIBRARY_PLAN D2) — the vocabulary picker plus a file field.
-async function addReferenceDialog() {
+async function addReferenceDialog(prefill = {}) {
   const r = await roleDialog({
     title: "Add reference",
     body: "One image, one job. It enters the library provisional; approve it to make it a canon anchor.",
-    prefillHead: "CHARACTER_LIKENESS",
+    prefillHead: prefill.head || "CHARACTER_LIKENESS",
+    prefillTitle: prefill.title || "",
     fields: [
       { name: "file", label: "Image", type: "file" },
       { name: "controls", label: "Controls", placeholder: "comma-separated — or click the chips" },
@@ -4980,8 +5012,13 @@ const SHELVES = [
 async function renderReferences() {
   useTemplate("tpl-references");
   _roleCtx = null;  // fresh groups after every library change
-  const [refs, subjects] = await Promise.all([
-    api("/api/references"), api("/api/subjects")]);
+  const [refs, subjects, locData] = await Promise.all([
+    api("/api/references"), api("/api/subjects"),
+    // The screenplay's own location register — deterministic slugline
+    // parse, no model. A place the script names belongs in this library's
+    // search even before anyone photographs it (user 2026-08-08).
+    api("/api/screenplay/locations").catch(() => ({ locations: [] }))]);
+  const screenplayLocs = locData.available ? (locData.locations || []) : [];
 
   const st = { APPROVED: 0, PROVISIONAL: 0, REJECTED: 0 };
   refs.forEach(r => { st[r.status] = (st[r.status] || 0) + 1; });
@@ -5007,6 +5044,19 @@ async function renderReferences() {
     const needle = q.v.trim().toUpperCase();
     if (!needle) return true;
     return [s.name, s.kind || "", s.subtitle || "", (s.traits || []).join(" ")]
+      .some(x => String(x).toUpperCase().includes(needle));
+  };
+  const envOfLoc = (() => {
+    const a = wizACache();
+    const map = {};
+    (a?.environments || []).forEach(e =>
+      (e.locations || []).forEach(l => { map[String(l).toUpperCase()] = e.name; }));
+    return loc => map[String(loc).toUpperCase()] || "";
+  })();
+  const matchesLoc = l => {
+    const needle = q.v.trim().toUpperCase();
+    if (!needle) return true;
+    return [l.location, envOfLoc(l.location)]
       .some(x => String(x).toUpperCase().includes(needle));
   };
 
@@ -5041,7 +5091,31 @@ async function renderReferences() {
         const shelfRefs = refs.slice().reverse()
           .filter(r => bucketOfRef(r) === shelf.key && matches(r));
         const roleCount = new Set(shelfRefs.map(r => roleHead(r.role))).size;
-        countText = shelf.count({ total: shelfRefs.length, roles: roleCount });
+        // The SCENES twin of the uncast pattern (user 2026-08-08): the
+        // screenplay names places the library holds nothing for, and the
+        // search said NOTHING instead of "not yet anchored". A location is
+        // anchored when a SCENE-shelf ref's titled-role suffix matches it
+        // — the panel matcher's own two-way containment, so this shelf and
+        // the panel pre-check can never disagree.
+        let unanchored = [];
+        if (shelf.key === "SCENE" && screenplayLocs.length) {
+          const norm = v => String(v).toUpperCase().trim();
+          const twoWay = (a, b) => {
+            const x = norm(a), y = norm(b);
+            return !!x && !!y && (x.includes(y) || y.includes(x));
+          };
+          const sceneAnchors = refs.filter(r =>
+            bucketOfRef(r) === "SCENE" && r.status !== "REJECTED");
+          const anchorNames = sceneAnchors.map(r =>
+            String(r.role).split("—")[1]?.trim() || "");
+          unanchored = screenplayLocs.filter(l =>
+            !anchorNames.some(nm => twoWay(nm, l.location)));
+        }
+        const shownUnanchored = unanchored.filter(matchesLoc);
+        countText = shelf.count({ total: shelfRefs.length, roles: roleCount })
+          + (unanchored.length
+             ? ` · ${unanchored.length} LOCATION${unanchored.length === 1 ? "" : "S"} UNANCHORED`
+             : "");
         // A design language is one swatch (PALETTE_GROUPS, extended to this
         // shelf 2026-08-08): 19 swatch cards said in a wall what three
         // ramps say in a strip. Quarantined swatches keep the card, like
@@ -5102,6 +5176,7 @@ async function renderReferences() {
             src: `/api/references/${r.id}/image`,
             caption: `${r.id} — ${r.role} (${r.status})` }));
           cardRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
+          shownUnanchored.forEach(l => grid.append(buildUnanchoredLocCard(l)));
         };
       }
       section.innerHTML = `

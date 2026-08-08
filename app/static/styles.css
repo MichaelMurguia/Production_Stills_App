@@ -2334,3 +2334,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .pal-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px 18px; margin-bottom: 14px; }
 .pal-shelf .pal-row { margin-bottom: 0; }
+
+/* Unanchored location on the SCENES shelf (2026-08-08) — the uncast
+   card's own vocabulary; only the identity line is Courier because a
+   scene count and an environment name are machine facts. */
+.loc-uncast .subj-identity { font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .04em; line-height: 1.6; }
