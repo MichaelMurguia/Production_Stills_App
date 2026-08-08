@@ -168,18 +168,31 @@ def volume_capabilities() -> dict:
     """
     data = _gql("""query {
         mutationType: __type(name: "Mutation") { fields { name } }
-        updateInput: __type(name: "VolumeUpdateInput") {
-          inputFields { name type { name kind ofType { name } } } }
+        updateInput: __type(name: "VolumeUpdateInput") { inputFields { name } }
+        createInput: __type(name: "VolumeCreateInput") { inputFields { name } }
         volume: __type(name: "Volume") { fields { name } }
+        instance: __type(name: "VolumeInstance") { fields { name } }
+        instanceUpdate: __type(name: "VolumeInstanceUpdateInput") {
+          inputFields { name } }
       }""", {})
     names = [f["name"] for f in (data.get("mutationType") or {}).get("fields", [])]
-    return {
+
+    def fields(key: str, prop: str) -> list:
+        return [f["name"] for f in (data.get(key) or {}).get(prop, [])]
+
+    out = {
         "volume_mutations": sorted(n for n in names if "olume" in n),
-        "update_input": [f["name"] for f in
-                         (data.get("updateInput") or {}).get("inputFields", [])],
-        "volume_fields": [f["name"] for f in
-                          (data.get("volume") or {}).get("fields", [])],
+        "volume_update_input": fields("updateInput", "inputFields"),
+        "volume_create_input": fields("createInput", "inputFields"),
+        "volume_fields": fields("volume", "fields"),
+        "volume_instance_fields": fields("instance", "fields"),
+        "volume_instance_update_input": fields("instanceUpdate", "inputFields"),
     }
+    # The whole point of asking: is there a size anywhere we can set?
+    sizey = [k for k, v in out.items()
+             if k.endswith("input") and any("size" in f.lower() for f in v)]
+    out["resizable_via"] = sizey
+    return out
 
 
 def create_domain(service_id: str) -> str:

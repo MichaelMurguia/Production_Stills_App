@@ -195,7 +195,8 @@ class TheCapabilityProbe(unittest.TestCase):
     def test_it_asks_for_the_three_things_that_decide_the_answer(self):
         body = self.source()
         for probe in ('__type(name: "Mutation")', '__type(name: "VolumeUpdateInput")',
-                      '__type(name: "Volume")'):
+                      '__type(name: "Volume")', '__type(name: "VolumeInstance")',
+                      '__type(name: "VolumeInstanceUpdateInput")'):
             self.assertIn(probe, body)
 
     def test_the_endpoint_is_gated_and_states_an_unconfigured_account(self):
