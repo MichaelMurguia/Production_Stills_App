@@ -1064,6 +1064,16 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-08** — Take action bar brought to **corrected mock 14a**
+  (comparison pass, pending since the mock arrived after T1/T2 shipped
+  from written spec): the identity tag moves to the TOP right and states
+  `CAND-0008 · TAKE 2 OF 2` — ordinal by creation position, not list
+  index; the bar loses its box, fences and internal rule — each verb's
+  ghost border is the only chrome, Approve holding the left in its green,
+  the cluster right-aligned, wrapping never scrolling. Reported
+  deviation: Reject stays at the far end — the mock omits it, but
+  removing a verb is functionality, and styling work does not change
+  functionality.
 - **2026-08-08** — Reference's STYLE shelf **consolidates swatches into
   ramps** (user): the same one-object-per-language presentation as the
   Production Design column, opening the same viewer. Doing it honestly

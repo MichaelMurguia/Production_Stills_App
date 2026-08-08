@@ -6665,14 +6665,17 @@ async function renderBoardPanels(specId) {
              row beneath carries verbs only and can fit. A chip swallows
              its own click; the picture opens the lightbox. -->
         <span class="shot-tag shot-tag-state shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
-        <span class="shot-tag shot-tag-id">${esc(staged.candidate_id)}${stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
+        <span class="shot-tag shot-tag-id">${esc(staged.candidate_id)} · TAKE ${
+          panelCands.length - panelCands.indexOf(staged)} OF ${panelCands.length}${
+          stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
       </div>
+      <!-- Corrected mock 14a (comparison pass 2026-08-08): no box, no
+           fences, no internal rule — Approve holds the left, the verb
+           cluster right-aligns, one ghost grammar throughout. The zones
+           survive as bare append targets only. -->
       <div class="act-bar">
-        <span class="act-zone act-left">
-          <span data-f="act-approve"></span>
-        </span>
+        <span class="act-zone act-left" data-f="act-approve"></span>
         <span class="act-zone act-use" data-f="act-use"></span>
-        <span class="act-rule" aria-hidden="true"></span>
         <span class="act-zone act-derive" data-f="act-derive"></span>
         <span class="act-zone act-right" data-f="act-danger"></span>
       </div>

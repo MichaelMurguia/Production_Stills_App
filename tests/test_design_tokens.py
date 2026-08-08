@@ -110,12 +110,6 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".req-mark.ok", ["color: var(--ok)"])
         self.assert_decls(".req-mark.hold", ["color: var(--hold)"])
 
-    def test_action_bar_grammar(self):
-        self.assert_decls(".act-bar", ["border: 1px solid var(--line)"])
-        self.assert_decls(".act-right", ["border-left: 1px solid var(--line)"])
-        self.assert_decls(".act-bar .act-approve-btn", [
-            "border: 1px solid var(--ok)", "color: var(--ok)"])
-
     def test_stated_zero_state(self):
         self.assert_decls(".nomatch", ["border: 1px solid var(--bad)"])
 
@@ -217,6 +211,12 @@ class TokenContractTests(unittest.TestCase):
         self.assertIn("flex-wrap: wrap", b)
         self.assertNotIn("overflow-x: auto", b,
                          "the row must wrap, never scroll")
+        # Corrected mock 14a: the buttons ARE the chrome — no enclosing
+        # box, no fenced zones, no internal rule.
+        self.assertNotIn("border: 1px solid var(--line)", b,
+                         "the bar itself carries no box")
+        self.assertNotIn(".act-rule", CSS, "the internal rule is gone")
+        self.assert_decls(".act-left", ["margin-right: auto"])
         self.assert_decls(".act-bar .ghost, .act-bar .danger",
                           ["border: 1px solid var(--line)"])
         self.assert_decls(".act-bar .act-approve-btn",
@@ -228,7 +228,8 @@ class TokenContractTests(unittest.TestCase):
             "position: absolute", "background: rgba(11, 12, 14, .82)",
             "border: 1px solid var(--line)", "font-family: var(--mono)"])
         self.assert_decls(".shot-tag-state", ["top: 10px", "left: 10px"])
-        self.assert_decls(".shot-tag-id", ["right: 10px", "bottom: 10px"])
+        # Corrected mock 14a: identity rides the TOP right, opposite state.
+        self.assert_decls(".shot-tag-id", ["right: 10px", "top: 10px"])
 
     def test_hidden_always_wins(self):
         """A hiding utility that a component can out-order is not a

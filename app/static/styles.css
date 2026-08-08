@@ -1637,22 +1637,23 @@ details.meta pre {
 }
 .gen-actions .text-act { align-self: center; }
 
-/* One action bar (PANEL_CARD_PLAN P7): status fenced left, use-this-take
-   and derive-from-it split by an internal rule, Reject fenced right —
-   a destructive action never sits adjacent to a promotion. Must not wrap. */
-/* T1/T2 (TAKE_ACTIONS, 2026-08-06): the row WRAPS, never scrolls —
-   horizontal scroll on navigation hides actions the user cannot then
-   find. It carries verbs only; state and identity moved onto the image. */
+/* T1/T2 (TAKE_ACTIONS), corrected by mock 14a (2026-08-08): the bar is
+   buttons on the page, not a box of fenced zones — each verb's own ghost
+   border is the only chrome. Approve holds the left; the verb cluster
+   right-aligns; the row WRAPS, never scrolls (horizontal scroll on
+   navigation hides actions the user cannot then find). Reject keeps its
+   danger colour at the far end — the mock omits it, but removing a verb
+   is functionality, and styling work does not change functionality. */
 .act-bar {
-  display: flex; align-items: center; border: 1px solid var(--line);
-  margin-top: 10px; min-height: 42px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; flex-wrap: wrap; justify-content: flex-end;
 }
-.act-zone { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; }
-.act-left { border-right: 1px solid var(--line); }
-.act-rule { width: 1px; align-self: stretch; background: var(--line); }
-.act-use { margin-left: 2px; }
-.act-derive { flex: 1; }
-.act-right { border-left: 1px solid var(--line); margin-left: auto; }
+.act-zone { display: inline-flex; align-items: center; gap: 10px; }
+/* an empty zone must not leave a stray gap-width hole in the row */
+.act-zone:empty { display: none; }
+/* Approve holds the left whatever else renders; with it absent the
+   remaining cluster keeps the mock's right alignment via flex-end */
+.act-left { margin-right: auto; }
 /* T2: peer verbs render in one grammar. They are all mk(…, "ghost") in
    the source, so they are all ghost BUTTONS on screen — a bare text link
    in a button row states a hierarchy the code does not have. */
@@ -1673,7 +1674,9 @@ details.meta pre {
   border: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px;
   letter-spacing: .06em; padding: 4px 8px; }
 .shot-tag-state { top: 10px; left: 10px; }
-.shot-tag-id { right: 10px; bottom: 10px; color: var(--ink-dim); }
+/* Corrected mock 14a: identity rides the TOP right, opposite the
+   state tag — the image's bottom edge stays clean for the artwork. */
+.shot-tag-id { right: 10px; top: 10px; color: var(--ink-dim); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
