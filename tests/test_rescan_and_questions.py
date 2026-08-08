@@ -188,5 +188,64 @@ class RescanKnowsWhatItHas(unittest.TestCase):
         self.assertFalse(live)
 
 
+class RejectionReasonsArePrimaryRules(unittest.TestCase):
+    """A rejection reason is a PRIMARY rule for the next take (user
+    2026-08-08). The mechanism already carried reasons into the next
+    prompt — verified live before changing anything — but as a bullet ~80%
+    of the way in, after the forbidden list. In a 16,000-character prompt
+    that is a footnote. It leads now, and the tail re-binds it."""
+
+    def spec(self, **extra):
+        return {"specification_id": "SPEC_X", "subject": "DINER",
+                "board_type": "LOCATION", "mode": "CANON_EXTRACTION",
+                "setting": {"int_ext": "INT", "location": "DINER"},
+                "panels": [], "evidence_ledger": [], **extra}
+
+    def panel(self):
+        return {"id": "P1", "panel_id": "P1", "purpose": "establish",
+                "required_objects": [], "scale": "wide"}
+
+    def compiled(self, monkey_reasons):
+        from unittest import mock
+        with mock.patch.object(generate, "rejection_feedback",
+                               return_value=monkey_reasons):
+            return generate.compile_panel_prompt(self.spec(), self.panel(), [])
+
+    def test_corrections_lead_the_prompt(self):
+        out = self.compiled(["the jukebox must be chrome and red, never wood"])
+        i = out.index("DIRECTOR'S CORRECTIONS — PRIMARY RULES")
+        self.assertLess(i / len(out), 0.25,
+                        "corrections belong at the head, not 80% deep")
+        self.assertIn("- the jukebox must be chrome and red, never wood", out)
+        self.assertIn("overrides ANY conflicting instruction", out)
+
+    def test_the_tail_re_binds_them(self):
+        out = self.compiled(["no neon signage"])
+        self.assertIn("Re-read the DIRECTOR'S CORRECTIONS", out)
+        self.assertGreater(out.index("Re-read the DIRECTOR'S CORRECTIONS"),
+                           out.index("FINAL INSTRUCTION"))
+
+    def test_no_rejections_means_no_section_anywhere(self):
+        out = self.compiled([])
+        self.assertNotIn("DIRECTOR'S CORRECTIONS", out)
+        self.assertNotIn("Re-read", out)
+
+    def test_the_old_buried_section_is_gone(self):
+        out = self.compiled(["a reason"])
+        self.assertNotIn("REJECTION FEEDBACK", out,
+                         "stated once at the head, never duplicated late")
+
+    def test_a_correction_still_suppresses_its_matching_lesson(self):
+        """The dedupe against project negatives survives the move."""
+        from unittest import mock
+        with mock.patch.object(generate, "rejection_feedback",
+                               return_value=["never photoreal"]), \
+             mock.patch.object(generate, "project_negatives",
+                               return_value=["never photoreal", "no anime"]):
+            out = generate.compile_panel_prompt(self.spec(), self.panel(), [])
+        self.assertEqual(out.count("never photoreal"), 1)
+        self.assertIn("no anime", out)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -466,6 +466,8 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     reference-role boundaries spelled out. Adds nothing creative."""
     from common import stable_hash  # scripts/ on sys.path via app.paths
 
+    feedback = rejection_feedback(str(spec.get("specification_id", "")),
+                                  panel.get("id", ""))
     lines = [
         f"{store.project_name().upper()} PRODUCTION RENDER — SINGLE PANEL",
         f"SPECIFICATION: {spec['specification_id']} (hash {stable_hash(spec)[:16]})",
@@ -478,6 +480,18 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         "characters, props, or action. Omit unspecified content rather than filling space.",
         "",
     ]
+    # The director's corrections lead (user 2026-08-08): a rejection reason
+    # is a PRIMARY rule for the next take, not a footnote. It used to ride
+    # ~80% of the way into the prompt, after the forbidden list — in a
+    # 16,000-character prompt that is a bullet competing with a spec. It
+    # now sits at the head, and FINAL INSTRUCTION re-binds it at the tail.
+    if feedback:
+        lines += ["DIRECTOR'S CORRECTIONS — PRIMARY RULES. Earlier takes of "
+                  "this exact panel were rejected for the reasons below. Each "
+                  "is binding for this render and overrides ANY conflicting "
+                  "instruction elsewhere in this prompt:"]
+        lines += [f"- {x}" for x in feedback]
+        lines += [""]
     lines += _setting_lines(spec, panel)
     if str(spec.get("scene", "")).strip():
         lines += ["THE SCENE",
@@ -548,7 +562,6 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     seen: set[str] = set()
     forbidden = [x for x in forbidden if not (x.casefold() in seen or seen.add(x.casefold()))]
     lines += [f"- {x}" for x in forbidden] or ["- None recorded"]
-    feedback = rejection_feedback(str(spec.get("specification_id", "")), panel.get("id", ""))
     feedback_keys = {f.casefold() for f in feedback}
     negatives = [n for n in project_negatives() if n.casefold() not in feedback_keys]
     if negatives:
@@ -556,12 +569,7 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
                   "rejected work. Each item is a rule: if it names unwanted content, "
                   "exclude that content; if it states a directive, follow it:"]
         lines += [f"- {x}" for x in negatives]
-    if feedback:
-        lines += ["", "REJECTION FEEDBACK — the director's corrections from rejecting "
-                  "earlier candidates of this exact panel. These are instructions to "
-                  "FOLLOW, not content to avoid. Each one overrides any conflicting "
-                  "default above:"]
-        lines += [f"- {x}" for x in feedback]
+    # (the corrections themselves lead the prompt; nothing repeats here)
 
     if refs:
         lines += ["", "APPROVED REFERENCE ROLES",
@@ -581,7 +589,10 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
               f"COMPOSITION ROLE: {panel.get('composition_role', 'distinct production question')}",
               "",
               "FINAL INSTRUCTION",
-              "The output is a CANDIDATE — UNAPPROVED. Do not add unsupported decorative content."]
+              "The output is a CANDIDATE — UNAPPROVED. Do not add unsupported decorative content."
+              + (" Re-read the DIRECTOR'S CORRECTIONS at the top of this "
+                 "prompt: each one is binding and overrides anything above "
+                 "that conflicts with it." if feedback else "")]
     return "\n".join(lines)
 
 
