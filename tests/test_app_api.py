@@ -298,10 +298,6 @@ class RenameTests(unittest.TestCase):
                                           json={"name": "  "}).status_code, 422)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class CountsPluralise(unittest.TestCase):
     """One board is not "1 BOARDS" (user 2026-08-07). Every count on a
     production card can legitimately be 1 — one board, one panel, one
@@ -332,3 +328,7 @@ class CountsPluralise(unittest.TestCase):
     def test_the_locations_fact_pluralises_too(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         self.assertIn('LOC${data.locations.length === 1 ? "" : "S"}', js)
+
+
+if __name__ == "__main__":
+    unittest.main()
