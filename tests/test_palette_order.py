@@ -134,8 +134,11 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn("Remove ${ids.length} reference", body)
 
     def viewer_fn(self) -> str:
+        """Bounded at renderWizard — the viewer sits at module scope just
+        above it since 2026-08-08; the old renderSwatchStrip bound would
+        sweep in the whole wizard prelude."""
         i = JS.index("const openSwatchViewer")
-        return JS[i:JS.index("\n    const renderSwatchStrip", i)]
+        return JS[i:JS.index("\nasync function renderWizard", i)]
 
     def test_the_viewer_takes_a_list_of_groups(self):
         """One for a ramp click, all of them for Review all — one viewer,
@@ -164,14 +167,44 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn('approved ? "APPROVED" : "PROPOSED, NOT CANON"', body)
 
     def test_approved_rows_open_the_viewer(self):
-        """The rule the ramp canonized: members are one click away."""
+        """The rule the ramp canonized: members are one click away. The
+        cross-block holder is gone — the viewer moved to MODULE scope
+        (2026-08-08) so the Reference page could reuse it, which also
+        retires the scope bug the holder guarded against."""
         body = self.column_fn()
-        # via the cross-block holder — the column renders outside the block
-        # the viewer is declared in
-        self.assertIn("openPaletteViewer(", body)
+        self.assertIn("openSwatchViewer(", body)
         self.assertIn("approved: true", body)
-        self.assertIn("openPaletteViewer = openSwatchViewer;", JS,
-                      "the holder must actually be assigned, or the click throws")
+        self.assertNotIn("openPaletteViewer", JS,
+                         "the holder pattern must not linger half-removed")
+
+    def test_the_viewer_is_module_scope_and_page_agnostic(self):
+        """One viewer, two pages. The page-specific facts ride opts:
+        refresh (which view re-renders) and onRescan (absent where no
+        engine picker exists — Rescan only renders where it can run)."""
+        i = JS.index("const openSwatchViewer")
+        head = JS[i:i + 300]
+        self.assertIn("refresh = () => {}", head)
+        self.assertIn("onRescan = null", head)
+        body = self.viewer_fn()
+        self.assertIn("many || !onRescan ?", body,
+                      "no engine picker means no Rescan act")
+        self.assertNotIn("refreshRefs", body,
+                         "the viewer must not reach into a page's closure")
+
+    def test_the_reference_shelf_uses_the_same_viewer(self):
+        """The consolidation the user asked for (2026-08-08): the STYLE
+        shelf's swatches group into ramps, quarantined ones keep the card
+        so their governance stays visible, and clicking opens the ONE
+        viewer with the Reference page's own refresh."""
+        i = JS.index('shelf.key === "STYLE" ? shelfRefs.filter(isSwatch)')
+        block = JS[i - 800:i + 3000]
+        self.assertIn('r.status !== "REJECTED"', block,
+                      "quarantined swatches keep the card")
+        self.assertIn("pal-shelf", block)
+        self.assertIn("openSwatchViewer(", block)
+        self.assertIn("refresh: renderReferences", block)
+        self.assertIn("row.swatches.every(sw => sw.approved)", block,
+                      "a group with provisional members keeps its Approve verbs")
 
     def test_setting_a_hero_only_touches_its_own_group(self):
         """With every language on screen at once, a hero click must not

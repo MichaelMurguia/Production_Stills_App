@@ -2940,96 +2940,16 @@ async function renderLessons() {
 
 /* ----------------------------------------------------------- setup wizard */
 
-async function renderWizard() {
-  useTemplate("tpl-wizard");
-  const state = await api("/api/state");
 
-  // The screenplay analysis is stored server-side (data/wizard_analysis.json)
-  // so design languages survive browser storage. Older sessions kept it only
-  // in localStorage — migrate that copy up once, and mirror the authoritative
-  // copy back down for the localStorage readers below.
-  let wizAnalysis = null;
-  try {
-    const srv = await api("/api/wizard/analysis");
-    wizAnalysis = srv && Object.keys(srv).length ? srv : null;
-  } catch { /* server copy unavailable; fall back to local */ }
-  const localAnalysis = wizACache();
-  if (!wizAnalysis && localAnalysis) {
-    wizAnalysis = localAnalysis;
-    api("/api/wizard/analysis", { method: "PUT", json: localAnalysis }).catch(() => {});
-  }
-  if (wizAnalysis) wizACacheSet(wizAnalysis);
-  $("#wiz-screenplay").innerHTML = state.screenplay
-    ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
-    : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
-
-  // Engine state (user ruling 2026-08-01): keys live in Settings only —
-  // the wizard's model selector states the gate when none are configured
-  // and lists only engines that actually have a key.
-  const engReady = await fillNarrativeSelect($("#wiz-provider"));
-  if (!engReady) {
-    $("#wiz-analyze").disabled = true;
-    $("#wiz-analyze").title = "Add a Gemini or OpenAI key in Settings first.";
-    $("#wiz-draft").disabled = true;
-    $("#wiz-draft").title = "Add a Gemini or OpenAI key in Settings first.";
-    $("#wiz-analyze-lock").textContent =
-      "NO ENGINE CONFIGURED — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
-  }
-
-  // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
-  // A swatch is an ordinary COLOR_PALETTE reference: pure solid pixels
-  // (engines study these images — name/hex live in the notes, never the
-  // pixels). Manual add is the user's act and lands approved; generated
-  // proposals are grounded in the saved Bible, grouped by its Design
-  // Languages, and stay client-side until each approval creates the
-  // reference.
-  let syncSwatchGen = () => {};
-  // The swatch machinery lives in the block below; the step-1 column
-  // renders outside it and needs the viewer to open an APPROVED group.
-  // Same holder pattern as syncSwatchGen above — a const inside that
-  // block is invisible out here (it was, and the click threw).
-  let openPaletteViewer = () => Promise.resolve(null);
-  {
-    const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
-    const colorIn = $("[data-f=sw-color]", col);
-    const hexIn = $("[data-f=sw-hex]", col);
-    colorIn.oninput = () => { hexIn.value = colorIn.value; };
-    hexIn.oninput = () => {
-      if (HEXOK.test(hexIn.value.trim())) colorIn.value = hexIn.value.trim();
-    };
-    $("[data-f=sw-add]", col).onclick = async () => {
-      const hex = hexIn.value.trim();
-      if (!HEXOK.test(hex)) return toast("A swatch needs a full hex — like #8A4B2E.", true);
-      const name = $("[data-f=sw-name]", col).value.trim();
-      try {
-        const ref = await api("/api/references/swatch",
-          { method: "POST", json: { hex, name: name || undefined, approve: true } });
-        toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added as an approved palette swatch.`);
-        $("[data-f=sw-name]", col).value = "";
-        refreshRefs();
-      } catch (err) { toast(err.message, true); }
-    };
-
-    const genHost = $("#swatch-gen");
-    const strip = $("#swatch-strip");
-
-    // The colour block itself, without the card chrome — rebuilt in place
-    // by a recolour so the edit does not cost a re-render of the strip.
-    // PALETTE_GROUPS_PLAN (2026-08-06): a design language renders as ONE
-    // contiguous ramp — the group is the swatch, the colour is a detail.
-    // Every per-colour fact and verb lives in the viewer, one click away.
+/* The swatch viewer and its helpers live at MODULE scope (2026-08-08):
+   the Reference page consolidates the same swatches into the same ramps,
+   and one viewer serving both pages is the standing contract. The two
+   page-specific facts ride opts: `refresh` (which view to re-render) and
+   `onRescan` (absent where no engine picker exists — the Rescan act only
+   renders where its precondition is met). */
     const swBlock = (hex, pair) => pair
       ? `<span class="sw-pair"><i style="background:${esc(hex)}"></i><i style="background:${esc(pair)}"></i></span>`
       : `<span class="sw-tile" style="background:${esc(hex)}"></span>`;
-
-    const rampLabel = g => {
-      const hero = g.swatches.find(s => s.hero);
-      return `<p class="sw-ramp-label">
-        <span class="lang">${esc(g.language.toUpperCase())}</span>
-        <span class="n">${g.swatches.length}</span>
-        <span class="hero${hero ? "" : " open"}">${
-          hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span></p>`;
-    };
 
     // Repaint every element that shows this reference — a colour appears
     // in the strip ramp and, while it is open, in the viewer too.
@@ -3057,7 +2977,7 @@ async function renderWizard() {
         json: { status, reason: status === "REJECTED"
           ? "swatch proposal rejected in review" : "" } });
 
-    const recolorSwatch = async (refId, hex, pair) => {
+    const recolorSwatch = async (refId, hex, pair, refresh = () => {}) => {
       const vals = await modal({
         title: "Edit this swatch color",
         body: "Repaints the swatch where it stands — it keeps its id, its name "
@@ -3076,7 +2996,7 @@ async function renderWizard() {
         { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair } });
       paintSwatch(refId, rec.hex, rec.pair_hex);
       toast(`${refId} repainted ${rec.hex}.`);
-      refreshRefs();
+      refresh();
       return rec;
     };
 
@@ -3089,7 +3009,8 @@ async function renderWizard() {
     // on a swatch that already is, and Reject there means demote out of
     // canon (which is NOT the row's ×: that deletes the reference).
     const openSwatchViewer = (groups, opts = {}) => {
-      const { focusRef = null, onChange = () => {}, approved = false } = opts;
+      const { focusRef = null, onChange = () => {}, approved = false,
+              refresh = () => {}, onRescan = null } = opts;
       const many = groups.length > 1;
       const count = () => groups.reduce((n, g) => n + g.swatches.length, 0);
       const groupOf = refId => groups.find(g =>
@@ -3108,7 +3029,7 @@ async function renderWizard() {
           </span>
           <span class="sv-acts">
             <button class="text-act" data-f="rc">Recolor</button>
-            ${approved ? "" : '<button class="text-act ok-act" data-f="ap">Approve</button>'}
+            ${approved || sw.approved ? "" : '<button class="text-act ok-act" data-f="ap">Approve</button>'}
             <button class="text-act" data-f="rj"${approved
               ? ' title="Demote out of canon — a status record with a reason, not a deletion"' : ""
               }>Reject</button>
@@ -3142,7 +3063,7 @@ async function renderWizard() {
             <span class="sv-title">${esc(many
               ? `${groups.length} design languages` : groups[0].language)}</span>
             <span class="sv-sub mono">${n} SWATCH${n === 1 ? "" : "ES"} · ${state}</span>
-            ${many ? "" : `<button class="text-act sv-rescan" data-f="rescan"
+            ${many || !onRescan ? "" : `<button class="text-act sv-rescan" data-f="rescan"
               title="Ask for the colors this design language is still missing">Rescan this language</button>`}
             <button class="sv-x" data-f="x" title="Close">&times;</button>
           </div>
@@ -3190,13 +3111,13 @@ async function renderWizard() {
               onChange();
               $(".sv", ov).outerHTML = draw();
               wire();
-              refreshRefs();
+              refresh();
             });
             $$(".sv-row", ov).forEach(row => {
               const refId = row.dataset.ref;
               $("[data-f=rc]", row).onclick = async () => {
                 try {
-                  const rec = await recolorSwatch(refId, row.dataset.hex, row.dataset.pair);
+                  const rec = await recolorSwatch(refId, row.dataset.hex, row.dataset.pair, refresh);
                   if (!rec) return;
                   const sw = groupOf(refId)?.swatches.find(s => s.ref_id === refId);
                   if (sw) { sw.hex = rec.hex; sw.pair_hex = rec.pair_hex; }
@@ -3205,7 +3126,7 @@ async function renderWizard() {
               };
               const ap = $("[data-f=ap]", row);
               if (ap) ap.onclick = async () => {
-                try { await verdictFor(refId, "APPROVED"); refreshRefs(); drop(refId); }
+                try { await verdictFor(refId, "APPROVED"); refresh(); drop(refId); }
                 catch (err) { toast(err.message, true); }
               };
               $("[data-f=rj]", row).onclick = async () => {
@@ -3221,7 +3142,7 @@ async function renderWizard() {
                   g.swatches = g.swatches.filter(s => s.ref_id !== sw.ref_id);
                 }
               }
-              if (status === "APPROVED") refreshRefs();
+              if (status === "APPROVED") refresh();
               onChange();
               done(null);
             };
@@ -3248,8 +3169,7 @@ async function renderWizard() {
               const lang = groups[0].language;
               let r;
               try {
-                r = await runSwatchScan($(".sv-foot", ov),
-                  { languages: [lang], label: `Rescanning ${lang}…` });
+                r = await onRescan(lang, $(".sv-foot", ov));
               } catch (err) { return toast(err.message, true); }
               if (!r) return;
               const found = r.groups.reduce((t, g) => t + g.swatches.length, 0);
@@ -3274,6 +3194,89 @@ async function renderWizard() {
           }
         },
       });
+    };
+
+
+async function renderWizard() {
+  useTemplate("tpl-wizard");
+  const state = await api("/api/state");
+
+  // The screenplay analysis is stored server-side (data/wizard_analysis.json)
+  // so design languages survive browser storage. Older sessions kept it only
+  // in localStorage — migrate that copy up once, and mirror the authoritative
+  // copy back down for the localStorage readers below.
+  let wizAnalysis = null;
+  try {
+    const srv = await api("/api/wizard/analysis");
+    wizAnalysis = srv && Object.keys(srv).length ? srv : null;
+  } catch { /* server copy unavailable; fall back to local */ }
+  const localAnalysis = wizACache();
+  if (!wizAnalysis && localAnalysis) {
+    wizAnalysis = localAnalysis;
+    api("/api/wizard/analysis", { method: "PUT", json: localAnalysis }).catch(() => {});
+  }
+  if (wizAnalysis) wizACacheSet(wizAnalysis);
+  $("#wiz-screenplay").innerHTML = state.screenplay
+    ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
+    : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
+
+  // Engine state (user ruling 2026-08-01): keys live in Settings only —
+  // the wizard's model selector states the gate when none are configured
+  // and lists only engines that actually have a key.
+  const engReady = await fillNarrativeSelect($("#wiz-provider"));
+  if (!engReady) {
+    $("#wiz-analyze").disabled = true;
+    $("#wiz-analyze").title = "Add a Gemini or OpenAI key in Settings first.";
+    $("#wiz-draft").disabled = true;
+    $("#wiz-draft").title = "Add a Gemini or OpenAI key in Settings first.";
+    $("#wiz-analyze-lock").textContent =
+      "NO ENGINE CONFIGURED — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
+  }
+
+  // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
+  // A swatch is an ordinary COLOR_PALETTE reference: pure solid pixels
+  // (engines study these images — name/hex live in the notes, never the
+  // pixels). Manual add is the user's act and lands approved; generated
+  // proposals are grounded in the saved Bible, grouped by its Design
+  // Languages, and stay client-side until each approval creates the
+  // reference.
+  let syncSwatchGen = () => {};
+  {
+    const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
+    const colorIn = $("[data-f=sw-color]", col);
+    const hexIn = $("[data-f=sw-hex]", col);
+    colorIn.oninput = () => { hexIn.value = colorIn.value; };
+    hexIn.oninput = () => {
+      if (HEXOK.test(hexIn.value.trim())) colorIn.value = hexIn.value.trim();
+    };
+    $("[data-f=sw-add]", col).onclick = async () => {
+      const hex = hexIn.value.trim();
+      if (!HEXOK.test(hex)) return toast("A swatch needs a full hex — like #8A4B2E.", true);
+      const name = $("[data-f=sw-name]", col).value.trim();
+      try {
+        const ref = await api("/api/references/swatch",
+          { method: "POST", json: { hex, name: name || undefined, approve: true } });
+        toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added as an approved palette swatch.`);
+        $("[data-f=sw-name]", col).value = "";
+        refreshRefs();
+      } catch (err) { toast(err.message, true); }
+    };
+
+    const genHost = $("#swatch-gen");
+    const strip = $("#swatch-strip");
+
+    // The colour block itself, without the card chrome — rebuilt in place
+    // by a recolour so the edit does not cost a re-render of the strip.
+    // PALETTE_GROUPS_PLAN (2026-08-06): a design language renders as ONE
+    // contiguous ramp — the group is the swatch, the colour is a detail.
+    // Every per-colour fact and verb lives in the viewer, one click away.
+    const rampLabel = g => {
+      const hero = g.swatches.find(s => s.hero);
+      return `<p class="sw-ramp-label">
+        <span class="lang">${esc(g.language.toUpperCase())}</span>
+        <span class="n">${g.swatches.length}</span>
+        <span class="hero${hero ? "" : " open"}">${
+          hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span></p>`;
     };
 
     // Which languages the user has actually looked at. Outside the render
@@ -3322,8 +3325,6 @@ async function renderWizard() {
       } finally { busy.done(); }
     };
 
-    openPaletteViewer = openSwatchViewer;
-
     const renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
@@ -3355,7 +3356,10 @@ async function renderWizard() {
           $$(".sw-ramp", strip).forEach(x => x.classList.remove("is-open"));
           ramp.classList.add("is-open");
           seen.add(g.language);
-          openSwatchViewer([g], { focusRef: hit?.dataset.ref, onChange: reflow })
+          openSwatchViewer([g], { focusRef: hit?.dataset.ref, onChange: reflow,
+              refresh: refreshRefs,
+              onRescan: (lang, host) => runSwatchScan(host,
+                { languages: [lang], label: `Rescanning ${lang}…` }) })
             .then(() => { ramp.classList.remove("is-open"); reflow(); });
         };
       });
@@ -3379,7 +3383,8 @@ async function renderWizard() {
       // is logged.
       $("[data-f=review]", strip).onclick = () => {
         r.groups.forEach(g => seen.add(g.language));
-        openSwatchViewer(r.groups, { onChange: reflow }).then(reflow);
+        openSwatchViewer(r.groups,
+          { onChange: reflow, refresh: refreshRefs }).then(reflow);
       };
       $("[data-f=ap-all]", strip).onclick = () => sweep("APPROVED");
       $("[data-f=discard]", strip).onclick = () => sweep("REJECTED");
@@ -3648,8 +3653,8 @@ async function renderWizard() {
         $(".sw-ramp", el).style.cursor = "pointer";
         $(".sw-ramp", el).onclick = e => {
           const hit = e.target.closest("i");
-          openPaletteViewer([{ language: row.label, swatches: row.swatches }],
-            { focusRef: hit?.dataset.ref, approved: true,
+          openSwatchViewer([{ language: row.label, swatches: row.swatches }],
+            { focusRef: hit?.dataset.ref, approved: true, refresh: refreshRefs,
               onChange: () => {} }).then(refreshRefs);
         };
       }
@@ -3673,7 +3678,8 @@ async function renderWizard() {
       const act = document.createElement("button");
       act.className = "text-act pal-review";
       act.textContent = `Review all ${total}`;
-      act.onclick = () => openPaletteViewer(groups, { approved: true, onChange: () => {} })
+      act.onclick = () => openSwatchViewer(groups,
+        { approved: true, refresh: refreshRefs, onChange: () => {} })
         .then(refreshRefs);
       badge.after(act);
     }
@@ -5036,11 +5042,66 @@ async function renderReferences() {
           .filter(r => bucketOfRef(r) === shelf.key && matches(r));
         const roleCount = new Set(shelfRefs.map(r => roleHead(r.role))).size;
         countText = shelf.count({ total: shelfRefs.length, roles: roleCount });
+        // A design language is one swatch (PALETTE_GROUPS, extended to this
+        // shelf 2026-08-08): 19 swatch cards said in a wall what three
+        // ramps say in a strip. Quarantined swatches keep the card, like
+        // the SUBJECTS shelf's rule — governance stays visible.
+        const isSwatch = r => roleHead(r.role) === "COLOR_PALETTE"
+          && !!swatchNotes(r.notes).hex && r.status !== "REJECTED";
+        const swatchRefs = shelf.key === "STYLE" ? shelfRefs.filter(isSwatch) : [];
+        const cardRefs = shelfRefs.filter(r => !swatchRefs.includes(r));
         fill = grid => {
-          const lb = shelfRefs.map(r => ({
+          if (swatchRefs.length) {
+            const byLang = new Map();
+            const rows = [];
+            for (const r of swatchRefs) {
+              const sw = { ...swatchNotes(r.notes), ref_id: r.id,
+                           approved: r.status === "APPROVED" };
+              if (!sw.language) {
+                rows.push({ label: sw.name || r.id, swatches: [sw] });
+                continue;
+              }
+              if (!byLang.has(sw.language)) {
+                const row = { label: sw.language, swatches: [] };
+                byLang.set(sw.language, row);
+                rows.push(row);
+              }
+              byLang.get(sw.language).swatches.push(sw);
+            }
+            const strip = document.createElement("div");
+            strip.className = "pal-shelf";
+            rows.forEach(row => {
+              const ordered = rampOrder(row.swatches);
+              const hero = row.swatches.find(sw => sw.hero);
+              const pend = row.swatches.filter(sw => !sw.approved).length;
+              const el = document.createElement("div");
+              el.className = "pal-row";
+              el.innerHTML = `
+                <div class="sw-ramp">${ordered.map(sw =>
+                  `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>
+                <p class="sw-ramp-label">
+                  <span class="lang">${esc(row.label.toUpperCase())}</span>
+                  <span class="n">${row.swatches.length}</span>
+                  <span class="hero mono">${pend
+                    ? `${pend} PROVISIONAL` : hero ? `HERO ${esc(hero.hex)}` : ""}</span>
+                </p>`;
+              $(".sw-ramp", el).style.cursor = "pointer";
+              $(".sw-ramp", el).onclick = e => {
+                const hit = e.target.closest("i");
+                openSwatchViewer([{ language: row.label, swatches: row.swatches }],
+                  { focusRef: hit?.dataset.ref,
+                    approved: row.swatches.every(sw => sw.approved),
+                    refresh: renderReferences, onChange: () => {} })
+                  .then(renderReferences);
+              };
+              strip.append(el);
+            });
+            grid.before(strip);
+          }
+          const lb = cardRefs.map(r => ({
             src: `/api/references/${r.id}/image`,
             caption: `${r.id} — ${r.role} (${r.status})` }));
-          shelfRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
+          cardRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
         };
       }
       section.innerHTML = `
@@ -5053,7 +5114,7 @@ async function renderReferences() {
         <div class="ref-grid" data-f="shelf-grid"></div>`;
       const grid = $("[data-f=shelf-grid]", section);
       fill(grid);
-      if (!grid.children.length)
+      if (!grid.children.length && !$(".pal-shelf", section))
         grid.innerHTML = `<p class="mini" style="grid-column:1/-1">${q.v ? "nothing on this shelf matches" : "nothing on this shelf yet"}</p>`;
       host.append(section);
     }

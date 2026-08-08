@@ -2323,3 +2323,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .stor-row { display: flex; justify-content: space-between; padding: 6px 0;
   border-bottom: 1px solid var(--line-soft); font-size: 12.5px; color: var(--ink-dim); }
 .stor-row .mono { color: var(--ink); font-size: 11px; }
+
+/* Reference STYLE shelf — swatches consolidate into the same ramps the
+   Production Design column draws (2026-08-08). Rows sit in their own
+   strip above the card grid; the cards that remain are plates and
+   quarantined swatches, whose governance stays visible. */
+.pal-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px 18px; margin-bottom: 14px; }
+.pal-shelf .pal-row { margin-bottom: 0; }

@@ -1037,6 +1037,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
+| 2026-08-08 | **Swatch ramps on the Reference STYLE shelf.** Built from canon — the same `.pal-row` ramps and the same viewer the Production Design column uses, in a `.pal-shelf` grid above the card grid. Quarantined swatches keep their card (the SUBJECTS shelf's governance rule); a mixed group's label states `N PROVISIONAL` and its viewer offers Approve only on the rows that need it. Review placement only: above the cards, or should the ramps BE the shelf with plates behind a disclosure? | Reference, STYLE shelf | Nineteen swatch cards said in a wall what three ramps say in a strip |
 | 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
 | 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
 
@@ -1063,6 +1064,15 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-08** — Reference's STYLE shelf **consolidates swatches into
+  ramps** (user): the same one-object-per-language presentation as the
+  Production Design column, opening the same viewer. Doing it honestly
+  meant hoisting the swatch viewer to module scope — one viewer, two
+  pages — with the page-specific facts as options: `refresh` names the
+  view to re-render, and `onRescan` is absent where no engine picker
+  exists, so Rescan only renders where it can actually run. Quarantined
+  swatches keep their card; a mixed group offers Approve only on rows
+  still provisional.
 - **2026-08-07** — Disk space is a **gate, not a 502** (user incident): a
   studio filled its volume and region repair died mid-write with
   `[Errno 28]`. Every render path now refuses before the spend, stating
