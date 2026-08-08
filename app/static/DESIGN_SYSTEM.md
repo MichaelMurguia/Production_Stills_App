@@ -638,12 +638,26 @@ states it verbatim. Plates live in `app/static/look_library/<slug>/`
 with a `looks.json` manifest and enter the library with
 `source: "look:<slug>"` so provenance survives.
 
-**A row of peer verbs renders in one grammar** (T2, ruled 2026-08-06).
-If they are all `mk(…, "ghost")` in the source they are all ghost buttons
-on screen; a bare text link in a button row states a hierarchy the code
-does not have. The row's one consequential act may carry a status colour
-(Approve keeps its `--ok` border and text) — that is its state, not an
-emphasis.
+**The code is not the authority on hierarchy — the decision is**
+(17a, ruled 2026-08-08, superseding T2's one-grammar clause). T2 reasoned
+from the source: *they are all `mk(…, "ghost")`, so they are all ghost
+buttons.* That inverted the direction of authority — a shared constructor
+is an implementation fact, never a design argument. When the source
+renders as peers things the user does not experience as peers, the source
+is what changes.
+
+The take bar is the worked example: **one verdict and two lists.** The
+filled-amber `Approve panel` (this screen's only amber, as canon already
+said — `--ok` is the *state* colour of an approved panel, not the colour
+of the act that approves it); `USE` and `DERIVE` as Courier-kickered
+lists of text acts, DERIVE dimmed because nothing in it advances this
+panel toward approval; `Reject` fenced right, `--bad` on hover only.
+Arrows come off the labels — one arrow marks a promotion, six mark
+nothing. T2's *wraps, never scrolls* holds and is strengthened: **a group
+collapses to `⋯` before the row wraps** — a group folding is legible; a
+row breaking mid-list is not. Measured with a `ResizeObserver` on the bar
+itself, because the rail and side panel change the stage's width without
+changing the viewport's.
 
 **The hatch is the only empty-image surface** (HATCH_RULE, ruled
 2026-08-06). Wherever an image is expected and absent — panel slots, take
@@ -1065,6 +1079,12 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-08** — Take action bar: Approve panel becomes the filled
+  amber verdict, the six remaining verbs become text acts in labelled USE
+  and DERIVE groups, arrows dropped, DERIVE collapses to ⋯ before the row
+  wraps. T2's one-grammar clause superseded; decision-not-code-owns-
+  hierarchy canonized. (Supersedes the 14a peer-cluster geometry shipped
+  earlier the same day.)
 - **2026-08-08** — The screenplay's **locations reach the Reference
   library** (user): the SCENES shelf gains the uncast pattern's twin —
   unanchored places as cards with one act that prefills a titled

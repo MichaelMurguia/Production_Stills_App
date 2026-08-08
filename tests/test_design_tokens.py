@@ -203,24 +203,32 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".spec-table thead th", [
             "background: var(--field)", "font-family: var(--mono)"])
 
-    def test_take_row_wraps_and_its_verbs_are_peers(self):
-        """T1/T2: horizontal scroll on navigation hides actions the user
-        then cannot find, and six verbs that are all ghost in the source
-        must all be ghost buttons on screen."""
+    def test_take_bar_is_one_verdict_and_two_lists(self):
+        """17a, superseding T2's one-grammar row and 14a's peer cluster:
+        the code is not the authority on hierarchy — the decision is. One
+        filled-amber verdict; USE and DERIVE as Courier-kickered lists of
+        text acts; Reject --bad on hover only; wrap stays the last resort
+        behind the DERIVE fold."""
         b = block(".act-bar")
         self.assertIn("flex-wrap: wrap", b)
-        self.assertNotIn("overflow-x: auto", b,
-                         "the row must wrap, never scroll")
-        # Corrected mock 14a: the buttons ARE the chrome — no enclosing
-        # box, no fenced zones, no internal rule.
-        self.assertNotIn("border: 1px solid var(--line)", b,
-                         "the bar itself carries no box")
-        self.assertNotIn(".act-rule", CSS, "the internal rule is gone")
-        self.assert_decls(".act-left", ["margin-right: auto"])
-        self.assert_decls(".act-bar .ghost, .act-bar .danger",
-                          ["border: 1px solid var(--line)"])
-        self.assert_decls(".act-bar .act-approve-btn",
-                          ["border: 1px solid var(--ok)", "color: var(--ok)"])
+        self.assertNotIn("overflow-x: auto", b)
+        self.assertNotIn(".act-bar .ghost", CSS,
+                         "the ghost-peer grammar is superseded")
+        self.assertNotIn("border: 1px solid var(--ok)", CSS.split(".act-bar")[1]
+                         if ".act-bar" in CSS else CSS,
+                         "Approve is the amber verdict, not a green peer")
+        self.assert_decls(".act-kicker", [
+            "font-family: var(--mono)", "color: var(--ink-faint)"])
+        self.assert_decls(".act-dim", ["color: var(--ink-dim)"])
+        self.assert_decls(".act-reject:hover", ["color: var(--bad)"])
+        self.assert_decls(".act-use, .act-derive, .act-right",
+                          ["border-left: 1px solid var(--line)"])
+        self.assert_decls(".act-spacer", ["flex: 1"])
+        for sel in (".act-bar", ".act-zone", ".act-kicker", ".act-derive-menu"):
+            self.assertNotIn("border-radius", block(sel), sel)
+        # the fold renders ⋯ only when collapsed
+        self.assert_decls(".act-more", ["display: none"])
+        self.assert_decls(".derive-collapsed .act-more", ["display: inline"])
 
     def test_take_tags_ride_the_image(self):
         self.assert_decls(".stage-shot", ["position: relative"])

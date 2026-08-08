@@ -1637,36 +1637,49 @@ details.meta pre {
 }
 .gen-actions .text-act { align-self: center; }
 
-/* T1/T2 (TAKE_ACTIONS), corrected by mock 14a (2026-08-08): the bar is
-   buttons on the page, not a box of fenced zones — each verb's own ghost
-   border is the only chrome. Approve holds the left; the verb cluster
-   right-aligns; the row WRAPS, never scrolls (horizontal scroll on
-   navigation hides actions the user cannot then find). Reject keeps its
-   danger colour at the far end — the mock omits it, but removing a verb
-   is functionality, and styling work does not change functionality. */
+/* 17a (2026-08-08) — one verdict, two lists, no wrap. Supersedes T2's
+   one-grammar row and 14a's peer cluster: the code is not the authority
+   on hierarchy, the decision is. One filled-amber verdict (the screen's
+   only amber, as canon already said); USE and DERIVE as Courier-kickered
+   lists of text acts; Reject fenced right, --bad on hover only. Text
+   acts cost their words, so the row measures under the column — and
+   DERIVE folds to ⋯ before the row is ever allowed to wrap. */
 .act-bar {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 10px; flex-wrap: wrap; justify-content: flex-end;
+  display: flex; align-items: center;
+  margin-top: 10px; flex-wrap: wrap;
 }
-.act-zone { display: inline-flex; align-items: center; gap: 10px; }
-/* an empty zone must not leave a stray gap-width hole in the row */
+.act-zone { display: inline-flex; align-items: center; gap: 14px; padding: 8px 16px; }
 .act-zone:empty { display: none; }
-/* Approve holds the left whatever else renders; with it absent the
-   remaining cluster keeps the mock's right alignment via flex-end */
-.act-left { margin-right: auto; }
-/* T2: peer verbs render in one grammar. They are all mk(…, "ghost") in
-   the source, so they are all ghost BUTTONS on screen — a bare text link
-   in a button row states a hierarchy the code does not have. */
-.act-bar .ghost, .act-bar .danger {
-  border: 1px solid var(--line); background: transparent; padding: 4px 12px;
-}
-.act-bar .ghost:hover { color: var(--ink); border-color: var(--ink-faint);
-  background: transparent; }
-.act-bar .danger { color: var(--bad); border-color: var(--line); }
+.act-approve { padding-left: 0; }
+.act-use, .act-derive, .act-right { border-left: 1px solid var(--line); }
+.act-spacer { flex: 1; }
+.act-right { padding-right: 0; }
+.act-items { display: inline-flex; align-items: center; gap: 14px; }
+.act-kicker { font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+  color: var(--ink-faint); }
+/* Mock 17a draws these verbs in Archivo — a verb is a word, not machine
+   data; the global .text-act (Courier) serves machine-flavoured acts and
+   is overridden here only inside the bar. Reported deviation from the
+   plan's bare ".text-act" naming: the mock is the authority for its
+   element. */
+.act-bar .text-act { white-space: nowrap; font-family: var(--sans);
+  font-size: 13.5px; letter-spacing: 0; font-weight: 600; }
+.act-dim { color: var(--ink-dim); }
+.act-dim:hover:not(:disabled) { color: var(--ink); }
+.act-reject { color: var(--ink-dim); }
+.act-reject:hover { color: var(--bad); }
+/* Delete forever (rejected takes only) keeps .danger — destruction is
+   not restyled by a hierarchy pass. */
+.act-bar .danger { border: 1px solid var(--line); background: transparent;
+  color: var(--bad); padding: 4px 12px; }
 .act-bar .danger:hover { border-color: var(--bad); background: transparent; }
-/* Approve is the row's consequential act; --ok is its state colour, not
-   an emphasis, so it keeps the border it already had. */
-.act-bar .act-approve-btn { border: 1px solid var(--ok); color: var(--ok); padding: 4px 12px; }
+/* the fold: ⋯ renders only when the group is collapsed */
+.act-more { display: none; }
+.derive-collapsed .act-derive .act-items { display: none; }
+.derive-collapsed .act-more { display: inline; }
+.act-derive { position: relative; }
+.act-derive-menu { display: flex; flex-direction: column;
+  align-items: flex-start; gap: 10px; padding: 12px 16px; }
 
 /* T1: the tags themselves — legible on any take, on their own ground. */
 .stage-shot { position: relative; }

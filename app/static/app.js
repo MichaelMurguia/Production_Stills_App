@@ -6744,14 +6744,25 @@ async function renderBoardPanels(specId) {
           panelCands.length - panelCands.indexOf(staged)} OF ${panelCands.length}${
           stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
       </div>
-      <!-- Corrected mock 14a (comparison pass 2026-08-08): no box, no
-           fences, no internal rule — Approve holds the left, the verb
-           cluster right-aligns, one ghost grammar throughout. The zones
-           survive as bare append targets only. -->
+      <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
+           amber verdict, six text acts in two LABELLED groups, Reject
+           fenced right. The kickers say what the labels cannot — USE
+           produces another take of THIS panel; DERIVE produces a record
+           somewhere else, and reads dimmer because nothing in it advances
+           this panel toward approval. -->
       <div class="act-bar">
-        <span class="act-zone act-left" data-f="act-approve"></span>
-        <span class="act-zone act-use" data-f="act-use"></span>
-        <span class="act-zone act-derive" data-f="act-derive"></span>
+        <span class="act-zone act-approve" data-f="act-approve"></span>
+        <span class="act-zone act-use">
+          <span class="act-kicker">USE</span>
+          <span class="act-items" data-f="act-use"></span>
+        </span>
+        <span class="act-zone act-derive">
+          <span class="act-kicker">DERIVE</span>
+          <span class="act-items" data-f="act-derive"></span>
+          <button type="button" class="text-act act-dim act-more" data-f="derive-more"
+            title="Derive — Reference, Crop to reference, Light study">&ctdot;</button>
+        </span>
+        <span class="act-spacer" aria-hidden="true"></span>
         <span class="act-zone act-right" data-f="act-danger"></span>
       </div>
       <div data-f="shot-busy"></div>
@@ -7138,7 +7149,7 @@ async function renderBoardPanels(specId) {
           : (c.model_notes || ""),
         [p.id, c.candidate_id].join(" · "));
 
-      if (c.status !== "REJECTED") actDanger.append(mk("Reject", "danger", async () => {
+      if (c.status !== "REJECTED") actDanger.append(mk("Reject", "text-act act-reject", async () => {
         const reason = await askText(`Reject ${c.candidate_id}`, "Reason",
           { hint: "recorded verbatim, carried into this panel's future prompts as rejection feedback",
             confirmLabel: "Reject", danger: true });
@@ -7148,11 +7159,11 @@ async function renderBoardPanels(specId) {
           toast(`${c.candidate_id} rejected.`); refresh();
         } catch (err) { toast(err.message, true); }
       }));
-      actDerive.append(mk("→ Reference", "ghost", () => promoteDialog(specId, c),
+      actDerive.append(mk("Reference", "text-act act-dim", () => promoteDialog(specId, c),
         c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — only approved renders become canon anchors" }
         : { title: "Promote this approved render into the reference library" }));
-      if (c.status !== "APPROVED") actApprove.append(mk("Approve panel", "ghost act-approve-btn", async () => {
+      if (c.status !== "APPROVED") actApprove.append(mk("Approve panel", "primary act-approve-btn", async () => {
         try {
           await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "APPROVED" });
           toast(`${c.candidate_id} approved.`); refresh();
@@ -7162,7 +7173,7 @@ async function renderBoardPanels(specId) {
       // Re-performance for resolution (never interpolation): the take
       // anchors itself; a locked reproduce-exactly instruction renders it
       // at full size. The answer to a good take trapped in a small file.
-      if (c.kind !== "derived_palette") actUse.append(mk("→ Full-size take", "ghost", () => {
+      if (c.kind !== "derived_palette") actUse.append(mk("Full-size take", "text-act", () => {
         const ov = document.createElement("div");
         ov.className = "modal-scrim";
         ov.innerHTML = `
@@ -7227,7 +7238,7 @@ async function renderBoardPanels(specId) {
           }
         };
       }, { title: "Make a NEW take: repaint this exact image at full resolution, anchored to itself — the sanctioned route out of a low-resolution file (nothing is ever interpolated). This take stays untouched." }));
-      if (c.kind !== "derived_palette") actUse.append(mk("Repair region", "ghost", () =>
+      if (c.kind !== "derived_palette") actUse.append(mk("Repair region", "text-act", () =>
         openRepair(`/api/specs/${specId}/candidates/${c.candidate_id}/image`,
           async (mask, instruction, provider) => {
             const pendId = addPendingTake(specId, p.id, `PAINTING — REPAIR OF ${c.candidate_id}`);
@@ -7245,13 +7256,13 @@ async function renderBoardPanels(specId) {
             }
           }),
         { title: "Paint over the area to fix, describe the change, pick the engine, and regenerate ONLY that region — the app composites the patch, so nothing outside your paint can change. The result is a new take; this one is untouched. You can close the paint screen while it renders — a pending tile holds its place in the strip." }));
-      actDerive.append(mk("Crop → reference", "ghost", () =>
+      actDerive.append(mk("Crop to reference", "text-act act-dim", () =>
         cropToReference({ type: "candidate", spec_id: specId, id: c.candidate_id },
           `/api/specs/${specId}/candidates/${c.candidate_id}/image`),
         c.status !== "APPROVED"
           ? { disabled: true, title: "Approve this take first — crops enter the library as approved canon" }
           : { title: "Harvest a region of this image as a new reference with its own narrow role" }));
-      actDerive.append(mk("→ Light study", "ghost", async () => {
+      actDerive.append(mk("Light study", "text-act act-dim", async () => {
         if (!(await askConfirm(`Create a lighting study from ${c.candidate_id}`,
           "This panel is promoted to a LOCATION_GEOMETRY anchor, and a new draft board is created with one panel per approved atmosphere from the Bible. Review and approve the draft on the Breakdowns tab, then generate.",
           "Create study"))) return;
@@ -7262,6 +7273,51 @@ async function renderBoardPanels(specId) {
       }, c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — the study locks this panel's geometry" }
         : { title: "Derive a lighting-study board: this panel becomes the geometry anchor, and each new panel renders the same place under one approved atmosphere" }));
+      // 17a — a group folds before the row breaks: DERIVE collapses to ⋯
+      // when the bar's content would exceed its box, measured by a
+      // ResizeObserver on the bar itself — the rail and the side panel
+      // both change the stage's width without changing the viewport's.
+      {
+        const bar = $(".act-bar", card);
+        const deriveZone = $(".act-derive", bar);
+        const deriveItems = $("[data-f=act-derive]", bar);
+        for (const zn of [".act-use", ".act-derive"]) {
+          const zone = $(zn, bar);
+          if (!$(".act-items", zone).children.length) zone.classList.add("hidden");
+        }
+        let menu = null;
+        const closeMenu = () => {
+          if (!menu) return;
+          deriveItems.append(...menu.querySelectorAll("button"));
+          menu.remove(); menu = null;
+        };
+        $("[data-f=derive-more]", bar).onclick = e => {
+          e.stopPropagation();
+          if (menu) return closeMenu();
+          menu = document.createElement("div");
+          menu.className = "card-menu act-derive-menu";
+          menu.append(...deriveItems.querySelectorAll("button"));
+          deriveZone.append(menu);
+          setTimeout(() => document.addEventListener("click", closeMenu, { once: true }));
+        };
+        // Wrapped content is not overflow — once flex-wrap absorbs the
+        // row, scrollWidth never exceeds clientWidth. So the fold's real
+        // test is "did any zone leave the first line": expand, read the
+        // zones' offsetTops, fold if they differ. rAF keeps the mutation
+        // out of the observer's own frame (the loop warning).
+        const fit = () => requestAnimationFrame(() => {
+          closeMenu();
+          bar.classList.remove("derive-collapsed");
+          const tops = new Set([...bar.children]
+            .filter(z => z.offsetParent !== null)
+            .map(z => z.offsetTop));
+          if (tops.size > 1 || bar.scrollWidth > bar.clientWidth + 1)
+            bar.classList.add("derive-collapsed");
+        });
+        new ResizeObserver(fit).observe(bar);
+        fit();
+      }
+
       if (c.status === "REJECTED") actDanger.append(mk("Delete forever", "danger", async () => {
         if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
           "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
