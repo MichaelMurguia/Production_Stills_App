@@ -1952,7 +1952,8 @@ async function renderLocations(state = null, langs = 0) {
   }
   const readFact = $("[data-f=read] b");
   if (readFact) readFact.textContent =
-    `${langs} LANGUAGE${langs === 1 ? "" : "S"} · ${data.locations.length} LOCS`;
+    `${langs} LANGUAGE${langs === 1 ? "" : "S"} · ${data.locations.length} `
+    + `LOC${data.locations.length === 1 ? "" : "S"}`;
 
   // Canonical coverage meter (plan v3 Part A.3): 4 segments; filled = --ok;
   // a single amber first segment means thin — inference will be spent here.

@@ -399,8 +399,15 @@ def _production_row(p: dict) -> dict:
                          for g in insights.locations().get("locations", []))
         except Exception:
             pass
-    counts = (f"{scenes} SCENES · {pn['approved']} PANELS · "
-              f"{bo['assembled']} BOARDS · {len(store.list_references())} REFS"
+    # One board is not "1 BOARDS" (user 2026-08-07). Every count on this
+    # line can legitimately be 1 — a production with one board, one panel,
+    # one reference — so each carries its own plural.
+    def _n(count: int, one: str, many: str = "") -> str:
+        return f"{count} {one if count == 1 else (many or one + 'S')}"
+
+    counts = (" · ".join([_n(scenes, "SCENE"), _n(pn["approved"], "PANEL"),
+                          _n(bo["assembled"], "BOARD"),
+                          _n(len(store.list_references()), "REF")])
               if ss["screenplay"] else "NO SCREENPLAY YET")
 
     # A6 — every card states its own next verb; ALL STAGES CLEAR has none.

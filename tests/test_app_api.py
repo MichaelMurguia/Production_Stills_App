@@ -300,3 +300,35 @@ class RenameTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CountsPluralise(unittest.TestCase):
+    """One board is not "1 BOARDS" (user 2026-08-07). Every count on a
+    production card can legitimately be 1 — one board, one panel, one
+    reference — so each carries its own plural."""
+
+    def _n(self, count, one, many=""):
+        # the helper as it is written in api_projects_summary
+        return f"{count} {one if count == 1 else (many or one + 'S')}"
+
+    def test_one_is_singular(self):
+        self.assertEqual(self._n(1, "BOARD"), "1 BOARD")
+        self.assertEqual(self._n(1, "SCENE"), "1 SCENE")
+        self.assertEqual(self._n(1, "REF"), "1 REF")
+
+    def test_zero_and_many_are_plural(self):
+        self.assertEqual(self._n(0, "BOARD"), "0 BOARDS")
+        self.assertEqual(self._n(252, "SCENE"), "252 SCENES")
+
+    def test_the_summary_uses_it_for_every_count(self):
+        src = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        i = src.index("def _n(count: int")
+        block = src[i:i + 600]
+        for word in ("SCENE", "PANEL", "BOARD", "REF"):
+            self.assertIn(f'_n(', block)
+            self.assertIn(f'"{word}"', block, word)
+        self.assertNotIn("SCENES ·", block, "no hardcoded plural survives")
+
+    def test_the_locations_fact_pluralises_too(self):
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('LOC${data.locations.length === 1 ? "" : "S"}', js)
