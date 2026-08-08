@@ -1037,6 +1037,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
+| 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
 | 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
 
 ---
@@ -1062,6 +1063,13 @@ well — this log records what changed, it does not replace the rules.
   `Make sheet` on Production Design. Both are `Create breakdown` now, and
   `Open sheet` is `Open breakdown` — sentence case, like every other
   button. `tests/test_vocabulary.py` holds it.
+- **2026-08-07** — Disk space is a **gate, not a 502** (user incident): a
+  studio filled its volume and region repair died mid-write with
+  `[Errno 28]`. Every render path now refuses before the spend, stating
+  what is free and how to reclaim it; Settings carries a storage readout
+  with a by-kind breakdown; and the pre-import safety copy is capped at
+  ONE, is refused outright when it would not fit, and is finally
+  downloadable — it was insurance with no way to collect it.
 - **2026-08-07** — The auto breakdown takes a **stated board type** (user
   bug): a scene-seeded draft rewritten as a location study in prose came
   back as the seeded scene. The brief was never dropped — it simply could

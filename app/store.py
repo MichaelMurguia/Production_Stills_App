@@ -47,10 +47,29 @@ AUTO_STYLE_ROLES = {*MOVIE_STYLE_ROLES, "BOARD_RENDERING_STYLE"}
 STYLE_ATTACH_CAP = 2  # newest approved N per role ride each render
 
 
+# The role vocabulary the picker offers, as families. Kept here so both
+# the em-dash form and the fully underscore-sanitized one resolve to the
+# same head.
+ROLE_FAMILY_HEADS = (
+    "BOARD_RENDERING_STYLE", "BOARD_LAYOUT_STYLE", "CINEMATOGRAPHY_STYLE",
+    "CHARACTER_LIKENESS", "LOCATION_GEOMETRY", "VEHICLE_GEOMETRY",
+    "ENVIRONMENT_LAYOUT", "LIGHTING_REFERENCE", "MATERIAL_REFERENCE",
+    "SCENE_REFERENCE", "PROP_REFERENCE", "WORLD_TEXTURE", "COLOR_PALETTE",
+)
+
+
 def role_head(role: str) -> str:
-    """The role's family name, tolerant of legacy underscore-sanitized records
-    (e.g. 'CHARACTER_LIKENESS_—_JOHN' → 'CHARACTER_LIKENESS')."""
-    return str(role or "").split("—")[0].strip(" _-").upper()
+    """The role's family name, tolerant of legacy underscore-sanitized
+    records: 'CHARACTER_LIKENESS_—_JOHN' splits on the dash, and
+    'CHARACTER_LIKENESS_JOHN' — where the dash itself was replaced — is
+    resolved by family prefix. Without the second pass a titled reference
+    had no recognisable family, so it fell through to the generic
+    jurisdiction line in a render prompt (2026-08-07)."""
+    raw = str(role or "").split("—")[0].strip(" _-").upper()
+    fams = sorted((h for h in ROLE_FAMILY_HEADS
+                   if raw == h or raw.startswith(h + "_")),
+                  key=len, reverse=True)
+    return fams[0] if fams else raw
 
 
 def utcnow() -> str:

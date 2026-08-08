@@ -209,7 +209,17 @@ def import_into(slug: str, payload: bytes) -> dict:
     while safety.exists():
         safety = base / f"pre-import-{stamp}-{n}.zip"
         n += 1
-    safety.write_bytes(make_backup(slug, record=False)[0])
+    payload = make_backup(slug, record=False)[0]
+    # Filling the volume to protect against an import is self-defeating —
+    # and the import that follows needs room too.
+    from . import storage
+    if not storage.free_bytes() or storage.free_bytes() < len(payload) * 2:
+        raise BackupError(
+            f"Not enough disk space to take a safety copy before importing: "
+            f"{storage.human(storage.free_bytes())} free, and the copy alone "
+            f"is {storage.human(len(payload))}. Free space first — the import "
+            "was not started and nothing was changed.")
+    safety.write_bytes(payload)
     _prune_safety_zips(base)
 
     staging = base / ".import-staging"
@@ -253,11 +263,19 @@ def import_into(slug: str, payload: bytes) -> dict:
             "files": len(members), "safety_zip": safety.name}
 
 
-def _prune_safety_zips(base: Path, keep: int = 3) -> None:
-    """Safety zips are insurance, not an archive — keep the newest few."""
-    zips = sorted(base.glob("pre-import-*.zip"))
-    for old in zips[:-keep] if len(zips) > keep else []:
-        old.unlink(missing_ok=True)
+def _prune_safety_zips(base: Path, keep: int = 1) -> None:
+    """Safety zips are insurance, not an archive — keep the newest ONE.
+
+    Three full copies of a production on the same volume the production
+    lives on is a lot of disk for insurance (user 2026-08-07, after a
+    studio filled its volume). One copy, downloadable, is the useful
+    amount; older ones go as soon as a newer one exists."""
+    # By mtime, NOT by name: two imports in one second produce
+    # "…-120000.zip" and "…-120000-2.zip", and "-" sorts before "." — so a
+    # name sort kept the OLDER copy and deleted the one just written.
+    zips = sorted(base.glob("pre-import-*.zip"), key=lambda z: z.stat().st_mtime)
+    for stale in zips[:-keep] if len(zips) > keep else []:
+        stale.unlink(missing_ok=True)
 
 
 def restore_backup(payload: bytes) -> dict:

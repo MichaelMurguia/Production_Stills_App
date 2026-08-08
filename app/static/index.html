@@ -496,8 +496,6 @@
       <button data-sub="workflow">Workflow &amp; Instructions</button>
       <button data-sub="faq">FAQ</button>
       <button data-sub="debug">Debug tools</button>
-      <span class="subnav-end mono">PRODUCTIONS MOVED &mdash;
-        <button class="text-act" id="goto-productions">MANAGE THEM IN PRODUCTIONS</button></span>
     </nav>
 
     <div data-subview="api">
@@ -591,6 +589,14 @@
           <p class="mini">nothing else is uploaded anywhere</p></div>
       </div>
       </div><!-- /settings-steady -->
+
+      <!-- What the volume holds. A cloud studio is one service with one
+           volume; nothing measured it, so a full one first surfaced as a
+           502 from the middle of a paid render (user 2026-08-07). -->
+      <div class="panel" id="storage-panel">
+        <h2>Storage <span class="step-cond" id="storage-cond"></span></h2>
+        <div id="storage-body"><p class="mini">reading…</p></div>
+      </div>
     </div>
 
     <div data-subview="workflow" class="hidden">

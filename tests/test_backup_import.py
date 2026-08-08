@@ -87,10 +87,24 @@ class ImportInto(unittest.TestCase):
         backup.import_into("my-show", self.payload())
         self.assertEqual(backup.last_backup_at("my-show"), "")
 
-    def test_safety_zips_are_pruned(self):
+    def test_only_the_newest_safety_zip_is_kept(self):
+        """Three full copies of a production, on the volume the production
+        lives on, is a lot of disk for insurance — and a studio filled its
+        volume (2026-08-07). One copy, downloadable, is the useful amount."""
         for _ in range(5):
             backup.import_into("my-show", self.payload())
-        self.assertEqual(len(list(self.base.glob("pre-import-*.zip"))), 3)
+        zips = list(self.base.glob("pre-import-*.zip"))
+        self.assertEqual(len(zips), 1)
+
+    def test_the_kept_copy_is_the_newest(self):
+        first = backup.import_into("my-show", self.payload())["safety_zip"]
+        (self.base / "data" / "screenplay.txt").write_text("SECOND", encoding="utf-8")
+        second = backup.import_into("my-show", self.payload())["safety_zip"]
+        self.assertNotEqual(first, second)
+        self.assertTrue((self.base / second).exists())
+        self.assertFalse((self.base / first).exists())
+        with zipfile.ZipFile(self.base / second) as z:
+            self.assertEqual(z.read("data/screenplay.txt").decode(), "SECOND")
 
     def test_safety_zips_never_ride_into_a_backup(self):
         backup.import_into("my-show", self.payload())

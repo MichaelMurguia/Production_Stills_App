@@ -205,6 +205,34 @@ def api_list_projects() -> dict:
             "first_run": first_run}
 
 
+@app.get("/api/storage")
+def api_storage() -> dict:
+    """What this studio's volume is holding, and how much room is left.
+    A cloud studio is one service with one volume; nothing measured it, so
+    a full one first showed up as a 502 from a paid render (2026-08-07)."""
+    from . import storage
+    return storage.usage()
+
+
+@app.get("/api/projects/safety-zip")
+def api_safety_zip(slug: str = "") -> Response:
+    """The newest pre-import safety copy, as a download. It was insurance
+    with no way to collect it — written to the volume and unreachable."""
+    if slug:
+        paths.safe_id(slug)
+    try:
+        base = backup._project_base(slug)
+    except KeyError as e:
+        raise _err(e)
+    zips = sorted(base.glob("pre-import-*.zip"), key=lambda z: z.stat().st_mtime)
+    if not zips:
+        raise HTTPException(404, "no safety copy — one is written before each import")
+    newest = zips[-1]
+    return Response(newest.read_bytes(), media_type="application/zip",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="{newest.name}"'})
+
+
 @app.get("/api/projects/backup")
 def api_backup_project(slug: str = "") -> Response:
     """One zip of one project — screenplay, bible, references, sheets,

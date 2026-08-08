@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from . import bible, mockflow, paths, store
+from . import bible, mockflow, paths, storage, store
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -656,6 +656,15 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
 
 
 # ---------------------------------------------------------------- candidates
+
+def _require_room(what: str) -> None:
+    """Disk pre-flight as a GenerationError, so it reaches the user through
+    the same stated-error path as every other refusal to render."""
+    try:
+        storage.require_room(what=what)
+    except storage.OutOfSpace as e:
+        raise GenerationError(str(e)) from e
+
 
 def _spec_board_dir(spec_id: str) -> Path:
     d = paths.BOARDS_DIR / paths.safe_id(spec_id)
@@ -1315,6 +1324,9 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
 
     ref_paths = _reference_image_paths(refs)
     new_id = _new_candidate_id()
+    # Refuse before the spend, not after it: a full volume used to
+    # surface as a 502 from the middle of a paid render (2026-08-07).
+    _require_room("this repair")
     d = _spec_board_dir(spec_id)
     out_path = d / f"{new_id}.png"
     notes = ""
@@ -1486,6 +1498,9 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     aspect = nearest_catalog_aspect(src_w, src_h)
 
     new_id = _new_candidate_id()
+    # Refuse before the spend, not after it: a full volume used to
+    # surface as a 502 from the middle of a paid render (2026-08-07).
+    _require_room("this re-render")
     d = _spec_board_dir(spec_id)
     out_path = d / f"{new_id}.png"
     notes = ""
@@ -1607,6 +1622,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
 
     cand_id = store.next_counter("cand_counter", "CAND")
 
+    # Refuse before the spend, not after it: a full volume used to
+    # surface as a 502 from the middle of a paid render (2026-08-07).
+    _require_room("this take")
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
     if provider == "mock":
@@ -1852,6 +1870,9 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
     ])
 
     cand_id = _new_candidate_id()
+    # Refuse before the spend, not after it: a full volume used to
+    # surface as a 502 from the middle of a paid render (2026-08-07).
+    _require_room("this study")
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
     if provider == "mock":

@@ -288,10 +288,19 @@ function esc(s) {
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// Role family name, tolerant of legacy underscore-sanitized records
-// ("CHARACTER_LIKENESS_—_JOHN" → "CHARACTER_LIKENESS").
+// Role family name, tolerant of legacy underscore-sanitized records.
+// The em-dash split handles "CHARACTER_LIKENESS_—_JOHN"; the family-prefix
+// pass handles the fully sanitized form "CHARACTER_LIKENESS_JOHN", where
+// the dash itself was replaced. Without it a person's name became a role
+// FAMILY and got enumerated as a kind of reference (user 2026-08-07:
+// "Every group in the library is … character likeness john").
 function roleHead(role) {
-  return String(role || "").split("—")[0].replace(/[\s_-]+$/, "").trim().toUpperCase();
+  const raw = String(role || "").split("—")[0].replace(/[\s_-]+$/, "").trim().toUpperCase();
+  const fams = (typeof ROLE_FAMILIES !== "undefined" ? ROLE_FAMILIES : [])
+    .map(f => f.head)
+    .filter(h => raw === h || raw.startsWith(h + "_"))
+    .sort((a, b) => b.length - a.length);
+  return fams[0] || raw;
 }
 
 // Roles auto-attached to every render — the four-anchor shelf (ruled
@@ -2283,9 +2292,47 @@ async function renderProjectsView() {
 
 /* --------------------------------------------------------------- settings */
 
+/* What the volume holds (user 2026-08-07, after a studio filled its disk
+   and a paid render died mid-write). Two facts in two voices: the phase
+   in prose, the measurements in Courier. --hold when it is getting tight,
+   --bad when a render would already be refused; otherwise no colour at
+   all, because a healthy disk is not news. */
+async function renderStorage() {
+  const host = $("#storage-body");
+  if (!host) return;
+  let s;
+  try { s = await api("/api/storage"); }
+  catch { host.innerHTML = '<p class="mini">storage could not be read</p>'; return; }
+  if (!s.total) {
+    host.innerHTML = '<p class="mini">this install’s volume cannot be measured</p>';
+    $("#storage-cond").textContent = "";
+    return;
+  }
+  const mb = n => n >= (1 << 30) ? `${(n / (1 << 30)).toFixed(1)} GB`
+    : n >= (1 << 20) ? `${Math.round(n / (1 << 20))} MB`
+    : `${Math.max(1, Math.round(n / (1 << 10)))} KB`;
+  const pct = Math.min(100, Math.round((s.used / s.total) * 100));
+  // A render is refused below this — the same number the server guards on.
+  const tight = s.free < 350 * 1024 * 1024;
+  const state = tight ? "bad" : s.low ? "hold" : "";
+  $("#storage-cond").textContent = tight
+    ? "A RENDER WOULD BE REFUSED — FREE SPACE FIRST"
+    : s.low ? "GETTING TIGHT" : "";
+  host.innerHTML = `
+    <div class="stor-bar ${state}"><i style="width:${pct}%"></i></div>
+    <p class="stor-line mono">${mb(s.free)} FREE OF ${mb(s.total)} · ${pct}% USED</p>
+    <div class="stor-rows">${(s.breakdown || []).map(r => `
+      <div class="stor-row"><span>${esc(r.kind)}</span>
+        <span class="mono">${mb(r.bytes)}</span></div>`).join("")
+      || '<p class="mini">nothing stored yet</p>'}</div>
+    <p class="mini">Takes are never upscaled, so a 4K take is 20–40 MB and every
+    one is kept until it is rejected and deleted. Reject a take, then Delete,
+    to reclaim its space.</p>`;
+}
+
 async function renderSettings() {
   useTemplate("tpl-settings");
-  $("#goto-productions").onclick = () => showView("projects");
+  renderStorage();
 
   const rememberedTab0 = uiGet("settingsTab", "");
   const rememberedTab = rememberedTab0 === "debug" && !_debugTools
@@ -2339,9 +2386,6 @@ async function renderSettings() {
     || cxRows.some(r => r.status !== "NOT_CONNECTED"));
   $("#settings-firstrun").classList.toggle("hidden", anyCred);
   $("#settings-steady").classList.toggle("hidden", !anyCred);
-  // MOCK_PARITY D7: first-run users have no productions to manage — the
-  // PRODUCTIONS MOVED pointer renders only in the configured state.
-  $(".subnav-end")?.classList.toggle("hidden", !anyCred);
   if (!anyCred) renderFirstRun();
 
   function renderFirstRun() {
@@ -6661,18 +6705,19 @@ async function renderBoardPanels(specId) {
           // so before a 4K spend — this is a quality warning.
           if (!groupList.length || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
             return "";
-          const kindName = { CHARACTER_LIKENESS: "cast likeness",
-                             VEHICLE_GEOMETRY: "vehicle reference",
-                             PROP_REFERENCE: "prop reference" };
-          const kinds = [...new Set(groupList.map(g =>
-            kindName[g.head] || g.head.replaceAll("_", " ").toLowerCase()))];
-          const kindPhrase = kinds.length === 1 ? `a ${kinds[0]}`
-            : `a ${kinds.slice(0, -1).join(", ")} or ${kinds.at(-1)}`;
+          // Name what actually went unmatched. The old copy hardcoded
+          // "this panel requires places and objects", which told the user
+          // nothing they could act on (2026-08-07); the objects ARE the
+          // actionable fact — rename one, or tick a group below.
+          const shown = reqObjs.slice(0, 4).map(o => `"${esc(o)}"`).join(", ");
+          const more = reqObjs.length > 4 ? ` (+${reqObjs.length - 4} more)` : "";
           return `<div class="nomatch">
             <b class="mono">NO MATCHES</b>
-            <p>Every group in the library is ${esc(kindPhrase)}; this panel
-            requires places and objects. It will render from text and style
-            alone.</p></div>`;
+            <p>${reqObjs.length
+              ? `Nothing in the library matches what this panel requires: ${shown}${more}.`
+              : "This panel lists no required objects, so nothing could be matched."}
+            It will render from text and style alone — tick a group below to
+            attach one anyway.</p></div>`;
         })()}
         <div class="ref-groups">${groupList.map(g => {
             const matched = reqObjs.some(o => matches(o, g.name));
