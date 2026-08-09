@@ -339,6 +339,17 @@ Then `scripts/update_tenants.sh --status` is a read-only probe (lists each
 studio's recent deploys, triggers nothing) and `scripts/update_tenants.sh`
 fires the fleet update. A wrong/absent token 404s, matching the gate.
 
+**Watch it land — standard practice, don't eyeball it.** The update only
+TRIGGERS the rebuilds; studios keep serving the old build until each new
+image finishes (~minutes, graceful drain). After firing the update, run
+`scripts/watch_tenants.py` as a listener: it discovers the ACTIVE studios,
+polls each one's Railway build status AND its `/api/healthz`, and exits when
+every studio serves the target commit (default: current git HEAD), or early
+if a build FAILS. Exit 0 = all live, 2 = a build failed (check the workspace
+row's `detail`; the next update run retries it), 1 = timeout. `--once` does a
+single pass. Launch it in the background and report when it returns — a
+studio that never flips means the build died, not that the release shipped.
+
 ## Local development
 
 ```
