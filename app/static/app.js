@@ -7371,16 +7371,21 @@ async function renderBoardPanels(specId) {
         };
         // Wrapped content is not overflow — once flex-wrap absorbs the
         // row, scrollWidth never exceeds clientWidth. So the fold's real
-        // test is "did any zone leave the first line": expand, read the
-        // zones' offsetTops, fold if they differ. rAF keeps the mutation
-        // out of the observer's own frame (the loop warning).
+        // test is "did any zone leave the first line" — and with
+        // align-items:center that means comparing vertical CENTERS, not
+        // offsetTops: same-line items of different heights (the 60px
+        // Approve zone, 37px text zones, the 0px spacer) have different
+        // tops but identical centers, and the offsetTop version folded
+        // DERIVE to ⋯ with a bar's worth of room (user 2026-08-08). rAF
+        // keeps the mutation out of the observer's own frame.
         const fit = () => requestAnimationFrame(() => {
           closeMenu();
           bar.classList.remove("derive-collapsed");
-          const tops = new Set([...bar.children]
+          const centers = [...bar.children]
             .filter(z => z.offsetParent !== null)
-            .map(z => z.offsetTop));
-          if (tops.size > 1 || bar.scrollWidth > bar.clientWidth + 1)
+            .map(z => z.offsetTop + z.offsetHeight / 2);
+          const spread = Math.max(...centers) - Math.min(...centers);
+          if (spread > 8 || bar.scrollWidth > bar.clientWidth + 1)
             bar.classList.add("derive-collapsed");
         });
         new ResizeObserver(fit).observe(bar);

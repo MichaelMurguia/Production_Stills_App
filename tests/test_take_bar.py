@@ -79,10 +79,14 @@ class TheFold(unittest.TestCase):
         the fold never firing). The real test is whether any zone left the
         first line."""
         i = JS.index("// 17a — a group folds before the row breaks")
-        block = JS[i:i + 2400]
+        block = JS[i:i + 2900]
         self.assertIn("new ResizeObserver(fit).observe(bar)", block)
         self.assertIn('bar.classList.add("derive-collapsed")', block)
-        self.assertIn("z.offsetTop", block, "fold on wrap, not only overflow")
+        # Same-line items of different heights have different offsetTops
+        # under align-items:center — the tops version folded DERIVE with a
+        # bar's worth of room. Only equal CENTERS prove one line.
+        self.assertIn("z.offsetTop + z.offsetHeight / 2", block,
+                      "fold on wrap means comparing centers, not tops")
         self.assertIn("requestAnimationFrame", block,
                       "mutation leaves the observer's frame")
 
