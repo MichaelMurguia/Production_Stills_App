@@ -27,6 +27,7 @@ Hard boundary: no imports across the two; nothing from `data/` or
 | `wizard.py` | Scene Scan (schema-forced JSON), re-run merge semantics (confirmed survives by name; new arrives PROPOSED), faction self-check, bible drafting (`_bible_instructions` — DIRECTOR'S ANSWERS ARE BINDING) |
 | `autofill.py` | Breakdown research pass: `_screenplay_bytes()` prefers the stored extraction (text/plain, cache-friendly prefix); `_instructions` carries the evidence-class rules; JSON parse + spec normalization |
 | `generate.py` | Engines. `PROVIDERS` (gemini / openai / openai-chat / custom); prompt compilation (`render_context` via `bible.py` selective injection; raises when no rendering language — no template fallback); renders, repairs (region composite — outside-mask pixels carried over unchanged), re-render (full-size re-performance), style probes, lessons; `_render_ready()` compose-time transcode backstop; `_wrap_engine_error` classifies content-policy refusals |
+| `imaging.py` | Display-tier image derivatives (`VARIANTS`: `thumb`≤512 / `md`≤1600 WebP + `full`): one `variant_path` builder — lazy, mtime-guarded, never upscales, falls back to source. Display-only (never a render/size-gate input). `generate` & `store` resolve candidate/reference tiers through it and warm them at write/intake. See `docs/IMAGE_SERVING.md` |
 | `bible.py` | Art Direction Bible parsing: `##` design languages, `### Environments`, atmospheres; `render_context(haystack, languages, lessons, environments)` builds the per-panel prompt block; `sections_catalog()` feeds the sheet scope UI |
 | `assemble.py` | Board math + composition: `_variant_rects` (aspect-first default: justified rows, aspect > scale > crop; grid; hero; allocation), `slot_map()` (same geometry + verdicts, incl. TOO_SMALL — the no-upscale rule made visible), `assemble()` (records `rects` + `panels_used` for the structural view AND draws the 4K composite with `_type_scale` typography) |
 | `backup.py` | One-zip-per-production backup (never `settings.json`), zip-slip-guarded restore that always creates a NEW production, `days_since_backup` care data |
@@ -60,9 +61,9 @@ every selector including modals).
 <base>/data/
   screenplay/<file> + _extracted.txt     app_state.json (counters, bible_rev)
   interview.json                         wizard_analysis.json
-  references/{originals,thumbs,quarantine,references.json}
+  references/{originals,thumbs/<REF>.{thumb,md}.webp,quarantine,references.json}
   subjects.json                          specs/*.json + locks.json
-  boards/<SPEC_ID>/CAND-*.{json,png} + BOARD-*.{json,png}
+  boards/<SPEC_ID>/CAND-*.{json,png,thumb.webp,md.webp} + BOARD-*.{same}
   activity_log.jsonl                     rejection_lessons.json
 <base>/context/01_ART_DIRECTION_BIBLE.md
 <base>/project_state/ (approval log, rejection history)
@@ -108,3 +109,6 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   `stage_summary` + DESIGN_SYSTEM entry (band numbering is documented).
 - **New reference role**: `store.SUGGESTED_ROLES` (+ jurisdiction copy);
   style vs subject kind decides auto-attach.
+- **New image display site**: request the tier the slot needs —
+  `?size=thumb` (≤256px), `?size=md` (mid pane), or full (zoom/pixel edit).
+  See `docs/IMAGE_SERVING.md`.

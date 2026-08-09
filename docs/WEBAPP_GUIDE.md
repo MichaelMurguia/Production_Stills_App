@@ -289,6 +289,10 @@ stated 404s, the off-railway guard, and request bodies are all covered.
 - Secrets only in Railway variables / local shells. `data/settings.json`
   is the *product's* key store and has nothing to do with the storefront.
 - The release zip never contains `data/` or `project_state/`.
+- Marketing stills serve responsive WebP derivatives (`scripts/build_images.py`
+  → `srcset`), never the raw multi-MB PNGs; the social card is a JPEG. Rerun the
+  build and commit `static/img/web/` when a source changes. See
+  `docs/IMAGE_SERVING.md`; `test_store_images.py` guards it.
 
 **Both:** update the relevant doc (`WEBAPP_GUIDE`, `DEPLOYMENT`,
 `DESIGN_SYSTEM`) in the same commit as the change it describes.
