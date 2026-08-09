@@ -329,6 +329,16 @@ It rebuilds every ACTIVE studio from repo head via
 workspace row's `detail` and retry on the next run). Verify with any
 tenant's `/api/healthz` — `rev` must match the released commit.
 
+**Repeatable helper:** `scripts/update_tenants.sh` runs the call with the
+token held OUTSIDE the repo — it reads `$ADMIN_EXPORT_TOKEN`, else the file
+`~/.screenboard_admin_token` (override with `$SCREENBOARD_ADMIN_TOKEN_FILE`),
+and sends it as `Authorization: Bearer` (out of access logs), never printing
+it. Set the token once, in your own terminal:
+`printf '%s' '<token>' > ~/.screenboard_admin_token && chmod 600 ~/.screenboard_admin_token`.
+Then `scripts/update_tenants.sh --status` is a read-only probe (lists each
+studio's recent deploys, triggers nothing) and `scripts/update_tenants.sh`
+fires the fleet update. A wrong/absent token 404s, matching the gate.
+
 ## Local development
 
 ```
