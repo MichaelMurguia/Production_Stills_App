@@ -867,8 +867,8 @@ def api_delete_reference(ref_id: str) -> dict:
 
 
 @app.get("/api/references/{ref_id}/image")
-def api_reference_image(ref_id: str, thumb: bool = False):
-    p = store.reference_image_path(ref_id, thumb=thumb)
+def api_reference_image(ref_id: str, size: str = "full", thumb: bool = False):
+    p = store.reference_image_path(ref_id, size=size, thumb=thumb)
     if p is None:
         raise HTTPException(404, f"no image for {ref_id}")
     return FileResponse(p)
@@ -1615,10 +1615,9 @@ def api_purge_rejected(spec_id: str) -> dict:
 
 
 @app.get("/api/specs/{spec_id}/candidates/{cand_id}/image")
-def api_candidate_image(spec_id: str, cand_id: str, thumb: bool = False):
+def api_candidate_image(spec_id: str, cand_id: str, size: str = "full", thumb: bool = False):
     try:
-        p = (generate.candidate_thumb_path(spec_id, cand_id) if thumb
-             else generate.candidate_image_path(spec_id, cand_id))
+        p = generate.candidate_variant_path(spec_id, cand_id, "thumb" if thumb else size)
     except KeyError as e:  # traversal-shaped ids → the same 404 as unknown ids
         raise _err(e)
     if p is None:

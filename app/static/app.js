@@ -3637,7 +3637,7 @@ async function renderWizard() {
       const refId = (hero || ordered[0])?.ref_id || row.single?.id || "";
       el.innerHTML = `
         ${row.single
-          ? `<div class="sw-ramp pal-plate"><img src="/api/references/${esc(row.single.id)}/image?thumb=1" alt=""></div>`
+          ? `<div class="sw-ramp pal-plate"><img src="/api/references/${esc(row.single.id)}/image?size=thumb" alt=""></div>`
           : `<div class="sw-ramp">${ordered.map(sw =>
               `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>`}
         <p class="sw-ramp-label">
@@ -3720,7 +3720,7 @@ async function renderWizard() {
         // No use-in-draft checkbox (user ruling 2026-08-05): if an anchor
         // is in the column, it is used — inclusion IS the selection.
         item.innerHTML = `
-          <img src="/api/references/${esc(r.id)}/image?thumb=1" loading="lazy" alt="${esc(r.id)}">
+          <img src="/api/references/${esc(r.id)}/image?size=thumb" loading="lazy" alt="${esc(r.id)}">
           <span class="meta mini">${esc(r.id)}${r.notes && r.role === "COLOR_PALETTE"
             ? `<span class="wiz-thumb-note">${esc(r.notes.split(" · ").slice(0, 2).join(" · "))}</span>` : ""}
           </span>
@@ -4754,7 +4754,7 @@ function buildRefCard(r, lbItems, i) {
       ? `<div class="meta">AUTO-ATTACHED · ALL RENDERS</div>`
       : (r.used_in ? `<div class="meta">USED IN ${r.used_in} RENDER${r.used_in > 1 ? "S" : ""}</div>` : "");
   card.innerHTML = `
-    <img src="/api/references/${r.id}/image?thumb=true" alt="${esc(r.id)}" loading="lazy">
+    <img src="/api/references/${r.id}/image?size=thumb" alt="${esc(r.id)}" loading="lazy">
     <div class="body">
       <div><span class="badge ${r.status}">${r.status}</span> <b>${esc(r.id)}</b></div>
       <div class="role">${esc(r.role)}</div>
@@ -4859,7 +4859,7 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
   imgs.forEach((r, i) => {
     const wrap = document.createElement("span");
     wrap.className = "subj-img";
-    wrap.innerHTML = `<img src="/api/references/${esc(r.id)}/image?thumb=1" loading="lazy" alt="${esc(r.id)}">
+    wrap.innerHTML = `<img src="/api/references/${esc(r.id)}/image?size=thumb" loading="lazy" alt="${esc(r.id)}">
       <button title="Permanently delete ${esc(r.id)}">×</button>`;
     $("img", wrap).onclick = () => openLightbox(lbItems, i);
     $("button", wrap).onclick = async () => {
@@ -6470,7 +6470,7 @@ async function promoteDialog(specId, c) {
   } catch (err) { toast(err.message, true); }
 }
 
-function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = null) {
+function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = null, size = "thumb") {
   const cc = document.createElement("div");
   cc.className = `ref-card ${c.status === "REJECTED" ? "REJECTED" : ""}`;
   const label = c.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : c.status;
@@ -6478,7 +6478,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     ? `${c.width}×${c.height} 4K board${c.layout_variant && c.layout_variant !== "default" ? ` · ${esc(c.layout_variant)} layout` : ""} · panels: ${esc(Object.values(c.panels_used || {}).join(", "))}`
     : `${c.width}×${c.height} · ${esc(c.image_size || "")} ${esc(c.aspect_ratio || "")} · ${esc(c.model || "")} · refs: ${esc((c.references || []).map(r => r.id).join(", ") || "none")}`;
   cc.innerHTML = `
-    <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="${esc(c.candidate_id)}">
+    <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?size=${size}" loading="lazy" alt="${esc(c.candidate_id)}">
     <div class="body">
       <div><span class="badge ${c.status}">${esc(label)}</span> <b>${esc(c.candidate_id)}</b></div>
       <div class="meta">${meta}</div>
@@ -6735,7 +6735,7 @@ async function renderBoardPanels(specId) {
     // spec is the content); no hatched placeholder, no "nothing here" line.
     const stagedHtml = !staged ? "" : `
       <div class="stage-shot" title="Click to open at full size">
-        <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image" alt="${esc(staged.candidate_id)}" data-f="shot-img">
+        <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image?size=md" alt="${esc(staged.candidate_id)}" data-f="shot-img">
         <!-- T1 (TAKE_ACTIONS): state and identity ride the image so the
              row beneath carries verbs only and can fit. A chip swallows
              its own click; the picture opens the lightbox. -->
@@ -6794,7 +6794,7 @@ async function renderBoardPanels(specId) {
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
-              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?thumb=1" loading="lazy" alt="">
+              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?size=thumb" loading="lazy" alt="">
               <span class="take-cap">${esc(c.candidate_id)}${word ? ` · ${word}` : ""}${pr ? " · REF" : ""}</span>
             </button>`;
           }).join("")}
@@ -7489,7 +7489,7 @@ async function renderBoardPanels(specId) {
   };
   const latestThumb = pid => {
     const last = candidates.filter(c => c.panel_id === pid).slice(-1)[0];
-    return last ? `<img src="/api/specs/${specId}/candidates/${last.candidate_id}/image?thumb=1" loading="lazy" alt="">` : "";
+    return last ? `<img src="/api/specs/${specId}/candidates/${last.candidate_id}/image?size=thumb" loading="lazy" alt="">` : "";
   };
 
   const rail = document.createElement("aside");
@@ -7582,7 +7582,7 @@ async function renderBoardPanels(specId) {
           </div>` : ""}
         ${allRefs.map(r => `
           <div class="anchor-row" title="${esc(r.role)}">
-            <span class="rail-thumb"><img src="/api/references/${esc(r.id)}/image?thumb=true" loading="lazy" alt="" onerror="this.remove()"></span>
+            <span class="rail-thumb"><img src="/api/references/${esc(r.id)}/image?size=thumb" loading="lazy" alt="" onerror="this.remove()"></span>
             <span class="anchor-meta"><b>${esc(roleHead(r.role))}</b><i>${esc(r.id)}</i></span>
           </div>`).join("")}
       </div>
@@ -7819,7 +7819,7 @@ async function renderAssembly() {
           </div>
           ${Object.entries(b.rects).map(([pid, r]) => `
             <div class="bf-slot" style="left:${(r[0] / b.width * 100).toFixed(2)}%;top:${(r[1] / b.height * 100).toFixed(2)}%;width:${(r[2] / b.width * 100).toFixed(2)}%;height:${(r[3] / b.height * 100).toFixed(2)}%">
-              ${takeOf(pid) ? `<img src="/api/specs/${sid}/candidates/${esc(takeOf(pid))}/image" loading="lazy" alt="${esc(pid)}" data-bfp="${esc(pid)}" title="Click for the full-sized, uncropped take (${esc(takeOf(pid))})">` : ""}
+              ${takeOf(pid) ? `<img src="/api/specs/${sid}/candidates/${esc(takeOf(pid))}/image?size=md" loading="lazy" alt="${esc(pid)}" data-bfp="${esc(pid)}" title="Click for the full-sized, uncropped take (${esc(takeOf(pid))})">` : ""}
               <span class="bf-pid mono">${esc(pid)}</span>
             </div>`).join("")}
         </div>
@@ -7856,7 +7856,7 @@ async function renderAssembly() {
       });
     } else {
       // Legacy boards (pre-structural) keep the canonical composite card.
-      const card = renderCard(b._spec.specification_id, b, () => renderAssembly(), lbItems, i);
+      const card = renderCard(b._spec.specification_id, b, () => renderAssembly(), lbItems, i, null, "md");
       card.classList.add("board-solo");
       bh.append(card);
     }

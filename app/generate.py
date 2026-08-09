@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from . import bible, mockflow, paths, storage, store
+from . import bible, imaging, mockflow, paths, storage, store
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -765,34 +765,37 @@ def candidate_image_path(spec_id: str, cand_id: str) -> Path | None:
     return p if p.exists() else None
 
 
-# The takes strip and the panel rail show dozens of renders at thumbnail
-# size. A take is native 4K (20–40 MB), so serving the full PNG for each
-# made the panels page crawl on load (user 2026-08-09). This is a small
-# cached JPEG derived from the PNG on first request — display-only: it
-# never feeds a render or a size gate, and the size check still reads the
-# record's real dimensions.
-CANDIDATE_THUMB_SIZE = 512
+# A take is native 4K (20–40 MB), and the app shows it almost everywhere at a
+# fraction of that size, so serving the full PNG for every strip/card/hero made
+# pages crawl on load (user 2026-08-09). Display tiers (see app.imaging) serve a
+# right-sized WebP instead — display-only: never feeds a render or a size gate
+# (that still reads the record's real dimensions).
 
 
-def candidate_thumb_path(spec_id: str, cand_id: str) -> Path | None:
-    """A cached thumbnail beside the full render, made on demand. Falls
-    back to the full image rather than 404 if the thumb cannot be built,
-    and rebuilds when the source PNG is newer than the cached thumb."""
+def _candidate_variant_cache(full: Path, size: str) -> Path:
+    return full.with_name(f"{full.stem}.{size}.webp")
+
+
+def candidate_variant_path(spec_id: str, cand_id: str, size: str = "full") -> Path | None:
+    """Resolve a candidate render at a display tier. `size='full'` is the raw
+    PNG; a tier name in `imaging.VARIANTS` is a cached WebP beside it, built on
+    demand and falling back to the full image rather than 404."""
     full = candidate_image_path(spec_id, cand_id)
-    if full is None:
-        return None
-    thumb = full.with_name(f"{full.stem}.thumb.jpg")
-    if thumb.exists() and thumb.stat().st_mtime >= full.stat().st_mtime:
-        return thumb
-    try:
-        from PIL import Image
-        with Image.open(full) as im:
-            im = im.convert("RGB")
-            im.thumbnail((CANDIDATE_THUMB_SIZE, CANDIDATE_THUMB_SIZE))
-            im.save(thumb, "JPEG", quality=85)
-    except Exception:
+    if full is None or size == "full" or size not in imaging.VARIANTS:
         return full
-    return thumb
+    edge, quality = imaging.VARIANTS[size]
+    return imaging.variant_path(full, _candidate_variant_cache(full, size), edge, quality)
+
+
+def warm_candidate_variants(spec_id: str, cand_id: str) -> None:
+    """Pre-build every display tier for a freshly-written render, so the first
+    view is already fast. Best-effort; the lazy path is the backstop."""
+    full = candidate_image_path(spec_id, cand_id)
+    if full is not None:
+        try:
+            imaging.warm(full, lambda s: _candidate_variant_cache(full, s))
+        except Exception:
+            pass
 
 
 def _render_ready(p: Path) -> Path:
@@ -1500,6 +1503,7 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     }
     (d / f"{new_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    warm_candidate_variants(spec_id, new_id)
     return record
 
 
@@ -1635,6 +1639,7 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     }
     (d / f"{new_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    warm_candidate_variants(spec_id, new_id)
     return record
 
 
@@ -1724,6 +1729,7 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         record["render_prompt"] = override
     (d / f"{cand_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    warm_candidate_variants(spec_id, cand_id)  # first view is already fast
     return record
 
 
@@ -1798,7 +1804,9 @@ def delete_candidate(spec_id: str, cand_id: str) -> dict:
 
     d = paths.BOARDS_DIR / spec_id
     (d / f"{cand_id}.png").unlink(missing_ok=True)
-    (d / f"{cand_id}.thumb.jpg").unlink(missing_ok=True)
+    for size in imaging.VARIANTS:  # display derivatives
+        (d / f"{cand_id}.{size}.webp").unlink(missing_ok=True)
+    (d / f"{cand_id}.thumb.jpg").unlink(missing_ok=True)  # legacy pre-WebP thumb
     (d / f"{cand_id}.json").unlink(missing_ok=True)
     return {"deleted": cand_id}
 

@@ -12,10 +12,9 @@ from typing import Any
 
 from PIL import Image
 
-from . import paths
+from . import imaging, paths
 
 REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
-THUMB_SIZE = 480
 
 # Roles suggested by context/02_CANON_AND_REFERENCE_RULES.md; free-form roles
 # are also allowed — these seed the UI dropdown.
@@ -375,13 +374,16 @@ def get_reference(ref_id: str) -> dict | None:
     return next((r for r in _load_refs() if r["id"] == ref_id), None)
 
 
-def _make_thumb(src: Path, ref_id: str) -> str:
-    thumb_name = f"{ref_id}.jpg"
-    with Image.open(src) as im:
-        im = im.convert("RGB")
-        im.thumbnail((THUMB_SIZE, THUMB_SIZE))
-        im.save(paths.REF_THUMBS / thumb_name, "JPEG", quality=88)
-    return thumb_name
+def _ref_variant_cache(ref_id: str, size: str) -> Path:
+    return paths.REF_THUMBS / f"{ref_id}.{size}.webp"
+
+
+def _warm_reference_variants(src: Path, ref_id: str) -> str:
+    """Build every display tier (see app.imaging) for a reference at intake, so
+    the library grid never waits on a first-request downscale. Returns the thumb
+    filename for the record (back-compat with the `thumb` field)."""
+    imaging.warm(src, lambda s: _ref_variant_cache(ref_id, s))
+    return f"{ref_id}.thumb.webp"
 
 
 # The engines accept exactly these (OpenAI and Gemini alike) — anything
@@ -427,7 +429,7 @@ def add_reference(original_name: str, content: bytes, role: str,
     dest = paths.REF_ORIGINALS / file_name
     dest.write_bytes(content)
     try:
-        thumb = _make_thumb(dest, ref_id)
+        thumb = _warm_reference_variants(dest, ref_id)
     except Exception:
         dest.unlink(missing_ok=True)
         raise ValueError(f"{original_name} is not a readable image")
@@ -491,7 +493,7 @@ def replace_reference_image(ref_id: str, content: bytes,
         if old.name != dest.name:
             old.unlink(missing_ok=True)
         r["file"] = dest.name
-        r["thumb"] = _make_thumb(dest, ref_id)
+        r["thumb"] = _warm_reference_variants(dest, ref_id)
         r["sha256"] = sha256_file(dest)
         r["updated_at"] = utcnow()
         _save_refs(refs)
@@ -549,26 +551,32 @@ def set_reference_status(ref_id: str, status: str, reason: str = "") -> dict:
     raise KeyError(ref_id)
 
 
-def reference_image_path(ref_id: str, thumb: bool = False,
+def reference_image_path(ref_id: str, size: str = "full", thumb: bool = False,
                          include_quarantine: bool = False) -> Path | None:
-    """Resolve a reference's image. Quarantined (REJECTED) files resolve
-    only when the record itself says REJECTED or the caller explicitly
-    asks — the physical quarantine must hold even if index and disk ever
-    disagree; generation paths must never attach a rejected file."""
+    """Resolve a reference's image at a display tier. `size='full'` is the raw
+    original; a tier in `imaging.VARIANTS` is a cached WebP derived from it.
+    `thumb=True` is a back-compat alias for `size='thumb'`.
+
+    Quarantined (REJECTED) files resolve only when the record itself says
+    REJECTED or the caller explicitly asks — the physical quarantine must hold
+    even if index and disk ever disagree; generation paths must never attach a
+    rejected file (they call with the default `size='full'`)."""
+    if thumb:
+        size = "thumb"
     r = get_reference(ref_id)
     if not r:
         return None
-    if thumb:
-        p = paths.REF_THUMBS / r["thumb"]
-        return p if p.exists() else None
-    p = paths.REF_ORIGINALS / r["file"]
-    if p.exists():
-        return p
-    if include_quarantine or r.get("status") == "REJECTED":
+    src = paths.REF_ORIGINALS / r["file"]
+    if not src.exists():
         q = paths.REF_QUARANTINE / r["file"]
-        if q.exists():
-            return q
-    return None
+        if (include_quarantine or r.get("status") == "REJECTED") and q.exists():
+            src = q
+        else:
+            return None
+    if size == "full" or size not in imaging.VARIANTS:
+        return src
+    edge, quality = imaging.VARIANTS[size]
+    return imaging.variant_path(src, _ref_variant_cache(ref_id, size), edge, quality)
 
 
 # --------------------------------------------------------------------- specs
