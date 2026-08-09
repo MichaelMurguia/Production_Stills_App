@@ -6794,7 +6794,7 @@ async function renderBoardPanels(specId) {
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
-              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image" loading="lazy" alt="">
+              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?thumb=1" loading="lazy" alt="">
               <span class="take-cap">${esc(c.candidate_id)}${word ? ` · ${word}` : ""}${pr ? " · REF" : ""}</span>
             </button>`;
           }).join("")}
@@ -7489,7 +7489,7 @@ async function renderBoardPanels(specId) {
   };
   const latestThumb = pid => {
     const last = candidates.filter(c => c.panel_id === pid).slice(-1)[0];
-    return last ? `<img src="/api/specs/${specId}/candidates/${last.candidate_id}/image" loading="lazy" alt="">` : "";
+    return last ? `<img src="/api/specs/${specId}/candidates/${last.candidate_id}/image?thumb=1" loading="lazy" alt="">` : "";
   };
 
   const rail = document.createElement("aside");

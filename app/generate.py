@@ -765,6 +765,36 @@ def candidate_image_path(spec_id: str, cand_id: str) -> Path | None:
     return p if p.exists() else None
 
 
+# The takes strip and the panel rail show dozens of renders at thumbnail
+# size. A take is native 4K (20–40 MB), so serving the full PNG for each
+# made the panels page crawl on load (user 2026-08-09). This is a small
+# cached JPEG derived from the PNG on first request — display-only: it
+# never feeds a render or a size gate, and the size check still reads the
+# record's real dimensions.
+CANDIDATE_THUMB_SIZE = 512
+
+
+def candidate_thumb_path(spec_id: str, cand_id: str) -> Path | None:
+    """A cached thumbnail beside the full render, made on demand. Falls
+    back to the full image rather than 404 if the thumb cannot be built,
+    and rebuilds when the source PNG is newer than the cached thumb."""
+    full = candidate_image_path(spec_id, cand_id)
+    if full is None:
+        return None
+    thumb = full.with_name(f"{full.stem}.thumb.jpg")
+    if thumb.exists() and thumb.stat().st_mtime >= full.stat().st_mtime:
+        return thumb
+    try:
+        from PIL import Image
+        with Image.open(full) as im:
+            im = im.convert("RGB")
+            im.thumbnail((CANDIDATE_THUMB_SIZE, CANDIDATE_THUMB_SIZE))
+            im.save(thumb, "JPEG", quality=85)
+    except Exception:
+        return full
+    return thumb
+
+
 def _render_ready(p: Path) -> Path:
     """Compose-time backstop for legacy library files: sniff the ACTUAL
     format and transcode anything the engines refuse (AVIF 400'd a live
@@ -1768,6 +1798,7 @@ def delete_candidate(spec_id: str, cand_id: str) -> dict:
 
     d = paths.BOARDS_DIR / spec_id
     (d / f"{cand_id}.png").unlink(missing_ok=True)
+    (d / f"{cand_id}.thumb.jpg").unlink(missing_ok=True)
     (d / f"{cand_id}.json").unlink(missing_ok=True)
     return {"deleted": cand_id}
 

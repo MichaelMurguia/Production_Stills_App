@@ -1615,9 +1615,10 @@ def api_purge_rejected(spec_id: str) -> dict:
 
 
 @app.get("/api/specs/{spec_id}/candidates/{cand_id}/image")
-def api_candidate_image(spec_id: str, cand_id: str):
+def api_candidate_image(spec_id: str, cand_id: str, thumb: bool = False):
     try:
-        p = generate.candidate_image_path(spec_id, cand_id)
+        p = (generate.candidate_thumb_path(spec_id, cand_id) if thumb
+             else generate.candidate_image_path(spec_id, cand_id))
     except KeyError as e:  # traversal-shaped ids → the same 404 as unknown ids
         raise _err(e)
     if p is None:
