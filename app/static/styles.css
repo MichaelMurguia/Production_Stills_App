@@ -1681,6 +1681,16 @@ details.meta pre {
 .act-derive-menu { display: flex; flex-direction: column;
   align-items: flex-start; gap: 10px; padding: 12px 16px; }
 
+/* UNCANONIZED — 2026-08-08 — editable panel brief. The purpose line gains
+   its verb (canon: the verb sits with its object) and swaps in place for a
+   textarea; Save is ghost — amber stays on the card's verdict. Existing
+   tokens only. */
+.brief-row { display: flex; align-items: baseline; gap: 12px; }
+.brief-row .mini { margin: 0; flex: 1; }
+.brief-editor { margin: 4px 0 8px; }
+.brief-editor textarea { width: 100%; }
+.brief-acts { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+
 /* T1: the tags themselves — legible on any take, on their own ground. */
 .stage-shot { position: relative; }
 .shot-tag { position: absolute; background: rgba(11, 12, 14, .82);

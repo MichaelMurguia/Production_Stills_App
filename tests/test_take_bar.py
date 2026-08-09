@@ -98,5 +98,36 @@ class TheFold(unittest.TestCase):
         self.assertIn('zone.classList.add("hidden")', JS[i:i + 1800])
 
 
+class TheSelectionIsRemembered(unittest.TestCase):
+    """Reference selection carries generation to generation (user
+    2026-08-08). The memory is the take record itself — every take stores
+    which references it attached — so it survives reloads and devices
+    with no new storage, and an emptied selection is remembered too."""
+
+    def block(self) -> str:
+        i = JS.index("buildWorkbench.isChecked")
+        return JS[i - 900:i + 900]
+
+    def test_the_newest_take_is_the_memory(self):
+        b = self.block()
+        self.assertIn("const lastTake = panelCands[0]", b)
+        self.assertIn("(lastTake?.references || []).map(r => r.id)", b)
+        self.assertIn("g.ids.some(id => lastIds.has(id))", b)
+
+    def test_the_matcher_is_only_the_first_take_default(self):
+        b = self.block()
+        self.assertIn("lastTake", b)
+        self.assertIn("reqObjs.some(o => matches(o, g.name))", b)
+
+    def test_the_hint_says_which_rule_is_in_force(self):
+        self.assertIn("rode the previous take and stay selected", JS)
+        self.assertIn("match this panel's required objects and are pre-checked", JS)
+
+    def test_no_match_warning_never_second_guesses_a_remembered_choice(self):
+        i = JS.index("P5: four unchecked boxes")
+        self.assertIn("panelCands.length", JS[i:i + 700],
+                      "an empty remembered selection is a decision, not a gap")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1394,6 +1394,17 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
     return {"prompt": generate.compile_panel_prompt(spec, panel, ref_records)}
 
 
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/purpose")
+def api_amend_panel_purpose(spec_id: str, panel_id: str, body: dict) -> dict:
+    """The workbench's between-takes brief edit — journaled, lock re-stamped;
+    refused only when this panel already has approved canon output."""
+    try:
+        return store.amend_panel_purpose(
+            spec_id, panel_id, str(body.get("purpose", "")))
+    except (KeyError, PermissionError, ValueError) as e:
+        raise _err(e)
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/generate")
 async def api_generate_panel(spec_id: str, panel_id: str, body: dict) -> dict:
     try:

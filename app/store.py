@@ -802,6 +802,55 @@ def unlock_spec(spec_id: str) -> dict:
     return spec
 
 
+def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
+    """Amend one panel's purpose — the brief that rides into its prompt —
+    without unlocking the sheet (user 2026-08-08: a purpose that says
+    "the three people" keeps painting three people; the fix belongs on
+    the workbench, between takes).
+
+    The lock's core promise survives because provenance is per-candidate:
+    every take records the spec_hash it was generated against, so old
+    takes keep the old hash, the lock re-stamps to the amended spec, and
+    the amend itself is journaled. The one hard gate is the same as
+    unlock's, scoped to this panel: an APPROVED take was approved against
+    the old brief and freezes it."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    approved = [r.get("candidate_id") for r in _board_records(spec_id)
+                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
+    if approved:
+        raise PermissionError(
+            f"{panel_id} has approved canon output ({', '.join(approved)}) painted "
+            "from its current purpose. Reject that take first if you truly intend "
+            "to change what this panel asks for.")
+    if not str(purpose).strip() and not panel.get("required_objects"):
+        # validation's own rule, held through the amend: a panel needs a
+        # purpose or at least one required object, else nothing to render
+        raise ValueError(
+            f"{panel_id} has no required objects — its purpose is the only thing "
+            "steering the render and cannot be emptied, only rewritten.")
+    old_text = str(panel.get("purpose", ""))
+    panel["purpose"] = str(purpose).strip()
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash  # scripts/common.py via paths sys.path hook
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+        append_approval_log(
+            f"SPECIFICATION {spec_id} panel {panel_id} purpose amended post-lock "
+            f"(lock re-stamped {prev.get('hash', '?')[:16]}… → "
+            f"{locks[spec_id]['hash'][:16]}…): \"{old_text[:120]}\" → "
+            f"\"{panel['purpose'][:120]}\". Existing takes keep the hash they "
+            "were generated against.")
+    return {"spec_id": spec_id, "panel_id": panel_id, "purpose": panel["purpose"]}
+
+
 def delete_spec(spec_id: str) -> dict:
     """Permanently delete a specification and its candidates. Canon guard: a
     spec with APPROVED candidates or boards cannot be deleted — that output is

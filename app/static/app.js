@@ -6806,7 +6806,30 @@ async function renderBoardPanels(specId) {
     card.innerHTML = `
       <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
         <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(((appSettings.aspects || []).find(x => x.id === staged.aspect_ratio) || {}).label || staged.aspect_ratio || "")}` : ""}</span></h2>
-      <p class="mini">${esc(p.purpose)}</p>
+      ${(() => {
+        // The brief is editable BETWEEN takes (user 2026-08-08: a purpose
+        // that says "the three people" keeps painting three people, and
+        // the only fix lived behind a full unlock). The amend is journaled
+        // server-side and the lock re-stamps; an APPROVED take freezes the
+        // brief it was approved against — the gate reads as state here,
+        // before it is hit.
+        const frozen = panelCands.some(c => c.status === "APPROVED");
+        return `<div class="brief-row" data-f="brief-row">
+          <p class="mini" data-f="brief-text">${esc(p.purpose)}</p>
+          <button type="button" class="text-act act-dim" data-f="brief-edit"
+            ${frozen ? "disabled" : ""} title="${frozen
+              ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
+              : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>
+        </div>
+        <div class="brief-editor hidden" data-f="brief-editor">
+          <textarea data-f="brief-input" rows="2"></textarea>
+          <div class="brief-acts">
+            <button type="button" class="ghost" data-f="brief-save">Save brief</button>
+            <button type="button" class="text-act" data-f="brief-cancel">Cancel</button>
+            <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF</span>
+          </div>
+        </div>`;
+      })()}
       ${workOrder ? reqTableHtml + forbiddenHtml + scopeHtml : reqChipsHtml + `
       <div class="spec-chips"><span class="f-label">Forbidden · ${ownForbid.length + boardForbid.length}</span>
         ${forbidChips || '<span class="mini">nothing</span>'}</div>`}
@@ -6847,14 +6870,33 @@ async function renderBoardPanels(specId) {
               `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
             </div>`;
         })()}
+        ${(() => {
+          // The selection is REMEMBERED generation to generation (user
+          // 2026-08-08): every take records which references it attached,
+          // so the newest take of this panel is the memory — no new
+          // storage, survives reloads and devices, and unticking
+          // everything is remembered too. The matcher is only the
+          // first-take default.
+          const lastTake = panelCands[0];
+          const lastIds = new Set((lastTake?.references || []).map(r => r.id));
+          buildWorkbench.isChecked = g => lastTake
+            ? g.ids.some(id => lastIds.has(id))
+            : reqObjs.some(o => matches(o, g.name));
+          return "";
+        })()}
         <h4>Attach subject references
-          <span class="mini mono" style="float:right">${groupList.filter(g => reqObjs.some(o => matches(o, g.name))).length} / ${groupList.length}</span>
-          <span class="hint">(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)</span></h4>
+          <span class="mini mono" style="float:right">${groupList.filter(buildWorkbench.isChecked).length} / ${groupList.length}</span>
+          <span class="hint">${panelCands.length
+            ? "(grouped by subject — ✓ green groups rode the previous take and stay selected)"
+            : "(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)"}</span></h4>
         ${(() => {
           // P5: four unchecked boxes read as a choice not yet made; in
           // fact the app decided and the answer was NOTHING MATCHED. Say
-          // so before a 4K spend — this is a quality warning.
-          if (!groupList.length || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
+          // so before a 4K spend — this is a quality warning. With a
+          // previous take the selection is the user's own memory, and an
+          // empty one is their decision — no warning second-guesses it.
+          if (!groupList.length || panelCands.length
+              || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
             return "";
           // Name what actually went unmatched. The old copy hardcoded
           // "this panel requires places and objects", which told the user
@@ -6871,9 +6913,11 @@ async function renderBoardPanels(specId) {
             attach one anyway.</p></div>`;
         })()}
         <div class="ref-groups">${groupList.map(g => {
-            const matched = reqObjs.some(o => matches(o, g.name));
+            const matched = buildWorkbench.isChecked(g);
             return `<label class="check ref-group ${matched ? "has-ref" : ""}"
-              title="${esc(g.ids.join(", "))}${matched ? " — matches a required object of this panel; pre-checked" : ""}">
+              title="${esc(g.ids.join(", "))}${matched ? (panelCands.length
+                ? " — rode the previous take; stays selected"
+                : " — matches a required object of this panel; pre-checked") : ""}">
               <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${matched ? "checked" : ""}>
               ${esc(g.name)} <span class="mini">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
             </label>`;
@@ -6926,6 +6970,31 @@ async function renderBoardPanels(specId) {
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
+
+    // The brief editor — swap the purpose line for a textarea, save through
+    // the journaled amend, repaint so the header and the next prompt agree.
+    const briefEdit = $("[data-f=brief-edit]", card);
+    if (briefEdit && !briefEdit.disabled) briefEdit.onclick = () => {
+      $("[data-f=brief-row]", card).classList.add("hidden");
+      const ed = $("[data-f=brief-editor]", card);
+      ed.classList.remove("hidden");
+      const input = $("[data-f=brief-input]", ed);
+      input.value = p.purpose || "";
+      input.focus();
+      $("[data-f=brief-cancel]", ed).onclick = () => {
+        ed.classList.add("hidden");
+        $("[data-f=brief-row]", card).classList.remove("hidden");
+      };
+      $("[data-f=brief-save]", ed).onclick = async () => {
+        try {
+          const out = await api(`/api/specs/${specId}/panels/${p.id}/purpose`, {
+            method: "POST", json: { purpose: input.value } });
+          toast(`${p.id} brief amended — journaled; the next take paints from it.`);
+          p.purpose = out.purpose;
+          renderBoardPanels(specId);
+        } catch (err) { toast(err.message, true); }
+      };
+    };
 
     // P4 disclosure: the full anchor badge list, unchanged, on demand.
     const showIds = $("[data-f=show-ids]", card);

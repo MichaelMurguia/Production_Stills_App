@@ -1051,6 +1051,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 
+| 2026-08-08 | **Editable panel brief** (`.brief-row`, `.brief-editor`). The workbench purpose line gains its verb — an `Edit brief` text act (canon: verb-sits-with-its-object) that swaps the line for a textarea with ghost `Save brief` / `Cancel` and the Courier line `JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF`. The amend is journaled server-side and re-stamps the lock; an APPROVED take disables the act with the condition stated in its title (gate readable as state). Review: in-place swap vs the edit-in-a-room modal canon, and the acts row's copy. | Boards, panel workbench | The brief was frozen at lock; a purpose saying "the three people" kept painting three people and the only fix was a full unlock |
+| 2026-08-08 | **Remembered reference selection.** Built from canon — no new markup; the workbench checkboxes now pre-check from the newest take's recorded references instead of the required-objects matcher once a take exists, the hint states which rule is in force ("rode the previous take and stay selected"), and the NO MATCHES warning stands down when the empty selection is the user's own remembered decision. Review copy only. | Boards, panel workbench | Manual selections reset to matcher defaults on every repaint, so each generation forgot the last one's casting |
 | 2026-08-08 | **Unanchored locations on the SCENES shelf.** The screenplay's slugline register joins the Reference library: places with no matching SCENE-shelf anchor render as uncast-style cards (`N SCENES · ENVIRONMENT`, the stated consequence, one `Add reference` act prefilling `LOCATION_GEOMETRY — <NAME>`), the shelf count states `M LOCATIONS UNANCHORED`, and library search covers location names and environments. Casting stays subjects-only by design. **User: needs a FULL design pass, not placement-only review** — how a place reads in the library, the card's anatomy, and whether the register deserves its own shelf are all open. | Reference, SCENES shelf | Searching a place the script names returned NOTHING — no way to see it lacked imagery, no act to give it any |
 | 2026-08-08 | **Swatch ramps on the Reference STYLE shelf.** Built from canon — the same `.pal-row` ramps and the same viewer the Production Design column uses, in a `.pal-shelf` grid above the card grid. Quarantined swatches keep their card (the SUBJECTS shelf's governance rule); a mixed group's label states `N PROVISIONAL` and its viewer offers Approve only on the rows that need it. Review placement only: above the cards, or should the ramps BE the shelf with plates behind a disclosure? | Reference, STYLE shelf | Nineteen swatch cards said in a wall what three ramps say in a strip |
 | 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
@@ -1063,6 +1065,12 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-08** — **Editable panel brief + remembered reference selection**
+  (user): the workbench purpose line gains an `Edit brief` text act (in-place
+  textarea, ghost Save, journaled amend, lock re-stamped; APPROVED take
+  freezes the brief and the gate reads as state), and the reference
+  checkboxes now remember the newest take's selection instead of resetting to
+  the matcher. Both in the Uncanonized table.
 - **2026-08-07** — **The look interview leads Production Design** (user):
   the rail is now `01 Interview · 02 Anchors · 03 Scan · 04 Cast ·
   05 Bible · 06 Bake-off`. What the director wants it to feel like is
