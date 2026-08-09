@@ -11,7 +11,7 @@
   "operatingSystem": "Windows, macOS, Linux, Web",
   "description": "A film production's art department in software: screenplay-driven art direction bibles, evidence-cited scene breakdowns, and native-4K concept boards rendered under the customer's own AI model API keys.",
   "url": "{{ base_url }}/",
-  "image": "{{ base_url }}/static/img/board-0001.png",
+  "image": "{{ base_url }}/static/img/web/board-0001-og.jpg",
   "offers": [
     {"@type": "Offer", "name": "Download Personal", "price": "119.00", "priceCurrency": "USD", "category": "one-time license"},
     {"@type": "Offer", "name": "Download Business", "price": "249.99", "priceCurrency": "USD", "category": "one-time license"},
@@ -28,18 +28,21 @@
 <!-- S2 — The Wall: hero copy on a scrim over three drifting columns of
      real Beltminers panels. Copy never moves; the wall does. -->
 <section class="wall" id="gallery">
+  {# The wall renders each still at ~380px (33vw on narrow); w400/w800 WebP
+     cover 1x/2x. Raw PNG sources stay in static/img/ for regeneration only —
+     literal paths so the served-asset test can verify each one. #}
   <div class="wall-cols" aria-hidden="true">
     <div class="wall-col wall-a">
-      <img src="/static/img/p01.png" alt=""><img src="/static/img/p02.png" alt="">
-      <img src="/static/img/p03.png" alt=""><img src="/static/img/p04.png" alt="">
+      <img src="/static/img/web/p01-w800.webp" srcset="/static/img/web/p01-w400.webp 400w, /static/img/web/p01-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p02-w800.webp" srcset="/static/img/web/p02-w400.webp 400w, /static/img/web/p02-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
+      <img src="/static/img/web/p03-w800.webp" srcset="/static/img/web/p03-w400.webp 400w, /static/img/web/p03-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p04-w800.webp" srcset="/static/img/web/p04-w400.webp 400w, /static/img/web/p04-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
     </div>
     <div class="wall-col wall-b">
-      <img src="/static/img/p05.png" alt=""><img src="/static/img/p06.png" alt="">
-      <img src="/static/img/p07.png" alt=""><img src="/static/img/p08.png" alt="">
+      <img src="/static/img/web/p05-w800.webp" srcset="/static/img/web/p05-w400.webp 400w, /static/img/web/p05-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p06-w800.webp" srcset="/static/img/web/p06-w400.webp 400w, /static/img/web/p06-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
+      <img src="/static/img/web/p07-w800.webp" srcset="/static/img/web/p07-w400.webp 400w, /static/img/web/p07-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p08-w800.webp" srcset="/static/img/web/p08-w400.webp 400w, /static/img/web/p08-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
     </div>
     <div class="wall-col wall-c">
-      <img src="/static/img/p09.png" alt=""><img src="/static/img/p10.png" alt="">
-      <img src="/static/img/p11.png" alt=""><img src="/static/img/p12.png" alt="">
+      <img src="/static/img/web/p09-w800.webp" srcset="/static/img/web/p09-w400.webp 400w, /static/img/web/p09-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p10-w800.webp" srcset="/static/img/web/p10-w400.webp 400w, /static/img/web/p10-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
+      <img src="/static/img/web/p11-w800.webp" srcset="/static/img/web/p11-w400.webp 400w, /static/img/web/p11-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy"><img src="/static/img/web/p12-w800.webp" srcset="/static/img/web/p12-w400.webp 400w, /static/img/web/p12-w800.webp 800w" sizes="(max-width:1180px) 33vw, 380px" alt="" loading="lazy">
     </div>
   </div>
   <div class="wall-scrim"></div>
@@ -191,14 +194,12 @@
 <!-- S4 — Filmstrip: decorative marquee of real panels. -->
 <section class="stripband" aria-hidden="true">
   <p class="strip-label mono wrap">ONE PRODUCTION &middot; ONE REFERENCE LIBRARY &middot; EVERY FRAME ON MODEL</p>
+  {# The marquee renders each still ~150px tall (~267px wide); w400/w800 cover
+     1x/2x. The row is duplicated for the seamless scroll. #}
   <div class="strip">
     <div class="strip-row">
-      <img src="/static/img/p13.png" alt="" loading="lazy"><img src="/static/img/p02.png" alt="" loading="lazy">
-      <img src="/static/img/p14.png" alt="" loading="lazy"><img src="/static/img/p07.png" alt="" loading="lazy">
-      <img src="/static/img/p15.png" alt="" loading="lazy"><img src="/static/img/p11.png" alt="" loading="lazy">
-      <img src="/static/img/p13.png" alt="" loading="lazy"><img src="/static/img/p02.png" alt="" loading="lazy">
-      <img src="/static/img/p14.png" alt="" loading="lazy"><img src="/static/img/p07.png" alt="" loading="lazy">
-      <img src="/static/img/p15.png" alt="" loading="lazy"><img src="/static/img/p11.png" alt="" loading="lazy">
+      <img src="/static/img/web/p13-w400.webp" srcset="/static/img/web/p13-w400.webp 400w, /static/img/web/p13-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p02-w400.webp" srcset="/static/img/web/p02-w400.webp 400w, /static/img/web/p02-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p14-w400.webp" srcset="/static/img/web/p14-w400.webp 400w, /static/img/web/p14-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p07-w400.webp" srcset="/static/img/web/p07-w400.webp 400w, /static/img/web/p07-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p15-w400.webp" srcset="/static/img/web/p15-w400.webp 400w, /static/img/web/p15-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p11-w400.webp" srcset="/static/img/web/p11-w400.webp 400w, /static/img/web/p11-w800.webp 800w" sizes="267px" alt="" loading="lazy">
+      <img src="/static/img/web/p13-w400.webp" srcset="/static/img/web/p13-w400.webp 400w, /static/img/web/p13-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p02-w400.webp" srcset="/static/img/web/p02-w400.webp 400w, /static/img/web/p02-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p14-w400.webp" srcset="/static/img/web/p14-w400.webp 400w, /static/img/web/p14-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p07-w400.webp" srcset="/static/img/web/p07-w400.webp 400w, /static/img/web/p07-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p15-w400.webp" srcset="/static/img/web/p15-w400.webp 400w, /static/img/web/p15-w800.webp 800w" sizes="267px" alt="" loading="lazy"><img src="/static/img/web/p11-w400.webp" srcset="/static/img/web/p11-w400.webp 400w, /static/img/web/p11-w800.webp 800w" sizes="267px" alt="" loading="lazy">
     </div>
   </div>
 </section>
@@ -296,11 +297,15 @@
           </div>
         </div>
         <div class="dis-pane" data-p="3">
-          <img class="pane-img" src="/static/img/p04.png" alt="" loading="lazy">
+          <img class="pane-img" src="/static/img/web/p04-w800.webp"
+               srcset="/static/img/web/p04-w400.webp 400w, /static/img/web/p04-w800.webp 800w"
+               sizes="(max-width: 980px) 90vw, 440px" alt="" loading="lazy">
           <p class="pane-facts mono">P02 &middot; 2736&times;1536 &middot; 6 ANCHORS &middot; <span class="ev-pass">APPROVED</span></p>
         </div>
         <div class="dis-pane" data-p="4">
-          <img class="pane-img contain" src="/static/img/board-0001.png" alt="" loading="lazy">
+          <img class="pane-img contain" src="/static/img/web/board-0001-w1200.webp"
+               srcset="/static/img/web/board-0001-w800.webp 800w, /static/img/web/board-0001-w1200.webp 1200w, /static/img/web/board-0001-w1600.webp 1600w"
+               sizes="(max-width: 980px) 90vw, 640px" alt="" loading="lazy">
           <p class="pane-facts mono">BOARD-0001 &middot; 3840&times;2160 &middot; TYPOGRAPHY DRAWN BY THE APP, NEVER THE MODEL</p>
         </div>
       </div>

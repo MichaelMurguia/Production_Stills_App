@@ -218,6 +218,7 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 |---|---|---|---|
 
 | 2026-08-07 | **Fleet storage table** on the admin page — every live studio's free space, largest consumer, and a state (`OK` / `TIGHT` / `REFUSING` / `UNREACHABLE`), fetched after page load and sorted worst-first. Built from canon: `.license-box`, `.admin-table.mono`, `.admin-note`. Only `REFUSING` carries colour, and it is `--bad`, not one of the four amber roles. | Admin, between trials and operations | Is a table right, or should a healthy fleet collapse to one line and only expand when a studio is in trouble? And is `UNREACHABLE` the right word for a studio that answers but cannot measure itself? |
+| 2026-08-09 | **Responsive marketing imagery** — the hero wall, marquee, and pipeline-demo stills now serve WebP `srcset` derivatives at display-matched widths (build: `scripts/build_images.py`) instead of the raw multi-MB PNGs; the social card (`og:image`/JSON-LD) is a purpose-cropped 1200×630 JPEG and the coming-soon backdrop a 1600px WebP. No visual change — same images, same layout, smaller bytes. Built from mechanics, not a new visual pattern. | Landing (`index.html`), `base.html` head, `coming_soon.html` | Pure infra — review only: are the chosen display widths/sizes hints right for the wall (≈380px) and marquee (≈150px tall), and is a JPEG social card acceptable vs. a bespoke share image? |
 
 ---
 
