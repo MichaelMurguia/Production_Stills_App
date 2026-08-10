@@ -547,5 +547,39 @@ class RenderTests(SheetHomeTest):
         self.assertEqual(out.suffix, ".pdf")
 
 
+class StageFiveDivisionTests(unittest.TestCase):
+    """ba-4a: stage 05 judges readiness, the composer arranges. The one
+    door is Arrange this board; the variant chips are gone; the Lookbook
+    is a tool, never a stage."""
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+    HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+
+    def test_arrange_door_beside_assemble(self):
+        self.assertIn('id="asm-arrange"', self.JS)
+        self.assertIn("Arrange this board", self.JS)
+        i = self.JS.index('id="asm-arrange"')
+        self.assertIn('id="asm-go"', self.JS[i:i + 800],
+                      "the door stands beside Assemble, one head row")
+
+    def test_variant_chips_left_stage_05(self):
+        self.assertNotIn('label: "ALLOCATION"', self.JS)
+        self.assertNotIn('data-f="variants"', self.JS)
+
+    def test_lookbook_is_a_tool_not_a_stage(self):
+        self.assertIn('data-view="lookbook"', self.HTML)
+        i = self.JS.index("const STAGE_ORDER")
+        self.assertNotIn("lookbook", self.JS[i:i + 200])
+        i = self.JS.index('"tool-mode"')
+        self.assertIn("lookbook", self.JS[i:i + 200],
+                      "the band condenses while the Lookbook is open")
+
+    def test_stage_03_copy_says_breakdown_not_sheet(self):
+        # R7: one word, one meaning — the exact phrase is gone from every
+        # user-facing surface.
+        for src in (self.JS, self.HTML):
+            self.assertNotIn("breakdown sheet", src.lower())
+
+
 if __name__ == "__main__":
     unittest.main()
