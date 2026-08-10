@@ -1,58 +1,33 @@
+"""Stage 05 — judging whether a scene's approved panels are ready, and
+assembling the board when they are.
+
+Since SHEET_SYSTEM_PLAN a board is a sheet with the BOARD archetype:
+the packing functions live in sheet.py (aliased below under their old
+names) and the pixels come from sheet_render.render_sheet — one renderer,
+so the stage-05 preview, the composer preview and the export cannot
+drift. This module keeps what stage 05 is for: slot readiness, the
+never-upscale gate, assembly, board records, the spec hash. Its public
+signature, AssemblyError cases and /api/specs/{id}/assemble are unchanged;
+the letterbox-and-flag fallback is preserved via allow_letterbox=True
+(ruling R2 — sheets themselves never letterbox).
+"""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from . import generate, paths, sheet, sheet_render, store
 
-from . import generate, paths, store
-
-# Board grammar defaults — warm neutral ground, production-wall hierarchy.
-BG = (42, 39, 35)
-PANEL_BG = (52, 48, 43)
-INK = (232, 229, 221)
-INK_DIM = (154, 151, 143)
-ACCENT = (216, 162, 74)
-
-MARGIN = 64
-GUTTER = 36
-
-
-def _type_scale(height: int) -> dict:
-    """Board typography scales with the canvas (user-caught 2026-08-02:
-    fixed 64px titles read tiny on a 4K wall board — the grammar says
-    legible at print size). Sizes are tuned at 2160 and scale linearly;
-    the slot map derives its header from the same numbers so preview and
-    board never drift."""
-    sc = height / 2160
-    title = max(48, int(96 * sc))
-    sub = max(20, int(34 * sc))
-    label = max(20, int(36 * sc))
-    rule_y = MARGIN - 10 + title + int(12 * sc) + sub + int(20 * sc)
-    return {"title": title, "sub": sub, "label": label,
-            "rule_y": rule_y, "inner_y": rule_y + int(24 * sc) + 3}
-LABEL_H = 46
-
-FONT_CANDIDATES = [
-    "C:/Windows/Fonts/bahnschrift.ttf",
-    "C:/Windows/Fonts/segoeuib.ttf",
-    "C:/Windows/Fonts/arialbd.ttf",
-    "C:/Windows/Fonts/arial.ttf",
-]
+# The packing functions moved to sheet.py (SHEET_SYSTEM_PLAN §2) so boards
+# and sheets share one layout implementation. Aliased under their old names
+# — geometry and callers unchanged.
+from .sheet import (GUTTER, LABEL_H,                 # noqa: F401
+                    aspect_rects as _aspect_rects,
+                    grid_rects as _grid_rects,
+                    layout_rects as _layout_rects)
 
 
 class AssemblyError(Exception):
     pass
-
-
-def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path in FONT_CANDIDATES:
-        if Path(path).exists():
-            try:
-                return ImageFont.truetype(path, size)
-            except OSError:
-                continue
-    return ImageFont.load_default()
 
 
 def _latest_approved_by_panel(spec_id: str) -> dict[str, dict]:
@@ -77,14 +52,6 @@ def _slug(spec: dict) -> str:
     if btype == "LIGHTING_STUDY":
         return f"LIGHTING STUDY · {slug}" if slug else "LIGHTING STUDY"
     return slug
-
-
-# The packing functions moved to sheet.py (SHEET_SYSTEM_PLAN §2) so boards
-# and sheets share one layout implementation. Aliased under their old names
-# — geometry and callers unchanged.
-from .sheet import (aspect_rects as _aspect_rects,   # noqa: E402
-                    grid_rects as _grid_rects,
-                    layout_rects as _layout_rects)
 
 
 def check_variant(spec: dict, variant: str | None) -> str:
@@ -137,6 +104,20 @@ def _variant_rects(spec: dict, alloc: dict[str, float],
     return _layout_rects(panels, alloc, x0, y0, w, h, hero_id)
 
 
+def _board_frame(spec: dict, spec_id: str, width: int,
+                 height: int) -> tuple[dict, tuple[int, int, int, int]]:
+    """The ephemeral BOARD sheet every stage-05 surface measures against,
+    and its content rect — sheet_render.content_rect is the single
+    geometry authority, so preview and board never drift."""
+    eph = {"sheet_id": "", "archetype": "BOARD", "style": sheet.BOARD_STYLE,
+           "medium": "SCREEN", "size": [width, height],
+           "size_source": "CHOSEN", "spine": False,
+           "masthead": {"title": str(spec.get("subject", spec_id)),
+                        "subject": "", "binding": None},
+           "blocks": []}
+    return eph, sheet_render.content_rect(eph, width, height)
+
+
 def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
              variant: str | None = None) -> dict:
     """The board's slot geometry BEFORE any pixels are spent, with a verdict
@@ -164,10 +145,8 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
                for pid, c in {**have, **approved}.items()
                if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
-    inner_x = MARGIN
-    inner_y = _type_scale(height)["inner_y"]
-    inner_w = width - 2 * MARGIN
-    inner_h = height - inner_y - MARGIN
+    _eph, (inner_x, inner_y, inner_w, inner_h) = _board_frame(
+        spec, spec_id, width, height)
     derived = [pid for pid in ("MATERIALS", "PALETTE") if pid in approved]
     if derived:
         inner_h -= max(220, int(inner_h * 0.16)) + GUTTER
@@ -249,115 +228,78 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
                for pid, c in approved.items()
                if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
-    board = Image.new("RGB", (width, height), BG)
-    draw = ImageDraw.Draw(board)
-
-    ts = _type_scale(height)
-    title_font = _font(ts["title"])
-    sub_font = _font(ts["sub"])
-    label_font = _font(ts["label"])
-
-    # Header — board title in the Master Board presentation grammar,
-    # scaled to the canvas so it reads at print size.
-    draw.text((MARGIN, MARGIN - 10), str(spec.get("subject", spec_id)).upper(),
-              font=title_font, fill=INK)
-    slug = _slug(spec)
+    eph, (cx, cy, cw, ch) = _board_frame(spec, spec_id, width, height)
     sub = "  ·  ".join(x for x in [
-        slug, spec_id, str(spec.get("mode", "")), "BOARD CANDIDATE — UNAPPROVED"] if x)
-    draw.text((MARGIN, MARGIN - 10 + ts["title"] + int(12 * height / 2160)),
-              sub, font=sub_font, fill=INK_DIM)
-    draw.line([(MARGIN, ts["rule_y"]), (width - MARGIN, ts["rule_y"])],
-              fill=ACCENT, width=max(3, int(3 * height / 2160)))
-
-    inner_x = MARGIN
-    inner_y = ts["inner_y"]
-    inner_w = width - 2 * MARGIN
-    inner_h = height - inner_y - MARGIN
+        _slug(spec), spec_id, str(spec.get("mode", "")),
+        "BOARD CANDIDATE — UNAPPROVED"] if x)
+    eph["masthead"]["subject"] = sub
 
     # Approved derived strips (palette / materials) reserve a bottom band.
-    derived = [(pid, approved[pid]) for pid in ("MATERIALS", "PALETTE") if pid in approved]
+    derived = [(pid, approved[pid]) for pid in ("MATERIALS", "PALETTE")
+               if pid in approved]
+    inner_h = ch
     strip_h = 0
     if derived:
         strip_h = max(220, int(inner_h * 0.16))
         inner_h -= strip_h + GUTTER
 
-    rects = _variant_rects(spec, alloc, aspects, variant,
-                           inner_x, inner_y, inner_w, inner_h)
+    rects = _variant_rects(spec, alloc, aspects, variant, cx, cy, cw, inner_h)
 
-    warnings = []
+    # The board as a sheet: one layout block carrying every panel slot at
+    # its packed rect, plus the derived band. Fractions are derived from
+    # the same rects the record states, so the click-through frames and
+    # the pixels agree.
     used: dict[str, str] = {}
+    main = {"block_id": "B-0001", "type": "GRID", "heading": None,
+            "caption": None,
+            "frac": {"x": 0.0, "y": 0.0, "w": 1.0, "h": inner_h / ch},
+            "slots": []}
     for panel in spec["panels"]:
         pid = panel["id"]
-        rx, ry, rw, rh = rects[pid]
-        img_h = rh - LABEL_H
         cand = approved[pid]
         used[pid] = cand["candidate_id"]
-        img_path = generate.candidate_image_path(spec_id, cand["candidate_id"])
-        if img_path is None:
+        if generate.candidate_image_path(spec_id, cand["candidate_id"]) is None:
             raise AssemblyError(f"image file missing for {cand['candidate_id']}")
+        rx, ry, rw, rh = rects[pid]
+        main["slots"].append({
+            "slot_id": f"S{len(main['slots']) + 1}",
+            "spec_id": spec_id, "candidate_id": cand["candidate_id"],
+            "panel_id": pid,
+            "label": f"{pid} — {panel.get('title') or panel.get('purpose', '')}",
+            "frac": {"x": (rx - cx) / cw, "y": (ry - cy) / inner_h,
+                     "w": rw / cw, "h": rh / inner_h},
+            "crop": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0, "rotate": 0.0},
+            "annotation": None})
+    eph["blocks"].append(main)
 
-        draw.rectangle([rx, ry, rx + rw, ry + img_h], fill=PANEL_BG)
-        with Image.open(img_path) as im:
-            im = im.convert("RGB")
-            orig_w, orig_h = im.size
-            # Cover-crop (director's ruling 2026-07-30): the board may crop
-            # images to fill its layout — scale DOWN to cover the slot, crop
-            # the overflow, center. Originals stay one click away in the app.
-            # No upscaling, ever: if covering would need a scale above 1.0,
-            # fall back to letterbox and flag for regeneration.
-            cover = max(rw / im.width, img_h / im.height)
-            if cover <= 1.0:
-                nw = max(rw, round(im.width * cover))
-                nh = max(img_h, round(im.height * cover))
-                im = im.resize((nw, nh), Image.LANCZOS)
-                left = (nw - rw) // 2
-                top = (nh - img_h) // 2
-                im = im.crop((left, top, left + rw, top + img_h))
-            else:
-                fit = min(rw / im.width, img_h / im.height, 1.0)
-                if fit < 1.0:
-                    im = im.resize((max(1, int(im.width * fit)),
-                                    max(1, int(im.height * fit))), Image.LANCZOS)
-                warnings.append(
-                    f"{pid}: {cand['candidate_id']} ({orig_w}x{orig_h}) cannot fill "
-                    f"its {rw}x{img_h} slot without upscaling — letterboxed; "
-                    "regenerate at a larger size for full quality")
-            ox = rx + (rw - im.width) // 2
-            oy = ry + (img_h - im.height) // 2
-            board.paste(im, (ox, oy))
-
-        label = f"{pid} — {panel.get('title') or panel.get('purpose', '')}"
-        draw.text((rx, ry + img_h + 10), label.upper(), font=label_font, fill=INK)
-
-    # Derived strips band: materials and palette, drawn from the board's own
-    # approved imagery. Same no-upscaling rule as every panel.
     if derived:
-        sy = inner_y + inner_h + GUTTER
-        cell_h = strip_h - LABEL_H
-        sx = inner_x
         strip_labels = {
             "MATERIALS": "MATERIALS — DERIVED FROM APPROVED PANELS",
             "PALETTE": "PALETTE — SAMPLED FROM APPROVED PANELS",
         }
-        for pid, cand in derived:
+        sy = cy + inner_h + GUTTER
+        strip = {"block_id": "B-0002", "type": "STRIP", "heading": None,
+                 "caption": None,
+                 "frac": {"x": 0.0, "y": (sy - cy) / ch, "w": 1.0,
+                          "h": strip_h / ch},
+                 "slots": []}
+        n = len(derived)
+        for i, (pid, cand) in enumerate(derived):
             used[pid] = cand["candidate_id"]
-            img_path = generate.candidate_image_path(spec_id, cand["candidate_id"])
-            if img_path is None:
-                warnings.append(f"{pid}: image file missing for {cand['candidate_id']}")
-                continue
-            with Image.open(img_path) as im:
-                im = im.convert("RGB")
-                scale = min(cell_h / im.height, (inner_x + inner_w - sx) / im.width, 1.0)
-                if scale < 1.0:
-                    im = im.resize((max(1, int(im.width * scale)),
-                                    max(1, int(im.height * scale))), Image.LANCZOS)
-                draw.rectangle([sx, sy, sx + im.width, sy + cell_h], fill=PANEL_BG)
-                board.paste(im, (sx, sy + (cell_h - im.height) // 2))
-                draw.text((sx, sy + cell_h + 8), strip_labels.get(pid, pid),
-                          font=label_font, fill=INK_DIM)
-                sx += im.width + GUTTER
-            if sx >= inner_x + inner_w:
-                break
+            strip["slots"].append({
+                "slot_id": f"S{i + 1}",
+                "spec_id": spec_id, "candidate_id": cand["candidate_id"],
+                "panel_id": pid, "label": strip_labels.get(pid, pid),
+                "frac": {"x": i / n, "y": 0.0,
+                         "w": 1 / n - (0.012 if n > 1 else 0), "h": 1.0},
+                "crop": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0,
+                         "rotate": 0.0},
+                "annotation": None})
+        eph["blocks"].append(strip)
+
+    warnings: list[str] = []
+    board = sheet_render.render_sheet(eph, 1.0, allow_letterbox=True,
+                                      warnings=warnings)
 
     board_id = store.next_counter("board_counter", "BOARD")
 

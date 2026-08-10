@@ -459,5 +459,93 @@ class LookbookTests(SheetHomeTest):
         self.assertIn(rec["sheet_id"], placed["placed_in"])
 
 
+class RenderTests(SheetHomeTest):
+    """One renderer for preview and export (§10) — never upscale; sheets
+    raise where boards letterbox (R2)."""
+
+    def _png(self, spec_id, cand_id, w, h):
+        from PIL import Image
+        d = paths.BOARDS_DIR / spec_id
+        d.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (w, h), (90, 84, 70)).save(d / f"{cand_id}.png")
+
+    def _filled_sheet(self, cand_w, cand_h, size=(1920, 1080)):
+        _write_spec()
+        _write_candidate("SPEC-0001", "CAND-0001", "P1",
+                         w=cand_w, h=cand_h)
+        self._png("SPEC-0001", "CAND-0001", cand_w, cand_h)
+        slot = {"slot_id": "S1", "spec_id": "SPEC-0001",
+                "candidate_id": "CAND-0001", "label": "P1 — HERO",
+                "frac": {"x": 0, "y": 0, "w": 1.0, "h": 1.0},
+                "crop": {"x": 0, "y": 0, "w": 1.0, "h": 1.0, "rotate": 0.0}}
+        return _mk("SCREEN", [_block("HERO", slots=[slot])], size=size)
+
+    def test_render_raises_rather_than_letterboxing_on_a_short_slot(self):
+        from app import sheet_render
+        s = self._filled_sheet(640, 360, size=(3840, 2160))
+        with self.assertRaises(sheet_render.RenderShortfall):
+            sheet_render.render_sheet(s, 1.0)
+
+    def test_board_path_letterboxes_and_says_so(self):
+        from app import sheet_render
+        s = self._filled_sheet(640, 360, size=(3840, 2160))
+        warnings: list[str] = []
+        img = sheet_render.render_sheet(s, 1.0, allow_letterbox=True,
+                                        warnings=warnings)
+        self.assertEqual(img.size, (3840, 2160))
+        self.assertTrue(any("upscaling" in w for w in warnings))
+
+    def test_preview_and_export_share_pixel_geometry(self):
+        from app import sheet_render
+        s = self._filled_sheet(1920, 1080)
+        full = sheet_render.pixel_size(s, 1.0)
+        quarter = sheet_render.pixel_size(s, 0.25)
+        self.assertEqual(full, (1920, 1080))
+        self.assertEqual(quarter, (480, 270))
+        self.assertEqual(sheet_render.render_sheet(s, 0.25).size, quarter)
+
+    def test_export_is_gated_then_lands_at_full_size(self):
+        from app import sheet_render
+        _write_spec()
+        rec = sheet.create_sheet("BOARD", "INK", "SCREEN",
+                                 title="THE BELTMINERS")
+        # Fresh board sheet: empty slots block the export.
+        with self.assertRaises(sheet.SheetError):
+            sheet_render.export_sheet(rec["sheet_id"])
+        # Fill every GRID slot with a real 4K take → ready → PNG lands.
+        self._png("SPEC-0001", "CAND-0001", 3840, 2160)
+        _write_candidate("SPEC-0001", "CAND-0001", "P1", w=3840, h=2160)
+        for s in rec["blocks"][0]["slots"]:
+            rec = sheet.set_slot(rec["sheet_id"],
+                                 rec["blocks"][0]["block_id"], s["slot_id"],
+                                 {"spec_id": "SPEC-0001",
+                                  "candidate_id": "CAND-0001"})
+        self.assertTrue(sheet.readiness(rec)["ready"])
+        out = sheet_render.export_sheet(rec["sheet_id"])
+        from PIL import Image
+        with Image.open(out) as im:
+            self.assertEqual(list(im.size), rec["size"])
+
+    def test_print_export_renders_at_300dpi(self):
+        from app import sheet_render
+        s = _mk("PRINT", [_block("PRINCIPLES")], size=(12, 8))
+        img = sheet_render.render_sheet(s, 1.0)
+        self.assertEqual(img.size, (12 * 300, 8 * 300))
+
+    def test_lookbook_pdf_carries_every_page(self):
+        from app import sheet_render
+        lb = sheet.create_lookbook("Pitch set")
+        a = sheet.create_sheet("LOCATION", "PLATE", "SCREEN", title="A")
+        # LOCATION seeds GRID (4 empty slots) — blocked; strip it to
+        # elastic-only so the gate opens for the export test.
+        a["blocks"] = [b for b in a["blocks"]
+                       if sheet.BLOCK_TYPES[b["type"]].elastic]
+        a = sheet.save_sheet(a)
+        sheet.lookbook_add_sheet(lb["lookbook_id"], a["sheet_id"])
+        out = sheet_render.export_lookbook(lb["lookbook_id"])
+        self.assertTrue(out.exists())
+        self.assertEqual(out.suffix, ".pdf")
+
+
 if __name__ == "__main__":
     unittest.main()

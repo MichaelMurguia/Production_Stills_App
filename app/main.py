@@ -11,7 +11,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
 from fastapi.staticfiles import StaticFiles
 
 from . import (activity, assemble, autofill, backup, bible, connectors,
-               generate, insights, paths, store, wizard)
+               generate, insights, paths, sheet, sheet_render, store, wizard)
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -1996,6 +1996,264 @@ def api_list_boards(spec_id: str) -> list[dict]:
     import json as _json
     return [_json.loads(p.read_text(encoding="utf-8"))
             for p in sorted(d.glob("BOARD-*.json"))]
+
+
+# ------------------------------------------------- sheets & lookbooks (§9)
+# The sheet grammar: one mechanism for boards and lookbook pages
+# (SHEET_SYSTEM_PLAN). SheetError → 422, KeyError → 404 throughout.
+
+def _sheet_call(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    except KeyError as e:
+        raise _err(e)
+
+
+@app.post("/api/specs/{spec_id}/arrange")
+def api_arrange(spec_id: str) -> dict:
+    """Stage 05's one new door: idempotent — a spec has at most one BOARD
+    sheet, created on first call from the spec's current slot map."""
+    if store.get_spec(spec_id) is None:
+        raise HTTPException(404, spec_id)
+    try:
+        return sheet.arrange_board(spec_id)
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    except assemble.AssemblyError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/sheets")
+def api_list_sheets() -> list[dict]:
+    return sheet.list_sheets()
+
+
+@app.post("/api/sheets")
+def api_create_sheet(body: dict) -> dict:
+    return _sheet_call(
+        sheet.create_sheet, str(body.get("archetype", "")),
+        str(body.get("style", "")), str(body.get("medium", "")),
+        spec_id=body.get("spec_id"), title=str(body.get("title", "")),
+        subject=str(body.get("subject", "")))
+
+
+@app.get("/api/sheets/{sheet_id}")
+def api_get_sheet(sheet_id: str) -> dict:
+    rec = _sheet_call(sheet.get_sheet, sheet_id)
+    if rec is None:
+        raise HTTPException(404, sheet_id)
+    return rec
+
+
+@app.delete("/api/sheets/{sheet_id}")
+def api_delete_sheet(sheet_id: str) -> dict:
+    _sheet_call(sheet.delete_sheet, sheet_id)
+    return {"ok": True}
+
+
+@app.post("/api/sheets/{sheet_id}/style")
+def api_sheet_style(sheet_id: str, body: dict) -> dict:
+    def _set():
+        rec = sheet.get_sheet(sheet_id)
+        if rec is None:
+            raise KeyError(sheet_id)
+        rec["style"] = str(body.get("style", ""))
+        return sheet.save_sheet(rec)
+    return _sheet_call(_set)
+
+
+@app.post("/api/sheets/{sheet_id}/size")
+def api_sheet_size(sheet_id: str, body: dict) -> dict:
+    """{size: [w, h]} pins a CHOSEN size; {size: "recommended"} returns to
+    the ladder's recommendation — derived sizes are recommended, never
+    imposed (§6)."""
+    def _set():
+        rec = sheet.get_sheet(sheet_id)
+        if rec is None:
+            raise KeyError(sheet_id)
+        size = body.get("size")
+        if size == "recommended":
+            rec["size_source"] = "RECOMMENDED"
+        else:
+            rungs = sheet.LADDERS[rec["medium"]]["rungs"]
+            pick = [int(size[0]), int(size[1])]
+            if pick not in [list(r) for r in rungs]:
+                raise sheet.SheetError(
+                    f"size {pick} is not a rung of the {rec['medium']} "
+                    f"ladder: {rungs}")
+            rec["size"] = pick
+            rec["size_source"] = "CHOSEN"
+        return sheet.save_sheet(rec)
+    return _sheet_call(_set)
+
+
+@app.post("/api/sheets/{sheet_id}/blocks")
+def api_add_block(sheet_id: str, body: dict) -> dict:
+    index = body.get("index")
+    return _sheet_call(sheet.add_block, sheet_id, str(body.get("type", "")),
+                       int(index) if index is not None else None)
+
+
+@app.delete("/api/sheets/{sheet_id}/blocks/{block_id}")
+def api_remove_block(sheet_id: str, block_id: str) -> dict:
+    return _sheet_call(sheet.remove_block, sheet_id, block_id)
+
+
+@app.put("/api/sheets/{sheet_id}/blocks/{block_id}/slots/{slot_id}")
+def api_set_slot(sheet_id: str, block_id: str, slot_id: str,
+                 body: dict) -> dict:
+    return _sheet_call(sheet.set_slot, sheet_id, block_id, slot_id, body)
+
+
+@app.post("/api/sheets/{sheet_id}/blocks/{block_id}/slots")
+def api_add_slot(sheet_id: str, block_id: str) -> dict:
+    return _sheet_call(sheet.add_slot, sheet_id, block_id)
+
+
+@app.delete("/api/sheets/{sheet_id}/blocks/{block_id}/slots/{slot_id}")
+def api_remove_slot(sheet_id: str, block_id: str, slot_id: str) -> dict:
+    return _sheet_call(sheet.remove_slot, sheet_id, block_id, slot_id)
+
+
+@app.put("/api/sheets/{sheet_id}/blocks/{block_id}/caption")
+def api_set_caption(sheet_id: str, block_id: str, body: dict) -> dict:
+    return _sheet_call(sheet.set_caption, sheet_id, block_id,
+                       text=body.get("text"), binding=body.get("binding"),
+                       which=str(body.get("which", "caption")))
+
+
+@app.post("/api/sheets/{sheet_id}/blocks/{block_id}/caption/resolve")
+def api_resolve_caption(sheet_id: str, block_id: str, body: dict) -> dict:
+    return _sheet_call(sheet.resolve_caption, sheet_id, block_id,
+                       str(body.get("action", "")),
+                       which=str(body.get("which", "caption")))
+
+
+@app.get("/api/sheets/{sheet_id}/readiness")
+def api_sheet_readiness(sheet_id: str) -> dict:
+    def _ready():
+        rec = sheet.get_sheet(sheet_id)
+        if rec is None:
+            raise KeyError(sheet_id)
+        return sheet.readiness(rec)
+    return _sheet_call(_ready)
+
+
+@app.post("/api/sheets/{sheet_id}/render")
+async def api_render_sheet(sheet_id: str, body: dict) -> Response:
+    """Preview PNG at a scale — the same renderer as export, so the two
+    cannot drift (§10)."""
+    rec = sheet.get_sheet(sheet_id)
+    if rec is None:
+        raise HTTPException(404, sheet_id)
+    scale = max(0.05, min(1.0, float(body.get("scale", 0.25))))
+    import io
+
+    def _render() -> bytes:
+        img = sheet_render.render_sheet(rec, scale, allow_letterbox=True)
+        buf = io.BytesIO()
+        img.save(buf, "PNG")
+        return buf.getvalue()
+    try:
+        data = await run_in_threadpool(_render)
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    return Response(content=data, media_type="image/png",
+                    headers={"X-Sheet-Rev": str(rec.get("rev", 0)),
+                             "Cache-Control": "no-store"})
+
+
+@app.post("/api/sheets/{sheet_id}/export")
+async def api_export_sheet(sheet_id: str, body: dict) -> dict:
+    try:
+        out = await run_in_threadpool(
+            sheet_render.export_sheet, sheet_id,
+            str(body.get("format", "png")))
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    except KeyError as e:
+        raise _err(e)
+    return {"ok": True, "file": out.name}
+
+
+@app.get("/api/sheets/{sheet_id}/export/{name}")
+def api_download_sheet_export(sheet_id: str, name: str) -> FileResponse:
+    p = sheet.sheet_export_dir(sheet_id) / paths.safe_id(name)
+    if not p.exists():
+        raise HTTPException(404, name)
+    return FileResponse(p, filename=p.name)
+
+
+# /candidates is declared BEFORE /{lb_id} — FastAPI matches in declaration
+# order, and "candidates" must never be captured as a lookbook id.
+@app.get("/api/lookbooks/candidates")
+def api_lookbook_candidates() -> list[dict]:
+    return sheet.lookbook_candidates()
+
+
+@app.get("/api/lookbooks")
+def api_list_lookbooks() -> list[dict]:
+    return sheet.list_lookbooks()
+
+
+@app.post("/api/lookbooks")
+def api_create_lookbook(body: dict) -> dict:
+    return _sheet_call(sheet.create_lookbook, str(body.get("title", "")))
+
+
+@app.get("/api/lookbooks/{lb_id}")
+def api_get_lookbook(lb_id: str) -> dict:
+    lb = _sheet_call(sheet.get_lookbook, lb_id)
+    if lb is None:
+        raise HTTPException(404, lb_id)
+    return lb
+
+
+@app.delete("/api/lookbooks/{lb_id}")
+def api_delete_lookbook(lb_id: str) -> dict:
+    _sheet_call(sheet.delete_lookbook, lb_id)
+    return {"ok": True}
+
+
+@app.post("/api/lookbooks/{lb_id}/sheets")
+def api_lookbook_add_sheet(lb_id: str, body: dict) -> dict:
+    def _add():
+        if body.get("sheet_id"):
+            return sheet.lookbook_add_sheet(lb_id, str(body["sheet_id"]))
+        rec = sheet.create_sheet(
+            str(body.get("archetype", "")), str(body.get("style", "")),
+            str(body.get("medium", "")), spec_id=body.get("spec_id"),
+            title=str(body.get("title", "")),
+            subject=str(body.get("subject", "")))
+        return sheet.lookbook_add_sheet(lb_id, rec["sheet_id"])
+    return _sheet_call(_add)
+
+
+@app.post("/api/lookbooks/{lb_id}/reorder")
+def api_lookbook_reorder(lb_id: str, body: dict) -> dict:
+    return _sheet_call(sheet.lookbook_reorder, lb_id,
+                       [str(s) for s in body.get("order", [])])
+
+
+@app.post("/api/lookbooks/{lb_id}/export")
+async def api_export_lookbook(lb_id: str) -> dict:
+    try:
+        out = await run_in_threadpool(sheet_render.export_lookbook, lb_id)
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    except KeyError as e:
+        raise _err(e)
+    return {"ok": True, "file": out.name}
+
+
+@app.get("/api/lookbooks/{lb_id}/export/{name}")
+def api_download_lookbook_export(lb_id: str, name: str) -> FileResponse:
+    p = paths.LOOKBOOKS_DIR / paths.safe_id(lb_id) / paths.safe_id(name)
+    if not p.exists():
+        raise HTTPException(404, name)
+    return FileResponse(p, filename=p.name)
 
 
 # ------------------------------------------------------------------------ ui
