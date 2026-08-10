@@ -152,8 +152,8 @@ literal ceiling. Ladder: sticky band 44 · header 45 · toast 50 · popover
 no new z-index value may be coined without a row here.
 
 **The two-mode band** (BAND_CONDENSE ruling, 2026-08-05): tools are not
-stages. While a tool view (Status / Reference / Productions / Settings)
-is open the band condenses to half height — sublines and the HERE chip
+stages. While a tool view (Status / Reference / Lookbook / Productions /
+Settings) is open the band condenses to half height — sublines and the HERE chip
 leave, cells drop to one row (7/8px padding), backgrounds recede
 `--bg2` → `--bg`, labels fall to `--ink-faint` (dimmer, never
 unreadable). Progress top borders survive — the map keeps reporting —
@@ -182,8 +182,8 @@ number, label, a live Courier subline from `stage_summary`, and a top border
 stating progress: `--ok` complete, `--accent` current (the viewed stage, else
 the work frontier — exactly one amber in the chrome), `--bad` blocked,
 `--line` unreached. `HERE` chip marks the viewed stage only. Tools (Status ·
-Reference · Productions · Settings) live in the header with the engine
-credential dots.
+Reference · Lookbook · Productions · Settings) live in the header with the
+engine credential dots.
 
 **Cursor band vs reach band — both are canon; do not "fix" one into the
 other** (PRODUCTIONS_PLAN A7). The nav band is a *cursor*: where the user
@@ -627,6 +627,46 @@ production's own art, not the app tokens.
 step (`.wiz-group-label`, THE MOVIE / THE BOARDS) — capability-before-
 vendor applied to parameters.
 
+**The sheet grammar** (SHEET_SYSTEM_PLAN §13, canonized 2026-08-10 with
+the plan's implementation; the composer surface itself sits in the
+Uncanonized table pending review):
+
+1. **A tool is not a stage.** The band is the pipeline. A surface that
+   spans the production rather than advancing it goes in the header
+   beside Reference — the Lookbook is the case.
+2. **One grammar per artifact class.** Two surfaces that both arrange
+   approved images onto a canvas are one mechanism with two archetypes.
+   Before adding a layout engine, name what the existing one cannot
+   express.
+3. **A style declares surface, edge and voice — never layout, size or
+   content.** And a style may not be named after the feature that uses
+   it (`PLATE`, not `LOOKBOOK`).
+4. **Derived sizes are recommended, never imposed** — and the cost of
+   moving is named in the unit the medium is read in, points or pixels,
+   not adjectives.
+5. **One failure vocabulary per surface.** Two ways of being unready are
+   two entries in one list, not two mechanisms. (Stage 05 keeps its
+   `slot_map` shape; the sheet speaks `TYPE_FLOOR` / `SLOT_PIXELS`;
+   `TOO_SMALL` maps across at the boundary only.)
+6. **Never auto-adopt an upstream change into approved work.** Report
+   the drift (`SOURCE MOVED`), offer take-it or freeze-it, let the user
+   rule.
+7. **Composer overlays are app chrome and never enter the artifact.**
+   Anything drawn to help the user aim lives in the DOM; the sheet
+   carries only its ink — namespaced under `.sheet[data-style]`, never
+   `:root`.
+8. **A rule applies to shipped output too.** When unification changes
+   what already ships — type sizes, a ground colour, a default — change
+   the output. Do not exempt it, and do not fork a style to preserve
+   the old look. (Boards moved to the `INK` ground and the type floor.)
+9. **Type that owns a column reflows; type in a rect does not.** Prose
+   grows to the legibility floor and takes the room; a caption under an
+   image cannot, so it is what decides the size. Nothing is ever exempt
+   from being legible.
+10. **One word, one meaning.** Two artifacts sharing a name is not fixed
+    by copy discipline. Rename one — stage 03's artifact is a
+    *breakdown*; "sheet" names the presentation artifact alone.
+
 **Preset looks** (D7, canon ahead of its library): a look is five
 pre-rendered plates the product ships — never a text prompt. Three
 rules: (1) selecting a look adds real reference images, so the Bible
@@ -1057,7 +1097,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | 2026-08-08 | **Unanchored locations on the SCENES shelf.** The screenplay's slugline register joins the Reference library: places with no matching SCENE-shelf anchor render as uncast-style cards (`N SCENES · ENVIRONMENT`, the stated consequence, one `Add reference` act prefilling `LOCATION_GEOMETRY — <NAME>`), the shelf count states `M LOCATIONS UNANCHORED`, and library search covers location names and environments. Casting stays subjects-only by design. **User: needs a FULL design pass, not placement-only review** — how a place reads in the library, the card's anatomy, and whether the register deserves its own shelf are all open. | Reference, SCENES shelf | Searching a place the script names returned NOTHING — no way to see it lacked imagery, no act to give it any |
 | 2026-08-08 | **Swatch ramps on the Reference STYLE shelf.** Built from canon — the same `.pal-row` ramps and the same viewer the Production Design column uses, in a `.pal-shelf` grid above the card grid. Quarantined swatches keep their card (the SUBJECTS shelf's governance rule); a mixed group's label states `N PROVISIONAL` and its viewer offers Approve only on the rows that need it. Review placement only: above the cards, or should the ramps BE the shelf with plates behind a disclosure? | Reference, STYLE shelf | Nineteen swatch cards said in a wall what three ramps say in a strip |
 | 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
-| 2026-08-09 | **Camera & composition axes** (`.cam-row`, `.cam-field`, marked `/* UNCANONIZED */` in styles.css). A labelled row of compact selects — Angle / Lens / Tilt / Shot — reused in three places: a "Camera grammar" production default on the Production Design Bible step, a per-panel row on the breakdown sheet editor, and an inline between-takes control on the panels workbench (which POSTs like Edit brief, re-stamping the lock, frozen by an approved take). Each axis is a controlled vocabulary the app expands into an authored render directive; blank = inherit the bible default. Tokens only; Courier micro-labels. Review: is the four-select row right on all three surfaces, or should the workbench collapse to a summary until opened? And the label/hint copy. | Production Design (Bible), sheet editor, panels workbench | Camera language reached the model only as two terse tokens at the prompt's end; "High Camera Angle" was ignored |
+| 2026-08-09 (rev 2026-08-10) | **Camera & composition axes** (`.cam-row`, `.cam-field`, `.cam-lens`, marked `/* UNCANONIZED */` in styles.css). A labelled row of compact selects — Angle / Lens / Tilt / Shot — reused in three places: the **"Camera grammar" production default now leads the Look Interview** (top of Production Design), a per-panel row on the breakdown sheet editor, and an inline between-takes control on the panels workbench (POSTs like Edit brief, re-stamping the lock, frozen by an approved take). Lens is a focal-length list (18–135mm) with a **Custom…** option revealing an inline mm input; Shot adds Aerial/Macro/Micro. A new production starts from a concrete default (Eye level · 24mm · Level · Wide) so the production card carries no blank; panel rows keep a blank "— from bible —". The app expands each axis into an authored render directive. Tokens only; Courier micro-labels. Review: the four-select row on all three surfaces (should the workbench collapse to a summary until opened?), the Custom-lens affordance, and the label/hint copy. | Look Interview, sheet editor, panels workbench | Camera language reached the model only as two terse tokens; "High Camera Angle" was ignored |
 | 2026-08-09 | **Add a panel from the panels workbench.** Built from canon — no new CSS: a ghost `+ Add panel` button (the sheet editor's `#sp-add-panel` vocabulary) in the Generate-panels header beside the breakdown selector, opening the canonical `modal` (title + brief textarea). The panel appends as a work-order card; the lock re-stamps server-side (same controlled edit as the between-takes brief) and the add is journaled. Review placement/copy only: the header button vs an add affordance at the end of the panel list, and the dialog's copy. | Boards, panels workbench header | Adding a panel meant leaving stage 04 to unlock the sheet at stage 03 — blocked once any take is approved |
 | 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
 

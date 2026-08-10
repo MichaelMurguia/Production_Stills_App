@@ -387,7 +387,7 @@
             <span class="door-nature mono">YOU FILL EVERYTHING</span></p>
           <form id="spec-new-form">
             <label class="f-wide">Subject
-              <input type="text" id="spec-new-subject" placeholder="what this sheet covers…" required title="What this board is about — a short human-readable name for the location, scene, prop, or character."></label>
+              <input type="text" id="spec-new-subject" placeholder="what this breakdown covers…" required title="What this board is about — a short human-readable name for the location, scene, prop, or character."></label>
             <!-- Spec ID takes its own row: CANON_EXTRACTION and
                  LIGHTING_STUDY need ~300px together, which no honest
                  split of a shared row affords at this column width.
@@ -620,9 +620,9 @@
         <h3>2 — Write or auto-fill a breakdown (03 Breakdowns)</h3>
         <p>A breakdown is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the breakdown; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the breakdown with a content hash.</p>
         <h3>3 — Generate and judge takes (04 Panels)</h3>
-        <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked sheet and spells out each reference's role boundary. Takes land in the filmstrip as <b>CANDIDATE — UNAPPROVED</b> until you judge them; reject with a specific reason and it feeds the panel's future prompts. Repair region fixes a painted area with your choice of engine.</p>
+        <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked breakdown and spells out each reference's role boundary. Takes land in the filmstrip as <b>CANDIDATE — UNAPPROVED</b> until you judge them; reject with a specific reason and it feeds the panel's future prompts. Repair region fixes a painted area with your choice of engine.</p>
         <h3>4 — Assemble the board (05 Boards)</h3>
-        <p>The slot map shows the exact canvas geometry and a verdict per slot before you spend anything. Once every slot reads OK, <b>Assemble 4K board</b> composes the approved takes onto a true 4K canvas with board typography drawn by the app (never by the model). Slots crop images to fit the layout — the originals stay one click away in the judging room. Layout variants (default / grid / hero) are presentation only — recorded on the board, the locked sheet untouched. Nothing is ever blown up: a take too small to fill its slot is letterboxed and flagged instead.</p>
+        <p>The slot map shows the exact canvas geometry and a verdict per slot before you spend anything. Once every slot reads OK, <b>Assemble 4K board</b> composes the approved takes onto a true 4K canvas with board typography drawn by the app (never by the model). Slots crop images to fit the layout — the originals stay one click away in the judging room. How the board is presented is arranged in the composer (Arrange this board) — recorded on the board, the locked breakdown untouched. Nothing is ever blown up: a take too small to fill its slot is letterboxed and flagged instead.</p>
         <h3>5 — Close the loop</h3>
         <p>Approve the board, then <b>→ Reference</b> promotes it (or any approved panel) into the reference library — e.g. as a <code>SCENE_REFERENCE</code> anchoring that screenplay scene. Future generations attach it, so consistency tightens with every approval. That is how the system improves over time without drifting.</p>
         <h3>Canon vs. Design Exploration</h3>

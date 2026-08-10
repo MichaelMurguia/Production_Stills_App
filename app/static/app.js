@@ -1141,7 +1141,7 @@ function gateChain(state) {
     { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
       sub: "Everything above becomes the document every render obeys" },
     { label: "DRAFT & LOCK A BREAKDOWN", verb: "Draft & lock a breakdown", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
-      sub: "Only a locked sheet can render" },
+      sub: "Only a locked breakdown can render" },
     { label: "RENDER AND APPROVE PANELS", verb: "Render and approve panels", done: (ss.panels?.approved || 0) > 0, stage: "boards",
       sub: "Takes are judged full-size, one at a time" },
   ];
@@ -1686,7 +1686,7 @@ const BLOCK_SUPPORT = {
   HOLD: "Held rows on required objects block the lock — read each cited source, then pass or cut the row.",
   GAP: "A missing input upstream stops generation downstream.",
   SIZE: "Nothing is ever blown up — regenerate the panel at a larger size.",
-  CITE: "The current draft no longer contains quotes this sheet cites — review the flagged rows.",
+  CITE: "The current draft no longer contains quotes this breakdown cites — review the flagged rows.",
 };
 
 // Gate stated before it is hit (user ruling 2026-08-01): a breakdown draws
@@ -5410,7 +5410,7 @@ async function renderSpecs(openId = null) {
   // and is left out rather than shipped as a promise.
   const HELP_TEXT = {
     "spec-id": "<b>Just a name. Does not affect generation.</b> The filing "
-      + "label this sheet, its panels, and its boards sort under — pick "
+      + "label this breakdown, its panels, and its boards sort under — pick "
       + "something you'll recognise in a list. CAPS_WITH_UNDERSCORES, "
       + "versioned. It cannot be renamed later.",
   };
@@ -5667,7 +5667,7 @@ async function openSpecEditor(specId) {
       </div>`;
     })() : ""}
     <div class="spec-section" style="margin-top:14px;border-top:none;padding-top:0">
-      <h4>Identity <span class="hint">(what this sheet is)</span></h4>
+      <h4>Identity <span class="hint">(what this breakdown is)</span></h4>
       <div class="grid-form">
       <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
@@ -5737,7 +5737,7 @@ async function openSpecEditor(specId) {
             ${envOptions.map(n => `<option value="${esc(n)}"${envCurrent && envCurrent.toLowerCase() === n.toLowerCase() ? " selected" : ""}>${esc(n)}${envNotes[n] ? ` — ${esc(envNotes[n].slice(0, 44))}` : ""}${(bible_catalog.environments || []).includes(n) ? "" : " (not in Bible yet)"}</option>`).join("")}
           </select>
           <p class="mini" style="margin:6px 0 0">One per sheet — a board lives somewhere.${!spec.environments && envCurrent ? ` Inferred ${esc(envCurrent)} from the location; change it if the read guessed wrong.` : ""}</p>
-          <p class="mini" style="margin:4px 0 0">Environment sets the biome's palette and light. ATMOSPHERE is this sheet's weather and mood — it wins where they overlap.</p>
+          <p class="mini" style="margin:4px 0 0">Environment sets the biome's palette and light. ATMOSPHERE is this breakdown's weather and mood — it wins where they overlap.</p>
         </div>
         <div class="fgroup" title="Scene-locked lessons are the Bible's accumulated rules for specific scenes/subjects. Check the ones that apply to this board.">
           <span class="f-label">Scene lessons</span>
@@ -6139,8 +6139,8 @@ REMOVE — marked for removal from the board.">
   } catch (err) {
     $("#sp-gate", panel).innerHTML =
       `<div class="report" style="border-left:2px solid var(--bad)"><b>The editor
-      failed to render this sheet's ${panelsHost.children.length ? "ledger" : "panels"}</b>
-      — the sheet itself is intact on the server (${(spec.panels || []).length} panels,
+      failed to render this breakdown's ${panelsHost.children.length ? "ledger" : "panels"}</b>
+      — the breakdown itself is intact on the server (${(spec.panels || []).length} panels,
       ${(spec.evidence_ledger || []).length} evidence rows).
       <span class="mono">${esc(String(err.message || err))}</span> —
       reload to retry; if it persists this is an app bug worth reporting.</div>`;
@@ -6358,7 +6358,7 @@ REMOVE — marked for removal from the board.">
     $("[data-f=lock-revise]", panel).onclick = doRevise;
     const doUnlock = async () => {
       if (!(await askConfirm(`Unlock ${specId} for editing`,
-        "This VOIDS its approval (journaled in the approval log) and returns it to DRAFT — it disappears from Panels until you approve it again, and re-approving mints a new spec hash. Unapproved candidates keep the hash they were generated against.\n\nRefused automatically if any APPROVED candidate or board depends on this sheet — approved canon can never change out from under what it was approved against.\n\nTo keep the approved version as history instead, use Create revision.",
+        "This VOIDS its approval (journaled in the approval log) and returns it to DRAFT — it disappears from Panels until you approve it again, and re-approving mints a new spec hash. Unapproved candidates keep the hash they were generated against.\n\nRefused automatically if any APPROVED candidate or board depends on this breakdown — approved canon can never change out from under what it was approved against.\n\nTo keep the approved version as history instead, use Create revision.",
         "Unlock & edit", true))) return;
       try {
         await api(`/api/specs/${specId}/unlock`, { method: "POST" });
@@ -6759,12 +6759,12 @@ async function pollForNewTake(specId, panelId, beforeIds, { tries = 40, delayMs 
 async function addPanelDialog(specId) {
   const res = await modal({
     title: "Add a panel",
-    body: "It joins this breakdown as a work order, ready to generate. The sheet's lock re-stamps; existing takes keep the hash they were painted against.",
+    body: "It joins this breakdown as a work order, ready to generate. The breakdown's lock re-stamps; existing takes keep the hash they were painted against.",
     fields: [
       { name: "title", label: "Panel title", placeholder: "e.g. The Pioneer's Workshop" },
       { name: "purpose", label: "Brief", textarea: true,
         placeholder: "What this panel must show — the brief every take is painted from.",
-        hint: "The panel's purpose; it steers the render until objects are added on the sheet." },
+        hint: "The panel's purpose; it steers the render until objects are added on the breakdown." },
     ],
     confirmLabel: "Add panel",
   });
@@ -6773,7 +6773,7 @@ async function addPanelDialog(specId) {
   try {
     const p = await api(`/api/specs/${specId}/panels`, { method: "POST",
       json: { title: res.title, purpose: res.purpose } });
-    toast(`${p.id} added — a work order at 0% allocation; balance it on the sheet before assembly.`);
+    toast(`${p.id} added — a work order at 0% allocation; balance it on the breakdown before assembly.`);
     await renderBoardPanels(specId);
   } catch (err) { toast(err.message, true); }
 }
@@ -7002,7 +7002,7 @@ async function renderBoardPanels(specId) {
             <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF</span>
           </div>
         </div>
-        <div class="cam-inline" data-f="cam-inline" title="Camera for this panel — changing an axis re-stamps the sheet lock and the next take paints from it. Blank = the production's Art Direction Bible default.">
+        <div class="cam-inline" data-f="cam-inline" title="Camera for this panel — changing an axis re-stamps the breakdown's lock and the next take paints from it. Blank = the production's Art Direction Bible default.">
           <span class="f-label">Camera <span class="hint">${frozen ? "frozen by an approved take" : "blank = the bible default · applies to the next take"}</span></span>
           ${cameraRow("cam", p, "— from bible —", frozen)}
         </div>`;
@@ -7320,7 +7320,7 @@ async function renderBoardPanels(specId) {
             content. Nothing is broken and nothing was billed — but this exact staging
             will not render on this engine.</p>
             <p style="margin:0 0 4px"><b>The craft answer:</b> restage the panel to imply
-            the sensitive element rather than inventory it (edit the sheet's required
+            the sensitive element rather than inventory it (edit the breakdown's required
             objects), or try a different engine — policy lines differ.</p>
             ${detail ? `<p class="mini mono" style="margin-top:6px">PROVIDER — ${esc(detail)}</p>` : ""}
             <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
@@ -7732,7 +7732,7 @@ async function renderBoardPanels(specId) {
         <span class="drow"><span>Palette</span><span class="mono">${derivedCands.some(c => c.panel_id === "PALETTE") ? "SAMPLED" : "NOT SAMPLED"}</span></span>
         <span class="drow"><span>Materials</span><span class="mono">${derivedCands.some(c => c.panel_id === "MATERIALS") ? "DERIVED" : "NOT DERIVED"}</span></span>
       </button>
-      <div class="rail-note">Both are measured from this sheet's approved panels at assembly.</div>
+      <div class="rail-note">Both are measured from this breakdown's approved panels at assembly.</div>
       <div class="rail-note">${boards.length
         ? `This sheet is assembled in <button class="text-act" data-f="to-assembly">${boards.length} board${boards.length === 1 ? "" : "s"}</button>.`
         : `Not assembled yet — <button class="text-act" data-f="to-assembly">05 Boards</button> is where that happens.`}</div>
@@ -8123,17 +8123,11 @@ async function renderAssemblyFor(specId) {
   try { sm = await api(`/api/specs/${specId}/slot-map`); }
   catch { /* the map is a preview; assembly still states its own errors */ }
 
-  const isStudy = String(spec.board_type || "").toUpperCase() === "LIGHTING_STUDY";
-  // "Aspect" is the default grammar (director's ruling 2026-07-31): slots
-  // derive from the takes' own aspect ratios; "Allocation" is the old
-  // sheet-allocation hero grammar, kept selectable.
-  const variants = isStudy ? [] : [
-    { value: "aspect", label: "ASPECT" },
-    { value: "allocation", label: "ALLOCATION" },
-    { value: "grid", label: "GRID" },
-    ...spec.panels.map(p => ({ value: `hero:${p.id}`, label: `HERO ${p.id}` })),
-  ];
-  let variant = "aspect";
+  // Layout moved to the sheet grammar (SHEET_SYSTEM_PLAN ba-4a): stage 05
+  // judges readiness, the composer arranges. The variant chips are gone —
+  // Arrange this board opens the composer on this scene's BOARD sheet,
+  // and the map reads the default grammar.
+  const variant = "aspect";
   const boardsCount = boards.length;
   // Same takes + same layout = the board that already exists; assembling
   // again would mint a duplicate (user ruling 2026-08-02).
@@ -8153,14 +8147,12 @@ async function renderAssemblyFor(specId) {
         <div class="rail-sheet" style="font-size:16px">${esc(specId)}</div>
         <p class="mini" style="margin:4px 0 0">${esc(spec.subject || "")} · ${spec.panels.length} slot${spec.panels.length > 1 ? "s" : ""}</p>
       </div>
-      <button class="primary" id="asm-go" ${sm?.ready && !dupBoard ? "" : "disabled"} title="${dupBoard ? `Already assembled as ${dupBoard.candidate_id} with these exact takes and this layout — approve a new take or pick another variant to assemble again` : sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">${dupBoard ? "Assembled" : "Assemble 4K board"}</button>
+      <button class="ghost" id="asm-arrange" title="Open the composer on this scene's BOARD sheet — archetype, style and slots already made from this slot map. Readiness travels with it and is not recomputed.">Arrange this board</button>
+      <button class="primary" id="asm-go" ${sm?.ready && !dupBoard ? "" : "disabled"} title="${dupBoard ? `Already assembled as ${dupBoard.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it in the composer` : sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">${dupBoard ? "Assembled" : "Assemble 4K board"}</button>
     </div>
     <div class="slot-caption" style="margin-top:14px">
       <span class="f-label">Slot map · true 4K canvas</span>
-      <span class="variant-chips" data-f="variants">
-        ${variants.map(v => `<button class="vchip${v.value === variant ? " on" : ""}" data-v="${esc(v.value)}">${esc(v.label)}</button>`).join("")}
-      </span>
-      <span class="hint">presentation only — recorded on the board, the locked sheet is never touched</span>
+      <span class="hint">readiness only — how the board is presented is arranged in the composer</span>
     </div>
     <div data-f="slot-wrap">${sm ? slotHtml(sm) : ""}</div>
     <div class="row">
@@ -8191,20 +8183,29 @@ async function renderAssemblyFor(specId) {
       go.disabled = !sm.ready || !!dup;
       go.textContent = dup ? "Assembled" : "Assemble 4K board";
       go.title = dup
-        ? `Already assembled as ${dup.candidate_id} with these exact takes and this layout — approve a new take or pick another variant to assemble again`
+        ? `Already assembled as ${dup.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it in the composer`
         : sm.ready
           ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling"
           : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first";
     } catch (err) { toast(err.message, true); }
   };
-  $$(".vchip", asm).forEach(ch => {
-    ch.onclick = () => {
-      variant = ch.dataset.v;
-      $$(".vchip", asm).forEach(x => x.classList.toggle("on", x === ch));
-      refreshMap();
-    };
-  });
   $("#asm-size", asm).onchange = refreshMap;
+
+  // The one door (ba-4a): Arrange opens the composer on this scene's
+  // BOARD sheet — idempotent server-side, so the door always lands on
+  // the same sheet.
+  $("#asm-arrange", asm).onclick = async e => {
+    e.target.disabled = true;
+    try {
+      const rec = await api(`/api/specs/${specId}/arrange`, { method: "POST" });
+      uiSet("lb.sheet", rec.sheet_id);
+      uiSet("lb.block", "");
+      showView("lookbook");
+    } catch (err) {
+      toast(err.message, true);
+      e.target.disabled = false;
+    }
+  };
 
   $("#asm-go", asm).onclick = async (e) => {
     const btn = e.target;
