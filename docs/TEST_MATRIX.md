@@ -13,7 +13,22 @@ one provisioner test can reach the real network through the
 `_domain_serves` probe when a row's url/railway_url diverge — seen once;
 stub it if it recurs. Both run in CI on every push;
 the convention (CLAUDE.md) is that every feature/bugfix updates tests in
-the same commit. The audit batch (`docs/AUDIT_2026-08-02.md`) added
+the same commit. Counts as of 2026-08-10: `tests/` 531, `storefront/tests/`
+193. The sheet grammar (SHEET_SYSTEM_PLAN, 2026-08-10) added
+`test_sheet.py` (43 tests): the R1 elastic/fixed ladder against the plan's
+worked-outcomes table (the unreachable 18×12 print rung is exercised via a
+test-only injected frac — the canon set stays closed at twelve), the
+one-list export gate (TYPE_FLOOR + SLOT_PIXELS, empty slots and over-crops
+included), caption staleness (rebind/author never touch the source),
+palette-order preservation, sheets-never-write-SPECS_DIR, idempotent
+/arrange with the R3 variant mapping and R4 derived strip, render
+letterbox-vs-raise parity (R2), gated PNG/PDF export at exact pixel size,
+lookbook lifecycle + no-dangling-references, and the ba-4a stage-05
+division wiring (Arrange door present, variant chips gone, Lookbook a
+tool not a stage, R7 rename held). `test_assemble_layout.py` passed
+unchanged across the packing-function move — the behaviour-preservation
+gate. `tests/test_camera.py` (19) covers the same-day camera revision.
+The audit batch (`docs/AUDIT_2026-08-02.md`) added
 `test_audit_fixes.py` to both suites: traversal guards, canvas bounds,
 corrupt-state resilience, quarantine enforcement, restore staging,
 webhook payment gating, refunds, revoke discipline, claim-race index,

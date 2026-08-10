@@ -12,22 +12,24 @@ project. Everything runs and stays on your machine; the browser is just the scre
 > has moved). This file is the operator's reference: setup, milestones,
 > engines, and the canon rules.
 
-## The pipeline band — five stages plus three tools
+## The pipeline band — five stages plus five tools
 
 The navigation band IS the pipeline, in work order:
 
 **01 Screenplay** (the root dependency: file, per-location coverage map,
 citation health) → **02 Prod. Design** (the visual concept: wizard, Art
 Direction Bible, style anchors, lessons) → **03 Breakdowns** (the script
-broken into per-board breakdown sheets) → **04 Panels** (the judging room:
-generate takes, review, approve) → **05 Boards** (assembly: slot map, layout
-variants, finished 4K boards). Each stage cell carries a live status subline
-and a progress-colored top border.
+broken into per-board breakdowns) → **04 Panels** (the judging room:
+generate takes, review, approve) → **05 Boards** (readiness: the slot map,
+Assemble, and the Arrange-this-board door into the composer). Each stage
+cell carries a live status subline and a progress-colored top border.
 
 In the header: **Status** (the landing page — DO THIS NEXT, everything
-blocking, recent activity) · **Research** (the reference library) ·
-**Settings** (engines and keys). You are the Production Designer; the app is
-your art department.
+blocking, recent activity) · **Reference** (the one library) · **Lookbook**
+(sheets and the composer — presentation for boards and pitch sets; see
+`docs/USER_GUIDE.md` §9) · **Productions** (the multi-project shelf) ·
+**Settings** (engines and keys). You are the Production Designer; the app
+is your art department.
 
 ## New project setup (Prod. Design stage)
 
@@ -72,7 +74,7 @@ Your browser opens at `http://127.0.0.1:8765`. Close the console window to stop 
 | M2 — Specification editor backed by the canon validators (+ continuous CANNOT-LOCK gate) | ✅ Built |
 | M3 — Panel generation (Gemini / GPT Image 2 / ChatGPT pipeline, selectable per generation) | ✅ Built — needs a Google Gemini and/or OpenAI API key |
 | M4 — Automated image audit (Claude vision) | Deliberately skipped — the director is the audit; revisit only as drift comparison |
-| M5 — 4K board assembly + typography + derived strips + slot map + layout variants (no upscaling) | ✅ Built |
+| M5 — 4K board assembly + typography + derived strips + slot map (no upscaling); layout arranged in the composer since 2026-08-10 | ✅ Built |
 | M6 — Revision workflow (Create revision, Unlock & edit with canon guards, journaled) | ✅ Built |
 | M7 — Region repair (paint a mask, describe the change, pick the engine — GPT Image 2 true masked edit or Gemini guided edit; result is a new take) | ✅ Built |
 | M8 — Activity log + debrief surfaces (`data/activity_log.jsonl` flight recorder; Recent feed, blockers, stage summary in-app; Claude reads the log on request) | ✅ Built |
@@ -92,7 +94,7 @@ Your browser opens at `http://127.0.0.1:8765`. Close the console window to stop 
    its role says it controls. Approve a reference to make it a canon anchor;
    reject it and the file is physically quarantined so it can never be attached
    to a generation again.
-3. **Breakdowns** — create a breakdown sheet (Production Generation
+3. **Breakdowns** — create a breakdown (Production Generation
    Specification) per board:
    panels (purpose, required/forbidden objects, layout %), forbidden elements,
    and the object-level evidence ledger. **Validate** runs the same

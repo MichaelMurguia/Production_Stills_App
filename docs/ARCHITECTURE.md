@@ -1,8 +1,9 @@
 # Screenboard Studio — Architecture
 
-*Current to 2026-08-04 (release 2026.08.04.43). Companion to
-`docs/INTENT.md` (why), `docs/WEBAPP_GUIDE.md` (storefront specifics),
-`docs/DEPLOYMENT.md` (infra runbook), `docs/SECURITY.md`.*
+*Current to 2026-08-10 (sheet grammar + camera revision on top of release
+2026.08.05.20). Companion to `docs/INTENT.md` (why),
+`docs/WEBAPP_GUIDE.md` (storefront specifics), `docs/DEPLOYMENT.md`
+(infra runbook), `docs/SECURITY.md`.*
 
 ## The two apps, one repo
 
@@ -29,7 +30,9 @@ Hard boundary: no imports across the two; nothing from `data/` or
 | `generate.py` | Engines. `PROVIDERS` (gemini / openai / openai-chat / custom); prompt compilation (`render_context` via `bible.py` selective injection; raises when no rendering language — no template fallback); renders, repairs (region composite — outside-mask pixels carried over unchanged), re-render (full-size re-performance), style probes, lessons; `_render_ready()` compose-time transcode backstop; `_wrap_engine_error` classifies content-policy refusals |
 | `imaging.py` | Display-tier image derivatives (`VARIANTS`: `thumb`≤512 / `md`≤1600 WebP + `full`): one `variant_path` builder — lazy, mtime-guarded, never upscales, falls back to source. Display-only (never a render/size-gate input). `generate` & `store` resolve candidate/reference tiers through it and warm them at write/intake. See `docs/IMAGE_SERVING.md` |
 | `bible.py` | Art Direction Bible parsing: `##` design languages, `### Environments`, atmospheres; `render_context(haystack, languages, lessons, environments)` builds the per-panel prompt block; `sections_catalog()` feeds the sheet scope UI |
-| `assemble.py` | Board math + composition: `_variant_rects` (aspect-first default: justified rows, aspect > scale > crop; grid; hero; allocation), `slot_map()` (same geometry + verdicts, incl. TOO_SMALL — the no-upscale rule made visible), `assemble()` (records `rects` + `panels_used` for the structural view AND draws the 4K composite with `_type_scale` typography) |
+| `assemble.py` | Stage 05's judgement: `_variant_rects` (aspect-first default: justified rows, aspect > scale > crop; grid; hero; allocation — packers imported from `sheet.py`, aliased under their old names), `slot_map()` (geometry + verdicts incl. TOO_SMALL — the no-upscale rule made visible; measures against `sheet_render.content_rect`, the single geometry authority), `assemble_board()` (a thin caller since SHEET_SYSTEM: builds an ephemeral `BOARD` sheet and renders it via `render_sheet(allow_letterbox=True)` — same gates, record shape, warnings and endpoint as always) |
+| `sheet.py` | The sheet grammar's model (SHEET_SYSTEM_PLAN, rulings R1–R8): `BLOCK_TYPES` (twelve, closed set, elastic flag per R1), `ARCHETYPES` seeds, the shared packers (`grid_rects`/`layout_rects`/`aspect_rects` — one layout implementation for boards and sheets), fractional geometry (block frac in content, slot frac in block; pixels always derived), `LADDERS` + `recommend()` (fixed floors 12 pt/24 px; elastic type renders `max(frac×W, floor)` and never drives the rung), `readiness()` (`TYPE_FLOOR`/`SLOT_PIXELS`, one list — stage-05 `TOO_SMALL` maps across at this boundary only, R5), caption bindings with sha256 staleness (never auto-adopt; rebind/author are the only two acts), idempotent `arrange_board()` (R3 variant→block mapping, hero → `HERO`+`GRID`; R4 derived takes travel as a captioned trailing `STRIP`), sheet/lookbook CRUD on `_atomic_write_json` |
+| `sheet_render.py` | One renderer for preview and export (`render_sheet(sheet, scale, allow_letterbox=False)` — the composer preview is this at a smaller scale, so preview and output cannot drift): `STYLE_INK` (six styles; `INK` is the boards', ground `#131418` per R6), all type from `caption_frac × pixel width`, cover-crop with **no upscaling ever** (sheets raise `RenderShortfall`; only the assemble path letterboxes+flags, R2), slot crop/rotate applied inside a never-rotating frame, gated `export_sheet` (PNG/PDF) and `export_lookbook` (multi-page PDF, each page at its sheet's own size) |
 | `backup.py` | One-zip-per-production backup (never `settings.json`), zip-slip-guarded restore that always creates a NEW production, `days_since_backup` care data |
 | `mockflow.py` | The debug dry-run engine (Settings → Debug tools): scan/bible/breakdown text derived deterministically from the screenplay, renders drawn or reused from the library — everything stamped MOCK, no model calls, no cost. Owner-linked: exists only where `SCREENBOARD_DEBUG_TOOLS` is set (the provisioner sets it for OWNER_EMAILS studios); customers never see the tab, endpoints, or provider |
 | `connectors.py` | Provider connectors (CONNECTORS_PLAN, 2026-08-03): one credential unlocks a synced catalog of image models. OpenRouter (PKCE one-click; `or:` ids render via chat-completions image path) and fal.ai (`fal:` ids via the async queue; unsupported parameter families listed but not enableable — a stated gate). State in install-level `connectors.json` (gitignored — holds live keys); enabled records join `all_providers()`; injected HTTP for tests |
@@ -47,13 +50,18 @@ frozen** (app.js generates markup against them).
 Key client subsystems: the band (`updateBand` — cursor colors, LOCKED
 cells, self-healing lock verification on click), `gateChain()` (one model
 feeding the lock popover and the stage checklist; optional steps never
-count), the judging room (rail/stage/side), the sheet editor (panels +
+count), the judging room (rail/stage/side), the breakdown editor (panels +
 evidence ledger + live lock gate mirroring `validate_spec`), the
 Productions library (cards with reach bands from `/api/projects/summary`),
 persistent UI state (`uiGet/uiSet`, localStorage namespaced per
 production), engine gating (`fillProviderSelect` / `providerOptions` —
 unconfigured omitted, failed-test keys disabled with reason, applied to
-every selector including modals).
+every selector including modals), and the Lookbook composer
+(`renderSheetComposer` — tray · server-rendered preview via
+`POST /api/sheets/{id}/render` fetched as a blob · rail; DOM overlays for
+selection/drag that mirror `sheet._content_rect_fracs` and never print;
+the fill popover verdicts takes against `slotNeed` client-side; deep link
+`#lookbook/SH-xxxx`).
 
 ### Data layout (per production)
 
@@ -65,6 +73,8 @@ every selector including modals).
   subjects.json                          specs/*.json + locks.json
   camera_defaults.json (bible-level camera grammar)
   boards/<SPEC_ID>/CAND-*.{json,png,thumb.webp,md.webp} + BOARD-*.{same}
+  sheets/SH-*.json + sheets/<SH>/export/ (sheet grammar; rev-stamped)
+  lookbooks/LB-*.json + lookbooks/<LB>/<LB>.pdf
   activity_log.jsonl                     rejection_lessons.json
 <base>/context/01_ART_DIRECTION_BIBLE.md
 <base>/project_state/ (approval log, rejection history)
@@ -87,12 +97,25 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   ROLE:` tail). Per-panel edits between takes go through `store.amend_panel_camera`
   (same lock-restamp/journal/frozen contract as `amend_panel_purpose`).
 - **Add a panel post-lock**: the panels workbench appends a panel to a locked
-  sheet (`store.add_panel`) — append-only, so nothing upstream of an approval
-  changes; it lands as a 0%-allocation work order, the lock re-stamps and the
-  add is journaled (same contract as `amend_panel_purpose`).
-- **Assemble**: slot map verdicts must all read OK → `assemble` records
-  `rects`/`panels_used` + draws composite → client lands on the
-  structural board; identical takes+variant re-assembly is disabled.
+  breakdown (`store.add_panel`) — append-only, so nothing upstream of an
+  approval changes; it lands as a 0%-allocation work order, the lock
+  re-stamps and the add is journaled (same contract as `amend_panel_purpose`).
+- **Assemble**: slot map verdicts must all read OK → `assemble_board`
+  builds the ephemeral BOARD sheet, renders it through `render_sheet`
+  (letterbox+flag allowed on this path only), records `rects`/
+  `panels_used` → client lands on the structural board; identical-takes
+  re-assembly is disabled.
+- **Arrange / compose** (SHEET_SYSTEM, 2026-08-10): stage 05's
+  `POST /api/specs/{id}/arrange` idempotently mints the scene's `BOARD`
+  sheet from its slot map (variant read from the latest board record) →
+  the composer edits it through the sheet API — `/api/sheets` CRUD,
+  `/style`, `/size` (rungs or `"recommended"`), `/blocks`,
+  `/blocks/{b}/slots/{s}` (fill/frac/crop), `/blocks/{b}/caption` +
+  `/caption/resolve` (`rebind`|`author`), `/readiness`, `/render`
+  (preview PNG at a scale), `/export`; lookbooks under `/api/lookbooks`
+  (`/candidates` declared before `/{lb}` — route-capture order). Every
+  mutation saves and bumps `rev`; a RECOMMENDED size silently follows
+  block changes (that is what recommended means).
 - **Switch production**: `POST /api/projects/activate` → `set_project` →
   full page reload (every view re-reads).
 
