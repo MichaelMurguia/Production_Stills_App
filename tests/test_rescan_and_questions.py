@@ -55,7 +55,30 @@ class ContinuityIsNotAnHour(unittest.TestCase):
                       "or opening the sheet would silently change it")
 
 
-class AnsweredQuestionsReachThePrompt(unittest.TestCase):
+class _IsolatedStyleContext(unittest.TestCase):
+    """compile_panel_prompt requires a rendering language, and these tests
+    are not about it — they must never read the real install's Art
+    Direction Bible (it emptied with a production switch and took nine
+    tests down). A canned language keeps the real prompt pipeline running
+    deterministically."""
+
+    def setUp(self):
+        from unittest import mock
+        self._style_patches = [
+            mock.patch.object(generate.bible, "render_context",
+                              return_value=""),
+            mock.patch.object(generate, "load_style_bible",
+                              return_value="Analog sci-fi. Real materials."),
+        ]
+        for p in self._style_patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self._style_patches:
+            p.stop()
+
+
+class AnsweredQuestionsReachThePrompt(_IsolatedStyleContext):
     def spec(self, **extra):
         return {"specification_id": "SPEC_X", "subject": "GRM BRIDGE",
                 "board_type": "LOCATION", "mode": "CANON_EXTRACTION",
@@ -188,7 +211,7 @@ class RescanKnowsWhatItHas(unittest.TestCase):
         self.assertFalse(live)
 
 
-class RejectionReasonsArePrimaryRules(unittest.TestCase):
+class RejectionReasonsArePrimaryRules(_IsolatedStyleContext):
     """A rejection reason is a PRIMARY rule for the next take (user
     2026-08-08). The mechanism already carried reasons into the next
     prompt — verified live before changing anything — but as a bullet ~80%

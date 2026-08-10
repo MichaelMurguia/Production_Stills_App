@@ -79,112 +79,12 @@ def _slug(spec: dict) -> str:
     return slug
 
 
-def _grid_rects(panels: list[dict], x0: int, y0: int, w: int,
-                h: int) -> dict[str, tuple[int, int, int, int]]:
-    """Uniform grid — the right grammar for study series: every panel equal,
-    comparison is the point."""
-    n = len(panels)
-    cols = min(4, max(1, n if n <= 4 else (3 if n <= 9 else 4)))
-    rows = -(-n // cols)
-    cw = (w - GUTTER * (cols - 1)) // cols
-    ch = (h - GUTTER * (rows - 1)) // rows
-    rects = {}
-    for i, p in enumerate(panels):
-        r, c = divmod(i, cols)
-        rects[p["id"]] = (x0 + c * (cw + GUTTER), y0 + r * (ch + GUTTER), cw, ch)
-    return rects
-
-
-def _layout_rects(panels: list[dict], alloc: dict[str, float],
-                  x0: int, y0: int, w: int, h: int,
-                  hero_id: str | None = None) -> dict[str, tuple[int, int, int, int]]:
-    """Hero panel takes the left region, remaining panels stack on the right
-    with heights proportional to their layout allocation. hero_id overrides
-    which panel leads — layout is presentation grammar, not canon."""
-    ordered = sorted(panels, key=lambda p: -(alloc.get(p["id"], 0) or 0))
-    if hero_id:
-        ordered = ([p for p in ordered if p["id"] == hero_id]
-                   + [p for p in ordered if p["id"] != hero_id])
-    rects: dict[str, tuple[int, int, int, int]] = {}
-    if len(ordered) == 1:
-        rects[ordered[0]["id"]] = (x0, y0, w, h)
-        return rects
-
-    hero = ordered[0]
-    hero_share = (alloc.get(hero["id"], 50) or 50) / 100.0
-    hero_w = int(w * min(max(hero_share, 0.45), 0.68))
-    rects[hero["id"]] = (x0, y0, hero_w, h)
-
-    rest = ordered[1:]
-    rx = x0 + hero_w + GUTTER
-    rw = w - hero_w - GUTTER
-    total = sum(alloc.get(p["id"], 0) or 0 for p in rest) or len(rest)
-    ry = y0
-    remaining_h = h - GUTTER * (len(rest) - 1)
-    for i, p in enumerate(rest):
-        share = (alloc.get(p["id"], 0) or (total / len(rest))) / total
-        ph = int(remaining_h * share) if i < len(rest) - 1 else (y0 + h - ry)
-        rects[p["id"]] = (rx, ry, rw, ph)
-        ry += ph + GUTTER
-    return rects
-
-
-def _aspect_rects(panels: list[dict], aspects: dict[str, float],
-                  x0: int, y0: int, w: int,
-                  h: int) -> dict[str, tuple[int, int, int, int]]:
-    """Aspect-first layout (director's ruling 2026-07-31): slot geometry
-    derives from the takes' OWN aspect ratios — justified rows in panel
-    order, like a photo wall. Priority order: aspect ratio first, scale
-    second, crop last. Every contiguous partition of the panels into rows
-    is scored; within a row, native aspects fix the widths, and the
-    partition whose natural stacked height best fills the canvas wins.
-    The residual mismatch (canvas height / natural height) is the ONLY
-    aspect deviation, it is uniform across every panel, and the cover-crop
-    step absorbs it — so the crop is as small as the canvas allows."""
-    import math
-    n = len(panels)
-    if n == 0:
-        return {}
-    a = [max(0.1, min(10.0, aspects.get(p["id"]) or 16 / 9)) for p in panels]
-
-    best = None  # (cost, rows, f)
-    for bits in range(1 << (n - 1)):
-        rows, start = [], 0
-        for i in range(n - 1):
-            if bits >> i & 1:
-                rows.append(range(start, i + 1))
-                start = i + 1
-        rows.append(range(start, n))
-        k = len(rows)
-        avail = h - GUTTER * (k - 1) - LABEL_H * k
-        if avail <= 0:
-            continue
-        natural = sum((w - GUTTER * (len(r) - 1)) / sum(a[i] for i in r)
-                      for r in rows)
-        f = avail / natural
-        # |log f| is the uniform crop each panel pays; the tiny row-count
-        # term only breaks ties toward calmer walls.
-        cost = abs(math.log(f)) + 0.01 * k
-        if best is None or cost < best[0]:
-            best = (cost, rows, f)
-
-    _, rows, f = best
-    rects: dict[str, tuple[int, int, int, int]] = {}
-    y = float(y0)
-    for r in rows:
-        wr = w - GUTTER * (len(r) - 1)
-        sum_a = sum(a[i] for i in r)
-        row_h = (wr / sum_a) * f
-        x = float(x0)
-        for j, i in enumerate(r):
-            wi = wr * (a[i] / sum_a)
-            if j == len(r) - 1:
-                wi = x0 + w - x  # absorb rounding drift
-            rects[panels[i]["id"]] = (round(x), round(y), round(wi),
-                                      round(row_h) + LABEL_H)
-            x += wi + GUTTER
-        y += row_h + LABEL_H + GUTTER
-    return rects
+# The packing functions moved to sheet.py (SHEET_SYSTEM_PLAN §2) so boards
+# and sheets share one layout implementation. Aliased under their old names
+# — geometry and callers unchanged.
+from .sheet import (aspect_rects as _aspect_rects,   # noqa: E402
+                    grid_rects as _grid_rects,
+                    layout_rects as _layout_rects)
 
 
 def check_variant(spec: dict, variant: str | None) -> str:

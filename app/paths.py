@@ -59,7 +59,8 @@ def set_project(slug: str) -> None:
     global ACTIVE_PROJECT, DATA, REFERENCES, REF_ORIGINALS, REF_THUMBS, \
         REF_QUARANTINE, REF_INDEX, SCREENPLAY_DIR, SPECS_DIR, SPEC_LOCKS, \
         APP_STATE, SUBJECTS, WIZARD_ANALYSIS, BOARDS_DIR, BIBLE, \
-        PROJECT_STATE, APPROVAL_LOG, REJECTION_HISTORY, CAMERA_DEFAULTS
+        PROJECT_STATE, APPROVAL_LOG, REJECTION_HISTORY, CAMERA_DEFAULTS, \
+        SHEETS_DIR, LOOKBOOKS_DIR
     base = _project_base(slug)
     ACTIVE_PROJECT = slug
     DATA = base / "data"
@@ -76,6 +77,8 @@ def set_project(slug: str) -> None:
     SUBJECTS = DATA / "subjects.json"
     WIZARD_ANALYSIS = DATA / "wizard_analysis.json"
     BOARDS_DIR = DATA / "boards"
+    SHEETS_DIR = DATA / "sheets"
+    LOOKBOOKS_DIR = DATA / "lookbooks"
     BIBLE = base / "context" / "01_ART_DIRECTION_BIBLE.md"
     PROJECT_STATE = base / "project_state" / "project_state.json"
     APPROVAL_LOG = base / "project_state" / "approval_log.md"
@@ -136,6 +139,6 @@ set_project(_load_active_project())
 
 def ensure_dirs() -> None:
     for d in (DATA, REFERENCES, REF_ORIGINALS, REF_THUMBS, REF_QUARANTINE,
-              SCREENPLAY_DIR, SPECS_DIR, BOARDS_DIR,
-              PROJECT_STATE.parent, BIBLE.parent):
+              SCREENPLAY_DIR, SPECS_DIR, BOARDS_DIR, SHEETS_DIR,
+              LOOKBOOKS_DIR, PROJECT_STATE.parent, BIBLE.parent):
         d.mkdir(parents=True, exist_ok=True)
