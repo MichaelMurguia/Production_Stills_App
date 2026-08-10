@@ -1408,6 +1408,33 @@ def api_add_panel(spec_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
 
 
+@app.get("/api/camera-defaults")
+def api_get_camera_defaults() -> dict:
+    """The production's default camera grammar (Art Direction Bible level)."""
+    return store.camera_defaults()
+
+
+@app.post("/api/camera-defaults")
+def api_save_camera_defaults(body: dict) -> dict:
+    try:
+        return store.save_camera_defaults(body or {})
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/camera")
+def api_amend_panel_camera(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Set a panel's camera between takes — journaled, lock re-stamped; refused
+    only when this panel already has approved canon output. See
+    store.amend_panel_camera."""
+    try:
+        return store.amend_panel_camera(spec_id, panel_id, body or {})
+    except (KeyError, PermissionError) as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/purpose")
 def api_amend_panel_purpose(spec_id: str, panel_id: str, body: dict) -> dict:
     """The workbench's between-takes brief edit — journaled, lock re-stamped;

@@ -420,6 +420,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 .panel-card .head .alloc .unit { color: var(--ink-dim); font-size: 13px; font-family: var(--mono); }
 .panel-card .head .ptod-wrap { width: auto; }
 .panel-card .head button.danger { flex: none; width: 34px; padding: 8px 0; }
+/* UNCANONIZED — 2026-08-09 — camera & composition axes. A labelled row of
+   compact selects (angle/lens/tilt/shot), reused by the sheet editor, the
+   panels workbench, and the bible-default card. Tokens only. */
+.cam-row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.cam-field { display: flex; flex-direction: column; gap: 4px; }
+.cam-field > span { color: var(--ink-faint); font-family: var(--mono);
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.cam-field select { min-width: 150px; }
 .panel-card .two-col { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 15px 18px; align-items: start; }
 @media (max-width: 900px) { .panel-card .two-col { grid-template-columns: 1fr; } }
 

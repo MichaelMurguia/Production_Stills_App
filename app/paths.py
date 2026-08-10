@@ -59,7 +59,7 @@ def set_project(slug: str) -> None:
     global ACTIVE_PROJECT, DATA, REFERENCES, REF_ORIGINALS, REF_THUMBS, \
         REF_QUARANTINE, REF_INDEX, SCREENPLAY_DIR, SPECS_DIR, SPEC_LOCKS, \
         APP_STATE, SUBJECTS, WIZARD_ANALYSIS, BOARDS_DIR, BIBLE, \
-        PROJECT_STATE, APPROVAL_LOG, REJECTION_HISTORY
+        PROJECT_STATE, APPROVAL_LOG, REJECTION_HISTORY, CAMERA_DEFAULTS
     base = _project_base(slug)
     ACTIVE_PROJECT = slug
     DATA = base / "data"
@@ -72,6 +72,7 @@ def set_project(slug: str) -> None:
     SPECS_DIR = DATA / "specs"
     SPEC_LOCKS = SPECS_DIR / "locks.json"
     APP_STATE = DATA / "app_state.json"
+    CAMERA_DEFAULTS = DATA / "camera_defaults.json"
     SUBJECTS = DATA / "subjects.json"
     WIZARD_ANALYSIS = DATA / "wizard_analysis.json"
     BOARDS_DIR = DATA / "boards"

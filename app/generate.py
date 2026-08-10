@@ -473,6 +473,78 @@ def _setting_lines(spec: dict, panel: dict) -> list[str]:
     return lines + [""]
 
 
+# Camera & composition language (user 2026-08-09). Image models under-respond to
+# terse tokens like "high angle"; the app owns the professional sentence instead.
+# Each axis resolves panel value -> Art Direction Bible default -> unset (the
+# model's own choice). Keep these vocabularies in sync with the JS label consts
+# by TIMES_OF_DAY in app.js, and with store.CAMERA_FIELDS.
+CAMERA_ANGLE_PHRASING = {
+    "EYE_LEVEL": "EYE LEVEL — the camera sits at the subject's eye height for a "
+                 "neutral, natural, observational point of view; horizon across the middle.",
+    "LOW": "LOW ANGLE — the camera is below the subject looking up; the subject "
+           "looms and reads powerful, dominant, imposing, with more space above it.",
+    "HIGH": "HIGH ANGLE — the camera is above the subject looking down on it; the "
+            "subject sits low in frame and reads smaller, diminished, vulnerable; "
+            "the ground plane dominates.",
+    "BIRDS_EYE": "BIRD'S-EYE VIEW — the camera is directly overhead facing straight "
+                 "down, a top-down map of the space that flattens figures to their "
+                 "footprint and emphasises layout and scale.",
+    "WORMS_EYE": "WORM'S-EYE VIEW — the camera is at ground level pointing straight "
+                 "up, an extreme upward view that exaggerates height and monumental scale.",
+}
+CAMERA_TILT_PHRASING = {
+    "LEVEL": "",  # the default: horizon level, nothing to say
+    "DUTCH": "DUTCH ANGLE — the camera is rolled so the horizon tilts off-level, an "
+             "unbalanced, tense, disorienting frame.",
+}
+CAMERA_LENS_PHRASING = {
+    "WIDE": "WIDE LENS (~24mm) — a broad field of view with exaggerated depth and "
+            "near/far separation; the environment reads large around the subject, "
+            "with mild perspective stretch toward the edges.",
+    "NORMAL": "NORMAL LENS (~50mm) — natural human perspective, neither compressed "
+              "nor exaggerated.",
+    "TELEPHOTO": "TELEPHOTO LENS (~85–135mm) — a narrow field of view with compressed "
+                 "depth; the background is pulled close and flattened and the subject "
+                 "is isolated from its surroundings.",
+}
+SCALE_PHRASING = {
+    "EXTREME_WIDE": "EXTREME WIDE SHOT — the subject is small within a vast space; the "
+                    "environment is the subject.",
+    "WIDE": "WIDE SHOT — the full subject with generous surrounding context.",
+    "MEDIUM": "MEDIUM SHOT — the subject from roughly the waist up; balanced subject "
+              "and setting.",
+    "CLOSE": "CLOSE SHOT — the subject fills the frame; setting falls away.",
+    "EXTREME_CLOSE": "EXTREME CLOSE-UP — a single detail fills the frame.",
+}
+CAMERA_AXES = {  # field -> phrasing map, in emit order
+    "scale": SCALE_PHRASING,
+    "camera_lens": CAMERA_LENS_PHRASING,
+    "camera_angle": CAMERA_ANGLE_PHRASING,
+    "camera_tilt": CAMERA_TILT_PHRASING,
+}
+
+
+def _camera_block(panel: dict) -> list[str]:
+    """The CAMERA block: authored composition directives, resolved
+    panel-value-or-bible-default, placed high in the prompt and stated to
+    override the references' own framing. Empty axes are omitted; an all-empty
+    camera contributes nothing (the model keeps its own choice, as before)."""
+    defaults = store.camera_defaults()
+    directives = []
+    for field, phrasing in CAMERA_AXES.items():
+        value = str(panel.get(field) or defaults.get(field) or "").strip().upper()
+        line = phrasing.get(value)
+        if line:
+            directives.append(line)
+    if not directives:
+        return []
+    return (["CAMERA — the shot's framing. Follow these exactly; where an "
+             "attached reference shows a different angle, lens, or framing, follow "
+             "THIS, not the reference's composition. References anchor identity, "
+             "materials, colour and medium, never the camera."]
+            + [f"- {d}" for d in directives] + [""])
+
+
 def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     """Mechanical translation of one approved panel into render instructions.
     Mirrors scripts/compile_prompt.py but scoped to a single panel, with
@@ -527,6 +599,9 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         "PANEL PURPOSE",
         panel.get("purpose", ""),
         "",
+    ]
+    lines += _camera_block(panel)
+    lines += [
         "DETAIL BUDGET",
         ("Hero panel: full rendering attention on the primary subject; "
          "secondary surfaces and ground cover simplify. Readable forms first — "
@@ -598,9 +673,7 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
                   "its brushwork, finish and surface — applied to this "
                   "subject. A photographic result is a failed render."]
 
-    lines += ["", f"SCALE: {panel.get('scale', 'unspecified')}",
-              f"COMPOSITION ROLE: {panel.get('composition_role', 'distinct production question')}",
-              "",
+    lines += ["",
               "FINAL INSTRUCTION",
               "The output is a CANDIDATE — UNAPPROVED. Do not add unsupported decorative content."
               + (" Re-read the DIRECTOR'S CORRECTIONS at the top of this "

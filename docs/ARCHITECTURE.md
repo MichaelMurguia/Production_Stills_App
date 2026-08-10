@@ -63,6 +63,7 @@ every selector including modals).
   interview.json                         wizard_analysis.json
   references/{originals,thumbs/<REF>.{thumb,md}.webp,quarantine,references.json}
   subjects.json                          specs/*.json + locks.json
+  camera_defaults.json (bible-level camera grammar)
   boards/<SPEC_ID>/CAND-*.{json,png,thumb.webp,md.webp} + BOARD-*.{same}
   activity_log.jsonl                     rejection_lessons.json
 <base>/context/01_ART_DIRECTION_BIBLE.md
@@ -77,6 +78,14 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   rejections + references) → engine → candidate JSON+PNG → judged in the
   room → status POST → optional promote to reference (`promoted_ref`
   back-link).
+- **Camera & composition**: three structured per-panel axes (`camera_angle`
+  /`camera_tilt`/`camera_lens`) plus `scale`, each resolved `panel value → the
+  production camera default (`store.camera_defaults`, `data/camera_defaults.json`,
+  edited on the Bible step) → unset`. `generate._camera_block` expands the enums
+  into an authored CAMERA directive placed right after PANEL PURPOSE and stated
+  to override the references' framing (it replaced the terse `SCALE:`/`COMPOSITION
+  ROLE:` tail). Per-panel edits between takes go through `store.amend_panel_camera`
+  (same lock-restamp/journal/frozen contract as `amend_panel_purpose`).
 - **Add a panel post-lock**: the panels workbench appends a panel to a locked
   sheet (`store.add_panel`) — append-only, so nothing upstream of an approval
   changes; it lands as a 0%-allocation work order, the lock re-stamps and the

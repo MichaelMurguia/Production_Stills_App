@@ -4638,6 +4638,23 @@ async function renderWizard() {
     syncBibleSave();
     return bible;
   };
+  // The production's default camera grammar lives with the Bible (edits reach
+  // every future prompt). Each select saves on change; a blank axis is the
+  // model's own choice. Panels override this per shot on the breakdown sheet.
+  const loadCameraDefault = async () => {
+    const host = $("#cam-default-row");
+    if (!host) return;
+    const defaults = await api("/api/camera-defaults").catch(() => ({}));
+    host.innerHTML = cameraRow("dcam", defaults, "— model's choice —");
+    $$("select", host).forEach(sel => sel.onchange = async () => {
+      const body = {};
+      CAMERA_AXES.forEach(a => { body[a.key] = $(`[data-f=dcam-${a.f}]`, host).value; });
+      try {
+        await api("/api/camera-defaults", { method: "POST", json: body });
+        $("#cam-default-status").textContent = "Saved — every panel inherits this unless it overrides.";
+      } catch (err) { $("#cam-default-status").textContent = err.message; }
+    });
+  };
   // Step-state badges (plan v3 C13): each step's h2 states where it stands,
   // from data already fetched or one cheap read. Existing badge classes only.
   const wizardStepBadges = async () => {
@@ -4718,6 +4735,7 @@ async function renderWizard() {
     $(id)?.addEventListener("change", () => { saveInterview(); wizardStepBadges(); });
 
   await loadBibleEditor();
+  await loadCameraDefault();
   $("#style-save").onclick = async () => {
     try {
       const text = $("#style-bible").value.trim();
@@ -5884,6 +5902,10 @@ async function openSpecEditor(specId) {
         <span class="f-label">Purpose</span>
         <input type="text" data-f="purpose" placeholder="The production question this panel answers" value="${esc(p.purpose || "")}" ${locked ? "disabled" : ""}>
       </div>
+      <div class="fgroup" title="Camera and composition for this panel. Each axis falls back to the production's Art Direction Bible camera default when blank, and overrides it when set. The app writes the professional directive into the render prompt.">
+        <span class="f-label">Camera <span class="hint">(blank = the bible default)</span></span>
+        ${cameraRow("pcam", p, "— from bible —", locked)}
+      </div>
       <div class="two-col">
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
           <span class="f-label">Required objects</span>
@@ -6213,7 +6235,10 @@ REMOVE — marked for removal from the board.">
         forbidden_objects: split(v("forbidden")),
         evidence: Array.isArray(orig.evidence) && orig.evidence.length
           ? orig.evidence : ["USER_DIRECTED"],
-        scale: orig.scale || "WIDE",
+        scale: v("pcam-scale"),
+        camera_angle: v("pcam-angle"),
+        camera_lens: v("pcam-lens"),
+        camera_tilt: v("pcam-tilt"),
         composition_role: orig.composition_role
           || (out.panels.length === 0 ? "hero" : "support"),
         time_of_day: v("ptod"),
@@ -6376,6 +6401,38 @@ const BOARD_TYPES = [
   { value: "MASTER", label: "MASTER — presentation grammar" },
 ];
 const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"];
+
+// Camera & composition vocabulary (user 2026-08-09) — [value, label]. Values
+// match store.CAMERA_FIELDS; the model-facing phrasing lives server-side in
+// generate.CAMERA_*_PHRASING. Reused by the sheet editor, the panels workbench,
+// and the bible-default card.
+const CAMERA_ANGLES = [["EYE_LEVEL", "Eye level"], ["LOW", "Low — looks up"],
+  ["HIGH", "High — looks down"], ["BIRDS_EYE", "Bird's-eye — top-down"],
+  ["WORMS_EYE", "Worm's-eye — straight up"]];
+const CAMERA_LENSES = [["WIDE", "Wide ~24mm"], ["NORMAL", "Normal ~50mm"],
+  ["TELEPHOTO", "Telephoto ~85–135mm"]];
+const CAMERA_TILTS = [["LEVEL", "Level"], ["DUTCH", "Dutch — tilted"]];
+const SHOT_SCALES = [["EXTREME_WIDE", "Extreme wide"], ["WIDE", "Wide"],
+  ["MEDIUM", "Medium"], ["CLOSE", "Close"], ["EXTREME_CLOSE", "Extreme close"]];
+const CAMERA_AXES = [
+  { key: "camera_angle", f: "angle", label: "Angle", opts: CAMERA_ANGLES },
+  { key: "camera_lens", f: "lens", label: "Lens", opts: CAMERA_LENSES },
+  { key: "camera_tilt", f: "tilt", label: "Tilt", opts: CAMERA_TILTS },
+  { key: "scale", f: "scale", label: "Shot", opts: SHOT_SCALES },
+];
+// One camera <select>. `prefix` namespaces its data-f (e.g. "pcam" / "cam" /
+// "dcam"); `blank` is the empty-option copy (inherit / model's choice).
+function cameraSelect(prefix, axis, value, blank, disabled = false) {
+  return `<label class="cam-field mini"><span>${esc(axis.label)}</span>
+    <select data-f="${prefix}-${axis.f}" ${disabled ? "disabled" : ""}>
+      <option value="">${esc(blank)}</option>
+      ${axis.opts.map(([v, l]) => `<option value="${v}" ${String(value || "").toUpperCase() === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+    </select></label>`;
+}
+function cameraRow(prefix, obj, blank, disabled = false) {
+  return `<div class="cam-row" data-f="${prefix}-row">${
+    CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")}</div>`;
+}
 
 // Engine options come from settings (built-ins plus user-added custom
 // engines) so every Model dropdown stays in sync with Settings.
@@ -6859,6 +6916,10 @@ async function renderBoardPanels(specId) {
             <button type="button" class="text-act" data-f="brief-cancel">Cancel</button>
             <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF</span>
           </div>
+        </div>
+        <div class="cam-inline" data-f="cam-inline" title="Camera for this panel — changing an axis re-stamps the sheet lock and the next take paints from it. Blank = the production's Art Direction Bible default.">
+          <span class="f-label">Camera <span class="hint">${frozen ? "frozen by an approved take" : "blank = the bible default · applies to the next take"}</span></span>
+          ${cameraRow("cam", p, "— from bible —", frozen)}
         </div>`;
       })()}
       ${workOrder ? reqTableHtml + forbiddenHtml + scopeHtml : reqChipsHtml + `
@@ -7026,6 +7087,22 @@ async function renderBoardPanels(specId) {
         } catch (err) { toast(err.message, true); }
       };
     };
+
+    // Inline camera edit (mirrors Edit brief): each select saves on change,
+    // journaled + lock re-stamped server-side; disabled when a take is approved.
+    $$("[data-f=cam-inline] select", card).forEach(sel => {
+      if (sel.disabled) return;
+      sel.onchange = async () => {
+        const body = {};
+        CAMERA_AXES.forEach(a => { body[a.key] = $(`[data-f=cam-${a.f}]`, card).value; });
+        try {
+          const out = await api(`/api/specs/${specId}/panels/${p.id}/camera`,
+            { method: "POST", json: body });
+          CAMERA_AXES.forEach(a => { p[a.key] = out[a.key]; });
+          toast(`${p.id} camera set — the next take uses it.`);
+        } catch (err) { toast(err.message, true); renderBoardPanels(specId); }
+      };
+    });
 
     // P4 disclosure: the full anchor badge list, unchanged, on demand.
     const showIds = $("[data-f=show-ids]", card);

@@ -16,6 +16,33 @@ from . import imaging, paths
 
 REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
 
+# Camera & composition vocabulary (user 2026-08-09). The allowed values for the
+# structured per-panel/per-bible camera fields; the model-facing phrasing lives
+# in generate.CAMERA_*_PHRASING, and the JS label consts by TIMES_OF_DAY.
+CAMERA_FIELDS = {
+    "camera_angle": {"EYE_LEVEL", "LOW", "HIGH", "BIRDS_EYE", "WORMS_EYE"},
+    "camera_lens": {"WIDE", "NORMAL", "TELEPHOTO"},
+    "camera_tilt": {"LEVEL", "DUTCH"},
+    "scale": {"EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE", "EXTREME_CLOSE"},
+}
+
+
+def _clean_camera_fields(fields: dict) -> dict:
+    """Validate/normalise a camera payload: upper-cased, only known fields, each
+    value in its enum. Empty values are dropped (they mean clear/inherit), so
+    the result carries only fields being SET. Raises ValueError on a bad value."""
+    out = {}
+    for field, allowed in CAMERA_FIELDS.items():
+        if field not in fields:
+            continue
+        v = str(fields.get(field) or "").strip().upper()
+        if not v:
+            continue
+        if v not in allowed:
+            raise ValueError(f"{field}: {v!r} is not one of {sorted(allowed)}")
+        out[field] = v
+    return out
+
 # Roles suggested by context/02_CANON_AND_REFERENCE_RULES.md; free-form roles
 # are also allowed — these seed the UI dropdown.
 SUGGESTED_ROLES = [
@@ -857,6 +884,65 @@ def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
             f"\"{panel['purpose'][:120]}\". Existing takes keep the hash they "
             "were generated against.")
     return {"spec_id": spec_id, "panel_id": panel_id, "purpose": panel["purpose"]}
+
+
+def camera_defaults() -> dict:
+    """The production's default camera grammar — the Art Direction Bible's
+    default angle/tilt/lens/scale, which every panel inherits unless it sets its
+    own. Its own file so it never races app_state's counter writes; empty when
+    unset (the model keeps its own choice, as before)."""
+    return _read_json(paths.CAMERA_DEFAULTS, {})
+
+
+def save_camera_defaults(fields: dict) -> dict:
+    """Replace the production camera default. Only known fields with valid enum
+    values survive; empties clear. Returns the stored dict."""
+    clean = _clean_camera_fields(fields)
+    _atomic_write_json(paths.CAMERA_DEFAULTS, clean)
+    return clean
+
+
+def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
+    """Set a panel's camera (angle/tilt/lens/scale) from the workbench between
+    takes, without unlocking. Same controlled-edit contract as
+    amend_panel_purpose: an APPROVED take was composed at its camera and freezes
+    it; otherwise the lock re-stamps and the change is journaled. A present field
+    with an empty value clears it (back to the bible default)."""
+    clean = _clean_camera_fields(fields)  # validates before any mutation
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    approved = [r.get("candidate_id") for r in _board_records(spec_id)
+                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
+    if approved:
+        raise PermissionError(
+            f"{panel_id} has approved canon output ({', '.join(approved)}) composed "
+            "at its current camera. Reject that take first if you truly intend to "
+            "change the shot.")
+    for field in CAMERA_FIELDS:
+        if field in fields:  # only touch fields the caller sent
+            v = clean.get(field, "")
+            if v:
+                panel[field] = v
+            else:
+                panel.pop(field, None)
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash  # scripts/common.py via paths sys.path hook
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+        append_approval_log(
+            f"SPECIFICATION {spec_id} panel {panel_id} camera amended post-lock "
+            f"(lock re-stamped {prev.get('hash', '?')[:16]}… → "
+            f"{locks[spec_id]['hash'][:16]}…): {clean or 'cleared'}. Existing takes "
+            "keep the hash they were generated against.")
+    return {"spec_id": spec_id, "panel_id": panel_id,
+            **{f: panel.get(f, "") for f in CAMERA_FIELDS}}
 
 
 def add_panel(spec_id: str, title: str, purpose: str) -> dict:
