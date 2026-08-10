@@ -62,7 +62,13 @@ async function api(path, opts = {}) {
   let data = null;
   try { data = await res.json(); } catch { /* non-JSON */ }
   if (!res.ok) {
-    throw new Error((data && data.detail) || `${res.status} ${res.statusText}`);
+    const err = new Error((data && data.detail) || `${res.status} ${res.statusText}`);
+    err.status = res.status;
+    // A gateway/proxy error (Railway "Application failed to respond", a 502/504
+    // on a long render) carries no app JSON detail — the app never saw it. That
+    // distinguishes "the connection was cut" from a real app failure.
+    err.gateway = !(data && data.detail);
+    throw err;
   }
   return data;
 }
@@ -6690,6 +6696,23 @@ function removePendingTake(specId, panelId, id) {
   $(`[data-pend="${id}"]`)?.remove();
 }
 
+// A long render can outlive the request: a gateway cuts the connection at ~1 min
+// but the engine finishes and the take lands on disk (user 2026-08-09). When that
+// happens we don't fail — we keep waiting and poll for the new candidate on this
+// panel. Returns the fresh record, or null if it never appears within the budget.
+async function pollForNewTake(specId, panelId, beforeIds, { tries = 40, delayMs = 5000 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    await new Promise(r => setTimeout(r, delayMs));
+    try {
+      const cands = await api(`/api/specs/${specId}/candidates`);
+      const fresh = (cands || []).find(c =>
+        c.panel_id === panelId && !beforeIds.has(c.candidate_id));
+      if (fresh) return fresh;
+    } catch { /* transient — keep waiting */ }
+  }
+  return null;
+}
+
 // Add a panel from the workbench (user 2026-08-09): the sheet stays locked, the
 // panel lands as a work order, and the lock re-stamps server-side
 // (store.add_panel) — the same controlled edit as the between-takes brief change.
@@ -7204,9 +7227,17 @@ async function renderBoardPanels(specId) {
         `${renderPrompt ? " from your edited prose" : ""}…`,
         "typically 30–120 seconds; the take appears in the strip above",
         () => ctrl.abort());
+      const before = new Set(panelCands.map(c => c.candidate_id));
       const pendId = addPendingTake(specId, p.id, `PAINTING — NEW TAKE · ${size}`);
+      const finish = () => { busy.done(); btn.disabled = false; btn.textContent = idleLabel;
+        removePendingTake(specId, p.id, pendId); };
+      const landed = cand => {
+        finish();
+        toast(`${cand.candidate_id} generated (${cand.width}×${cand.height}) — CANDIDATE, unapproved.`);
+        renderBoardPanels(specId);
+      };
       try {
-        const cand = await api(`/api/specs/${specId}/panels/${p.id}/generate`, {
+        landed(await api(`/api/specs/${specId}/panels/${p.id}/generate`, {
           method: "POST",
           signal: ctrl.signal,
           json: {
@@ -7216,17 +7247,29 @@ async function renderBoardPanels(specId) {
             provider: modelSel.value,
             render_prompt: renderPrompt,
           },
-        });
-        toast(`${cand.candidate_id} generated (${cand.width}×${cand.height}) — CANDIDATE, unapproved.`);
-        renderBoardPanels(specId);
+        }));
       } catch (err) {
-        busy.done();
-        btn.disabled = false;
-        btn.textContent = idleLabel;
         if (err.name === "AbortError") {
+          finish();
           toast("Canceled. Note: if the model had already started painting, the candidate may still arrive — check the gallery in a minute.");
           return;
         }
+        // A cut connection — a gateway 502/504 on a long render, or a dropped
+        // fetch — does NOT stop the render: it finishes in the threadpool and the
+        // take lands on disk (user 2026-08-09). So keep the pending tile and the
+        // spinner up and poll for the take instead of crying failure over a
+        // render that is actually completing.
+        if ((err instanceof TypeError) || (err.gateway && err.status >= 500)) {
+          const fresh = await pollForNewTake(specId, p.id, before);
+          if (fresh) { landed(fresh); return; }
+          finish();
+          report.innerHTML = `<div class="report"><b>Still rendering</b> — the connection
+            dropped, but the engine keeps working; the take appears in the strip above when
+            it finishes (this can take a couple of minutes). Refresh if it doesn't.
+            <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
+          return;
+        }
+        finish();
         toast(err.message, true);
         // A content-policy refusal reads as a stated condition — the
         // engine's decision, the reason, and the craft options — never a
@@ -7247,8 +7290,6 @@ async function renderBoardPanels(specId) {
           report.innerHTML = `<div class="report fail"><b>Generation failed</b> — ${esc(err.message)}
             <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
         }
-      } finally {
-        removePendingTake(specId, p.id, pendId);
       }
     };
 
