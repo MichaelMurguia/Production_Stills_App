@@ -886,6 +886,23 @@ def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     return {"spec_id": spec_id, "panel_id": panel_id, "purpose": panel["purpose"]}
 
 
+def warm_all_references() -> int:
+    """Build display variants for every reference (back-catalogue predates
+    eager warming). References are smaller than 4K renders but the same
+    on-demand-build cost applies to their first view. Best-effort; capped in
+    imaging. Returns the count warmed."""
+    warmed = 0
+    for r in _load_refs():
+        try:
+            src = paths.REF_ORIGINALS / r.get("file", "")
+            if src.exists():
+                imaging.warm(src, lambda s, rid=r["id"]: _ref_variant_cache(rid, s))
+                warmed += 1
+        except Exception:
+            pass
+    return warmed
+
+
 def camera_defaults() -> dict:
     """The production's default camera grammar — the Art Direction Bible's
     default angle/tilt/lens/scale, which every panel inherits unless it sets its

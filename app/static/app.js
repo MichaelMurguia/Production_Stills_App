@@ -856,15 +856,23 @@ function closeLightbox() {
   lb.items = [];
 }
 
+// The lightbox opens at the md tier (a few hundred KB) for a fast fit-view and
+// pulls the raw 20–40 MB full image only when the user zooms to 100% (user
+// 2026-08-09: loading full on open was slow and sometimes stalled). Only our
+// image endpoints take ?size=; anything else loads unchanged.
+const lbSize = (s, sz) => /\/image$/.test(String(s || "")) ? `${s}?size=${sz}` : s;
+
 function lbShow() {
   const item = lb.items[lb.index];
   if (!item) return;
-  lb.zoomed = false; lb.panX = lb.panY = 0;
+  lb.zoomed = false; lb.panX = lb.panY = 0; lb.atFull = false;
+  lb.full = item.src;
   const img = $("#lb-img");
   const stage = $(".lb-stage");
   stage.classList.remove("zoomed");
   img.style.transform = "";
-  img.src = item.src;
+  img.onload = null;
+  img.src = lbSize(item.src, "md");
   $("#lb-caption").textContent = `${item.caption}  ·  ${lb.index + 1}/${lb.items.length}`;
   const setZoomLabel = () => {
     $("#lb-zoom").textContent = img.naturalWidth
@@ -902,10 +910,19 @@ function initLightbox() {
     stage.classList.toggle("zoomed", lb.zoomed);
     if (lb.zoomed) {
       // center the 100% view on the stage
-      lb.panX = Math.min(0, (stage.clientWidth - img.naturalWidth) / 2);
-      lb.panY = Math.min(0, (stage.clientHeight - img.naturalHeight) / 2);
-      lbApplyPan();
-      $("#lb-zoom").textContent = `${img.naturalWidth}×${img.naturalHeight} — 100% (drag to pan, click to fit)`;
+      const zoomIn = () => {
+        lb.panX = Math.min(0, (stage.clientWidth - img.naturalWidth) / 2);
+        lb.panY = Math.min(0, (stage.clientHeight - img.naturalHeight) / 2);
+        lbApplyPan();
+        $("#lb-zoom").textContent = `${img.naturalWidth}×${img.naturalHeight} — 100% (drag to pan, click to fit)`;
+      };
+      // Pull the real pixels only now — the fit view was the md tier.
+      if (!lb.atFull && lb.full && lbSize(lb.full, "md") !== lb.full) {
+        lb.atFull = true;
+        $("#lb-zoom").textContent = "loading full resolution…";
+        img.onload = () => { img.onload = null; if (lb.zoomed) zoomIn(); };
+        img.src = lb.full;
+      } else zoomIn();
     } else {
       img.style.transform = "";
       $("#lb-zoom").textContent = `${img.naturalWidth}×${img.naturalHeight} — fit (click for 100%)`;
@@ -2533,23 +2550,28 @@ async function renderSettings() {
   const credRows = [
     { key: "openrouter", tile: "ORT", name: "OpenRouter",
       connected: orRow.status !== "NOT_CONNECTED",
+      account: "https://openrouter.ai/settings/keys",
       facts: (orRow.identity ? `${esc(orRow.identity)} · ` : "")
         + "SCOPED KEY — REVOKE FROM THEIR DASHBOARD",
       state: cxState(orRow), actions: cxActs(orRow.status) },
     { key: "openai", tile: "OAI", icon: "openai", name: "OpenAI",
       connected: !!engAll.openai?.configured,
+      account: "https://platform.openai.com/api-keys",
       facts: esc(settings.openai_api_key_hint || settings.openai_env_key_hint || ""),
       state: keyState("openai"), actions: keyActs("openai") },
     { key: "gemini", tile: "GGL", icon: "gemini-color", name: "Google Gemini",
       connected: !!engAll.gemini?.configured,
+      account: "https://aistudio.google.com/apikey",
       facts: esc(settings.gemini_api_key_hint || ""),
       state: keyState("gemini"), actions: keyActs("gemini") },
     { key: "anthropic", tile: "ANT", icon: "claude-color", name: "Anthropic Claude",
       connected: !!settings.anthropic_api_key_set,
+      account: "https://console.anthropic.com/settings/keys",
       facts: esc(settings.anthropic_api_key_hint || ""),
       state: keyState("anthropic"), actions: keyActs("anthropic") },
     { key: "fal", tile: "FAL", name: "fal.ai",
       connected: falRow.status !== "NOT_CONNECTED",
+      account: "https://fal.ai/dashboard/keys",
       facts: esc(falRow.key_hint || ""),
       state: cxState(falRow), actions: cxActs(falRow.status) },
     { key: "custom", tile: "+", name: "Your own endpoints", custom: true,
@@ -2582,7 +2604,7 @@ async function renderSettings() {
         ${r.facts || chips ? `<span class="cred-meta">${r.facts}${chips ? " " + chips : ""}</span>` : ""}
       </span>
       <span class="cred-state">${r.state ? mark(r.state[0]) + esc(r.state[1]) : ""}</span>
-      <span class="cred-acts">${(r.actions || []).map(([l, a]) =>
+      <span class="cred-acts">${r.account ? `<a class="text-act" href="${esc(r.account)}" target="_blank" rel="noopener" title="Open this provider's account — manage the key, usage and billing">Account ↗</a>` : ""}${(r.actions || []).map(([l, a]) =>
         `<button class="text-act" data-act="${esc(a)}">${esc(l)}</button>`).join(" ")}</span>
     </div>
     <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`;

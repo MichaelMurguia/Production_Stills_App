@@ -178,5 +178,40 @@ class ReferenceVariantTests(unittest.TestCase):
         self.assertEqual(list(paths.REF_THUMBS.glob(f"{rid}.*")), [])
 
 
+class BackCatalogueWarmTests(unittest.TestCase):
+    """The back-catalogue predates eager warming; a cold board otherwise fired a
+    synchronous 4K resize per tile, dozens at once, saturating a tenant (user
+    2026-08-09). The boot sweep builds them once, bounded."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-warm-"))
+        _redirect_home(self.tmp)
+        self.board = paths.BOARDS_DIR / "SPEC"
+        self.board.mkdir(parents=True, exist_ok=True)
+        for i in range(3):
+            Image.new("RGB", (2000, 1200), (i, 20, 30)).save(self.board / f"C{i}.png", "PNG")
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_warm_all_candidates_builds_every_tier(self):
+        from app import generate
+        self.assertEqual(generate.warm_all_candidates(), 3)
+        webps = sorted(p.name for p in self.board.glob("*.webp"))
+        self.assertEqual(len(webps), 6)  # thumb + md for each of 3
+
+    def test_re_warm_rebuilds_nothing(self):
+        from app import generate
+        generate.warm_all_candidates()
+        before = {p: p.stat().st_mtime_ns for p in self.board.glob("*.webp")}
+        generate.warm_all_candidates()
+        for p, mt in before.items():
+            self.assertEqual(mt, p.stat().st_mtime_ns, "cached variants must not rebuild")
+
+    def test_concurrent_builds_are_capped(self):
+        self.assertGreaterEqual(imaging._BUILD_SEMAPHORE._value, 1,
+                                "a semaphore must bound concurrent 4K builds")
+
+
 if __name__ == "__main__":
     unittest.main()

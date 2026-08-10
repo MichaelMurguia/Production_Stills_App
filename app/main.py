@@ -622,6 +622,23 @@ async def activity_middleware(request: Request, call_next):
     return response
 
 
+@app.on_event("startup")
+def _warm_display_variants() -> None:
+    """Pre-build the back-catalogue's display variants in the background at boot,
+    so a cold board never triggers a storm of synchronous 4K resizes on first
+    view (user 2026-08-09 — dozens at once saturated a tenant). Non-blocking,
+    capped in imaging, best-effort; the lazy path stays as the backstop."""
+    import threading
+
+    def _run():
+        try:
+            generate.warm_all_candidates()
+            store.warm_all_references()
+        except Exception:
+            pass
+    threading.Thread(target=_run, name="variant-warm", daemon=True).start()
+
+
 def _err(exc: Exception) -> HTTPException:
     codes = {KeyError: 404, FileExistsError: 409, PermissionError: 423, ValueError: 422}
     return HTTPException(status_code=codes.get(type(exc), 500), detail=str(exc))

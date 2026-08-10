@@ -871,6 +871,29 @@ def warm_candidate_variants(spec_id: str, cand_id: str) -> None:
             pass
 
 
+def warm_all_candidates() -> int:
+    """Build display variants for every existing render across all boards. The
+    back-catalogue predates eager warming (user 2026-08-09), so without this the
+    first view of a cold board fires a synchronous 4K resize per tile — dozens
+    at once saturated a tenant. Sequential and best-effort; concurrency is capped
+    in imaging, so it's safe to run in a background thread at boot. Returns the
+    count warmed. Skips files whose variants are already fresh (near-instant)."""
+    warmed = 0
+    root = paths.BOARDS_DIR
+    if not root.exists():
+        return 0
+    for spec_dir in sorted(root.iterdir()):
+        if not spec_dir.is_dir():
+            continue
+        for png in sorted(spec_dir.glob("*.png")):
+            try:
+                imaging.warm(png, lambda s, p=png: p.with_name(f"{p.stem}.{s}.webp"))
+                warmed += 1
+            except Exception:
+                pass
+    return warmed
+
+
 def _render_ready(p: Path) -> Path:
     """Compose-time backstop for legacy library files: sniff the ACTUAL
     format and transcode anything the engines refuse (AVIF 400'd a live
