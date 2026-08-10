@@ -486,5 +486,4 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
     }
     (d / f"{board_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    generate.warm_candidate_variants(spec_id, board_id)  # board grid/solo tiers
     return record

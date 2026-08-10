@@ -31,7 +31,7 @@ VARIANTS: dict[str, tuple[int, int]] = {"thumb": (512, 80), "md": (1600, 82)}
 # thread and the boot warmer, so a burst queues instead of storming. The cached
 # fast path never touches it.
 _BUILD_SEMAPHORE = threading.Semaphore(
-    max(1, int(os.environ.get("SCREENBOARD_VARIANT_CONCURRENCY", "3"))))
+    max(1, int(os.environ.get("SCREENBOARD_VARIANT_CONCURRENCY", "2"))))
 
 
 def _fresh(cache: Path, src: Path) -> bool:

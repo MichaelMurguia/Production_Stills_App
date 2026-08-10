@@ -861,8 +861,12 @@ def candidate_variant_path(spec_id: str, cand_id: str, size: str = "full") -> Pa
 
 
 def warm_candidate_variants(spec_id: str, cand_id: str) -> None:
-    """Pre-build every display tier for a freshly-written render, so the first
-    view is already fast. Best-effort; the lazy path is the backstop."""
+    """Pre-build every display tier for one render. Deliberately NOT called from
+    the render/repair/rerender/assembly request path (user 2026-08-09): a 4K
+    decode+resize on top of the render's own memory could OOM a small tenant,
+    surfacing as a gateway 502 the flight recorder never saw. New renders warm
+    lazily on first view (bounded); the boot sweep covers the back-catalogue.
+    Kept as a utility. Best-effort; the lazy path is the backstop."""
     full = candidate_image_path(spec_id, cand_id)
     if full is not None:
         try:
@@ -1599,7 +1603,6 @@ def repair_region(spec_id: str, cand_id: str, mask_png: bytes,
     }
     (d / f"{new_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    warm_candidate_variants(spec_id, new_id)
     return record
 
 
@@ -1735,7 +1738,6 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     }
     (d / f"{new_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    warm_candidate_variants(spec_id, new_id)
     return record
 
 
@@ -1825,7 +1827,6 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         record["render_prompt"] = override
     (d / f"{cand_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    warm_candidate_variants(spec_id, cand_id)  # first view is already fast
     return record
 
 
