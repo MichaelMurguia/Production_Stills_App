@@ -27,6 +27,7 @@
     <nav class="tools" id="tools-nav">
       <button data-view="status" class="active" title="Where the project stands: the next action, everything blocking, and recent activity">Status</button>
       <button data-view="references" title="The one reference library: style anchors, cast &amp; subjects, scene anchors — everything a render can anchor to">Reference</button>
+      <button data-view="lookbook" title="Lookbooks — art direction, subject and scene sheets built from approved panels">Lookbook</button>
       <button data-view="projects" title="The Screenboard Library — every production on this install: create, open, back up, restore">Productions</button>
       <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">Settings</button>
     </nav>
@@ -47,7 +48,7 @@
     <span class="stage-top"><span class="stage-n">02</span><span class="stage-l">Prod. Design</span><span class="here-chip">HERE</span><span class="lock-chip">LOCKED</span></span>
     <span class="stage-sub" data-ssub="wizard"></span>
   </button>
-  <button data-view="specs" title="Stage 03 — breakdown sheets: the script broken into each board's sets, dressing, props, and evidence">
+  <button data-view="specs" title="Stage 03 — breakdowns: the script broken into each board's sets, dressing, props, and evidence">
     <span class="stage-top"><span class="stage-n">03</span><span class="stage-l">Breakdowns</span><span class="here-chip">HERE</span><span class="lock-chip">LOCKED</span></span>
     <span class="stage-sub" data-ssub="specs"></span>
   </button>
@@ -168,6 +169,11 @@
          LOCKED_STAGE_PLAN L3: the interview precedes casting. -->
     <div class="panel step" data-step="1">
       <h2>Look interview <span class="step-cond">BLANKS COME BACK MARKED PROPOSED &middot; STEP 3 ANSWERS ALREADY INCLUDED</span></h2>
+      <div class="fgroup cam-default" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
+        <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
+        <div id="cam-default-row"></div>
+        <span id="cam-default-status" class="mini"></span>
+      </div>
       <div class="grid-form">
         <label title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="films, artists, or eras this should feel like…"></label>
         <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
@@ -279,11 +285,6 @@
         <span class="wv-tag hidden" id="style-save-gate">NOTHING TO SAVE UNTIL A DRAFT EXISTS</span>
         <span id="style-status" class="mini"></span>
       </div>
-      <div class="fgroup cam-default" id="cam-default" title="The production's default camera grammar — the shot language every panel inherits unless it overrides on the breakdown sheet. The app writes the professional directive into every render prompt; each axis left blank is the model's own choice.">
-        <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
-        <div id="cam-default-row"></div>
-        <span id="cam-default-status" class="mini"></span>
-      </div>
       <!-- SWATCH_GENERATE_RULING: an act lives where its precondition is
            met; its result lives where it belongs. Generation reads the
            SAVED Bible, so it stands here; the swatches land in step 2's
@@ -339,7 +340,7 @@
          on the recommended door. Every id here is unchanged; this is a
          markup move, not a rewiring. -->
     <div class="panel panel-lead intake">
-      <h2>New breakdown sheet</h2>
+      <h2>New breakdown</h2>
       <div class="intake-doors">
         <div class="door door-auto">
           <p class="door-head">Auto breakdown
@@ -416,7 +417,7 @@
     <!-- B4: the table holds data. The create form no longer masquerades
          as its last rows. -->
     <div class="panel">
-      <h2>Breakdown sheets <span class="sheet-count mono" id="spec-count"></span></h2>
+      <h2>Breakdowns <span class="sheet-count mono" id="spec-count"></span></h2>
       <table class="table spec-table" id="spec-table">
         <thead><tr><th>SPEC ID</th><th>SUBJECT</th><th>MODE</th><th>PANELS</th><th>STATUS</th><th></th></tr></thead>
         <tbody></tbody>
@@ -435,11 +436,15 @@
         <label class="mini" title="Which signed-off breakdown to generate panels for. Drafts don't appear here — approve one on the Breakdowns tab first.">Breakdown&nbsp;
           <select id="board-spec"></select>
         </label>
-        <button class="ghost" id="board-add-panel" hidden title="Add a panel to this breakdown — it appears as a work order ready to generate. The sheet's lock re-stamps; existing takes are untouched.">+ Add panel</button>
+        <button class="ghost" id="board-add-panel" hidden title="Add a panel to this breakdown — it appears as a work order ready to generate. The breakdown's lock re-stamps; existing takes are untouched.">+ Add panel</button>
       </div>
     </div>
     <div id="board-panels"></div>
   </section>
+</template>
+
+<template id="tpl-lookbook">
+  <section class="view" id="lb-root"></section>
 </template>
 
 <template id="tpl-firstrun">
@@ -612,8 +617,8 @@
         <p class="chain">Screenplay → Cast &amp; anchors (REFERENCE) → Specification → Approve &amp; lock → Generate panels → Approve panels → Assemble 4K board → Approve board → Promote to reference</p>
         <h3>1 — Load your sources (01 Screenplay / Reference)</h3>
         <p>Upload the current screenplay on stage 01 — it maps every location the script names and how much the script says about each. There is <b>one reference library</b> (Reference), on three shelves by when an image rides along: STYLE (every render, automatically), SUBJECTS (when its subject appears on a panel — cast the film in Production Design step 4 to fill it), SCENES (when a board covers its scene). Every image has a <b>narrow role</b>: a role is the reference's jurisdiction — a <code>CHARACTER_LIKENESS</code> photo controls that character's face and build, <i>not</i> their costume or lighting. Approve a reference to make it a canon anchor; rejecting quarantines the file from the pipeline (Reinstate returns it to provisional review).</p>
-        <h3>2 — Write or auto-fill a breakdown sheet (03 Breakdowns)</h3>
-        <p>A breakdown sheet is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the sheet; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the sheet with a content hash.</p>
+        <h3>2 — Write or auto-fill a breakdown (03 Breakdowns)</h3>
+        <p>A breakdown is the brief you'd give a concept artist, written down and enforceable: panels (each answering one production question), required and forbidden objects, and an <b>evidence ledger</b> — one row per visible object saying why it's allowed to exist (screenplay quote, your direction, or approved canon). Run the breakdown to have the AI read the screenplay and draft the breakdown; then edit. The CANNOT-LOCK strip lists anything approval would refuse; Approve &amp; lock freezes the breakdown with a content hash.</p>
         <h3>3 — Generate and judge takes (04 Panels)</h3>
         <p>Each panel generates individually at native 1K/2K/4K — never upscaled. Every generation re-anchors to the approved references you attach; the prompt is compiled mechanically from the locked sheet and spells out each reference's role boundary. Takes land in the filmstrip as <b>CANDIDATE — UNAPPROVED</b> until you judge them; reject with a specific reason and it feeds the panel's future prompts. Repair region fixes a painted area with your choice of engine.</p>
         <h3>4 — Assemble the board (05 Boards)</h3>

@@ -421,6 +421,50 @@ class TokenContractTests(unittest.TestCase):
         self.assertNotIn("--accent", b)
         self.assertNotIn("--bad", b)
 
+    # -- the sheet grammar (SHEET_SYSTEM_PLAN §4/§11, 2026-08-10) ----------
+
+    def test_sheet_ink_lives_only_under_sheet_data_style(self):
+        """Sheet ink is the artifact's surface, not an app token: --sheet-*
+        may be DECLARED only inside .sheet[data-style=…] rules, and never
+        in :root. The paper hexes may appear nowhere else in the file."""
+        root = block(":root")
+        self.assertNotIn("--sheet-", root)
+        for hx in ("#efe9dd", "#d9d4c8", "#1c4f7c", "#fbfbf9"):
+            for m in re.finditer(re.escape(hx), CSS):
+                start = CSS.rfind("{", 0, m.start())
+                sel = CSS[CSS.rfind("}", 0, start) + 1:start].strip()
+                self.assertIn('.sheet[data-style="', sel,
+                              f"{hx} escaped the .sheet[data-style] namespace: {sel}")
+        for m in re.finditer(r"--sheet-[a-z]+\s*:", CSS):
+            start = CSS.rfind("{", 0, m.start())
+            sel = CSS[CSS.rfind("}", 0, start) + 1:start].strip()
+            self.assertIn(".sheet", sel,
+                          f"--sheet-* declared outside .sheet: {sel}")
+
+    def test_composer_room_tracks(self):
+        self.assert_decls(".lb-room", [
+            "grid-template-columns: 186px minmax(0, 1fr) 300px"])
+
+    def test_composer_selection_is_the_amber(self):
+        """The composer's selection outline spends the amber; unselected
+        blocks carry no color until hovered."""
+        self.assert_decls(".ov-block.sel", ["border-color: var(--accent)"])
+        self.assert_decls(".ov-block", ["border: 1px solid transparent"])
+
+    def test_stale_binding_reads_bad_and_bound_reads_ok(self):
+        self.assert_decls(".lb-chip.bad", ["border-color: var(--bad)"])
+        self.assert_decls(".lb-chip.ok", ["border-color: var(--ok)"])
+
+    def test_tray_and_rail_are_contained_panels(self):
+        for sel in (".sheet-tray", ".sheet-rail"):
+            self.assert_decls(sel, ["background: var(--panel)",
+                                    "border: 1px solid var(--line)"])
+
+    def test_no_radius_in_the_composer(self):
+        """Square everywhere — the composer adds no rounding."""
+        i = CSS.index("Lookbook shelf & sheet composer")
+        self.assertNotIn("border-radius", CSS[i:])
+
 
 if __name__ == "__main__":
     unittest.main()

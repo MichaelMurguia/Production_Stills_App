@@ -56,30 +56,46 @@ class CameraBlockTests(unittest.TestCase):
         _restore_home()
 
     def test_panel_value_overrides_bible_default(self):
-        store.save_camera_defaults({"camera_angle": "HIGH", "camera_lens": "NORMAL"})
+        store.save_camera_defaults({"camera_angle": "HIGH", "camera_lens": "50MM"})
         inherit = "\n".join(generate._camera_block({"purpose": "x"}))
         self.assertIn("HIGH ANGLE", inherit)          # inherited from the bible
-        self.assertIn("NORMAL LENS", inherit)
+        self.assertIn("50mm LENS", inherit)
         override = "\n".join(generate._camera_block({"camera_angle": "LOW"}))
         self.assertIn("LOW ANGLE", override)           # panel wins
         self.assertNotIn("HIGH ANGLE", override)
-        self.assertIn("NORMAL LENS", override)         # unset axis still inherits
+        self.assertIn("50mm LENS", override)           # unset axis still inherits
 
     def test_block_states_it_overrides_the_references(self):
         block = "\n".join(generate._camera_block({"camera_tilt": "DUTCH"}))
         self.assertIn("DUTCH ANGLE", block)
         self.assertIn("not the reference", block.lower())
 
-    def test_empty_everywhere_emits_nothing(self):
-        self.assertEqual(generate._camera_block({"purpose": "x"}), [])
+    def test_baseline_speaks_when_nothing_is_set(self):
+        """A production starts from CAMERA_BASELINE (Eye level · 24mm ·
+        Level · Wide, user 2026-08-10) — a panel with no camera of its own
+        inherits it, so the block always states the house grammar."""
+        block = "\n".join(generate._camera_block({"purpose": "x"}))
+        self.assertIn("WIDE SHOT", block)
+        self.assertIn("24mm LENS", block)
 
     def test_every_enum_value_has_authored_phrasing(self):
         for field, allowed in store.CAMERA_FIELDS.items():
+            if hasattr(allowed, "match"):
+                continue  # the lens is a focal length — covered below
             for v in allowed:
                 block = "\n".join(generate._camera_block({field: v}))
                 if field == "camera_tilt" and v == "LEVEL":
                     continue  # LEVEL is intentionally silent
                 self.assertTrue(block.strip(), f"{field}={v} produced no directive")
+
+    def test_every_focal_length_has_authored_phrasing(self):
+        """Presets, the legacy names, and custom lengths all resolve to a
+        directive whose character derives from the millimetres."""
+        for v in ("18MM", "24MM", "35MM", "50MM", "85MM", "135MM",
+                  "8MM", "200MM", "WIDE", "NORMAL", "TELEPHOTO"):
+            line = generate._lens_phrasing(v)
+            self.assertTrue(line, f"lens {v} produced no directive")
+            self.assertIn("LENS", line)
 
 
 class CompilePlacementTests(unittest.TestCase):
@@ -106,7 +122,10 @@ class CameraDefaultsTests(unittest.TestCase):
         d = store.camera_defaults()
         self.assertEqual(d["camera_angle"], "HIGH")   # upper-cased
         self.assertEqual(d["scale"], "MEDIUM")
-        self.assertNotIn("camera_tilt", d)            # empty dropped
+        # An empty value clears the stored override; the read then shows
+        # the baseline through it (camera_defaults is baseline-merged).
+        self.assertEqual(d["camera_tilt"], store.CAMERA_BASELINE["camera_tilt"])
+        self.assertEqual(d["camera_lens"], store.CAMERA_BASELINE["camera_lens"])
 
     def test_unknown_value_is_refused(self):
         with self.assertRaises(ValueError):
@@ -177,8 +196,25 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
 
     def test_sheet_editor_row_and_serialize(self):
         self.assertIn('cameraRow("pcam"', JS)
-        self.assertIn('camera_angle: v("pcam-angle")', JS)
-        self.assertIn('scale: v("pcam-scale")', JS)
+        # the row serialises through readCameraFields, which resolves a Custom
+        # focal length to e.g. "28MM" (a plain v("pcam-lens") would read "CUSTOM")
+        self.assertIn('readCameraFields("pcam", row)', JS)
+
+    def test_lens_is_focal_lengths_with_a_custom_option(self):
+        self.assertIn('["24MM", "24mm"]', JS)
+        self.assertIn('["135MM", "135mm"]', JS)
+        self.assertIn("Custom", JS)
+        self.assertIn("-lens-mm", JS)          # the custom focal-length input
+
+    def test_shot_list_has_the_new_types(self):
+        for s in ('["AERIAL", "Aerial"]', '["MACRO", "Macro"]', '["MICRO", "Micro"]'):
+            self.assertIn(s, JS)
+
+    def test_camera_card_leads_the_look_interview(self):
+        i = HTML.index('data-step="1"')
+        j = HTML.index('id="cam-default"')
+        self.assertGreater(j, i, "the camera card must sit inside step 1")
+        self.assertLess(j, HTML.index('class="grid-form"', i), "and lead it, above the fields")
 
     def test_bible_default_card_loads_and_saves(self):
         self.assertIn('id="cam-default-row"', HTML)

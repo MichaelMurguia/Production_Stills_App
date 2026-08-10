@@ -497,17 +497,9 @@ CAMERA_TILT_PHRASING = {
     "DUTCH": "DUTCH ANGLE — the camera is rolled so the horizon tilts off-level, an "
              "unbalanced, tense, disorienting frame.",
 }
-CAMERA_LENS_PHRASING = {
-    "WIDE": "WIDE LENS (~24mm) — a broad field of view with exaggerated depth and "
-            "near/far separation; the environment reads large around the subject, "
-            "with mild perspective stretch toward the edges.",
-    "NORMAL": "NORMAL LENS (~50mm) — natural human perspective, neither compressed "
-              "nor exaggerated.",
-    "TELEPHOTO": "TELEPHOTO LENS (~85–135mm) — a narrow field of view with compressed "
-                 "depth; the background is pulled close and flattened and the subject "
-                 "is isolated from its surroundings.",
-}
 SCALE_PHRASING = {
+    "AERIAL": "AERIAL SHOT — a high, wide view from well above the scene; vast scope, "
+              "the subject small within the landscape below.",
     "EXTREME_WIDE": "EXTREME WIDE SHOT — the subject is small within a vast space; the "
                     "environment is the subject.",
     "WIDE": "WIDE SHOT — the full subject with generous surrounding context.",
@@ -515,27 +507,60 @@ SCALE_PHRASING = {
               "and setting.",
     "CLOSE": "CLOSE SHOT — the subject fills the frame; setting falls away.",
     "EXTREME_CLOSE": "EXTREME CLOSE-UP — a single detail fills the frame.",
+    "MACRO": "MACRO SHOT — an intimate detail at near life-size; a small object or "
+             "surface fills the frame with tactile texture.",
+    "MICRO": "MICRO SHOT — extreme magnification of a tiny detail, a microscopic "
+             "fragment of a surface filling the whole frame.",
 }
-CAMERA_AXES = {  # field -> phrasing map, in emit order
-    "scale": SCALE_PHRASING,
-    "camera_lens": CAMERA_LENS_PHRASING,
-    "camera_angle": CAMERA_ANGLE_PHRASING,
-    "camera_tilt": CAMERA_TILT_PHRASING,
-}
+
+
+# Pre-2026-08-10 lens vocabulary, mapped onto focal lengths so any camera set
+# under it keeps producing a directive.
+_LEGACY_LENS = {"WIDE": "24MM", "NORMAL": "50MM", "TELEPHOTO": "135MM"}
+
+
+def _lens_phrasing(value: str) -> str:
+    """A focal length like '24MM' -> its authored directive. One source of truth
+    for the presets AND any custom focal length the user types; the perspective
+    character is derived from the millimetres."""
+    v = _LEGACY_LENS.get(str(value).upper().strip(), str(value))
+    try:
+        mm = int(v.upper().rstrip("M"))
+    except (ValueError, AttributeError):
+        return ""
+    if mm <= 20:
+        char = ("an ultra-wide field of view — sweeping scope, strong perspective "
+                "depth and edge stretch; the environment dominates the subject")
+    elif mm <= 35:
+        char = ("a wide field of view — generous context with mild perspective depth; "
+                "the space reads large around the subject")
+    elif mm <= 60:
+        char = "a natural, normal field of view — neither compressed nor exaggerated"
+    elif mm <= 105:
+        char = ("a short-telephoto field of view — gentle compression that separates "
+                "the subject cleanly from its background (a flattering portrait length)")
+    else:
+        char = ("a telephoto field of view — strong compression; the background is "
+                "pulled close and flattened and the subject is isolated")
+    return f"{mm}mm LENS — {char}."
 
 
 def _camera_block(panel: dict) -> list[str]:
     """The CAMERA block: authored composition directives, resolved
     panel-value-or-bible-default, placed high in the prompt and stated to
-    override the references' own framing. Empty axes are omitted; an all-empty
-    camera contributes nothing (the model keeps its own choice, as before)."""
+    override the references' own framing. Emit order: shot, lens, angle, tilt.
+    Empty axes are omitted; an all-empty camera contributes nothing."""
     defaults = store.camera_defaults()
-    directives = []
-    for field, phrasing in CAMERA_AXES.items():
-        value = str(panel.get(field) or defaults.get(field) or "").strip().upper()
-        line = phrasing.get(value)
-        if line:
-            directives.append(line)
+
+    def resolve(field):
+        return str(panel.get(field) or defaults.get(field) or "").strip().upper()
+
+    directives = [d for d in (
+        SCALE_PHRASING.get(resolve("scale")),
+        _lens_phrasing(resolve("camera_lens")),
+        CAMERA_ANGLE_PHRASING.get(resolve("camera_angle")),
+        CAMERA_TILT_PHRASING.get(resolve("camera_tilt")),
+    ) if d]
     if not directives:
         return []
     return (["CAMERA — the shot's framing. Follow these exactly; where an "

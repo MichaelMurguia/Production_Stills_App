@@ -968,8 +968,8 @@ function initLightbox() {
 
 const views = { status: renderStatus, screenplay: renderScreenplay, wizard: renderWizard,
                 references: renderReferences, specs: renderSpecs, boards: renderBoards,
-                assembly: renderAssembly, projects: renderProjectsView,
-                settings: renderSettings };
+                assembly: renderAssembly, lookbook: renderLookbook,
+                projects: renderProjectsView, settings: renderSettings };
 const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
 let activeView = "status";
 
@@ -1154,7 +1154,7 @@ const UNLOCK_LINE = { specs: "THE MOMENT THE BIBLE IS SAVED",
                      boards: "THE MOMENT A SHEET LOCKS",
                      assembly: "THE MOMENT A PANEL IS APPROVED" };
 const NEED_SENTENCE = { specs: "Breakdowns need the Art Direction Bible.",
-                       boards: "Panels need a locked breakdown sheet.",
+                       boards: "Panels need a locked breakdown.",
                        assembly: "Boards need approved panels." };
 const COUNT_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 
@@ -1546,7 +1546,7 @@ async function showView(name) {
   // tool view is open. Keyed here in the one router chokepoint, so boot
   // restores (persistent UI state) and both nav bars stay in sync free.
   document.body.classList.toggle("tool-mode",
-    ["status", "references", "projects", "settings"].includes(name));
+    ["status", "references", "lookbook", "projects", "settings"].includes(name));
   activeView = name;
   uiSet("view", name);
   _roleCtx = null;  // suggestion sources refresh per navigation
@@ -1875,7 +1875,7 @@ async function renderScreenplay() {
   $("#scr-downstream").innerHTML = sp ? `
     <div class="fact-head">DOWNSTREAM OF THIS FILE</div>
     <div class="dsrow"><span>Design languages</span><b>${langs}</b></div>
-    <div class="dsrow"><span>Breakdown sheets</span><b>${specMetas.length}</b></div>
+    <div class="dsrow"><span>Breakdowns</span><b>${specMetas.length}</b></div>
     <div class="dsrow"><span>Cited evidence rows</span><b>${citedRows}</b></div>
     <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>` : "";
 
@@ -2241,7 +2241,7 @@ async function renderProjectsView() {
           body: `That zip holds "${info.name}" — ${info.files} files, `
             + `${mbs(info.bytes)}${when ? `, backed up ${when}` : ""}. `
             + "Importing replaces this production's screenplay, bible, reference "
-            + "library, breakdown sheets, boards and approval log with what the zip "
+            + "library, breakdowns, boards and approval log with what the zip "
             + "carries; anything here that the zip does not contain is removed. "
             + `"${p.name}" keeps its own name and its place on the shelf. A safety `
             + "copy of the current state is saved beside the production first, but "
@@ -4170,7 +4170,7 @@ async function renderWizard() {
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       const envNames = envs.map(e => e.name);
       buildLocFinder(secHost, {
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN SHEET <span class="loc-showing">FIVE SHOWN PER ENVIRONMENT</span></span></div>`,
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">FIVE SHOWN PER ENVIRONMENT</span></span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
         rows: (needle, q) => grouped.map(g => {
@@ -4220,7 +4220,7 @@ async function renderWizard() {
       }) || null;
     };
     buildLocFinder(secHost, {
-      head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${keyLocs.length} · EACH BECOMES ONE BREAKDOWN SHEET</span></div>`,
+      head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${keyLocs.length} · EACH BECOMES ONE BREAKDOWN</span></div>`,
       headRow: WIZ_LOC_THEAD,
       placeholder: "find a location…",
       rows: (needle, q) => keyLocs
@@ -4666,19 +4666,18 @@ async function renderWizard() {
     syncBibleSave();
     return bible;
   };
-  // The production's default camera grammar lives with the Bible (edits reach
-  // every future prompt). Each select saves on change; a blank axis is the
-  // model's own choice. Panels override this per shot on the breakdown sheet.
+  // The production's default camera grammar leads Production Design (edits reach
+  // every future prompt). It always carries a concrete value (a new production
+  // starts Eye level · 24mm · Level · Wide); each change saves. Panels override
+  // it per shot on the breakdown.
   const loadCameraDefault = async () => {
     const host = $("#cam-default-row");
     if (!host) return;
     const defaults = await api("/api/camera-defaults").catch(() => ({}));
-    host.innerHTML = cameraRow("dcam", defaults, "— model's choice —");
-    $$("select", host).forEach(sel => sel.onchange = async () => {
-      const body = {};
-      CAMERA_AXES.forEach(a => { body[a.key] = $(`[data-f=dcam-${a.f}]`, host).value; });
+    host.innerHTML = cameraRow("dcam", defaults, "");  // no blank: always a value
+    wireCameraRow("dcam", host, async () => {
       try {
-        await api("/api/camera-defaults", { method: "POST", json: body });
+        await api("/api/camera-defaults", { method: "POST", json: readCameraFields("dcam", host) });
         $("#cam-default-status").textContent = "Saved — every panel inherits this unless it overrides.";
       } catch (err) { $("#cam-default-status").textContent = err.message; }
     });
@@ -5463,7 +5462,7 @@ async function renderSpecs(openId = null) {
     btn.disabled = true;
     const providerSel = $("#spec-auto-provider");
     const busy = startBusy(status,
-      `Reading the screenplay and drafting the breakdown sheet with ${providerSel.options[providerSel.selectedIndex].text}…`,
+      `Reading the screenplay and drafting the breakdown with ${providerSel.options[providerSel.selectedIndex].text}…`,
       "this can take a minute or two");
     try {
       const spec = await api("/api/specs/autofill", {
@@ -5515,7 +5514,7 @@ async function renderSpecs(openId = null) {
   const countEl = $("#spec-count");
   if (countEl) countEl.textContent = specs.length || "";
   tbody.innerHTML = specs.length ? "" :
-    `<tr><td colspan="6" class="mini">NO BREAKDOWN SHEETS YET — RUN A BREAKDOWN ABOVE</td></tr>`;
+    `<tr><td colspan="6" class="mini">NO BREAKDOWNS YET — RUN ONE ABOVE</td></tr>`;
   for (const s of specs) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -5528,7 +5527,7 @@ async function renderSpecs(openId = null) {
         <button class="ghost" data-f="open">Open</button>
         <!-- B4: Delete is not this row's primary verb — the confirm dialog
            carries the danger at length. -->
-        <button class="ghost" data-f="del" title="Permanently delete this breakdown sheet and its candidates">Delete</button>
+        <button class="ghost" data-f="del" title="Permanently delete this breakdown and its candidates">Delete</button>
       </td>`;
     $("[data-f=open]", tr).onclick = () => openSpecEditor(s.specification_id);
     $("[data-f=del]", tr).onclick = async () => {
@@ -6089,6 +6088,7 @@ async function openSpecEditor(specId) {
       syncSuggest();
     }
     panelsHost.append(row);
+    wireCameraRow("pcam", row);  // reveal the custom focal-length input on demand
     updateSettingVis();
   }
 
@@ -6263,10 +6263,7 @@ REMOVE — marked for removal from the board.">
         forbidden_objects: split(v("forbidden")),
         evidence: Array.isArray(orig.evidence) && orig.evidence.length
           ? orig.evidence : ["USER_DIRECTED"],
-        scale: v("pcam-scale"),
-        camera_angle: v("pcam-angle"),
-        camera_lens: v("pcam-lens"),
-        camera_tilt: v("pcam-tilt"),
+        ...readCameraFields("pcam", row),
         composition_role: orig.composition_role
           || (out.panels.length === 0 ? "hero" : "support"),
         time_of_day: v("ptod"),
@@ -6437,29 +6434,72 @@ const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", 
 const CAMERA_ANGLES = [["EYE_LEVEL", "Eye level"], ["LOW", "Low — looks up"],
   ["HIGH", "High — looks down"], ["BIRDS_EYE", "Bird's-eye — top-down"],
   ["WORMS_EYE", "Worm's-eye — straight up"]];
-const CAMERA_LENSES = [["WIDE", "Wide ~24mm"], ["NORMAL", "Normal ~50mm"],
-  ["TELEPHOTO", "Telephoto ~85–135mm"]];
+const CAMERA_LENSES = [["18MM", "18mm"], ["24MM", "24mm"], ["35MM", "35mm"],
+  ["50MM", "50mm"], ["85MM", "85mm"], ["135MM", "135mm"]];
 const CAMERA_TILTS = [["LEVEL", "Level"], ["DUTCH", "Dutch — tilted"]];
-const SHOT_SCALES = [["EXTREME_WIDE", "Extreme wide"], ["WIDE", "Wide"],
-  ["MEDIUM", "Medium"], ["CLOSE", "Close"], ["EXTREME_CLOSE", "Extreme close"]];
+const SHOT_SCALES = [["AERIAL", "Aerial"], ["EXTREME_WIDE", "Extreme wide"],
+  ["WIDE", "Wide"], ["MEDIUM", "Medium"], ["CLOSE", "Close"],
+  ["EXTREME_CLOSE", "Extreme close"], ["MACRO", "Macro"], ["MICRO", "Micro"]];
 const CAMERA_AXES = [
   { key: "camera_angle", f: "angle", label: "Angle", opts: CAMERA_ANGLES },
   { key: "camera_lens", f: "lens", label: "Lens", opts: CAMERA_LENSES },
   { key: "camera_tilt", f: "tilt", label: "Tilt", opts: CAMERA_TILTS },
   { key: "scale", f: "scale", label: "Shot", opts: SHOT_SCALES },
 ];
-// One camera <select>. `prefix` namespaces its data-f (e.g. "pcam" / "cam" /
-// "dcam"); `blank` is the empty-option copy (inherit / model's choice).
+// Pre-2026-08-10 lens words map onto a focal length so old settings still show.
+const _LEGACY_LENS = { WIDE: "24MM", NORMAL: "50MM", TELEPHOTO: "135MM" };
+const lensValue = v => _LEGACY_LENS[String(v || "").toUpperCase()] || String(v || "").toUpperCase();
+
+// One camera <select>. `prefix` namespaces its data-f ("pcam"/"cam"/"dcam");
+// `blank`, when given, is the empty "inherit" option — omitted for the
+// production default, which always carries a concrete value. The lens axis adds
+// a "Custom…" option that reveals a focal-length input.
 function cameraSelect(prefix, axis, value, blank, disabled = false) {
+  const dis = disabled ? "disabled" : "";
+  const blankOpt = blank ? `<option value="">${esc(blank)}</option>` : "";
+  if (axis.key === "camera_lens") {
+    const v = lensValue(value);
+    const custom = !!v && !axis.opts.some(([ov]) => ov === v);
+    return `<label class="cam-field mini"><span>${esc(axis.label)}</span>
+      <span class="cam-lens">
+        <select data-f="${prefix}-lens" ${dis}>${blankOpt}
+          ${axis.opts.map(([ov, ol]) => `<option value="${ov}" ${v === ov ? "selected" : ""}>${esc(ol)}</option>`).join("")}
+          <option value="CUSTOM" ${custom ? "selected" : ""}>Custom…</option>
+        </select>
+        <input type="number" data-f="${prefix}-lens-mm" class="cam-lens-mm${custom ? "" : " hidden"}"
+          min="8" max="800" step="1" placeholder="mm" value="${custom ? esc(v.replace(/MM$/, "")) : ""}" ${dis}>
+      </span></label>`;
+  }
+  const uv = String(value || "").toUpperCase();
   return `<label class="cam-field mini"><span>${esc(axis.label)}</span>
-    <select data-f="${prefix}-${axis.f}" ${disabled ? "disabled" : ""}>
-      <option value="">${esc(blank)}</option>
-      ${axis.opts.map(([v, l]) => `<option value="${v}" ${String(value || "").toUpperCase() === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+    <select data-f="${prefix}-${axis.f}" ${dis}>${blankOpt}
+      ${axis.opts.map(([ov, ol]) => `<option value="${ov}" ${uv === ov ? "selected" : ""}>${esc(ol)}</option>`).join("")}
     </select></label>`;
 }
 function cameraRow(prefix, obj, blank, disabled = false) {
   return `<div class="cam-row" data-f="${prefix}-row">${
     CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")}</div>`;
+}
+// Read the four axes back off a rendered row. The lens resolves its Custom
+// number field to a focal length like "28MM"; a blank select stays "".
+function readCameraFields(prefix, root) {
+  const val = f => $(`[data-f=${prefix}-${f}]`, root)?.value || "";
+  let lens = val("lens");
+  if (lens === "CUSTOM") {
+    const mm = ($(`[data-f=${prefix}-lens-mm]`, root)?.value || "").trim();
+    lens = mm ? `${mm}MM` : "";
+  }
+  return { camera_angle: val("angle"), camera_lens: lens,
+           camera_tilt: val("tilt"), scale: val("scale") };
+}
+// Toggle the Custom focal-length input as the lens select changes, and run
+// `onChange` after any axis changes (each surface persists differently).
+function wireCameraRow(prefix, root, onChange) {
+  const lensSel = $(`[data-f=${prefix}-lens]`, root);
+  const mm = $(`[data-f=${prefix}-lens-mm]`, root);
+  const toggle = () => { if (mm) mm.classList.toggle("hidden", !lensSel || lensSel.value !== "CUSTOM"); };
+  root.querySelectorAll(`[data-f^="${prefix}-"]`).forEach(el =>
+    el.addEventListener("change", () => { toggle(); if (onChange) onChange(); }));
 }
 
 // Engine options come from settings (built-ins plus user-added custom
@@ -7133,21 +7173,19 @@ async function renderBoardPanels(specId) {
       };
     };
 
-    // Inline camera edit (mirrors Edit brief): each select saves on change,
-    // journaled + lock re-stamped server-side; disabled when a take is approved.
-    $$("[data-f=cam-inline] select", card).forEach(sel => {
-      if (sel.disabled) return;
-      sel.onchange = async () => {
-        const body = {};
-        CAMERA_AXES.forEach(a => { body[a.key] = $(`[data-f=cam-${a.f}]`, card).value; });
+    // Inline camera edit (mirrors Edit brief): saves on change, journaled +
+    // lock re-stamped server-side; disabled when a take is approved.
+    const camInline = $("[data-f=cam-inline]", card);
+    if (camInline && !$("select", camInline)?.disabled) {
+      wireCameraRow("cam", camInline, async () => {
         try {
           const out = await api(`/api/specs/${specId}/panels/${p.id}/camera`,
-            { method: "POST", json: body });
+            { method: "POST", json: readCameraFields("cam", camInline) });
           CAMERA_AXES.forEach(a => { p[a.key] = out[a.key]; });
           toast(`${p.id} camera set — the next take uses it.`);
         } catch (err) { toast(err.message, true); renderBoardPanels(specId); }
-      };
-    });
+      });
+    }
 
     // P4 disclosure: the full anchor badge list, unchanged, on demand.
     const showIds = $("[data-f=show-ids]", card);
@@ -8284,7 +8322,8 @@ async function boot() {
     // Deep-link support: #screenplay, #boards, … land on that view
     // directly; otherwise the app reopens exactly where it was left.
     const stored = uiGet("view", "status");
-    const hashView = location.hash.slice(1);
+    // One optional segment addresses into the view (#lookbook/SH-0001).
+    const hashView = location.hash.slice(1).split("/")[0];
     showView(Object.hasOwn(views, hashView) ? hashView
       : Object.hasOwn(views, stored) ? stored : "status");
     return;
@@ -8314,4 +8353,606 @@ async function boot() {
   });
   $("#firstrun-name").focus();
 }
+
+/* --------------------------------------------------------------- lookbook
+   The sheet grammar's surface (SHEET_SYSTEM_PLAN §11): a tool, not a
+   stage — the band is the pipeline and a lookbook spans it. Two lives:
+   the shelf (lookbooks + sheets, archetypes as the primary act when
+   empty) and the composer (tray · fitted sheet · rail). Composer overlays
+   are app chrome drawn in the DOM and never enter render_sheet. */
+
+const SHEET_STYLES = ["GALLERY", "CONTACT", "NEWSPRINT", "BLUEPRINT", "PLATE", "INK"];
+const SHEET_SPINE_W = 0.24;  // mirrors sheet.SPINE_W
+const SHEET_ARCHETYPES = [
+  ["ART_DIRECTION", "Art direction", "Spine, character clusters, atmosphere strip — the film's look on one sheet", "GALLERY", "PRINT"],
+  ["SUBJECT_STUDY", "Subject study", "Hero, orthographics, spec, materials and versus for one subject", "INK", "PRINT"],
+  ["SCENE_BOARD", "Scene board", "Up to fifteen beats plus strips — a scene told in order", "INK", "PRINT"],
+  ["LOOK_STYLES", "Look styles", "Four looks side by side, principles, a lineup", "PLATE", "PRINT"],
+  ["FACTION", "Faction", "Hero columns, principles, grid and palette for one faction", "CONTACT", "SCREEN"],
+  ["LOCATION", "Location", "One place: grid, principles, palette", "GALLERY", "PRINT"],
+  ["BOARD", "Board", "A stage-05 board drawn as a sheet — usually made with Arrange this board", "INK", "SCREEN"],
+];
+const SHEET_TRAY = {
+  "PANEL BLOCKS": ["HERO", "CLUSTER", "STRIP", "BEATS", "GRID", "ORTHO"],
+  "EVIDENCE BLOCKS": ["PALETTE", "MATERIAL", "SPEC", "PRINCIPLES", "LINEUP", "VERSUS"],
+};
+// Mirrors sheet.BLOCK_TYPES — slots range + elastic; the server validates,
+// this only writes honest tray tooltips and slot verdicts.
+const SHEET_BLOCKS = {
+  HERO: [1, 1, false], CLUSTER: [2, 5, false], STRIP: [3, 8, false],
+  BEATS: [6, 15, false], GRID: [4, 12, false], ORTHO: [4, 4, false],
+  PALETTE: [0, 0, true], MATERIAL: [3, 6, false], SPEC: [0, 0, true],
+  PRINCIPLES: [0, 0, true], LINEUP: [4, 10, false], VERSUS: [2, 2, false],
+};
+
+function sheetContentFracs(sh) {
+  // Mirrors sheet._content_rect_fracs — the overlay must aim where the
+  // renderer draws.
+  const [w, h] = sh.size;
+  const aspect = h ? w / h : 1;
+  const mx = 0.047, my = mx * aspect / (16 / 9);
+  const x0 = sh.spine ? SHEET_SPINE_W + mx : mx;
+  const y0 = sh.spine ? my : my + 0.11;
+  return { x: x0, y: y0, w: 1 - x0 - mx, h: 1 - y0 - my };
+}
+
+function sheetSizeLine(sh) {
+  const [w, h] = sh.size;
+  return sh.medium === "PRINT"
+    ? `${w * 300} × ${h * 300} AT 300 DPI (${w} × ${h} IN)`
+    : `${w} × ${h} PX`;
+}
+
+function slotNeed(sh, block, slot) {
+  // Mirrors sheet.slot_pixel_need for the fill popover's verdicts.
+  const [w, h] = sh.size;
+  const pxw = sh.medium === "PRINT" ? w * 300 : w;
+  const pxh = sh.medium === "PRINT" ? h * 300 : h;
+  const c = sheetContentFracs(sh);
+  const crop = slot.crop || { w: 1, h: 1 };
+  return [Math.round(pxw * c.w * block.frac.w * slot.frac.w / Math.max(crop.w || 1, 1e-6)),
+          Math.round(pxh * c.h * block.frac.h * slot.frac.h / Math.max(crop.h || 1, 1e-6))];
+}
+
+async function renderLookbook() {
+  // Deep link: #lookbook/SH-0001 opens that sheet in the composer.
+  const deep = location.hash.slice(1).split("/")[1];
+  if (deep) {
+    uiSet("lb.sheet", deep);
+    history.replaceState(null, "", "#lookbook");
+  }
+  const open = uiGet("lb.sheet", "");
+  if (open) {
+    try { return await renderSheetComposer(open); }
+    catch { uiSet("lb.sheet", ""); }
+  }
+  return renderLookbookShelf();
+}
+
+async function renderLookbookShelf() {
+  useTemplate("tpl-lookbook");
+  const root = $("#lb-root");
+  const [lbs, sheets] = await Promise.all([api("/api/lookbooks"), api("/api/sheets")]);
+
+  const archRow = SHEET_ARCHETYPES.map(([key, name, what]) =>
+    `<button class="ghost lb-arch" data-arch="${key}" title="${esc(what)}">${esc(name)}</button>`).join("");
+
+  root.innerHTML = `
+    <div class="panel">
+      <h2>Start a sheet</h2>
+      <p class="hint">A sheet arranges approved panels and stage-02 evidence on one printable page. Pick the shape; style, size and blocks are yours to change in the composer.</p>
+      <div class="lb-arch-row">${archRow}</div>
+    </div>
+    <div class="panel">
+      <h2>Lookbooks <span class="mono lb-count">${lbs.length} SET${lbs.length === 1 ? "" : "S"}</span></h2>
+      ${lbs.length ? `<div class="lb-list">${lbs.map(lb => `
+        <div class="lb-row" data-lb="${esc(lb.lookbook_id)}">
+          <span class="mono lb-id">${esc(lb.lookbook_id)}</span>
+          <span class="lb-name">${esc(lb.title)}</span>
+          <span class="mono lb-facts">${lb.sheets.length} SHEET${lb.sheets.length === 1 ? "" : "S"}</span>
+          <span class="lb-acts">
+            <button class="ghost" data-lbx="${esc(lb.lookbook_id)}" ${lb.sheets.length ? "" : `disabled title="An empty lookbook has nothing to export — add a sheet first"`} title="One PDF, one page per sheet at that sheet's own size">Export PDF</button>
+            <button class="ghost" data-lbdel="${esc(lb.lookbook_id)}" title="Delete this lookbook — its sheets stay">Delete</button>
+          </span>
+        </div>`).join("")}</div>` : ""}
+      <div class="row lb-intake">
+        <input type="text" id="lb-new-title" placeholder="name a lookbook — an ordered set of sheets, exported as one PDF" style="flex:1">
+        <button class="ghost" id="lb-new">New lookbook</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Sheets <span class="mono lb-count">${sheets.length}</span></h2>
+      ${sheets.length ? `<div class="lb-list">${sheets.map(s => `
+        <div class="lb-row lb-sheet-row" data-sheet="${esc(s.sheet_id)}" title="Open in the composer">
+          <span class="mono lb-id">${esc(s.sheet_id)}</span>
+          <span class="lb-name">${esc(s.title || s.archetype)}</span>
+          <span class="mono lb-facts">${esc(s.archetype)} · ${esc(s.style)} · ${esc(String(s.size[0]))}×${esc(String(s.size[1]))} ${s.medium === "PRINT" ? "IN" : "PX"} · ${s.blocks} BLOCK${s.blocks === 1 ? "" : "S"}</span>
+          <span class="lb-acts"><button class="ghost" data-shdel="${esc(s.sheet_id)}" title="Delete this sheet — it leaves every lookbook it is in">Delete</button></span>
+        </div>`).join("")}</div>`
+      : `<p class="hint">No sheets yet — start one above, or send an assembled board here with Arrange this board on stage 05.</p>`}
+    </div>`;
+
+  root.onclick = async e => {
+    const arch = e.target.closest("[data-arch]");
+    if (arch) {
+      const [key, , , style, medium] = SHEET_ARCHETYPES.find(a => a[0] === arch.dataset.arch);
+      const vals = await modal({
+        title: `New ${key.replace(/_/g, " ").toLowerCase()} sheet`,
+        fields: [{ label: "Title", placeholder: "THE BELTMINERS", value: "" },
+                 { label: "Subtitle", placeholder: "ART DIRECTION v3", value: "" }],
+        confirmLabel: "Create sheet" });
+      if (!vals) return;
+      try {
+        const rec = await api("/api/sheets", { method: "POST", json: {
+          archetype: key, style, medium, title: vals[0] || key, subject: vals[1] || "" } });
+        uiSet("lb.sheet", rec.sheet_id); uiSet("lb.block", "");
+        renderLookbook();
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
+    if (e.target.id === "lb-new") {
+      const title = $("#lb-new-title").value.trim();
+      if (!title) { $("#lb-new-title").focus(); return; }
+      try { await api("/api/lookbooks", { method: "POST", json: { title } }); renderLookbookShelf(); }
+      catch (err) { toast(err.message, true); }
+      return;
+    }
+    const del = e.target.closest("[data-lbdel]");
+    if (del) {
+      if (!await modal({ title: "Delete this lookbook?", body: "Its sheets stay on the shelf — only the set and its order are deleted.", confirmLabel: "Delete", danger: true })) return;
+      try { await api(`/api/lookbooks/${del.dataset.lbdel}`, { method: "DELETE" }); renderLookbookShelf(); }
+      catch (err) { toast(err.message, true); }
+      return;
+    }
+    const exp = e.target.closest("[data-lbx]");
+    if (exp) {
+      try {
+        const r = await api(`/api/lookbooks/${exp.dataset.lbx}/export`, { method: "POST", json: {} });
+        window.open(`/api/lookbooks/${exp.dataset.lbx}/export/${encodeURIComponent(r.file)}`, "_blank");
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
+    const sdel = e.target.closest("[data-shdel]");
+    if (sdel) {
+      if (!await modal({ title: `Delete ${sdel.dataset.shdel}?`, body: "The sheet and its exports are deleted; the takes it shows are untouched.", confirmLabel: "Delete", danger: true })) return;
+      try { await api(`/api/sheets/${sdel.dataset.shdel}`, { method: "DELETE" }); renderLookbookShelf(); }
+      catch (err) { toast(err.message, true); }
+      return;
+    }
+    const row = e.target.closest("[data-sheet]");
+    if (row) { uiSet("lb.sheet", row.dataset.sheet); uiSet("lb.block", ""); renderLookbook(); }
+  };
+}
+
+let _lbPreviewUrl = null;
+
+async function renderSheetComposer(sheetId) {
+  useTemplate("tpl-lookbook");
+  const root = $("#lb-root");
+  let sh = await api(`/api/sheets/${sheetId}`);
+  let ready = await api(`/api/sheets/${sheetId}/readiness`);
+  const selId = uiGet("lb.block", "");
+  const sel = sh.blocks.find(b => b.block_id === selId) || null;
+  const blockedBy = {};
+  for (const e of ready.blocked) {
+    (blockedBy[e.block_id] = blockedBy[e.block_id] || []).push(e);
+  }
+
+  const tray = Object.entries(SHEET_TRAY).map(([group, types]) => `
+    <div class="tray-group-label mono">${group}</div>
+    ${types.map(t => {
+      const [lo, hi, elastic] = SHEET_BLOCKS[t];
+      const what = elastic ? "evidence — draws from stage 02, reflows to stay legible"
+        : `${lo === hi ? lo : `${lo}–${hi}`} slots for approved takes`;
+      return `<button class="tray-block" data-add="${t}" title="Add a ${t} block — ${esc(what)}">${t[0] + t.slice(1).toLowerCase()}</button>`;
+    }).join("")}`).join("");
+
+  const rungs = (sh.medium === "PRINT"
+    ? [[12, 8], [18, 12], [24, 16], [36, 24]]
+    : [[1920, 1080], [2560, 1440], [3840, 2160], [5120, 2880]]);
+  const unit = sh.medium === "PRINT" ? "IN" : "PX";
+  const isCurrent = r => r[0] === sh.size[0] && r[1] === sh.size[1];
+
+  const slotState = (b, s) => {
+    const errs = (blockedBy[b.block_id] || []).filter(x => x.slot_id === s.slot_id);
+    if (!s.candidate_id) return ["empty", "EMPTY"];
+    return errs.length ? ["bad", "SHORT"] : ["ok", s.candidate_id];
+  };
+
+  const capRowHtml = (b, which) => {
+    const cap = b[which];
+    const label = which === "heading" ? "HEADING" : "CAPTION";
+    if (!cap) {
+      return `<div class="lb-cap-row"><span class="mono lb-cap-k">${label}</span>
+        <button class="text-act" data-capa="${which}">Author</button></div>`;
+    }
+    const chip = cap.state === "BOUND" ? `<span class="lb-chip ok mono">BOUND</span>`
+      : cap.state === "STALE" ? `<span class="lb-chip bad mono">SOURCE MOVED</span>`
+      : `<span class="lb-chip authored mono">AUTHORED</span>`;
+    return `<div class="lb-cap-row"><span class="mono lb-cap-k">${label}</span>${chip}
+        <span class="lb-cap-text" title="${esc(cap.text || "")}">${esc((cap.text || "").split("\n")[0])}</span>
+        <button class="text-act" data-capa="${which}" title="Rewrite this line here — an authored caption has no upstream source">Author</button>
+      </div>
+      ${cap.state === "STALE" ? `<div class="lb-stale-acts">
+        <button class="primary" data-caps="rebind:${which}" title="Adopt what the source says now — the binding re-stamps">Take the new line</button>
+        <button class="ghost" data-caps="author:${which}" title="Keep this text and freeze it — the source stops speaking here">Keep and author</button>
+      </div>` : ""}`;
+  };
+
+  const railSelected = sel ? `
+    <div class="lb-rail-sec">
+      <div class="lb-rail-k mono">SELECTED · ${esc(sel.type)}</div>
+      ${SHEET_BLOCKS[sel.type][2] ? `<p class="hint">Evidence block — its text reflows and never blocks a size. Bind or author its caption below.</p>` : `
+      <div class="lb-slots">${sel.slots.map(s => {
+        const [st, label] = slotState(sel, s);
+        return `<div class="lb-slot-row" data-slot="${esc(s.slot_id)}">
+          <i class="lb-dot ${st}"></i>
+          <span class="mono">${esc(s.slot_id)}</span>
+          <span class="mono lb-slot-c ${st === "empty" ? "faint" : ""}">${esc(label)}</span>
+          <span class="lb-slot-acts">
+            <button class="text-act" data-fill="${esc(s.slot_id)}" title="Fill this slot from the production's approved takes">${s.candidate_id ? "Swap" : "Fill"}</button>
+            ${s.candidate_id ? `<button class="text-act" data-crop="${esc(s.slot_id)}" title="Crop, zoom and rotate inside the frame — over-cropping is kept and gates export like a small render">Crop</button>
+            <button class="text-act" data-clear="${esc(s.slot_id)}">Clear</button>` : ""}
+          </span>
+        </div>`; }).join("")}</div>
+      <div class="lb-slot-manage">
+        ${sel.slots.length < SHEET_BLOCKS[sel.type][1] ? `<button class="text-act" data-f="slot-add">+ Slot</button>` : ""}
+        ${sel.slots.length > SHEET_BLOCKS[sel.type][0] ? `<button class="text-act" data-f="slot-del" title="Removes the last slot">− Slot</button>` : ""}
+      </div>`}
+      <div class="lb-caps">${capRowHtml(sel, "heading")}${capRowHtml(sel, "caption")}</div>
+      <button class="text-act lb-del-block" data-f="block-del" title="Remove this block from the sheet — the takes it shows are untouched">Remove block</button>
+    </div>` : `
+    <div class="lb-rail-sec"><div class="lb-rail-k mono">SELECTED</div>
+      <p class="hint">Click a block on the sheet to select it — its slots, captions and bindings edit here.</p></div>`;
+
+  const blockedLead = ready.ready ? "" : `
+    <div class="panel panel-lead lb-blocked">
+      <div class="lb-blocked-k mono">${ready.blocked.length} THING${ready.blocked.length === 1 ? "" : "S"} BLOCK${ready.blocked.length === 1 ? "S" : ""} EXPORT</div>
+      <div class="lb-blocked-rows">${ready.blocked.slice(0, 4).map(b =>
+        b.kind === "TYPE_FLOOR"
+          ? `<span>${esc(b.block_id)} sets type at ${b.size}${sh.medium === "PRINT" ? "pt" : "px"} — the ${sh.medium.toLowerCase()} floor is ${b.floor}. Pick a larger size in the rail.</span>`
+          : `<span>${esc(b.block_id)} · ${esc(b.slot_id)} ${b.have[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "is empty — fill it or remove the slot"}.</span>`).join("")}
+        ${ready.blocked.length > 4 ? `<span class="mono">AND ${ready.blocked.length - 4} MORE</span>` : ""}</div>
+    </div>`;
+
+  root.innerHTML = `
+    <div class="lb-head">
+      <button class="text-act" data-f="back">← All sheets</button>
+      <span class="lb-title mono">${esc((sh.masthead?.title || sh.archetype).toUpperCase())} — ${esc(sh.archetype)}</span>
+      <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">● EVERY CHANGE SAVED</span>
+      <button class="${ready.ready ? "primary" : "ghost"}" data-f="export" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export</button>
+    </div>
+    <div class="lb-room">
+      <aside class="sheet-tray">${tray}
+        <div class="tray-foot mono">CLICK A BLOCK TO ADD IT · TWELVE TYPES COVER EVERY REGION</div>
+      </aside>
+      <div class="sheet-stage">
+        <div class="stage-meta mono">${esc(sh.archetype)} · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}<span class="stage-meta-note">overlays are app chrome — they never print</span></div>
+        <div class="sheet-wrap"><img id="sheet-preview" alt="sheet preview"><div class="sheet-overlay" id="sheet-overlay"></div></div>
+        ${blockedLead}
+      </div>
+      <aside class="sheet-rail">
+        ${railSelected}
+        <div class="lb-rail-sec">
+          <div class="lb-rail-k mono">SHEET STYLE</div>
+          <select id="lb-style">${SHEET_STYLES.map(s =>
+            `<option${s === sh.style ? " selected" : ""}>${s}</option>`).join("")}</select>
+        </div>
+        <div class="lb-rail-sec">
+          <div class="lb-rail-k mono">SHEET SIZE ${sh.size_source === "RECOMMENDED" ? `<span class="lb-chip ok mono" title="The smallest size where every caption clears the legibility floor and every take has the pixels its slot needs. It follows block changes until you pin one.">RECOMMENDED</span>` : ""}</div>
+          <div class="lb-ladder">${rungs.map(r =>
+            `<button class="vchip${isCurrent(r) ? " on" : ""}" data-size="${r[0]}x${r[1]}" title="${sh.medium === "PRINT" ? `${r[0] * 300} × ${r[1] * 300} px at 300 dpi` : "Deliverable pixels"}">${r[0]} × ${r[1]} ${unit}</button>`).join("")}</div>
+          ${sh.size_source === "CHOSEN" ? `<button class="text-act" data-f="size-rec" title="Return to the ladder's recommendation — it then follows block changes again">Follow recommendation</button>` : ""}
+        </div>
+        <div class="lb-rail-sec lb-rail-foot">
+          <div class="mono ${ready.ready ? "lb-ready" : "lb-not-ready"}">${ready.ready ? "READY TO EXPORT" : `${ready.blocked.length} BLOCKING`}</div>
+        </div>
+      </aside>
+    </div>`;
+
+  // ---- preview: the real renderer at a fitted scale (never app chrome).
+  const img = $("#sheet-preview");
+  const wrap = img.parentElement;
+  const fullW = sh.medium === "PRINT" ? sh.size[0] * 300 : sh.size[0];
+  const drawPreview = async () => {
+    const scale = Math.max(0.05, Math.min(1, (wrap.clientWidth || 900) / fullW));
+    const r = await fetch(`/api/sheets/${sheetId}/render`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scale }) });
+    if (!r.ok) { toast("Preview failed", true); return; }
+    const url = URL.createObjectURL(await r.blob());
+    if (_lbPreviewUrl) URL.revokeObjectURL(_lbPreviewUrl);
+    _lbPreviewUrl = url;
+    img.src = url;
+  };
+  drawPreview();
+
+  // ---- overlay: block outlines + selection (amber = the selection), slot
+  // rects on the selected block for aim; geometry mirrors the renderer.
+  const overlay = $("#sheet-overlay");
+  const c = sheetContentFracs(sh);
+  const pct = v => `${(v * 100).toFixed(3)}%`;
+  overlay.innerHTML = sh.blocks.map(b => {
+    const elastic = SHEET_BLOCKS[b.type][2];
+    if (elastic && sh.spine) return "";  // rendered in the spine column
+    const bx = c.x + b.frac.x * c.w, by = c.y + b.frac.y * c.h;
+    const bw = b.frac.w * c.w, bh = b.frac.h * c.h;
+    const isSel = sel && b.block_id === sel.block_id;
+    return `<div class="ov-block${isSel ? " sel" : ""}" data-ovb="${esc(b.block_id)}"
+      style="left:${pct(bx)};top:${pct(by)};width:${pct(bw)};height:${pct(bh)}">
+      ${isSel ? `<span class="ov-chip mono">${esc(b.type)}${b.slots.length ? ` · ${b.slots.length} SLOTS` : ""}</span>` : ""}
+      ${isSel ? b.slots.map(s => `<div class="ov-slot" data-ovs="${esc(s.slot_id)}"
+        style="left:${pct(s.frac.x)};top:${pct(s.frac.y)};width:${pct(s.frac.w)};height:${pct(s.frac.h)}">
+        ${s.candidate_id ? "" : `<span class="mono ov-empty">EMPTY</span>`}</div>`).join("") : ""}
+    </div>`;
+  }).join("");
+
+  const refresh = () => renderSheetComposer(sheetId);
+
+  // ---- drag-resize + move on the selected block's slots. Soft snap to
+  // sibling edges and thirds; every drop saves (no session, no button).
+  let drag = null;
+  overlay.onpointerdown = e => {
+    const sEl = e.target.closest("[data-ovs]");
+    if (!sEl || !sel) return;
+    const slot = sel.slots.find(x => x.slot_id === sEl.dataset.ovs);
+    const host = sEl.parentElement.getBoundingClientRect();
+    const r = sEl.getBoundingClientRect();
+    const edge = 8;
+    const ex = e.clientX, ey = e.clientY;
+    const mode = {
+      l: Math.abs(ex - r.left) < edge, r: Math.abs(ex - r.right) < edge,
+      t: Math.abs(ey - r.top) < edge, b: Math.abs(ey - r.bottom) < edge };
+    drag = { slot, sEl, host, start: { ...slot.frac },
+             mode: (mode.l || mode.r || mode.t || mode.b) ? mode : "move",
+             x0: ex, y0: ey };
+    sEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  overlay.onpointermove = e => {
+    if (!drag) return;
+    const dx = (e.clientX - drag.x0) / drag.host.width;
+    const dy = (e.clientY - drag.y0) / drag.host.height;
+    const f = { ...drag.start };
+    if (drag.mode === "move") { f.x += dx; f.y += dy; }
+    else {
+      if (drag.mode.l) { f.x += dx; f.w -= dx; }
+      if (drag.mode.r) f.w += dx;
+      if (drag.mode.t) { f.y += dy; f.h -= dy; }
+      if (drag.mode.b) f.h += dy;
+    }
+    f.w = Math.max(0.04, f.w); f.h = Math.max(0.04, f.h);
+    f.x = Math.max(0, Math.min(1 - f.w, f.x));
+    f.y = Math.max(0, Math.min(1 - f.h, f.y));
+    // Soft snap: sibling edges + thirds of the block.
+    const targets = [0, 1 / 3, 2 / 3, 1];
+    for (const s of sel.slots) {
+      if (s.slot_id === drag.slot.slot_id) continue;
+      targets.push(s.frac.x, s.frac.x + s.frac.w, s.frac.y, s.frac.y + s.frac.h);
+    }
+    const snap = (v, alt) => {
+      for (const t of targets) if (Math.abs(v - t) < 0.012) return t;
+      return alt;
+    };
+    const x2 = snap(f.x + f.w, f.x + f.w);
+    f.x = snap(f.x, f.x); f.w = x2 - f.x;
+    const y2 = snap(f.y + f.h, f.y + f.h);
+    f.y = snap(f.y, f.y); f.h = y2 - f.y;
+    drag.f = f;
+    drag.sEl.style.left = pct(f.x); drag.sEl.style.top = pct(f.y);
+    drag.sEl.style.width = pct(f.w); drag.sEl.style.height = pct(f.h);
+  };
+  overlay.onpointerup = async e => {
+    if (!drag) return;
+    const { slot, f } = drag;
+    drag = null;
+    if (!f) return;
+    try {
+      await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slot.slot_id}`, {
+        method: "PUT", json: { frac: { x: +f.x.toFixed(4), y: +f.y.toFixed(4),
+                                       w: +f.w.toFixed(4), h: +f.h.toFixed(4) } } });
+      refresh();
+    } catch (err) { toast(err.message, true); refresh(); }
+  };
+  overlay.onclick = e => {
+    if (e.target.closest("[data-ovs]")) return;  // slot clicks are edits
+    const bEl = e.target.closest("[data-ovb]");
+    if (bEl) { uiSet("lb.block", bEl.dataset.ovb === selId ? "" : bEl.dataset.ovb); refresh(); }
+  };
+
+  // ---- the fill popover: the verb sits with the empty slot; candidates
+  // are verdicted against THIS slot's pixel need (plan §5).
+  const fillSlot = async slotId => {
+    const slot = sel.slots.find(s => s.slot_id === slotId);
+    const tray_ = await api("/api/lookbooks/candidates");
+    if (!tray_.length) { toast("No approved takes yet — approve panels on stage 04 first", true); return; }
+    const need = slotNeed(sh, sel, slot);
+    const verdict = t => {
+      const w = t.width || 0, h = t.height || 0;
+      if (w >= need[0] && h >= need[1]) return ["FITS", "ok"];
+      if (w >= need[0] * 0.7 && h >= need[1] * 0.7) return ["NEEDS A CROP", "hold"];
+      return ["TOO SMALL", "bad"];
+    };
+    const body = `<div class="modal-title">Fill ${esc(slotId)} — approved takes</div>
+      <div class="lb-fill-need mono">THIS SLOT NEEDS ${need[0]}×${need[1]} PX</div>
+      <div class="lb-fill-grid">${tray_.map(t => {
+        const [v, cls] = verdict(t);
+        return `<button class="lb-fill-cell" data-pick="${esc(t.spec_id)}:${esc(t.candidate_id)}">
+          <img src="/api/specs/${esc(t.spec_id)}/candidates/${esc(t.candidate_id)}/image?size=thumb" loading="lazy" alt="">
+          <span class="mono">${esc(t.candidate_id)} · ${esc(t.panel_id)}</span>
+          <span class="mono lb-fill-v ${cls}">${v}${t.placed_in.length ? ` · PLACED ${t.placed_in.length}×` : ""}</span>
+        </button>`; }).join("")}</div>
+      <div class="modal-actions"><button class="ghost" data-mf="cancel">Cancel</button></div>`;
+    await new Promise(res => {
+      const ov = document.createElement("div");
+      ov.className = "modal-scrim";
+      ov.innerHTML = `<div class="modal lb-fill-modal" role="dialog" aria-modal="true">${body}</div>`;
+      document.body.appendChild(ov);
+      const close = () => { ov.remove(); res(); };
+      ov.onclick = async e2 => {
+        if (e2.target === ov || e2.target.dataset.mf === "cancel") return close();
+        const pick = e2.target.closest("[data-pick]");
+        if (!pick) return;
+        const [specId, candId] = pick.dataset.pick.split(":");
+        try {
+          await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slotId}`, {
+            method: "PUT", json: { spec_id: specId, candidate_id: candId } });
+          close(); refresh();
+        } catch (err) { toast(err.message, true); }
+      };
+    });
+  };
+
+  // ---- crop / zoom / rotate: the frame never rotates — the image moves
+  // inside it. Over-budget crops are allowed and kept; export gates.
+  const cropSlot = async slotId => {
+    const slot = sel.slots.find(s => s.slot_id === slotId);
+    const src = `/api/specs/${esc(slot.spec_id)}/candidates/${esc(slot.candidate_id)}/image?size=md`;
+    const RATIOS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39], ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
+    const cur = slot.crop || { x: 0, y: 0, w: 1, h: 1, rotate: 0 };
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal lb-crop-modal" role="dialog" aria-modal="true">
+        <div class="modal-title">Crop ${esc(slot.candidate_id)} in ${esc(slotId)}</div>
+        <div class="lb-crop-chips">${RATIOS.map(([n]) =>
+          `<button class="vchip${n === "SLOT" ? " on" : ""}" data-ratio="${n}">${n}</button>`).join("")}
+          <label class="mono lb-rot">ROTATE <input type="number" id="lb-rot" min="-45" max="45" step="0.5" value="${cur.rotate || 0}">°</label></div>
+        <div class="lb-crop-stage"><img src="${src}" draggable="false" alt="">
+          <div class="lb-crop-box"></div></div>
+        <p class="hint">Drag to frame. A ratio other than SLOT lets the sheet's paper show inside the frame. Cropping past the slot's pixel need is kept — the slot reads SHORT and export blocks until the take is regenerated larger.</p>
+        <div class="modal-actions">
+          <button class="ghost" data-f="cancel">Cancel</button>
+          <button class="primary" data-f="save">Save crop</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const stage = $(".lb-crop-stage", ov), box = $(".lb-crop-box", ov), im = $("img", stage);
+    let ratio = 0;  // 0 = slot's own; -1 free
+    const slotAspect = () => {
+      const bw = sel.frac.w * c.w * (sh.medium === "PRINT" ? sh.size[0] * 300 : sh.size[0]) * slot.frac.w;
+      const bh = sel.frac.h * c.h * (sh.medium === "PRINT" ? sh.size[1] * 300 : sh.size[1]) * slot.frac.h;
+      return bh ? bw / bh : 16 / 9;
+    };
+    let f = { ...cur };
+    const paint = () => {
+      box.style.left = `${f.x * 100}%`; box.style.top = `${f.y * 100}%`;
+      box.style.width = `${f.w * 100}%`; box.style.height = `${f.h * 100}%`;
+    };
+    im.onload = paint; if (im.complete) paint();
+    let d0 = null;
+    stage.onpointerdown = e => {
+      const r = stage.getBoundingClientRect();
+      d0 = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+      stage.setPointerCapture(e.pointerId);
+    };
+    stage.onpointermove = e => {
+      if (!d0) return;
+      const r = stage.getBoundingClientRect();
+      const x1 = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      const y1 = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+      f.x = Math.min(d0.x, x1); f.y = Math.min(d0.y, y1);
+      f.w = Math.abs(x1 - d0.x) || 0.01; f.h = Math.abs(y1 - d0.y) || 0.01;
+      const want = ratio === 0 ? slotAspect() : ratio;
+      if (want > 0) {
+        const imgA = (im.naturalWidth || 16) / (im.naturalHeight || 9);
+        f.h = f.w * imgA / want;
+        if (f.y + f.h > 1) { f.h = 1 - f.y; f.w = f.h * want / imgA; }
+      }
+      paint();
+    };
+    stage.onpointerup = () => { d0 = null; };
+    ov.onclick = async e => {
+      const chip = e.target.closest("[data-ratio]");
+      if (chip) {
+        ratio = RATIOS.find(r => r[0] === chip.dataset.ratio)[1];
+        $$("[data-ratio]", ov).forEach(b => b.classList.toggle("on", b === chip));
+        return;
+      }
+      if (e.target.dataset.f === "cancel" || e.target === ov) { ov.remove(); return; }
+      if (e.target.dataset.f === "save") {
+        try {
+          await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slotId}`, {
+            method: "PUT", json: { crop: { x: +f.x.toFixed(4), y: +f.y.toFixed(4),
+              w: +f.w.toFixed(4), h: +f.h.toFixed(4),
+              rotate: parseFloat($("#lb-rot", ov).value) || 0 } } });
+          ov.remove(); refresh();
+        } catch (err) { toast(err.message, true); }
+      }
+    };
+  };
+
+  // ---- rail + head actions.
+  root.onclick = async e => {
+    const t = e.target;
+    const act = t.dataset.f || "";
+    try {
+      if (act === "back") { uiSet("lb.sheet", ""); uiSet("lb.block", ""); return renderLookbook(); }
+      if (act === "export") {
+        const r = await api(`/api/sheets/${sheetId}/export`, { method: "POST", json: { format: sh.medium === "PRINT" ? "pdf" : "png" } });
+        window.open(`/api/sheets/${sheetId}/export/${encodeURIComponent(r.file)}`, "_blank");
+        return;
+      }
+      if (act === "size-rec") { await api(`/api/sheets/${sheetId}/size`, { method: "POST", json: { size: "recommended" } }); return refresh(); }
+      if (act === "slot-add") { await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots`, { method: "POST", json: {} }); return refresh(); }
+      if (act === "slot-del") {
+        const last = sel.slots[sel.slots.length - 1];
+        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${last.slot_id}`, { method: "DELETE" });
+        return refresh();
+      }
+      if (act === "block-del") {
+        if (!await modal({ title: `Remove ${sel.block_id} (${sel.type})?`, body: "The block and its layout leave the sheet; every take it showed stays approved and reusable.", confirmLabel: "Remove block", danger: true })) return;
+        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}`, { method: "DELETE" });
+        uiSet("lb.block", "");
+        return refresh();
+      }
+      const add = t.closest("[data-add]");
+      if (add) {
+        const rec = await api(`/api/sheets/${sheetId}/blocks`, { method: "POST", json: { type: add.dataset.add } });
+        uiSet("lb.block", rec.blocks[rec.blocks.length - 1].block_id);
+        return refresh();
+      }
+      const size = t.closest("[data-size]");
+      if (size) {
+        const [w, h] = size.dataset.size.split("x").map(Number);
+        await api(`/api/sheets/${sheetId}/size`, { method: "POST", json: { size: [w, h] } });
+        return refresh();
+      }
+      const fill = t.closest("[data-fill]");
+      if (fill) return fillSlot(fill.dataset.fill);
+      const crop = t.closest("[data-crop]");
+      if (crop) return cropSlot(crop.dataset.crop);
+      const clear = t.closest("[data-clear]");
+      if (clear) {
+        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${clear.dataset.clear}`, {
+          method: "PUT", json: { spec_id: null, candidate_id: null } });
+        return refresh();
+      }
+      const capa = t.closest("[data-capa]");
+      if (capa) {
+        const which = capa.dataset.capa;
+        const cap = sel[which];
+        const vals = await modal({ title: `${which === "heading" ? "Heading" : "Caption"} — ${sel.block_id}`,
+          fields: [{ label: "Text", textarea: true, value: cap?.text || "" }],
+          confirmLabel: "Save" });
+        if (!vals) return;
+        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/caption`, {
+          method: "PUT", json: { text: vals[0], which } });
+        return refresh();
+      }
+      const caps = t.closest("[data-caps]");
+      if (caps) {
+        const [action, which] = caps.dataset.caps.split(":");
+        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/caption/resolve`, {
+          method: "POST", json: { action, which } });
+        return refresh();
+      }
+    } catch (err) { toast(err.message, true); refresh(); }
+  };
+  $("#lb-style").onchange = async e => {
+    try { await api(`/api/sheets/${sheetId}/style`, { method: "POST", json: { style: e.target.value } }); refresh(); }
+    catch (err) { toast(err.message, true); }
+  };
+}
+
 boot();

@@ -1050,6 +1050,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-10 | **Lookbook shelf & sheet composer** (`.lb-room` 186px·1fr·300px, `.sheet-tray`, `.sheet-stage`, `.sheet-rail`, `.ov-block/.ov-slot` overlays, `.lb-fill-*` popover, `.lb-crop-*` modal). The SHEET_SYSTEM_PLAN surface: server-rendered preview (one renderer with export), DOM overlays for selection/drag that never print, slot fill verdicted against the slot's pixel need, caption binding rail with BOUND/`SOURCE MOVED`/AUTHORED states. **Amber spends beyond the app's three roles, per the plan's own §8/§11:** selection outline + block chip, AUTHORED chip, the stale take-the-new-line act, Export-when-ready — review against the scarcity rule. Also: overlay rects ignore heading/caption bands inside blocks (a few px of aim drift on headed blocks) — rule on whether the overlay must mirror the renderer's inner offsets. | Lookbook (tool view) | Boards judged readiness but nothing composed presentation; no surface arranged approved takes + stage-02 evidence on a printable sheet |
 
 | 2026-08-08 | **Editable panel brief** (`.brief-row`, `.brief-editor`). The workbench purpose line gains its verb — an `Edit brief` text act (canon: verb-sits-with-its-object) that swaps the line for a textarea with ghost `Save brief` / `Cancel` and the Courier line `JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF`. The amend is journaled server-side and re-stamps the lock; an APPROVED take disables the act with the condition stated in its title (gate readable as state). Review: in-place swap vs the edit-in-a-room modal canon, and the acts row's copy. | Boards, panel workbench | The brief was frozen at lock; a purpose saying "the three people" kept painting three people and the only fix was a full unlock |
 | 2026-08-08 | **Remembered reference selection.** Built from canon — no new markup; the workbench checkboxes now pre-check from the newest take's recorded references instead of the required-objects matcher once a take exists, the hint states which rule is in force ("rode the previous take and stay selected"), and the NO MATCHES warning stands down when the empty selection is the user's own remembered decision. Review copy only. | Boards, panel workbench | Manual selections reset to matcher defaults on every repaint, so each generation forgot the last one's casting |
@@ -1067,6 +1068,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-10** — **The sheet grammar lands** (SHEET_SYSTEM_PLAN, rulings
+  R1–R8): boards and lookbook pages become one mechanism — twelve block
+  types, six sheet styles (INK is the boards'; its ground moves to
+  #131418 deliberately), the fixed-floor size ladder with elastic
+  evidence type, caption bindings that never auto-adopt, and the
+  composer (tray · fitted sheet · rail) behind a Lookbook tool button.
+  Stage 03 copy renamed **breakdown** (R7 — "sheet" now means exactly one
+  thing). Sheet ink is namespaced under `.sheet[data-style]`, never
+  `:root` (token-test enforced). Non-canon: see the Uncanonized table.
 - **2026-08-08** — **Editable panel brief + remembered reference selection**
   (user): the workbench purpose line gains an `Edit brief` text act (in-place
   textarea, ghost Save, journaled amend, lock re-stamped; APPROVED take

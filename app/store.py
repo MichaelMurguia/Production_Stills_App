@@ -19,27 +19,39 @@ REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
 # Camera & composition vocabulary (user 2026-08-09). The allowed values for the
 # structured per-panel/per-bible camera fields; the model-facing phrasing lives
 # in generate.CAMERA_*_PHRASING, and the JS label consts by TIMES_OF_DAY.
+_LENS_RE = re.compile(r"^\d{1,3}MM$")  # a focal length like 24MM — presets + custom
 CAMERA_FIELDS = {
     "camera_angle": {"EYE_LEVEL", "LOW", "HIGH", "BIRDS_EYE", "WORMS_EYE"},
-    "camera_lens": {"WIDE", "NORMAL", "TELEPHOTO"},
+    "camera_lens": _LENS_RE,
     "camera_tilt": {"LEVEL", "DUTCH"},
-    "scale": {"EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE", "EXTREME_CLOSE"},
+    "scale": {"AERIAL", "EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE",
+              "EXTREME_CLOSE", "MACRO", "MICRO"},
 }
+# A new production starts from this camera grammar (user 2026-08-10); stored
+# values override, and every panel inherits it unless it sets its own axis.
+CAMERA_BASELINE = {"camera_angle": "EYE_LEVEL", "camera_lens": "24MM",
+                   "camera_tilt": "LEVEL", "scale": "WIDE"}
+
+
+def _camera_valid(field: str, value: str) -> bool:
+    allowed = CAMERA_FIELDS[field]
+    return bool(allowed.match(value)) if hasattr(allowed, "match") else value in allowed
 
 
 def _clean_camera_fields(fields: dict) -> dict:
     """Validate/normalise a camera payload: upper-cased, only known fields, each
-    value in its enum. Empty values are dropped (they mean clear/inherit), so
-    the result carries only fields being SET. Raises ValueError on a bad value."""
+    value valid for its axis (an enum, or a focal length for the lens). Empty
+    values are dropped (they mean clear/inherit), so the result carries only
+    fields being SET. Raises ValueError on a bad value."""
     out = {}
-    for field, allowed in CAMERA_FIELDS.items():
+    for field in CAMERA_FIELDS:
         if field not in fields:
             continue
         v = str(fields.get(field) or "").strip().upper()
         if not v:
             continue
-        if v not in allowed:
-            raise ValueError(f"{field}: {v!r} is not one of {sorted(allowed)}")
+        if not _camera_valid(field, v):
+            raise ValueError(f"{field}: {v!r} is not a valid value")
         out[field] = v
     return out
 
@@ -904,11 +916,11 @@ def warm_all_references() -> int:
 
 
 def camera_defaults() -> dict:
-    """The production's default camera grammar — the Art Direction Bible's
-    default angle/tilt/lens/scale, which every panel inherits unless it sets its
-    own. Its own file so it never races app_state's counter writes; empty when
-    unset (the model keeps its own choice, as before)."""
-    return _read_json(paths.CAMERA_DEFAULTS, {})
+    """The production's default camera grammar — the default angle/tilt/lens/scale
+    every panel inherits unless it sets its own. A production starts from
+    CAMERA_BASELINE (Eye level · 24mm · Level · Wide, user 2026-08-10); stored
+    values override. Its own file so it never races app_state's counter writes."""
+    return {**CAMERA_BASELINE, **_read_json(paths.CAMERA_DEFAULTS, {})}
 
 
 def save_camera_defaults(fields: dict) -> dict:
