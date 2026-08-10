@@ -77,6 +77,10 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   rejections + references) → engine → candidate JSON+PNG → judged in the
   room → status POST → optional promote to reference (`promoted_ref`
   back-link).
+- **Add a panel post-lock**: the panels workbench appends a panel to a locked
+  sheet (`store.add_panel`) — append-only, so nothing upstream of an approval
+  changes; it lands as a 0%-allocation work order, the lock re-stamps and the
+  add is journaled (same contract as `amend_panel_purpose`).
 - **Assemble**: slot map verdicts must all read OK → `assemble` records
   `rects`/`panels_used` + draws composite → client lands on the
   structural board; identical takes+variant re-assembly is disabled.

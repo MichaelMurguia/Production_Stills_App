@@ -6611,6 +6611,31 @@ function removePendingTake(specId, panelId, id) {
   $(`[data-pend="${id}"]`)?.remove();
 }
 
+// Add a panel from the workbench (user 2026-08-09): the sheet stays locked, the
+// panel lands as a work order, and the lock re-stamps server-side
+// (store.add_panel) — the same controlled edit as the between-takes brief change.
+async function addPanelDialog(specId) {
+  const res = await modal({
+    title: "Add a panel",
+    body: "It joins this breakdown as a work order, ready to generate. The sheet's lock re-stamps; existing takes keep the hash they were painted against.",
+    fields: [
+      { name: "title", label: "Panel title", placeholder: "e.g. The Pioneer's Workshop" },
+      { name: "purpose", label: "Brief", textarea: true,
+        placeholder: "What this panel must show — the brief every take is painted from.",
+        hint: "The panel's purpose; it steers the render until objects are added on the sheet." },
+    ],
+    confirmLabel: "Add panel",
+  });
+  if (!res) return;
+  if (!res.purpose) { toast("A brief is required — it is the only thing steering the render.", true); return; }
+  try {
+    const p = await api(`/api/specs/${specId}/panels`, { method: "POST",
+      json: { title: res.title, purpose: res.purpose } });
+    toast(`${p.id} added — a work order at 0% allocation; balance it on the sheet before assembly.`);
+    await renderBoardPanels(specId);
+  } catch (err) { toast(err.message, true); }
+}
+
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
@@ -6633,6 +6658,12 @@ async function renderBoardPanels(specId) {
   const styleAnchors = refs.filter(r => r.status === "APPROVED" && isAutoStyle(r));
   const approvedRefs = refs.filter(r => r.status === "APPROVED" && !isAutoStyle(r));
   host.innerHTML = "";
+
+  // The workbench can add a panel to the locked sheet (it lands as a work
+  // order; the lock re-stamps server-side). The button lives in the screen
+  // header, so it survives the host rewrite — re-wire it each render.
+  const addPanelBtn = $("#board-add-panel");
+  if (addPanelBtn) { addPanelBtn.hidden = false; addPanelBtn.onclick = () => addPanelDialog(specId); }
 
   function buildWorkbench(p) {
     const alloc = (spec.layout?.panels || []).find(x => x.id === p.id)?.allocation_percent;

@@ -1394,6 +1394,20 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
     return {"prompt": generate.compile_panel_prompt(spec, panel, ref_records)}
 
 
+@app.post("/api/specs/{spec_id}/panels")
+def api_add_panel(spec_id: str, body: dict) -> dict:
+    """Add a panel to a sheet from the panels workbench — appended as a work
+    order, the lock re-stamped (same controlled edit as a between-takes brief
+    change). See store.add_panel."""
+    try:
+        return store.add_panel(spec_id, str(body.get("title", "")),
+                               str(body.get("purpose", "")))
+    except KeyError as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/purpose")
 def api_amend_panel_purpose(spec_id: str, panel_id: str, body: dict) -> dict:
     """The workbench's between-takes brief edit — journaled, lock re-stamped;

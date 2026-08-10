@@ -859,6 +859,60 @@ def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     return {"spec_id": spec_id, "panel_id": panel_id, "purpose": panel["purpose"]}
 
 
+def add_panel(spec_id: str, title: str, purpose: str) -> dict:
+    """Append a panel to a sheet from the panels workbench, without a full
+    unlock (user 2026-08-09: adding a panel mid-generation otherwise meant
+    unlocking the sheet, which is blocked once any take is approved).
+
+    Append-only, so nothing upstream of an existing approval changes: the new
+    panel starts as a work order, the lock re-stamps, and the add is journaled
+    — the same controlled-edit contract as `amend_panel_purpose`. It lands at
+    0% allocation; the assembly gate surfaces the imbalance to be balanced in
+    the sheet editor, readable as state before it is hit."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    purpose = str(purpose).strip()
+    if not purpose:
+        # validation's rule, held at the door: a panel needs a purpose or a
+        # required object, and the workbench add only offers the brief.
+        raise ValueError(
+            "a new panel needs a brief — it is the only thing steering its "
+            "render until objects are added on the sheet.")
+    panels = spec.setdefault("panels", [])
+    existing = {str(p.get("id", "")).upper() for p in panels}
+    n = 1
+    while f"P{n:02d}" in existing:
+        n += 1
+    pid = f"P{n:02d}"
+    panel = {
+        "id": pid,
+        "title": str(title).strip() or pid,
+        "purpose": purpose,
+        "required_objects": [],
+        "forbidden_objects": [],
+        "evidence": ["USER_DIRECTED"],
+        "scale": "MEDIUM",
+        "composition_role": "support",
+    }
+    panels.append(panel)
+    spec.setdefault("layout", {}).setdefault("panels", []).append(
+        {"id": pid, "allocation_percent": 0})
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash  # scripts/common.py via paths sys.path hook
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+        append_approval_log(
+            f"SPECIFICATION {spec_id} panel {pid} added post-lock (lock re-stamped "
+            f"{prev.get('hash', '?')[:16]}… → {locks[spec_id]['hash'][:16]}…): "
+            f"\"{panel['title'][:80]}\". Allocation 0% until balanced; existing "
+            "takes keep the hash they were generated against.")
+    return panel
+
+
 def delete_spec(spec_id: str) -> dict:
     """Permanently delete a specification and its candidates. Canon guard: a
     spec with APPROVED candidates or boards cannot be deleted — that output is
