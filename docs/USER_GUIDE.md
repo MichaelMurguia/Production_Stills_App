@@ -161,6 +161,32 @@ lessons, and the sheet's own ATMOSPHERE wins where they overlap). The
 Drift Prevention Rule is enforced on the prose rewriter, which acts as the
 Art Direction Guardian.
 
+### Camera grammar — the production's default shot language
+
+At the top of the **Look interview** sits the **Camera grammar** bar: four
+dropdowns that set the camera every panel is shot with unless it says otherwise.
+
+- **Angle** — Eye level · Low (looks up, makes the subject powerful) · High
+  (looks down, makes it small) · Bird's-eye (top-down) · Worm's-eye (straight up).
+- **Lens** — a focal length: 18 · 24 · 35 · 50 · 85 · 135 mm, or **Custom…** to
+  type any focal length. Wide lenses exaggerate depth and space; long lenses
+  compress it and isolate the subject.
+- **Tilt** — Level, or Dutch (a deliberately tilted, unsettled horizon).
+- **Shot** — how much fills the frame: Aerial · Extreme wide · Wide · Medium ·
+  Close · Extreme close · Macro · Micro.
+
+A new production starts at **Eye level · 24 mm · Level · Wide**. Change any
+dropdown and it saves immediately — the app writes a proper cinematography
+directive into every render prompt from then on, and it is stated to **override
+the framing of any reference image** you attach (references still control who and
+what and the medium — never the camera).
+
+**Overriding per shot.** Every panel inherits this grammar but can set its own:
+on the **breakdown sheet** each panel row has the same four dropdowns (leave one
+"— from bible —" to inherit), and in the **Panels** workbench you can change a
+panel's camera **between takes** — it re-stamps the lock and the next take is shot
+that way. A panel with an approved take is frozen (reject it first to reframe).
+
 ## 6. Stage 03 — Breakdowns
 
 **Drafting.** Describe the board ("Charlie's cabin — the workshop scenes

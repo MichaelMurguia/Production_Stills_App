@@ -88,14 +88,17 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   rejections + references) → engine → candidate JSON+PNG → judged in the
   room → status POST → optional promote to reference (`promoted_ref`
   back-link).
-- **Camera & composition**: three structured per-panel axes (`camera_angle`
-  /`camera_tilt`/`camera_lens`) plus `scale`, each resolved `panel value → the
-  production camera default (`store.camera_defaults`, `data/camera_defaults.json`,
-  edited on the Bible step) → unset`. `generate._camera_block` expands the enums
-  into an authored CAMERA directive placed right after PANEL PURPOSE and stated
-  to override the references' framing (it replaced the terse `SCALE:`/`COMPOSITION
-  ROLE:` tail). Per-panel edits between takes go through `store.amend_panel_camera`
-  (same lock-restamp/journal/frozen contract as `amend_panel_purpose`).
+- **Camera & composition**: four structured per-panel axes — `camera_angle`,
+  `camera_lens` (a focal length; presets + custom), `camera_tilt`, `scale` —
+  each resolved `panel value → the production default → unset`. The default
+  (`store.camera_defaults`, `data/camera_defaults.json`) is baseline-merged
+  (`CAMERA_BASELINE` = Eye level · 24mm · Level · Wide) and edited on the Camera
+  grammar bar at the top of the Look Interview. `generate._camera_block` expands
+  each axis into an authored CAMERA directive placed right after PANEL PURPOSE
+  and stated to override the references' framing (it replaced the terse
+  `SCALE:`/`COMPOSITION ROLE:` tail). Per-panel edits between takes go through
+  `store.amend_panel_camera` (same lock-restamp/journal/frozen contract as
+  `amend_panel_purpose`). Full reference: `docs/CAMERA_AND_COMPOSITION.md`.
 - **Add a panel post-lock**: the panels workbench appends a panel to a locked
   breakdown (`store.add_panel`) — append-only, so nothing upstream of an
   approval changes; it lands as a 0%-allocation work order, the lock
