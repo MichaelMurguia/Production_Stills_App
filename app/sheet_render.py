@@ -262,7 +262,8 @@ def _draw_palette_block(draw, sheet, block, rect, style, W) -> None:
 
 
 def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
-                     allow_letterbox, warnings, annotations) -> None:
+                     allow_letterbox, warnings, annotations,
+                     manifest: list | None = None) -> None:
     rx, ry, rw, rh = rect
     cap_frac = sheet_mod.BLOCK_TYPES[block["type"]].frac
     cap_px = _type_px(sheet, None, cap_frac, W)
@@ -284,6 +285,17 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
     if inset:
         draw.rectangle([rx, y, rx + rw - 1, y + inner_h - 1], fill=inset)
 
+    # Geometry is computed once and declared (canon pass R2): the drawer
+    # emits the rects it drew; the composer overlay consumes them and
+    # measures nothing. `image` is the slot band the slot fracs address —
+    # its origin/size invert a dragged rect back to a model frac exactly.
+    entry = None
+    if manifest is not None:
+        entry = {"block_id": block["block_id"], "type": block["type"],
+                 "outer": [rx, ry, rw, rh],
+                 "image": [rx, y, rw, inner_h], "slots": []}
+        manifest.append(entry)
+
     label_px = cap_px
     for s in block.get("slots", []):
         f = s["frac"]
@@ -291,6 +303,10 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
         sy = y + int(f["y"] * inner_h)
         sw_ = max(1, int(f["w"] * rw))
         sh_ = max(1, int(f["h"] * inner_h))
+        if entry is not None:
+            entry["slots"].append({"slot_id": s["slot_id"],
+                                   "rect": [sx, sy, sw_, sh_],
+                                   "filled": bool(s.get("candidate_id"))})
         label = str(s.get("label") or "")
         band = int(label_px * 1.5) + 8 if label else 0
         img_h = max(1, sh_ - band)
@@ -328,7 +344,8 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
 
 def render_sheet(sheet: dict, scale: float = 1.0, *,
                  allow_letterbox: bool = False,
-                 warnings: list[str] | None = None) -> Image.Image:
+                 warnings: list[str] | None = None,
+                 manifest: list | None = None) -> Image.Image:
     """The sheet as ink on paper. Composer overlays are app chrome and are
     drawn in the DOM — nothing here marks selection, snapping or state."""
     style = STYLE_INK.get(sheet.get("style"))
@@ -419,7 +436,8 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
                 _draw_text_block(draw, sheet, b, rect, style, W)
         else:
             _draw_slot_block(canvas, draw, sheet, b, rect, style, W,
-                             allow_letterbox, warnings, annotations)
+                             allow_letterbox, warnings, annotations,
+                             manifest)
 
     # Canon footer: the sheet states what it is, in mono. The KEY lists
     # annotations in order — they claim no band and force no reflow.

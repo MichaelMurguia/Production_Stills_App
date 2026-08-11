@@ -221,12 +221,22 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         self.assertIn('cameraRow("dcam"', JS)
         self.assertIn('/api/camera-defaults', JS)
 
-    def test_workbench_inline_control_posts_and_is_frozen(self):
+    def test_workbench_states_then_opens_then_freezes(self):
+        """Canon pass R7 (2026-08-10, mock au-wb-camera): the workbench
+        judges takes, so the camera in force is ONE Courier line with the
+        verb beside it; the selects open on ask; an approved take freezes
+        the act with the condition in its title."""
         self.assertIn('cameraRow("cam"', JS)
         self.assertIn("/panels/${p.id}/camera", JS)
-        # the inline control is disabled when a take is approved (frozen)
         i = JS.index('data-f="cam-inline"')
-        self.assertIn("frozen", JS[i:i + 400])
+        block = JS[i:i + 2600]
+        self.assertIn("cam-stated", block)
+        self.assertIn("Change camera", block)
+        self.assertIn("FROM BIBLE", block)
+        self.assertIn("THIS PANEL", block)
+        self.assertIn("Frozen by an approved take", block)
+        self.assertIn('NEVER "CUSTOM"', block)
+        self.assertIn("Save camera", block)
 
 
 if __name__ == "__main__":

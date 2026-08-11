@@ -2342,9 +2342,11 @@ async function renderStorage() {
   $("#storage-cond").textContent = tight
     ? "A RENDER WOULD BE REFUSED — FREE SPACE FIRST"
     : s.low ? "GETTING TIGHT" : "";
+  // R6 (canon pass 2026-08-10): the coverage meter is the project's only
+  // meter — a capacity is a Courier number line whose colour carries its
+  // state. The number a user would read aloud is the thing on screen.
   host.innerHTML = `
-    <div class="stor-bar ${state}"><i style="width:${pct}%"></i></div>
-    <p class="stor-line mono">${mb(s.free)} FREE OF ${mb(s.total)} · ${pct}% USED</p>
+    <p class="stor-line mono ${state}">FREE ${mb(s.free)} OF ${mb(s.total)} · ${pct}% USED</p>
     <div class="stor-rows">${(s.breakdown || []).map(r => `
       <div class="stor-row"><span>${esc(r.kind)}</span>
         <span class="mono">${mb(r.bytes)}</span></div>`).join("")
@@ -4954,37 +4956,43 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
   return card;
 }
 
-// An uncast recommendation: dashed card, no photos yet — casting it creates
-// the library card (the only write path, same as the wizard's).
-// The place the screenplay names and no anchor holds — the SCENES twin
-// of the uncast card. Locations are DELIBERATELY not castable: subjects
-// ride when their subject appears on a panel; places ride when a board
-// covers their scene, and their imagery lives here under titled
-// LOCATION_GEOMETRY / SCENE_REFERENCE roles. The one act is the one that
-// closes the gap.
-function buildUnanchoredLocCard(l) {
-  const card = document.createElement("div");
-  card.className = "subj-card uncast loc-uncast";
-  const env = (() => {
+// The unanchored register (canon pass R4, mock au-ref-register): a place
+// with no reference has nothing to judge, so it is a ROW in a labelled
+// table, not a card with an empty well — a card is for a thing with a
+// picture. The register is the SCENES shelf's unfinished business and
+// sits beneath its card grid. Locations stay DELIBERATELY not castable:
+// subjects ride per panel appearance, places ride per scene coverage.
+function buildUnanchoredRegister(locs) {
+  const envOf = l => {
     const a = wizACache();
     const hit = (a?.environments || []).find(e =>
       (e.locations || []).some(x =>
         String(x).toUpperCase() === String(l.location).toUpperCase()));
     return hit?.name || "";
-  })();
-  card.innerHTML = `
-    <div class="subj-head">
-      <span class="subj-name">${esc(String(l.location).toUpperCase())}</span>
-      <span class="kind-badge">LOCATION</span>
-      <span class="cast-badge uncast">UNANCHORED</span>
+  };
+  const reg = document.createElement("div");
+  reg.className = "loc-register";
+  reg.innerHTML = `
+    <div class="loc-reg-head">
+      <span class="mono loc-reg-label">UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES</span>
+      <span class="hint">these places are named in the script and have no imagery</span>
     </div>
-    <div class="subj-identity">${l.scenes || 0} SCENE${(l.scenes || 0) === 1 ? "" : "S"}${
-      env ? ` · ${esc(env.toUpperCase())}` : ""} — no reference yet. Panels
-      render this place from text and style alone until one is anchored.</div>
-    <div><button type="button" class="ghost" data-f="anchor">Add reference</button></div>`;
-  $("[data-f=anchor]", card).onclick = () =>
-    addReferenceDialog({ head: "LOCATION_GEOMETRY", title: l.location });
-  return card;
+    <div class="loc-reg-row loc-reg-cols mono">
+      <span>PLACE</span><span>SCENES</span><span>ENVIRONMENT</span><span></span>
+    </div>
+    ${locs.map(l => `
+    <div class="loc-reg-row">
+      <span class="loc-reg-place">${esc(l.location)}</span>
+      <span class="mono">${l.scenes || 0}</span>
+      <span class="mono loc-reg-env">${esc(envOf(l).toUpperCase())}</span>
+      <span class="loc-reg-act"><button type="button" class="text-act" data-loc="${esc(l.location)}">Add reference</button></span>
+    </div>`).join("")}
+    <div class="mono loc-reg-foot">ADD REFERENCE PREFILLS LOCATION_GEOMETRY — &lt;NAME&gt; · CASTING STAYS SUBJECTS-ONLY</div>`;
+  reg.onclick = e => {
+    const b = e.target.closest("[data-loc]");
+    if (b) addReferenceDialog({ head: "LOCATION_GEOMETRY", title: b.dataset.loc });
+  };
+  return reg;
 }
 
 function buildUncastCard(rec, onChange) {
@@ -5169,6 +5177,14 @@ async function renderReferences() {
           && !!swatchNotes(r.notes).hex && r.status !== "REJECTED";
         const swatchRefs = shelf.key === "STYLE" ? shelfRefs.filter(isSwatch) : [];
         const cardRefs = shelfRefs.filter(r => !swatchRefs.includes(r));
+        if (swatchRefs.length) {
+          // R5: the shelf states groups and swatches (mock au-ref-style-shelf).
+          const langs = new Set(swatchRefs.map(r => swatchNotes(r.notes).language)
+            .filter(Boolean));
+          countText = `${langs.size || 1} GROUP${langs.size === 1 ? "" : "S"} · `
+            + `${swatchRefs.length} SWATCHES`
+            + (cardRefs.length ? ` · ${cardRefs.length} PLATES` : "");
+        }
         fill = grid => {
           if (swatchRefs.length) {
             const byLang = new Map();
@@ -5187,41 +5203,65 @@ async function renderReferences() {
               }
               byLang.get(sw.language).swatches.push(sw);
             }
+            // R5 (canon pass, mock au-ref-style-shelf): the ramps ARE the
+            // shelf — name and count above, Open group beneath; plates
+            // live behind the viewer each group already opens.
             const strip = document.createElement("div");
-            strip.className = "pal-shelf";
+            strip.className = "pal-shelf pal-shelf-is-shelf";
             rows.forEach(row => {
               const ordered = rampOrder(row.swatches);
-              const hero = row.swatches.find(sw => sw.hero);
               const pend = row.swatches.filter(sw => !sw.approved).length;
               const el = document.createElement("div");
               el.className = "pal-row";
               el.innerHTML = `
-                <div class="sw-ramp">${ordered.map(sw =>
-                  `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>
                 <p class="sw-ramp-label">
                   <span class="lang">${esc(row.label.toUpperCase())}</span>
-                  <span class="n">${row.swatches.length}</span>
-                  <span class="hero mono">${pend
-                    ? `${pend} PROVISIONAL` : hero ? `HERO ${esc(hero.hex)}` : ""}</span>
-                </p>`;
-              $(".sw-ramp", el).style.cursor = "pointer";
-              $(".sw-ramp", el).onclick = e => {
-                const hit = e.target.closest("i");
+                  <span class="hero mono${pend ? " prov" : ""}">${pend
+                    ? `${pend} PROVISIONAL` : row.swatches.length}</span>
+                </p>
+                <div class="sw-ramp">${ordered.map(sw =>
+                  `<i data-ref="${esc(sw.ref_id)}" style="flex:${sw.hero ? 2 : 1};${bandStyle(sw)}"></i>`).join("")}</div>
+                <button type="button" class="text-act pal-open">Open group</button>`;
+              const open = e => {
+                const hit = e.target.closest?.("i");
                 openSwatchViewer([{ language: row.label, swatches: row.swatches }],
                   { focusRef: hit?.dataset.ref,
                     approved: row.swatches.every(sw => sw.approved),
                     refresh: renderReferences, onChange: () => {} })
                   .then(renderReferences);
               };
+              $(".sw-ramp", el).style.cursor = "pointer";
+              $(".sw-ramp", el).onclick = open;
+              $(".pal-open", el).onclick = open;
               strip.append(el);
             });
             grid.before(strip);
           }
-          const lb = cardRefs.map(r => ({
+          // Quarantined swatches keep their cards, below, under a stated
+          // label — a verdict happens where the proposal is.
+          const isQuarantinedSwatch = r => roleHead(r.role) === "COLOR_PALETTE"
+            && !!swatchNotes(r.notes).hex && r.status === "REJECTED";
+          const qRefs = shelf.key === "STYLE"
+            ? cardRefs.filter(isQuarantinedSwatch) : [];
+          const plainRefs = cardRefs.filter(r => !qRefs.includes(r));
+          const lb = plainRefs.map(r => ({
             src: `/api/references/${r.id}/image`,
             caption: `${r.id} — ${r.role} (${r.status})` }));
-          cardRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
-          shownUnanchored.forEach(l => grid.append(buildUnanchoredLocCard(l)));
+          plainRefs.forEach((r, i) => grid.append(buildRefCard(r, lb, i)));
+          if (qRefs.length) {
+            const q_ = document.createElement("div");
+            q_.className = "shelf-quarantine";
+            q_.innerHTML = `<div class="mono loc-reg-label">QUARANTINED · AWAITING A VERDICT</div>
+              <div class="ref-grid" data-f="qgrid"></div>
+              <div class="mono loc-reg-foot">A VERDICT HAPPENS WHERE THE PROPOSAL IS — THESE KEEP THEIR CARDS UNTIL RULED</div>`;
+            const qlb = qRefs.map(r => ({
+              src: `/api/references/${r.id}/image`,
+              caption: `${r.id} — ${r.role} (${r.status})` }));
+            qRefs.forEach((r, i) => $("[data-f=qgrid]", q_).append(buildRefCard(r, qlb, i)));
+            grid.after(q_);
+          }
+          if (shownUnanchored.length)
+            grid.after(buildUnanchoredRegister(shownUnanchored));
         };
       }
       section.innerHTML = `
@@ -6781,13 +6821,14 @@ async function addPanelDialog(specId) {
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards] = await Promise.all([
+  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards, camDefaults] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
     api("/api/settings"),
     api(`/api/specs/${specId}/slot-map`).catch(() => null),
     api(`/api/specs/${specId}/boards`).catch(() => []),
+    api("/api/camera-defaults").catch(() => ({})),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
   const prefKeyFailed =
@@ -6999,12 +7040,38 @@ async function renderBoardPanels(specId) {
           <div class="brief-acts">
             <button type="button" class="ghost" data-f="brief-save">Save brief</button>
             <button type="button" class="text-act" data-f="brief-cancel">Cancel</button>
-            <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF</span>
+            <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF · NOTHING ELSE INHERITS IT</span>
           </div>
         </div>
-        <div class="cam-inline" data-f="cam-inline" title="Camera for this panel — changing an axis re-stamps the breakdown's lock and the next take paints from it. Blank = the production's Art Direction Bible default.">
-          <span class="f-label">Camera <span class="hint">${frozen ? "frozen by an approved take" : "blank = the bible default · applies to the next take"}</span></span>
-          ${cameraRow("cam", p, "— from bible —", frozen)}
+        <div class="cam-inline" data-f="cam-inline">
+          ${(() => {
+            // R7 (canon pass, mock au-wb-camera): one control, two
+            // presentations. The workbench judges takes — the camera in
+            // force is a stated Courier line with its verb beside it;
+            // the four selects open only when asked. Three states:
+            // inherited-and-stated, opened, fixed by an approved take.
+            const axes = ["camera_angle", "camera_lens", "camera_tilt", "scale"];
+            const own = axes.some(k => p[k]);
+            const rv = k => String(p[k] || camDefaults?.[k] || "—")
+              .replace(/_/g, " ");
+            const summary = `${rv("camera_angle")} · ${rv("camera_lens")} · ${rv("camera_tilt")} · ${rv("scale")}`;
+            return `
+          <div class="cam-stated">
+            <span class="mono cam-sum">CAMERA&ensp;${esc(summary)}
+              <span class="cam-src">— ${own ? "THIS PANEL" : "FROM BIBLE"}</span></span>
+            <button type="button" class="text-act" data-f="cam-open"
+              ${frozen ? `disabled title="Frozen by an approved take — it was composed at this camera; the setting unfreezes if the take is rejected"` : ""}>Change camera</button>
+          </div>
+          <div class="cam-editor hidden" data-f="cam-editor">
+            <span class="mono cam-open-k">CAMERA OPENED · NEXT TAKE PAINTS FROM THESE</span>
+            ${cameraRow("cam", p, "— from bible —", false)}
+            <div class="cam-editor-acts">
+              <button type="button" class="primary" data-f="cam-save">Save camera</button>
+              <button type="button" class="ghost" data-f="cam-cancel">Cancel</button>
+            </div>
+            <span class="mini mono">JOURNALED · RE-STAMPS THE LOCK · A CUSTOM LENS STATES ITS MM IN THE LINE, NEVER "CUSTOM"</span>
+          </div>`;
+          })()}
         </div>`;
       })()}
       ${workOrder ? reqTableHtml + forbiddenHtml + scopeHtml : reqChipsHtml + `
@@ -7064,7 +7131,7 @@ async function renderBoardPanels(specId) {
         <h4>Attach subject references
           <span class="mini mono" style="float:right">${groupList.filter(buildWorkbench.isChecked).length} / ${groupList.length}</span>
           <span class="hint">${panelCands.length
-            ? "(grouped by subject — ✓ green groups rode the previous take and stay selected)"
+            ? "(grouped by subject — ✓ green groups RODE THE PREVIOUS TAKE)"
             : "(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)"}</span></h4>
         ${(() => {
           // P5: four unchecked boxes read as a choice not yet made; in
@@ -7093,7 +7160,7 @@ async function renderBoardPanels(specId) {
             const matched = buildWorkbench.isChecked(g);
             return `<label class="check ref-group ${matched ? "has-ref" : ""}"
               title="${esc(g.ids.join(", "))}${matched ? (panelCands.length
-                ? " — rode the previous take; stays selected"
+                ? " — RODE THE PREVIOUS TAKE"
                 : " — matches a required object of this panel; pre-checked") : ""}">
               <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${matched ? "checked" : ""}>
               ${esc(g.name)} <span class="mini">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
@@ -7173,18 +7240,27 @@ async function renderBoardPanels(specId) {
       };
     };
 
-    // Inline camera edit (mirrors Edit brief): saves on change, journaled +
-    // lock re-stamped server-side; disabled when a take is approved.
+    // R7: stated → opened → saved. The selects stay local until Save
+    // camera posts once (journaled + lock re-stamped server-side).
     const camInline = $("[data-f=cam-inline]", card);
-    if (camInline && !$("select", camInline)?.disabled) {
-      wireCameraRow("cam", camInline, async () => {
+    if (camInline) {
+      const openBtn = $("[data-f=cam-open]", camInline);
+      const editor = $("[data-f=cam-editor]", camInline);
+      wireCameraRow("cam", camInline, null);  // Custom-lens reveal only
+      if (openBtn && !openBtn.disabled) openBtn.onclick = () => {
+        editor.classList.remove("hidden");
+        $(".cam-stated", camInline).classList.add("hidden");
+      };
+      $("[data-f=cam-cancel]", camInline).onclick = () =>
+        renderBoardPanels(specId);
+      $("[data-f=cam-save]", camInline).onclick = async () => {
         try {
-          const out = await api(`/api/specs/${specId}/panels/${p.id}/camera`,
+          await api(`/api/specs/${specId}/panels/${p.id}/camera`,
             { method: "POST", json: readCameraFields("cam", camInline) });
-          CAMERA_AXES.forEach(a => { p[a.key] = out[a.key]; });
           toast(`${p.id} camera set — the next take uses it.`);
+          renderBoardPanels(specId);
         } catch (err) { toast(err.message, true); renderBoardPanels(specId); }
-      });
+      };
     }
 
     // P4 disclosure: the full anchor badge list, unchanged, on demand.
@@ -8363,7 +8439,6 @@ async function boot() {
    are app chrome drawn in the DOM and never enter render_sheet. */
 
 const SHEET_STYLES = ["GALLERY", "CONTACT", "NEWSPRINT", "BLUEPRINT", "PLATE", "INK"];
-const SHEET_SPINE_W = 0.24;  // mirrors sheet.SPINE_W
 const SHEET_ARCHETYPES = [
   ["ART_DIRECTION", "Art direction", "Spine, character clusters, atmosphere strip — the film's look on one sheet", "GALLERY", "PRINT"],
   ["SUBJECT_STUDY", "Subject study", "Hero, orthographics, spec, materials and versus for one subject", "INK", "PRINT"],
@@ -8386,17 +8461,6 @@ const SHEET_BLOCKS = {
   PRINCIPLES: [0, 0, true], LINEUP: [4, 10, false], VERSUS: [2, 2, false],
 };
 
-function sheetContentFracs(sh) {
-  // Mirrors sheet._content_rect_fracs — the overlay must aim where the
-  // renderer draws.
-  const [w, h] = sh.size;
-  const aspect = h ? w / h : 1;
-  const mx = 0.047, my = mx * aspect / (16 / 9);
-  const x0 = sh.spine ? SHEET_SPINE_W + mx : mx;
-  const y0 = sh.spine ? my : my + 0.11;
-  return { x: x0, y: y0, w: 1 - x0 - mx, h: 1 - y0 - my };
-}
-
 function sheetSizeLine(sh) {
   const [w, h] = sh.size;
   return sh.medium === "PRINT"
@@ -8404,15 +8468,15 @@ function sheetSizeLine(sh) {
     : `${w} × ${h} PX`;
 }
 
-function slotNeed(sh, block, slot) {
-  // Mirrors sheet.slot_pixel_need for the fill popover's verdicts.
-  const [w, h] = sh.size;
-  const pxw = sh.medium === "PRINT" ? w * 300 : w;
-  const pxh = sh.medium === "PRINT" ? h * 300 : h;
-  const c = sheetContentFracs(sh);
+// R2 (canon pass 2026-08-10): geometry is computed once and declared.
+// The renderer emits the rects it drew (X-Sheet-Geometry on the preview
+// response); everything here — overlay aim, drag inversion, pixel need —
+// consumes those rects and measures nothing. No JS re-implementation of
+// the sheet's geometry survives.
+function slotNeedFromRect(rect, scale, slot) {
   const crop = slot.crop || { w: 1, h: 1 };
-  return [Math.round(pxw * c.w * block.frac.w * slot.frac.w / Math.max(crop.w || 1, 1e-6)),
-          Math.round(pxh * c.h * block.frac.h * slot.frac.h / Math.max(crop.h || 1, 1e-6))];
+  return [Math.round(rect[2] / scale / Math.max(crop.w || 1, 1e-6)),
+          Math.round(rect[3] / scale / Math.max(crop.h || 1, 1e-6))];
 }
 
 async function renderLookbook() {
@@ -8575,7 +8639,7 @@ async function renderSheetComposer(sheetId) {
         <button class="text-act" data-capa="${which}" title="Rewrite this line here — an authored caption has no upstream source">Author</button>
       </div>
       ${cap.state === "STALE" ? `<div class="lb-stale-acts">
-        <button class="primary" data-caps="rebind:${which}" title="Adopt what the source says now — the binding re-stamps">Take the new line</button>
+        <button class="ghost" data-caps="rebind:${which}" title="Adopt what the source says now — the binding re-stamps">Take the new line</button>
         <button class="ghost" data-caps="author:${which}" title="Keep this text and freeze it — the source stops speaking here">Keep and author</button>
       </div>` : ""}`;
   };
@@ -8652,68 +8716,84 @@ async function renderSheetComposer(sheetId) {
     </div>`;
 
   // ---- preview: the real renderer at a fitted scale (never app chrome).
+  // R2 (canon pass): the response carries the renderer's own geometry
+  // manifest; the overlay consumes it and measures nothing.
   const img = $("#sheet-preview");
   const wrap = img.parentElement;
   const fullW = sh.medium === "PRINT" ? sh.size[0] * 300 : sh.size[0];
+  const overlay = $("#sheet-overlay");
+  const pct = v => `${(v * 100).toFixed(3)}%`;
+  let geo = null;  // {scale, W, H, blocks} — from X-Sheet-Geometry
+  const geoBlock = id => geo && geo.blocks.find(g => g.block_id === id);
+
+  const renderOverlay = () => {
+    if (!geo || !geo.W) { overlay.innerHTML = ""; return; }
+    const { W, H } = geo;
+    overlay.innerHTML = geo.blocks.map(g => {
+      const isSel = sel && g.block_id === sel.block_id;
+      const [bx, by, bw, bh] = g.outer;
+      return `<div class="ov-block${isSel ? " sel" : ""}" data-ovb="${esc(g.block_id)}"
+        style="left:${pct(bx / W)};top:${pct(by / H)};width:${pct(bw / W)};height:${pct(bh / H)}">
+        ${isSel ? `<span class="ov-chip">${esc(g.type)}${g.slots.length ? ` · ${g.slots.length} SLOTS` : ""}</span>` : ""}
+      </div>` + (isSel ? g.slots.map(s => `<div class="ov-slot" data-ovs="${esc(s.slot_id)}"
+        style="left:${pct(s.rect[0] / W)};top:${pct(s.rect[1] / H)};width:${pct(s.rect[2] / W)};height:${pct(s.rect[3] / H)}">
+        ${s.filled ? "" : `<span class="mono ov-empty">EMPTY</span>`}</div>`).join("") : "");
+    }).join("");
+  };
+
   const drawPreview = async () => {
     const scale = Math.max(0.05, Math.min(1, (wrap.clientWidth || 900) / fullW));
     const r = await fetch(`/api/sheets/${sheetId}/render`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scale }) });
     if (!r.ok) { toast("Preview failed", true); return; }
+    try {
+      geo = { scale: parseFloat(r.headers.get("X-Sheet-Scale")) || scale,
+              blocks: JSON.parse(r.headers.get("X-Sheet-Geometry") || "[]"),
+              W: 0, H: 0 };
+    } catch { geo = null; }
     const url = URL.createObjectURL(await r.blob());
     if (_lbPreviewUrl) URL.revokeObjectURL(_lbPreviewUrl);
     _lbPreviewUrl = url;
+    img.onload = () => {
+      if (geo) { geo.W = img.naturalWidth; geo.H = img.naturalHeight; }
+      renderOverlay();
+    };
     img.src = url;
   };
   drawPreview();
-
-  // ---- overlay: block outlines + selection (amber = the selection), slot
-  // rects on the selected block for aim; geometry mirrors the renderer.
-  const overlay = $("#sheet-overlay");
-  const c = sheetContentFracs(sh);
-  const pct = v => `${(v * 100).toFixed(3)}%`;
-  overlay.innerHTML = sh.blocks.map(b => {
-    const elastic = SHEET_BLOCKS[b.type][2];
-    if (elastic && sh.spine) return "";  // rendered in the spine column
-    const bx = c.x + b.frac.x * c.w, by = c.y + b.frac.y * c.h;
-    const bw = b.frac.w * c.w, bh = b.frac.h * c.h;
-    const isSel = sel && b.block_id === sel.block_id;
-    return `<div class="ov-block${isSel ? " sel" : ""}" data-ovb="${esc(b.block_id)}"
-      style="left:${pct(bx)};top:${pct(by)};width:${pct(bw)};height:${pct(bh)}">
-      ${isSel ? `<span class="ov-chip mono">${esc(b.type)}${b.slots.length ? ` · ${b.slots.length} SLOTS` : ""}</span>` : ""}
-      ${isSel ? b.slots.map(s => `<div class="ov-slot" data-ovs="${esc(s.slot_id)}"
-        style="left:${pct(s.frac.x)};top:${pct(s.frac.y)};width:${pct(s.frac.w)};height:${pct(s.frac.h)}">
-        ${s.candidate_id ? "" : `<span class="mono ov-empty">EMPTY</span>`}</div>`).join("") : ""}
-    </div>`;
-  }).join("");
 
   const refresh = () => renderSheetComposer(sheetId);
 
   // ---- drag-resize + move on the selected block's slots. Soft snap to
   // sibling edges and thirds; every drop saves (no session, no button).
+  // Deltas convert through the manifest's image band, so a dragged rect
+  // inverts to a model frac exactly.
   let drag = null;
   overlay.onpointerdown = e => {
     const sEl = e.target.closest("[data-ovs]");
-    if (!sEl || !sel) return;
+    if (!sEl || !sel || !geo) return;
     const slot = sel.slots.find(x => x.slot_id === sEl.dataset.ovs);
-    const host = sEl.parentElement.getBoundingClientRect();
+    const g = geoBlock(sel.block_id);
+    if (!slot || !g) return;
     const r = sEl.getBoundingClientRect();
     const edge = 8;
     const ex = e.clientX, ey = e.clientY;
     const mode = {
       l: Math.abs(ex - r.left) < edge, r: Math.abs(ex - r.right) < edge,
       t: Math.abs(ey - r.top) < edge, b: Math.abs(ey - r.bottom) < edge };
-    drag = { slot, sEl, host, start: { ...slot.frac },
+    drag = { slot, sEl, g, start: { ...slot.frac },
              mode: (mode.l || mode.r || mode.t || mode.b) ? mode : "move",
-             x0: ex, y0: ey };
+             x0: ex, y0: ey,
+             pxPerClient: geo.W / Math.max(1, overlay.clientWidth) };
     sEl.setPointerCapture(e.pointerId);
     e.preventDefault();
   };
   overlay.onpointermove = e => {
     if (!drag) return;
-    const dx = (e.clientX - drag.x0) / drag.host.width;
-    const dy = (e.clientY - drag.y0) / drag.host.height;
+    const [ix, iy, iw, ih] = drag.g.image;
+    const dx = (e.clientX - drag.x0) * drag.pxPerClient / Math.max(1, iw);
+    const dy = (e.clientY - drag.y0) * drag.pxPerClient / Math.max(1, ih);
     const f = { ...drag.start };
     if (drag.mode === "move") { f.x += dx; f.y += dy; }
     else {
@@ -8740,8 +8820,11 @@ async function renderSheetComposer(sheetId) {
     const y2 = snap(f.y + f.h, f.y + f.h);
     f.y = snap(f.y, f.y); f.h = y2 - f.y;
     drag.f = f;
-    drag.sEl.style.left = pct(f.x); drag.sEl.style.top = pct(f.y);
-    drag.sEl.style.width = pct(f.w); drag.sEl.style.height = pct(f.h);
+    const [ix2, iy2, iw2, ih2] = drag.g.image;
+    drag.sEl.style.left = pct((ix2 + f.x * iw2) / geo.W);
+    drag.sEl.style.top = pct((iy2 + f.y * ih2) / geo.H);
+    drag.sEl.style.width = pct(f.w * iw2 / geo.W);
+    drag.sEl.style.height = pct(f.h * ih2 / geo.H);
   };
   overlay.onpointerup = async e => {
     if (!drag) return;
@@ -8767,7 +8850,9 @@ async function renderSheetComposer(sheetId) {
     const slot = sel.slots.find(s => s.slot_id === slotId);
     const tray_ = await api("/api/lookbooks/candidates");
     if (!tray_.length) { toast("No approved takes yet — approve panels on stage 04 first", true); return; }
-    const need = slotNeed(sh, sel, slot);
+    const srect = geoBlock(sel.block_id)?.slots.find(x => x.slot_id === slotId);
+    const need = srect && geo ? slotNeedFromRect(srect.rect, geo.scale, slot)
+      : [0, 0];
     const verdict = t => {
       const w = t.width || 0, h = t.height || 0;
       if (w >= need[0] && h >= need[1]) return ["FITS", "ok"];
@@ -8831,9 +8916,9 @@ async function renderSheetComposer(sheetId) {
     const stage = $(".lb-crop-stage", ov), box = $(".lb-crop-box", ov), im = $("img", stage);
     let ratio = 0;  // 0 = slot's own; -1 free
     const slotAspect = () => {
-      const bw = sel.frac.w * c.w * (sh.medium === "PRINT" ? sh.size[0] * 300 : sh.size[0]) * slot.frac.w;
-      const bh = sel.frac.h * c.h * (sh.medium === "PRINT" ? sh.size[1] * 300 : sh.size[1]) * slot.frac.h;
-      return bh ? bw / bh : 16 / 9;
+      // R2: the slot's drawn aspect comes from the renderer's manifest.
+      const sr = geoBlock(sel.block_id)?.slots.find(x => x.slot_id === slotId);
+      return sr && sr.rect[3] ? sr.rect[2] / sr.rect[3] : 16 / 9;
     };
     let f = { ...cur };
     const paint = () => {

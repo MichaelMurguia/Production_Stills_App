@@ -50,18 +50,28 @@ class TheShelfKnowsTheScreenplay(unittest.TestCase):
         self.assertIn("envOfLoc(l.location)", JS[i:i + 300])
 
 
-class TheCard(unittest.TestCase):
-    def test_it_states_the_consequence_not_just_the_absence(self):
-        i = JS.index("function buildUnanchoredLocCard")
-        block = JS[i:i + 1600]
-        self.assertIn("text and style alone", block)
-        self.assertIn("UNANCHORED", block)
+class TheRegister(unittest.TestCase):
+    """Canon pass R4 (2026-08-10, mock au-ref-register): a card is for a
+    thing with a picture — unanchored places are ROWS in a labelled table
+    beneath the SCENES card grid, each carrying its own fix."""
+
+    def test_it_is_a_labelled_table_not_cards(self):
+        i = JS.index("function buildUnanchoredRegister")
+        block = JS[i:JS.index("function buildUncastCard", i)]
+        self.assertIn("loc-register", block)
+        self.assertIn("UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES", block)
+        self.assertNotIn("subj-card", block)
 
     def test_its_one_act_prefills_head_and_title(self):
-        i = JS.index("function buildUnanchoredLocCard")
-        block = JS[i:i + 1800]
-        self.assertIn('addReferenceDialog({ head: "LOCATION_GEOMETRY", title: l.location })',
+        i = JS.index("function buildUnanchoredRegister")
+        block = JS[i:i + 2400]
+        self.assertIn('addReferenceDialog({ head: "LOCATION_GEOMETRY", title: b.dataset.loc })',
                       block)
+        self.assertIn('class="text-act"', block)
+
+    def test_the_footer_states_the_jurisdiction(self):
+        i = JS.index("function buildUnanchoredRegister")
+        self.assertIn("CASTING STAYS SUBJECTS-ONLY", JS[i:i + 2400])
 
     def test_the_dialog_accepts_the_prefill(self):
         i = JS.index("async function addReferenceDialog(prefill = {})")
@@ -77,8 +87,8 @@ class CastingStaysSubjectsOnly(unittest.TestCase):
         If this ever changes, it is a design decision, not a drift."""
         self.assertEqual(store.SUBJECT_KINDS, {"CHARACTER", "VEHICLE", "PROP"})
 
-    def test_the_card_offers_no_cast_act(self):
-        i = JS.index("function buildUnanchoredLocCard")
+    def test_the_register_offers_no_cast_act(self):
+        i = JS.index("function buildUnanchoredRegister")
         block = JS[i:JS.index("function buildUncastCard", i)]
         self.assertNotIn('data-f="cast"', block)
         self.assertNotIn("Cast this", block)

@@ -451,6 +451,32 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".ov-block.sel", ["border-color: var(--accent)"])
         self.assert_decls(".ov-block", ["border: 1px solid transparent"])
 
+    def test_composer_amber_stops_at_two(self):
+        """Canon pass R1 (2026-08-10): the exemption was refused — the
+        block chip is a label (tags-ride-the-image), AUTHORED is a plain
+        Courier fact, and the stale acts are equal ghosts. Selection and
+        the Export act are the composer's only ambers."""
+        self.assert_decls(".ov-chip", ["background: rgba(11, 12, 14, .82)",
+                                       "border: 1px solid var(--line)",
+                                       "color: var(--ink)"])
+        self.assertNotIn("--accent", block(".ov-chip"))
+        b = block(".lb-chip.authored")
+        self.assertNotIn("--accent", b)
+        self.assertIn("border: 0", b)
+
+    def test_no_second_bar_exists(self):
+        """Canon pass R6: the coverage meter is the only meter — the
+        storage bar is deleted and the Courier line carries the state."""
+        self.assertNotIn(".stor-bar", CSS)
+        self.assert_decls(".stor-line.bad", ["color: var(--bad)"])
+        self.assert_decls(".stor-line.hold", ["color: var(--hold)"])
+
+    def test_unanchored_register_is_a_labelled_table(self):
+        """Canon pass R4: grid tracks per the ruling; header on --field."""
+        self.assert_decls(".loc-reg-row", [
+            "grid-template-columns: minmax(0, 1fr) 130px 210px 170px"])
+        self.assert_decls(".loc-reg-cols", ["background: var(--field)"])
+
     def test_stale_binding_reads_bad_and_bound_reads_ok(self):
         self.assert_decls(".lb-chip.bad", ["border-color: var(--bad)"])
         self.assert_decls(".lb-chip.ok", ["border-color: var(--ok)"])

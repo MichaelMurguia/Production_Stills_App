@@ -547,6 +547,36 @@ class RenderTests(SheetHomeTest):
         self.assertEqual(out.suffix, ".pdf")
 
 
+class GeometryManifestTests(SheetHomeTest):
+    """Canon pass R2 (2026-08-10): geometry is computed once and declared
+    — the renderer emits the rects it drew; the overlay consumes them and
+    measures nothing."""
+
+    def test_renderer_emits_the_rects_it_drew(self):
+        from app import sheet_render
+        rec = sheet.create_sheet("BOARD", "INK", "SCREEN", title="T")
+        bid = rec["blocks"][0]["block_id"]
+        rec = sheet.set_caption(rec["sheet_id"], bid, text="HEADED",
+                                which="heading")
+        manifest: list = []
+        sheet_render.render_sheet(rec, 0.5, allow_letterbox=True,
+                                  manifest=manifest)
+        self.assertEqual(len(manifest), 1)
+        g = manifest[0]
+        self.assertEqual(g["block_id"], bid)
+        # A headed block's image band sits BELOW its outer top — the exact
+        # offset the old JS mirror could not know.
+        self.assertGreater(g["image"][1], g["outer"][1])
+        self.assertEqual(len(g["slots"]), len(rec["blocks"][0]["slots"]))
+        for s in g["slots"]:
+            self.assertEqual(len(s["rect"]), 4)
+
+    def test_no_js_geometry_mirror_survives(self):
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertNotIn("sheetContentFracs", js)
+        self.assertIn("X-Sheet-Geometry", js)
+
+
 class StageFiveDivisionTests(unittest.TestCase):
     """ba-4a: stage 05 judges readiness, the composer arranges. The one
     door is Arrange this board; the variant chips are gone; the Lookbook

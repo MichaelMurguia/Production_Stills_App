@@ -346,7 +346,15 @@
           <p class="door-head">Auto breakdown
             <span class="door-nature mono">READS THE WHOLE SCREENPLAY</span></p>
           <form id="spec-auto-form">
-            <!-- B2: the brief leads — it is the input that does the work. -->
+            <!-- The board's SHAPE is stated, not inferred from the brief
+                 (user-hit 2026-08-07); it stands ABOVE the brief (canon
+                 pass R10, 2026-08-10) — a control that qualifies a field
+                 belongs before it, not after the user has written the
+                 thing it changes the meaning of. -->
+            <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
+              <select id="spec-auto-btype"></select>
+            </label>
+            <!-- B2: the brief leads the writing — it is the input that does the work. -->
             <label class="f-wide" title="Plain-language description of the board you want — a location and which of its scenes. The research pass reads the whole screenplay with this as its brief and drafts panels, objects, and cited evidence.">What is this board about?
               <textarea id="spec-auto-prompt" placeholder="describe the board…" required></textarea>
             </label>
@@ -358,12 +366,6 @@
                   <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
                   <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
                 </select>
-              </label>
-              <!-- The board's SHAPE is stated, not inferred from the brief
-                   (user-hit 2026-08-07): a scene-seeded draft rewritten as a
-                   location study in prose came back as the seeded scene. -->
-              <label title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
-                <select id="spec-auto-btype"></select>
               </label>
             </div>
             <div class="door-run">

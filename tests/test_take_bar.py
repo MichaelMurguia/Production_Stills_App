@@ -124,7 +124,7 @@ class TheSelectionIsRemembered(unittest.TestCase):
         self.assertIn("reqObjs.some(o => matches(o, g.name))", b)
 
     def test_the_hint_says_which_rule_is_in_force(self):
-        self.assertIn("rode the previous take and stay selected", JS)
+        self.assertIn("RODE THE PREVIOUS TAKE", JS)
         self.assertIn("match this panel's required objects and are pre-checked", JS)
 
     def test_no_match_warning_never_second_guesses_a_remembered_choice(self):

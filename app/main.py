@@ -2151,8 +2151,11 @@ async def api_render_sheet(sheet_id: str, body: dict) -> Response:
     scale = max(0.05, min(1.0, float(body.get("scale", 0.25))))
     import io
 
+    manifest: list = []
+
     def _render() -> bytes:
-        img = sheet_render.render_sheet(rec, scale, allow_letterbox=True)
+        img = sheet_render.render_sheet(rec, scale, allow_letterbox=True,
+                                        manifest=manifest)
         buf = io.BytesIO()
         img.save(buf, "PNG")
         return buf.getvalue()
@@ -2160,8 +2163,13 @@ async def api_render_sheet(sheet_id: str, body: dict) -> Response:
         data = await run_in_threadpool(_render)
     except sheet.SheetError as e:
         raise HTTPException(422, str(e))
+    # R2 (canon pass): geometry is computed once and declared — the
+    # renderer's own rects ride the response; the overlay aims with them
+    # and measures nothing.
     return Response(content=data, media_type="image/png",
                     headers={"X-Sheet-Rev": str(rec.get("rev", 0)),
+                             "X-Sheet-Scale": str(scale),
+                             "X-Sheet-Geometry": json.dumps(manifest),
                              "Cache-Control": "no-store"})
 
 

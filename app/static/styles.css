@@ -2349,12 +2349,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* Storage readout (user 2026-08-07). A healthy disk is not news, so the
    bar carries no colour until it matters: --hold when it is getting
    tight, --bad once a render would be refused. */
-.stor-bar { height: 6px; background: var(--field); border: 1px solid var(--line);
   margin: 4px 0 8px; }
-.stor-bar i { display: block; height: 100%; background: var(--ink-faint); }
-.stor-bar.hold i { background: var(--hold); }
-.stor-bar.bad i { background: var(--bad); }
 .stor-line { font-size: 10px; letter-spacing: .1em; color: var(--ink-dim); }
+/* R6: no bar — the line's colour carries the state. */
+.stor-line.hold { color: var(--hold); }
+.stor-line.bad { color: var(--bad); }
 .stor-rows { margin: 10px 0; }
 .stor-row { display: flex; justify-content: space-between; padding: 6px 0;
   border-bottom: 1px solid var(--line-soft); font-size: 12.5px; color: var(--ink-dim); }
@@ -2368,11 +2367,39 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   gap: 14px 18px; margin-bottom: 14px; }
 .pal-shelf .pal-row { margin-bottom: 0; }
 
-/* Unanchored location on the SCENES shelf (2026-08-08) — the uncast
-   card's own vocabulary; only the identity line is Courier because a
-   scene count and an environment name are machine facts. */
-.loc-uncast .subj-identity { font-family: var(--mono); font-size: 10.5px;
-  letter-spacing: .04em; line-height: 1.6; }
+/* The unanchored register (canon pass R4, 2026-08-10, mock
+   au-ref-register): a card is for a thing with a picture — a place with
+   no imagery is a row in a labelled table (D4 vocabulary) beneath the
+   SCENES card grid. The page scrolls; the table does not. */
+.loc-register { margin-top: 16px; }
+.loc-reg-head { display: flex; align-items: baseline; gap: 14px;
+  margin-bottom: 8px; }
+.loc-reg-head .hint { margin-left: auto; }
+.loc-reg-label { font-size: 10px; letter-spacing: .14em;
+  color: var(--ink-dim); }
+.loc-reg-row { display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 210px 170px;
+  align-items: baseline; gap: 12px; padding: 9px 10px;
+  border-top: 1px solid var(--line-soft); }
+.loc-reg-cols { background: var(--field); border: 1px solid var(--line-soft);
+  border-top: 0; font-size: 9.5px; letter-spacing: .12em;
+  color: var(--ink-faint); }
+.loc-reg-place { font-weight: 600; font-size: 13px; }
+.loc-reg-row .mono { font-size: 11px; color: var(--ink-dim); }
+.loc-reg-act { text-align: right; }
+.loc-reg-foot { font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); padding: 10px 0 0; }
+
+/* R5 (canon pass, mock au-ref-style-shelf): the ramps ARE the STYLE
+   shelf — name and count lead, the ramp carries the group, Open group is
+   the one act. Quarantined swatch cards sit below under a stated label. */
+.pal-shelf-is-shelf .pal-row { display: flex; flex-direction: column; }
+.pal-shelf-is-shelf .sw-ramp { height: 34px; }
+.pal-shelf-is-shelf .sw-ramp-label { order: -1; margin-bottom: 6px; }
+.pal-shelf-is-shelf .sw-ramp-label .hero.prov { color: var(--bad); }
+.pal-open { align-self: flex-start; margin-top: 6px; font-size: 12px; }
+.shelf-quarantine { margin-top: 18px; }
+.shelf-quarantine .ref-grid { margin-top: 10px; }
 
 /* A retired correction stays readable as history but no longer commands. */
 .carried { display: flex; align-items: baseline; gap: 10px; }
@@ -2432,9 +2459,14 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ov-block { position: absolute; border: 1px solid transparent; }
 .ov-block:hover { border-color: var(--line); cursor: pointer; }
 .ov-block.sel { border-color: var(--accent); }
-.ov-chip { position: absolute; top: -18px; left: -1px; background: var(--accent);
-  color: var(--accent-ink); font-size: 9px; letter-spacing: .1em;
-  padding: 2px 7px; line-height: 1.4; white-space: nowrap; }
+/* R1 (canon pass 2026-08-10): the chip is a label, not a signal — the
+   tags-ride-the-image vocabulary. Outline says WHICH block, chip says
+   WHAT it is; one job each. */
+.ov-chip { position: absolute; top: -18px; left: -1px;
+  background: rgba(11, 12, 14, .82); color: var(--ink);
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 9px;
+  letter-spacing: .1em; padding: 1px 7px; line-height: 1.4;
+  white-space: nowrap; }
 .ov-slot { position: absolute; border: 1px dashed var(--line);
   touch-action: none; }
 .ov-slot:hover { border-color: var(--ink-dim); cursor: move; }
@@ -2471,7 +2503,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border: 1px solid var(--line); color: var(--ink-dim); flex: none; }
 .lb-chip.ok { border-color: var(--ok); color: var(--ok); }
 .lb-chip.bad { border-color: var(--bad); color: var(--bad); }
-.lb-chip.authored { border-color: var(--accent); color: var(--accent); }
+/* R1: AUTHORED is a fact, not a signal — amber marks what blocks, and an
+   authored caption blocks nothing. Plain Courier, no chip frame. */
+.lb-chip.authored { border: 0; padding: 0; color: var(--ink-dim); }
 .lb-stale-acts { display: flex; gap: 8px; margin: 4px 0 2px 60px; }
 .lb-del-block { margin-top: 10px; font-size: 10px; }
 .lb-ladder { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -2526,3 +2560,18 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sheet[data-style="INK"] { --sheet-paper: #131418; --sheet-inset: #e2ddd0;
   --sheet-ink: #e8e5dd; }
 .sheet { background: var(--sheet-paper); color: var(--sheet-ink); }
+
+/* R7 (canon pass 2026-08-10, mock au-wb-camera): one control, two
+   presentations — the workbench states the camera in force on one
+   Courier line with the verb beside it, and opens the selects on ask. */
+.cam-stated { display: flex; align-items: baseline; gap: 14px; }
+.cam-sum { font-size: 11px; letter-spacing: .08em; color: var(--ink); }
+.cam-sum .cam-src { color: var(--ink-faint); }
+.cam-stated .text-act { margin-left: auto; flex: none; }
+.cam-open-k { display: block; font-size: 9.5px; letter-spacing: .12em;
+  color: var(--ink-faint); margin-bottom: 8px; }
+.cam-editor-acts { display: flex; gap: 10px; margin: 10px 0 6px; }
+
+/* R10: the board's shape qualifies the brief, so it stands before it —
+   a capped select, never full-width. */
+.f-btype select { max-width: 260px; }

@@ -308,6 +308,50 @@ design question stays inline — collapsing it would hide the answer, and
 the answer is the only part worth re-reading; the question is just its
 label. Question to `--ink-faint`, answer below it in `--ink`.
 
+**A card is for a thing with a picture** (canon pass R4, 2026-08-10, mock
+au-ref-register). Where a record has no image to judge, it is a row in a
+labelled table, not a card with an empty well — an uncast-style card is an
+image-sized well whose only message is that there is no image, and it
+invites a judgement that cannot be made. A register of such rows belongs
+under the shelf that would hold its answers, never beside it as a peer.
+Worked example: unanchored screenplay locations — a labelled table
+(`.loc-register`, tracks `minmax(0,1fr) 130px 210px 170px`) beneath the
+SCENES card grid, section label `UNANCHORED · FROM THE SCREENPLAY'S
+SLUGLINES`, one `Add reference` text act per row prefilling
+`LOCATION_GEOMETRY — <NAME>`, footer stating `CASTING STAYS
+SUBJECTS-ONLY`. The shelf count states the finding factually — never an
+apology.
+
+**A room is owed when other records inherit the prose** (canon pass R3 —
+the discriminator on *edit a paragraph in a room, not in a cell*). Prose
+only its own record reads is edited in place; the room exists so a save
+can state its blast radius, and a record with no inheritors has none. The
+discriminator is inheritance, not length. Worked example: the panel brief
+edits in place (`.brief-row`), its Courier line stating `JOURNALED · NEXT
+TAKE PAINTS FROM THE NEW BRIEF · NOTHING ELSE INHERITS IT`; the
+environment editor keeps its room because sheets inherit it.
+
+**One control, two presentations** (canon pass R7, mock au-wb-camera). A
+setting authored on one surface and merely in force on another shows its
+full controls where it is authored and a single stated Courier line where
+it is inherited — with the verb beside the line. A summary always states
+the value, never the word "Custom". Worked example: the camera axes —
+full `.cam-row` on the Look Interview and the breakdown editor (authoring
+surfaces); on the panels workbench one line, `EYE LEVEL · 24MM · LEVEL ·
+WIDE — FROM BIBLE` / `Change camera`, opening the four selects on ask
+with `Save camera` / `Cancel`; an approved take freezes the act in place
+with the condition in its `title`. Provenance suffixes `— FROM BIBLE` /
+`— THIS PANEL` answer "why does this say 24mm" without a sentence.
+
+**Geometry is computed once and declared** (canon pass R2). When one
+component draws and another must aim at what was drawn, the drawer emits
+its rects and the aimer consumes them. Two implementations of one
+geometry is a drift bug with a permanent maintenance cost, not a
+tolerance to tune. Worked example: `render_sheet` returns a geometry
+manifest (block outer, image band, slot rects) riding the preview
+response as `X-Sheet-Geometry`; the composer overlay positions from it
+and measures nothing.
+
 **A set that means something as a set renders as one object**
 (PALETTE_GROUPS_PLAN, ruled 2026-08-06) — the members live inside it, one
 click away, not spread beside it. Grids are for things that merely share a
@@ -415,6 +459,14 @@ library ("Research" was renamed REFERENCE), on three shelf sections
 ordered by *when an image rides along*, not how it arrived: STYLE (every
 render, automatically) · SUBJECTS (when its subject appears on a panel —
 subject cards ARE this shelf) · SCENES (when a board covers its scene).
+**The ramps ARE the STYLE shelf** (canon pass R5, 2026-08-10, mock
+au-ref-style-shelf): one 34px ramp per design language — name and count
+above, `Open group` beneath — with individual plates behind the group
+viewer each ramp already opens; no plate grid on the shelf. Quarantined
+swatches keep their cards below, under `QUARANTINED · AWAITING A
+VERDICT` (*a verdict happens where the proposal is*), and a mixed
+group's count reads `N PROVISIONAL` in `--bad`. The shelf count states
+`N GROUPS · M SWATCHES`.
 Shelf header (`.shelf-head`): Courier bold shelf name · faint Courier
 ride-along line (`RIDES ALONG — …`) · right-aligned Courier counts
 (`.shelf-count`). Intake lives behind `+ Add reference` (the role
@@ -1063,6 +1115,18 @@ for the manifest's maskable purpose.
 - Wrap content in more nested panels — depth was the v1 clutter mechanism.
 - Rename existing CSS classes. `app.js` generates markup against these names;
   the stylesheet was written to preserve every one of them.
+- **Grant a feature an exemption from the two rules** (canon pass R1). A
+  plan may not authorise amber outside its three roles; if a mark is not
+  stage, primary act or focus, it is `--ink` or Courier. The composer is
+  the worked refusal: five requested spends ruled down to two — the
+  selection outline (focus) and Export-when-ready (primary act); the
+  block chip became the tags-ride-the-image label, `AUTHORED` a plain
+  Courier fact (amber marks what blocks, and an authored caption blocks
+  nothing), and the stale acts equal ghosts.
+- **Add a second bar** (canon pass R6). The coverage meter is the only
+  meter. A capacity is a Courier number line whose colour carries its
+  state — `FREE 214 GB OF 500 GB · 57% USED`, uncoloured while healthy,
+  `--hold` when tight, `--bad` once a render would be refused.
 
 ---
 
@@ -1090,16 +1154,6 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-10 | **Lookbook shelf & sheet composer** (`.lb-room` 186px·1fr·300px, `.sheet-tray`, `.sheet-stage`, `.sheet-rail`, `.ov-block/.ov-slot` overlays, `.lb-fill-*` popover, `.lb-crop-*` modal). The SHEET_SYSTEM_PLAN surface: server-rendered preview (one renderer with export), DOM overlays for selection/drag that never print, slot fill verdicted against the slot's pixel need, caption binding rail with BOUND/`SOURCE MOVED`/AUTHORED states. **Amber spends beyond the app's three roles, per the plan's own §8/§11:** selection outline + block chip, AUTHORED chip, the stale take-the-new-line act, Export-when-ready — review against the scarcity rule. Also: overlay rects ignore heading/caption bands inside blocks (a few px of aim drift on headed blocks) — rule on whether the overlay must mirror the renderer's inner offsets. | Lookbook (tool view) | Boards judged readiness but nothing composed presentation; no surface arranged approved takes + stage-02 evidence on a printable sheet |
-
-| 2026-08-08 | **Editable panel brief** (`.brief-row`, `.brief-editor`). The workbench purpose line gains its verb — an `Edit brief` text act (canon: verb-sits-with-its-object) that swaps the line for a textarea with ghost `Save brief` / `Cancel` and the Courier line `JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF`. The amend is journaled server-side and re-stamps the lock; an APPROVED take disables the act with the condition stated in its title (gate readable as state). Review: in-place swap vs the edit-in-a-room modal canon, and the acts row's copy. | Boards, panel workbench | The brief was frozen at lock; a purpose saying "the three people" kept painting three people and the only fix was a full unlock |
-| 2026-08-08 | **Remembered reference selection.** Built from canon — no new markup; the workbench checkboxes now pre-check from the newest take's recorded references instead of the required-objects matcher once a take exists, the hint states which rule is in force ("rode the previous take and stay selected"), and the NO MATCHES warning stands down when the empty selection is the user's own remembered decision. Review copy only. | Boards, panel workbench | Manual selections reset to matcher defaults on every repaint, so each generation forgot the last one's casting |
-| 2026-08-08 | **Unanchored locations on the SCENES shelf.** The screenplay's slugline register joins the Reference library: places with no matching SCENE-shelf anchor render as uncast-style cards (`N SCENES · ENVIRONMENT`, the stated consequence, one `Add reference` act prefilling `LOCATION_GEOMETRY — <NAME>`), the shelf count states `M LOCATIONS UNANCHORED`, and library search covers location names and environments. Casting stays subjects-only by design. **User: needs a FULL design pass, not placement-only review** — how a place reads in the library, the card's anatomy, and whether the register deserves its own shelf are all open. | Reference, SCENES shelf | Searching a place the script names returned NOTHING — no way to see it lacked imagery, no act to give it any |
-| 2026-08-08 | **Swatch ramps on the Reference STYLE shelf.** Built from canon — the same `.pal-row` ramps and the same viewer the Production Design column uses, in a `.pal-shelf` grid above the card grid. Quarantined swatches keep their card (the SUBJECTS shelf's governance rule); a mixed group's label states `N PROVISIONAL` and its viewer offers Approve only on the rows that need it. Review placement only: above the cards, or should the ramps BE the shelf with plates behind a disclosure? | Reference, STYLE shelf | Nineteen swatch cards said in a wall what three ramps say in a strip |
-| 2026-08-07 | **Storage readout** (`.stor-bar`, `.stor-row`) — a capacity bar that carries NO colour while the disk is healthy, `--hold` when it is getting tight and `--bad` once a render would already be refused, over a Courier free/total line and a by-kind list. Review: is a bar right at all here, or should this be numbers only like every other fact in Settings? | Settings | Nothing measured the volume, so a full one first surfaced as a 502 from the middle of a paid render |
-| 2026-08-09 (rev 2026-08-10) | **Camera & composition axes** (`.cam-row`, `.cam-field`, `.cam-lens`, marked `/* UNCANONIZED */` in styles.css). A labelled row of compact selects — Angle / Lens / Tilt / Shot — reused in three places: the **"Camera grammar" production default now leads the Look Interview** (top of Production Design), a per-panel row on the breakdown sheet editor, and an inline between-takes control on the panels workbench (POSTs like Edit brief, re-stamping the lock, frozen by an approved take). Lens is a focal-length list (18–135mm) with a **Custom…** option revealing an inline mm input; Shot adds Aerial/Macro/Micro. A new production starts from a concrete default (Eye level · 24mm · Level · Wide) so the production card carries no blank; panel rows keep a blank "— from bible —". The app expands each axis into an authored render directive. Tokens only; Courier micro-labels. Review: the four-select row on all three surfaces (should the workbench collapse to a summary until opened?), the Custom-lens affordance, and the label/hint copy. | Look Interview, sheet editor, panels workbench | Camera language reached the model only as two terse tokens; "High Camera Angle" was ignored |
-| 2026-08-09 | **Add a panel from the panels workbench.** Built from canon — no new CSS: a ghost `+ Add panel` button (the sheet editor's `#sp-add-panel` vocabulary) in the Generate-panels header beside the breakdown selector, opening the canonical `modal` (title + brief textarea). The panel appends as a work-order card; the lock re-stamps server-side (same controlled edit as the between-takes brief) and the add is journaled. Review placement/copy only: the header button vs an add affordance at the end of the panel list, and the dialog's copy. | Boards, panels workbench header | Adding a panel meant leaving stage 04 to unlock the sheet at stage 03 — blocked once any take is approved |
-| 2026-08-07 | **Board type on the Auto Breakdown intake.** Built from canon — a `<select>` in the existing `.door-pair`, offering the same `BOARD_TYPES` vocabulary the blank-sheet form already uses, defaulted from the Create-breakdown hint (scene row → SCENE, location row → LOCATION) and left alone once touched. Review placement/copy only: does the shape belong beside Mode, or above the brief where it would be read first? | Breakdowns, Auto Breakdown | The board's shape was inferable only from prose, and prose was the weakest signal in the request — a rewritten brief could not change it |
 
 ---
 
@@ -1108,6 +1162,21 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-10** — **Canonization pass** (CANONIZATION_PASS_2026-08-10,
+  R1–R10 + mocks au-*): all nine Uncanonized rows ruled and the table
+  emptied. Composer amber exemption REFUSED — two spends survive
+  (selection, Export); block chip → tags-ride-the-image, AUTHORED → plain
+  Courier fact, stale acts equal ghosts. Overlay drift resolved by
+  structure: the renderer emits its geometry manifest and the JS mirror is
+  deleted (geometry-computed-once canonized). Unanchored locations become
+  a labelled REGISTER under the SCENES grid (card-is-for-a-picture
+  canonized; no own shelf). The ramps ARE the STYLE shelf; quarantine
+  keeps cards below. Storage bar deleted — Courier number line carries
+  the state (no-second-bar canonized). Workbench camera collapses to a
+  stated line with `Change camera` (one-control-two-presentations
+  canonized); brief stays in place with inheritance stated
+  (room-owed-on-inheritance canonized). Board type moves above the brief.
+  Remembered-selection copy: `RODE THE PREVIOUS TAKE`.
 - **2026-08-10** — **The sheet grammar lands** (SHEET_SYSTEM_PLAN, rulings
   R1–R8): boards and lookbook pages become one mechanism — twelve block
   types, six sheet styles (INK is the boards'; its ground moves to
