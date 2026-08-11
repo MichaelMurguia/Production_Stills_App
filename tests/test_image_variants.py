@@ -213,5 +213,51 @@ class BackCatalogueWarmTests(unittest.TestCase):
                                 "a semaphore must bound concurrent 4K builds")
 
 
+class BoardCompositeVariantTests(unittest.TestCase):
+    """A BOARD-* composite is a candidate file like any other, so the tier
+    resolver must serve its thumb — the completed-boards grid once loaded
+    the full 4K composite (20–40 MB per card, user 2026-08-11)."""
+
+    SPEC, BOARD = "IMG_BOARD_V001", "BOARD-0001"
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-boardvar-"))
+        _redirect_home(self.tmp)
+        d = paths.BOARDS_DIR / self.SPEC
+        d.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (3840, 2160), (19, 20, 24)).save(
+            d / f"{self.BOARD}.png", "PNG")
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_board_thumb_is_a_bounded_webp_not_the_composite(self):
+        p = generate.candidate_variant_path(self.SPEC, self.BOARD, "thumb")
+        self.assertEqual(p.name, f"{self.BOARD}.thumb.webp")
+        with Image.open(p) as im:
+            self.assertLessEqual(max(im.size), imaging.VARIANTS["thumb"][0])
+
+
+class GridImagesNeverLoadFull(unittest.TestCase):
+    """The tier contract's UI half: every inline <img> against a candidate
+    or reference image URL states a display tier. Full resolution is for
+    the lightbox, crop/repair sources and the export link — never a grid
+    thumbnail. The completed-boards grid violated this (2026-08-11)."""
+
+    def test_every_inline_img_tag_carries_a_size(self):
+        import re
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        for m in re.finditer(
+                r"<img[^>]{0,200}?src=\"[^\"]*/(?:candidates|references)/"
+                r"[^\"]*/image([^\"]*)\"", js):
+            self.assertIn("size=", m.group(1),
+                          f"inline <img> loads full resolution: {m.group(0)[:120]}")
+
+    def test_completed_boards_grid_uses_thumb(self):
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        i = js.index("Completed boards")
+        self.assertIn("?size=thumb", js[i:i + 900])
+
+
 if __name__ == "__main__":
     unittest.main()

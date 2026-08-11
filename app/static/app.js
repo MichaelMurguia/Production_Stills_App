@@ -8059,7 +8059,7 @@ async function renderAssembly() {
       card.style.cursor = "pointer";
       card.title = "Open this board — it replaces the grid; judge it there.";
       card.innerHTML = `
-        <img src="${lbItems[i].src}" loading="lazy" alt="${esc(b.candidate_id)}">
+        <img src="${lbItems[i].src}?size=thumb" loading="lazy" alt="${esc(b.candidate_id)}">
         <div class="body">
           <div><span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span> <b>${esc(b.candidate_id)}</b></div>
           <div class="meta">${esc(b._spec.subject || b._spec.specification_id)}</div>
