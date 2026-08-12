@@ -31,6 +31,11 @@ CAMERA_FIELDS = {
 # values override, and every panel inherits it unless it sets its own axis.
 CAMERA_BASELINE = {"camera_angle": "EYE_LEVEL", "camera_lens": "24MM",
                    "camera_tilt": "LEVEL", "scale": "WIDE"}
+# Pre-camera-enum autofill shot vocabulary (2026-08-12 review): drafted specs
+# persisted FULL_BODY / DETAIL verbatim. Mapped onto the canon enum wherever a
+# scale is read — the same lazy style as generate._LEGACY_LENS; a sheet save
+# persists the migrated form.
+LEGACY_SCALE = {"FULL_BODY": "WIDE", "DETAIL": "EXTREME_CLOSE"}
 
 
 def _camera_valid(field: str, value: str) -> bool:

@@ -553,7 +553,19 @@ def _camera_block(panel: dict) -> list[str]:
     defaults = store.camera_defaults()
 
     def resolve(field):
-        return str(panel.get(field) or defaults.get(field) or "").strip().upper()
+        # An unrecognized persisted value (a pre-enum autofill draft, a
+        # hand-edited file) falls back to the production default instead of
+        # silently deleting the axis from the prompt; legacy vocabularies
+        # migrate here so old sheets keep speaking.
+        for source in (panel.get(field), defaults.get(field)):
+            v = str(source or "").strip().upper()
+            if field == "camera_lens":
+                v = _LEGACY_LENS.get(v, v)
+            elif field == "scale":
+                v = store.LEGACY_SCALE.get(v, v)
+            if v and store._camera_valid(field, v):
+                return v
+        return ""
 
     directives = [d for d in (
         SCALE_PHRASING.get(resolve("scale")),

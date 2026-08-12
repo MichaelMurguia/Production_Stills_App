@@ -6489,6 +6489,11 @@ const CAMERA_AXES = [
 // Pre-2026-08-10 lens words map onto a focal length so old settings still show.
 const _LEGACY_LENS = { WIDE: "24MM", NORMAL: "50MM", TELEPHOTO: "135MM" };
 const lensValue = v => _LEGACY_LENS[String(v || "").toUpperCase()] || String(v || "").toUpperCase();
+// Pre-enum autofill shot words map onto the canon scale so drafted panels
+// show their real value instead of "— from bible —" (a save persists the
+// migrated form). Mirrors store.LEGACY_SCALE.
+const _LEGACY_SCALE = { FULL_BODY: "WIDE", DETAIL: "EXTREME_CLOSE" };
+const scaleValue = v => _LEGACY_SCALE[String(v || "").toUpperCase()] || String(v || "").toUpperCase();
 
 // One camera <select>. `prefix` namespaces its data-f ("pcam"/"cam"/"dcam");
 // `blank`, when given, is the empty "inherit" option — omitted for the
@@ -6510,7 +6515,8 @@ function cameraSelect(prefix, axis, value, blank, disabled = false) {
           min="8" max="800" step="1" placeholder="mm" value="${custom ? esc(v.replace(/MM$/, "")) : ""}" ${dis}>
       </span></label>`;
   }
-  const uv = String(value || "").toUpperCase();
+  const uv = axis.key === "scale" ? scaleValue(value)
+    : String(value || "").toUpperCase();
   return `<label class="cam-field mini"><span>${esc(axis.label)}</span>
     <select data-f="${prefix}-${axis.f}" ${dis}>${blankOpt}
       ${axis.opts.map(([ov, ol]) => `<option value="${ov}" ${uv === ov ? "selected" : ""}>${esc(ol)}</option>`).join("")}
@@ -6780,9 +6786,13 @@ function removePendingTake(specId, panelId, id) {
 // but the engine finishes and the take lands on disk (user 2026-08-09). When that
 // happens we don't fail — we keep waiting and poll for the new candidate on this
 // panel. Returns the fresh record, or null if it never appears within the budget.
-async function pollForNewTake(specId, panelId, beforeIds, { tries = 40, delayMs = 5000 } = {}) {
+async function pollForNewTake(specId, panelId, beforeIds, { tries = 40, delayMs = 5000, signal } = {}) {
   for (let i = 0; i < tries; i++) {
     await new Promise(r => setTimeout(r, delayMs));
+    // Cancel works mid-poll too (2026-08-12 review): once the fetch has
+    // already failed, abort() has nothing to abort — the poll itself must
+    // honor it, or Cancel is a silent no-op for the whole 200s budget.
+    if (signal?.aborted) return null;
     try {
       const cands = await api(`/api/specs/${specId}/candidates`);
       const fresh = (cands || []).find(c =>
@@ -7348,7 +7358,13 @@ async function renderBoardPanels(specId) {
       const landed = cand => {
         finish();
         toast(`${cand.candidate_id} generated (${cand.width}×${cand.height}) — CANDIDATE, unapproved.`);
-        renderBoardPanels(specId);
+        // A gateway-cut poll can outlive navigation: announce the arrival,
+        // never hijack whatever view the user is on now back to this spec
+        // (2026-08-12 review). The take is on disk; the strip shows it on
+        // the next visit.
+        if ($("#board-panels") && $("#board-spec")?.value === specId) {
+          renderBoardPanels(specId);
+        }
       };
       try {
         landed(await api(`/api/specs/${specId}/panels/${p.id}/generate`, {
@@ -7374,7 +7390,13 @@ async function renderBoardPanels(specId) {
         // spinner up and poll for the take instead of crying failure over a
         // render that is actually completing.
         if ((err instanceof TypeError) || (err.gateway && err.status >= 500)) {
-          const fresh = await pollForNewTake(specId, p.id, before);
+          const fresh = await pollForNewTake(specId, p.id, before,
+            { signal: ctrl.signal });
+          if (ctrl.signal.aborted) {
+            finish();
+            toast("Canceled. Note: if the model had already started painting, the candidate may still arrive — check the gallery in a minute.");
+            return;
+          }
           if (fresh) { landed(fresh); return; }
           finish();
           report.innerHTML = `<div class="report"><b>Still rendering</b> — the connection
@@ -8621,6 +8643,7 @@ async function renderSheetComposer(sheetId) {
   const slotState = (b, s) => {
     const errs = (blockedBy[b.block_id] || []).filter(x => x.slot_id === s.slot_id);
     if (!s.candidate_id) return ["empty", "EMPTY"];
+    if (errs.some(x => x.kind === "SLOT_APPROVAL")) return ["bad", "UNAPPROVED"];
     return errs.length ? ["bad", "SHORT"] : ["ok", s.candidate_id];
   };
 
@@ -8676,6 +8699,8 @@ async function renderSheetComposer(sheetId) {
       <div class="lb-blocked-rows">${ready.blocked.slice(0, 4).map(b =>
         b.kind === "TYPE_FLOOR"
           ? `<span>${esc(b.block_id)} sets type at ${b.size}${sh.medium === "PRINT" ? "pt" : "px"} — the ${sh.medium.toLowerCase()} floor is ${b.floor}. Pick a larger size in the rail.</span>`
+          : b.kind === "SLOT_APPROVAL"
+          ? `<span>${esc(b.block_id)} · ${esc(b.slot_id)} holds <span class="mono">${esc(b.candidate_id)}</span>, which is not approved — approve it on the workbench or swap in an approved take.</span>`
           : `<span>${esc(b.block_id)} · ${esc(b.slot_id)} ${b.have[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "is empty — fill it or remove the slot"}.</span>`).join("")}
         ${ready.blocked.length > 4 ? `<span class="mono">AND ${ready.blocked.length - 4} MORE</span>` : ""}</div>
     </div>`;

@@ -1154,6 +1154,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-12 | Composer approval gate: `SLOT_APPROVAL` row in the blocked-export lead ("holds CAND-…, which is not approved — approve it on the workbench or swap in an approved take") and an `UNAPPROVED` slot chip in the rail | Sheet composer (Lookbook tool / arranged boards) | Built from canon — review copy only. Bug-fix: slots could carry unapproved takes past the export gate; the gate now states the condition using the existing lb-blocked rows and lb-slot state chips |
 
 ---
 
@@ -1162,6 +1163,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-12** — **Review fix batch** (2026-08-12 review of .14–.21): the
+  composer's export gate gains the `SLOT_APPROVAL` kind (slots hold
+  approved takes only — arrange leaves unapproved panels as empty slots,
+  and a take rejected after placement turns the gate red); arrange chunks
+  oversized boards into multiple blocks instead of a 422; arranged
+  mastheads are born BOUND; legacy autofill shot words (FULL_BODY/DETAIL)
+  migrate onto the camera enum everywhere a scale is read. Non-canon: see
+  the Uncanonized table (copy-only review).
 - **2026-08-10** — **Canonization pass** (CANONIZATION_PASS_2026-08-10,
   R1–R10 + mocks au-*): all nine Uncanonized rows ruled and the table
   emptied. Composer amber exemption REFUSED — two spends survive

@@ -60,10 +60,22 @@ class _IsolatedStyleContext(unittest.TestCase):
     are not about it — they must never read the real install's Art
     Direction Bible (it emptied with a production switch and took nine
     tests down). A canned language keeps the real prompt pipeline running
-    deterministically."""
+    deterministically. The home redirect (2026-08-12 review) closes the
+    residual leak: rejection_feedback and project_name otherwise read the
+    real install's boards/ and project files, so a real production holding
+    a SPEC_X rejection would bleed into these assertions."""
 
     def setUp(self):
         from unittest import mock
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-style-"))
+        self._saved = (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+                       paths.SETTINGS, paths.ACTIVE_PROJECT)
+        paths.HOME = self.tmp
+        paths.PROJECTS_DIR = self.tmp / "projects"
+        paths.ACTIVE_PROJECT_FILE = self.tmp / "active_project.json"
+        paths.SETTINGS = self.tmp / "settings.json"
+        paths.set_project("")
+        paths.ensure_dirs()
         self._style_patches = [
             mock.patch.object(generate.bible, "render_context",
                               return_value=""),
@@ -76,6 +88,10 @@ class _IsolatedStyleContext(unittest.TestCase):
     def tearDown(self):
         for p in self._style_patches:
             p.stop()
+        (paths.HOME, paths.PROJECTS_DIR, paths.ACTIVE_PROJECT_FILE,
+         paths.SETTINGS, slug) = self._saved
+        paths.set_project(slug)
+        shutil.rmtree(self.tmp, ignore_errors=True)
 
 
 class AnsweredQuestionsReachThePrompt(_IsolatedStyleContext):

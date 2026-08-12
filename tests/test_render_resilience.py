@@ -28,20 +28,41 @@ class RenderResilienceWiring(unittest.TestCase):
 
     def test_poll_helper_watches_the_candidates_list(self):
         i = JS.index("async function pollForNewTake")
-        block = JS[i:i + 600]
+        block = JS[i:i + 1000]
         self.assertIn("/candidates`", block)
         self.assertIn("!beforeIds.has(c.candidate_id)", block,
                       "it must find a candidate that wasn't there before the render")
 
     def test_generate_polls_on_a_gateway_cut_instead_of_failing(self):
         i = JS.index("const runGenerate = async")
-        block = JS[i:i + 3000]
+        block = JS[i:i + 3200]
         # snapshots existing takes, then polls when the connection is cut
         self.assertIn("const before = new Set(panelCands.map", block)
         self.assertIn("(err instanceof TypeError) || (err.gateway && err.status >= 500)", block)
-        self.assertIn("pollForNewTake(specId, p.id, before)", block)
+        self.assertIn("pollForNewTake(specId, p.id, before", block)
         # a real app error still reports; the cut path never says "Generation failed"
         self.assertIn("Still rendering", block)
+
+    def test_cancel_stops_a_gateway_cut_poll(self):
+        # Regression (2026-08-12 review): once the fetch had failed, Cancel
+        # only fired ctrl.abort() — nothing was listening, and the spinner
+        # ran to the 200s budget. The poll must honor the signal.
+        i = JS.index("async function pollForNewTake")
+        self.assertIn("signal?.aborted", JS[i:i + 900],
+                      "the poll loop must check the abort signal each tick")
+        j = JS.index("const runGenerate = async")
+        block = JS[j:j + 3200]
+        self.assertIn("{ signal: ctrl.signal }", block,
+                      "the gateway-cut poll must receive the Cancel signal")
+        self.assertIn("ctrl.signal.aborted", block)
+
+    def test_a_landed_take_never_hijacks_another_view(self):
+        # Regression (2026-08-12 review): a poll finishing after navigation
+        # re-rendered this spec's panels over whatever the user was viewing.
+        j = JS.index("const runGenerate = async")
+        block = JS[j:j + 3200]
+        self.assertIn('$("#board-panels") && $("#board-spec")?.value === specId',
+                      block, "landed() must verify the view before re-rendering")
 
 
 if __name__ == "__main__":

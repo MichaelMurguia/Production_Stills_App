@@ -30,8 +30,15 @@ VARIANTS: dict[str, tuple[int, int]] = {"thumb": (512, 80), "md": (1600, 82)}
 # (user 2026-08-09). This caps how many run concurrently across every request
 # thread and the boot warmer, so a burst queues instead of storming. The cached
 # fast path never touches it.
-_BUILD_SEMAPHORE = threading.Semaphore(
-    max(1, int(os.environ.get("SCREENBOARD_VARIANT_CONCURRENCY", "2"))))
+def _env_concurrency() -> int:
+    # A malformed value must not take the app down at import time.
+    try:
+        return max(1, int(os.environ.get("SCREENBOARD_VARIANT_CONCURRENCY", "2")))
+    except ValueError:
+        return 2
+
+
+_BUILD_SEMAPHORE = threading.Semaphore(_env_concurrency())
 
 
 def _fresh(cache: Path, src: Path) -> bool:
@@ -60,7 +67,19 @@ def variant_path(src: Path, cache: Path, max_edge: int, quality: int) -> Path:
                 im = im.convert("RGB")
                 if max(im.size) > max_edge:               # thumbnail never upscales,
                     im.thumbnail((max_edge, max_edge), Image.LANCZOS)  # but be explicit
-                im.save(cache, "WEBP", quality=quality)
+                # Write-to-temp + atomic replace (2026-08-12 review): a
+                # visible cache file is always COMPLETE, so the pre-permit
+                # fast path can never serve a half-written WebP, a build
+                # that dies mid-write (ENOSPC, kill) leaves no fresh-looking
+                # poisoned file behind, and a concurrent double-build
+                # degrades to harmless last-writer-wins.
+                tmp = cache.with_suffix(
+                    f".{os.getpid()}-{threading.get_ident()}.tmp")
+                try:
+                    im.save(tmp, "WEBP", quality=quality)
+                    os.replace(tmp, cache)
+                finally:
+                    tmp.unlink(missing_ok=True)
         return cache
     except Exception:
         return src

@@ -181,7 +181,7 @@ Return ONLY a JSON object with exactly this shape:
       "purpose": "the single production question this panel answers",
       "required_objects": ["object", "..."],
       "forbidden_objects": ["likely-but-wrong additions to exclude", "..."],
-      "scale": "EXTREME_WIDE | WIDE | FULL_BODY | MEDIUM | DETAIL",
+      "scale": "AERIAL | EXTREME_WIDE | WIDE | MEDIUM | CLOSE | EXTREME_CLOSE | MACRO | MICRO",
       "allocation_percent": 60
     }}
   ],
@@ -220,6 +220,14 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
     panels, layout_panels = [], []
     for i, p in enumerate(panels_in, 1):
         pid = str(p.get("id") or f"P{i:02d}").strip().upper()
+        # The shot lands in the camera enum or not at all (2026-08-12
+        # review: pre-enum drafts persisted FULL_BODY/DETAIL verbatim and
+        # the axis silently vanished from prompts). An empty scale means
+        # inherit the production default — the resolve chain's own grammar.
+        scale = str(p.get("scale", "") or "").strip().upper()
+        scale = store.LEGACY_SCALE.get(scale, scale)
+        if not store._camera_valid("scale", scale):
+            scale = ""
         panels.append({
             "id": pid,
             "title": str(p.get("title", ""))[:120],
@@ -227,7 +235,7 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
             "required_objects": [str(x) for x in (p.get("required_objects") or [])][:12],
             "forbidden_objects": [str(x) for x in (p.get("forbidden_objects") or [])][:20],
             "evidence": ["SCRIPT_EXPLICIT"],
-            "scale": str(p.get("scale", "WIDE")),
+            "scale": scale,
             "composition_role": "hero" if i == 1 else "support",
         })
         try:

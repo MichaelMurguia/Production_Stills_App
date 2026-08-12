@@ -382,6 +382,131 @@ class ArrangeTests(SheetHomeTest):
         self.assertTrue(all(e["kind"] == "SLOT_PIXELS"
                             for e in r["blocked"]))
 
+    def test_six_panel_allocation_board_chunks_into_clusters(self):
+        # Regression (2026-08-12 review): CLUSTER caps at 5, and
+        # "allocation" was the pre-2026-07-31 default — a 6-panel board
+        # raised `CLUSTER holds at most 5 slots` instead of arranging.
+        _write_spec(panels=[{"id": f"P{i}", "title": f"Panel {i}"}
+                            for i in range(1, 7)])
+        self._approve_all()
+        self._board_record("SPEC-0001", "allocation")
+        rec = sheet.arrange_board("SPEC-0001")
+        self.assertEqual([b["type"] for b in rec["blocks"]],
+                         ["CLUSTER", "CLUSTER"])
+        counts = [len(b["slots"]) for b in rec["blocks"]]
+        self.assertEqual(counts, [3, 3])
+        placed = sorted(s["panel_id"] for b in rec["blocks"]
+                        for s in b["slots"])
+        self.assertEqual(placed, [f"P{i}" for i in range(1, 7)])
+
+    def test_thirteen_panel_board_chunks_into_grids(self):
+        # Regression: GRID caps at 12; thirteen panels raised instead of
+        # chunking into balanced blocks.
+        _write_spec(panels=[{"id": f"P{i:02d}", "title": f"Panel {i}"}
+                            for i in range(1, 14)])
+        self._approve_all()
+        rec = sheet.arrange_board("SPEC-0001")
+        self.assertEqual([b["type"] for b in rec["blocks"]],
+                         ["GRID", "GRID"])
+        self.assertEqual(sum(len(b["slots"]) for b in rec["blocks"]), 13)
+        self.assertTrue(all(len(b["slots"]) <= 12 for b in rec["blocks"]))
+
+    def test_chunking_preserves_absolute_geometry(self):
+        # Slot fracs are relative to their block's own bounding box, so
+        # chunking must not move any panel: composing block frac × slot
+        # frac reproduces the slot map's positions.
+        from app import assemble
+        _write_spec(panels=[{"id": f"P{i}", "title": f"Panel {i}"}
+                            for i in range(1, 7)])
+        self._approve_all()
+        self._board_record("SPEC-0001", "allocation")
+        sm = assemble.slot_map("SPEC-0001", variant="allocation")
+        x0 = min(e["x"] for e in sm["slots"])
+        y0 = min(e["y"] for e in sm["slots"])
+        x1 = max(e["x"] + e["w"] for e in sm["slots"])
+        y1 = max(e["y"] + e["h"] for e in sm["slots"])
+        expect = {e["panel_id"]: ((e["x"] - x0) / (x1 - x0),
+                                  (e["y"] - y0) / (y1 - y0))
+                  for e in sm["slots"]}
+        rec = sheet.arrange_board("SPEC-0001")
+        for b in rec["blocks"]:
+            bf = b["frac"]
+            for s in b["slots"]:
+                ax = bf["x"] + s["frac"]["x"] * bf["w"]
+                ay = bf["y"] + s["frac"]["y"] * bf["h"]
+                ex, ey = expect[s["panel_id"]]
+                self.assertAlmostEqual(ax, ex, delta=0.01, msg=s["panel_id"])
+                self.assertAlmostEqual(ay, ey, delta=0.01, msg=s["panel_id"])
+
+    def test_take_less_small_board_arranges_with_an_empty_slot(self):
+        # Regression: GRID's min of 4 rejected a 3-panel spec whose slots
+        # were not all filled; a panel-bound block is exempt — the census
+        # is the spec's panel list, not a layout choice.
+        _write_spec(panels=[{"id": "P1", "title": "A"},
+                            {"id": "P2", "title": "B"},
+                            {"id": "P3", "title": "C"}])
+        _write_candidate("SPEC-0001", "CAND-0001", "P1")
+        _write_candidate("SPEC-0001", "CAND-0002", "P2")
+        rec = sheet.arrange_board("SPEC-0001")
+        slots = rec["blocks"][0]["slots"]
+        self.assertEqual(len(slots), 3)
+        empty = [s["panel_id"] for s in slots if not s.get("candidate_id")]
+        self.assertEqual(empty, ["P3"])
+        # The empty slot gates export — the state is readable, not a 422.
+        self.assertFalse(sheet.readiness(rec)["ready"])
+
+    def test_unapproved_takes_arrange_as_empty_slots(self):
+        # Regression (approval gate): arrange carried UNAPPROVED takes
+        # into slots, and export would ship them. Only approved takes ride.
+        _write_spec()
+        _write_candidate("SPEC-0001", "CAND-0001", "P1")
+        _write_candidate("SPEC-0001", "CAND-0002", "P2", status="CANDIDATE")
+        rec = sheet.arrange_board("SPEC-0001")
+        placed = {s["panel_id"]: s.get("candidate_id")
+                  for b in rec["blocks"] for s in b["slots"]}
+        self.assertEqual(placed["P1"], "CAND-0001")
+        self.assertIsNone(placed["P2"])
+
+    def test_set_slot_refuses_an_unapproved_take(self):
+        # The composer door is no wider than the fill tray: slots hold
+        # approved takes only.
+        _write_spec()
+        _write_candidate("SPEC-0001", "CAND-0001", "P1", status="CANDIDATE")
+        rec = sheet.create_sheet("BOARD", "INK", "SCREEN")
+        b = rec["blocks"][0]
+        with self.assertRaises(sheet.SheetError):
+            sheet.set_slot(rec["sheet_id"], b["block_id"],
+                           b["slots"][0]["slot_id"],
+                           {"spec_id": "SPEC-0001",
+                            "candidate_id": "CAND-0001"})
+
+    def test_rejection_after_placement_blocks_export(self):
+        # A take rejected after it was placed turns the gate red as
+        # SLOT_APPROVAL — export never ships a take that lost approval.
+        _write_spec(panels=[{"id": "P1", "title": "Hero"}])
+        _write_candidate("SPEC-0001", "CAND-0001", "P1")
+        rec = sheet.arrange_board("SPEC-0001")
+        self.assertTrue(sheet.readiness(rec)["ready"])
+        _write_candidate("SPEC-0001", "CAND-0001", "P1", status="REJECTED")
+        r = sheet.readiness(sheet.get_sheet(rec["sheet_id"]))
+        self.assertFalse(r["ready"])
+        self.assertIn("SLOT_APPROVAL", [e["kind"] for e in r["blocked"]])
+
+    def test_arranged_masthead_is_born_bound(self):
+        # Regression: arrange_board set the binding but never bound_hash,
+        # so every arranged board read STALE ("SOURCE MOVED") from birth.
+        _write_spec()
+        self._approve_all()
+        rec = sheet.arrange_board("SPEC-0001")
+        self.assertEqual(sheet.get_sheet(rec["sheet_id"])
+                         ["masthead"]["state"], "BOUND")
+        spec_path = paths.SPECS_DIR / "SPEC-0001.json"
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        spec["subject"] = "SOMETHING ELSE ENTIRELY"
+        spec_path.write_text(json.dumps(spec), encoding="utf-8")
+        self.assertEqual(sheet.get_sheet(rec["sheet_id"])
+                         ["masthead"]["state"], "STALE")
+
 
 class ModelTests(SheetHomeTest):
     def test_create_validates_vocabulary(self):

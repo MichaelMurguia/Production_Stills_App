@@ -64,6 +64,42 @@ class StatedTypeWins(unittest.TestCase):
                                    "gemini", "NONSENSE")
 
 
+class TheShotLandsInTheEnum(unittest.TestCase):
+    """Regression (2026-08-12 review): the drafting prompt asked for
+    FULL_BODY | DETAIL — pre-camera-enum vocabulary — and _coerce persisted
+    it verbatim, so the shot axis silently vanished from every render
+    prompt and the sheet editor misreported '— from bible —'."""
+
+    def coerce_scale(self, scale):
+        draft = {"subject": "s", "board_type": "LOCATION",
+                 "panels": [{"id": "P01", "title": "t", "purpose": "p",
+                             "scale": scale}],
+                 "evidence_ledger": [{"panel_id": "P01", "object": "o",
+                                      "evidence_class": "SCRIPT_EXPLICIT",
+                                      "status": "PASS", "source": "line"}]}
+        out = autofill._coerce(draft, "SPEC_X", "CANON_EXTRACTION", "")
+        return out["panels"][0]["scale"]
+
+    def test_the_prompt_offers_the_canon_enum(self):
+        out = autofill._instructions("brief", "CANON_EXTRACTION", [], "")
+        self.assertIn("AERIAL | EXTREME_WIDE | WIDE | MEDIUM | CLOSE | "
+                      "EXTREME_CLOSE | MACRO | MICRO", out)
+        self.assertNotIn("FULL_BODY", out)
+
+    def test_canon_values_persist_as_stated(self):
+        for v in ("AERIAL", "EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE",
+                  "EXTREME_CLOSE", "MACRO", "MICRO"):
+            self.assertEqual(self.coerce_scale(v), v)
+
+    def test_legacy_words_migrate_at_the_door(self):
+        self.assertEqual(self.coerce_scale("FULL_BODY"), "WIDE")
+        self.assertEqual(self.coerce_scale("DETAIL"), "EXTREME_CLOSE")
+
+    def test_nonsense_means_inherit_not_a_stored_orphan(self):
+        self.assertEqual(self.coerce_scale("CINEMATIC"), "")
+        self.assertEqual(self.coerce_scale(""), "")
+
+
 class TheInstructionsCarryIt(unittest.TestCase):
     def test_a_stated_type_is_an_absolute_rule(self):
         out = autofill._instructions("brief", "CANON_EXTRACTION", [], "LOCATION")

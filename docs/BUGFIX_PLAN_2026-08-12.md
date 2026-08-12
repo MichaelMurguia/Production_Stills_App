@@ -8,6 +8,11 @@ in the same commit (CLAUDE.md).
 
 ## Release 1 — the fix batch (low-risk, one fleet rollout)
 
+**Shipped as `2026.08.05.22` (2026-08-12)** — all items below landed with
+their regression tests; the composer gate's new state is logged in
+DESIGN_SYSTEM.md's Uncanonized table. Release 2 (async generation) and the
+parked items remain open.
+
 ### B1. Approval-gate bypass through the Arrange door — `app/sheet.py`
 **Bug:** `arrange_board` copies unapproved takes into slots (`slot_map` keeps a
 `candidate_id` regardless of status), `set_slot` checks only existence, and

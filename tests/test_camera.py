@@ -88,6 +88,29 @@ class CameraBlockTests(unittest.TestCase):
                     continue  # LEVEL is intentionally silent
                 self.assertTrue(block.strip(), f"{field}={v} produced no directive")
 
+    def test_legacy_autofill_scale_still_speaks(self):
+        # Regression (2026-08-12 review): pre-enum autofill drafts persisted
+        # FULL_BODY / DETAIL verbatim; the shot axis silently vanished from
+        # the prompt. They migrate onto the canon enum at resolve time.
+        full = "\n".join(generate._camera_block({"scale": "FULL_BODY"}))
+        self.assertIn("WIDE SHOT", full)
+        detail = "\n".join(generate._camera_block({"scale": "DETAIL"}))
+        self.assertIn("EXTREME CLOSE-UP", detail)
+
+    def test_unrecognized_value_falls_back_to_the_default(self):
+        # A hand-edited or imported value never silences an axis — it
+        # degrades to the production default, the house grammar.
+        store.save_camera_defaults({"camera_angle": "HIGH"})
+        block = "\n".join(generate._camera_block({"camera_angle": "SIDEWAYS"}))
+        self.assertIn("HIGH ANGLE", block)
+
+    def test_the_ui_migrates_legacy_scale_words(self):
+        # The sheet editor showed "— from bible —" for a stored FULL_BODY;
+        # the select now shows (and a save persists) the migrated value.
+        self.assertIn("_LEGACY_SCALE", JS)
+        self.assertIn('FULL_BODY: "WIDE"', JS)
+        self.assertIn('DETAIL: "EXTREME_CLOSE"', JS)
+
     def test_every_focal_length_has_authored_phrasing(self):
         """Presets, the legacy names, and custom lengths all resolve to a
         directive whose character derives from the millimetres."""

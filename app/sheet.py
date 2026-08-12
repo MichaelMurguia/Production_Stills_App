@@ -370,6 +370,16 @@ def readiness(sheet: dict) -> dict:
             blocked.append({"kind": "SLOT_PIXELS", "block_id": b["block_id"],
                             "slot_id": s["slot_id"],
                             "have": list(have), "need": list(need)})
+        # A take rejected or reverted after placement blocks export here —
+        # slots hold approved takes only, and the gate must say so before
+        # a pixel is spent. (A vanished candidate reads as (0,0) above.)
+        if s.get("candidate_id") and s.get("spec_id"):
+            rec = generate.get_candidate(s["spec_id"], s["candidate_id"])
+            if rec is not None and rec.get("status") != "APPROVED":
+                blocked.append({"kind": "SLOT_APPROVAL",
+                                "block_id": b["block_id"],
+                                "slot_id": s["slot_id"],
+                                "candidate_id": s["candidate_id"]})
     return {"ready": not blocked, "blocked": blocked}
 
 
@@ -566,9 +576,14 @@ def _validate(sheet: dict) -> None:
         # The minimum stops skeletal empty layouts; a block whose every
         # slot is filled is valid at any count — an arranged two-panel
         # board is a real board, and the R4 strip carries exactly the
-        # takes that exist.
+        # takes that exist. A panel-bound block (every slot names its
+        # panel) is likewise exempt: its census comes from the spec's
+        # panel list, not a layout choice, and an unapproved panel
+        # arranges as an empty slot.
         filled = nslots > 0 and all(s.get("candidate_id") for s in slots)
-        if not bd.elastic and nslots < bd.slots_min and not filled:
+        panel_bound = nslots > 0 and all(s.get("panel_id") for s in slots)
+        if (not bd.elastic and nslots < bd.slots_min
+                and not filled and not panel_bound):
             raise SheetError(
                 f"{b.get('block_id')}: {b['type']} holds at least "
                 f"{bd.slots_min} slots, not {nslots}")
@@ -687,9 +702,15 @@ def set_slot(sheet_id: str, block_id: str, slot_id: str, patch: dict) -> dict:
         if key in patch:
             s[key] = patch[key]
     if s.get("candidate_id") and s.get("spec_id"):
-        if generate.get_candidate(s["spec_id"], s["candidate_id"]) is None:
+        cand = generate.get_candidate(s["spec_id"], s["candidate_id"])
+        if cand is None:
             raise SheetError(f"unknown candidate {s['candidate_id']} "
                              f"on {s['spec_id']}")
+        # Slots hold approved takes only — the fill tray offers nothing
+        # else, and this door must not be wider than the tray.
+        if cand.get("status") != "APPROVED":
+            raise SheetError(f"{s['candidate_id']} is not approved; "
+                             "slots hold approved takes only")
     for key in ("frac", "crop"):
         if key in patch and patch[key] is not None:
             s[key] = {k: float(v) for k, v in patch[key].items()}
@@ -810,6 +831,8 @@ def arrange_board(spec_id: str) -> dict:
                          subject=assemble._slug(spec))
     sheet["masthead"]["binding"] = {"kind": "SPEC_FIELD", "id": spec_id,
                                     "field": "subject"}
+    sheet["masthead"]["bound_hash"] = _hash_text(
+        resolve_binding(sheet["masthead"]["binding"]))
     sheet["blocks"] = []
 
     hero_id = variant[5:] if variant.startswith("hero:") else None
@@ -834,9 +857,15 @@ def arrange_board(spec_id: str) -> dict:
             "w": round(bw / all_box[2], 4), "h": round(bh / all_box[3], 4)})
         block["slots"] = []
         for e in entries:
+            # Only approved takes ride into the sheet (OK / TOO_SMALL both
+            # mean approved); an UNAPPROVED panel arranges as an empty
+            # slot, which readiness() blocks until it is filled.
+            approved_take = (e.get("candidate_id")
+                             if e.get("status") in ("OK", "TOO_SMALL")
+                             else None)
             block["slots"].append({
                 "slot_id": f"S{len(block['slots']) + 1}",
-                "spec_id": spec_id, "candidate_id": e.get("candidate_id"),
+                "spec_id": spec_id, "candidate_id": approved_take,
                 "panel_id": e["panel_id"],
                 "frac": {"x": round((e["x"] - bx) / bw, 4),
                          "y": round((e["y"] - by) / bh, 4),
@@ -850,7 +879,19 @@ def arrange_board(spec_id: str) -> dict:
     if hero is not None:
         sheet["blocks"].append(block_from([hero], "HERO"))
     if slots:
-        sheet["blocks"].append(block_from(slots, layout_type))
+        # The block caps are hard for hand-authored sheets; an arranged
+        # board honors them by chunking reading-order runs into as many
+        # balanced blocks as the count needs (a 6-panel allocation board
+        # is two CLUSTERs of three, not a 422). Slot fracs are relative
+        # to each block's own bounding box, so chunking never moves a
+        # panel — the rendered geometry is identical.
+        cap = BLOCK_TYPES[layout_type].slots_max
+        ordered = sorted(slots, key=lambda e: (e["y"], e["x"]))
+        groups = -(-len(ordered) // cap)
+        size = -(-len(ordered) // groups)
+        for i in range(0, len(ordered), size):
+            sheet["blocks"].append(block_from(ordered[i:i + size],
+                                              layout_type))
 
     # R4: existing MATERIALS / PALETTE renders are takes, not evidence
     # blocks — they travel as a trailing STRIP naming the swap. Nothing is

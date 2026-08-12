@@ -86,6 +86,42 @@ class VariantHelperTests(unittest.TestCase):
         out = imaging.variant_path(bad, self.tmp / "b.webp", 512, 80)
         self.assertEqual(out, bad)  # degrade to source, never raise
 
+    def test_a_failed_write_leaves_no_poisoned_cache(self):
+        # Regression (2026-08-12 review): the cache was written in place,
+        # so a save that died mid-write (ENOSPC, kill) left a fresh-looking
+        # truncated file that every later call happily served. Writes now
+        # go to a temp file and land atomically — a visible cache file is
+        # always complete.
+        from unittest import mock
+        c = self.tmp / "atomic.webp"
+        with mock.patch("PIL.Image.Image.save",
+                        side_effect=OSError("disk full")):
+            out = imaging.variant_path(self.src, c, 512, 80)
+        self.assertEqual(out, self.src)      # degraded to source this call
+        self.assertFalse(c.exists())         # and poisoned nothing
+        # The next call rebuilds cleanly.
+        out = imaging.variant_path(self.src, c, 512, 80)
+        self.assertEqual(out, c)
+        with Image.open(out) as im:
+            self.assertEqual(im.format, "WEBP")
+
+    def test_a_successful_build_litters_no_temp_files(self):
+        c = self.tmp / "clean.webp"
+        imaging.variant_path(self.src, c, 512, 80)
+        self.assertEqual([p.name for p in self.tmp.glob("*.tmp")], [])
+
+    def test_malformed_concurrency_env_defaults_not_crashes(self):
+        # A bad SCREENBOARD_VARIANT_CONCURRENCY used to raise at import
+        # time and take the whole app down.
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ,
+                             {"SCREENBOARD_VARIANT_CONCURRENCY": "lots"}):
+            self.assertEqual(imaging._env_concurrency(), 2)
+        with mock.patch.dict(os.environ,
+                             {"SCREENBOARD_VARIANT_CONCURRENCY": "0"}):
+            self.assertEqual(imaging._env_concurrency(), 1)
+
 
 class CandidateVariantTests(unittest.TestCase):
     SPEC = "SPEC001"
