@@ -56,7 +56,13 @@ Productions library (cards with reach bands from `/api/projects/summary`),
 persistent UI state (`uiGet/uiSet`, localStorage namespaced per
 production), engine gating (`fillProviderSelect` / `providerOptions` —
 unconfigured omitted, failed-test keys disabled with reason, applied to
-every selector including modals), and the arrange room
+every selector including modals), the deep-link router (2026-08-12:
+`VIEW_PATH`/`PATH_VIEW` translate stage paths — `/breakdowns/<spec>`,
+`/panels/<spec>[/<panel>]`, `/boards/<spec>[/arrange|/<board-id>]` — to
+internal views; `applyRoute` seeds the persisted selection state,
+`syncUrl` keeps the address honest on every selection change, popstate
+walks history; the server boots the stamped SPA for any non-API path and
+the auth gate carries `?next=` through /login), and the arrange room
 (`renderArrangeRoom` — the composer scoped to a spec's BOARD sheet,
 rendered inline on stage 05 by `Arrange this board`; server-rendered
 preview via `POST /api/sheets/{id}/render` fetched as a blob · rail of

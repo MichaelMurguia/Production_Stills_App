@@ -1538,7 +1538,69 @@ async function openEnginePicker(sel, s) {
 const selectedModelLabel = sel =>
   sel?.selectedOptions?.[0]?.textContent?.trim() || "the selected model";
 
-async function showView(name) {
+/* Deep links (user 2026-08-12): every stage AND its selection is a plain
+   shareable path — /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002,
+   /boards/SPEC-0001/arrange, /panels/SPEC-0001/P03. Internal view names
+   predate the stage renames; the URL speaks the product's words and
+   these tables translate. The server serves index.html for any non-API
+   path, so a pasted link boots straight into the addressed room. */
+const VIEW_PATH = { status: "status", screenplay: "screenplay",
+  wizard: "production-design", specs: "breakdowns", boards: "panels",
+  assembly: "boards", references: "reference", projects: "productions",
+  settings: "settings" };
+const PATH_VIEW = Object.fromEntries(
+  Object.entries(VIEW_PATH).map(([v, p]) => [p, v]));
+
+let _routePanel = "";  // /panels/<spec>/<panel> — scroll target, one shot
+
+function applyRoute(pathname) {
+  const segs = pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  const view = PATH_VIEW[segs[0] || ""];
+  if (!view) return null;
+  const sel = segs[1] || "";
+  const sub = segs[2] || "";
+  if (view === "specs" && sel) uiSet("openSpec", sel);
+  if (view === "boards" && sel) {
+    uiSet("boardSpec", sel);
+    _routePanel = sub;
+  }
+  if (view === "assembly" && sel) {
+    uiSet("asmSpec", sel);
+    if (sub === "arrange") uiSet("asm.room", sel);
+    else if (sub) uiSet("openBoard", sub);
+  }
+  return view;
+}
+
+function currentPath() {
+  const enc = encodeURIComponent;
+  let path = "/" + (VIEW_PATH[activeView] || "status");
+  const sel = activeView === "specs" ? uiGet("openSpec", "")
+    : activeView === "boards" ? uiGet("boardSpec", "")
+    : activeView === "assembly" ? uiGet("asmSpec", "") : "";
+  if (sel) {
+    path += "/" + enc(sel);
+    if (activeView === "assembly" && uiGet("asm.room", "") === sel) {
+      path += "/arrange";
+    }
+  }
+  return path;
+}
+
+// Keep the address honest after any selection change. replace by default
+// (selection refinement); push for a genuine navigation step.
+function syncUrl(push = false) {
+  const p = currentPath();
+  if (location.pathname === p) return;
+  history[push ? "pushState" : "replaceState"](null, "", p);
+}
+
+window.addEventListener("popstate", () => {
+  const v = applyRoute(location.pathname);
+  if (v) showView(v, { push: false });
+});
+
+async function showView(name, { push = true } = {}) {
   // Own keys only — #toString would otherwise "exist" via the prototype,
   // dispatch garbage, and persist a view name that renders nothing.
   if (!Object.hasOwn(views, name)) name = "status";
@@ -1549,6 +1611,7 @@ async function showView(name) {
     ["status", "references", "projects", "settings"].includes(name));
   activeView = name;
   uiSet("view", name);
+  syncUrl(push);
   _roleCtx = null;  // suggestion sources refresh per navigation
   $$("#tools-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   updateBand();  // fire and forget — the band must never block the view
@@ -5592,6 +5655,7 @@ async function renderSpecs(openId = null) {
 
 async function openSpecEditor(specId) {
   uiSet("openSpec", specId);
+  syncUrl(true);
   const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs] = await Promise.all([
     api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references")]);
 
@@ -6591,7 +6655,7 @@ async function renderBoards() {
   const sel = $("#board-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
     specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
-  sel.onchange = () => { uiSet("boardSpec", sel.value); sel.value && renderBoardPanels(sel.value); };
+  sel.onchange = () => { uiSet("boardSpec", sel.value); syncUrl(true); sel.value && renderBoardPanels(sel.value); };
   const rememberedB = uiGet("boardSpec", "");
   if (rememberedB && specs.some(s2 => s2.specification_id === rememberedB)) {
     sel.value = rememberedB; renderBoardPanels(rememberedB);
@@ -7997,6 +8061,18 @@ async function renderBoardPanels(specId) {
   room.append(rail, stage);
   if (side) room.append(side);
   host.append(room);
+
+  // A shared /panels/<spec>/<panel> link lands ON the panel: scroll its
+  // card into view once, then the address settles back to the spec.
+  if (_routePanel) {
+    const target = $$(".panel-card[data-pid]", host)
+      .find(pc => pc.dataset.pid === _routePanel);
+    _routePanel = "";
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    syncUrl();
+  }
 }
 
 /* --------------------------------------------------- assembly (stage 05) */
@@ -8007,7 +8083,7 @@ async function renderAssembly() {
   const sel = $("#asm-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
     specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
-  sel.onchange = () => { uiSet("asmSpec", sel.value); sel.value ? renderAssemblyFor(sel.value) : renderAssembly(); };
+  sel.onchange = () => { uiSet("asmSpec", sel.value); syncUrl(true); sel.value ? renderAssemblyFor(sel.value) : renderAssembly(); };
 
   const host = $("#assembly-host");
   if (!specs.length) {
@@ -8068,6 +8144,7 @@ async function renderAssembly() {
   }));
 
   const showGrid = () => {
+    syncUrl();  // leaving a drilled board: the address drops its id
     host.innerHTML = "";
     const p = document.createElement("div");
     p.className = "panel";
@@ -8094,6 +8171,10 @@ async function renderAssembly() {
   };
 
   const showBoard = (b, i) => {
+    // The drilled board is addressable: /boards/<spec>/<board-id>.
+    history.pushState(null, "", "/boards/"
+      + encodeURIComponent(b._spec.specification_id) + "/"
+      + encodeURIComponent(b.candidate_id));
     host.innerHTML = "";
     const p = document.createElement("div");
     p.className = "panel";
@@ -8298,6 +8379,7 @@ async function renderAssemblyFor(specId) {
   const closeRoom = () => {
     roomHost.innerHTML = "";
     uiSet("asm.room", "");
+    syncUrl(true);
     const b = $("#asm-arrange", asm);
     if (b) b.disabled = false;
   };
@@ -8309,6 +8391,7 @@ async function renderAssemblyFor(specId) {
   };
   $("#asm-arrange", asm).onclick = async () => {
     uiSet("asm.room", specId);
+    syncUrl(true);
     try { await openRoom(); } catch (err) { toast(err.message, true); closeRoom(); }
   };
   if (uiGet("asm.room", "") === specId) {
@@ -8428,12 +8511,16 @@ async function boot() {
     uiLoad(pr.active || "");
   } catch { uiLoad(""); /* boot anyway */ }
   if (!first) {
-    // Deep-link support: #screenplay, #boards, … land on that view
-    // directly; otherwise the app reopens exactly where it was left.
+    // Deep-link support: a pasted path (/panels/SPEC-0001, /boards/…)
+    // outranks the remembered view; "/" reopens exactly where the app
+    // was left. Legacy #view hashes still land, then read as paths.
+    const routed = applyRoute(location.pathname);
     const stored = uiGet("view", "status");
     const hashView = location.hash.slice(1).split("/")[0];
-    showView(Object.hasOwn(views, hashView) ? hashView
-      : Object.hasOwn(views, stored) ? stored : "status");
+    showView(routed
+      || (Object.hasOwn(views, hashView) ? hashView
+        : Object.hasOwn(views, stored) ? stored : "status"),
+      { push: false });
     return;
   }
   $("#nav").classList.add("hidden");

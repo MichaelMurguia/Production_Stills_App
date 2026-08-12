@@ -57,11 +57,16 @@ if (location.hash.length > 1) {
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("signing").classList.remove("hidden");
 }
+// The deep link that hit the gate rides ?next= — sign-in lands there.
+// Same-origin paths only: a value not starting with a single "/" (or
+// trying "//host") falls back to "/".
+const rawNext = new URLSearchParams(location.search).get("next") || "/";
+const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "/";
 const attempt = async token => {
   const r = await fetch("/api/login", { method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }) });
-  if (r.ok) { location.replace("/"); return; }
+  if (r.ok) { location.replace(next); return; }
   document.getElementById("signing").classList.add("hidden");
   document.getElementById("gate").classList.remove("hidden");
   document.getElementById("tok").classList.add("bad");
@@ -75,7 +80,7 @@ document.getElementById("f").onsubmit = e => {
 // fragment never reaches any server or log; strip it immediately.
 if (location.hash.length > 1) {
   const t = decodeURIComponent(location.hash.slice(1));
-  history.replaceState(null, "", "/login");
+  history.replaceState(null, "", "/login" + location.search);
   attempt(t);
 }
 </script></body></html>"""
@@ -107,7 +112,12 @@ async def workspace_auth(request: Request, call_next):
         return await call_next(request)
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": "workspace login required"}, status_code=401)
-    return RedirectResponse("/login", status_code=303)
+    # A shared deep link must survive the gate: carry the destination so
+    # signing in lands ON the addressed page, not on "/".
+    from urllib.parse import quote
+    nxt = quote(request.url.path, safe="/")
+    dest = f"/login?next={nxt}" if nxt != "/" else "/login"
+    return RedirectResponse(dest, status_code=303)
 
 
 @app.get("/login")
@@ -2164,8 +2174,7 @@ async def canonical_host(request: Request, call_next):
     return await call_next(request)
 
 
-@app.get("/")
-def serve_index() -> HTMLResponse:
+def _stamped_index() -> HTMLResponse:
     html = (paths.STATIC / "index.html").read_text(encoding="utf-8")
     ver = paths.ROOT / "VERSION"
     v = ver.read_text(encoding="utf-8").strip() if ver.exists() else "dev"
@@ -2180,6 +2189,11 @@ def serve_index() -> HTMLResponse:
     return HTMLResponse(html)
 
 
+@app.get("/")
+def serve_index() -> HTMLResponse:
+    return _stamped_index()
+
+
 app.mount("/", StaticFiles(directory=str(paths.STATIC), html=True), name="static")
 
 
@@ -2187,4 +2201,8 @@ app.mount("/", StaticFiles(directory=str(paths.STATIC), html=True), name="static
 async def not_found(request, exc):
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": getattr(exc, "detail", "not found")}, status_code=404)
-    return FileResponse(paths.STATIC / "index.html")
+    # Deep links (user 2026-08-12): /panels/SPEC-0001, /boards/…/arrange —
+    # any non-API path boots the SPA, which routes the address. Serve the
+    # SAME stamped document as "/": the bare file would pin unversioned
+    # asset URLs and reopen the stale-tab hole on shared links.
+    return _stamped_index()

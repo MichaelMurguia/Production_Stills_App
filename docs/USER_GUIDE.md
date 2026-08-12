@@ -69,6 +69,14 @@ green = key saved, blue = environment variable, hollow = none; never a fake
 "connected"), and the tools: **Status · Reference · Productions
 · Settings**. Tools are not stages — the band condenses while one is open.
 
+**Every page is a shareable address** (2026-08-12). The URL always names
+what you're looking at, and pasting one lands anyone (after sign-in)
+exactly there: `/screenplay`, `/production-design`,
+`/breakdowns/SPEC-0001`, `/panels/SPEC-0001` (add `/P03` to land on one
+panel), `/boards/SPEC-0001`, `/boards/SPEC-0001/arrange` (the arrange
+room open), `/boards/SPEC-0001/BOARD-0002` (a completed board), plus
+`/reference`, `/productions`, `/settings`. Back/forward walk your steps.
+
 **The band** — five stages, each cell showing a live status subline
 ("2 locked · 1 draft", "11 approved of 26"). The top border tells you where
 things stand: **green** complete, **amber** the current stage (the one you're
