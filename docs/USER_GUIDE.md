@@ -6,8 +6,9 @@ core mechanics remain accurate, but the app has since gained productions
 boards, cloud studios, provider connectors (one OpenRouter/fal
 connection unlocks a model catalog; first run is a setup form), a
 narrative role that runs on OpenAI, Gemini, Anthropic or OpenRouter,
-and — 2026-08-10 — the **sheet grammar**: the Lookbook tool and its
-composer (§9), with stage 05 handing presentation to it (§8). See
+and — 2026-08-10 — the **sheet grammar**: one renderer for boards, with
+the **arrange room** inline on stage 05 (§8–§9; the standalone Lookbook
+tool was rolled back 2026-08-12). See
 [`INTENT.md`](INTENT.md) for the current shape and
 [`ARCHITECTURE.md`](ARCHITECTURE.md) for the technicals.*
 
@@ -56,9 +57,8 @@ Core vocabulary:
 | **Evidence ledger** | One row per visible object, saying why it may exist: the evidence class (screenplay-explicit → user-directed → weak inference), the cited quote or source, and a state — PASS renders, HOLD blocks the lock, REMOVE marks for removal. |
 | **Spec hash** | Locking a breakdown mints a content hash. Every candidate records the hash it was generated against — the audit trail of *exactly what brief* produced *exactly what image*. |
 | **Candidate / take** | A generated render. Always `CANDIDATE — UNAPPROVED` until you judge it. Rejected takes stay on file (dimmed) as a record, with your reason carried into future prompts as rejection feedback. |
-| **Board** | The assembled 4K wall. Itself a candidate needing your approval; once approved it can be promoted to a `SCENE_REFERENCE` so future renders anchor to it. Since 2026-08-10 a board is a **sheet** with the `BOARD` archetype — one presentation mechanism for boards and lookbook pages. |
-| **Sheet** | The presentation artifact: approved takes and stage-02 evidence arranged on one printable page — masthead, blocks of slots, canon footer. Built in the **Lookbook** composer (§9); a stage-05 board is one of its archetypes. |
-| **Lookbook** | An ordered set of sheets, exported as one PDF — one page per sheet at that sheet's own size. |
+| **Board** | The assembled 4K wall. Itself a candidate needing your approval; once approved it can be promoted to a `SCENE_REFERENCE` so future renders anchor to it. Since 2026-08-10 a board is a **sheet** with the `BOARD` archetype — one layout mechanism under everything. |
+| **Sheet** | The board's presentation record: approved takes arranged on one page — masthead, blocks of slots, canon footer. Arranged in the **arrange room** (§9), inline on stage 05. |
 | **Lessons** | Standing project-wide rules (Settings on the Production Design page) injected into every prompt. Rejection reasons feed panel-scoped feedback automatically. |
 | **Prohibited inventions** | The never-render list, seeded from rejection history, enforced on every board. Shown on Status. |
 
@@ -66,7 +66,7 @@ Core vocabulary:
 
 **Header** — project name, two **engine dots** (credentials only: filled
 green = key saved, blue = environment variable, hollow = none; never a fake
-"connected"), and the tools: **Status · Reference · Lookbook · Productions
+"connected"), and the tools: **Status · Reference · Productions
 · Settings**. Tools are not stages — the band condenses while one is open.
 
 **The band** — five stages, each cell showing a live status subline
@@ -296,10 +296,11 @@ into the repair prompt automatically.
 ## 8. Stage 05 — Boards: assembly
 
 Stage 05 **judges whether a scene is ready**; how the board is *presented*
-is arranged in the Lookbook composer (§9). The division (ruled 2026-08-10):
-readiness is a judgement about the work; presentation is a judgement about
-the audience. Stage 05 keeps the first and hands over the second — the
-composer never grows a second opinion about whether a panel is big enough.
+is arranged in the **arrange room** (§9), which opens inline on this same
+page. The division (ruled 2026-08-10, rehomed 2026-08-12): readiness is a
+judgement about the work; presentation is a judgement about the audience.
+Stage 05 keeps both, in two panels of one page — the room never grows a
+second opinion about whether a panel is big enough.
 
 **The slot map** shows the exact assembler geometry on a true 4K canvas
 before you spend anything: each slot with its panel ID, allocation, and a
@@ -308,13 +309,14 @@ upscaling, which never happens — regenerate larger) · `NO CANDIDATE`. The
 title and canon blocks are marked APP-DRAWN: all board typography is drawn
 by the app, never by the model.
 
-**Arrange this board** (the one door, beside Assemble) opens the composer
-on this scene's own `BOARD` sheet — created on first use from the current
-slot map, then always the same sheet. Its slots arrive filled with the
-scene's approved takes; existing derived MATERIALS/PALETTE takes travel as
-a trailing strip whose note states the swap available (`THE PALETTE BLOCK
-CAN DRAW THESE FROM STAGE 02`). Readiness travels with it: a stage-05
-`TOO SMALL` reads as a short slot in the composer's gate.
+**Arrange this board** (the one door, beside Assemble) unfolds the arrange
+room right below the slot map, on this scene's own `BOARD` sheet — created
+on first use from the current slot map, then always the same sheet. Its
+slots arrive filled with the scene's approved takes; existing derived
+MATERIALS/PALETTE takes travel as a trailing strip whose note states the
+swap available (`THE PALETTE BLOCK CAN DRAW THESE FROM STAGE 02`).
+Readiness travels with it: a stage-05 `TOO SMALL` reads as a short slot in
+the room's gate. **Close arrange** folds the room away.
 
 **Assemble 4K board** enables when every slot reads OK. Canvas choices: 4K
 UHD, DCI-flavor wide, print-leaning. The board renders through the same
@@ -330,106 +332,43 @@ drift; **Derive materials** — a generated close-up strip whose only allowed
 sources are the board's own approved panels. Both land as candidates; both
 can join the board as a bottom strip.
 
-## 9. Lookbook — sheets and the composer
+## 9. The arrange room
 
-The Lookbook (header tools, beside Reference) is where approved work gets
-**presented**: art-direction pages, subject studies, scene boards — and
-stage-05 boards, which are the same mechanism. Nothing here changes canon:
-a sheet shows approved takes and stage-02 evidence; the takes, the
-breakdowns and the references are never touched.
+> The standalone **Lookbook** tool (shelf, sheet archetypes, styles,
+> block tray, lookbook PDF sets) was rolled back on 2026-08-12 — it was
+> too big and too separate from the board work. What survives is this
+> room: the same composer machinery, scoped to a scene's board and
+> opened **inline on stage 05** by **Arrange this board**. Any sheets or
+> lookbooks made before the rollback stay on disk untouched.
 
-### Sheets and archetypes
+The room never changes canon: it shows approved takes; the takes, the
+breakdowns and the references are never touched. Two regions: the
+**fitted board** (the real renderer at a reduced scale, so the preview
+and the export cannot differ) and the **rail**. Overlays — selection
+outline, slot rects, EMPTY marks — are app chrome and never print. There
+is no save button: **every change saves**.
 
-A **sheet** is one printable page: masthead, blocks, canon footer. Start
-one from an archetype (a starting shape, not a cage — blocks can be added
-and removed after):
-
-| Archetype | What it is |
-|---|---|
-| `ART_DIRECTION` | Spine (title, thesis, evidence) + character clusters + atmosphere strip |
-| `SUBJECT_STUDY` | Hero, orthographics, strip, spec, materials, versus — one subject |
-| `SCENE_BOARD` | Up to fifteen beats plus strips — a scene told in order |
-| `LOOK_STYLES` | Four looks side by side, principles, a lineup |
-| `FACTION` / `LOCATION` | Hero columns or a grid, principles, palette |
-| `BOARD` | A stage-05 board — usually made for you by **Arrange this board** |
-
-**Twelve block types** cover every region: six panel blocks that hold
-takes (`HERO` · `CLUSTER` · `STRIP` · `BEATS` · `GRID` · `ORTHO`) and six
-evidence blocks (`PALETTE` · `MATERIAL` · `SPEC` · `PRINCIPLES` · `LINEUP`
-· `VERSUS`). `PALETTE`, `SPEC` and `PRINCIPLES` are **elastic** — their
-text owns its own column and reflows, so it can never be illegible and
-never forces a bigger sheet.
-
-### The composer
-
-Three regions: the **block tray** (left — click a type to add it), the
-**fitted sheet** (centre — the real renderer at a reduced scale, so the
-preview and the export cannot differ), and the **rail** (right). Overlays
-— selection outline, slot rects, EMPTY marks — are app chrome and never
-print. There is no save button: **every change saves**.
-
-- **Select a block** by clicking it on the sheet; its slots, captions and
-  bindings edit in the rail.
+- **Select a block** by clicking it on the board; its slots edit in the
+  rail (`Fill` / `Swap` / `Crop` / `Clear`).
 - **Fill a slot** — the popover offers every approved take in the
   production, each verdicted against *this slot's* pixel need: `FITS` ·
-  `NEEDS A CROP` · `TOO SMALL`. Unapproved takes are never offered.
+  `NEEDS A CROP` · `TOO SMALL`. Unapproved takes are never offered, and
+  takes already `PLACED` on another sheet say so.
 - **Drag a slot's edges** to resize (soft snap to neighbours and thirds);
-  drag its middle to move.
+  drag its middle to move. Changing nothing about the takes — only where
+  they hang.
 - **Crop / zoom / rotate** — the frame never rotates; the image moves
-  inside it. Ratios: `SLOT`, `16:9`, `2.39:1`, `4:3`, `1:1`, `FREE` — a
-  ratio other than SLOT lets the sheet's paper show inside the frame.
+  inside it. Ratios: `SLOT`, `16:9`, `2.39:1`, `4:3`, `1:1`, `FREE`.
   Cropping past the slot's pixel need is **allowed and kept**: the slot
   reads short and export blocks, exactly as a small render does.
 
-### Styles
-
-Six, one list for boards and pages alike. A style declares surface, edge
-and voice — never layout, size or content: `GALLERY` (warm rag, matted,
-serif) · `CONTACT` (lab black, flush, mono) · `NEWSPRINT` · `BLUEPRINT`
-· `PLATE` (bright white, quiet sans) · `INK` (near-black, matted — the
-boards' style). A style paints every app-drawn mark; it never touches a
-rendered take.
-
-### Size — the ladder
-
-Print sheets are 3:2 (12×8 → 36×24 in at 300 dpi); screen sheets are 16:9
-(1920 → 5120 px). The **recommended** rung is the smallest where every
-caption clears the legibility floor (12 pt print / 24 px screen) *and*
-every filled slot has the pixels its printed size needs. It follows your
-block changes until you pin a size; `Follow recommendation` hands it back.
-The rule runs opposite to instinct: a **sparse** sheet authors large type
-and prints small; a **dense** sheet needs a large sheet to stay legible.
-Density forces format. Changing size never moves a slot — geometry is
-fractional and rescales.
-
-### Captions and bindings
-
-A caption is either **authored** (written here, no upstream source) or
-**bound** to canon: a subject card, a panel purpose, a stage-02 palette
-group (its swatches in ruled order — a sheet may not reorder them), a
-reference role, a screenplay line, a judging note, a breakdown field.
-When a bound source changes upstream the caption reads **`SOURCE MOVED`**
-and offers exactly two acts: **Take the new line** (re-bind to what the
-source now says) or **Keep and author** (freeze your text). The app never
-rewrites an approved sheet silently, and neither act ever writes to the
-source.
-
-### The export gate
-
-One list, two kinds of unready: `TYPE_FLOOR` (a caption would set under
-the medium's floor at this size — pick a larger rung) and `SLOT_PIXELS`
-(a slot is empty, or its take is short of the pixels the printed size
-needs — fill it, regenerate larger, or crop less). While anything is
-listed, Export is disabled and the panel below the sheet states every
-item. Sheets export as PNG or single-page PDF; a **lookbook** exports as
-one PDF, one page per sheet at that sheet's own size.
-
-### Lookbooks
-
-Create one on the shelf, add sheets, reorder. Deleting a lookbook keeps
-its sheets; deleting a sheet leaves every lookbook it was in (no dangling
-pages). The candidates tray marks takes already `PLACED` on other sheets
-so a pitch set never repeats a frame by accident.
+**The export gate** — one list, every kind of unready stated before a
+pixel is spent: `SLOT_PIXELS` (a slot is empty, or its take is short of
+the pixels the size needs — fill it, regenerate larger, or crop less),
+`SLOT_APPROVAL` (a placed take lost its approval — approve it again or
+swap it), `TYPE_FLOOR` (type would set under the medium's floor). While
+anything is listed, export is disabled and the panel below the board
+states every item. **Export PNG** and **Export PDF** are the two doors.
 
 ## 10. Reference — one library, three shelves
 
@@ -496,8 +435,8 @@ approved image to harvest a region as a new narrow-role reference.
 | `data/screenplay/` | The current draft |
 | `data/specs/` | Breakdown JSON + `locks.json` |
 | `data/boards/<SPEC>/` | Candidates (`CAND-*.png/json`) and boards (`BOARD-*`) |
-| `data/sheets/` | Sheet JSON (`SH-*.json`) + per-sheet `export/` |
-| `data/lookbooks/` | Lookbook JSON (`LB-*.json`) + exported PDFs |
+| `data/sheets/` | Board sheet JSON (`SH-*.json`) + per-sheet `export/` |
+| `data/lookbooks/` | Pre-rollback lookbook JSON (`LB-*.json`) — inert since 2026-08-12, kept on disk |
 | `data/settings.json` | API keys, default engine, engine test results |
 | `data/subjects.json` | Cast & subject title cards |
 | `data/wizard_analysis.json` | The screenplay read |
@@ -526,11 +465,9 @@ citations; decide per row whether the breakdown still holds.
 **Same brief, different painters** — Lock once, generate the same panel with
 each engine, compare in the filmstrip; every take records its model.
 
-**A pitch lookbook** — Approve panels across the scenes you want to show
-(04) → Lookbook → start an `ART_DIRECTION` sheet, fill its clusters from
-the tray, bind captions to the cast cards and palette groups → add each
-scene's board with **Arrange this board** (05) → create a lookbook, add
-the sheets in pitch order → Export PDF.
+**A presentable board** — Approve panels (04) → **Arrange this board**
+(05) → swap, crop and resize takes in the arrange room until the page
+reads right → Export PNG for screens, Export PDF for the meeting.
 
 **Lighting study** — Approve a panel → **→ Light study** → a geometry-locked
 draft breakdown appears on 03 with one panel per approved atmosphere → trim,

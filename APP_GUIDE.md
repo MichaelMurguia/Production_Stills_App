@@ -25,10 +25,10 @@ Assemble, and the Arrange-this-board door into the composer). Each stage
 cell carries a live status subline and a progress-colored top border.
 
 In the header: **Status** (the landing page — DO THIS NEXT, everything
-blocking, recent activity) · **Reference** (the one library) · **Lookbook**
-(sheets and the composer — presentation for boards and pitch sets; see
-`docs/USER_GUIDE.md` §9) · **Productions** (the multi-project shelf) ·
-**Settings** (engines and keys). You are the Production Designer; the app
+blocking, recent activity) · **Reference** (the one library) ·
+**Productions** (the multi-project shelf) · **Settings** (engines and
+keys). Board presentation lives in the arrange room, inline on stage 05
+(see `docs/USER_GUIDE.md` §9). You are the Production Designer; the app
 is your art department.
 
 ## New project setup (Prod. Design stage)

@@ -648,11 +648,6 @@ def delete_sheet(sheet_id: str) -> None:
     if not p.exists():
         raise KeyError(sheet_id)
     p.unlink()
-    # A lookbook never lists a sheet that no longer exists.
-    for lb in list_lookbooks():
-        if sheet_id in lb.get("sheets", []):
-            lb["sheets"] = [s for s in lb["sheets"] if s != sheet_id]
-            store._atomic_write_json(_lookbook_path(lb["lookbook_id"]), lb)
 
 
 # ----------------------------------------------------------------- block ops
@@ -915,70 +910,14 @@ def arrange_board(spec_id: str) -> dict:
     return save_sheet(sheet)
 
 
-# ----------------------------------------------------------------- lookbooks
+# ------------------------------------------------------------- fill tray
 
-def _lookbook_path(lb_id: str):
-    return paths.LOOKBOOKS_DIR / f"{paths.safe_id(lb_id)}.json"
-
-
-def create_lookbook(title: str) -> dict:
-    title = str(title or "").strip()
-    if not title:
-        raise SheetError("a lookbook needs a title")
-    lb = {"lookbook_id": store.next_counter("lookbook_counter", "LB"),
-          "title": title, "sheets": [], "created_at": store.utcnow()}
-    store._atomic_write_json(_lookbook_path(lb["lookbook_id"]), lb)
-    return lb
-
-
-def get_lookbook(lb_id: str) -> dict | None:
-    p = _lookbook_path(lb_id)
-    if not p.exists():
-        return None
-    return json.loads(p.read_text(encoding="utf-8"))
-
-
-def list_lookbooks() -> list[dict]:
-    if not paths.LOOKBOOKS_DIR.exists():
-        return []
-    return [json.loads(p.read_text(encoding="utf-8"))
-            for p in sorted(paths.LOOKBOOKS_DIR.glob("LB-*.json"))]
-
-
-def delete_lookbook(lb_id: str) -> None:
-    p = _lookbook_path(lb_id)
-    if not p.exists():
-        raise KeyError(lb_id)
-    p.unlink()
-
-
-def lookbook_add_sheet(lb_id: str, sheet_id: str) -> dict:
-    lb = get_lookbook(lb_id)
-    if lb is None:
-        raise KeyError(lb_id)
-    if get_sheet(sheet_id) is None:
-        raise KeyError(sheet_id)
-    if sheet_id not in lb["sheets"]:
-        lb["sheets"].append(sheet_id)
-        store._atomic_write_json(_lookbook_path(lb_id), lb)
-    return lb
-
-
-def lookbook_reorder(lb_id: str, order: list[str]) -> dict:
-    lb = get_lookbook(lb_id)
-    if lb is None:
-        raise KeyError(lb_id)
-    if sorted(order) != sorted(lb["sheets"]):
-        raise SheetError("order must be a permutation of the lookbook's sheets")
-    lb["sheets"] = list(order)
-    store._atomic_write_json(_lookbook_path(lb_id), lb)
-    return lb
-
-
-def lookbook_candidates() -> list[dict]:
-    """The tray (plan §9): every APPROVED candidate across the production,
-    `placed_in` naming the sheets already holding it. Reuses
-    generate.list_candidates per spec — no second index."""
+def fill_candidates() -> list[dict]:
+    """The arrange room's fill tray: every APPROVED candidate across the
+    production, `placed_in` naming the sheets already holding it. Reuses
+    generate.list_candidates per spec — no second index. (Formerly
+    lookbook_candidates; the Lookbook surface was rolled back 2026-08-12
+    and the tray now serves the stage-05 arrange room.)"""
     placed: dict[str, list[str]] = {}
     for meta in list_sheets():
         full = get_sheet(meta["sheet_id"]) or {}

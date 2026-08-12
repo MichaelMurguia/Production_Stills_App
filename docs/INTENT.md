@@ -94,20 +94,18 @@ outside the paint preserved byte-for-byte), re-render at full size
 palette / materials. Approved takes can be promoted into the reference
 library — the loop that lets later scenes anchor to earlier approvals.
 
-**05 Boards** — readiness. The slot map shows exact geometry and per-slot
-verdicts BEFORE a render is spent. Presentation is arranged in the sheet
-composer (2026-08-10, SHEET_SYSTEM): **Arrange this board** opens the
-Lookbook on the scene's own BOARD sheet — layout, styles, and studies are
-sheet properties there, recorded on the board and never touching the
-locked breakdown. Assembling produces a **structural board** — the layout
+**05 Boards** — readiness AND presentation, one page. The slot map shows
+exact geometry and per-slot verdicts BEFORE a render is spent.
+**Arrange this board** unfolds the arrange room inline on the scene's own
+BOARD sheet (2026-08-12 — the standalone Lookbook tool was rolled back as
+too big and too separate from board work); layout is a sheet property
+there, recorded on the board and never touching the locked breakdown. Assembling produces a **structural board** — the layout
 frames holding the individual panels, each clickable through to its
 uncropped take — plus a drawn 4K composite available as "Export board".
 Boards are candidates until approved.
 
 **Tools (header):** Status (DO THIS NEXT + blocking + advisory + recent),
 Reference (the one library, three shelves: STYLE / SUBJECTS / SCENES),
-Lookbook (the sheet grammar: sheets, the composer, lookbook PDFs —
-presentation for boards and pitch sets),
 Productions (the Screenboard Library — cards with reach bands, per-
 production next verbs, backup care states), Settings (engines & keys,
 install-level).

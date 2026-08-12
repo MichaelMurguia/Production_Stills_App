@@ -968,7 +968,7 @@ function initLightbox() {
 
 const views = { status: renderStatus, screenplay: renderScreenplay, wizard: renderWizard,
                 references: renderReferences, specs: renderSpecs, boards: renderBoards,
-                assembly: renderAssembly, lookbook: renderLookbook,
+                assembly: renderAssembly,
                 projects: renderProjectsView, settings: renderSettings };
 const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
 let activeView = "status";
@@ -1546,7 +1546,7 @@ async function showView(name) {
   // tool view is open. Keyed here in the one router chokepoint, so boot
   // restores (persistent UI state) and both nav bars stay in sync free.
   document.body.classList.toggle("tool-mode",
-    ["status", "references", "lookbook", "projects", "settings"].includes(name));
+    ["status", "references", "projects", "settings"].includes(name));
   activeView = name;
   uiSet("view", name);
   _roleCtx = null;  // suggestion sources refresh per navigation
@@ -8222,9 +8222,9 @@ async function renderAssemblyFor(specId) {
   catch { /* the map is a preview; assembly still states its own errors */ }
 
   // Layout moved to the sheet grammar (SHEET_SYSTEM_PLAN ba-4a): stage 05
-  // judges readiness, the composer arranges. The variant chips are gone —
-  // Arrange this board opens the composer on this scene's BOARD sheet,
-  // and the map reads the default grammar.
+  // judges readiness, the arrange room arranges. The variant chips are
+  // gone — Arrange this board opens the room inline on this scene's
+  // BOARD sheet, and the map reads the default grammar.
   const variant = "aspect";
   const boardsCount = boards.length;
   // Same takes + same layout = the board that already exists; assembling
@@ -8245,14 +8245,15 @@ async function renderAssemblyFor(specId) {
         <div class="rail-sheet" style="font-size:16px">${esc(specId)}</div>
         <p class="mini" style="margin:4px 0 0">${esc(spec.subject || "")} · ${spec.panels.length} slot${spec.panels.length > 1 ? "s" : ""}</p>
       </div>
-      <button class="ghost" id="asm-arrange" title="Open the composer on this scene's BOARD sheet — archetype, style and slots already made from this slot map. Readiness travels with it and is not recomputed.">Arrange this board</button>
-      <button class="primary" id="asm-go" ${sm?.ready && !dupBoard ? "" : "disabled"} title="${dupBoard ? `Already assembled as ${dupBoard.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it in the composer` : sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">${dupBoard ? "Assembled" : "Assemble 4K board"}</button>
+      <button class="ghost" id="asm-arrange" title="Open the arrange room right here — this scene's BOARD sheet, slots already made from this slot map. Readiness travels with it and is not recomputed.">Arrange this board</button>
+      <button class="primary" id="asm-go" ${sm?.ready && !dupBoard ? "" : "disabled"} title="${dupBoard ? `Already assembled as ${dupBoard.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it below` : sm?.ready ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling" : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first"}">${dupBoard ? "Assembled" : "Assemble 4K board"}</button>
     </div>
     <div class="slot-caption" style="margin-top:14px">
       <span class="f-label">Slot map · true 4K canvas</span>
-      <span class="hint">readiness only — how the board is presented is arranged in the composer</span>
+      <span class="hint">readiness only — Arrange this board opens the arrange room below</span>
     </div>
     <div data-f="slot-wrap">${sm ? slotHtml(sm) : ""}</div>
+    <div id="asm-arrange-host" style="margin-top:14px"></div>
     <div class="row">
       <label class="mini" title="Pixel dimensions of the final assembled board. Panels are composed at native resolution — never upscaled — so every panel needs enough source resolution for its allocation.">Canvas <select id="asm-size">
         <option value="3840x2160" selected>3840 × 2160 (4K UHD)</option>
@@ -8281,7 +8282,7 @@ async function renderAssemblyFor(specId) {
       go.disabled = !sm.ready || !!dup;
       go.textContent = dup ? "Assembled" : "Assemble 4K board";
       go.title = dup
-        ? `Already assembled as ${dup.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it in the composer`
+        ? `Already assembled as ${dup.candidate_id} with these exact takes — approve a new take to assemble again, or rearrange it below`
         : sm.ready
           ? "Compose the latest approved candidate of every panel onto the canvas with board typography — no upscaling"
           : "Enabled when every slot reads OK — approve a candidate per panel at sufficient size first";
@@ -8289,21 +8290,30 @@ async function renderAssemblyFor(specId) {
   };
   $("#asm-size", asm).onchange = refreshMap;
 
-  // The one door (ba-4a): Arrange opens the composer on this scene's
-  // BOARD sheet — idempotent server-side, so the door always lands on
-  // the same sheet.
-  $("#asm-arrange", asm).onclick = async e => {
-    e.target.disabled = true;
-    try {
-      const rec = await api(`/api/specs/${specId}/arrange`, { method: "POST" });
-      uiSet("lb.sheet", rec.sheet_id);
-      uiSet("lb.block", "");
-      showView("lookbook");
-    } catch (err) {
-      toast(err.message, true);
-      e.target.disabled = false;
-    }
+  // The one door (ba-4a, rehomed 2026-08-12): Arrange opens the room
+  // INLINE below the slot map — this scene's BOARD sheet, idempotent
+  // server-side, so the door always lands on the same sheet. No view
+  // change; the board work stays on the board stage (user).
+  const roomHost = $("#asm-arrange-host", asm);
+  const closeRoom = () => {
+    roomHost.innerHTML = "";
+    uiSet("asm.room", "");
+    const b = $("#asm-arrange", asm);
+    if (b) b.disabled = false;
   };
+  const openRoom = async () => {
+    const rec = await api(`/api/specs/${specId}/arrange`, { method: "POST" });
+    await renderArrangeRoom(rec.sheet_id, roomHost, closeRoom);
+    const b = $("#asm-arrange", asm);
+    if (b) { b.disabled = true; b.title = "The arrange room is open below — Close arrange puts this door back"; }
+  };
+  $("#asm-arrange", asm).onclick = async () => {
+    uiSet("asm.room", specId);
+    try { await openRoom(); } catch (err) { toast(err.message, true); closeRoom(); }
+  };
+  if (uiGet("asm.room", "") === specId) {
+    openRoom().catch(() => uiSet("asm.room", ""));
+  }
 
   $("#asm-go", asm).onclick = async (e) => {
     const btn = e.target;
@@ -8421,7 +8431,6 @@ async function boot() {
     // Deep-link support: #screenplay, #boards, … land on that view
     // directly; otherwise the app reopens exactly where it was left.
     const stored = uiGet("view", "status");
-    // One optional segment addresses into the view (#lookbook/SH-0001).
     const hashView = location.hash.slice(1).split("/")[0];
     showView(Object.hasOwn(views, hashView) ? hashView
       : Object.hasOwn(views, stored) ? stored : "status");
@@ -8453,35 +8462,11 @@ async function boot() {
   $("#firstrun-name").focus();
 }
 
-/* --------------------------------------------------------------- lookbook
-   The sheet grammar's surface (SHEET_SYSTEM_PLAN §11): a tool, not a
-   stage — the band is the pipeline and a lookbook spans it. Two lives:
-   the shelf (lookbooks + sheets, archetypes as the primary act when
-   empty) and the composer (tray · fitted sheet · rail). Composer overlays
-   are app chrome drawn in the DOM and never enter render_sheet. */
-
-const SHEET_STYLES = ["GALLERY", "CONTACT", "NEWSPRINT", "BLUEPRINT", "PLATE", "INK"];
-const SHEET_ARCHETYPES = [
-  ["ART_DIRECTION", "Art direction", "Spine, character clusters, atmosphere strip — the film's look on one sheet", "GALLERY", "PRINT"],
-  ["SUBJECT_STUDY", "Subject study", "Hero, orthographics, spec, materials and versus for one subject", "INK", "PRINT"],
-  ["SCENE_BOARD", "Scene board", "Up to fifteen beats plus strips — a scene told in order", "INK", "PRINT"],
-  ["LOOK_STYLES", "Look styles", "Four looks side by side, principles, a lineup", "PLATE", "PRINT"],
-  ["FACTION", "Faction", "Hero columns, principles, grid and palette for one faction", "CONTACT", "SCREEN"],
-  ["LOCATION", "Location", "One place: grid, principles, palette", "GALLERY", "PRINT"],
-  ["BOARD", "Board", "A stage-05 board drawn as a sheet — usually made with Arrange this board", "INK", "SCREEN"],
-];
-const SHEET_TRAY = {
-  "PANEL BLOCKS": ["HERO", "CLUSTER", "STRIP", "BEATS", "GRID", "ORTHO"],
-  "EVIDENCE BLOCKS": ["PALETTE", "MATERIAL", "SPEC", "PRINCIPLES", "LINEUP", "VERSUS"],
-};
-// Mirrors sheet.BLOCK_TYPES — slots range + elastic; the server validates,
-// this only writes honest tray tooltips and slot verdicts.
-const SHEET_BLOCKS = {
-  HERO: [1, 1, false], CLUSTER: [2, 5, false], STRIP: [3, 8, false],
-  BEATS: [6, 15, false], GRID: [4, 12, false], ORTHO: [4, 4, false],
-  PALETTE: [0, 0, true], MATERIAL: [3, 6, false], SPEC: [0, 0, true],
-  PRINCIPLES: [0, 0, true], LINEUP: [4, 10, false], VERSUS: [2, 2, false],
-};
+/* ---------------------------------------------------------- arrange room
+   The sheet grammar's one surviving surface (Lookbook rollback,
+   2026-08-12): the composer scoped to a spec's BOARD sheet, opened
+   inline on stage 05 by Arrange this board. Overlays are app chrome
+   drawn in the DOM and never enter render_sheet. */
 
 function sheetSizeLine(sh) {
   const [w, h] = sh.size;
@@ -8501,121 +8486,14 @@ function slotNeedFromRect(rect, scale, slot) {
           Math.round(rect[3] / scale / Math.max(crop.h || 1, 1e-6))];
 }
 
-async function renderLookbook() {
-  // Deep link: #lookbook/SH-0001 opens that sheet in the composer.
-  const deep = location.hash.slice(1).split("/")[1];
-  if (deep) {
-    uiSet("lb.sheet", deep);
-    history.replaceState(null, "", "#lookbook");
-  }
-  const open = uiGet("lb.sheet", "");
-  if (open) {
-    try { return await renderSheetComposer(open); }
-    catch { uiSet("lb.sheet", ""); }
-  }
-  return renderLookbookShelf();
-}
-
-async function renderLookbookShelf() {
-  useTemplate("tpl-lookbook");
-  const root = $("#lb-root");
-  const [lbs, sheets] = await Promise.all([api("/api/lookbooks"), api("/api/sheets")]);
-
-  const archRow = SHEET_ARCHETYPES.map(([key, name, what]) =>
-    `<button class="ghost lb-arch" data-arch="${key}" title="${esc(what)}">${esc(name)}</button>`).join("");
-
-  root.innerHTML = `
-    <div class="panel">
-      <h2>Start a sheet</h2>
-      <p class="hint">A sheet arranges approved panels and stage-02 evidence on one printable page. Pick the shape; style, size and blocks are yours to change in the composer.</p>
-      <div class="lb-arch-row">${archRow}</div>
-    </div>
-    <div class="panel">
-      <h2>Lookbooks <span class="mono lb-count">${lbs.length} SET${lbs.length === 1 ? "" : "S"}</span></h2>
-      ${lbs.length ? `<div class="lb-list">${lbs.map(lb => `
-        <div class="lb-row" data-lb="${esc(lb.lookbook_id)}">
-          <span class="mono lb-id">${esc(lb.lookbook_id)}</span>
-          <span class="lb-name">${esc(lb.title)}</span>
-          <span class="mono lb-facts">${lb.sheets.length} SHEET${lb.sheets.length === 1 ? "" : "S"}</span>
-          <span class="lb-acts">
-            <button class="ghost" data-lbx="${esc(lb.lookbook_id)}" ${lb.sheets.length ? "" : `disabled title="An empty lookbook has nothing to export — add a sheet first"`} title="One PDF, one page per sheet at that sheet's own size">Export PDF</button>
-            <button class="ghost" data-lbdel="${esc(lb.lookbook_id)}" title="Delete this lookbook — its sheets stay">Delete</button>
-          </span>
-        </div>`).join("")}</div>` : ""}
-      <div class="row lb-intake">
-        <input type="text" id="lb-new-title" placeholder="name a lookbook — an ordered set of sheets, exported as one PDF" style="flex:1">
-        <button class="ghost" id="lb-new">New lookbook</button>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>Sheets <span class="mono lb-count">${sheets.length}</span></h2>
-      ${sheets.length ? `<div class="lb-list">${sheets.map(s => `
-        <div class="lb-row lb-sheet-row" data-sheet="${esc(s.sheet_id)}" title="Open in the composer">
-          <span class="mono lb-id">${esc(s.sheet_id)}</span>
-          <span class="lb-name">${esc(s.title || s.archetype)}</span>
-          <span class="mono lb-facts">${esc(s.archetype)} · ${esc(s.style)} · ${esc(String(s.size[0]))}×${esc(String(s.size[1]))} ${s.medium === "PRINT" ? "IN" : "PX"} · ${s.blocks} BLOCK${s.blocks === 1 ? "" : "S"}</span>
-          <span class="lb-acts"><button class="ghost" data-shdel="${esc(s.sheet_id)}" title="Delete this sheet — it leaves every lookbook it is in">Delete</button></span>
-        </div>`).join("")}</div>`
-      : `<p class="hint">No sheets yet — start one above, or send an assembled board here with Arrange this board on stage 05.</p>`}
-    </div>`;
-
-  root.onclick = async e => {
-    const arch = e.target.closest("[data-arch]");
-    if (arch) {
-      const [key, , , style, medium] = SHEET_ARCHETYPES.find(a => a[0] === arch.dataset.arch);
-      const vals = await modal({
-        title: `New ${key.replace(/_/g, " ").toLowerCase()} sheet`,
-        fields: [{ label: "Title", placeholder: "THE BELTMINERS", value: "" },
-                 { label: "Subtitle", placeholder: "ART DIRECTION v3", value: "" }],
-        confirmLabel: "Create sheet" });
-      if (!vals) return;
-      try {
-        const rec = await api("/api/sheets", { method: "POST", json: {
-          archetype: key, style, medium, title: vals[0] || key, subject: vals[1] || "" } });
-        uiSet("lb.sheet", rec.sheet_id); uiSet("lb.block", "");
-        renderLookbook();
-      } catch (err) { toast(err.message, true); }
-      return;
-    }
-    if (e.target.id === "lb-new") {
-      const title = $("#lb-new-title").value.trim();
-      if (!title) { $("#lb-new-title").focus(); return; }
-      try { await api("/api/lookbooks", { method: "POST", json: { title } }); renderLookbookShelf(); }
-      catch (err) { toast(err.message, true); }
-      return;
-    }
-    const del = e.target.closest("[data-lbdel]");
-    if (del) {
-      if (!await modal({ title: "Delete this lookbook?", body: "Its sheets stay on the shelf — only the set and its order are deleted.", confirmLabel: "Delete", danger: true })) return;
-      try { await api(`/api/lookbooks/${del.dataset.lbdel}`, { method: "DELETE" }); renderLookbookShelf(); }
-      catch (err) { toast(err.message, true); }
-      return;
-    }
-    const exp = e.target.closest("[data-lbx]");
-    if (exp) {
-      try {
-        const r = await api(`/api/lookbooks/${exp.dataset.lbx}/export`, { method: "POST", json: {} });
-        window.open(`/api/lookbooks/${exp.dataset.lbx}/export/${encodeURIComponent(r.file)}`, "_blank");
-      } catch (err) { toast(err.message, true); }
-      return;
-    }
-    const sdel = e.target.closest("[data-shdel]");
-    if (sdel) {
-      if (!await modal({ title: `Delete ${sdel.dataset.shdel}?`, body: "The sheet and its exports are deleted; the takes it shows are untouched.", confirmLabel: "Delete", danger: true })) return;
-      try { await api(`/api/sheets/${sdel.dataset.shdel}`, { method: "DELETE" }); renderLookbookShelf(); }
-      catch (err) { toast(err.message, true); }
-      return;
-    }
-    const row = e.target.closest("[data-sheet]");
-    if (row) { uiSet("lb.sheet", row.dataset.sheet); uiSet("lb.block", ""); renderLookbook(); }
-  };
-}
-
+// The Lookbook surface (nav tool, shelf, sheet authoring, lookbook PDF
+// sets) was rolled back 2026-08-12 (user: too big, and separate from the
+// board workflow). What survives is this room — the composer scoped to a
+// spec's BOARD sheet, rendered INLINE on stage 05 under the slot map.
 let _lbPreviewUrl = null;
 
-async function renderSheetComposer(sheetId) {
-  useTemplate("tpl-lookbook");
-  const root = $("#lb-root");
+async function renderArrangeRoom(sheetId, host, onClose) {
+  const root = host;
   let sh = await api(`/api/sheets/${sheetId}`);
   let ready = await api(`/api/sheets/${sheetId}/readiness`);
   const selId = uiGet("lb.block", "");
@@ -8625,21 +8503,6 @@ async function renderSheetComposer(sheetId) {
     (blockedBy[e.block_id] = blockedBy[e.block_id] || []).push(e);
   }
 
-  const tray = Object.entries(SHEET_TRAY).map(([group, types]) => `
-    <div class="tray-group-label mono">${group}</div>
-    ${types.map(t => {
-      const [lo, hi, elastic] = SHEET_BLOCKS[t];
-      const what = elastic ? "evidence — draws from stage 02, reflows to stay legible"
-        : `${lo === hi ? lo : `${lo}–${hi}`} slots for approved takes`;
-      return `<button class="tray-block" data-add="${t}" title="Add a ${t} block — ${esc(what)}">${t[0] + t.slice(1).toLowerCase()}</button>`;
-    }).join("")}`).join("");
-
-  const rungs = (sh.medium === "PRINT"
-    ? [[12, 8], [18, 12], [24, 16], [36, 24]]
-    : [[1920, 1080], [2560, 1440], [3840, 2160], [5120, 2880]]);
-  const unit = sh.medium === "PRINT" ? "IN" : "PX";
-  const isCurrent = r => r[0] === sh.size[0] && r[1] === sh.size[1];
-
   const slotState = (b, s) => {
     const errs = (blockedBy[b.block_id] || []).filter(x => x.slot_id === s.slot_id);
     if (!s.candidate_id) return ["empty", "EMPTY"];
@@ -8647,35 +8510,14 @@ async function renderSheetComposer(sheetId) {
     return errs.length ? ["bad", "SHORT"] : ["ok", s.candidate_id];
   };
 
-  const capRowHtml = (b, which) => {
-    const cap = b[which];
-    const label = which === "heading" ? "HEADING" : "CAPTION";
-    if (!cap) {
-      return `<div class="lb-cap-row"><span class="mono lb-cap-k">${label}</span>
-        <button class="text-act" data-capa="${which}">Author</button></div>`;
-    }
-    const chip = cap.state === "BOUND" ? `<span class="lb-chip ok mono">BOUND</span>`
-      : cap.state === "STALE" ? `<span class="lb-chip bad mono">SOURCE MOVED</span>`
-      : `<span class="lb-chip authored mono">AUTHORED</span>`;
-    return `<div class="lb-cap-row"><span class="mono lb-cap-k">${label}</span>${chip}
-        <span class="lb-cap-text" title="${esc(cap.text || "")}">${esc((cap.text || "").split("\n")[0])}</span>
-        <button class="text-act" data-capa="${which}" title="Rewrite this line here — an authored caption has no upstream source">Author</button>
-      </div>
-      ${cap.state === "STALE" ? `<div class="lb-stale-acts">
-        <button class="ghost" data-caps="rebind:${which}" title="Adopt what the source says now — the binding re-stamps">Take the new line</button>
-        <button class="ghost" data-caps="author:${which}" title="Keep this text and freeze it — the source stops speaking here">Keep and author</button>
-      </div>` : ""}`;
-  };
-
   const railSelected = sel ? `
     <div class="lb-rail-sec">
       <div class="lb-rail-k mono">SELECTED · ${esc(sel.type)}</div>
-      ${SHEET_BLOCKS[sel.type][2] ? `<p class="hint">Evidence block — its text reflows and never blocks a size. Bind or author its caption below.</p>` : `
       <div class="lb-slots">${sel.slots.map(s => {
         const [st, label] = slotState(sel, s);
         return `<div class="lb-slot-row" data-slot="${esc(s.slot_id)}">
           <i class="lb-dot ${st}"></i>
-          <span class="mono">${esc(s.slot_id)}</span>
+          <span class="mono">${esc(s.slot_id)}${s.panel_id ? ` · ${esc(s.panel_id)}` : ""}</span>
           <span class="mono lb-slot-c ${st === "empty" ? "faint" : ""}">${esc(label)}</span>
           <span class="lb-slot-acts">
             <button class="text-act" data-fill="${esc(s.slot_id)}" title="Fill this slot from the production's approved takes">${s.candidate_id ? "Swap" : "Fill"}</button>
@@ -8683,15 +8525,9 @@ async function renderSheetComposer(sheetId) {
             <button class="text-act" data-clear="${esc(s.slot_id)}">Clear</button>` : ""}
           </span>
         </div>`; }).join("")}</div>
-      <div class="lb-slot-manage">
-        ${sel.slots.length < SHEET_BLOCKS[sel.type][1] ? `<button class="text-act" data-f="slot-add">+ Slot</button>` : ""}
-        ${sel.slots.length > SHEET_BLOCKS[sel.type][0] ? `<button class="text-act" data-f="slot-del" title="Removes the last slot">− Slot</button>` : ""}
-      </div>`}
-      <div class="lb-caps">${capRowHtml(sel, "heading")}${capRowHtml(sel, "caption")}</div>
-      <button class="text-act lb-del-block" data-f="block-del" title="Remove this block from the sheet — the takes it shows are untouched">Remove block</button>
     </div>` : `
     <div class="lb-rail-sec"><div class="lb-rail-k mono">SELECTED</div>
-      <p class="hint">Click a block on the sheet to select it — its slots, captions and bindings edit here.</p></div>`;
+      <p class="hint">Click a block on the board to select it — drag its frames to resize, or fill, swap and crop its slots here.</p></div>`;
 
   const blockedLead = ready.ready ? "" : `
     <div class="panel panel-lead lb-blocked">
@@ -8707,15 +8543,13 @@ async function renderSheetComposer(sheetId) {
 
   root.innerHTML = `
     <div class="lb-head">
-      <button class="text-act" data-f="back">← All sheets</button>
-      <span class="lb-title mono">${esc((sh.masthead?.title || sh.archetype).toUpperCase())} — ${esc(sh.archetype)}</span>
+      <button class="text-act" data-f="back">Close arrange</button>
+      <span class="lb-title mono">${esc((sh.masthead?.title || sh.archetype).toUpperCase())} — ARRANGED BOARD</span>
       <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">● EVERY CHANGE SAVED</span>
-      <button class="${ready.ready ? "primary" : "ghost"}" data-f="export" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export</button>
+      <button class="ghost" data-f="export-pdf" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export PDF</button>
+      <button class="${ready.ready ? "primary" : "ghost"}" data-f="export" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export PNG</button>
     </div>
-    <div class="lb-room">
-      <aside class="sheet-tray">${tray}
-        <div class="tray-foot mono">CLICK A BLOCK TO ADD IT · TWELVE TYPES COVER EVERY REGION</div>
-      </aside>
+    <div class="lb-room lb-room-board">
       <div class="sheet-stage">
         <div class="stage-meta mono">${esc(sh.archetype)} · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}<span class="stage-meta-note">overlays are app chrome — they never print</span></div>
         <div class="sheet-wrap"><img id="sheet-preview" alt="sheet preview"><div class="sheet-overlay" id="sheet-overlay"></div></div>
@@ -8723,17 +8557,6 @@ async function renderSheetComposer(sheetId) {
       </div>
       <aside class="sheet-rail">
         ${railSelected}
-        <div class="lb-rail-sec">
-          <div class="lb-rail-k mono">SHEET STYLE</div>
-          <select id="lb-style">${SHEET_STYLES.map(s =>
-            `<option${s === sh.style ? " selected" : ""}>${s}</option>`).join("")}</select>
-        </div>
-        <div class="lb-rail-sec">
-          <div class="lb-rail-k mono">SHEET SIZE ${sh.size_source === "RECOMMENDED" ? `<span class="lb-chip ok mono" title="The smallest size where every caption clears the legibility floor and every take has the pixels its slot needs. It follows block changes until you pin one.">RECOMMENDED</span>` : ""}</div>
-          <div class="lb-ladder">${rungs.map(r =>
-            `<button class="vchip${isCurrent(r) ? " on" : ""}" data-size="${r[0]}x${r[1]}" title="${sh.medium === "PRINT" ? `${r[0] * 300} × ${r[1] * 300} px at 300 dpi` : "Deliverable pixels"}">${r[0]} × ${r[1]} ${unit}</button>`).join("")}</div>
-          ${sh.size_source === "CHOSEN" ? `<button class="text-act" data-f="size-rec" title="Return to the ladder's recommendation — it then follows block changes again">Follow recommendation</button>` : ""}
-        </div>
         <div class="lb-rail-sec lb-rail-foot">
           <div class="mono ${ready.ready ? "lb-ready" : "lb-not-ready"}">${ready.ready ? "READY TO EXPORT" : `${ready.blocked.length} BLOCKING`}</div>
         </div>
@@ -8788,7 +8611,7 @@ async function renderSheetComposer(sheetId) {
   };
   drawPreview();
 
-  const refresh = () => renderSheetComposer(sheetId);
+  const refresh = () => renderArrangeRoom(sheetId, host, onClose);
 
   // ---- drag-resize + move on the selected block's slots. Soft snap to
   // sibling edges and thirds; every drop saves (no session, no button).
@@ -8873,7 +8696,7 @@ async function renderSheetComposer(sheetId) {
   // are verdicted against THIS slot's pixel need (plan §5).
   const fillSlot = async slotId => {
     const slot = sel.slots.find(s => s.slot_id === slotId);
-    const tray_ = await api("/api/lookbooks/candidates");
+    const tray_ = await api("/api/sheets/candidates");
     if (!tray_.length) { toast("No approved takes yet — approve panels on stage 04 first", true); return; }
     const srect = geoBlock(sel.block_id)?.slots.find(x => x.slot_id === slotId);
     const need = srect && geo ? slotNeedFromRect(srect.rect, geo.scale, slot)
@@ -8998,36 +8821,11 @@ async function renderSheetComposer(sheetId) {
     const t = e.target;
     const act = t.dataset.f || "";
     try {
-      if (act === "back") { uiSet("lb.sheet", ""); uiSet("lb.block", ""); return renderLookbook(); }
-      if (act === "export") {
-        const r = await api(`/api/sheets/${sheetId}/export`, { method: "POST", json: { format: sh.medium === "PRINT" ? "pdf" : "png" } });
+      if (act === "back") { uiSet("lb.block", ""); return onClose(); }
+      if (act === "export" || act === "export-pdf") {
+        const r = await api(`/api/sheets/${sheetId}/export`, { method: "POST", json: { format: act === "export-pdf" ? "pdf" : "png" } });
         window.open(`/api/sheets/${sheetId}/export/${encodeURIComponent(r.file)}`, "_blank");
         return;
-      }
-      if (act === "size-rec") { await api(`/api/sheets/${sheetId}/size`, { method: "POST", json: { size: "recommended" } }); return refresh(); }
-      if (act === "slot-add") { await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots`, { method: "POST", json: {} }); return refresh(); }
-      if (act === "slot-del") {
-        const last = sel.slots[sel.slots.length - 1];
-        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${last.slot_id}`, { method: "DELETE" });
-        return refresh();
-      }
-      if (act === "block-del") {
-        if (!await modal({ title: `Remove ${sel.block_id} (${sel.type})?`, body: "The block and its layout leave the sheet; every take it showed stays approved and reusable.", confirmLabel: "Remove block", danger: true })) return;
-        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}`, { method: "DELETE" });
-        uiSet("lb.block", "");
-        return refresh();
-      }
-      const add = t.closest("[data-add]");
-      if (add) {
-        const rec = await api(`/api/sheets/${sheetId}/blocks`, { method: "POST", json: { type: add.dataset.add } });
-        uiSet("lb.block", rec.blocks[rec.blocks.length - 1].block_id);
-        return refresh();
-      }
-      const size = t.closest("[data-size]");
-      if (size) {
-        const [w, h] = size.dataset.size.split("x").map(Number);
-        await api(`/api/sheets/${sheetId}/size`, { method: "POST", json: { size: [w, h] } });
-        return refresh();
       }
       const fill = t.closest("[data-fill]");
       if (fill) return fillSlot(fill.dataset.fill);
@@ -9039,30 +8837,7 @@ async function renderSheetComposer(sheetId) {
           method: "PUT", json: { spec_id: null, candidate_id: null } });
         return refresh();
       }
-      const capa = t.closest("[data-capa]");
-      if (capa) {
-        const which = capa.dataset.capa;
-        const cap = sel[which];
-        const vals = await modal({ title: `${which === "heading" ? "Heading" : "Caption"} — ${sel.block_id}`,
-          fields: [{ label: "Text", textarea: true, value: cap?.text || "" }],
-          confirmLabel: "Save" });
-        if (!vals) return;
-        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/caption`, {
-          method: "PUT", json: { text: vals[0], which } });
-        return refresh();
-      }
-      const caps = t.closest("[data-caps]");
-      if (caps) {
-        const [action, which] = caps.dataset.caps.split(":");
-        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/caption/resolve`, {
-          method: "POST", json: { action, which } });
-        return refresh();
-      }
     } catch (err) { toast(err.message, true); refresh(); }
-  };
-  $("#lb-style").onchange = async e => {
-    try { await api(`/api/sheets/${sheetId}/style`, { method: "POST", json: { style: e.target.value } }); refresh(); }
-    catch (err) { toast(err.message, true); }
   };
 }
 

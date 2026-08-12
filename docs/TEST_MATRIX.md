@@ -21,11 +21,11 @@ test-only injected frac — the canon set stays closed at twelve), the
 one-list export gate (TYPE_FLOOR + SLOT_PIXELS, empty slots and over-crops
 included), caption staleness (rebind/author never touch the source),
 palette-order preservation, sheets-never-write-SPECS_DIR, idempotent
-/arrange with the R3 variant mapping and R4 derived strip, render
-letterbox-vs-raise parity (R2), gated PNG/PDF export at exact pixel size,
-lookbook lifecycle + no-dangling-references, and the ba-4a stage-05
-division wiring (Arrange door present, variant chips gone, Lookbook a
-tool not a stage, R7 rename held). `test_assemble_layout.py` passed
+/arrange with the R3 variant mapping (cap-aware since 2026-08-12) and R4
+derived strip, render letterbox-vs-raise parity (R2), gated PNG/PDF
+export at exact pixel size, the fill tray, and the stage-05 wiring
+(Arrange door opens the room inline; the Lookbook surface is gone —
+rollback regressions pin its absence; R7 rename held). `test_assemble_layout.py` passed
 unchanged across the packing-function move — the behaviour-preservation
 gate. `tests/test_camera.py` (19) covers the same-day camera revision.
 The audit batch (`docs/AUDIT_2026-08-02.md`) added

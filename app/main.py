@@ -2025,18 +2025,17 @@ def api_arrange(spec_id: str) -> dict:
         raise HTTPException(422, str(e))
 
 
-@app.get("/api/sheets")
-def api_list_sheets() -> list[dict]:
-    return sheet.list_sheets()
+# The sheet API was trimmed to the arrange room's needs 2026-08-12 (the
+# Lookbook authoring surface was rolled back, user): sheets are made only
+# by /api/specs/{id}/arrange, and the composer verbs that remain are
+# slot edits (fill/crop/frac), readiness, render and export. The model
+# layer keeps its full grammar — it is the boards' renderer.
 
-
-@app.post("/api/sheets")
-def api_create_sheet(body: dict) -> dict:
-    return _sheet_call(
-        sheet.create_sheet, str(body.get("archetype", "")),
-        str(body.get("style", "")), str(body.get("medium", "")),
-        spec_id=body.get("spec_id"), title=str(body.get("title", "")),
-        subject=str(body.get("subject", "")))
+# /candidates is declared BEFORE /{sheet_id} — FastAPI matches in
+# declaration order, and "candidates" must never be captured as an id.
+@app.get("/api/sheets/candidates")
+def api_fill_candidates() -> list[dict]:
+    return sheet.fill_candidates()
 
 
 @app.get("/api/sheets/{sheet_id}")
@@ -2047,88 +2046,10 @@ def api_get_sheet(sheet_id: str) -> dict:
     return rec
 
 
-@app.delete("/api/sheets/{sheet_id}")
-def api_delete_sheet(sheet_id: str) -> dict:
-    _sheet_call(sheet.delete_sheet, sheet_id)
-    return {"ok": True}
-
-
-@app.post("/api/sheets/{sheet_id}/style")
-def api_sheet_style(sheet_id: str, body: dict) -> dict:
-    def _set():
-        rec = sheet.get_sheet(sheet_id)
-        if rec is None:
-            raise KeyError(sheet_id)
-        rec["style"] = str(body.get("style", ""))
-        return sheet.save_sheet(rec)
-    return _sheet_call(_set)
-
-
-@app.post("/api/sheets/{sheet_id}/size")
-def api_sheet_size(sheet_id: str, body: dict) -> dict:
-    """{size: [w, h]} pins a CHOSEN size; {size: "recommended"} returns to
-    the ladder's recommendation — derived sizes are recommended, never
-    imposed (§6)."""
-    def _set():
-        rec = sheet.get_sheet(sheet_id)
-        if rec is None:
-            raise KeyError(sheet_id)
-        size = body.get("size")
-        if size == "recommended":
-            rec["size_source"] = "RECOMMENDED"
-        else:
-            rungs = sheet.LADDERS[rec["medium"]]["rungs"]
-            pick = [int(size[0]), int(size[1])]
-            if pick not in [list(r) for r in rungs]:
-                raise sheet.SheetError(
-                    f"size {pick} is not a rung of the {rec['medium']} "
-                    f"ladder: {rungs}")
-            rec["size"] = pick
-            rec["size_source"] = "CHOSEN"
-        return sheet.save_sheet(rec)
-    return _sheet_call(_set)
-
-
-@app.post("/api/sheets/{sheet_id}/blocks")
-def api_add_block(sheet_id: str, body: dict) -> dict:
-    index = body.get("index")
-    return _sheet_call(sheet.add_block, sheet_id, str(body.get("type", "")),
-                       int(index) if index is not None else None)
-
-
-@app.delete("/api/sheets/{sheet_id}/blocks/{block_id}")
-def api_remove_block(sheet_id: str, block_id: str) -> dict:
-    return _sheet_call(sheet.remove_block, sheet_id, block_id)
-
-
 @app.put("/api/sheets/{sheet_id}/blocks/{block_id}/slots/{slot_id}")
 def api_set_slot(sheet_id: str, block_id: str, slot_id: str,
                  body: dict) -> dict:
     return _sheet_call(sheet.set_slot, sheet_id, block_id, slot_id, body)
-
-
-@app.post("/api/sheets/{sheet_id}/blocks/{block_id}/slots")
-def api_add_slot(sheet_id: str, block_id: str) -> dict:
-    return _sheet_call(sheet.add_slot, sheet_id, block_id)
-
-
-@app.delete("/api/sheets/{sheet_id}/blocks/{block_id}/slots/{slot_id}")
-def api_remove_slot(sheet_id: str, block_id: str, slot_id: str) -> dict:
-    return _sheet_call(sheet.remove_slot, sheet_id, block_id, slot_id)
-
-
-@app.put("/api/sheets/{sheet_id}/blocks/{block_id}/caption")
-def api_set_caption(sheet_id: str, block_id: str, body: dict) -> dict:
-    return _sheet_call(sheet.set_caption, sheet_id, block_id,
-                       text=body.get("text"), binding=body.get("binding"),
-                       which=str(body.get("which", "caption")))
-
-
-@app.post("/api/sheets/{sheet_id}/blocks/{block_id}/caption/resolve")
-def api_resolve_caption(sheet_id: str, block_id: str, body: dict) -> dict:
-    return _sheet_call(sheet.resolve_caption, sheet_id, block_id,
-                       str(body.get("action", "")),
-                       which=str(body.get("which", "caption")))
 
 
 @app.get("/api/sheets/{sheet_id}/readiness")
@@ -2194,74 +2115,9 @@ def api_download_sheet_export(sheet_id: str, name: str) -> FileResponse:
     return FileResponse(p, filename=p.name)
 
 
-# /candidates is declared BEFORE /{lb_id} — FastAPI matches in declaration
-# order, and "candidates" must never be captured as a lookbook id.
-@app.get("/api/lookbooks/candidates")
-def api_lookbook_candidates() -> list[dict]:
-    return sheet.lookbook_candidates()
-
-
-@app.get("/api/lookbooks")
-def api_list_lookbooks() -> list[dict]:
-    return sheet.list_lookbooks()
-
-
-@app.post("/api/lookbooks")
-def api_create_lookbook(body: dict) -> dict:
-    return _sheet_call(sheet.create_lookbook, str(body.get("title", "")))
-
-
-@app.get("/api/lookbooks/{lb_id}")
-def api_get_lookbook(lb_id: str) -> dict:
-    lb = _sheet_call(sheet.get_lookbook, lb_id)
-    if lb is None:
-        raise HTTPException(404, lb_id)
-    return lb
-
-
-@app.delete("/api/lookbooks/{lb_id}")
-def api_delete_lookbook(lb_id: str) -> dict:
-    _sheet_call(sheet.delete_lookbook, lb_id)
-    return {"ok": True}
-
-
-@app.post("/api/lookbooks/{lb_id}/sheets")
-def api_lookbook_add_sheet(lb_id: str, body: dict) -> dict:
-    def _add():
-        if body.get("sheet_id"):
-            return sheet.lookbook_add_sheet(lb_id, str(body["sheet_id"]))
-        rec = sheet.create_sheet(
-            str(body.get("archetype", "")), str(body.get("style", "")),
-            str(body.get("medium", "")), spec_id=body.get("spec_id"),
-            title=str(body.get("title", "")),
-            subject=str(body.get("subject", "")))
-        return sheet.lookbook_add_sheet(lb_id, rec["sheet_id"])
-    return _sheet_call(_add)
-
-
-@app.post("/api/lookbooks/{lb_id}/reorder")
-def api_lookbook_reorder(lb_id: str, body: dict) -> dict:
-    return _sheet_call(sheet.lookbook_reorder, lb_id,
-                       [str(s) for s in body.get("order", [])])
-
-
-@app.post("/api/lookbooks/{lb_id}/export")
-async def api_export_lookbook(lb_id: str) -> dict:
-    try:
-        out = await run_in_threadpool(sheet_render.export_lookbook, lb_id)
-    except sheet.SheetError as e:
-        raise HTTPException(422, str(e))
-    except KeyError as e:
-        raise _err(e)
-    return {"ok": True, "file": out.name}
-
-
-@app.get("/api/lookbooks/{lb_id}/export/{name}")
-def api_download_lookbook_export(lb_id: str, name: str) -> FileResponse:
-    p = paths.LOOKBOOKS_DIR / paths.safe_id(lb_id) / paths.safe_id(name)
-    if not p.exists():
-        raise HTTPException(404, name)
-    return FileResponse(p, filename=p.name)
+# /api/lookbooks* removed 2026-08-12: the Lookbook surface was rolled back
+# (user). The fill tray moved to /api/sheets/candidates (declared above the
+# /{sheet_id} routes); any lookbook JSON files on disk stay inert.
 
 
 # ------------------------------------------------------------------------ ui

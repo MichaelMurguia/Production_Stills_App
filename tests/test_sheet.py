@@ -1,7 +1,8 @@
-"""The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7): the size
-ladder with the R1 elastic/fixed ruling, the export gate's one list, caption
-binding and staleness, /arrange's variant mapping and R4 strip, lookbooks —
-all against a throwaway home so the real install is never touched."""
+"""The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7, amended by
+the Lookbook rollback 2026-08-12): the size ladder with the R1
+elastic/fixed ruling, the export gate's one list, caption binding and
+staleness, /arrange's variant mapping and R4 strip, the fill tray — all
+against a throwaway home so the real install is never touched."""
 from __future__ import annotations
 
 import json
@@ -548,27 +549,10 @@ class ModelTests(SheetHomeTest):
                            {"frac": {"x": 0, "y": 0, "w": 1.4, "h": 1}})
 
 
-class LookbookTests(SheetHomeTest):
-    def test_lifecycle_and_reorder_guard(self):
-        lb = sheet.create_lookbook("The Beltminers — pitch set")
-        s1 = sheet.create_sheet("ART_DIRECTION", "GALLERY", "PRINT")
-        s2 = sheet.create_sheet("SCENE_BOARD", "INK", "PRINT")
-        sheet.lookbook_add_sheet(lb["lookbook_id"], s1["sheet_id"])
-        lb = sheet.lookbook_add_sheet(lb["lookbook_id"], s2["sheet_id"])
-        self.assertEqual(lb["sheets"], [s1["sheet_id"], s2["sheet_id"]])
-        lb = sheet.lookbook_reorder(
-            lb["lookbook_id"], [s2["sheet_id"], s1["sheet_id"]])
-        self.assertEqual(lb["sheets"], [s2["sheet_id"], s1["sheet_id"]])
-        with self.assertRaises(sheet.SheetError):
-            sheet.lookbook_reorder(lb["lookbook_id"], [s1["sheet_id"]])
-
-    def test_deleting_a_sheet_leaves_no_dangling_reference(self):
-        lb = sheet.create_lookbook("Set")
-        s1 = sheet.create_sheet("LOCATION", "PLATE", "SCREEN")
-        sheet.lookbook_add_sheet(lb["lookbook_id"], s1["sheet_id"])
-        sheet.delete_sheet(s1["sheet_id"])
-        self.assertEqual(
-            sheet.get_lookbook(lb["lookbook_id"])["sheets"], [])
+class FillTrayTests(SheetHomeTest):
+    """The arrange room's fill tray (formerly the lookbook tray — that
+    surface was rolled back 2026-08-12; the model function survives as
+    fill_candidates)."""
 
     def test_candidates_tray_reports_placement(self):
         _write_spec()
@@ -576,12 +560,18 @@ class LookbookTests(SheetHomeTest):
         _write_candidate("SPEC-0001", "CAND-0002", "P2",
                          status="CANDIDATE")
         rec = sheet.arrange_board("SPEC-0001")
-        tray = sheet.lookbook_candidates()
+        tray = sheet.fill_candidates()
         ids = {c["candidate_id"] for c in tray}
         self.assertIn("CAND-0001", ids)       # approved
         self.assertNotIn("CAND-0002", ids)    # unapproved never offered
         placed = next(c for c in tray if c["candidate_id"] == "CAND-0001")
         self.assertIn(rec["sheet_id"], placed["placed_in"])
+
+    def test_the_lookbook_model_is_gone(self):
+        for name in ("create_lookbook", "list_lookbooks", "get_lookbook",
+                     "delete_lookbook", "lookbook_add_sheet",
+                     "lookbook_reorder", "lookbook_candidates"):
+            self.assertFalse(hasattr(sheet, name), name)
 
 
 class RenderTests(SheetHomeTest):
@@ -657,17 +647,17 @@ class RenderTests(SheetHomeTest):
         img = sheet_render.render_sheet(s, 1.0)
         self.assertEqual(img.size, (12 * 300, 8 * 300))
 
-    def test_lookbook_pdf_carries_every_page(self):
+    def test_pdf_export_of_a_sheet(self):
+        # The arrange room's second export door (Lookbook rollback kept
+        # single-sheet PDF; the multi-page lookbook PDF went with it).
         from app import sheet_render
-        lb = sheet.create_lookbook("Pitch set")
         a = sheet.create_sheet("LOCATION", "PLATE", "SCREEN", title="A")
         # LOCATION seeds GRID (4 empty slots) — blocked; strip it to
         # elastic-only so the gate opens for the export test.
         a["blocks"] = [b for b in a["blocks"]
                        if sheet.BLOCK_TYPES[b["type"]].elastic]
         a = sheet.save_sheet(a)
-        sheet.lookbook_add_sheet(lb["lookbook_id"], a["sheet_id"])
-        out = sheet_render.export_lookbook(lb["lookbook_id"])
+        out = sheet_render.export_sheet(a["sheet_id"], "pdf")
         self.assertTrue(out.exists())
         self.assertEqual(out.suffix, ".pdf")
 
@@ -703,9 +693,10 @@ class GeometryManifestTests(SheetHomeTest):
 
 
 class StageFiveDivisionTests(unittest.TestCase):
-    """ba-4a: stage 05 judges readiness, the composer arranges. The one
-    door is Arrange this board; the variant chips are gone; the Lookbook
-    is a tool, never a stage."""
+    """ba-4a, amended by the Lookbook rollback (user, 2026-08-12): stage
+    05 judges readiness AND arranges — the one door is Arrange this
+    board, and it opens the arrange room INLINE on the assembly page.
+    The Lookbook surface (nav tool, shelf, sheet authoring) is gone."""
 
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
     HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
@@ -721,13 +712,30 @@ class StageFiveDivisionTests(unittest.TestCase):
         self.assertNotIn('label: "ALLOCATION"', self.JS)
         self.assertNotIn('data-f="variants"', self.JS)
 
-    def test_lookbook_is_a_tool_not_a_stage(self):
-        self.assertIn('data-view="lookbook"', self.HTML)
-        i = self.JS.index("const STAGE_ORDER")
-        self.assertNotIn("lookbook", self.JS[i:i + 200])
-        i = self.JS.index('"tool-mode"')
-        self.assertIn("lookbook", self.JS[i:i + 200],
-                      "the band condenses while the Lookbook is open")
+    def test_the_lookbook_surface_is_gone(self):
+        # Rollback regression (2026-08-12): no nav tool, no view route,
+        # no shelf, no sheet authoring — and the deep link died with it.
+        self.assertNotIn('data-view="lookbook"', self.HTML)
+        self.assertNotIn("renderLookbook", self.JS)
+        self.assertNotIn("SHEET_ARCHETYPES", self.JS)
+        self.assertNotIn('api("/api/lookbooks', self.JS)
+        self.assertNotIn("#lookbook", self.JS)
+
+    def test_arrange_opens_the_room_inline_not_a_view(self):
+        # The door renders the room into the assembly page's own host —
+        # board work never leaves the board stage.
+        self.assertIn('id="asm-arrange-host"', self.JS)
+        self.assertIn("renderArrangeRoom(rec.sheet_id, roomHost, closeRoom)",
+                      self.JS)
+        i = self.JS.index('$("#asm-arrange", asm).onclick')
+        self.assertNotIn("showView", self.JS[i:i + 400],
+                         "Arrange must not navigate away from stage 05")
+
+    def test_the_room_exports_png_and_pdf(self):
+        i = self.JS.index("async function renderArrangeRoom")
+        block = self.JS[i:]
+        self.assertIn('data-f="export-pdf"', block)
+        self.assertIn('data-f="export"', block)
 
     def test_stage_03_copy_says_breakdown_not_sheet(self):
         # R7: one word, one meaning — the exact phrase is gone from every

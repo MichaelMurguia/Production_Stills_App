@@ -152,7 +152,7 @@ literal ceiling. Ladder: sticky band 44 · header 45 · toast 50 · popover
 no new z-index value may be coined without a row here.
 
 **The two-mode band** (BAND_CONDENSE ruling, 2026-08-05): tools are not
-stages. While a tool view (Status / Reference / Lookbook / Productions /
+stages. While a tool view (Status / Reference / Productions /
 Settings) is open the band condenses to half height — sublines and the HERE chip
 leave, cells drop to one row (7/8px padding), backgrounds recede
 `--bg2` → `--bg`, labels fall to `--ink-faint` (dimmer, never
@@ -182,7 +182,7 @@ number, label, a live Courier subline from `stage_summary`, and a top border
 stating progress: `--ok` complete, `--accent` current (the viewed stage, else
 the work frontier — exactly one amber in the chrome), `--bad` blocked,
 `--line` unreached. `HERE` chip marks the viewed stage only. Tools (Status ·
-Reference · Lookbook · Productions · Settings) live in the header with the
+Reference · Productions · Settings) live in the header with the
 engine credential dots.
 
 **Cursor band vs reach band — both are canon; do not "fix" one into the
@@ -680,12 +680,14 @@ step (`.wiz-group-label`, THE MOVIE / THE BOARDS) — capability-before-
 vendor applied to parameters.
 
 **The sheet grammar** (SHEET_SYSTEM_PLAN §13, canonized 2026-08-10 with
-the plan's implementation; the composer surface itself sits in the
-Uncanonized table pending review):
+the plan's implementation; **the Lookbook surface was rolled back by the
+user 2026-08-12** — the sheet model stays as the boards' engine, and the
+composer survives only as the arrange room opened inline on stage 05):
 
 1. **A tool is not a stage.** The band is the pipeline. A surface that
    spans the production rather than advancing it goes in the header
-   beside Reference — the Lookbook is the case.
+   beside Reference. (The Lookbook was the case; it is gone — the rule
+   stands for future tools.)
 2. **One grammar per artifact class.** Two surfaces that both arrange
    approved images onto a canvas are one mechanism with two archetypes.
    Before adding a layout engine, name what the existing one cannot
@@ -1154,7 +1156,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-12 | Composer approval gate: `SLOT_APPROVAL` row in the blocked-export lead ("holds CAND-…, which is not approved — approve it on the workbench or swap in an approved take") and an `UNAPPROVED` slot chip in the rail | Sheet composer (Lookbook tool / arranged boards) | Built from canon — review copy only. Bug-fix: slots could carry unapproved takes past the export gate; the gate now states the condition using the existing lb-blocked rows and lb-slot state chips |
+| 2026-08-12 | Composer approval gate: `SLOT_APPROVAL` row in the blocked-export lead ("holds CAND-…, which is not approved — approve it on the workbench or swap in an approved take") and an `UNAPPROVED` slot chip in the rail | Arrange room (stage 05) | Built from canon — review copy only. Bug-fix: slots could carry unapproved takes past the export gate; the gate now states the condition using the existing lb-blocked rows and lb-slot state chips |
+| 2026-08-12 | Inline arrange room (`.lb-room-board`, stage + rail, no tray): the composer scoped to a spec's BOARD sheet, opened by `Arrange this board` INLINE under the slot map — head verbs `Close arrange` / `Export PDF` / `Export PNG`; rail is slot rows (Fill/Swap/Crop/Clear) only | Stage 05 assembly page | The Lookbook surface was rolled back (user, 2026-08-12: "too big, and separate from the Board panel"); the room reuses composer canon (overlay, drag, fill tray, blocked lead) but its inline placement, two-column grid and trimmed rail need review |
 
 ---
 
@@ -1163,6 +1166,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-12** — **The Lookbook surface is rolled back** (user: "too
+  big, and separate from the Board panel"). Gone: the nav tool, the
+  shelf, sheet authoring (archetypes/styles/sizes/block tray/captions),
+  lookbook PDF sets, and their API routes. Stays: the sheet model as the
+  boards' one renderer, and the composer as the **inline arrange room**
+  on stage 05 (`Arrange this board` unfolds it under the slot map;
+  Fill/Swap/Crop/Clear per slot, drag-resize, stated export gate, PNG +
+  PDF export). §13 items amended in place; non-canon row above. The
+  band's tool list loses Lookbook everywhere it was enumerated.
 - **2026-08-12** — **Review fix batch** (2026-08-12 review of .14–.21): the
   composer's export gate gains the `SLOT_APPROVAL` kind (slots hold
   approved takes only — arrange leaves unapproved panels as empty slots,

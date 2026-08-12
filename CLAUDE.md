@@ -56,7 +56,11 @@ user's separate design-review Claude chat, which has this project folder
 connected and delivers its rulings as `*_PLAN.md` files in the repo.
 **Folder sync can resurrect retired plans** — before implementing any plan
 or snippet file, check `docs/RETIRED_PLANS.md`; if listed, delete it again
-rather than re-implementing.)
+rather than re-implementing. **And the inverse, ruled 2026-08-12: the
+moment a plan file is implemented, DELETE it in the same commit and add
+its row to the ledger** — a plan file left in the tree is a resurrection
+waiting to happen. Partially implemented plans get trimmed to only their
+un-built sections.)
 
 **When a feature genuinely needs a pattern the design system doesn't cover,
 additionally:**

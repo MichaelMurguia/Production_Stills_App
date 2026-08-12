@@ -2433,6 +2433,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   color: var(--ok); }
 .lb-room { display: grid; grid-template-columns: 186px minmax(0, 1fr) 300px;
   gap: 14px; align-items: start; }
+/* UNCANONIZED — 2026-08-12 — inline arrange room (Lookbook rollback): the
+   block tray is gone, so the board's arrange room is stage + rail only. */
+.lb-room-board { grid-template-columns: minmax(0, 1fr) 300px; }
 
 .sheet-tray { background: var(--panel); border: 1px solid var(--line);
   padding: 10px; display: flex; flex-direction: column; gap: 4px; }

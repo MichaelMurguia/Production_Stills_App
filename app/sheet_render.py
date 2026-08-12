@@ -484,27 +484,6 @@ def export_sheet(sheet_id: str, fmt: str = "png") -> Path:
     return out
 
 
-def export_lookbook(lb_id: str) -> Path:
-    """Multi-page PDF, one page per sheet at that sheet's own size — sheets
-    in one lookbook may differ in size; each page carries its own box."""
-    lb = sheet_mod.get_lookbook(lb_id)
-    if lb is None:
-        raise KeyError(lb_id)
-    if not lb.get("sheets"):
-        raise sheet_mod.SheetError("the lookbook has no sheets to export")
-    pages: list[Image.Image] = []
-    for sid in lb["sheets"]:
-        rec = sheet_mod.get_sheet(sid)
-        if rec is None:
-            continue
-        gate = sheet_mod.readiness(rec)
-        if not gate["ready"]:
-            raise sheet_mod.SheetError(
-                f"{sid} blocks the export: " + json.dumps(gate["blocked"]))
-        pages.append(render_sheet(rec, 1.0))
-    out_dir = paths.LOOKBOOKS_DIR / paths.safe_id(lb_id)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"{lb_id}.pdf"
-    pages[0].save(out, "PDF", resolution=PRINT_DPI, save_all=True,
-                  append_images=pages[1:])
-    return out
+# export_lookbook removed 2026-08-12: the Lookbook surface was rolled back
+# (user); export_sheet above remains the one export door, serving the
+# stage-05 arrange room.
