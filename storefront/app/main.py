@@ -185,6 +185,22 @@ def _reconcile_on_start():
     import threading
     threading.Thread(target=provisioner.reconcile, daemon=True).start()
 
+
+@app.on_event("startup")
+def _fleet_update_on_start():
+    """Updates follow the push (user ruling 2026-08-12): this deploy IS
+    the release event, so a boot on a commit the fleet has not seen
+    triggers the tenant fleet update automatically. The manual door
+    (/admin/tenants/update and scripts/update_tenants.sh) remains as the
+    fallback; auto_update_tenants() skips outside Railway."""
+    import threading
+
+    def run():
+        out = provisioner.auto_update_tenants()
+        print(f"[fleet] auto-update: {out}", flush=True)
+
+    threading.Thread(target=run, daemon=True).start()
+
 _here = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_here / "static"), name="static")
 # Brand icons at /icons/ per brand spec — the webmanifest's src paths and

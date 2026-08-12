@@ -50,10 +50,11 @@ Resend/GitHub/Google Cloud (free tiers at current volume).
 transcript 2026-08-03): Resend → new key → Railway `SMTP_PASS` → delete
 old key.
 
-**Also parked:** tenant fleet update to the current release
-(`/admin/tenants/update` — house studio and tenant-5 run older builds);
-product roadmap items live in CONNECTORS_PLAN.md (N5 on demand, N6 truth
-pass, fal starter set, Role-01 Gemini fix, narrative-via-OpenRouter).
+**Resolved 2026-08-12:** the tenant fleet now updates itself on every
+push (see "The tenant fleet updates itself" below) — the parked manual
+fleet-update item is gone. Product roadmap items live in
+CONNECTORS_PLAN.md (N5 on demand, N6 truth pass, fal starter set,
+Role-01 Gemini fix, narrative-via-OpenRouter).
 
 ## The product
 
@@ -314,11 +315,18 @@ release of `app/` features** — a stale zip silently ships old product; the
 CI `release-zip` job enforces this by diffing the staged zip against HEAD
 and going red with the restage command when they drift.
 
-**Then update the tenant fleet.** Tenant services do NOT follow pushes —
-they stay on the build they were provisioned with until told otherwise
-(observed live 2026-08-01: a tenant serving a day-one rev 30+ commits
-behind main). The cloud edition sells "updates land the day they ship",
-so after every release of `app/` features hit:
+**The tenant fleet updates itself on every push (since 2026-08-12).**
+Tenant services do not follow pushes directly — but the storefront does,
+and on every boot it compares its own `RAILWAY_GIT_COMMIT_SHA` to the
+`fleet_state` marker and runs `provisioner.auto_update_tenants()` when
+they differ (user ruling 2026-08-12: "update automatically when you push
+changes"). So the push that deploys the storefront IS the fleet rollout:
+no operator step, no token outside Railway. The marker advances only on
+a zero-failure run; a partial rollout retries on the next boot. Watch it
+in the deploy logs as `[fleet] auto-update: {...}`.
+
+**Manual fallback** (auto-update failed, or you need to push the fleet
+without a storefront deploy):
 
 ```
 GET https://www.screenboardstudio.com/admin/tenants/update?token=<ADMIN_EXPORT_TOKEN>

@@ -121,6 +121,21 @@ class Workspace(Base):
     purchase: Mapped[Purchase] = relationship(back_populates="workspace")
 
 
+class FleetState(Base):
+    """One row (id=1): the commit the tenant fleet was last pushed to.
+    Railway redeploys the storefront on every push to main; on boot the
+    storefront compares its own RAILWAY_GIT_COMMIT_SHA to this marker and
+    auto-runs the fleet update when they differ (user ruling 2026-08-12:
+    updates follow the push — no operator step, no token on a laptop).
+    The marker advances only on a zero-failure run, so a partial rollout
+    retries on the next boot instead of stranding a studio."""
+
+    __tablename__ = "fleet_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_updated_sha: Mapped[str] = mapped_column(String(64), default="")
+
+
 class TrialCode(Base):
     """An operator-granted free trial of arbitrary duration — no payment
     method, no Stripe object. The code is the capability: whoever holds it

@@ -261,6 +261,46 @@ def update_tenants(railway=railway_client) -> dict:
     return out
 
 
+# One auto-update at a time — concurrent boots (Railway restarts mid-
+# deploy) would otherwise both trigger fleet rebuilds.
+_fleet_lock = threading.Lock()
+
+
+def auto_update_tenants(railway=railway_client) -> dict:
+    """Fleet auto-update on boot (user ruling 2026-08-12: "update
+    automatically when you push changes"). Railway redeploys the
+    storefront on every push to main; a freshly booted storefront that
+    finds itself running a commit the fleet has not been pushed to runs
+    the same update the /admin/tenants/update door runs — no operator,
+    no token. The FleetState marker advances only when every studio
+    updated cleanly; a partial rollout retries on the next boot. Local
+    runs and tests have no RAILWAY_GIT_COMMIT_SHA and skip."""
+    import os
+    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
+    if not sha or not settings.railway_configured():
+        return {"skipped": "no commit sha or railway not configured"}
+    if not _fleet_lock.acquire(blocking=False):
+        return {"skipped": "auto-update already running"}
+    try:
+        with db.session() as s:
+            st = s.get(db.FleetState, 1)
+            if st is not None and st.last_updated_sha == sha:
+                return {"skipped": "fleet already on this commit",
+                        "commit": sha}
+        out = update_tenants(railway)
+        if not out["failed"]:
+            with db.session() as s:
+                st = s.get(db.FleetState, 1)
+                if st is None:
+                    s.add(db.FleetState(id=1, last_updated_sha=sha))
+                else:
+                    st.last_updated_sha = sha
+                s.commit()
+        return out
+    finally:
+        _fleet_lock.release()
+
+
 # reconcile() is spawned from startup, /success, the webhook, and studio
 # naming — often concurrently. Every step is idempotent, but two runs
 # interleaving through _provision can still double-create Railway
