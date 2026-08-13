@@ -504,5 +504,14 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".arr-style-img", ["background: var(--bg2)"])
 
 
+class MiniMonoTests(unittest.TestCase):
+    def test_mini_mono_is_courier(self):
+        """.mini defaults to sans (short prose), but markup that ALSO says
+        .mono means it — .mini used to win the order battle and silently
+        rendered machine data proportional (found 2026-08-13, the
+        correction-intake checklist)."""
+        self.assertIn(".mini.mono { font-family: var(--mono); }", CSS)
+
+
 if __name__ == "__main__":
     unittest.main()

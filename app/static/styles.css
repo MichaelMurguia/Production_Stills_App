@@ -454,6 +454,10 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 #sp-ledger { margin-bottom: 9px; }
 
 .mini { font-size: 12px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans); }
+/* .mini defaults to sans (it carries short prose), but markup that ALSO
+   says .mono means it — .mini alone won the order battle and silently
+   rendered machine data proportional (found 2026-08-13, intake rail). */
+.mini.mono { font-family: var(--mono); }
 .stack { display: flex; flex-direction: column; gap: 6px; }
 
 /* ================================================================= reports */

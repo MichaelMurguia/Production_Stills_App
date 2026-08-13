@@ -8092,7 +8092,7 @@ async function renderBoardPanels(specId) {
           const ci = t.correction_intake;
           if (!ci || ci.dismissed || !(ci.deltas || []).length) return "";
           const label = d => d.kind === "camera"
-            ? `CAMERA ${d.field.replace("camera_", "").toUpperCase()} → ${String(d.value).replace(/_/g, " ")}`
+            ? `CAMERA ${(CAMERA_AXES.find(a => a.key === d.field)?.label || d.field.replace("camera_", "")).toUpperCase()} → ${String(d.value).replace(/_/g, " ")}`
             : d.kind === "require" ? `REQUIRE "${d.value}"`
             : d.kind === "forbid" ? `FORBID "${d.value}"`
             : `BRIEF + "${d.value}"`;
@@ -8102,10 +8102,11 @@ async function renderBoardPanels(specId) {
             ${ci.deltas.map((d, i) => `<label style="display:block;margin:2px 0${d.applied ? ";color:var(--ink-faint)" : ""}">
               <input type="checkbox" data-di="${i}" ${d.applied ? "disabled checked" : "checked"}>
               ${esc(label(d))}${d.applied ? " · APPLIED" : ""}</label>`).join("")}
-            ${open ? `<button class="text-act" data-apply-intake="${esc(t.candidate_id)}"
+            ${open ? `<div style="display:flex;gap:16px;margin-top:5px">
+              <button class="text-act" data-apply-intake="${esc(t.candidate_id)}"
                 title="Apply the checked deltas to the panel — journaled, lock re-stamped; the verbatim correction above still carries until you retire it">Apply selected</button>
               <button class="text-act" data-dismiss-intake="${esc(t.candidate_id)}"
-                title="Drop this proposal — the rejection and its verbatim carry are untouched">Dismiss</button>` : ""}
+                title="Drop this proposal — the rejection and its verbatim carry are untouched">Dismiss</button></div>` : ""}
           </div>`;
         })()}`).join("")}
       </div>` : ""}
