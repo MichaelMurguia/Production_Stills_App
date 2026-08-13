@@ -5,17 +5,23 @@ app-authored, prominently placed, and stated to outrank the reference images —
 because a render told "High Camera Angle" as free text was ignored (the model
 under-weights terse composition tokens, and the references anchor the framing).
 
-## The four axes
+## The five axes
 
 Per-panel fields (all optional), each resolved `panel value → production
 default → unset`:
 
 | Field | Values |
 |---|---|
-| `camera_angle` | `EYE_LEVEL · LOW · HIGH · BIRDS_EYE · WORMS_EYE` |
+| `camera_angle` | `EYE_LEVEL · LOW · HIGH · BIRDS_EYE · WORMS_EYE` (elevation) |
+| `camera_orientation` | `FRONT · THREE_QUARTER_FRONT · SIDE · THREE_QUARTER_REAR · REAR` (azimuth — which face of the subject the camera sees; added 2026-08-13 because "side view" was inexpressible as structure) |
 | `camera_lens` | a focal length string `^\d{1,3}MM$` — presets 18/24/35/50/85/135 mm **plus any custom value** (e.g. `28MM`, `200MM`) |
 | `camera_tilt` | `LEVEL · DUTCH` (`LEVEL` is intentionally silent) |
 | `scale` (shot) | `AERIAL · EXTREME_WIDE · WIDE · MEDIUM · CLOSE · EXTREME_CLOSE · MACRO · MICRO` |
+
+`camera_orientation` is deliberately **not** in the baseline: it is
+subject-relative, and a house default would fight every panel's references.
+Unset means the model chooses — the axis emits nothing, and the workbench's
+stated camera line omits it rather than showing a dash.
 
 The vocabulary and validation live in **`store.CAMERA_FIELDS`** (sets for the
 enum axes, a regex `store._LENS_RE` for the lens); `store._camera_valid` /
@@ -39,13 +45,15 @@ prompt, and closing with the override line: *"where an attached reference shows 
 different angle, lens, or framing, follow THIS, not the reference's composition;
 references anchor identity, materials, colour and medium, never the camera."*
 
-- Enum phrasing: `CAMERA_ANGLE_PHRASING`, `CAMERA_TILT_PHRASING`, `SCALE_PHRASING`.
+- Enum phrasing: `CAMERA_ANGLE_PHRASING`, `CAMERA_ORIENTATION_PHRASING`,
+  `CAMERA_TILT_PHRASING`, `SCALE_PHRASING`.
 - Lens phrasing: **`generate._lens_phrasing(value)`** — one source of truth for
   presets *and* custom focal lengths; it reads the millimetres and derives the
   perspective character (≤20 ultra-wide, ≤35 wide, ≤60 normal, ≤105 short-tele,
   else telephoto). `generate._LEGACY_LENS` maps the pre-2026-08-10 words
   (`WIDE→24MM`, `NORMAL→50MM`, `TELEPHOTO→135MM`) so old settings still speak.
-- Emit order: shot, lens, angle, tilt. An all-empty camera contributes nothing.
+- Emit order: shot, lens, orientation, angle, tilt (azimuth before elevation).
+  An all-empty camera contributes nothing.
 
 This block replaced the old terse `SCALE:`/`COMPOSITION ROLE:` tail.
 
@@ -65,11 +73,14 @@ present field with an empty value clears it back to the production default.
 
 ## UI — three surfaces, one control (`app/static/app.js`)
 
-`cameraRow(prefix, obj, blank, disabled)` renders a labelled row of four selects;
+`cameraRow(prefix, obj, blank, disabled)` renders a labelled row of five selects;
 `readCameraFields(prefix, root)` reads them back (resolving a Custom lens to
 `"<n>MM"`); `wireCameraRow(prefix, root, onChange)` toggles the Custom
 focal-length input and fires `onChange`. Vocabulary consts: `CAMERA_ANGLES`,
-`CAMERA_LENSES`, `CAMERA_TILTS`, `SHOT_SCALES`, `CAMERA_AXES` (near `TIMES_OF_DAY`).
+`CAMERA_ORIENTATIONS`, `CAMERA_LENSES`, `CAMERA_TILTS`, `SHOT_SCALES`,
+`CAMERA_AXES` (near `TIMES_OF_DAY`). An axis may carry `unset: "<label>"` —
+used by orientation so it stays clearable on the defaults card, which renders
+with no blank option for the always-concrete axes.
 
 | Surface | Prefix | Blank? | Persists |
 |---|---|---|---|

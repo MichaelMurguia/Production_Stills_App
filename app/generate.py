@@ -492,6 +492,24 @@ CAMERA_ANGLE_PHRASING = {
     "WORMS_EYE": "WORM'S-EYE VIEW — the camera is at ground level pointing straight "
                  "up, an extreme upward view that exaggerates height and monumental scale.",
 }
+CAMERA_ORIENTATION_PHRASING = {
+    "FRONT": "FRONT VIEW — the camera faces the subject head-on; the front "
+             "face dominates and the sides recede to nothing; symmetric, "
+             "confrontational presence.",
+    "THREE_QUARTER_FRONT": "THREE-QUARTER FRONT VIEW — the camera sits ~45 "
+                           "degrees off the subject's nose: the front and one "
+                           "side both read, the classic volume-describing "
+                           "product angle.",
+    "SIDE": "SIDE VIEW — the camera faces the subject's side at a full 90 "
+            "degrees, a true profile: the subject's whole length crosses the "
+            "frame; neither the front nor the rear face is visible.",
+    "THREE_QUARTER_REAR": "THREE-QUARTER REAR VIEW — the camera sits ~45 "
+                          "degrees behind the subject's side: the rear and "
+                          "one side both read; a departing, chased, or "
+                          "left-behind feeling.",
+    "REAR": "REAR VIEW — the camera is directly behind the subject; the rear "
+            "face dominates, the subject looks or moves away from us.",
+}
 CAMERA_TILT_PHRASING = {
     "LEVEL": "",  # the default: horizon level, nothing to say
     "DUTCH": "DUTCH ANGLE — the camera is rolled so the horizon tilts off-level, an "
@@ -548,8 +566,9 @@ def _lens_phrasing(value: str) -> str:
 def _camera_block(panel: dict) -> list[str]:
     """The CAMERA block: authored composition directives, resolved
     panel-value-or-bible-default, placed high in the prompt and stated to
-    override the references' own framing. Emit order: shot, lens, angle, tilt.
-    Empty axes are omitted; an all-empty camera contributes nothing."""
+    override the references' own framing. Emit order: shot, lens, orientation,
+    angle, tilt (azimuth before elevation — one camera position, read left to
+    right). Empty axes are omitted; an all-empty camera contributes nothing."""
     defaults = store.camera_defaults()
 
     def resolve(field):
@@ -570,6 +589,7 @@ def _camera_block(panel: dict) -> list[str]:
     directives = [d for d in (
         SCALE_PHRASING.get(resolve("scale")),
         _lens_phrasing(resolve("camera_lens")),
+        CAMERA_ORIENTATION_PHRASING.get(resolve("camera_orientation")),
         CAMERA_ANGLE_PHRASING.get(resolve("camera_angle")),
         CAMERA_TILT_PHRASING.get(resolve("camera_tilt")),
     ) if d]

@@ -6541,11 +6541,21 @@ const CAMERA_ANGLES = [["EYE_LEVEL", "Eye level"], ["LOW", "Low — looks up"],
 const CAMERA_LENSES = [["18MM", "18mm"], ["24MM", "24mm"], ["35MM", "35mm"],
   ["50MM", "50mm"], ["85MM", "85mm"], ["135MM", "135mm"]];
 const CAMERA_TILTS = [["LEVEL", "Level"], ["DUTCH", "Dutch — tilted"]];
+// The azimuth axis (2026-08-13): which face of the subject the camera sees.
+// No baseline — unset means the model chooses (mirrors store.CAMERA_FIELDS).
+const CAMERA_ORIENTATIONS = [["FRONT", "Front"],
+  ["THREE_QUARTER_FRONT", "3/4 front"], ["SIDE", "Side — profile"],
+  ["THREE_QUARTER_REAR", "3/4 rear"], ["REAR", "Rear"]];
 const SHOT_SCALES = [["AERIAL", "Aerial"], ["EXTREME_WIDE", "Extreme wide"],
   ["WIDE", "Wide"], ["MEDIUM", "Medium"], ["CLOSE", "Close"],
   ["EXTREME_CLOSE", "Extreme close"], ["MACRO", "Macro"], ["MICRO", "Micro"]];
 const CAMERA_AXES = [
   { key: "camera_angle", f: "angle", label: "Angle", opts: CAMERA_ANGLES },
+  // `unset` keeps orientation clearable even on the defaults card, which
+  // renders with no blank option — the other axes always carry a value
+  // there, this one legitimately has none.
+  { key: "camera_orientation", f: "orient", label: "View",
+    opts: CAMERA_ORIENTATIONS, unset: "— free —" },
   { key: "camera_lens", f: "lens", label: "Lens", opts: CAMERA_LENSES },
   { key: "camera_tilt", f: "tilt", label: "Tilt", opts: CAMERA_TILTS },
   { key: "scale", f: "scale", label: "Shot", opts: SHOT_SCALES },
@@ -6565,7 +6575,8 @@ const scaleValue = v => _LEGACY_SCALE[String(v || "").toUpperCase()] || String(v
 // a "Custom…" option that reveals a focal-length input.
 function cameraSelect(prefix, axis, value, blank, disabled = false) {
   const dis = disabled ? "disabled" : "";
-  const blankOpt = blank ? `<option value="">${esc(blank)}</option>` : "";
+  const blankLabel = blank || axis.unset || "";
+  const blankOpt = blankLabel ? `<option value="">${esc(blankLabel)}</option>` : "";
   if (axis.key === "camera_lens") {
     const v = lensValue(value);
     const custom = !!v && !axis.opts.some(([ov]) => ov === v);
@@ -6590,7 +6601,7 @@ function cameraRow(prefix, obj, blank, disabled = false) {
   return `<div class="cam-row" data-f="${prefix}-row">${
     CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")}</div>`;
 }
-// Read the four axes back off a rendered row. The lens resolves its Custom
+// Read the five axes back off a rendered row. The lens resolves its Custom
 // number field to a focal length like "28MM"; a blank select stays "".
 function readCameraFields(prefix, root) {
   const val = f => $(`[data-f=${prefix}-${f}]`, root)?.value || "";
@@ -6599,8 +6610,8 @@ function readCameraFields(prefix, root) {
     const mm = ($(`[data-f=${prefix}-lens-mm]`, root)?.value || "").trim();
     lens = mm ? `${mm}MM` : "";
   }
-  return { camera_angle: val("angle"), camera_lens: lens,
-           camera_tilt: val("tilt"), scale: val("scale") };
+  return { camera_angle: val("angle"), camera_orientation: val("orient"),
+           camera_lens: lens, camera_tilt: val("tilt"), scale: val("scale") };
 }
 // Toggle the Custom focal-length input as the lens select changes, and run
 // `onChange` after any axis changes (each surface persists differently).
@@ -7124,11 +7135,17 @@ async function renderBoardPanels(specId) {
             // force is a stated Courier line with its verb beside it;
             // the four selects open only when asked. Three states:
             // inherited-and-stated, opened, fixed by an approved take.
-            const axes = ["camera_angle", "camera_lens", "camera_tilt", "scale"];
+            const axes = ["camera_angle", "camera_orientation", "camera_lens",
+              "camera_tilt", "scale"];
             const own = axes.some(k => p[k]);
             const rv = k => String(p[k] || camDefaults?.[k] || "—")
               .replace(/_/g, " ");
-            const summary = `${rv("camera_angle")} · ${rv("camera_lens")} · ${rv("camera_tilt")} · ${rv("scale")}`;
+            // Orientation states itself only when set — it has no baseline,
+            // and a standing "—" would read as a missing value, not a choice.
+            const orient = String(p.camera_orientation
+              || camDefaults?.camera_orientation || "").replace(/_/g, " ");
+            const summary = [rv("camera_angle"), orient, rv("camera_lens"),
+              rv("camera_tilt"), rv("scale")].filter(Boolean).join(" · ");
             return `
           <div class="cam-stated">
             <span class="mono cam-sum">CAMERA&ensp;${esc(summary)}

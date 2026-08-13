@@ -22,6 +22,12 @@ REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
 _LENS_RE = re.compile(r"^\d{1,3}MM$")  # a focal length like 24MM — presets + custom
 CAMERA_FIELDS = {
     "camera_angle": {"EYE_LEVEL", "LOW", "HIGH", "BIRDS_EYE", "WORMS_EYE"},
+    # Orientation is the azimuth axis (2026-08-13): which face of the subject
+    # the camera sees. camera_angle is elevation only, which left "side view"
+    # inexpressible as structure — a director's correction asking for one
+    # could only ride as prose.
+    "camera_orientation": {"FRONT", "THREE_QUARTER_FRONT", "SIDE",
+                           "THREE_QUARTER_REAR", "REAR"},
     "camera_lens": _LENS_RE,
     "camera_tilt": {"LEVEL", "DUTCH"},
     "scale": {"AERIAL", "EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE",
@@ -29,6 +35,9 @@ CAMERA_FIELDS = {
 }
 # A new production starts from this camera grammar (user 2026-08-10); stored
 # values override, and every panel inherits it unless it sets its own axis.
+# camera_orientation has NO baseline: it is subject-relative, and a house
+# default would fight every panel's references — unset means the model
+# chooses, exactly like any empty axis.
 CAMERA_BASELINE = {"camera_angle": "EYE_LEVEL", "camera_lens": "24MM",
                    "camera_tilt": "LEVEL", "scale": "WIDE"}
 # Pre-camera-enum autofill shot vocabulary (2026-08-12 review): drafted specs
@@ -937,8 +946,8 @@ def save_camera_defaults(fields: dict) -> dict:
 
 
 def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
-    """Set a panel's camera (angle/tilt/lens/scale) from the workbench between
-    takes, without unlocking. Same controlled-edit contract as
+    """Set a panel's camera (angle/orientation/tilt/lens/scale) from the
+    workbench between takes, without unlocking. Same controlled-edit contract as
     amend_panel_purpose: an APPROVED take was composed at its camera and freezes
     it; otherwise the lock re-stamps and the change is journaled. A present field
     with an empty value clears it (back to the bible default)."""

@@ -111,6 +111,27 @@ class CameraBlockTests(unittest.TestCase):
         self.assertIn('FULL_BODY: "WIDE"', JS)
         self.assertIn('DETAIL: "EXTREME_CLOSE"', JS)
 
+    def test_orientation_has_no_baseline_and_stays_silent_unset(self):
+        """Orientation is subject-relative — a house default would fight
+        every panel's references. Nothing set = no VIEW directive."""
+        self.assertNotIn("camera_orientation", store.CAMERA_BASELINE)
+        block = "\n".join(generate._camera_block({"purpose": "x"}))
+        self.assertNotIn("VIEW —", block)
+
+    def test_side_view_is_now_expressible_as_structure(self):
+        """The CANYON_GRM_GT40_GETAWAY failure: 'side view' could only ride
+        as prose. It is an axis now, and it outranks the references."""
+        block = "\n".join(generate._camera_block({"camera_orientation": "SIDE"}))
+        self.assertIn("SIDE VIEW", block)
+        self.assertIn("true profile", block)
+        self.assertIn("not the reference", block.lower())
+
+    def test_orientation_emits_between_lens_and_angle(self):
+        block = "\n".join(generate._camera_block(
+            {"camera_orientation": "REAR", "camera_angle": "LOW"}))
+        self.assertLess(block.index("24mm LENS"), block.index("REAR VIEW"))
+        self.assertLess(block.index("REAR VIEW"), block.index("LOW ANGLE"))
+
     def test_every_focal_length_has_authored_phrasing(self):
         """Presets, the legacy names, and custom lengths all resolve to a
         directive whose character derives from the millimetres."""
@@ -153,6 +174,14 @@ class CameraDefaultsTests(unittest.TestCase):
     def test_unknown_value_is_refused(self):
         with self.assertRaises(ValueError):
             store.save_camera_defaults({"camera_angle": "SIDEWAYS"})
+
+    def test_orientation_round_trips_and_clears_to_nothing(self):
+        """Unlike the baselined axes, a cleared orientation shows NO value
+        through the merge — unset is a legitimate stored state."""
+        store.save_camera_defaults({"camera_orientation": "side"})
+        self.assertEqual(store.camera_defaults()["camera_orientation"], "SIDE")
+        store.save_camera_defaults({"camera_orientation": ""})
+        self.assertNotIn("camera_orientation", store.camera_defaults())
 
 
 SPEC = {
@@ -210,12 +239,31 @@ class AmendPanelCameraTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             store.amend_panel_camera("CAM_V001", "P01", {"camera_angle": "NOPE"})
 
+    def test_orientation_sets_and_clears_like_any_axis(self):
+        store.amend_panel_camera("CAM_V001", "P01",
+                                 {"camera_orientation": "THREE_QUARTER_REAR"})
+        p = next(x for x in store.get_spec("CAM_V001")["panels"] if x["id"] == "P01")
+        self.assertEqual(p["camera_orientation"], "THREE_QUARTER_REAR")
+        store.amend_panel_camera("CAM_V001", "P01", {"camera_orientation": ""})
+        p = next(x for x in store.get_spec("CAM_V001")["panels"] if x["id"] == "P01")
+        self.assertNotIn("camera_orientation", p)
+
 
 class TheThreeSurfacesWireUp(unittest.TestCase):
     def test_js_defines_the_vocabulary_and_a_reusable_row(self):
-        for c in ("CAMERA_ANGLES", "CAMERA_LENSES", "CAMERA_TILTS", "SHOT_SCALES",
+        for c in ("CAMERA_ANGLES", "CAMERA_ORIENTATIONS", "CAMERA_LENSES",
+                  "CAMERA_TILTS", "SHOT_SCALES",
                   "CAMERA_AXES", "function cameraSelect", "function cameraRow"):
             self.assertIn(c, JS)
+
+    def test_orientation_wires_through_all_three_surfaces(self):
+        """The axis rides CAMERA_AXES, so every surface renders it; the
+        reader returns it; the defaults card keeps it clearable via the
+        per-axis unset label (that card renders with no blank option)."""
+        self.assertIn('["SIDE", "Side — profile"]', JS)
+        self.assertIn('key: "camera_orientation"', JS)
+        self.assertIn('unset: "— free —"', JS)
+        self.assertIn('camera_orientation: val("orient")', JS)
 
     def test_sheet_editor_row_and_serialize(self):
         self.assertIn('cameraRow("pcam"', JS)
