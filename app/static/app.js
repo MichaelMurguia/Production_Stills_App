@@ -8764,12 +8764,13 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       }
       if (!best) return null;
       const r = best.r;
-      const dxc = cx - (r.x + r.w / 2), dyc = cy - (r.y + r.h / 2);
-      const side = Math.abs(dxc) / r.w > Math.abs(dyc) / r.h
-        ? (dxc < 0 ? "left" : "right") : (dyc < 0 ? "top" : "bottom");
+      const dyc = cy - (r.y + r.h / 2);
+      // Refugees STACK into their nearest neighbor, never dock beside
+      // it — a beside-split would rebuild the very boundary the claim
+      // just cut through and the click would read as doing nothing
+      // (user-hit 2026-08-13, found in the Reflow Lab).
       cur = placedIn(cur, d, {
-        kind: side === "left" || side === "right" ? "beside" : "stack",
-        side, target: best.tid });
+        kind: "stack", side: dyc < 0 ? "top" : "bottom", target: best.tid });
     }
     const out = normalize(cur);
     out._claimed = displaced;
