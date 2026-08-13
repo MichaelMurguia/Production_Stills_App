@@ -2053,7 +2053,19 @@ def api_get_sheet(sheet_id: str) -> dict:
     rec = _sheet_call(sheet.get_sheet, sheet_id)
     if rec is None:
         raise HTTPException(404, sheet_id)
+    # BOARD sheets predating the arrange-room physics get an arrangement
+    # inferred from their slot geometry (not persisted by a read).
+    if rec.get("archetype") == "BOARD" and "arrangement" not in rec:
+        rec["arrangement"] = sheet.derive_arrangement(rec)
     return rec
+
+
+@app.put("/api/sheets/{sheet_id}/arrangement")
+def api_set_arrangement(sheet_id: str, body: dict) -> dict:
+    """The arrange room's commit door (2026-08-12): the client edits a
+    rows/columns/cells structure; the server maps it to slot geometry and
+    stores both. Gesture math in the client is feedback only."""
+    return _sheet_call(sheet.set_arrangement, sheet_id, body)
 
 
 @app.put("/api/sheets/{sheet_id}/blocks/{block_id}/slots/{slot_id}")

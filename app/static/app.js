@@ -8292,6 +8292,7 @@ async function renderAssemblyFor(specId) {
         ${sm.slots.map(s => `
           <div class="slot ${s.status === "TOO_SMALL" ? "hatch-bad" : "hatch"} ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
                title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
+            ${s.candidate_id ? `<img class="slot-img" src="/api/specs/${encodeURIComponent(specId)}/candidates/${esc(s.candidate_id)}/image?size=thumb" loading="lazy" alt="">` : ""}
             <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}</span>
             <span class="slot-verdict ${esc(s.status)}">${VERDICT[s.status]}</span>
           </div>`).join("")}
@@ -8550,10 +8551,15 @@ async function boot() {
 }
 
 /* ---------------------------------------------------------- arrange room
-   The sheet grammar's one surviving surface (Lookbook rollback,
-   2026-08-12): the composer scoped to a spec's BOARD sheet, opened
-   inline on stage 05 by Arrange this board. Overlays are app chrome
-   drawn in the DOM and never enter render_sheet. */
+   The board's arrange physics (user 2026-08-12, prototyped in the Reflow
+   Lab): tiles are the real takes, ghosted; edges and corners resize with
+   linked renegotiation; dropping a tile on another splits it (sides go
+   beside, top/bottom stacks); claim arrows take an edge to the canvas;
+   the trash benches a panel and + docks it back. The client owns only
+   the rows -> columns -> stacked-cells STRUCTURE during a gesture —
+   every commit PUTs it to /api/sheets/{id}/arrangement and the SERVER
+   maps structure to slot geometry, the stored truth. Overlays are app
+   chrome and never enter render_sheet. */
 
 function sheetSizeLine(sh) {
   const [w, h] = sh.size;
@@ -8562,286 +8568,516 @@ function sheetSizeLine(sh) {
     : `${w} × ${h} PX`;
 }
 
-// R2 (canon pass 2026-08-10): geometry is computed once and declared.
-// The renderer emits the rects it drew (X-Sheet-Geometry on the preview
-// response); everything here — overlay aim, drag inversion, pixel need —
-// consumes those rects and measures nothing. No JS re-implementation of
-// the sheet's geometry survives.
-function slotNeedFromRect(rect, scale, slot) {
-  const crop = slot.crop || { w: 1, h: 1 };
-  return [Math.round(rect[2] / scale / Math.max(crop.w || 1, 1e-6)),
-          Math.round(rect[3] / scale / Math.max(crop.h || 1, 1e-6))];
-}
-
-// The Lookbook surface (nav tool, shelf, sheet authoring, lookbook PDF
-// sets) was rolled back 2026-08-12 (user: too big, and separate from the
-// board workflow). What survives is this room — the composer scoped to a
-// spec's BOARD sheet, rendered INLINE on stage 05 under the slot map.
-let _lbPreviewUrl = null;
-
 async function renderArrangeRoom(sheetId, host, onClose) {
   const root = host;
   let sh = await api(`/api/sheets/${sheetId}`);
   let ready = await api(`/api/sheets/${sheetId}/readiness`);
-  const selId = uiGet("lb.block", "");
-  const sel = sh.blocks.find(b => b.block_id === selId) || null;
-  const blockedBy = {};
-  for (const e of ready.blocked) {
-    (blockedBy[e.block_id] = blockedBy[e.block_id] || []).push(e);
-  }
+  const specId = sh.spec_id || "";
+  const cands = specId
+    ? await api(`/api/specs/${specId}/candidates`).catch(() => []) : [];
+  const BW = sh.size[0], BH = sh.size[1];
+  const GRID_X = 24, GRID_Y = 12, SNAP_PX = 10, GUT = 6;
+  const MIN_W = 0.07, MIN_H = 0.09, MIN_CELL = 0.2;
+  const RATIOS = [["2.39:1", 2.39], ["16:9", 16 / 9], ["4:3", 4 / 3], ["1:1", 1]];
 
-  const slotState = (b, s) => {
-    const errs = (blockedBy[b.block_id] || []).filter(x => x.slot_id === s.slot_id);
-    if (!s.candidate_id) return ["empty", "EMPTY"];
-    if (errs.some(x => x.kind === "SLOT_APPROVAL")) return ["bad", "UNAPPROVED"];
-    return errs.length ? ["bad", "SHORT"] : ["ok", s.candidate_id];
+  // Take facts per panel: the sheet's slots carry the ids; the candidate
+  // list fills in pixel dimensions and covers benched panels.
+  const takeOf = {};
+  for (const b of sh.blocks || []) {
+    for (const s of b.slots || []) {
+      if (s.panel_id && s.candidate_id) {
+        takeOf[s.panel_id] = { spec: s.spec_id, cand: s.candidate_id };
+      }
+    }
+  }
+  const latestApproved = {};
+  for (const c of cands) {
+    if (c.status === "APPROVED" && String(c.candidate_id || "").startsWith("CAND-")) {
+      latestApproved[c.panel_id] = c;
+    }
+  }
+  const factsFor = pid => {
+    const t = takeOf[pid]
+      || (latestApproved[pid] && { spec: specId, cand: latestApproved[pid].candidate_id });
+    if (!t) return null;
+    const rec = cands.find(c => c.candidate_id === t.cand);
+    return { ...t, w: rec?.width || 0, h: rec?.height || 0 };
+  };
+  const panelOf = (blockId, slotId) => {
+    const b = (sh.blocks || []).find(x => x.block_id === blockId);
+    return b?.slots.find(s => s.slot_id === slotId)?.panel_id || slotId;
   };
 
-  const railSelected = sel ? `
-    <div class="lb-rail-sec">
-      <div class="lb-rail-k mono">SELECTED · ${esc(sel.type)}</div>
-      <div class="lb-slots">${sel.slots.map(s => {
-        const [st, label] = slotState(sel, s);
-        return `<div class="lb-slot-row" data-slot="${esc(s.slot_id)}">
-          <i class="lb-dot ${st}"></i>
-          <span class="mono">${esc(s.slot_id)}${s.panel_id ? ` · ${esc(s.panel_id)}` : ""}</span>
-          <span class="mono lb-slot-c ${st === "empty" ? "faint" : ""}">${esc(label)}</span>
-          <span class="lb-slot-acts">
-            <button class="text-act" data-fill="${esc(s.slot_id)}" title="Fill this slot from the production's approved takes">${s.candidate_id ? "Swap" : "Fill"}</button>
-            ${s.candidate_id ? `<button class="text-act" data-crop="${esc(s.slot_id)}" title="Crop, zoom and rotate inside the frame — over-cropping is kept and gates export like a small render">Crop</button>
-            <button class="text-act" data-clear="${esc(s.slot_id)}">Clear</button>` : ""}
-          </span>
-        </div>`; }).join("")}</div>
-    </div>` : `
-    <div class="lb-rail-sec"><div class="lb-rail-k mono">SELECTED</div>
-      <p class="hint">Click a block on the board to select it — drag its frames to resize, or fill, swap and crop its slots here.</p></div>`;
+  const clone = o => JSON.parse(JSON.stringify(o));
+  let arr = sh.arrangement?.rows ? clone(sh.arrangement) : { rows: [], bench: [] };
+  arr.bench = arr.bench || [];
+  const allIds = () => {
+    const out = [];
+    for (const r of arr.rows) for (const c of r.cols) for (const k of c.cells) out.push(k.id);
+    return out;
+  };
 
-  const blockedLead = ready.ready ? "" : `
-    <div class="panel panel-lead lb-blocked">
-      <div class="lb-blocked-k mono">${ready.blocked.length} THING${ready.blocked.length === 1 ? "" : "S"} BLOCK${ready.blocked.length === 1 ? "S" : ""} EXPORT</div>
-      <div class="lb-blocked-rows">${ready.blocked.slice(0, 4).map(b =>
-        b.kind === "TYPE_FLOOR"
-          ? `<span>${esc(b.block_id)} sets type at ${b.size}${sh.medium === "PRINT" ? "pt" : "px"} — the ${sh.medium.toLowerCase()} floor is ${b.floor}. Pick a larger size in the rail.</span>`
-          : b.kind === "SLOT_APPROVAL"
-          ? `<span>${esc(b.block_id)} · ${esc(b.slot_id)} holds <span class="mono">${esc(b.candidate_id)}</span>, which is not approved — approve it on the workbench or swap in an approved take.</span>`
-          : `<span>${esc(b.block_id)} · ${esc(b.slot_id)} ${b.have[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "is empty — fill it or remove the slot"}.</span>`).join("")}
-        ${ready.blocked.length > 4 ? `<span class="mono">AND ${ready.blocked.length - 4} MORE</span>` : ""}</div>
-    </div>`;
+  /* ------------------------------------------------ structure physics */
+  const normalize = st => {
+    for (const row of st.rows) row.cols = row.cols.filter(c => c.cells.length);
+    st.rows = st.rows.filter(r => r.cols.length);
+    const hs = st.rows.reduce((a, r) => a + r.h, 0) || 1;
+    for (const row of st.rows) {
+      row.h /= hs;
+      const ws = row.cols.reduce((a, c) => a + c.w, 0) || 1;
+      for (const col of row.cols) {
+        col.w /= ws;
+        const cs = col.cells.reduce((a, k) => a + k.h, 0) || 1;
+        for (const cell of col.cells) cell.h /= cs;
+      }
+    }
+    return st;
+  };
+  const rectsOf = st => {
+    const out = {};
+    let y = 0;
+    st.rows.forEach((row, ri) => {
+      let x = 0;
+      row.cols.forEach((col, ci) => {
+        let cy = y;
+        col.cells.forEach((cell, ki) => {
+          out[cell.id] = { x, y: cy, w: col.w, h: row.h * cell.h, ri, ci, ki };
+          cy += row.h * cell.h;
+        });
+        x += col.w;
+      });
+      y += row.h;
+    });
+    return out;
+  };
+  const findCell = (id, st) => {
+    for (let ri = 0; ri < st.rows.length; ri++) {
+      const row = st.rows[ri];
+      for (let ci = 0; ci < row.cols.length; ci++) {
+        const ki = row.cols[ci].cells.findIndex(k => k.id === id);
+        if (ki >= 0) return { ri, ci, ki };
+      }
+    }
+    return null;
+  };
+  const removeCell = (st, id) => {
+    const p = findCell(id, st);
+    if (p) st.rows[p.ri].cols[p.ci].cells.splice(p.ki, 1);
+    normalize(st);
+  };
+  const share = (list, idx, target, key, min) => {
+    if (list.length === 1) return;
+    const max = 1 - min * (list.length - 1);
+    const v = Math.min(max, Math.max(min, target));
+    const others = list.reduce((a, o, i) => i === idx ? a : a + o[key], 0);
+    const k = (1 - v) / (others || 1);
+    list.forEach((o, i) => { o[key] = i === idx ? v : o[key] * k; });
+  };
+  const insertionAt = (px, py, st) => {
+    let y = 0;
+    const bands = [0];
+    for (const row of st.rows) { y += row.h; bands.push(y); }
+    for (let bi = 0; bi < bands.length; bi++) {
+      if (Math.abs(py - bands[bi]) < 0.035) return { kind: "row", at: bi };
+    }
+    const R = rectsOf(st);
+    for (const id of Object.keys(R)) {
+      const r = R[id];
+      if (px < r.x || px > r.x + r.w || py < r.y || py > r.y + r.h) continue;
+      const u = (px - r.x) / r.w, v = (py - r.y) / r.h;
+      const d = [["left", u], ["right", 1 - u], ["top", v], ["bottom", 1 - v]]
+        .sort((a, b) => a[1] - b[1])[0][0];
+      return { kind: d === "left" || d === "right" ? "beside" : "stack",
+               side: d, target: id };
+    }
+    return { kind: "row", at: st.rows.length };
+  };
+  const placedIn = (base, id, ins) => {
+    const st = clone(base);
+    removeCell(st, id);
+    const p = ins.target ? findCell(ins.target, st) : null;
+    if (ins.kind === "row" || !p) {
+      const at = Math.min(ins.at ?? st.rows.length, st.rows.length);
+      st.rows.splice(at, 0,
+        { h: 1 / (st.rows.length + 1), cols: [{ w: 1, cells: [{ id, h: 1 }] }] });
+      return normalize(st);
+    }
+    const row = st.rows[p.ri], col = row.cols[p.ci];
+    if (ins.kind === "beside") {
+      const at = p.ci + (ins.side === "right" ? 1 : 0);
+      col.w /= 2;
+      row.cols.splice(at, 0, { w: col.w, cells: [{ id, h: 1 }] });
+    } else {
+      const cell = col.cells[p.ki];
+      const at = p.ki + (ins.side === "bottom" ? 1 : 0);
+      cell.h /= 2;
+      col.cells.splice(at, 0, { id, h: cell.h });
+    }
+    return normalize(st);
+  };
+  const claimedTo = (base, id, dir) => {
+    const st = clone(base);
+    const p = findCell(id, st);
+    if (!p) return null;
+    const row = st.rows[p.ri], col = row.cols[p.ci], cell = col.cells[p.ki];
+    let displaced = [];
+    if (dir === "left" || dir === "right") {
+      const start = dir === "right" ? p.ci + 1 : 0;
+      const count = dir === "right" ? row.cols.length - p.ci - 1 : p.ci;
+      const removed = row.cols.splice(start, count);
+      displaced = removed.flatMap(c => c.cells.map(k => k.id));
+      col.w += removed.reduce((a, c) => a + c.w, 0);
+    } else {
+      const cs = dir === "down" ? p.ki + 1 : 0;
+      const cn = dir === "down" ? col.cells.length - p.ki - 1 : p.ki;
+      const rc = col.cells.splice(cs, cn);
+      cell.h += rc.reduce((a, k) => a + k.h, 0);
+      const rs = dir === "down" ? p.ri + 1 : 0;
+      const rn = dir === "down" ? st.rows.length - p.ri - 1 : p.ri;
+      const rr = st.rows.splice(rs, rn);
+      row.h += rr.reduce((a, r) => a + r.h, 0);
+      displaced = rc.map(k => k.id).concat(
+        rr.flatMap(r => r.cols.flatMap(c => c.cells.map(k => k.id))));
+    }
+    if (!displaced.length) return null;
+    normalize(st);
+    const orig = rectsOf(normalize(clone(base)));
+    let cur = st;
+    for (const d of displaced) {
+      const oc = orig[d];
+      const cx = oc.x + oc.w / 2, cy = oc.y + oc.h / 2;
+      const R = rectsOf(cur);
+      let best = null, bd = Infinity;
+      for (const tid of Object.keys(R)) {
+        if (tid === id && Object.keys(R).length > 1) continue;
+        const r = R[tid];
+        const dx = (r.x + r.w / 2) - cx, dy = (r.y + r.h / 2) - cy;
+        if (dx * dx + dy * dy < bd) { bd = dx * dx + dy * dy; best = { tid, r }; }
+      }
+      if (!best) return null;
+      const r = best.r;
+      const dxc = cx - (r.x + r.w / 2), dyc = cy - (r.y + r.h / 2);
+      const side = Math.abs(dxc) / r.w > Math.abs(dyc) / r.h
+        ? (dxc < 0 ? "left" : "right") : (dyc < 0 ? "top" : "bottom");
+      cur = placedIn(cur, d, {
+        kind: side === "left" || side === "right" ? "beside" : "stack",
+        side, target: best.tid });
+    }
+    return normalize(cur);
+  };
 
+  /* --------------------------------------------------------- markup */
+  const exportBtns = ok => `
+      <button class="ghost" data-f="export-pdf" ${ok ? "" : `disabled title="Export is blocked — the gate below states by what"`}>Export PDF</button>
+      <button class="${ok ? "primary" : "ghost"}" data-f="export" ${ok ? "" : `disabled title="Export is blocked — the gate below states by what"`}>Export PNG</button>`;
   root.innerHTML = `
     <div class="lb-head">
       <button class="text-act" data-f="back">Close arrange</button>
-      <span class="lb-title mono">${esc((sh.masthead?.title || sh.archetype).toUpperCase())} — ARRANGED BOARD</span>
+      <span class="lb-title mono">${esc((sh.masthead?.title || "BOARD").toUpperCase())} — ARRANGED BOARD</span>
       <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">● EVERY CHANGE SAVED</span>
-      <button class="ghost" data-f="export-pdf" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export PDF</button>
-      <button class="${ready.ready ? "primary" : "ghost"}" data-f="export" ${ready.ready ? "" : `disabled title="Export is blocked — the panel below states by what"`}>Export PNG</button>
+      <span data-f="export-slot">${exportBtns(ready.ready)}</span>
     </div>
-    <div class="lb-room lb-room-board">
-      <div class="sheet-stage">
-        <div class="stage-meta mono">${esc(sh.archetype)} · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}<span class="stage-meta-note">overlays are app chrome — they never print</span></div>
-        <div class="sheet-wrap"><img id="sheet-preview" alt="sheet preview"><div class="sheet-overlay" id="sheet-overlay"></div></div>
-        ${blockedLead}
-      </div>
-      <aside class="sheet-rail">
-        ${railSelected}
-        <div class="lb-rail-sec lb-rail-foot">
-          <div class="mono ${ready.ready ? "lb-ready" : "lb-not-ready"}">${ready.ready ? "READY TO EXPORT" : `${ready.blocked.length} BLOCKING`}</div>
-        </div>
-      </aside>
-    </div>`;
+    <div class="stage-meta mono">BOARD · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}
+      <span class="stage-meta-note">drag middle to move · drop on a tile to split · edges resize · Alt = free</span></div>
+    <div class="arr-board" data-f="board">
+      <div class="arr-ghost" data-f="ghost"><span class="arr-ghost-k mono" data-f="ghost-k"></span></div>
+      <div class="arr-arrows" data-f="arrows"></div>
+      <button class="arr-corner-add" data-f="corner-add" title="Add a benched panel back as a bottom row">
+        <svg viewBox="0 0 12 12" fill="none"><path d="M6 1.5 V10.5 M1.5 6 H10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="arr-menu" data-f="menu"></div>
+      <div class="arr-chip mono" data-f="chip"></div>
+    </div>
+    <div class="arr-hud mono" data-f="hud">hover a frame — its slot and take facts read here</div>
+    <div data-f="gate"></div>`;
 
-  // ---- preview: the real renderer at a fitted scale (never app chrome).
-  // R2 (canon pass): the response carries the renderer's own geometry
-  // manifest; the overlay consumes it and measures nothing.
-  const img = $("#sheet-preview");
-  const wrap = img.parentElement;
-  const fullW = sh.medium === "PRINT" ? sh.size[0] * 300 : sh.size[0];
-  const overlay = $("#sheet-overlay");
-  const pct = v => `${(v * 100).toFixed(3)}%`;
-  let geo = null;  // {scale, W, H, blocks} — from X-Sheet-Geometry
-  const geoBlock = id => geo && geo.blocks.find(g => g.block_id === id);
+  const boardEl = $("[data-f=board]", root);
+  const ghost = $("[data-f=ghost]", root);
+  const ghostK = $("[data-f=ghost-k]", root);
+  const chip = $("[data-f=chip]", root);
+  const hud = $("[data-f=hud]", root);
+  const gateEl = $("[data-f=gate]", root);
+  const menuEl = $("[data-f=menu]", root);
+  const cornerAdd = $("[data-f=corner-add]", root);
+  boardEl.style.aspectRatio = `${BW} / ${BH}`;
 
-  const renderOverlay = () => {
-    if (!geo || !geo.W) { overlay.innerHTML = ""; return; }
-    const { W, H } = geo;
-    overlay.innerHTML = geo.blocks.map(g => {
-      const isSel = sel && g.block_id === sel.block_id;
-      const [bx, by, bw, bh] = g.outer;
-      return `<div class="ov-block${isSel ? " sel" : ""}" data-ovb="${esc(g.block_id)}"
-        style="left:${pct(bx / W)};top:${pct(by / H)};width:${pct(bw / W)};height:${pct(bh / H)}">
-        ${isSel ? `<span class="ov-chip">${esc(g.type)}${g.slots.length ? ` · ${g.slots.length} SLOTS` : ""}</span>` : ""}
-      </div>` + (isSel ? g.slots.map(s => `<div class="ov-slot" data-ovs="${esc(s.slot_id)}"
-        style="left:${pct(s.rect[0] / W)};top:${pct(s.rect[1] / H)};width:${pct(s.rect[2] / W)};height:${pct(s.rect[3] / H)}">
-        ${s.filled ? "" : `<span class="mono ov-empty">EMPTY</span>`}</div>`).join("") : "");
-    }).join("");
+  /* tiles — one per panel this sheet knows (placed or benched) */
+  const tiles = {};
+  const knownIds = [...new Set([...allIds(), ...arr.bench])];
+  const ICON = {
+    trash: `<svg viewBox="0 0 12 12" fill="none"><path d="M2.5 3.2 H9.5 M4.2 3.2 V2 H7.8 V3.2 M3.3 3.2 L3.9 10 H8.1 L8.7 3.2 M5.1 5 V8.2 M6.9 5 V8.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    plus: `<svg viewBox="0 0 12 12" fill="none"><path d="M6 1.5 V10.5 M1.5 6 H10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    crop: `<svg viewBox="0 0 12 12" fill="none"><path d="M3.2 1 V8.8 H11 M1 3.2 H8.8 V11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
   };
-
-  const drawPreview = async () => {
-    const scale = Math.max(0.05, Math.min(1, (wrap.clientWidth || 900) / fullW));
-    const r = await fetch(`/api/sheets/${sheetId}/render`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scale }) });
-    if (!r.ok) { toast("Preview failed", true); return; }
-    try {
-      geo = { scale: parseFloat(r.headers.get("X-Sheet-Scale")) || scale,
-              blocks: JSON.parse(r.headers.get("X-Sheet-Geometry") || "[]"),
-              W: 0, H: 0 };
-    } catch { geo = null; }
-    const url = URL.createObjectURL(await r.blob());
-    if (_lbPreviewUrl) URL.revokeObjectURL(_lbPreviewUrl);
-    _lbPreviewUrl = url;
-    img.onload = () => {
-      if (geo) { geo.W = img.naturalWidth; geo.H = img.naturalHeight; }
-      renderOverlay();
-    };
-    img.src = url;
-  };
-  drawPreview();
-
-  const refresh = () => renderArrangeRoom(sheetId, host, onClose);
-
-  // ---- drag-resize + move on the selected block's slots. Soft snap to
-  // sibling edges and thirds; every drop saves (no session, no button).
-  // Deltas convert through the manifest's image band, so a dragged rect
-  // inverts to a model frac exactly.
-  let drag = null;
-  overlay.onpointerdown = e => {
-    const sEl = e.target.closest("[data-ovs]");
-    if (!sEl || !sel || !geo) return;
-    const slot = sel.slots.find(x => x.slot_id === sEl.dataset.ovs);
-    const g = geoBlock(sel.block_id);
-    if (!slot || !g) return;
-    const r = sEl.getBoundingClientRect();
-    const edge = 8;
-    const ex = e.clientX, ey = e.clientY;
-    const mode = {
-      l: Math.abs(ex - r.left) < edge, r: Math.abs(ex - r.right) < edge,
-      t: Math.abs(ey - r.top) < edge, b: Math.abs(ey - r.bottom) < edge };
-    drag = { slot, sEl, g, start: { ...slot.frac },
-             mode: (mode.l || mode.r || mode.t || mode.b) ? mode : "move",
-             x0: ex, y0: ey,
-             pxPerClient: geo.W / Math.max(1, overlay.clientWidth) };
-    sEl.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  };
-  overlay.onpointermove = e => {
-    if (!drag) return;
-    const [ix, iy, iw, ih] = drag.g.image;
-    const dx = (e.clientX - drag.x0) * drag.pxPerClient / Math.max(1, iw);
-    const dy = (e.clientY - drag.y0) * drag.pxPerClient / Math.max(1, ih);
-    const f = { ...drag.start };
-    if (drag.mode === "move") { f.x += dx; f.y += dy; }
-    else {
-      if (drag.mode.l) { f.x += dx; f.w -= dx; }
-      if (drag.mode.r) f.w += dx;
-      if (drag.mode.t) { f.y += dy; f.h -= dy; }
-      if (drag.mode.b) f.h += dy;
+  for (const pid of knownIds) {
+    const t = factsFor(pid);
+    const el = document.createElement("div");
+    el.className = "arr-tile";
+    el.dataset.pid = pid;
+    if (t) {
+      el.style.backgroundImage =
+        `url(/api/specs/${encodeURIComponent(t.spec)}/candidates/${encodeURIComponent(t.cand)}/image?size=md)`;
     }
-    f.w = Math.max(0.04, f.w); f.h = Math.max(0.04, f.h);
-    f.x = Math.max(0, Math.min(1 - f.w, f.x));
-    f.y = Math.max(0, Math.min(1 - f.h, f.y));
-    // Soft snap: sibling edges + thirds of the block.
-    const targets = [0, 1 / 3, 2 / 3, 1];
-    for (const s of sel.slots) {
-      if (s.slot_id === drag.slot.slot_id) continue;
-      targets.push(s.frac.x, s.frac.x + s.frac.w, s.frac.y, s.frac.y + s.frac.h);
+    el.innerHTML = `<span class="arr-tag mono">${esc(pid)}</span>
+      <span class="arr-dim mono"></span>
+      <span class="arr-verdict mono"></span>
+      <button class="arr-act arr-trash" data-act="bench" title="Remove from the board — the take goes to the bench; + docks it back">${ICON.trash}</button>
+      <button class="arr-act arr-plus" data-act="add" title="Dock a benched panel next to this one">${ICON.plus}</button>
+      <button class="arr-act arr-crop" data-act="crop" title="Crop, zoom and rotate inside the frame">${ICON.crop}</button>`;
+    boardEl.appendChild(el);
+    tiles[pid] = el;
+  }
+
+  /* --------------------------------------------------------- painting */
+  const layout = (st, skipId = null) => {
+    const R = rectsOf(st);
+    const bw = boardEl.clientWidth, bh = boardEl.clientHeight;
+    for (const pid of Object.keys(tiles)) {
+      const r = R[pid], el = tiles[pid];
+      if (!r) { el.style.display = "none"; continue; }
+      el.style.display = "";
+      if (pid === skipId) continue;
+      el.style.left = (r.x * bw + GUT / 2) + "px";
+      el.style.top = (r.y * bh + GUT / 2) + "px";
+      el.style.width = Math.max(4, r.w * bw - GUT) + "px";
+      el.style.height = Math.max(4, r.h * bh - GUT) + "px";
+      const t = factsFor(pid);
+      const pw = Math.round(r.w * BW), ph = Math.round(r.h * BH);
+      const short = t && t.w && (pw > t.w || ph > t.h);
+      el.classList.toggle("short", !!short);
+      el.querySelector(".arr-dim").textContent = `${pw} × ${ph}`;
+      el.querySelector(".arr-verdict").textContent =
+        short ? `SHORT — TAKE ${t.w} × ${t.h}` : (t ? "" : "NO APPROVED TAKE");
     }
-    const snap = (v, alt) => {
-      for (const t of targets) if (Math.abs(v - t) < 0.012) return t;
-      return alt;
-    };
-    const x2 = snap(f.x + f.w, f.x + f.w);
-    f.x = snap(f.x, f.x); f.w = x2 - f.x;
-    const y2 = snap(f.y + f.h, f.y + f.h);
-    f.y = snap(f.y, f.y); f.h = y2 - f.y;
-    drag.f = f;
-    const [ix2, iy2, iw2, ih2] = drag.g.image;
-    drag.sEl.style.left = pct((ix2 + f.x * iw2) / geo.W);
-    drag.sEl.style.top = pct((iy2 + f.y * ih2) / geo.H);
-    drag.sEl.style.width = pct(f.w * iw2 / geo.W);
-    drag.sEl.style.height = pct(f.h * ih2 / geo.H);
+    return R;
   };
-  overlay.onpointerup = async e => {
-    if (!drag) return;
-    const { slot, f } = drag;
-    drag = null;
-    if (!f) return;
-    try {
-      await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slot.slot_id}`, {
-        method: "PUT", json: { frac: { x: +f.x.toFixed(4), y: +f.y.toFixed(4),
-                                       w: +f.w.toFixed(4), h: +f.h.toFixed(4) } } });
-      refresh();
-    } catch (err) { toast(err.message, true); refresh(); }
+  const gateHtml = () => {
+    const rows = (ready.blocked || []).slice(0, 4).map(b =>
+      b.kind === "TYPE_FLOOR"
+        ? `<span>${esc(b.block_id)} sets type under the floor — pick a larger size.</span>`
+        : b.kind === "SLOT_APPROVAL"
+        ? `<span>${esc(panelOf(b.block_id, b.slot_id))} holds <span class="mono">${esc(b.candidate_id)}</span>, which is not approved — approve it on the workbench.</span>`
+        : `<span>${esc(panelOf(b.block_id, b.slot_id))} ${b.have?.[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "has no approved take — approve one on the workbench"}.</span>`)
+      .join("");
+    return ready.ready ? "" : `
+      <div class="panel panel-lead lb-blocked">
+        <div class="lb-blocked-k mono">${ready.blocked.length} THING${ready.blocked.length === 1 ? "" : "S"} BLOCK${ready.blocked.length === 1 ? "S" : ""} EXPORT</div>
+        <div class="lb-blocked-rows">${rows}
+          ${ready.blocked.length > 4 ? `<span class="mono">AND ${ready.blocked.length - 4} MORE</span>` : ""}</div>
+      </div>`;
   };
-  overlay.onclick = e => {
-    if (e.target.closest("[data-ovs]")) return;  // slot clicks are edits
-    const bEl = e.target.closest("[data-ovb]");
-    if (bEl) { uiSet("lb.block", bEl.dataset.ovb === selId ? "" : bEl.dataset.ovb); refresh(); }
+  const paintChrome = () => {
+    gateEl.innerHTML = gateHtml();
+    $("[data-f=export-slot]", root).innerHTML = exportBtns(ready.ready);
+    cornerAdd.disabled = !arr.bench.length;
+    cornerAdd.title = arr.bench.length
+      ? `Add a benched panel back — on the bench: ${arr.bench.join(", ")}`
+      : "Every panel is on the board";
+    for (const el of root.querySelectorAll(".arr-plus")) {
+      el.classList.toggle("empty", !arr.bench.length);
+      el.title = arr.bench.length
+        ? `Dock a benched panel next to this one — on the bench: ${arr.bench.join(", ")}`
+        : "Nothing on the bench — trash a panel first";
+    }
+  };
+  const paint = () => { layout(arr); paintChrome(); };
+
+  const hudFor = (pid, live = false) => {
+    const r = rectsOf(arr)[pid];
+    const t = factsFor(pid);
+    if (!r) return;
+    const pw = Math.round(r.w * BW), ph = Math.round(r.h * BH);
+    const short = t && t.w && (pw > t.w || ph > t.h);
+    hud.innerHTML = `<b>${esc(pid)}</b> · slot ${pw} × ${ph} px `
+      + `(${(pw / ph).toFixed(2)}:1)`
+      + (t ? ` · take ${t.w} × ${t.h} · ` : " · no approved take · ")
+      + (short
+        ? `<span class="arr-bad">SHORT — regenerate larger or shrink the frame</span>`
+        : `<span class="arr-ok">OK</span>`)
+      + (live ? " · dragging" : "");
   };
 
-  // ---- the fill popover: the verb sits with the empty slot; candidates
-  // are verdicted against THIS slot's pixel need (plan §5).
-  const fillSlot = async slotId => {
-    const slot = sel.slots.find(s => s.slot_id === slotId);
-    const tray_ = await api("/api/sheets/candidates");
-    if (!tray_.length) { toast("No approved takes yet — approve panels on stage 04 first", true); return; }
-    const srect = geoBlock(sel.block_id)?.slots.find(x => x.slot_id === slotId);
-    const need = srect && geo ? slotNeedFromRect(srect.rect, geo.scale, slot)
-      : [0, 0];
-    const verdict = t => {
-      const w = t.width || 0, h = t.height || 0;
-      if (w >= need[0] && h >= need[1]) return ["FITS", "ok"];
-      if (w >= need[0] * 0.7 && h >= need[1] * 0.7) return ["NEEDS A CROP", "hold"];
-      return ["TOO SMALL", "bad"];
-    };
-    const body = `<div class="modal-title">Fill ${esc(slotId)} — approved takes</div>
-      <div class="lb-fill-need mono">THIS SLOT NEEDS ${need[0]}×${need[1]} PX</div>
-      <div class="lb-fill-grid">${tray_.map(t => {
-        const [v, cls] = verdict(t);
-        return `<button class="lb-fill-cell" data-pick="${esc(t.spec_id)}:${esc(t.candidate_id)}">
-          <img src="/api/specs/${esc(t.spec_id)}/candidates/${esc(t.candidate_id)}/image?size=thumb" loading="lazy" alt="">
-          <span class="mono">${esc(t.candidate_id)} · ${esc(t.panel_id)}</span>
-          <span class="mono lb-fill-v ${cls}">${v}${t.placed_in.length ? ` · PLACED ${t.placed_in.length}×` : ""}</span>
-        </button>`; }).join("")}</div>
-      <div class="modal-actions"><button class="ghost" data-mf="cancel">Cancel</button></div>`;
-    await new Promise(res => {
-      const ov = document.createElement("div");
-      ov.className = "modal-scrim";
-      ov.innerHTML = `<div class="modal lb-fill-modal" role="dialog" aria-modal="true">${body}</div>`;
-      document.body.appendChild(ov);
-      const close = () => { ov.remove(); res(); };
-      ov.onclick = async e2 => {
-        if (e2.target === ov || e2.target.dataset.mf === "cancel") return close();
-        const pick = e2.target.closest("[data-pick]");
-        if (!pick) return;
-        const [specId, candId] = pick.dataset.pick.split(":");
-        try {
-          await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slotId}`, {
-            method: "PUT", json: { spec_id: specId, candidate_id: candId } });
-          close(); refresh();
-        } catch (err) { toast(err.message, true); }
-      };
+  /* ---------------------------------------------------------- commit */
+  let committing = false;
+  const commit = async () => {
+    if (committing) return;
+    committing = true;
+    try {
+      sh = await api(`/api/sheets/${sheetId}/arrangement`, {
+        method: "PUT", json: { rows: arr.rows, bench: arr.bench } });
+      arr = clone(sh.arrangement);
+      ready = await api(`/api/sheets/${sheetId}/readiness`);
+    } catch (err) {
+      toast(err.message, true);
+      sh = await api(`/api/sheets/${sheetId}`);
+      arr = sh.arrangement?.rows ? clone(sh.arrangement) : arr;
+    } finally {
+      committing = false;
+      paint();
+    }
+  };
+
+  /* ------------------------------------------------------ claim arrows */
+  const arrowLayer = $("[data-f=arrows]", root);
+  const ARROWS = {};
+  const ARROW_ROT = { right: 0, down: 90, left: 180, up: 270 };
+  let hoveredTile = null, hideTimer = null;
+  for (const dir of ["left", "right", "up", "down"]) {
+    const b = document.createElement("button");
+    b.className = "arr-arrow";
+    b.innerHTML = `<svg viewBox="0 0 12 12" fill="none" style="transform: rotate(${ARROW_ROT[dir]}deg)">
+      <path d="M1.5 6 H10.5 M6.8 2.2 L10.5 6 L6.8 9.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    b.title = "Claim to the canvas edge — displaced panels re-home into their nearest neighbor";
+    b.addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); });
+    b.addEventListener("mouseenter", () => {
+      clearTimeout(hideTimer);
+      if (!hoveredTile) return;
+      const c = claimedTo(arr, hoveredTile, dir);
+      if (!c) return;
+      const r = rectsOf(c)[hoveredTile];
+      if (!r) return;
+      const bw = boardEl.clientWidth, bh = boardEl.clientHeight;
+      ghost.style.display = "block";
+      ghost.style.left = (r.x * bw + GUT / 2) + "px";
+      ghost.style.top = (r.y * bh + GUT / 2) + "px";
+      ghost.style.width = (r.w * bw - GUT) + "px";
+      ghost.style.height = (r.h * bh - GUT) + "px";
+      ghostK.textContent = `CLICK — ${hoveredTile} CLAIMS TO THE ${
+        dir === "up" ? "TOP" : dir === "down" ? "BOTTOM" : dir.toUpperCase()} EDGE`;
     });
-  };
+    b.addEventListener("mouseleave", () => { ghost.style.display = "none"; scheduleHide(); });
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      if (!hoveredTile) return;
+      const c = claimedTo(arr, hoveredTile, dir);
+      ghost.style.display = "none";
+      hideArrows();
+      if (c) { arr = c; paint(); commit(); }
+    });
+    arrowLayer.appendChild(b);
+    ARROWS[dir] = b;
+  }
+  function hideArrows() {
+    hoveredTile = null;
+    for (const d in ARROWS) ARROWS[d].classList.remove("show");
+  }
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideArrows, 160);
+  }
+  function showArrows(pid) {
+    hoveredTile = pid;
+    const r = rectsOf(arr)[pid];
+    if (!r) return hideArrows();
+    const bw = boardEl.clientWidth, bh = boardEl.clientHeight, eps = 0.004, IN = 15;
+    const pos = {
+      left:  [r.x * bw + IN, (r.y + r.h / 2) * bh, r.x > eps],
+      right: [(r.x + r.w) * bw - IN, (r.y + r.h / 2) * bh, r.x + r.w < 1 - eps],
+      up:    [(r.x + r.w / 2) * bw, r.y * bh + IN, r.y > eps],
+      down:  [(r.x + r.w / 2) * bw, (r.y + r.h) * bh - IN, r.y + r.h < 1 - eps],
+    };
+    for (const d in pos) {
+      const [px, py, ok] = pos[d];
+      ARROWS[d].classList.toggle("show", !!ok);
+      ARROWS[d].style.left = px + "px";
+      ARROWS[d].style.top = py + "px";
+    }
+  }
 
-  // ---- crop / zoom / rotate: the frame never rotates — the image moves
-  // inside it. Over-budget crops are allowed and kept; export gates.
-  const cropSlot = async slotId => {
-    const slot = sel.slots.find(s => s.slot_id === slotId);
+  /* --------------------------------------------------- bench & verbs */
+  let menuTarget = null;
+  const openMenu = (target, ev) => {
+    menuTarget = target;
+    menuEl.innerHTML = arr.bench.map(id =>
+      `<button data-add="${esc(id)}">${esc(id)}</button>`).join("");
+    menuEl.classList.add("open");
+    const br = boardEl.getBoundingClientRect();
+    if (target && ev) {
+      menuEl.style.right = "auto"; menuEl.style.bottom = "auto";
+      menuEl.style.left = Math.min(ev.clientX - br.left, br.width - 180) + "px";
+      menuEl.style.top = Math.min(ev.clientY - br.top + 10, br.height - 40) + "px";
+    } else {
+      menuEl.style.left = "auto"; menuEl.style.top = "auto";
+      menuEl.style.right = "10px"; menuEl.style.bottom = "64px";
+    }
+  };
+  const dockNear = (id, targetId) => {
+    arr.bench = arr.bench.filter(b => b !== id);
+    const r = rectsOf(arr)[targetId];
+    if (r) {
+      const wide = (r.w * BW) / (r.h * BH) > 1.55;
+      arr = placedIn(arr, id, { kind: wide ? "beside" : "stack",
+                                side: wide ? "right" : "bottom", target: targetId });
+    } else {
+      arr = placedIn(arr, id, { kind: "row", at: arr.rows.length });
+    }
+    paint(); commit();
+  };
+  const benchPanel = pid => {
+    if (allIds().length <= 1) {
+      toast("A board keeps at least one panel — bench the rest, not the last.", true);
+      return;
+    }
+    hideArrows();
+    ghost.style.display = "none";
+    removeCell(arr, pid);
+    if (!arr.bench.includes(pid)) arr.bench.push(pid);
+    paint(); commit();
+  };
+  menuEl.addEventListener("click", e => {
+    const b = e.target.closest("[data-add]");
+    if (!b) return;
+    menuEl.classList.remove("open");
+    const id = b.dataset.add;
+    if (menuTarget) dockNear(id, menuTarget);
+    else { arr.bench = arr.bench.filter(x => x !== id);
+           arr = placedIn(arr, id, { kind: "row", at: arr.rows.length });
+           paint(); commit(); }
+    menuTarget = null;
+  });
+  cornerAdd.addEventListener("pointerdown", e => e.stopPropagation());
+  cornerAdd.addEventListener("click", e => {
+    e.stopPropagation();
+    if (!arr.bench.length) return;
+    if (arr.bench.length === 1) {
+      const id = arr.bench[0];
+      arr.bench = [];
+      arr = placedIn(arr, id, { kind: "row", at: arr.rows.length });
+      paint(); commit();
+      return;
+    }
+    openMenu(null, e);
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".arr-menu") && !e.target.closest(".arr-corner-add")
+        && !e.target.closest(".arr-plus")) {
+      menuEl.classList.remove("open");
+    }
+  });
+
+  /* crop — the frame never rotates; the image moves inside it */
+  const cropPanel = async pid => {
+    let bid = null, sid = null, slot = null;
+    for (const b of sh.blocks || []) {
+      for (const s of b.slots || []) {
+        if (s.panel_id === pid) { bid = b.block_id; sid = s.slot_id; slot = s; }
+      }
+    }
+    if (!slot?.candidate_id) return toast("No take in this frame to crop.", true);
     const src = `/api/specs/${esc(slot.spec_id)}/candidates/${esc(slot.candidate_id)}/image?size=md`;
-    const RATIOS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39], ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
+    const rect = rectsOf(arr)[pid];
+    const RATS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39], ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
     const cur = slot.crop || { x: 0, y: 0, w: 1, h: 1, rotate: 0 };
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
     ov.innerHTML = `
       <div class="modal lb-crop-modal" role="dialog" aria-modal="true">
-        <div class="modal-title">Crop ${esc(slot.candidate_id)} in ${esc(slotId)}</div>
-        <div class="lb-crop-chips">${RATIOS.map(([n]) =>
+        <div class="modal-title">Crop ${esc(slot.candidate_id)} in ${esc(pid)}</div>
+        <div class="lb-crop-chips">${RATS.map(([n]) =>
           `<button class="vchip${n === "SLOT" ? " on" : ""}" data-ratio="${n}">${n}</button>`).join("")}
           <label class="mono lb-rot">ROTATE <input type="number" id="lb-rot" min="-45" max="45" step="0.5" value="${cur.rotate || 0}">°</label></div>
         <div class="lb-crop-stage"><img src="${src}" draggable="false" alt="">
           <div class="lb-crop-box"></div></div>
-        <p class="hint">Drag to frame. A ratio other than SLOT lets the sheet's paper show inside the frame. Cropping past the slot's pixel need is kept — the slot reads SHORT and export blocks until the take is regenerated larger.</p>
+        <p class="hint">Drag to frame. Cropping past the slot's pixel need is kept — the slot reads SHORT and export blocks until the take is regenerated larger.</p>
         <div class="modal-actions">
           <button class="ghost" data-f="cancel">Cancel</button>
           <button class="primary" data-f="save">Save crop</button>
@@ -8849,18 +9085,14 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       </div>`;
     document.body.appendChild(ov);
     const stage = $(".lb-crop-stage", ov), box = $(".lb-crop-box", ov), im = $("img", stage);
-    let ratio = 0;  // 0 = slot's own; -1 free
-    const slotAspect = () => {
-      // R2: the slot's drawn aspect comes from the renderer's manifest.
-      const sr = geoBlock(sel.block_id)?.slots.find(x => x.slot_id === slotId);
-      return sr && sr.rect[3] ? sr.rect[2] / sr.rect[3] : 16 / 9;
-    };
+    let ratio = 0;
+    const slotAspect = () => rect ? (rect.w * BW) / (rect.h * BH) : 16 / 9;
     let f = { ...cur };
-    const paint = () => {
+    const paintBox = () => {
       box.style.left = `${f.x * 100}%`; box.style.top = `${f.y * 100}%`;
       box.style.width = `${f.w * 100}%`; box.style.height = `${f.h * 100}%`;
     };
-    im.onload = paint; if (im.complete) paint();
+    im.onload = paintBox; if (im.complete) paintBox();
     let d0 = null;
     stage.onpointerdown = e => {
       const r = stage.getBoundingClientRect();
@@ -8876,56 +9108,234 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       f.w = Math.abs(x1 - d0.x) || 0.01; f.h = Math.abs(y1 - d0.y) || 0.01;
       const want = ratio === 0 ? slotAspect() : ratio;
       if (want > 0) {
-        const imgA = (im.naturalWidth || 16) / (im.naturalHeight || 9);
-        f.h = f.w * imgA / want;
-        if (f.y + f.h > 1) { f.h = 1 - f.y; f.w = f.h * want / imgA; }
+        const ia = (im.naturalWidth || 16) / (im.naturalHeight || 9);
+        f.h = f.w * ia / want;
+        if (f.y + f.h > 1) { f.h = 1 - f.y; f.w = f.h * want / ia; }
       }
-      paint();
+      paintBox();
     };
     stage.onpointerup = () => { d0 = null; };
     ov.onclick = async e => {
-      const chip = e.target.closest("[data-ratio]");
-      if (chip) {
-        ratio = RATIOS.find(r => r[0] === chip.dataset.ratio)[1];
-        $$("[data-ratio]", ov).forEach(b => b.classList.toggle("on", b === chip));
+      const chipEl = e.target.closest("[data-ratio]");
+      if (chipEl) {
+        ratio = RATS.find(r => r[0] === chipEl.dataset.ratio)[1];
+        $$("[data-ratio]", ov).forEach(b => b.classList.toggle("on", b === chipEl));
         return;
       }
       if (e.target.dataset.f === "cancel" || e.target === ov) { ov.remove(); return; }
       if (e.target.dataset.f === "save") {
         try {
-          await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${slotId}`, {
+          await api(`/api/sheets/${sheetId}/blocks/${bid}/slots/${sid}`, {
             method: "PUT", json: { crop: { x: +f.x.toFixed(4), y: +f.y.toFixed(4),
               w: +f.w.toFixed(4), h: +f.h.toFixed(4),
               rotate: parseFloat($("#lb-rot", ov).value) || 0 } } });
-          ov.remove(); refresh();
+          ov.remove();
+          sh = await api(`/api/sheets/${sheetId}`);
+          ready = await api(`/api/sheets/${sheetId}/readiness`);
+          paint();
         } catch (err) { toast(err.message, true); }
       }
     };
   };
 
-  // ---- rail + head actions.
+  /* --------------------------------------------------------- pointers */
+  const EDGE = 9, CORNER = 14;
+  let drag = null;
+  const hitMode = (el, ev) => {
+    const r = el.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const L = x < EDGE, R2 = r.width - x < EDGE, T = y < EDGE, B = r.height - y < EDGE;
+    const Lc = x < CORNER, Rc = r.width - x < CORNER,
+          Tc = y < CORNER, Bc = r.height - y < CORNER;
+    if ((Lc || Rc) && (Tc || Bc)) return { l: Lc, r: Rc, t: Tc, b: Bc, corner: true };
+    if (L || R2 || T || B) return { l: L, r: R2, t: T, b: B, corner: false };
+    return null;
+  };
+  const cursorFor = m => {
+    if (!m) return "grab";
+    if (m.corner) return (m.l && m.t) || (m.r && m.b) ? "nwse-resize" : "nesw-resize";
+    return (m.l || m.r) ? "ew-resize" : "ns-resize";
+  };
+  const snapFrac = (v, steps, span) =>
+    !steps ? v : (Math.abs(Math.round(v * steps) / steps - v) * span <= SNAP_PX
+      ? Math.round(v * steps) / steps : v);
+
+  boardEl.addEventListener("pointermove", ev => {
+    if (drag) return;
+    if (ev.target.closest(".arr-arrow") || ev.target.closest(".arr-act")
+        || ev.target.closest(".arr-corner-add")) { clearTimeout(hideTimer); return; }
+    const el = ev.target.closest(".arr-tile");
+    if (!el) { boardEl.style.cursor = ""; scheduleHide(); return; }
+    boardEl.style.cursor = cursorFor(hitMode(el, ev));
+    hudFor(el.dataset.pid);
+    clearTimeout(hideTimer);
+    if (el.dataset.pid !== hoveredTile) showArrows(el.dataset.pid);
+  });
+  boardEl.addEventListener("pointerleave", () => scheduleHide());
+
+  boardEl.addEventListener("pointerdown", ev => {
+    const act = ev.target.closest(".arr-act");
+    if (act) { ev.stopPropagation(); ev.preventDefault(); return; }
+    const el = ev.target.closest(".arr-tile");
+    if (!el) return;
+    ev.preventDefault();
+    ghost.style.display = "none";
+    hideArrows();
+    boardEl.classList.add("dragging");
+    boardEl.setPointerCapture(ev.pointerId);
+    const pid = el.dataset.pid;
+    const p = findCell(pid, arr);
+    if (!p) return;
+    const col = arr.rows[p.ri].cols[p.ci];
+    drag = {
+      pid, el, mode: hitMode(el, ev), start: clone(arr), pos: p,
+      x0: ev.clientX, y0: ev.clientY,
+      startW: col.w, startRowH: arr.rows[p.ri].h,
+      startCellH: col.cells[p.ki].h,
+      grabbed: el.getBoundingClientRect(),
+      moved: false, preview: null,
+    };
+    el.classList.add("active");
+  });
+
+  boardEl.addEventListener("pointermove", ev => {
+    if (!drag) return;
+    const bw = boardEl.clientWidth, bh = boardEl.clientHeight;
+    const dx = (ev.clientX - drag.x0) / bw, dy = (ev.clientY - drag.y0) / bh;
+    if (Math.abs(dx) * bw + Math.abs(dy) * bh > 3) drag.moved = true;
+    const free = ev.altKey;
+
+    if (drag.mode) {                                   /* resize */
+      const st = clone(drag.start);
+      const p = drag.pos;
+      const col = st.rows[p.ri].cols[p.ci];
+      const innerTop = drag.mode.t && p.ki > 0;
+      const innerBottom = drag.mode.b && p.ki < col.cells.length - 1;
+      let w = drag.startW;
+      if (drag.mode.l || drag.mode.r) {
+        w = drag.startW + (drag.mode.r ? dx : -dx);
+        if (!free) w = snapFrac(w, GRID_X, bw);
+      }
+      let caught = "";
+      if (drag.mode.corner && !free) {
+        const t = factsFor(drag.pid);
+        const cellAbsH = drag.startRowH * drag.startCellH;
+        const cand = t && t.w ? [[`TAKE ${t.w}×${t.h}`, t.w / t.h], ...RATIOS] : RATIOS;
+        const aspect = (w * BW) / (cellAbsH * BH);
+        for (const [name, target] of cand) {
+          if (Math.abs(aspect - target) / target < 0.05) {
+            w = (target * cellAbsH * BH) / BW;
+            caught = name;
+            break;
+          }
+        }
+      }
+      if (drag.mode.l || drag.mode.r) share(st.rows[p.ri].cols, p.ci, w, "w", MIN_W);
+      if (innerTop || innerBottom) {
+        let ch = drag.startCellH + (innerBottom ? dy : -dy) / drag.startRowH;
+        if (!free) {
+          const abs = snapFrac(drag.startRowH * ch, GRID_Y, bh);
+          ch = abs / drag.startRowH;
+        }
+        share(st.rows[p.ri].cols[p.ci].cells, p.ki, ch, "h", MIN_CELL);
+      } else if (drag.mode.t || drag.mode.b) {
+        let h = drag.startRowH + (drag.mode.b ? dy : -dy);
+        if (!free) h = snapFrac(h, GRID_Y, bh);
+        share(st.rows, p.ri, h, "h", MIN_H);
+      }
+      arr = normalize(st);
+      layout(arr);
+      if (caught) {
+        chip.style.display = "block";
+        chip.textContent = caught;
+        const br = boardEl.getBoundingClientRect();
+        chip.style.left = (ev.clientX - br.left + 14) + "px";
+        chip.style.top = (ev.clientY - br.top + 14) + "px";
+      } else chip.style.display = "none";
+      hudFor(drag.pid, true);
+      return;
+    }
+
+    /* move: lift + split-dock ghost preview — the state under your hand
+       IS the state you get */
+    if (!drag.moved) return;
+    const el = drag.el;
+    el.classList.add("lifted");
+    const br = boardEl.getBoundingClientRect();
+    el.style.left = (drag.grabbed.left - br.left + ev.clientX - drag.x0) + "px";
+    el.style.top = (drag.grabbed.top - br.top + ev.clientY - drag.y0) + "px";
+    const px = Math.min(1, Math.max(0, (ev.clientX - br.left) / bw));
+    const py = Math.min(1, Math.max(0, (ev.clientY - br.top) / bh));
+    const without = clone(drag.start);
+    removeCell(without, drag.pid);
+    const ins = insertionAt(px, py, without);
+    const next = placedIn(drag.start, drag.pid, ins);
+    drag.preview = next;
+    const R = layout(next, drag.pid);
+    const r = R[drag.pid];
+    if (r) {
+      ghost.style.display = "block";
+      ghost.style.left = (r.x * bw + GUT / 2) + "px";
+      ghost.style.top = (r.y * bh + GUT / 2) + "px";
+      ghost.style.width = (r.w * bw - GUT) + "px";
+      ghost.style.height = (r.h * bh - GUT) + "px";
+      ghostK.textContent = ins.kind === "row" ? "NEW ROW"
+        : `SPLIT — ${ins.kind === "beside" ? "BESIDE" : "STACKED"} ${ins.side === "left" || ins.side === "top" ? "BEFORE" : "AFTER"} ${ins.target}`;
+    }
+  });
+
+  const endDrag = commitIt => {
+    if (!drag) return;
+    drag.el.classList.remove("active", "lifted");
+    boardEl.classList.remove("dragging");
+    ghost.style.display = "none";
+    chip.style.display = "none";
+    const changed = drag.moved || drag.mode;
+    if (drag.preview && commitIt) arr = drag.preview;
+    else if (!commitIt) arr = drag.start;
+    drag = null;
+    normalize(arr);
+    paint();
+    if (changed && commitIt) commit();
+  };
+  boardEl.addEventListener("pointerup", () => endDrag(true));
+  boardEl.addEventListener("pointercancel", () => endDrag(false));
+  const escHandler = ev => { if (ev.key === "Escape") endDrag(false); };
+  window.addEventListener("keydown", escHandler);
+
+  /* tile verbs + head actions */
+  boardEl.addEventListener("click", ev => {
+    const act = ev.target.closest(".arr-act");
+    if (!act) return;
+    ev.stopPropagation();
+    const pid = act.closest(".arr-tile").dataset.pid;
+    if (act.dataset.act === "bench") return benchPanel(pid);
+    if (act.dataset.act === "crop") return cropPanel(pid);
+    if (act.dataset.act === "add") {
+      if (!arr.bench.length) return;
+      if (arr.bench.length === 1) return dockNear(arr.bench[0], pid);
+      return openMenu(pid, ev);
+    }
+  });
   root.onclick = async e => {
-    const t = e.target;
-    const act = t.dataset.f || "";
+    const f = e.target.dataset.f || "";
     try {
-      if (act === "back") { uiSet("lb.block", ""); return onClose(); }
-      if (act === "export" || act === "export-pdf") {
-        const r = await api(`/api/sheets/${sheetId}/export`, { method: "POST", json: { format: act === "export-pdf" ? "pdf" : "png" } });
+      if (f === "back") {
+        window.removeEventListener("keydown", escHandler);
+        return onClose();
+      }
+      if (f === "export" || f === "export-pdf") {
+        const r = await api(`/api/sheets/${sheetId}/export`, {
+          method: "POST", json: { format: f === "export-pdf" ? "pdf" : "png" } });
         window.open(`/api/sheets/${sheetId}/export/${encodeURIComponent(r.file)}`, "_blank");
         return;
       }
-      const fill = t.closest("[data-fill]");
-      if (fill) return fillSlot(fill.dataset.fill);
-      const crop = t.closest("[data-crop]");
-      if (crop) return cropSlot(crop.dataset.crop);
-      const clear = t.closest("[data-clear]");
-      if (clear) {
-        await api(`/api/sheets/${sheetId}/blocks/${sel.block_id}/slots/${clear.dataset.clear}`, {
-          method: "PUT", json: { spec_id: null, candidate_id: null } });
-        return refresh();
-      }
-    } catch (err) { toast(err.message, true); refresh(); }
+    } catch (err) { toast(err.message, true); }
   };
+
+  new ResizeObserver(() => { if (!drag) paint(); }).observe(boardEl);
+  normalize(arr);
+  paint();
 }
 
 boot();

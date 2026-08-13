@@ -574,6 +574,110 @@ class FillTrayTests(SheetHomeTest):
             self.assertFalse(hasattr(sheet, name), name)
 
 
+class ArrangementTests(SheetHomeTest):
+    """The arrange room's physics (user 2026-08-12, Reflow Lab): the
+    rows/columns/cells structure commits through set_arrangement, and the
+    SERVER maps it to slot geometry — the client never stores fracs."""
+
+    def _board(self, n=3):
+        _write_spec(panels=[{"id": f"P{i}", "title": f"T{i}"}
+                            for i in range(1, n + 1)])
+        for i in range(1, n + 1):
+            _write_candidate("SPEC-0001", f"CAND-{i:04d}", f"P{i}")
+        return sheet.arrange_board("SPEC-0001")
+
+    def test_structure_becomes_slot_geometry(self):
+        rec = self._board(3)
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 0.6, "cols": [
+                {"w": 0.7, "cells": [{"id": "P1", "h": 1}]},
+                {"w": 0.3, "cells": [{"id": "P2", "h": 0.5},
+                                      {"id": "P3", "h": 0.5}]},
+            ]},
+        ]})
+        # absolute rects: P1 70%x100% of the band; P2/P3 stacked right
+        rects = {}
+        for b in out["blocks"]:
+            bf = b["frac"]
+            for s in b["slots"]:
+                f = s["frac"]
+                rects[s["panel_id"]] = (
+                    round(bf["x"] + f["x"] * bf["w"], 3),
+                    round(bf["y"] + f["y"] * bf["h"], 3),
+                    round(f["w"] * bf["w"], 3),
+                    round(f["h"] * bf["h"], 3))
+        self.assertEqual(rects["P1"], (0.0, 0.0, 0.7, 1.0))
+        self.assertEqual(rects["P2"], (0.7, 0.0, 0.3, 0.5))
+        self.assertEqual(rects["P3"], (0.7, 0.5, 0.3, 0.5))
+
+    def test_takes_and_crops_ride_by_panel(self):
+        rec = self._board(2)
+        bid = rec["blocks"][0]["block_id"]
+        s1 = rec["blocks"][0]["slots"][0]
+        sheet.set_slot(rec["sheet_id"], bid, s1["slot_id"],
+                       {"crop": {"x": 0.1, "y": 0.1, "w": 0.5, "h": 0.5,
+                                 "rotate": 0.0}})
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 1, "cells": [{"id": "P2", "h": 1},
+                                                  {"id": "P1", "h": 1}]}]},
+        ]})
+        by_pid = {s["panel_id"]: s for b in out["blocks"]
+                  for s in b["slots"]}
+        self.assertEqual(by_pid["P1"]["candidate_id"], "CAND-0001")
+        self.assertEqual(by_pid["P2"]["candidate_id"], "CAND-0002")
+        self.assertEqual(by_pid["P1"]["crop"]["w"], 0.5)
+
+    def test_bench_is_a_layout_decision(self):
+        rec = self._board(3)
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 1, "cells": [{"id": "P1", "h": 1}]}]},
+        ], "bench": ["P2", "P3"]})
+        pids = [s["panel_id"] for b in out["blocks"] for s in b["slots"]]
+        self.assertEqual(pids, ["P1"])
+        self.assertEqual(out["arrangement"]["bench"], ["P2", "P3"])
+        # no empty slot exists, so the bench never blocks export
+        self.assertTrue(sheet.readiness(out)["ready"])
+
+    def test_census_is_enforced(self):
+        rec = self._board(2)
+        dup = {"rows": [{"h": 1, "cols": [
+            {"w": 1, "cells": [{"id": "P1", "h": 1}, {"id": "P1", "h": 1}]}]}]}
+        with self.assertRaises(sheet.SheetError):
+            sheet.set_arrangement(rec["sheet_id"], dup)
+        ghostly = {"rows": [{"h": 1, "cols": [
+            {"w": 1, "cells": [{"id": "P9", "h": 1}]}]}]}
+        with self.assertRaises(sheet.SheetError):
+            sheet.set_arrangement(rec["sheet_id"], ghostly)
+        with self.assertRaises(sheet.SheetError):
+            sheet.set_arrangement(rec["sheet_id"], {"rows": []})
+
+    def test_a_wide_row_chunks_at_the_grid_cap(self):
+        rec = self._board(13)
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 1, "cells": [{"id": f"P{i}", "h": 1}]}
+                              for i in range(1, 14)]},
+        ]})
+        self.assertTrue(all(len(b["slots"]) <= 12 for b in out["blocks"]))
+        self.assertEqual(sum(len(b["slots"]) for b in out["blocks"]), 13)
+
+    def test_legacy_sheets_derive_a_round_tripping_arrangement(self):
+        rec = self._board(4)  # packer-made blocks, no arrangement yet
+        derived = sheet.derive_arrangement(rec)
+        placed = [c["id"] for r in derived["rows"] for co in r["cols"]
+                  for c in co["cells"]]
+        self.assertEqual(sorted(placed), ["P1", "P2", "P3", "P4"])
+        before = {s["panel_id"]: (b["frac"], s["frac"])
+                  for b in rec["blocks"] for s in b["slots"]}
+        out = sheet.set_arrangement(rec["sheet_id"], derived)
+        for b in out["blocks"]:
+            bf = b["frac"]
+            for s in b["slots"]:
+                obf, osf = before[s["panel_id"]]
+                ax = bf["x"] + s["frac"]["x"] * bf["w"]
+                ox = obf["x"] + osf["x"] * obf["w"]
+                self.assertAlmostEqual(ax, ox, delta=0.02, msg=s["panel_id"])
+
+
 class RenderTests(SheetHomeTest):
     """One renderer for preview and export (§10) — never upscale; sheets
     raise where boards letterbox (R2)."""
@@ -687,9 +791,14 @@ class GeometryManifestTests(SheetHomeTest):
             self.assertEqual(len(s["rect"]), 4)
 
     def test_no_js_geometry_mirror_survives(self):
+        # Amended by the arrange-room physics (2026-08-12): the client
+        # owns the rows/cols/cells STRUCTURE during a gesture and commits
+        # it whole; the server maps structure to slot geometry (the
+        # stored truth). No JS copy of the RENDERER's geometry exists.
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         self.assertNotIn("sheetContentFracs", js)
-        self.assertIn("X-Sheet-Geometry", js)
+        self.assertIn("/arrangement", js,
+                      "commits go through the arrangement door")
 
 
 class StageFiveDivisionTests(unittest.TestCase):
@@ -736,6 +845,25 @@ class StageFiveDivisionTests(unittest.TestCase):
         block = self.JS[i:]
         self.assertIn('data-f="export-pdf"', block)
         self.assertIn('data-f="export"', block)
+
+    def test_the_room_runs_the_reflow_physics(self):
+        # 2026-08-12: the Reflow Lab folded in — linked resize, split
+        # docking, claim arrows, bench, ghost preview, ratio snap.
+        i = self.JS.index("async function renderArrangeRoom")
+        block = self.JS[i:]
+        for marker in ("placedIn", "claimedTo", "insertionAt",
+                       "arr-arrow", "arr-trash", "arr-plus",
+                       "/arrangement", "SPLIT —", "CLAIMS TO THE"):
+            self.assertIn(marker, block, marker)
+        # tiles carry the real takes, ghosted (scrim in styles.css)
+        self.assertIn("candidates/", block)
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertIn(".arr-tile::before", css)
+
+    def test_the_slot_map_shows_ghosted_takes(self):
+        self.assertIn('class="slot-img"', self.JS)
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertIn(".slot .slot-img", css)
 
     def test_stage_03_copy_says_breakdown_not_sheet(self):
         # R7: one word, one meaning — the exact phrase is gone from every

@@ -63,13 +63,16 @@ internal views; `applyRoute` seeds the persisted selection state,
 `syncUrl` keeps the address honest on every selection change, popstate
 walks history; the server boots the stamped SPA for any non-API path and
 the auth gate carries `?next=` through /login), and the arrange room
-(`renderArrangeRoom` — the composer scoped to a spec's BOARD sheet,
-rendered inline on stage 05 by `Arrange this board`; server-rendered
-preview via `POST /api/sheets/{id}/render` fetched as a blob · rail of
-slot verbs; DOM overlays for selection/drag consume the renderer's
-X-Sheet-Geometry manifest and never print; the fill popover verdicts
-takes against `slotNeedFromRect` client-side. The Lookbook nav tool,
-shelf and sheet authoring were rolled back 2026-08-12).
+(`renderArrangeRoom`, rebuilt 2026-08-12 from the Reflow Lab prototype:
+tiles are the real takes ghosted via md-tier cover backgrounds; linked
+edge/corner resize, split-docking, claim arrows, bench/trash/+, grid +
+film-ratio snap, live SHORT hatch. The client edits only the
+rows→columns→cells STRUCTURE during a gesture and commits it whole via
+`PUT /api/sheets/{id}/arrangement`; `sheet.set_arrangement` maps
+structure to slot geometry server-side — the stored truth — and
+`derive_arrangement` infers a structure for pre-existing BOARD sheets
+by guillotine slicing. The Lookbook nav tool, shelf and sheet authoring
+were rolled back earlier the same day).
 
 ### Data layout (per production)
 

@@ -1157,7 +1157,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-12 | Composer approval gate: `SLOT_APPROVAL` row in the blocked-export lead ("holds CAND-…, which is not approved — approve it on the workbench or swap in an approved take") and an `UNAPPROVED` slot chip in the rail | Arrange room (stage 05) | Built from canon — review copy only. Bug-fix: slots could carry unapproved takes past the export gate; the gate now states the condition using the existing lb-blocked rows and lb-slot state chips |
-| 2026-08-12 | Inline arrange room (`.lb-room-board`, stage + rail, no tray): the composer scoped to a spec's BOARD sheet, opened by `Arrange this board` INLINE under the slot map — head verbs `Close arrange` / `Export PDF` / `Export PNG`; rail is slot rows (Fill/Swap/Crop/Clear) only | Stage 05 assembly page | The Lookbook surface was rolled back (user, 2026-08-12: "too big, and separate from the Board panel"); the room reuses composer canon (overlay, drag, fill tray, blocked lead) but its inline placement, two-column grid and trimmed rail need review |
+| 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry) |
 | 2026-08-12 | Deep-link URL vocabulary: `/screenplay` · `/production-design` · `/breakdowns/<spec>` · `/panels/<spec>[/<panel>]` · `/boards/<spec>[/arrange\|/<board-id>]` · `/reference` · `/productions` · `/settings` | Every view (address bar) | No visible UI — built from the product's stage names, not internal view names; review the vocabulary only (these words appear in shared links) |
 
 ---
@@ -1167,6 +1167,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-12** — **The arrange room gets its physics** (user-directed,
+  iterated in the Reflow Lab artifact until it felt right): tiles are
+  the real takes, ghosted; linked resize, split-docking, claim arrows,
+  bench/trash/+, ratio + grid snap, live pixel gate. The client edits a
+  rows→columns→cells STRUCTURE and commits it whole
+  (`PUT /api/sheets/{id}/arrangement`); the server maps structure to
+  slot geometry — R2's "geometry computed once" now reads: once, on the
+  server, per commit. The stage-05 slot map also shows each panel's
+  take, ghosted, under its verdict chrome. Non-canon: see the table.
 - **2026-08-12** — **Every page is a shareable address** (user): plain
   paths for every stage and selection — `/breakdowns/<spec>`,
   `/panels/<spec>[/<panel>]`, `/boards/<spec>[/arrange|/<board-id>]`,

@@ -2578,3 +2578,102 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* R10: the board's shape qualifies the brief, so it stands before it —
    a capped select, never full-width. */
 .f-btype select { max-width: 260px; }
+
+/* UNCANONIZED — 2026-08-12 — arrange room physics (Reflow Lab fold-in).
+   Tiles are the real takes, ghosted via a field-tone scrim that lifts on
+   hover; overlay verbs (claim arrows, trash, dock-+, crop) are icon
+   chips sized to the Lab's tuning. The Lab prototyped these as ROUND
+   buttons; canon forbids rounded corners, so they ship square — the
+   round-vs-square call is the designer's (see Uncanonized table). */
+.arr-board { position: relative; width: 100%; background: var(--field);
+  border: 1px solid var(--line); overflow: hidden; touch-action: none;
+  user-select: none; margin-top: 8px; }
+.arr-tile { position: absolute; overflow: hidden;
+  border: 1px solid var(--line); background-color: var(--bg2);
+  background-size: cover; background-position: center;
+  transition: left .14s, top .14s, width .14s, height .14s; }
+.arr-tile::before { content: ""; position: absolute; inset: 0;
+  background: var(--field); opacity: .45; pointer-events: none; }
+.arr-tile:hover::before { opacity: .12; }
+.arr-tile.active { border-color: var(--accent); z-index: 30; transition: none; }
+.arr-tile.lifted { opacity: .9; z-index: 40; transition: none;
+  outline: 1px solid var(--accent); pointer-events: none; }
+.arr-tile.short::after { content: ""; position: absolute; inset: 0;
+  pointer-events: none; background: repeating-linear-gradient(45deg,
+  rgba(224, 82, 66, .25) 0 2px, transparent 2px 9px); }
+.arr-tag { position: absolute; left: 6px; top: 5px; z-index: 2;
+  font-size: 10px; letter-spacing: .08em; color: var(--ink);
+  background: var(--field); padding: 2px 6px; pointer-events: none; }
+.arr-dim { position: absolute; right: 6px; bottom: 5px; z-index: 2;
+  font-size: 9.5px; letter-spacing: .06em; color: var(--ink-dim);
+  background: var(--field); padding: 2px 6px; pointer-events: none; }
+.arr-verdict { position: absolute; left: 6px; bottom: 5px; z-index: 2;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  color: var(--bad); background: var(--field); padding: 2px 6px;
+  pointer-events: none; }
+.arr-verdict:empty { display: none; }
+.arr-ghost { position: absolute; border: 1px dashed var(--accent);
+  background: transparent; z-index: 20; pointer-events: none; display: none; }
+.arr-ghost-k { position: absolute; left: 6px; top: 5px; font-size: 9.5px;
+  letter-spacing: .1em; color: var(--accent); background: var(--field);
+  padding: 2px 6px; }
+.arr-arrows { position: absolute; inset: 0; z-index: 36; pointer-events: none; }
+.arr-arrow { position: absolute; width: 20px; height: 20px; display: none;
+  align-items: center; justify-content: center; padding: 0;
+  color: var(--ink); background: var(--field);
+  border: 1px solid var(--ink-faint); cursor: pointer;
+  pointer-events: auto; transform: translate(-50%, -50%); }
+.arr-arrow svg { display: block; width: 11px; height: 11px; }
+.arr-arrow.show { display: flex; }
+.arr-arrow:hover { border-color: var(--ink); background: var(--panel); }
+.arr-act { position: absolute; top: 6px; width: 40px; height: 40px;
+  display: none; align-items: center; justify-content: center; padding: 0;
+  color: var(--ink); background: var(--field);
+  border: 1px solid var(--ink-faint); cursor: pointer; opacity: .55;
+  z-index: 3; }
+.arr-act svg { display: block; width: 22px; height: 22px; }
+.arr-tile:hover .arr-act { display: flex; }
+.arr-act:hover { opacity: 1; border-color: var(--ink); }
+.arr-trash { right: 6px; }
+.arr-trash:hover { border-color: var(--bad); color: var(--bad); }
+.arr-plus { right: 52px; }
+.arr-plus.empty { opacity: .22; cursor: default; }
+.arr-plus.empty:hover { opacity: .22; border-color: var(--ink-faint);
+  color: var(--ink); }
+.arr-crop { right: 98px; }
+.arr-board.dragging .arr-arrow, .arr-board.dragging .arr-act,
+.arr-board.dragging .arr-corner-add { display: none !important; }
+.arr-corner-add { position: absolute; right: 10px; bottom: 10px; z-index: 36;
+  width: 48px; height: 48px; display: flex; align-items: center;
+  justify-content: center; padding: 0; color: var(--ink);
+  background: var(--field); border: 1px solid var(--ink-faint);
+  cursor: pointer; }
+.arr-corner-add svg { display: block; width: 24px; height: 24px; }
+.arr-corner-add[disabled] { opacity: .35; cursor: default; }
+.arr-corner-add:not([disabled]):hover { border-color: var(--ink); }
+.arr-menu { position: absolute; z-index: 37; background: var(--panel);
+  border: 1px solid var(--line); display: none; flex-direction: column;
+  min-width: 160px; }
+.arr-menu.open { display: flex; }
+.arr-menu button { font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .06em; color: var(--ink-dim); background: transparent;
+  border: 0; border-top: 1px solid var(--line-soft); padding: 8px 10px;
+  text-align: left; cursor: pointer; }
+.arr-menu button:first-child { border-top: 0; }
+.arr-menu button:hover { color: var(--ink); background: var(--field); }
+.arr-chip { position: absolute; z-index: 50; pointer-events: none;
+  display: none; font-size: 10px; letter-spacing: .1em;
+  color: var(--accent); background: var(--field);
+  border: 1px solid var(--accent); padding: 2px 7px; }
+.arr-hud { margin-top: 8px; font-size: 11px; letter-spacing: .06em;
+  color: var(--ink-dim); min-height: 18px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.arr-hud b { color: var(--ink); font-weight: 400; }
+.arr-bad { color: var(--bad); }
+.arr-ok { color: var(--ok); }
+/* Slot map panels carry their takes, ghosted, under the verdict chrome */
+.slot .slot-img { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: .35; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .arr-tile { transition: none; }
+}

@@ -910,6 +910,181 @@ def arrange_board(spec_id: str) -> dict:
     return save_sheet(sheet)
 
 
+# ---------------------------------------------------------- arrangement
+# The arrange room's board physics (user 2026-08-12, prototyped in the
+# Reflow Lab): the room edits a rows -> columns -> stacked-cells
+# structure with linked-edge resizing, split-docking, claim arrows and a
+# bench. THIS is where that structure becomes slot geometry — the server
+# owns the mapping (R2: geometry computed once); the client's live math
+# during a gesture is feedback only, never stored.
+
+def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
+    """Replace a BOARD sheet's blocks from an arrangement structure:
+    {rows: [{h, cols: [{w, cells: [{id, h}]}]}], bench: [panel ids]}.
+    Fractions renormalize server-side; every placed cell keeps its
+    panel's carried take, crop and annotation; benched panels simply
+    have no slot (a layout decision — the takes are untouched)."""
+    sheet = _require(sheet_id)
+    if sheet.get("archetype") != "BOARD":
+        raise SheetError("an arrangement applies to BOARD sheets only")
+    rows = arrangement.get("rows") or []
+    bench = [str(b) for b in (arrangement.get("bench") or [])]
+    spec_id = str(sheet.get("spec_id") or "")
+    spec = store.get_spec(spec_id) or {}
+    known = ({p["id"] for p in spec.get("panels", [])}
+             | {"MATERIALS", "PALETTE"})
+    carried: dict[str, dict] = {}
+    for _b, s in _iter_slots(sheet):
+        if s.get("panel_id"):
+            carried[s["panel_id"]] = s
+            known.add(s["panel_id"])
+
+    ids: list[str] = []
+    for row in rows:
+        for col in (row.get("cols") or []):
+            for cell in (col.get("cells") or []):
+                ids.append(str(cell.get("id", "")))
+    dupes = sorted({i for i in ids if ids.count(i) > 1})
+    if dupes:
+        raise SheetError(f"panel placed twice: {', '.join(dupes)}")
+    unknown = sorted({i for i in ids + bench if i not in known})
+    if unknown:
+        raise SheetError(f"unknown panel: {', '.join(unknown)}")
+    if not ids:
+        raise SheetError("an arrangement needs at least one placed panel")
+
+    from . import assemble
+    approved = assemble._latest_approved_by_panel(spec_id) if spec_id else {}
+
+    def slot_for(pid: str, frac: dict) -> dict:
+        old = carried.get(pid) or {}
+        cand = old.get("candidate_id") or (
+            approved.get(pid) or {}).get("candidate_id")
+        return {"slot_id": "", "spec_id": old.get("spec_id") or spec_id,
+                "candidate_id": cand, "panel_id": pid, "frac": frac,
+                "crop": old.get("crop") or {"x": 0.0, "y": 0.0, "w": 1.0,
+                                            "h": 1.0, "rotate": 0.0},
+                "annotation": old.get("annotation")}
+
+    hsum = sum(float(r.get("h", 0)) for r in rows) or 1.0
+    blocks: list[dict] = []
+    y = 0.0
+    norm_rows = []
+    for row in rows:
+        rh = float(row.get("h", 0)) / hsum
+        cols = row.get("cols") or []
+        wsum = sum(float(c.get("w", 0)) for c in cols) or 1.0
+        slots: list[dict] = []
+        norm_cols = []
+        x = 0.0
+        for col in cols:
+            cw = float(col.get("w", 0)) / wsum
+            cells = col.get("cells") or []
+            csum = sum(float(k.get("h", 0)) for k in cells) or 1.0
+            norm_cells = []
+            cy = 0.0
+            for cell in cells:
+                ch = float(cell.get("h", 0)) / csum
+                pid = str(cell.get("id"))
+                slots.append(slot_for(pid, {
+                    "x": round(x, 4), "y": round(cy, 4),
+                    "w": round(cw, 4), "h": round(ch, 4)}))
+                norm_cells.append({"id": pid, "h": round(ch, 4)})
+                cy += ch
+            norm_cols.append({"w": round(cw, 4), "cells": norm_cells})
+            x += cw
+        # The GRID cap is hard for hand-authored sheets; a row that holds
+        # more chunks into same-band blocks (geometry preserved, exactly
+        # as arrange_board chunks).
+        cap = BLOCK_TYPES["GRID"].slots_max
+        pieces = [slots[i:i + cap] for i in range(0, len(slots), cap)] or [[]]
+        for piece in pieces:
+            if not piece:
+                continue
+            bx = min(s["frac"]["x"] for s in piece)
+            bxe = max(s["frac"]["x"] + s["frac"]["w"] for s in piece)
+            bw = max(bxe - bx, 1e-6)
+            block = _new_block(sheet, "GRID", {
+                "x": round(bx, 4), "y": round(y, 4),
+                "w": round(bw, 4), "h": round(rh, 4)})
+            block["slots"] = []
+            for s in piece:
+                f = s["frac"]
+                s = dict(s, slot_id=f"S{len(block['slots']) + 1}",
+                         frac={"x": round((f["x"] - bx) / bw, 4),
+                               "y": f["y"],
+                               "w": round(f["w"] / bw, 4), "h": f["h"]})
+                block["slots"].append(s)
+            blocks.append(block)
+        norm_rows.append({"h": round(rh, 4), "cols": norm_cols})
+        y += rh
+    sheet["blocks"] = blocks
+    sheet["arrangement"] = {"rows": norm_rows, "bench": bench}
+    return save_sheet(sheet)
+
+
+def derive_arrangement(sheet: dict) -> dict:
+    """A BOARD sheet that predates arrangements gets one inferred from
+    its slot geometry by guillotine slicing: full-width horizontal gaps
+    cut rows, full-height vertical gaps cut columns, horizontal gaps cut
+    stacked cells. Everything the packers and the old composer produced
+    slices cleanly at depth three; anything deeper degrades to one
+    column per remaining rect (approximate, never lossy of panels)."""
+    rects = []
+    for b in sheet.get("blocks", []):
+        bf = b.get("frac", {})
+        for s in b.get("slots", []):
+            if not s.get("panel_id"):
+                continue
+            f = s["frac"]
+            rects.append({"id": s["panel_id"],
+                          "x": bf["x"] + f["x"] * bf["w"],
+                          "y": bf["y"] + f["y"] * bf["h"],
+                          "w": f["w"] * bf["w"], "h": f["h"] * bf["h"]})
+
+    def cuts(rs, axis):
+        lo = min(r[axis] for r in rs)
+        hi = max(r[axis] + r["w" if axis == "x" else "h"] for r in rs)
+        edges = sorted({round(r[axis] + (r["w" if axis == "x" else "h"]), 4)
+                        for r in rs} - {round(hi, 4)})
+        out = []
+        for e in edges:
+            if all(r[axis] + 1e-4 >= e or
+                   r[axis] + (r["w"] if axis == "x" else r["h"]) <= e + 1e-4
+                   for r in rs):
+                out.append(e)
+        return [lo] + out + [hi]
+
+    def between(rs, axis, a, b):
+        key = "w" if axis == "x" else "h"
+        return [r for r in rs if r[axis] + r[key] / 2 > a
+                and r[axis] + r[key] / 2 < b]
+
+    rows_out = []
+    if not rects:
+        return {"rows": [], "bench": []}
+    ys = cuts(rects, "y")
+    for yi in range(len(ys) - 1):
+        band = between(rects, "y", ys[yi], ys[yi + 1])
+        if not band:
+            continue
+        cols_out = []
+        xs = cuts(band, "x")
+        for xi in range(len(xs) - 1):
+            colr = between(band, "x", xs[xi], xs[xi + 1])
+            if not colr:
+                continue
+            colr.sort(key=lambda r: r["y"])
+            total = sum(r["h"] for r in colr) or 1.0
+            cols_out.append({"w": round(xs[xi + 1] - xs[xi], 4),
+                             "cells": [{"id": r["id"],
+                                        "h": round(r["h"] / total, 4)}
+                                       for r in colr]})
+        rows_out.append({"h": round(ys[yi + 1] - ys[yi], 4),
+                         "cols": cols_out})
+    return {"rows": rows_out, "bench": []}
+
+
 # ------------------------------------------------------------- fill tray
 
 def fill_candidates() -> list[dict]:

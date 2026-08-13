@@ -350,33 +350,41 @@ can join the board as a bottom strip.
 > lookbooks made before the rollback stay on disk untouched.
 
 The room never changes canon: it shows approved takes; the takes, the
-breakdowns and the references are never touched. Two regions: the
-**fitted board** (the real renderer at a reduced scale, so the preview
-and the export cannot differ) and the **rail**. Overlays — selection
-outline, slot rects, EMPTY marks — are app chrome and never print. There
-is no save button: **every change saves**.
+breakdowns and the references are never touched. The board is direct
+manipulation — tiles are the real takes, ghosted so the chrome stays
+readable — and there is no save button: **every change saves** (the
+structure commits whole; the server maps it to stored geometry).
 
-- **Select a block** by clicking it on the board; its slots edit in the
-  rail (`Fill` / `Swap` / `Crop` / `Clear`).
-- **Fill a slot** — the popover offers every approved take in the
-  production, each verdicted against *this slot's* pixel need: `FITS` ·
-  `NEEDS A CROP` · `TOO SMALL`. Unapproved takes are never offered, and
-  takes already `PLACED` on another sheet say so.
-- **Drag a slot's edges** to resize (soft snap to neighbours and thirds);
-  drag its middle to move. Changing nothing about the takes — only where
-  they hang.
-- **Crop / zoom / rotate** — the frame never rotates; the image moves
-  inside it. Ratios: `SLOT`, `16:9`, `2.39:1`, `4:3`, `1:1`, `FREE`.
-  Cropping past the slot's pixel need is **allowed and kept**: the slot
-  reads short and export blocks, exactly as a small render does.
+- **Drag a tile's edges or corners to resize** — its neighbors give and
+  take space proportionally, in realtime. Edges land on a 24×12 grid;
+  corner drags click through the film ratios (`2.39:1 · 16:9 · 4:3 ·
+  1:1` and the take's own). Hold `Alt` for free-hand.
+- **Drag a tile's middle to move it** — the rest of the board takes its
+  post-drop positions live, with a dashed amber ghost marking the
+  landing slot. **Drop on another tile to split it**: its left/right
+  thirds put you beside it, its top/bottom thirds stack you with it.
+  The thin bands between rows make a new row. `Esc` cancels.
+- **Claim arrows** — hover a tile and an arrow sits at each edge's
+  midpoint; hovering it outlines the territory a claim would take, and
+  **clicking** jumps that edge to the canvas boundary. Displaced panels
+  re-home into their nearest neighbor: expansion displaces, never
+  destroys.
+- **Trash and +** — the trash benches a panel off the board (the take
+  is untouched); every tile's `+` docks a benched panel next to it, and
+  the corner `+` returns one as a bottom row.
+- **Crop / zoom / rotate** (the tile's crop chip) — the frame never
+  rotates; the image moves inside it. Cropping past the slot's pixel
+  need is **allowed and kept**: the slot reads short and export blocks.
+- **The pixel gate reads while you drag** — grow a frame past its
+  take's native pixels and it hatches `SHORT` under your hand.
 
 **The export gate** — one list, every kind of unready stated before a
-pixel is spent: `SLOT_PIXELS` (a slot is empty, or its take is short of
-the pixels the size needs — fill it, regenerate larger, or crop less),
-`SLOT_APPROVAL` (a placed take lost its approval — approve it again or
-swap it), `TYPE_FLOOR` (type would set under the medium's floor). While
-anything is listed, export is disabled and the panel below the board
-states every item. **Export PNG** and **Export PDF** are the two doors.
+pixel is spent: `SLOT_PIXELS` (a take short of the pixels its size
+needs — regenerate larger or crop less), `SLOT_APPROVAL` (a placed take
+lost its approval — approve it again on the workbench), `TYPE_FLOOR`
+(type would set under the medium's floor). While anything is listed,
+export is disabled and the gate below the board states every item.
+**Export PNG** and **Export PDF** are the two doors.
 
 ## 10. Reference — one library, three shelves
 
