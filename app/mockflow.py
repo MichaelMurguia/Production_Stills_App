@@ -279,6 +279,38 @@ def composition_check(spec: dict, panel: dict, prompt: str,
             "purpose_amendment": ""}
 
 
+_ORIENT_WORDS = [("side view", "SIDE"), ("profile", "SIDE"),
+                 ("from behind", "REAR"), ("rear view", "REAR"),
+                 ("head-on", "FRONT"), ("front view", "FRONT")]
+
+
+def correction_deltas(reason: str, panel: dict) -> dict:
+    """Deterministic keyword parse of a rejection reason into intake
+    deltas, so the whole propose→apply flow is testable key-free. Real
+    logic, honest scope: camera words map to axes; 'no X' clauses become
+    forbids; other clauses become requires. corrections._coerce_deltas
+    still validates and dedupes everything downstream."""
+    low = " ".join(reason.lower().split())
+    deltas: list[dict] = []
+    for phrase, value in _ORIENT_WORDS:
+        if phrase in low:
+            deltas.append({"kind": "camera", "field": "camera_orientation",
+                           "value": value})
+            break
+    for m in re.finditer(r"\bno ([a-z][a-z0-9 '\-]{2,40})", low):
+        deltas.append({"kind": "forbid", "value": m.group(1).strip()})
+    for clause in re.split(r"[.;]", reason):
+        c = clause.strip()
+        cl = c.lower()
+        if not c or len(c) < 12:
+            continue
+        if any(p in cl for p, _ in _ORIENT_WORDS) or cl.startswith("no "):
+            continue
+        if any(w in cl for w in ("should", "must", "need", "would like")):
+            deltas.append({"kind": "require", "value": c[:120]})
+    return {"deltas": deltas}
+
+
 def bible_markdown(answers: dict) -> str:
     """A bible draft in the exact section grammar bible.py parses, built
     from the interview answers (still BINDING — they land verbatim) and

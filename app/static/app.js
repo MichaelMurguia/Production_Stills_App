@@ -6807,6 +6807,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
       try {
         await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "REJECTED", reason });
         toast(`${c.candidate_id} rejected.`); refresh();
+        proposeCorrections(specId, c.candidate_id, refresh);
       } catch (err) { toast(err.message, true); }
     };
     actions.append(b);
@@ -6901,6 +6902,22 @@ async function addPanelDialog(specId) {
     toast(`${p.id} added — a work order at 0% allocation; balance it on the breakdown before assembly.`);
     await renderBoardPanels(specId);
   } catch (err) { toast(err.message, true); }
+}
+
+// Correction intake (2026-08-13): after a rejection saves, the reason is
+// parsed into proposed structural deltas (camera axis, require/forbid,
+// brief extension) shown under CARRIED REJECTIONS for the user to apply.
+// Advisory and best-effort — a missing narrative key must never make
+// rejecting itself feel broken, so failures stay silent here.
+async function proposeCorrections(specId, candId, onDone) {
+  try {
+    const r = await api(`/api/specs/${specId}/candidates/${candId}/correction-intake`,
+      { method: "POST", json: {} });
+    if ((r.deltas || []).length) {
+      toast(`${candId} — ${r.deltas.length} structural delta${r.deltas.length === 1 ? "" : "s"} proposed from the rejection. Review them under CARRIED REJECTIONS.`);
+      if (onDone) onDone();
+    }
+  } catch (err) { /* advisory only */ }
 }
 
 async function renderBoardPanels(specId) {
@@ -7683,6 +7700,7 @@ async function renderBoardPanels(specId) {
         try {
           await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "REJECTED", reason });
           toast(`${c.candidate_id} rejected.`); refresh();
+          proposeCorrections(specId, c.candidate_id, refresh);
         } catch (err) { toast(err.message, true); }
       }));
       actDerive.append(mk("Reference", "text-act act-dim", () => promoteDialog(specId, c),
@@ -8067,7 +8085,29 @@ async function renderBoardPanels(specId) {
               ? "Carry this correction into future prompts again"
               : "Stop carrying this correction into future prompts — the rejection and its history stay. Retire a note once it is satisfied, or when it contradicts a newer one (an old ‘closer adherence’ can stand as a counter-order against ‘remove X’)."}">${
             t.feedback_retired ? "Reinstate" : "Retire"}</button>
-        </div>`).join("")}
+        </div>${(() => {
+          // Correction intake (2026-08-13): the rejection parsed into
+          // proposed structural deltas — the model proposes, the user
+          // applies; applied rows read as state, not verbs.
+          const ci = t.correction_intake;
+          if (!ci || ci.dismissed || !(ci.deltas || []).length) return "";
+          const label = d => d.kind === "camera"
+            ? `CAMERA ${d.field.replace("camera_", "").toUpperCase()} → ${String(d.value).replace(/_/g, " ")}`
+            : d.kind === "require" ? `REQUIRE "${d.value}"`
+            : d.kind === "forbid" ? `FORBID "${d.value}"`
+            : `BRIEF + "${d.value}"`;
+          const open = ci.deltas.some(d => !d.applied);
+          return `<div class="mini mono" data-intake="${esc(t.candidate_id)}" style="margin:2px 0 8px 12px">
+            <span style="color:var(--ink-dim)">PROPOSED STRUCTURE — FROM THIS REJECTION</span>
+            ${ci.deltas.map((d, i) => `<label style="display:block;margin:2px 0${d.applied ? ";color:var(--ink-faint)" : ""}">
+              <input type="checkbox" data-di="${i}" ${d.applied ? "disabled checked" : "checked"}>
+              ${esc(label(d))}${d.applied ? " · APPLIED" : ""}</label>`).join("")}
+            ${open ? `<button class="text-act" data-apply-intake="${esc(t.candidate_id)}"
+                title="Apply the checked deltas to the panel — journaled, lock re-stamped; the verbatim correction above still carries until you retire it">Apply selected</button>
+              <button class="text-act" data-dismiss-intake="${esc(t.candidate_id)}"
+                title="Drop this proposal — the rejection and its verbatim carry are untouched">Dismiss</button>` : ""}
+          </div>`;
+        })()}`).join("")}
       </div>` : ""}
       </div>`;
     const fullBtn = $("[data-f=full]", el);
@@ -8132,6 +8172,27 @@ async function renderBoardPanels(specId) {
         [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),
          c.image_size].filter(Boolean).join(" · "));
     }
+    // Correction-intake acts — wired outside the prompt block so a take
+    // without a stored prompt still gets them.
+    $$("[data-apply-intake]", el).forEach(b => b.onclick = async () => {
+      const box = $(`[data-intake="${b.dataset.applyIntake}"]`, el);
+      const indices = $$("input[data-di]:checked", box)
+        .filter(x => !x.disabled).map(x => +x.dataset.di);
+      if (!indices.length) { toast("Nothing selected.", true); return; }
+      try {
+        const r = await api(`/api/specs/${specId}/candidates/${b.dataset.applyIntake}/correction-intake/apply`,
+          { method: "POST", json: { indices } });
+        toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied — journaled; the next take paints from them.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    });
+    $$("[data-dismiss-intake]", el).forEach(b => b.onclick = async () => {
+      try {
+        await api(`/api/specs/${specId}/candidates/${b.dataset.dismissIntake}/correction-intake/dismiss`,
+          { method: "POST", json: {} });
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    });
     return el;
   }
 

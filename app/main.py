@@ -1527,6 +1527,50 @@ def api_list_candidates(spec_id: str) -> list[dict]:
     return generate.list_candidates(spec_id)
 
 
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/correction-intake")
+async def api_correction_intake(spec_id: str, cand_id: str, body: dict) -> dict:
+    """Parse a rejection into proposed structural deltas (camera, require,
+    forbid, brief extension) stored on the candidate record. Proposals
+    only — applying is a separate, user-driven call."""
+    from . import corrections
+    try:
+        return await run_in_threadpool(
+            corrections.propose, spec_id, cand_id,
+            str(body.get("provider") or ""))
+    except KeyError as e:
+        raise _err(e)
+    except (autofill.AutofillError, generate.GenerationError) as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"correction intake failed: {e}")
+
+
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/correction-intake/apply")
+def api_correction_apply(spec_id: str, cand_id: str, body: dict) -> dict:
+    """Apply selected proposed deltas through the journaled controlled-edit
+    doors (amend_panel_camera / amend_panel_content). An approved take's
+    freeze propagates as the same stated refusal those doors give."""
+    from . import corrections
+    try:
+        return corrections.apply(spec_id, cand_id,
+                                 list(body.get("indices") or []))
+    except (KeyError, PermissionError) as e:
+        raise _err(e)
+    except (ValueError, generate.GenerationError) as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/correction-intake/dismiss")
+def api_correction_dismiss(spec_id: str, cand_id: str) -> dict:
+    from . import corrections
+    try:
+        return corrections.dismiss(spec_id, cand_id)
+    except KeyError as e:
+        raise _err(e)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/candidates/{cand_id}/feedback-retire")
 def api_retire_feedback(spec_id: str, cand_id: str, body: dict) -> dict:
     """A rejection reason that was satisfied or superseded stops carrying

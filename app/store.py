@@ -988,6 +988,63 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
             **{f: panel.get(f, "") for f in CAMERA_FIELDS}}
 
 
+def amend_panel_content(spec_id: str, panel_id: str,
+                        add_required: list[str] | None = None,
+                        add_forbidden: list[str] | None = None,
+                        purpose_append: str = "",
+                        source: str = "") -> dict:
+    """Add required/forbidden content or extend the brief between takes —
+    the correction-intake apply path (2026-08-13), same controlled-edit
+    contract as amend_panel_camera: an APPROVED take freezes the panel;
+    otherwise the lock re-stamps and the change is journaled, naming the
+    rejection it was structured from. Additive only: nothing here removes
+    or rewrites what the breakdown research established."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    approved = [r.get("candidate_id") for r in _board_records(spec_id)
+                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
+    if approved:
+        raise PermissionError(
+            f"{panel_id} has approved canon output ({', '.join(approved)}) painted "
+            "from its current content. Reject that take first if you truly intend "
+            "to change what this panel asks for.")
+    changed = []
+    for key, items in (("required_objects", add_required or []),
+                       ("forbidden_objects", add_forbidden or [])):
+        have = {str(x).casefold() for x in panel.get(key, [])}
+        for item in items:
+            item = str(item).strip()
+            if item and item.casefold() not in have:
+                panel.setdefault(key, []).append(item)
+                have.add(item.casefold())
+                changed.append(f"{key.split('_')[0]} + \"{item[:60]}\"")
+    extra = str(purpose_append or "").strip()
+    if extra and extra.casefold() not in str(panel.get("purpose", "")).casefold():
+        panel["purpose"] = (str(panel.get("purpose", "")).strip()
+                            + (" — " if panel.get("purpose") else "") + extra)
+        changed.append(f"purpose + \"{extra[:60]}\"")
+    if not changed:
+        return {"spec_id": spec_id, "panel_id": panel_id, "changed": []}
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash  # scripts/common.py via paths sys.path hook
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+        append_approval_log(
+            f"SPECIFICATION {spec_id} panel {panel_id} content amended post-lock "
+            f"(lock re-stamped {prev.get('hash', '?')[:16]}… → "
+            f"{locks[spec_id]['hash'][:16]}…): {'; '.join(changed)}"
+            + (f" — structured from {source}'s rejection" if source else "")
+            + ". Existing takes keep the hash they were generated against.")
+    return {"spec_id": spec_id, "panel_id": panel_id, "changed": changed}
+
+
 def add_panel(spec_id: str, title: str, purpose: str) -> dict:
     """Append a panel to a sheet from the panels workbench, without a full
     unlock (user 2026-08-09: adding a panel mid-generation otherwise meant
