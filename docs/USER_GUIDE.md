@@ -366,15 +366,23 @@ structure commits whole; the server maps it to stored geometry).
   The thin bands between rows make a new row. `Esc` cancels.
 - **Claim arrows** — hover a tile and an arrow sits at each edge's
   midpoint; hovering it outlines the territory a claim would take, and
-  **clicking** jumps that edge to the canvas boundary. Displaced panels
-  re-home into their nearest neighbor: expansion displaces, never
-  destroys.
+  **clicking cuts through the next panel**: the edge extends to that
+  neighbor's far edge and only that neighbor re-homes (into its nearest
+  neighbor). Click again to keep walking toward the canvas. Expansion
+  displaces, never destroys.
 - **Trash and +** — the trash benches a panel off the board (the take
   is untouched); every tile's `+` docks a benched panel next to it, and
   the corner `+` returns one as a bottom row.
-- **Crop / zoom / rotate** (the tile's crop chip) — the frame never
-  rotates; the image moves inside it. Cropping past the slot's pixel
-  need is **allowed and kept**: the slot reads short and export blocks.
+- **Crop** (the tile's crop chip) opens the frame **exactly as it
+  appears on the board** — current crop, position, and the slot's own
+  aspect. The **HAND** tool drags the image inside the frame to
+  reposition what displays (wheel zooms); the **CROP** tool redraws the
+  region on the full plate (film-ratio chips apply). The frame never
+  rotates; the image moves inside it. Over-cropping is **allowed and
+  kept**: the slot reads short and export blocks.
+- **Gutter and readouts** — the gutter slider sets the board's breathing
+  space (a sheet property, honored by exports); READOUTS toggles the
+  per-frame pixel figures.
 - **The pixel gate reads while you drag** — grow a frame past its
   take's native pixels and it hatches `SHORT` under your hand.
 

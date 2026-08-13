@@ -2677,3 +2677,21 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   .arr-tile { transition: none; }
 }
+/* arrange room controls (2026-08-13): gutter is a sheet property baked
+   into stored fracs server-side; readouts are room-local. Crop modal
+   gains the HAND view — a slot-aspect viewport the image pans within. */
+.arr-ctls { display: flex; align-items: center; gap: 14px; margin: 6px 0 0;
+  font-size: 10px; letter-spacing: .1em; color: var(--ink-dim); }
+.arr-ctls label { display: flex; align-items: center; gap: 8px; }
+.arr-ctls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.arr-board.hide-dims .arr-dim { display: none; }
+.arr-crop-modal { width: min(860px, 92vw); }
+.arr-crop-tools { display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 10px; }
+.arr-crop-ratios { display: flex; gap: 6px; }
+.arr-crop-ratios.hidden, .arr-crop-hand.hidden { display: none; }
+.arr-crop-view { position: relative; overflow: hidden; width: 100%;
+  background: var(--field); border: 1px solid var(--line);
+  cursor: grab; touch-action: none; user-select: none; }
+.arr-crop-view.grabbing { cursor: grabbing; }
+.arr-crop-view img { position: absolute; max-width: none; }

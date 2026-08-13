@@ -966,6 +966,17 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
                                             "h": 1.0, "rotate": 0.0},
                 "annotation": old.get("annotation")}
 
+    # Gutter (user 2026-08-13, from the prototype's tuning): a sheet-level
+    # breathing space in SHEET pixels, baked into the stored fracs so the
+    # renderer and every export honor it without knowing it exists.
+    W, H = sheet["size"][0], sheet["size"][1]
+    if sheet.get("medium") == "PRINT":
+        W, H = W * 300, H * 300
+    gutter = arrangement.get("gutter")
+    cap = min(W, H) // 5  # breathing space, never a layout of its own
+    gutter = 36 if gutter is None else max(0, min(cap, int(gutter)))
+    gx, gy = gutter / W, gutter / H
+
     hsum = sum(float(r.get("h", 0)) for r in rows) or 1.0
     blocks: list[dict] = []
     y = 0.0
@@ -974,7 +985,7 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
         rh = float(row.get("h", 0)) / hsum
         cols = row.get("cols") or []
         wsum = sum(float(c.get("w", 0)) for c in cols) or 1.0
-        slots: list[dict] = []
+        slots: list[dict] = []   # carries ABSOLUTE fracs until chunking
         norm_cols = []
         x = 0.0
         for col in cols:
@@ -986,9 +997,12 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
             for cell in cells:
                 ch = float(cell.get("h", 0)) / csum
                 pid = str(cell.get("id"))
+                ax = x + gx / 2
+                ay = y + rh * cy + gy / 2
+                aw = max(cw - gx, 0.01)
+                ah = max(rh * ch - gy, 0.01)
                 slots.append(slot_for(pid, {
-                    "x": round(x, 4), "y": round(cy, 4),
-                    "w": round(cw, 4), "h": round(ch, 4)}))
+                    "x": ax, "y": ay, "w": aw, "h": ah}))
                 norm_cells.append({"id": pid, "h": round(ch, 4)})
                 cy += ch
             norm_cols.append({"w": round(cw, 4), "cells": norm_cells})
@@ -1002,24 +1016,29 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
             if not piece:
                 continue
             bx = min(s["frac"]["x"] for s in piece)
+            by = min(s["frac"]["y"] for s in piece)
             bxe = max(s["frac"]["x"] + s["frac"]["w"] for s in piece)
+            bye = max(s["frac"]["y"] + s["frac"]["h"] for s in piece)
             bw = max(bxe - bx, 1e-6)
+            bh = max(bye - by, 1e-6)
             block = _new_block(sheet, "GRID", {
-                "x": round(bx, 4), "y": round(y, 4),
-                "w": round(bw, 4), "h": round(rh, 4)})
+                "x": round(bx, 4), "y": round(by, 4),
+                "w": round(bw, 4), "h": round(bh, 4)})
             block["slots"] = []
             for s in piece:
                 f = s["frac"]
                 s = dict(s, slot_id=f"S{len(block['slots']) + 1}",
                          frac={"x": round((f["x"] - bx) / bw, 4),
-                               "y": f["y"],
-                               "w": round(f["w"] / bw, 4), "h": f["h"]})
+                               "y": round((f["y"] - by) / bh, 4),
+                               "w": round(f["w"] / bw, 4),
+                               "h": round(f["h"] / bh, 4)})
                 block["slots"].append(s)
             blocks.append(block)
         norm_rows.append({"h": round(rh, 4), "cols": norm_cols})
         y += rh
     sheet["blocks"] = blocks
-    sheet["arrangement"] = {"rows": norm_rows, "bench": bench}
+    sheet["arrangement"] = {"rows": norm_rows, "bench": bench,
+                            "gutter": gutter}
     return save_sheet(sheet)
 
 
@@ -1062,7 +1081,7 @@ def derive_arrangement(sheet: dict) -> dict:
 
     rows_out = []
     if not rects:
-        return {"rows": [], "bench": []}
+        return {"rows": [], "bench": [], "gutter": 36}
     ys = cuts(rects, "y")
     for yi in range(len(ys) - 1):
         band = between(rects, "y", ys[yi], ys[yi + 1])
@@ -1082,7 +1101,7 @@ def derive_arrangement(sheet: dict) -> dict:
                                        for r in colr]})
         rows_out.append({"h": round(ys[yi + 1] - ys[yi], 4),
                          "cols": cols_out})
-    return {"rows": rows_out, "bench": []}
+    return {"rows": rows_out, "bench": [], "gutter": 36}
 
 
 # ------------------------------------------------------------- fill tray

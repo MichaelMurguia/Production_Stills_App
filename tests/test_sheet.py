@@ -594,7 +594,7 @@ class ArrangementTests(SheetHomeTest):
                 {"w": 0.3, "cells": [{"id": "P2", "h": 0.5},
                                       {"id": "P3", "h": 0.5}]},
             ]},
-        ]})
+        ], "gutter": 0})
         # absolute rects: P1 70%x100% of the band; P2/P3 stacked right
         rects = {}
         for b in out["blocks"]:
@@ -650,6 +650,24 @@ class ArrangementTests(SheetHomeTest):
             sheet.set_arrangement(rec["sheet_id"], ghostly)
         with self.assertRaises(sheet.SheetError):
             sheet.set_arrangement(rec["sheet_id"], {"rows": []})
+
+    def test_gutter_is_baked_into_stored_geometry(self):
+        # User 2026-08-13: the prototype's gutter graduates — a sheet
+        # property in sheet pixels, applied by the server as slot insets
+        # so the renderer and exports honor it without knowing it exists.
+        rec = self._board(2)
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 0.5, "cells": [{"id": "P1", "h": 1}]},
+                               {"w": 0.5, "cells": [{"id": "P2", "h": 1}]}]},
+        ], "gutter": 384})  # 10% of a 3840 sheet
+        self.assertEqual(out["arrangement"]["gutter"], 384)
+        b = out["blocks"][0]
+        bf = b["frac"]
+        s1 = next(s for s in b["slots"] if s["panel_id"] == "P1")
+        ax = bf["x"] + s1["frac"]["x"] * bf["w"]
+        aw = s1["frac"]["w"] * bf["w"]
+        self.assertAlmostEqual(ax, 0.05, delta=0.01)   # half a gutter in
+        self.assertAlmostEqual(aw, 0.40, delta=0.01)   # width minus one
 
     def test_a_wide_row_chunks_at_the_grid_cap(self):
         rec = self._board(13)
@@ -853,7 +871,9 @@ class StageFiveDivisionTests(unittest.TestCase):
         block = self.JS[i:]
         for marker in ("placedIn", "claimedTo", "insertionAt",
                        "arr-arrow", "arr-trash", "arr-plus",
-                       "/arrangement", "SPLIT —", "CLAIMS TO THE"):
+                       "/arrangement", "SPLIT —", "CLAIMS THROUGH",
+                       'data-tool="hand"', 'data-tool="crop"',
+                       'data-f="gutter"', 'data-f="readouts"'):
             self.assertIn(marker, block, marker)
         # tiles carry the real takes, ghosted (scrim in styles.css)
         self.assertIn("candidates/", block)
