@@ -861,9 +861,13 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     # Style anchors (the four-anchor shelf: world texture, color palette,
     # cinematography, board rendering) are art direction, not subject
     # reference — they apply to every generation automatically, capped per
-    # role, ahead of the panel's subject references.
+    # role, AFTER the panel's subject references (user 2026-08-13,
+    # reversing the 2026-08-03 style-first placement): the GT40 board's
+    # hover jet plate attached as "image 7 of 8" behind the style shelf
+    # and lost. Identity anchors take the early positions; role scoping,
+    # not position, is what binds the style anchors.
     seen_ids = {r["id"] for r in refs}
-    refs = [r for r in store.auto_style_references() if r["id"] not in seen_ids] + refs
+    refs = refs + [r for r in store.auto_style_references() if r["id"] not in seen_ids]
 
     # Lighting studies are anchored to their parent board's approved geometry:
     # same place, same camera — only the light varies.
