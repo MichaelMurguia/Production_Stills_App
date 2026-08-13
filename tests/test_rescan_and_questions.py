@@ -258,32 +258,62 @@ class RejectionReasonsArePrimaryRules(_IsolatedStyleContext):
         self.assertIn("- the jukebox must be chrome and red, never wood", out)
         self.assertIn("overrides ANY conflicting instruction", out)
 
-    def test_the_tail_re_binds_them(self):
+    def test_the_tail_carries_the_full_text(self):
+        """A lossy rewrite can drop a pointer's target — the tail repeats
+        every correction verbatim (2026-08-13), not a reference to it."""
         out = self.compiled(["no neon signage"])
-        self.assertIn("Re-read the DIRECTOR'S CORRECTIONS", out)
-        self.assertGreater(out.index("Re-read the DIRECTOR'S CORRECTIONS"),
+        self.assertGreater(out.rindex("- no neon signage"),
                            out.index("FINAL INSTRUCTION"))
+        self.assertIn("They are, again, in full:", out)
+        self.assertNotIn("Re-read", out, "the pointer form is retired")
 
     def test_no_rejections_means_no_section_anywhere(self):
         out = self.compiled([])
         self.assertNotIn("DIRECTOR'S CORRECTIONS", out)
-        self.assertNotIn("Re-read", out)
+        self.assertNotIn("again, in full", out)
 
     def test_the_old_buried_section_is_gone(self):
         out = self.compiled(["a reason"])
         self.assertNotIn("REJECTION FEEDBACK", out,
-                         "stated once at the head, never duplicated late")
+                         "the legacy mid-prompt section stays dead")
 
     def test_a_correction_still_suppresses_its_matching_lesson(self):
-        """The dedupe against project negatives survives the move."""
+        """The dedupe against project negatives survives the move: the
+        correction rides the head and the tail echo, but never the
+        PROJECT LESSONS LEARNED section."""
         from unittest import mock
         with mock.patch.object(generate, "rejection_feedback",
                                return_value=["never photoreal"]), \
              mock.patch.object(generate, "project_negatives",
                                return_value=["never photoreal", "no anime"]):
             out = generate.compile_panel_prompt(self.spec(), self.panel(), [])
-        self.assertEqual(out.count("never photoreal"), 1)
+        lessons = out[out.index("PROJECT LESSONS LEARNED"):
+                      out.index("FINAL INSTRUCTION")]
+        self.assertNotIn("never photoreal", lessons)
+        self.assertEqual(out.count("never photoreal"), 2,
+                         "head and tail echo, nowhere else")
         self.assertIn("no anime", out)
+
+    def test_the_rewriter_is_told_to_preserve_corrections_and_camera(self):
+        """The openai-chat pipeline rewrites the whole compiled prompt; its
+        rules must NAME the corrections and camera blocks or the rewrite
+        can legally drop them (found 2026-08-13, CANYON_GRM_GT40_GETAWAY:
+        1 of 5 corrections survived a re-render)."""
+        rules = generate._rewriter_rules()
+        self.assertIn("DIRECTOR'S CORRECTIONS", rules)
+        self.assertIn("Never\n  drop, soften, or average".replace("\n  ", " "),
+                      rules.replace("\n  ", " "))
+        self.assertIn("CAMERA block is binding framing", rules)
+
+    def test_vehicle_geometry_no_longer_argues_for_the_reference_angle(self):
+        """The role line used to say 'match that image closely' about the
+        angle — directly opposing a corrected angle. Camera and
+        corrections outrank the reference's own angle now."""
+        ref = {"id": "REF-0040", "role": "VEHICLE_GEOMETRY"}
+        out = generate.compile_panel_prompt(self.spec(), self.panel(), [ref])
+        self.assertNotIn("match that image closely", out)
+        self.assertIn("render THIS vehicle from that angle even if no "
+                      "attached image shows it", out)
 class CorrectionsCanRetire(unittest.TestCase):
     """A correction that was satisfied or superseded stops carrying (user
     2026-08-08): CAND-0072 followed "shoot into a corner" but kept the

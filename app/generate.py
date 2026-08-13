@@ -712,10 +712,15 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
 
     lines += ["",
               "FINAL INSTRUCTION",
-              "The output is a CANDIDATE — UNAPPROVED. Do not add unsupported decorative content."
-              + (" Re-read the DIRECTOR'S CORRECTIONS at the top of this "
-                 "prompt: each one is binding and overrides anything above "
-                 "that conflicts with it." if feedback else "")]
+              "The output is a CANDIDATE — UNAPPROVED. Do not add unsupported decorative content."]
+    # The tail used to be a pointer back to the head; a lossy rewrite can
+    # drop a pointer's target. The corrections now ride in full at BOTH
+    # ends (2026-08-13) — primacy and recency both survive.
+    if feedback:
+        lines += ["The DIRECTOR'S CORRECTIONS above are binding and override "
+                  "anything in this prompt that conflicts with them. They "
+                  "are, again, in full:"]
+        lines += [f"- {x}" for x in feedback]
     return "\n".join(lines)
 
 
@@ -765,8 +770,11 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
             "panel shapes, intakes, lights, wheels, details, and the interior "
             "where an attached image shows one: what its instruments, controls "
             "and surfaces look like. It is this specific vehicle, "
-            "not a generic vehicle of its type; where the panel shows an angle "
-            "an attached image covers, match that image closely",
+            "not a generic vehicle of its type. The CAMERA block and any "
+            "DIRECTOR'S CORRECTIONS choose the viewing angle: where they call "
+            "for an angle, render THIS vehicle from that angle even if no "
+            "attached image shows it — an attached image at the same angle is "
+            "a bonus anchor, never a licence to reuse its angle",
             "the vehicle's placement, viewing angle, lighting, or the scene"),
         "CHARACTER_LIKENESS": (
             "this character's facial likeness, build, hair, and age — the "
@@ -1127,6 +1135,15 @@ describe the finished painting: one flowing description of subject, composition,
 light, and paint handling.
 
 Hard rules for your rewrite:
+- Anything under DIRECTOR'S CORRECTIONS is the highest-priority rule set in
+  the specification. Reproduce every correction in your rewrite — verbatim or
+  stronger — and make each described change unmistakable in the prose. Never
+  drop, soften, or average a correction against the references, the style
+  sections, or your own composition sense. End your prompt by restating each
+  correction.
+- The CAMERA block is binding framing: carry its shot scale, lens, view,
+  angle, and tilt into the prose explicitly — the description must be FROM
+  that camera, whatever the attached references show.
 - Every item under REQUIRED CONTENT must appear, described concretely.
 - Nothing under FORBIDDEN CONTENT or PROJECT LESSONS LEARNED may appear, and do
   not invent ANY object, character, creature, symbol, text, or worldbuilding
