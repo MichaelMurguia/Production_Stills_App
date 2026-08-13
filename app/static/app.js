@@ -8304,7 +8304,7 @@ async function renderAssemblyFor(specId) {
           <span class="slot-id">TITLE BLOCK · APP-DRAWN</span>
         </div>
         ${sm.slots.map(s => `
-          <div class="slot ${s.status === "TOO_SMALL" ? "hatch-bad" : "hatch"} ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
+          <div class="slot ${s.status === "OK" ? "clean" : s.status === "TOO_SMALL" ? "hatch-bad" : "hatch"} ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
                title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
             ${s.candidate_id ? `<img class="slot-img" src="/api/specs/${encodeURIComponent(specId)}/candidates/${esc(s.candidate_id)}/image?size=thumb" loading="lazy" alt="">` : ""}
             <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}</span>
@@ -8321,7 +8321,7 @@ async function renderAssemblyFor(specId) {
   // judges readiness, the arrange room arranges. The variant chips are
   // gone — Arrange this board opens the room inline on this scene's
   // BOARD sheet, and the map reads the default grammar.
-  const variant = "aspect";
+  const variant = sm?.layout_variant === "arranged" ? "arranged" : "aspect";
   const boardsCount = boards.length;
   // Same takes + same layout = the board that already exists; assembling
   // again would mint a duplicate (user ruling 2026-08-02).
@@ -8409,6 +8409,9 @@ async function renderAssemblyFor(specId) {
     uiSet("asm.room", "");
     syncUrl(true);
     setArrangeMode(false);
+    // Done arranging returns to a map that TELLS THE TRUTH: refetch it
+    // so it shows the arranged geometry, not the packer's default.
+    refreshMap();
   };
   const openRoom = async () => {
     const rec = await api(`/api/specs/${specId}/arrange`, { method: "POST" });

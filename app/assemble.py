@@ -30,6 +30,132 @@ class AssemblyError(Exception):
     pass
 
 
+def _arranged_sheet(spec_id: str) -> dict | None:
+    """The spec's arranged BOARD sheet, if the user has arranged one.
+    Once it exists it IS the board's layout truth (user 2026-08-13):
+    the slot map reports it and assembly renders it — the packer only
+    speaks for never-arranged boards."""
+    if not paths.SHEETS_DIR.exists():
+        return None
+    for p in sorted(paths.SHEETS_DIR.glob("SH-*.json")):
+        s = json.loads(p.read_text(encoding="utf-8"))
+        if (s.get("archetype") == "BOARD" and s.get("spec_id") == spec_id
+                and s.get("arrangement")):
+            return sheet.get_sheet(s["sheet_id"])
+    return None
+
+
+def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
+                       width: int, height: int) -> dict:
+    cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
+    slots = []
+    for b in rec.get("blocks", []):
+        bf = b["frac"]
+        for s in b.get("slots", []):
+            if not s.get("panel_id"):
+                continue
+            f = s["frac"]
+            ax = cxf + (bf["x"] + f["x"] * bf["w"]) * cwf
+            ay = cyf + (bf["y"] + f["y"] * bf["h"]) * chf
+            aw = f["w"] * bf["w"] * cwf
+            ah = f["h"] * bf["h"] * chf
+            cand_id = s.get("candidate_id")
+            cand = generate.get_candidate(spec_id, cand_id) if cand_id else None
+            have = ((int(cand.get("width") or 0), int(cand.get("height") or 0))
+                    if cand else (0, 0))
+            if not cand:
+                status = "NO_CANDIDATE"
+            elif cand.get("status") != "APPROVED":
+                status = "UNAPPROVED"
+            else:
+                shown, need = sheet.shown_pixels(rec, b, s, have)
+                status = ("TOO_SMALL" if (shown[0] + 1 < need[0]
+                                          or shown[1] + 1 < need[1]) else "OK")
+            panel = next((p for p in spec.get("panels", [])
+                          if p.get("id") == s["panel_id"]), {})
+            slots.append({
+                "panel_id": s["panel_id"],
+                "title": panel.get("title") or panel.get("purpose", ""),
+                "x": ax, "y": ay, "w": aw, "h": ah,
+                "slot_width": int(aw * width),
+                "slot_height": int(ah * height),
+                "status": status,
+                "candidate_id": cand_id,
+                "candidate_width": have[0] or None,
+                "candidate_height": have[1] or None,
+                "allocation_percent": None,
+            })
+    not_ready = [s for s in slots if s["status"] != "OK"]
+    return {
+        "spec_id": spec_id,
+        "canvas": {"width": width, "height": height},
+        "locked": store.spec_locked(spec_id),
+        "board_type": str(spec.get("board_type") or "LOCATION").upper(),
+        "layout_variant": "arranged",
+        "derived_strip": [],
+        "slots": slots,
+        "ready": not not_ready,
+        "assemblable": all(s["status"] in ("OK", "TOO_SMALL") for s in slots),
+        "not_ready": [{"panel_id": s["panel_id"], "status": s["status"]}
+                      for s in not_ready],
+    }
+
+
+def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
+                       width: int, height: int) -> dict:
+    from common import stable_hash
+
+    gate = sheet.readiness(rec)
+    if not gate["ready"]:
+        raise AssemblyError(
+            "the arranged board blocks assembly: "
+            + "; ".join(f"{e['kind']} {e.get('slot_id', '')}".strip()
+                        for e in gate["blocked"]))
+    probe = dict(rec, size=[width, height], size_source="CHOSEN")
+    warnings: list[str] = []
+    board = sheet_render.render_sheet(probe, 1.0, allow_letterbox=True,
+                                      warnings=warnings)
+    used: dict[str, str] = {}
+    rects: dict[str, list[float]] = {}
+    cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
+    for b in rec.get("blocks", []):
+        bf = b["frac"]
+        for s in b.get("slots", []):
+            if not (s.get("panel_id") and s.get("candidate_id")):
+                continue
+            used[s["panel_id"]] = s["candidate_id"]
+            f = s["frac"]
+            rects[s["panel_id"]] = [
+                (cxf + (bf["x"] + f["x"] * bf["w"]) * cwf) * width,
+                (cyf + (bf["y"] + f["y"] * bf["h"]) * chf) * height,
+                f["w"] * bf["w"] * cwf * width,
+                f["h"] * bf["h"] * chf * height,
+            ]
+    board_id = store.next_counter("board_counter", "BOARD")
+    d = paths.BOARDS_DIR / spec_id
+    d.mkdir(parents=True, exist_ok=True)
+    board.save(d / f"{board_id}.png", "PNG")
+    record = {
+        "candidate_id": board_id,
+        "kind": "assembled_board",
+        "specification_id": spec_id,
+        "spec_hash": stable_hash(spec),
+        "panel_id": "BOARD",
+        "status": "CANDIDATE",
+        "width": width,
+        "height": height,
+        "layout_variant": "arranged",
+        "panels_used": used,
+        "rects": rects,
+        "warnings": warnings,
+        "created_at": store.utcnow(),
+    }
+    (d / f"{board_id}.json").write_text(
+        json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    return record
+
+
 def _latest_approved_by_panel(spec_id: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for c in generate.list_candidates(spec_id):
@@ -129,6 +255,11 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
     spec = store.get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
+    # An arranged board IS the layout truth — the map reports it, with
+    # verdicts judged the way the renderer will draw it.
+    arranged = _arranged_sheet(spec_id)
+    if arranged is not None:
+        return _arranged_slot_map(spec_id, spec, arranged, width, height)
     variant = check_variant(spec, variant)
 
     approved = _latest_approved_by_panel(spec_id)
@@ -213,6 +344,13 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
         raise KeyError(spec_id)
     if not store.spec_locked(spec_id):
         raise AssemblyError(f"{spec_id} is not approved; only locked specs can assemble.")
+    # An arranged board assembles AS ARRANGED (user 2026-08-13): the
+    # sheet renders at the requested canvas — fractional geometry makes
+    # the size free — gated on the sheet's own readiness (which covers
+    # pixels and approval; deliberately benched panels don't block).
+    arranged = _arranged_sheet(spec_id)
+    if arranged is not None:
+        return _assemble_arranged(spec_id, spec, arranged, width, height)
     variant = check_variant(spec, variant)
 
     approved = _latest_approved_by_panel(spec_id)

@@ -651,6 +651,57 @@ class ArrangementTests(SheetHomeTest):
         with self.assertRaises(sheet.SheetError):
             sheet.set_arrangement(rec["sheet_id"], {"rows": []})
 
+    def test_arranged_board_owns_the_map_and_assembly(self):
+        # User-hit 2026-08-13: after Done arranging, the readiness map
+        # showed the packer's default and Assemble would have rendered
+        # it. Once an arrangement exists it IS the layout truth: the
+        # slot map reports it and assembly renders it.
+        from common import stable_hash
+        from PIL import Image
+        from app import assemble
+        rec = self._board(3)
+        d = paths.BOARDS_DIR / "SPEC-0001"
+        for i in range(1, 4):
+            Image.new("RGB", (3840, 2160), (40 + i * 10, 50, 60)).save(
+                d / f"CAND-{i:04d}.png", "PNG")
+        sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 0.6, "cells": [{"id": "P2", "h": 1}]},
+                               {"w": 0.4, "cells": [{"id": "P1", "h": 0.5},
+                                                    {"id": "P3", "h": 0.5}]}]},
+        ], "gutter": 0})
+        sm = assemble.slot_map("SPEC-0001")
+        self.assertEqual(sm["layout_variant"], "arranged")
+        by = {s["panel_id"]: s for s in sm["slots"]}
+        self.assertGreater(by["P2"]["w"], by["P1"]["w"])
+        self.assertTrue(sm["ready"])
+        spec = store.get_spec("SPEC-0001")
+        store._atomic_write_json(paths.SPEC_LOCKS, {"SPEC-0001": {
+            "hash": stable_hash(spec), "approved_at": store.utcnow()}})
+        b = assemble.assemble_board("SPEC-0001")
+        self.assertEqual(b["layout_variant"], "arranged")
+        self.assertEqual(set(b["panels_used"]), {"P1", "P2", "P3"})
+        self.assertEqual([b["width"], b["height"]], [3840, 2160])
+
+    def test_a_benched_panel_does_not_block_arranged_assembly(self):
+        from common import stable_hash
+        from PIL import Image
+        from app import assemble
+        rec = self._board(3)
+        d = paths.BOARDS_DIR / "SPEC-0001"
+        for i in range(1, 4):
+            Image.new("RGB", (3840, 2160), (60, 40 + i * 10, 50)).save(
+                d / f"CAND-{i:04d}.png", "PNG")
+        sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 1, "cols": [{"w": 0.6, "cells": [{"id": "P1", "h": 1}]},
+                               {"w": 0.4, "cells": [{"id": "P2", "h": 1}]}]},
+        ], "bench": ["P3"], "gutter": 0})
+        spec = store.get_spec("SPEC-0001")
+        store._atomic_write_json(paths.SPEC_LOCKS, {"SPEC-0001": {
+            "hash": stable_hash(spec), "approved_at": store.utcnow()}})
+        b = assemble.assemble_board("SPEC-0001")
+        self.assertEqual(set(b["panels_used"]), {"P1", "P2"},
+                         "a deliberately benched panel stays off the board")
+
     def test_slots_follow_the_latest_approved_take(self):
         # Regression (user-hit 2026-08-13): slots pinned the take placed
         # at arrange time, so approving a fresh 4K render left the board

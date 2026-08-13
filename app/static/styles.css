@@ -2725,3 +2725,6 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .arr-crop-preview { position: relative; overflow: hidden; width: 100%;
   background: var(--field); border: 1px solid var(--line); }
 .arr-crop-preview img { position: absolute; max-width: none; }
+/* 2026-08-13: an OK slot on the map shows its take plainly — the ghost
+   and hatch belong to problems, not to health. */
+.slot.clean .slot-img { opacity: .85; }
