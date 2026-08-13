@@ -2728,3 +2728,31 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* 2026-08-13: an OK slot on the map shows its take plainly — the ghost
    and hatch belong to problems, not to health. */
 .slot.clean .slot-img { opacity: .85; }
+
+/* UNCANONIZED — 2026-08-13 — board look picker (arrange room Style…).
+   Cards are real renders of the sheet; selection is an ink keyline, not
+   amber — a chosen style is state, and amber stays with the primary
+   action (Apply). */
+.arr-style-modal { width: min(960px, 94vw); }
+.arr-style-cards { display: flex; gap: 12px; margin: 12px 0 10px; }
+.arr-style-card { flex: 1 1 0; min-width: 0; padding: 8px;
+  background: var(--field); border: 1px solid var(--line-soft);
+  cursor: pointer; display: flex; flex-direction: column; gap: 7px;
+  text-align: left; }
+.arr-style-card:hover { border-color: var(--ink-faint); }
+.arr-style-card.on { border-color: var(--ink); }
+.arr-style-img { display: flex; align-items: center; justify-content: center;
+  width: 100%; background: var(--bg2); border: 1px solid var(--line-soft);
+  overflow: hidden; }
+.arr-style-img img { width: 100%; height: 100%; object-fit: contain;
+  display: block; }
+.arr-style-name { font-size: 11px; letter-spacing: .08em;
+  color: var(--ink-dim); }
+.arr-style-card.on .arr-style-name { color: var(--ink); }
+.arr-style-opts { display: flex; gap: 16px; flex-wrap: wrap;
+  min-height: 22px; margin-bottom: 4px; }
+.arr-style-opts label { display: inline-flex; gap: 6px; align-items: center;
+  font-size: 11px; letter-spacing: .06em; color: var(--ink-dim);
+  cursor: pointer; }
+.lb-head [data-f=style].on { color: var(--ink);
+  border-color: var(--ink-faint); }

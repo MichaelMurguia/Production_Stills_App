@@ -610,6 +610,31 @@ class ArrangementTests(SheetHomeTest):
         self.assertEqual(rects["P2"], (0.7, 0.0, 0.3, 0.5))
         self.assertEqual(rects["P3"], (0.7, 0.5, 0.3, 0.5))
 
+    def test_multirow_blocks_get_unique_ids_and_slot_edits_aim_true(self):
+        # Regression (2026-08-13): _new_block numbered from
+        # sheet["blocks"], which set_arrangement only replaces at the
+        # end — every row-block in one commit shared an id, and set_slot
+        # (crop, annotation) on any later row silently patched row one.
+        rec = self._board(3)
+        out = sheet.set_arrangement(rec["sheet_id"], {"rows": [
+            {"h": 0.5, "cols": [{"w": 0.5, "cells": [{"id": "P1", "h": 1}]},
+                                {"w": 0.5, "cells": [{"id": "P2", "h": 1}]}]},
+            {"h": 0.5, "cols": [{"w": 1, "cells": [{"id": "P3", "h": 1}]}]},
+        ]})
+        ids = [b["block_id"] for b in out["blocks"]]
+        self.assertEqual(len(ids), len(set(ids)),
+                         f"block ids must be unique in one commit: {ids}")
+        row2 = next(b for b in out["blocks"]
+                    if any(s["panel_id"] == "P3" for s in b["slots"]))
+        s3 = next(s for s in row2["slots"] if s["panel_id"] == "P3")
+        after = sheet.set_slot(rec["sheet_id"], row2["block_id"],
+                               s3["slot_id"],
+                               {"annotation": {"n": 1, "text": "on P3"}})
+        by_pid = {s["panel_id"]: s.get("annotation")
+                  for b in after["blocks"] for s in b["slots"]}
+        self.assertEqual(by_pid["P3"], {"n": 1, "text": "on P3"})
+        self.assertIsNone(by_pid.get("P1"))
+
     def test_takes_and_crops_ride_by_panel(self):
         rec = self._board(2)
         bid = rec["blocks"][0]["block_id"]

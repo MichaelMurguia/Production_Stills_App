@@ -491,6 +491,18 @@ class TokenContractTests(unittest.TestCase):
         i = CSS.index("Lookbook shelf & sheet composer")
         self.assertNotIn("border-radius", CSS[i:])
 
+    def test_style_picker_selection_is_ink_not_amber(self):
+        """Board looks (2026-08-13, uncanonized): a chosen style is
+        STATE — the card keylines in ink; amber stays with the primary
+        action. Cards sit on the field like every other well."""
+        self.assert_decls(".arr-style-card", [
+            "background: var(--field)",
+            "border: 1px solid var(--line-soft)"])
+        self.assert_decls(".arr-style-card.on", [
+            "border-color: var(--ink)"])
+        self.assertNotIn("--accent", block(".arr-style-card.on"))
+        self.assert_decls(".arr-style-img", ["background: var(--bg2)"])
+
 
 if __name__ == "__main__":
     unittest.main()

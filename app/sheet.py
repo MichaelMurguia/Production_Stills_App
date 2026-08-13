@@ -1093,6 +1093,11 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
             block = _new_block(sheet, "GRID", {
                 "x": round(bx, 4), "y": round(by, 4),
                 "w": round(bw, 4), "h": round(bh, 4)})
+            # _new_block numbers from sheet["blocks"], which this commit
+            # only replaces at the END — without this, every row-block in
+            # one commit shared an id and set_slot (crop, annotation) on
+            # any later row silently patched the first (bug, 2026-08-13).
+            block["block_id"] = f"B-{len(blocks) + 1:04d}"
             block["slots"] = []
             for s in piece:
                 f = s["frac"]

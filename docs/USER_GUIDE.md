@@ -389,6 +389,23 @@ structure commits whole; the server maps it to stored geometry).
   per-frame pixel figures.
 - **The pixel gate reads while you drag** — grow a frame past its
   take's native pixels and it hatches `SHORT` under your hand.
+- **Style…** — an arranged board can carry a **presentation look**.
+  The picker shows this board actually rendered three ways: **INK —
+  none** (the bare working sheet), **Art Board** (parchment, serif
+  masthead with the breakdown's render intent as a tagline, the slots'
+  annotations handwritten on the images, a palette swatch strip from
+  the approved design languages, an atmosphere slug line) and **Tech
+  Design** (near-black, mono, keylined panels with registration ticks
+  and panel ids, a spec table column, material reference chips, a
+  compact hex row). Each look has option checkboxes; Apply saves it.
+  **The room always works in INK** — the look dresses previews, export
+  and the assembled board only, and everything it shows is pulled live
+  from canon at render time, so an approved swatch added tomorrow is
+  on tomorrow's export. Panel space shrinks slightly to make room for
+  the dress bands, and the pixel gate honestly judges that smaller
+  area — a take can read `OK` bare and `SHORT` dressed. Material chips
+  never upscale: a small source is skipped with a warning, never
+  stretched, and never blocks export.
 
 **The export gate** — one list, every kind of unready stated before a
 pixel is spent: `SLOT_PIXELS` (a take short of the pixels its size

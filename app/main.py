@@ -11,8 +11,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
 from fastapi.staticfiles import StaticFiles
 
 from . import (activity, assemble, autofill, backup, bible, composition,
-               connectors, generate, insights, paths, sheet, sheet_render,
-               store, wizard)
+               connectors, generate, insights, looks, paths, sheet,
+               sheet_render, store, wizard)
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -33,7 +33,7 @@ ACCESS_TOKEN = os.environ.get("SCREENBOARD_ACCESS_TOKEN", "")
 _AUTH_EXEMPT = {"/login", "/api/login", "/api/healthz", "/styles.css",
                 "/favicon.ico", "/connectors/openrouter/callback"}
 
-_LOGIN_HTML = """<!doctype html>
+_LOGIN_HTML = r"""<!doctype html>
 <html><head><meta charset="utf-8"><title>Screenboard Studio — workspace login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/styles.css"></head>
@@ -2059,11 +2059,16 @@ def api_arrange(spec_id: str) -> dict:
 # slot edits (fill/crop/frac), readiness, render and export. The model
 # layer keeps its full grammar — it is the boards' renderer.
 
-# /candidates is declared BEFORE /{sheet_id} — FastAPI matches in
-# declaration order, and "candidates" must never be captured as an id.
+# /candidates and /looks are declared BEFORE /{sheet_id} — FastAPI
+# matches in declaration order, and neither must be captured as an id.
 @app.get("/api/sheets/candidates")
 def api_fill_candidates() -> list[dict]:
     return sheet.fill_candidates()
+
+
+@app.get("/api/sheets/looks")
+def api_looks_catalog() -> list[dict]:
+    return looks.catalog()
 
 
 @app.get("/api/sheets/{sheet_id}")
@@ -2092,13 +2097,23 @@ def api_set_slot(sheet_id: str, block_id: str, slot_id: str,
     return _sheet_call(sheet.set_slot, sheet_id, block_id, slot_id, body)
 
 
+@app.put("/api/sheets/{sheet_id}/look")
+def api_set_look(sheet_id: str, body: dict) -> dict:
+    """Persist (or clear, key null) a board's presentation look. The look
+    is a sibling of the arrangement — it survives every arrange commit."""
+    return _sheet_call(looks.set_look, sheet_id, body.get("key"),
+                       body.get("options"))
+
+
 @app.get("/api/sheets/{sheet_id}/readiness")
 def api_sheet_readiness(sheet_id: str) -> dict:
     def _ready():
         rec = sheet.get_sheet(sheet_id)
         if rec is None:
             raise KeyError(sheet_id)
-        return sheet.readiness(rec)
+        # Judge what will ship: a look shrinks the panel area, and the
+        # gate must be readable before export is hit.
+        return sheet.readiness(looks.dressed(rec))
     return _sheet_call(_ready)
 
 
@@ -2110,13 +2125,38 @@ async def api_render_sheet(sheet_id: str, body: dict) -> Response:
     if rec is None:
         raise HTTPException(404, sheet_id)
     scale = max(0.05, min(1.0, float(body.get("scale", 0.25))))
+    # Look resolution: by default the stored look dresses the render; a
+    # "look" key in the body overrides WITHOUT persisting (the picker's
+    # preview cards). {"look": null} previews the naked INK sheet.
+    if "look" in body:
+        rec = dict(rec)
+        rec.pop("look", None)
+        ov = body.get("look")
+        if ov and ov.get("key"):
+            try:
+                rec["look"] = {"key": str(ov["key"]),
+                               "options": looks.resolved_options(
+                                   str(ov["key"]), ov.get("options"))}
+            except KeyError:
+                raise HTTPException(422, f"unknown look: {ov.get('key')}")
+            except sheet.SheetError as e:
+                raise HTTPException(422, str(e))
+    try:
+        view = looks.dressed(rec)
+    except sheet.SheetError as e:
+        raise HTTPException(422, str(e))
+    # Preview-scale renders feed slot images from the md display tier —
+    # a picker card must not decode a dozen 4K PNGs. Full-scale renders
+    # (and export/assemble, which never pass a tier) read the source.
+    tier = "md" if scale <= 0.25 else "full"
     import io
 
     manifest: list = []
 
     def _render() -> bytes:
-        img = sheet_render.render_sheet(rec, scale, allow_letterbox=True,
-                                        manifest=manifest)
+        img = sheet_render.render_sheet(view, scale, allow_letterbox=True,
+                                        manifest=manifest,
+                                        image_tier=tier)
         buf = io.BytesIO()
         img.save(buf, "PNG")
         return buf.getvalue()

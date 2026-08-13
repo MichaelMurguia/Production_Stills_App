@@ -61,16 +61,41 @@ STYLE_INK: dict[str, dict] = {
             "ink": (232, 229, 221), "dim": (154, 151, 143),
             "edge": "matted", "voice": "mono",
             "accent": (216, 162, 74), "mat": (52, 48, 43)},
+    # Look styles (2026-08-13): rendered by ephemeral dressed() sheets
+    # only — deliberately NOT in sheet.STYLES, so no stored sheet can
+    # adopt them. Ink values are design-review parameters (defaults).
+    "ART_BOARD": {"paper": (236, 228, 210), "ink": (40, 34, 26),
+                  "dim": (122, 110, 92), "edge": "matted",
+                  "mat": (222, 212, 192), "voice": "serif",
+                  "accent": (166, 118, 58), "hand_ink": (58, 48, 92)},
+    "TECH_DESIGN": {"paper": (16, 18, 22), "ink": (226, 230, 235),
+                    "dim": (128, 136, 146), "edge": "flush",
+                    "keyline": (70, 78, 88), "voice": "mono",
+                    "accent": (94, 160, 208), "grid": (26, 30, 36)},
 }
 
+# Bundled OFL faces render FIRST (app/fonts/, license beside each) so
+# typography is identical on every install — the old Windows-only paths
+# meant Linux tenants silently fell back to PIL's default bitmap font
+# (found 2026-08-13). Windows paths remain as a fallback for stripped
+# checkouts; load_default() is the last resort. "hand" is the Art Board
+# annotation voice (Caveat) — sheet-render typography, not app chrome.
+_FONTS_DIR = Path(__file__).resolve().parent / "fonts"
 _VOICES = {
-    "serif": ["C:/Windows/Fonts/georgia.ttf", "C:/Windows/Fonts/times.ttf"],
-    "mono": ["C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/cour.ttf"],
-    "slab": ["C:/Windows/Fonts/rockb.ttf", "C:/Windows/Fonts/bahnschrift.ttf"],
-    "sans": ["C:/Windows/Fonts/bahnschrift.ttf",
+    "serif": [str(_FONTS_DIR / "ebgaramond" / "EBGaramond.ttf"),
+              "C:/Windows/Fonts/georgia.ttf", "C:/Windows/Fonts/times.ttf"],
+    "mono": [str(_FONTS_DIR / "ibmplexmono" / "IBMPlexMono-Regular.ttf"),
+             "C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/cour.ttf"],
+    "slab": [str(_FONTS_DIR / "zillaslab" / "ZillaSlab-Regular.ttf"),
+             "C:/Windows/Fonts/rockb.ttf", "C:/Windows/Fonts/bahnschrift.ttf"],
+    "sans": [str(_FONTS_DIR / "inter" / "Inter.ttf"),
+             "C:/Windows/Fonts/bahnschrift.ttf",
              "C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf"],
+    "hand": [str(_FONTS_DIR / "caveat" / "Caveat.ttf"),
+             "C:/Windows/Fonts/segoepr.ttf"],
 }
-_SANS_BOLD = ["C:/Windows/Fonts/bahnschrift.ttf",
+_SANS_BOLD = [str(_FONTS_DIR / "inter" / "Inter.ttf"),
+              "C:/Windows/Fonts/bahnschrift.ttf",
               "C:/Windows/Fonts/segoeuib.ttf", "C:/Windows/Fonts/arialbd.ttf"]
 
 
@@ -268,7 +293,8 @@ def _draw_palette_block(draw, sheet, block, rect, style, W) -> None:
 
 def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
                      allow_letterbox, warnings, annotations,
-                     manifest: list | None = None) -> None:
+                     manifest: list | None = None,
+                     image_tier: str = "full") -> None:
     rx, ry, rw, rh = rect
     cap_frac = sheet_mod.BLOCK_TYPES[block["type"]].frac
     cap_px = _type_px(sheet, None, cap_frac, W)
@@ -317,8 +343,14 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
         img_h = max(1, sh_ - band)
         img_path = None
         if s.get("candidate_id") and s.get("spec_id"):
-            img_path = generate.candidate_image_path(s["spec_id"],
-                                                     s["candidate_id"])
+            if image_tier != "full":
+                # Preview-scale renders read display derivatives (md) —
+                # export and assemble always render from the source.
+                img_path = generate.candidate_variant_path(
+                    s["spec_id"], s["candidate_id"], image_tier)
+            else:
+                img_path = generate.candidate_image_path(s["spec_id"],
+                                                         s["candidate_id"])
         if img_path:
             _place_image(canvas, draw, img_path, (sx, sy, sw_, img_h),
                          s.get("crop"), style, allow_letterbox, warnings,
@@ -330,8 +362,40 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
         if label:
             draw.text((sx, sy + img_h + 6), label.upper(),
                       font=cap_f, fill=style["ink"])
+        # Tech Design panel marks: keyline + corner registration ticks +
+        # panel id — presentation only, the fracs never move.
+        if sheet.get("dress_panel_marks"):
+            line = style.get("keyline") or style["dim"]
+            draw.rectangle([sx, sy, sx + sw_ - 1, sy + img_h - 1],
+                           outline=line, width=1)
+            tick = max(6, W // 300)
+            for tx, ty, dx, dy in ((sx, sy, 1, 1), (sx + sw_ - 1, sy, -1, 1),
+                                   (sx, sy + img_h - 1, 1, -1),
+                                   (sx + sw_ - 1, sy + img_h - 1, -1, -1)):
+                draw.line([(tx, ty), (tx + dx * tick, ty)], fill=line, width=1)
+                draw.line([(tx, ty), (tx, ty + dy * tick)], fill=line, width=1)
+            pid = str(s.get("panel_id") or "")
+            if pid:
+                pf = _font("mono", max(7, int(cap_px * 0.8)))
+                pw_ = draw.textlength(pid.upper(), font=pf)
+                draw.text((sx + sw_ - pw_ - 6, sy + 5), pid.upper(),
+                          font=pf, fill=style["ink"])
         ann = s.get("annotation")
-        if ann and ann.get("n"):
+        mode = sheet.get("dress_annotations")
+        if ann and mode == "hand" and str(ann.get("text") or "").strip():
+            # Art Board hand notes: the annotation text itself, written
+            # on the image in the hand voice — no badge, no KEY entry.
+            # A paper-colored halo keeps the script legible on any take.
+            hf = _font("hand", max(14, int(cap_px * 2.0)))
+            note = str(ann["text"])[:60]
+            halo = style["paper"]
+            for ox, oy in ((-2, 0), (2, 0), (0, -2), (0, 2),
+                           (-1, -1), (1, 1), (-1, 1), (1, -1)):
+                draw.text((sx + 10 + ox, sy + 8 + oy), note, font=hf,
+                          fill=halo)
+            draw.text((sx + 10, sy + 8), note, font=hf,
+                      fill=style.get("hand_ink", style["ink"]))
+        elif ann and ann.get("n"):
             r = max(8, int(cap_px * 0.9))
             draw.ellipse([sx + 6, sy + 6, sx + 6 + 2 * r, sy + 6 + 2 * r],
                          fill=style["ink"])
@@ -345,12 +409,183 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
         cy0 += int(cap_px * 1.55)
 
 
+# --------------------------------------------------------------- dress
+# Look dress (2026-08-13): presentation elements derived by looks.dressed
+# around the arranged panel blocks. Dress paints only its reserved
+# regions; it is never blocks, never judged by readiness, never stored.
+
+def _draw_swatch_strip(draw, rect, style, W, swatches, compact=False):
+    rx, ry, rw, rh = rect
+    if not swatches:
+        return
+    n = len(swatches)
+    gap = 2
+    cell_w = max(6, (rw - gap * (n - 1)) // n)
+    label_px = max(7, int(FOOTER_FRAC * W))
+    label_f = _font("mono", label_px)
+    label_h = 0 if compact else int(label_px * 2.9)
+    cell_h = max(8, rh - label_h)
+    x = rx
+    for sw in swatches:
+        hx = str(sw.get("hex") or "")
+        try:
+            rgb = tuple(int(hx[i:i + 2], 16) for i in (1, 3, 5))
+        except (ValueError, IndexError):
+            continue
+        draw.rectangle([x, ry, x + cell_w - 1, ry + cell_h - 1], fill=rgb)
+        if sw.get("hero"):
+            draw.rectangle([x, ry, x + cell_w - 1, ry + cell_h - 1],
+                           outline=style["ink"], width=max(1, W // 1600))
+        if compact:
+            lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+            fill = (20, 20, 20) if lum > 140 else (235, 235, 235)
+            draw.text((x + 3, ry + cell_h - label_px - 3), hx.upper(),
+                      font=label_f, fill=fill)
+        else:
+            draw.text((x, ry + cell_h + 4),
+                      str(sw.get("name") or "")[:14].upper(),
+                      font=label_f, fill=style["ink"])
+            draw.text((x, ry + cell_h + 4 + int(label_px * 1.3)),
+                      hx.upper(), font=label_f, fill=style["dim"])
+        x += cell_w + gap
+
+
+def _draw_material_chips(canvas, draw, rect, style, W, refs, warnings):
+    """Square reference chips, downscale-only: a source smaller than its
+    chip is SKIPPED with a warning — dress never upscales and never
+    gates (it is presentation, not a slot)."""
+    rx, ry, rw, rh = rect
+    if not refs:
+        return
+    label_px = max(7, int(FOOTER_FRAC * W))
+    label_f = _font("mono", label_px)
+    label_h = int(label_px * 1.6)
+    chip = max(8, rh - label_h)
+    gap = max(4, W // 480)
+    x = rx
+    for r in refs:
+        if x + chip > rx + rw:
+            break
+        path = store.reference_image_path(str(r.get("id") or ""), "md")
+        drawn = False
+        if path:
+            try:
+                with Image.open(path) as im:
+                    im = im.convert("RGB")
+                    if im.width >= chip and im.height >= chip:
+                        cover = chip / min(im.width, im.height)
+                        nw = max(chip, round(im.width * cover))
+                        nh = max(chip, round(im.height * cover))
+                        im = im.resize((nw, nh), Image.LANCZOS)
+                        left = (nw - chip) // 2
+                        top = (nh - chip) // 2
+                        im = im.crop((left, top, left + chip, top + chip))
+                        canvas.paste(im, (x, ry))
+                        drawn = True
+                    else:
+                        warnings.append(
+                            f"material chip {r.get('id')}: source smaller "
+                            f"than its {chip}px chip — skipped, never "
+                            "upscaled")
+            except OSError:
+                pass
+        if not drawn:
+            continue
+        if style.get("keyline"):
+            draw.rectangle([x, ry, x + chip - 1, ry + chip - 1],
+                           outline=style["keyline"], width=1)
+        draw.text((x, ry + chip + 3),
+                  str(r.get("label") or r.get("id") or "")[:16].upper(),
+                  font=label_f, fill=style["dim"])
+        x += chip + gap
+
+
+def _draw_spec_table(draw, rect, style, W, rows):
+    rx, ry, rw, rh = rect
+    if not rows:
+        return
+    px = max(7, int(FOOTER_FRAC * W * 1.1))
+    key_f = _font("mono", px)
+    row_h = int(px * 2.1)
+    key_w = int(rw * 0.42)
+    y = ry
+    for k, v in rows:
+        if y + row_h > ry + rh:
+            break
+        draw.line([(rx, y + row_h - 2), (rx + rw, y + row_h - 2)],
+                  fill=style.get("keyline") or style["dim"], width=1)
+        draw.text((rx, y + int(px * 0.4)), str(k).upper()[:18], font=key_f,
+                  fill=style["dim"])
+        val = str(v)
+        while val and draw.textlength(val + "…", font=key_f) > rw - key_w:
+            val = val[:-1]
+        draw.text((rx + key_w, y + int(px * 0.4)),
+                  val + ("…" if val != str(v) else ""), font=key_f,
+                  fill=style["ink"])
+        y += row_h
+
+
+def _draw_atmosphere(draw, rect, style, W, text):
+    rx, ry, rw, rh = rect
+    if not text:
+        return
+    px = max(8, int(SUB_FRAC * W))
+    f = _font("mono", px)
+    if style.get("accent"):
+        draw.line([(rx, ry), (rx + rw, ry)], fill=style["accent"],
+                  width=max(1, W // 1600))
+    line = str(text).upper()
+    while line and draw.textlength(line + "…", font=f) > rw:
+        line = line[:-1]
+    draw.text((rx, ry + max(4, int(px * 0.6))),
+              line + ("…" if line != str(text).upper() else ""),
+              font=f, fill=style["dim"])
+
+
+def _draw_profile(draw, rect, style, W, text):
+    rx, ry, rw, rh = rect
+    if not text:
+        return
+    px = max(8, int(SUB_FRAC * W))
+    f = _font(style["voice"], px)
+    y = ry
+    for line in _wrap(draw, str(text), f, rw):
+        if y + px * 1.55 > ry + rh:
+            break
+        draw.text((rx, y), line, font=f, fill=style["dim"])
+        y += int(px * 1.55)
+
+
+def _draw_dress(canvas, draw, sheet, style, W, cx, cy, cw, ch, warnings):
+    for d in sheet.get("dress", []) or []:
+        f = d.get("frac") or {}
+        rect = (cx + int(f.get("x", 0) * cw), cy + int(f.get("y", 0) * ch),
+                max(1, int(f.get("w", 0) * cw)),
+                max(1, int(f.get("h", 0) * ch)))
+        data = d.get("data") or {}
+        kind = d.get("kind")
+        if kind == "SWATCH_STRIP":
+            _draw_swatch_strip(draw, rect, style, W,
+                               data.get("swatches") or [],
+                               compact=bool(data.get("compact")))
+        elif kind == "MATERIAL_CHIPS":
+            _draw_material_chips(canvas, draw, rect, style, W,
+                                 data.get("refs") or [], warnings)
+        elif kind == "SPEC_TABLE":
+            _draw_spec_table(draw, rect, style, W, data.get("rows") or [])
+        elif kind == "ATMOSPHERE":
+            _draw_atmosphere(draw, rect, style, W, data.get("text", ""))
+        elif kind == "PROFILE":
+            _draw_profile(draw, rect, style, W, data.get("text", ""))
+
+
 # -------------------------------------------------------------- the renderer
 
 def render_sheet(sheet: dict, scale: float = 1.0, *,
                  allow_letterbox: bool = False,
                  warnings: list[str] | None = None,
-                 manifest: list | None = None) -> Image.Image:
+                 manifest: list | None = None,
+                 image_tier: str = "full") -> Image.Image:
     """The sheet as ink on paper. Composer overlays are app chrome and are
     drawn in the DOM — nothing here marks selection, snapping or state."""
     style = STYLE_INK.get(sheet.get("style"))
@@ -419,8 +654,13 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
         draw.text((mx, yy), str(mh.get("title", "")).upper(), font=title_f,
                   fill=style["ink"])
         yy += int(title_px * 1.2)
-        if mh.get("subject"):
-            draw.text((mx, yy), str(mh["subject"]).upper(), font=sub_f,
+        subject_bits = [str(mh.get("subject") or "").upper()]
+        tagline = (sheet.get("dress_masthead") or {}).get("tagline", "")
+        if tagline:
+            subject_bits.append(str(tagline))
+        subject_line = "  ·  ".join(x for x in subject_bits if x)
+        if subject_line:
+            draw.text((mx, yy), subject_line, font=sub_f,
                       fill=style["dim"])
         if style.get("accent"):
             ry_ = cy - int(sub_px * 1.2)
@@ -442,7 +682,9 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
         else:
             _draw_slot_block(canvas, draw, sheet, b, rect, style, W,
                              allow_letterbox, warnings, annotations,
-                             manifest)
+                             manifest, image_tier)
+
+    _draw_dress(canvas, draw, sheet, style, W, cx, cy, cw, ch, warnings)
 
     # Canon footer: the sheet states what it is, in mono. The KEY lists
     # annotations in order — they claim no band and force no reflow.
@@ -468,17 +710,20 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
 
 def export_sheet(sheet_id: str, fmt: str = "png") -> Path:
     """Full-size export, gated on readiness — both failure kinds must be
-    clear before a pixel is spent (§7)."""
+    clear before a pixel is spent (§7). The gate judges the DRESSED sheet:
+    a look shrinks the panel area, and what ships is what is judged."""
+    from . import looks
     rec = sheet_mod.get_sheet(sheet_id)
     if rec is None:
         raise KeyError(sheet_id)
-    gate = sheet_mod.readiness(rec)
+    view = looks.dressed(rec)
+    gate = sheet_mod.readiness(view)
     if not gate["ready"]:
         raise sheet_mod.SheetError(
             "export is blocked: " + json.dumps(gate["blocked"]))
     if fmt not in ("png", "pdf"):
         raise sheet_mod.SheetError("format must be png or pdf")
-    img = render_sheet(rec, 1.0)
+    img = render_sheet(view, 1.0)
     out_dir = sheet_mod.sheet_export_dir(sheet_id)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{sheet_id}.{fmt}"

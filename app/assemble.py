@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 
-from . import generate, paths, sheet, sheet_render, store
+from . import generate, looks, paths, sheet, sheet_render, store
 
 # The packing functions moved to sheet.py (SHEET_SYSTEM_PLAN §2) so boards
 # and sheets share one layout implementation. Aliased under their old names
@@ -47,6 +47,9 @@ def _arranged_sheet(spec_id: str) -> dict | None:
 
 def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
                        width: int, height: int) -> dict:
+    # Judge and report the DRESSED geometry: a look shrinks the panel
+    # area, and the stage-05 verdicts must match what assembly renders.
+    rec = looks.dressed(rec)
     cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
     slots = []
     for b in rec.get("blocks", []):
@@ -105,6 +108,8 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
                        width: int, height: int) -> dict:
     from common import stable_hash
 
+    look = rec.get("look")
+    rec = looks.dressed(rec)
     gate = sheet.readiness(rec)
     if not gate["ready"]:
         raise AssemblyError(
@@ -145,6 +150,7 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
         "width": width,
         "height": height,
         "layout_variant": "arranged",
+        "look": look,
         "panels_used": used,
         "rects": rects,
         "warnings": warnings,

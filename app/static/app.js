@@ -8927,6 +8927,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       <button class="text-act" data-f="back">Close arrange</button>
       <span class="lb-title mono">${esc((sh.masthead?.title || "BOARD").toUpperCase())} — ARRANGED BOARD</span>
       <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">● EVERY CHANGE SAVED</span>
+      <button class="ghost" data-f="style" title="Choose a presentation style for this board — the room stays neutral; the style shows in previews and export">Style…</button>
       <span data-f="export-slot">${exportBtns(ready.ready)}</span>
     </div>
     <div class="stage-meta mono">BOARD · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}
@@ -9038,6 +9039,12 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   const paintChrome = () => {
     gateEl.innerHTML = gateHtml();
     $("[data-f=export-slot]", root).innerHTML = exportBtns(ready.ready);
+    const stBtn = $("[data-f=style]", root);
+    if (stBtn) {
+      stBtn.textContent = sh.look?.key
+        ? `Style · ${sh.look.key.replace(/_/g, " ")}` : "Style…";
+      stBtn.classList.toggle("on", !!sh.look?.key);
+    }
     cornerAdd.disabled = !arr.bench.length;
     cornerAdd.title = arr.bench.length
       ? `Add a benched panel back — on the bench: ${arr.bench.join(", ")}`
@@ -9445,6 +9452,104 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     });
   };
 
+  /* ------------------------------------------------------ style picker */
+  // Board looks (2026-08-13): the room always works in INK; a chosen
+  // look dresses previews and export only. Cards are REAL renders of
+  // this sheet at a small scale (md-tier sources server-side), so the
+  // user chooses from the actual board, not an illustration.
+  const stylePicker = async () => {
+    let cat;
+    try { cat = await api(`/api/sheets/looks`); }
+    catch (err) { return toast(err.message, true); }
+    let selKey = sh.look?.key || "";
+    let opts = { ...(sh.look?.options || {}) };
+    const cards = [{ key: "", label: "Ink — none", options: {} }, ...cat];
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal arr-style-modal" role="dialog" aria-modal="true">
+        <div class="modal-title">Board style — each card is this board, rendered</div>
+        <div class="arr-style-cards">${cards.map(c => `
+          <button class="arr-style-card${c.key === selKey ? " on" : ""}" data-key="${esc(c.key)}">
+            <span class="arr-style-img" style="aspect-ratio:${BW} / ${BH}"><span class="mini">rendering…</span></span>
+            <span class="arr-style-name mono">${esc(c.key ? c.label.toUpperCase() : "INK — NONE")}</span>
+          </button>`).join("")}</div>
+        <div class="arr-style-opts mono" data-f="opts"></div>
+        <p class="hint">The room stays INK while you arrange — the chosen style dresses previews, export and the assembled board.</p>
+        <div class="modal-actions">
+          <button class="ghost" data-f="cancel">Cancel</button>
+          <button class="primary" data-f="apply">Apply style</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const urls = [];
+    const cleanup = () => { urls.forEach(u => URL.revokeObjectURL(u)); ov.remove(); };
+    const cardImg = key =>
+      $(`.arr-style-card[data-key="${CSS.escape(key)}"] .arr-style-img`, ov);
+    const loadCard = async c => {
+      const body = { scale: 0.12,
+        look: c.key ? { key: c.key, options: c.key === selKey ? opts : {} } : null };
+      const r = await fetch(`/api/sheets/${sheetId}/render`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body) });
+      const holder = cardImg(c.key);
+      if (!holder) return;
+      if (!r.ok) { holder.innerHTML = `<span class="mini">preview failed</span>`; return; }
+      const u = URL.createObjectURL(await r.blob());
+      urls.push(u);
+      holder.innerHTML = `<img src="${u}" alt="${esc(c.label)} preview">`;
+    };
+    // two renders in flight at a time — a card is a real sheet render
+    const queue = [...cards];
+    Array.from({ length: 2 }, async () => {
+      while (queue.length && ov.isConnected) await loadCard(queue.shift());
+    });
+    const paintOpts = () => {
+      const c = cat.find(x => x.key === selKey);
+      const host = $("[data-f=opts]", ov);
+      host.innerHTML = c ? Object.entries(c.options).map(([n, m]) => `
+        <label><input type="checkbox" data-opt="${esc(n)}"${(opts[n] ?? m.default) ? " checked" : ""}> ${esc(m.label.toUpperCase())}</label>`).join("")
+        : `<span class="mini">INK is the bare working sheet — no dress</span>`;
+    };
+    paintOpts();
+    ov.onclick = async e => {
+      if (e.target === ov) return cleanup();
+      const card = e.target.closest(".arr-style-card");
+      if (card) {
+        selKey = card.dataset.key;
+        opts = selKey === (sh.look?.key || "") ? { ...(sh.look?.options || {}) } : {};
+        for (const el of ov.querySelectorAll(".arr-style-card")) {
+          el.classList.toggle("on", el === card);
+        }
+        paintOpts();
+        return;
+      }
+      const opt = e.target.closest("[data-opt]");
+      if (opt) {
+        opts[opt.dataset.opt] = opt.checked;
+        const holder = cardImg(selKey);
+        if (holder) holder.innerHTML = `<span class="mini">rendering…</span>`;
+        await loadCard(cat.find(x => x.key === selKey) || cards[0]);
+        return;
+      }
+      const f = e.target.dataset.f || "";
+      if (f === "cancel") return cleanup();
+      if (f === "apply") {
+        try {
+          sh = await api(`/api/sheets/${sheetId}/look`, {
+            method: "PUT",
+            json: { key: selKey || null, options: selKey ? opts : undefined } });
+          ready = await api(`/api/sheets/${sheetId}/readiness`);
+          cleanup();
+          paint();
+          toast(selKey
+            ? `Style set: ${selKey.replace(/_/g, " ")} — previews and export now dress the board.`
+            : "Style cleared — the board exports as bare INK.");
+        } catch (err) { toast(err.message, true); }
+      }
+    };
+  };
+
   /* --------------------------------------------------------- pointers */
   const EDGE = 9, CORNER = 14;
   let drag = null;
@@ -9631,6 +9736,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         window.removeEventListener("keydown", escHandler);
         return onClose();
       }
+      if (f === "style") return stylePicker();
       if (f === "export" || f === "export-pdf") {
         const r = await api(`/api/sheets/${sheetId}/export`, {
           method: "POST", json: { format: f === "export-pdf" ? "pdf" : "png" } });
