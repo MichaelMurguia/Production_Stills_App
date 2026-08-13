@@ -651,6 +651,29 @@ class ArrangementTests(SheetHomeTest):
         with self.assertRaises(sheet.SheetError):
             sheet.set_arrangement(rec["sheet_id"], {"rows": []})
 
+    def test_slots_follow_the_latest_approved_take(self):
+        # Regression (user-hit 2026-08-13): slots pinned the take placed
+        # at arrange time, so approving a fresh 4K render left the board
+        # judging the OLD take SHORT forever. Panel-bound slots follow
+        # the latest approval — the slot map's and assemble's rule.
+        rec = self._board(2)
+        _write_candidate("SPEC-0001", "CAND-0099", "P1", w=3840, h=2160)
+        out = sheet.set_arrangement(rec["sheet_id"],
+                                    sheet.derive_arrangement(rec))
+        by_pid = {s["panel_id"]: s for b in out["blocks"]
+                  for s in b["slots"]}
+        self.assertEqual(by_pid["P1"]["candidate_id"], "CAND-0099")
+        # a panel whose ONLY take lost approval keeps the pinned id, and
+        # the SLOT_APPROVAL gate states it
+        _write_candidate("SPEC-0001", "CAND-0002", "P2", status="REJECTED")
+        out = sheet.set_arrangement(out["sheet_id"],
+                                    sheet.derive_arrangement(out))
+        by_pid = {s["panel_id"]: s for b in out["blocks"]
+                  for s in b["slots"]}
+        self.assertEqual(by_pid["P2"]["candidate_id"], "CAND-0002")
+        kinds = [e["kind"] for e in sheet.readiness(out)["blocked"]]
+        self.assertIn("SLOT_APPROVAL", kinds)
+
     def test_gutter_is_baked_into_stored_geometry(self):
         # User 2026-08-13: the prototype's gutter graduates — a sheet
         # property in sheet pixels, applied by the server as slot insets

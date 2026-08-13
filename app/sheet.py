@@ -957,9 +957,16 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
     approved = assemble._latest_approved_by_panel(spec_id) if spec_id else {}
 
     def slot_for(pid: str, frac: dict) -> dict:
+        # A panel-bound slot follows the panel's LATEST approved take —
+        # the same rule the slot map and assemble live by. Pinning the
+        # placed candidate froze boards on stale takes: a fresh 4K
+        # approval left the board judging the old render SHORT forever
+        # (user-hit 2026-08-13). The carried id only fills in when no
+        # approval exists (e.g. it lost approval after placement — the
+        # SLOT_APPROVAL gate then states it).
         old = carried.get(pid) or {}
-        cand = old.get("candidate_id") or (
-            approved.get(pid) or {}).get("candidate_id")
+        cand = ((approved.get(pid) or {}).get("candidate_id")
+                or old.get("candidate_id"))
         return {"slot_id": "", "spec_id": old.get("spec_id") or spec_id,
                 "candidate_id": cand, "panel_id": pid, "frac": frac,
                 "crop": old.get("crop") or {"x": 0.0, "y": 0.0, "w": 1.0,

@@ -8144,6 +8144,7 @@ async function renderAssembly() {
   }));
 
   const showGrid = () => {
+    uiSet("drilledBoard", "");
     syncUrl();  // leaving a drilled board: the address drops its id
     host.innerHTML = "";
     const p = document.createElement("div");
@@ -8171,7 +8172,8 @@ async function renderAssembly() {
   };
 
   const showBoard = (b, i) => {
-    // The drilled board is addressable: /boards/<spec>/<board-id>.
+    // The drilled board is addressable AND remembered.
+    uiSet("drilledBoard", b.candidate_id);
     history.pushState(null, "", "/boards/"
       + encodeURIComponent(b._spec.specification_id) + "/"
       + encodeURIComponent(b.candidate_id));
@@ -8251,11 +8253,14 @@ async function renderAssembly() {
     host.append(p);
   };
 
-  const pendingOpen = uiGet("openBoard", "");
+  // The drilled board is REMEMBERED (user 2026-08-13): leaving the tab
+  // and coming back reopens the same board; showGrid clears it.
+  const pendingOpen = uiGet("openBoard", "") || uiGet("drilledBoard", "");
   if (pendingOpen) {
     uiSet("openBoard", "");
     const idx = all.findIndex(x => x.candidate_id === pendingOpen);
     if (idx >= 0) { showBoard(all[idx], idx); return; }
+    uiSet("drilledBoard", "");  // the remembered board no longer exists
   }
   showGrid();
 }
@@ -8598,8 +8603,10 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     }
   }
   const factsFor = pid => {
-    const t = takeOf[pid]
-      || (latestApproved[pid] && { spec: specId, cand: latestApproved[pid].candidate_id });
+    // Latest approved wins (2026-08-13): the pinned slot id is only the
+    // fallback for panels whose take lost approval.
+    const la = latestApproved[pid];
+    const t = la ? { spec: specId, cand: la.candidate_id } : takeOf[pid];
     if (!t) return null;
     const rec = cands.find(c => c.candidate_id === t.cand);
     return { ...t, w: rec?.width || 0, h: rec?.height || 0 };
@@ -9457,6 +9464,15 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   new ResizeObserver(() => { if (!drag) paint(); }).observe(boardEl);
   normalize(arr);
   paint();
+
+  // A board opened after new approvals refreshes itself: if any slot
+  // pins a take that is no longer its panel's latest approved, one
+  // silent commit re-resolves every slot (server rule: latest wins) and
+  // the gate re-judges against the new pixels.
+  const stale = (sh.blocks || []).some(b => (b.slots || []).some(s =>
+    s.panel_id && latestApproved[s.panel_id]
+    && s.candidate_id !== latestApproved[s.panel_id].candidate_id));
+  if (stale) commit();
 }
 
 boot();
