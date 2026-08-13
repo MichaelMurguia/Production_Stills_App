@@ -6923,7 +6923,7 @@ async function proposeCorrections(specId, candId, onDone) {
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
-  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards, camDefaults] = await Promise.all([
+  const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards, camDefaults, carriedFb] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
     api(`/api/specs/${specId}/candidates`),
@@ -6931,6 +6931,7 @@ async function renderBoardPanels(specId) {
     api(`/api/specs/${specId}/slot-map`).catch(() => null),
     api(`/api/specs/${specId}/boards`).catch(() => []),
     api("/api/camera-defaults").catch(() => ({})),
+    api(`/api/specs/${specId}/carried-feedback`).catch(() => ({ items: [] })),
   ]);
   const prefProvider = appSettings.preferred_provider || "gemini";
   const prefKeyFailed =
@@ -8025,8 +8026,13 @@ async function renderBoardPanels(specId) {
   function buildSide(c, panelCands) {
     const promptText = c.render_prompt
       ? `RENDER PROMPT (user-edited):\n${c.render_prompt}` : (c.prompt || "");
-    const rejectedTakes = panelCands.filter(t =>
-      t.status === "REJECTED" && (t.status_reason || "").trim());
+    // The carried list is the server's own carry sources — live rejected
+    // takes AND archive rows from deleted takes (2026-08-13: rendering
+    // only live records made a deleted take's still-carrying note
+    // invisible, which read as destroyed). Visibility equals reality.
+    const carried = (carriedFb.items || [])
+      .filter(f => f.panel_id === c.panel_id);
+    const liveByCand = Object.fromEntries(panelCands.map(t => [t.candidate_id, t]));
     // P8: one bordered panel with rules between sections — the rail was
     // ~60% empty while the prompt was a five-line peephole.
     const shapeClass = Math.max(c.width || 0, c.height || 0) >= 3200 ? "4K"
@@ -8073,19 +8079,28 @@ async function renderBoardPanels(specId) {
         </div>
         <pre class="side-prompt side-prompt-tall" data-f="ppre">${esc(promptText)}</pre>
       </div>` : ""}
-      ${rejectedTakes.length ? `
+      ${carried.length ? `
       <div class="side-sec">
-        <div class="rail-label bad">CARRIED REJECTIONS · ${rejectedTakes.length}</div>
-        ${rejectedTakes.map(t => `<div class="carried${t.feedback_retired ? " retired" : ""}">
-          <span>${esc(t.candidate_id)} — ${esc(t.status_reason.toUpperCase())}${
-            t.feedback_retired ? " · RETIRED" : ""}</span>
-          <button class="text-act" data-retire="${esc(t.candidate_id)}"
-            data-retired="${t.feedback_retired ? "1" : ""}"
-            title="${t.feedback_retired
+        <div class="rail-label bad">CARRIED REJECTIONS · ${carried.length}</div>
+        ${carried.map(f => `<div class="carried${f.retired ? " retired" : ""}">
+          <span>${esc(f.source)} — ${esc(f.reason.toUpperCase())}${
+            f.archived ? " · TAKE DELETED, NOTE CARRIES" : ""}${
+            f.retired ? " · RETIRED" : ""}</span>
+          <span style="display:inline-flex;gap:12px;flex:none">
+          <button class="text-act" data-fb-edit="${esc(f.source)}"
+            title="Rewrite this note — journaled; it keeps carrying with the new words">Edit</button>
+          <button class="text-act" data-retire="${esc(f.source)}"
+            data-retired="${f.retired ? "1" : ""}"
+            title="${f.retired
               ? "Carry this correction into future prompts again"
               : "Stop carrying this correction into future prompts — the rejection and its history stay. Retire a note once it is satisfied, or when it contradicts a newer one (an old ‘closer adherence’ can stand as a counter-order against ‘remove X’)."}">${
-            t.feedback_retired ? "Reinstate" : "Retire"}</button>
+            f.retired ? "Reinstate" : "Retire"}</button>
+          <button class="text-act" data-fb-delete="${esc(f.source)}"
+            title="Remove this note from every future prompt — asks first, is journaled, and touches nothing else (the take's history stays)">Delete</button>
+          </span>
         </div>${(() => {
+          const t = liveByCand[f.source];
+          if (!t) return "";
           // Correction intake (2026-08-13): the rejection parsed into
           // proposed structural deltas — the model proposes, the user
           // applies; applied rows read as state, not verbs.
@@ -8173,6 +8188,34 @@ async function renderBoardPanels(specId) {
         [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),
          c.image_size].filter(Boolean).join(" · "));
     }
+    // Rejection-note verbs (2026-08-13): a note is edited in place or
+    // deleted only by its own stated verb — never as a side effect of
+    // deleting the take. Both are journaled server-side.
+    $$("[data-fb-edit]", el).forEach(b => b.onclick = async () => {
+      const item = carried.find(f => f.source === b.dataset.fbEdit);
+      const next = await askText(`Edit ${b.dataset.fbEdit}'s rejection note`, "Note",
+        { value: item?.reason || "",
+          hint: "journaled — the note keeps carrying into future prompts with the new words; use Delete to remove it entirely",
+          confirmLabel: "Save note" });
+      if (next === null) return;
+      try {
+        await api(`/api/specs/${specId}/candidates/${b.dataset.fbEdit}/feedback-edit`,
+          { method: "POST", json: { reason: next } });
+        toast(`${b.dataset.fbEdit} note updated — it carries into future prompts as written.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    });
+    $$("[data-fb-delete]", el).forEach(b => b.onclick = async () => {
+      if (!(await askConfirm(`Delete ${b.dataset.fbDelete}'s rejection note`,
+          "The note stops carrying into every future prompt for this panel. The take's history and the approval log keep the record. This cannot be undone.",
+          "Delete note", true))) return;
+      try {
+        await api(`/api/specs/${specId}/candidates/${b.dataset.fbDelete}/feedback-delete`,
+          { method: "POST", json: {} });
+        toast(`${b.dataset.fbDelete} note deleted — journaled; no longer carried.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    });
     // Correction-intake acts — wired outside the prompt block so a take
     // without a stored prompt still gets them.
     $$("[data-apply-intake]", el).forEach(b => b.onclick = async () => {

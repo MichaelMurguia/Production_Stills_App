@@ -1527,6 +1527,38 @@ def api_list_candidates(spec_id: str) -> list[dict]:
     return generate.list_candidates(spec_id)
 
 
+@app.get("/api/specs/{spec_id}/carried-feedback")
+def api_carried_feedback(spec_id: str) -> dict:
+    """Every rejection note that carries into this spec's future prompts —
+    live rejected takes and the archive rows deleted takes left behind.
+    The rail renders this list, so visibility equals reality."""
+    return {"items": generate.carried_feedback(spec_id)}
+
+
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/feedback-edit")
+def api_edit_feedback(spec_id: str, cand_id: str, body: dict) -> dict:
+    """Rewrite a rejection note in place (live record or archive row) —
+    journaled; the note keeps carrying with its new words."""
+    try:
+        return generate.edit_feedback(spec_id, cand_id,
+                                      str(body.get("reason", "")))
+    except KeyError as e:
+        raise _err(e)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/feedback-delete")
+def api_delete_feedback(spec_id: str, cand_id: str) -> dict:
+    """Remove a rejection note from every future prompt — an explicit,
+    logged user act (2026-08-13 ruling: notes are destroyed only by their
+    own Delete verb, never as a side effect)."""
+    try:
+        return generate.delete_feedback(spec_id, cand_id)
+    except KeyError as e:
+        raise _err(e)
+
+
 @app.post("/api/specs/{spec_id}/candidates/{cand_id}/correction-intake")
 async def api_correction_intake(spec_id: str, cand_id: str, body: dict) -> dict:
     """Parse a rejection into proposed structural deltas (camera, require,

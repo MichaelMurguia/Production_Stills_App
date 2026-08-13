@@ -344,9 +344,12 @@ def _feedback_archive_path() -> Path:
     return paths.DATA / "feedback_archive.json"
 
 
-def archive_feedback(spec_id: str, panel_id: str, reason: str, source: str) -> None:
+def archive_feedback(spec_id: str, panel_id: str, reason: str, source: str,
+                     retired: bool = False) -> None:
     """Preserve a rejection directive when its candidate record is deleted —
-    institutional memory must outlive the image file."""
+    institutional memory must outlive the image file. The retired flag
+    survives too (found 2026-08-13: deleting a take whose note was retired
+    silently resurrected the note as a live correction)."""
     reason = (reason or "").strip()
     if not reason:
         return
@@ -357,9 +360,115 @@ def archive_feedback(spec_id: str, panel_id: str, reason: str, source: str) -> N
            and i["reason"].casefold() == reason.casefold() for i in items):
         return
     items.append({"base": base, "panel_id": panel_id, "reason": reason,
-                  "source": source, "archived_at": store.utcnow()})
+                  "source": source, "archived_at": store.utcnow(),
+                  "feedback_retired": bool(retired)})
     paths.ensure_dirs()
     store._atomic_write_json(p, items)
+
+
+def carried_feedback(spec_id: str) -> list[dict]:
+    """Everything rejection_feedback() draws on, with provenance — live
+    rejected takes AND archived notes from deleted takes. The rail renders
+    THIS list, so what the user sees is exactly what carries (found
+    2026-08-13: the rail read only live records, so deleting a take made
+    its still-carrying note invisible and it looked destroyed)."""
+    base = re.sub(r"_R\d+$", "", spec_id)
+    items: list[dict] = []
+    p = _feedback_archive_path()
+    if p.exists():
+        for i in json.loads(p.read_text(encoding="utf-8")):
+            if i.get("base") == base and str(i.get("reason", "")).strip():
+                items.append({"source": str(i.get("source", "")),
+                              "panel_id": str(i.get("panel_id", "")),
+                              "reason": str(i.get("reason", "")),
+                              "retired": bool(i.get("feedback_retired")),
+                              "archived": True})
+    if paths.BOARDS_DIR.exists():
+        for d in sorted(paths.BOARDS_DIR.iterdir()):
+            if not d.is_dir() or re.sub(r"_R\d+$", "", d.name) != base:
+                continue
+            for meta in sorted(d.glob("CAND-*.json")):
+                r = json.loads(meta.read_text(encoding="utf-8"))
+                if (r.get("status") == "REJECTED"
+                        and str(r.get("status_reason", "")).strip()):
+                    items.append({"source": str(r.get("candidate_id", "")),
+                                  "panel_id": str(r.get("panel_id", "")),
+                                  "reason": str(r.get("status_reason", "")),
+                                  "retired": bool(r.get("feedback_retired")),
+                                  "archived": False})
+    return sorted(items, key=lambda i: i["source"], reverse=True)
+
+
+def edit_feedback(spec_id: str, cand_id: str, reason: str) -> dict:
+    """Rewrite a rejection note in place — on the live record, or on the
+    archive rows a deleted take left behind. The note keeps carrying with
+    its new words; the take's history and status are untouched."""
+    reason = (reason or "").strip()
+    if not reason:
+        raise GenerationError(
+            "an empty edit would erase the note — use its Delete verb to "
+            "remove it deliberately.")
+    touched = False
+    record = get_candidate(spec_id, cand_id)
+    if record is not None and str(record.get("status_reason", "")).strip():
+        old = record["status_reason"]
+        record["status_reason"] = reason
+        record["updated_at"] = store.utcnow()
+        (_spec_board_dir(spec_id) / f"{cand_id}.json").write_text(
+            json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        touched = True
+    else:
+        p = _feedback_archive_path()
+        if p.exists():
+            items = json.loads(p.read_text(encoding="utf-8"))
+            for i in items:
+                if i.get("source") == cand_id:
+                    old = i.get("reason", "")
+                    i["reason"] = reason
+                    touched = True
+            if touched:
+                store._atomic_write_json(p, items)
+    if not touched:
+        raise KeyError(cand_id)
+    store.append_approval_log(
+        f"{cand_id} ({spec_id}) rejection note edited: "
+        f"\"{str(old)[:80]}\" → \"{reason[:80]}\"")
+    return {"candidate_id": cand_id, "reason": reason}
+
+
+def delete_feedback(spec_id: str, cand_id: str) -> dict:
+    """Remove a rejection note from every future prompt — an explicit,
+    logged user act, never a side effect (user ruling 2026-08-13: notes
+    are destroyed only by their own Delete verb). On a live record the
+    note clears but the take, its REJECTED status, and its history stay;
+    archive rows are removed."""
+    touched = False
+    record = get_candidate(spec_id, cand_id)
+    if record is not None and str(record.get("status_reason", "")).strip():
+        old = record["status_reason"]
+        record["status_reason"] = ""
+        record["updated_at"] = store.utcnow()
+        (_spec_board_dir(spec_id) / f"{cand_id}.json").write_text(
+            json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        touched = True
+    else:
+        p = _feedback_archive_path()
+        if p.exists():
+            items = json.loads(p.read_text(encoding="utf-8"))
+            keep = [i for i in items if i.get("source") != cand_id]
+            if len(keep) != len(items):
+                old = "; ".join(i.get("reason", "") for i in items
+                                if i.get("source") == cand_id)
+                store._atomic_write_json(p, keep)
+                touched = True
+    if not touched:
+        raise KeyError(cand_id)
+    store.append_approval_log(
+        f"{cand_id} ({spec_id}) rejection note DELETED by the user: "
+        f"\"{str(old)[:120]}\" — no longer carried into any prompt.")
+    return {"candidate_id": cand_id, "deleted": True}
 
 
 def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
@@ -1967,7 +2076,8 @@ def delete_candidate(spec_id: str, cand_id: str) -> dict:
             "permanently deleted. Reject it first.")
 
     archive_feedback(spec_id, record.get("panel_id", ""),
-                     record.get("status_reason", ""), cand_id)
+                     record.get("status_reason", ""), cand_id,
+                     retired=bool(record.get("feedback_retired")))
 
     line = (f"- {store.utcnow()} — {cand_id} ({spec_id}/{record.get('panel_id', '?')}, "
             f"{record.get('model', 'unknown model')}) permanently deleted. "
