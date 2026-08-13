@@ -7277,6 +7277,7 @@ async function renderBoardPanels(specId) {
         <div class="dispatch-facts mono" data-f="dispatch-facts"></div>
         <div class="gen-actions">
           <button class="text-act" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
+          <button class="text-act" data-f="compcheck" title="Have the narrative model read this panel's scene in the screenplay and judge whether the compiled prompt's angle and composition serve its action — one text call, no image spend">Check composition</button>
           <button class="text-act" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
           <button class="${workOrder ? "primary" : "ghost gen-go"}" data-f="generate" ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : workOrder ? "Render this panel's first take — the one action that fills the card" : "Render the next take with the model, size, aspect, and references above — not amber after the first take; nothing here is the one thing to do"}">${workOrder ? "Generate first take" : "Generate candidate"}</button>
         </div>
@@ -7417,6 +7418,74 @@ async function renderBoardPanels(specId) {
           <pre style="white-space:pre-wrap;margin:0">${esc(r.prompt)}</pre></div>`;
         $("[data-f=close-report]", report).onclick = () => { report.innerHTML = ""; };
       } catch (err) { toast(err.message, true); }
+    };
+
+    // Composition check (2026-08-13): the screenplay's own scene against
+    // the compiled prompt, judged pre-spend. Advisory — WARN never gates;
+    // the verdict renders into the same report host as Preview prompt and
+    // persists nothing (a changed brief just means re-checking).
+    const compBtn = $("[data-f=compcheck]", card);
+    if (compBtn) compBtn.onclick = async () => {
+      compBtn.disabled = true;
+      const busy = startBusy(busyHost,
+        `Checking ${p.id} composition against the screenplay…`,
+        "one narrative call, no image spend — typically 5–20 seconds");
+      try {
+        const v = await api(`/api/specs/${specId}/panels/${p.id}/composition-check`, {
+          method: "POST",
+          json: { ref_ids: checkedRefs(),
+                  provider: modelSel.value === "mock" ? "mock" : "" },
+        });
+        const warns = v.findings.filter(f => f.severity === "WARN").length;
+        const anchorLine = v.anchor?.matched
+          ? `SCREENPLAY SCENE: ${esc(String(v.anchor.location || "").toUpperCase())} — ${v.anchor.scenes} SCENE${v.anchor.scenes === 1 ? "" : "S"} READ`
+          : "SCREENPLAY SCENE NOT LOCATED — JUDGED AGAINST THE SHEET'S SCENE PROSE";
+        const rows = v.findings.map(f => `
+          <li><span class="mono"${f.severity === "WARN" ? ' style="color:var(--hold)"' : ""}>${f.severity} — ${esc(f.axis)}</span>
+            <div class="mono" style="color:var(--ink-dim)">${esc(f.note)}${f.suggestion ? `<br>→ ${esc(f.suggestion)}` : ""}</div></li>`).join("");
+        const camInl = $("[data-f=cam-inline]", card);
+        const camOpen = camInl && $("[data-f=cam-open]", camInl);
+        const canApply = v.suggested_camera && camOpen && !camOpen.disabled;
+        const sugLine = v.suggested_camera
+          ? `SUGGESTED CAMERA · ${esc(Object.entries(v.suggested_camera)
+              .map(([k, x]) => `${k.replace("camera_", "")} ${x.replace(/_/g, " ")}`)
+              .join(" · ").toUpperCase())}`
+          : "";
+        report.innerHTML = `<div class="report${warns ? "" : " pass"}">
+          <div class="report-head"><b>Composition check — ${esc(p.id)} · ${warns ? `${warns} WARNING${warns === 1 ? "" : "S"}` : "OK"}</b>
+            <button class="ghost" data-f="close-report">Close</button></div>
+          <div class="mini mono">${anchorLine} · SPEC ${esc(String(v.spec_hash || "").toUpperCase())} · ${esc(String(v.model || v.provider || ""))}</div>
+          <ul>${rows}</ul>
+          ${v.purpose_amendment ? `<div class="mono" style="color:var(--ink-dim)">BRIEF AMENDMENT PROPOSED — ${esc(v.purpose_amendment)}</div>` : ""}
+          ${sugLine ? `<div class="mini mono">${sugLine}${canApply
+            ? ` <button class="ghost" data-f="comp-apply">Apply suggested camera</button>`
+            : camOpen && camOpen.disabled ? " · CAMERA FROZEN BY AN APPROVED TAKE" : ""}</div>` : ""}
+        </div>`;
+        $("[data-f=close-report]", report).onclick = () => { report.innerHTML = ""; };
+        const applyBtn = $("[data-f=comp-apply]", report);
+        if (applyBtn) applyBtn.onclick = () => {
+          // Act-where-condition-is-met: open the existing camera editor
+          // prefilled with the suggestion merged over the current values —
+          // the user reviews and hits the same journaled Save camera.
+          camOpen.click();
+          for (const a of CAMERA_AXES) {
+            const want = v.suggested_camera[a.key];
+            if (!want) continue;
+            const sel = $(`[data-f=cam-${a.f}]`, camInl);
+            if (!sel) continue;
+            if (a.key === "camera_lens" && ![...sel.options].some(o => o.value === want)) {
+              sel.value = "CUSTOM";
+              const mm = $("[data-f=cam-lens-mm]", camInl);
+              if (mm) { mm.classList.remove("hidden"); mm.value = want.replace(/MM$/, ""); }
+            } else {
+              sel.value = want;
+            }
+          }
+          applyBtn.disabled = true;
+        };
+      } catch (err) { toast(err.message, true); }
+      busy.done();
+      compBtn.disabled = false;
     };
 
     const runGenerate = async (btn, idleLabel, renderPrompt = "") => {

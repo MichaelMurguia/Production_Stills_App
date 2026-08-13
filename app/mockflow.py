@@ -243,6 +243,42 @@ def autofill_draft(subject_prompt: str, mode: str) -> dict:
     }
 
 
+def composition_check(spec: dict, panel: dict, prompt: str,
+                      anchor: dict) -> dict:
+    """A composition verdict at zero cost, honesty-stamped: every note
+    begins MOCK VERDICT. Real logic from real fields — a hero panel at an
+    AERIAL/EXTREME_WIDE scale earns a genuine SUBJECT_PROMINENCE warning
+    (that combination is exactly the GT40 failure this check exists for),
+    so the flow test exercises both the clean and the warned branch."""
+    resolved = str(panel.get("scale")
+                   or store.camera_defaults().get("scale") or "").upper()
+    findings = []
+    suggested = {}
+    if panel.get("composition_role") == "hero" and resolved in (
+            "AERIAL", "EXTREME_WIDE"):
+        findings.append({
+            "axis": "SUBJECT_PROMINENCE", "severity": "WARN",
+            "note": f"MOCK VERDICT — a hero panel at {resolved} renders its "
+                    "subject small in a vast frame; the composition role "
+                    "and the shot scale argue against each other.",
+            "suggestion": "Tighten the shot so the hero subject carries "
+                          "the frame."})
+        suggested = {"scale": "WIDE"}
+    else:
+        findings.append({
+            "axis": "COMPOSITION", "severity": "NOTE",
+            "note": "MOCK VERDICT — no model was called; run a real "
+                    "narrative engine for a production check."})
+    if not anchor.get("matched"):
+        findings.append({
+            "axis": "ACTION_COVERAGE", "severity": "NOTE",
+            "note": "MOCK VERDICT — the screenplay scene was not located; "
+                    "a real check would judge against the sheet's scene "
+                    "prose only."})
+    return {"findings": findings, "suggested_camera": suggested,
+            "purpose_amendment": ""}
+
+
 def bible_markdown(answers: dict) -> str:
     """A bible draft in the exact section grammar bible.py parses, built
     from the interview answers (still BINDING — they land verbatim) and

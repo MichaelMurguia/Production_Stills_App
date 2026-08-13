@@ -10,8 +10,9 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 from fastapi.staticfiles import StaticFiles
 
-from . import (activity, assemble, autofill, backup, bible, connectors,
-               generate, insights, paths, sheet, sheet_render, store, wizard)
+from . import (activity, assemble, autofill, backup, bible, composition,
+               connectors, generate, insights, paths, sheet, sheet_render,
+               store, wizard)
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -1502,6 +1503,23 @@ async def api_draft_prose(spec_id: str, panel_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"prose draft failed: {e}")
+
+
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/composition-check")
+async def api_composition_check(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Pre-render, text-only, advisory: the screenplay scene is re-derived
+    and the compiled prompt judged against it — no image spend, nothing
+    persisted. See app/composition.py."""
+    try:
+        return await run_in_threadpool(
+            composition.check_panel, spec_id, panel_id,
+            body.get("ref_ids", []), str(body.get("provider") or ""))
+    except KeyError as e:
+        raise _err(e)
+    except (autofill.AutofillError, generate.GenerationError) as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"composition check failed: {e}")
 
 
 @app.get("/api/specs/{spec_id}/candidates")
