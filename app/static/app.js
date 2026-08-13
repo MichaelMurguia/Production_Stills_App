@@ -8262,6 +8262,15 @@ async function renderAssembly() {
     if (idx >= 0) { showBoard(all[idx], idx); return; }
     uiSet("drilledBoard", "");  // the remembered board no longer exists
   }
+  // The board being WORKED ON is remembered too (user 2026-08-13):
+  // returning to this tab reopens the selected breakdown's bench, not
+  // the grid. Clearing the picker is the way back to the grid.
+  const rememberedA = uiGet("asmSpec", "");
+  if (rememberedA && specs.some(s2 => s2.specification_id === rememberedA)) {
+    sel.value = rememberedA;
+    await renderAssemblyFor(rememberedA);
+    return;
+  }
   showGrid();
 }
 
@@ -8377,25 +8386,37 @@ async function renderAssemblyFor(specId) {
   };
   $("#asm-size", asm).onchange = refreshMap;
 
-  // The one door (ba-4a, rehomed 2026-08-12): Arrange opens the room
-  // INLINE below the slot map — this scene's BOARD sheet, idempotent
-  // server-side, so the door always lands on the same sheet. No view
-  // change; the board work stays on the board stage (user).
+  // Arrange is a MODE, not an addition (user 2026-08-13: the readiness
+  // map beside the arranged tiles read as two copies of the board). The
+  // room REPLACES the slot map; Done arranging — or the room's own
+  // Close — brings the map back. Every change already saved.
   const roomHost = $("#asm-arrange-host", asm);
+  const slotCap = $(".slot-caption", asm);
+  const slotWrap = $("[data-f=slot-wrap]", asm);
+  const setArrangeMode = open => {
+    slotCap?.classList.toggle("hidden", open);
+    slotWrap?.classList.toggle("hidden", open);
+    const b = $("#asm-arrange", asm);
+    if (b) {
+      b.textContent = open ? "Done arranging" : "Arrange this board";
+      b.title = open
+        ? "Close the arrange room — every change is already saved"
+        : "Switch this board into arrange mode — the readiness map hands over to the room";
+    }
+  };
   const closeRoom = () => {
     roomHost.innerHTML = "";
     uiSet("asm.room", "");
     syncUrl(true);
-    const b = $("#asm-arrange", asm);
-    if (b) b.disabled = false;
+    setArrangeMode(false);
   };
   const openRoom = async () => {
     const rec = await api(`/api/specs/${specId}/arrange`, { method: "POST" });
     await renderArrangeRoom(rec.sheet_id, roomHost, closeRoom);
-    const b = $("#asm-arrange", asm);
-    if (b) { b.disabled = true; b.title = "The arrange room is open below — Close arrange puts this door back"; }
+    setArrangeMode(true);
   };
   $("#asm-arrange", asm).onclick = async () => {
+    if (roomHost.childElementCount) return closeRoom();
     uiSet("asm.room", specId);
     syncUrl(true);
     try { await openRoom(); } catch (err) { toast(err.message, true); closeRoom(); }
@@ -8610,6 +8631,30 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     if (!t) return null;
     const rec = cands.find(c => c.candidate_id === t.cand);
     return { ...t, w: rec?.width || 0, h: rec?.height || 0 };
+  };
+  // Client mirror of sheet.display_window — gesture feedback only; the
+  // server recomputes the same window when it renders and judges.
+  const winFor = (crop, aspect, nw, nh) => {
+    const c = crop || {};
+    const fx = c.x || 0, fy = c.y || 0;
+    const fw = c.w || 1, fh = c.h || 1;
+    if (!nw || !nh || !aspect) return { x: fx, y: fy, w: fw, h: fh };
+    let w = fw, h = (w * nw) / (aspect * nh);
+    if (h < fh) { h = fh; w = (aspect * nh * h) / nw; }
+    if (w > 1) { w = 1; h = (w * nw) / (aspect * nh); }
+    if (h > 1) { h = 1; w = (aspect * nh * h) / nw; }
+    w = Math.min(w, 1); h = Math.min(h, 1);
+    const x = Math.min(Math.max(0, 1 - w), Math.max(0, fx + fw / 2 - w / 2));
+    const y = Math.min(Math.max(0, 1 - h), Math.max(0, fy + fh / 2 - h / 2));
+    return { x, y, w, h };
+  };
+  const cropFor = pid => {
+    for (const b of sh.blocks || []) {
+      for (const s of b.slots || []) {
+        if (s.panel_id === pid) return s.crop || null;
+      }
+    }
+    return null;
   };
   const panelOf = (blockId, slotId) => {
     const b = (sh.blocks || []).find(x => x.block_id === blockId);
@@ -8836,11 +8881,8 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     const el = document.createElement("div");
     el.className = "arr-tile";
     el.dataset.pid = pid;
-    if (t) {
-      el.style.backgroundImage =
-        `url(/api/specs/${encodeURIComponent(t.spec)}/candidates/${encodeURIComponent(t.cand)}/image?size=md)`;
-    }
-    el.innerHTML = `<span class="arr-tag mono">${esc(pid)}</span>
+    el.innerHTML = `${t ? `<img class="arr-img" draggable="false" alt="" src="/api/specs/${encodeURIComponent(t.spec)}/candidates/${encodeURIComponent(t.cand)}/image?size=md">` : ""}
+      <span class="arr-tag mono">${esc(pid)}</span>
       <span class="arr-dim mono"></span>
       <span class="arr-verdict mono"></span>
       <button class="arr-act arr-trash" data-act="bench" title="Remove from the board — the take goes to the bench; + docks it back">${ICON.trash}</button>
@@ -8860,17 +8902,32 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       if (!r) { el.style.display = "none"; continue; }
       el.style.display = "";
       if (pid === skipId) continue;
+      const fw = Math.max(4, r.w * bw - GUT), fh = Math.max(4, r.h * bh - GUT);
       el.style.left = (r.x * bw + GUT / 2) + "px";
       el.style.top = (r.y * bh + GUT / 2) + "px";
-      el.style.width = Math.max(4, r.w * bw - GUT) + "px";
-      el.style.height = Math.max(4, r.h * bh - GUT) + "px";
+      el.style.width = fw + "px";
+      el.style.height = fh + "px";
       const t = factsFor(pid);
       const pw = Math.round(r.w * BW), ph = Math.round(r.h * BH);
-      const short = t && t.w && (pw > t.w || ph > t.h);
+      const crop = cropFor(pid);
+      const win = t && t.w ? winFor(crop, pw / ph, t.w, t.h) : null;
+      const img = el.querySelector(".arr-img");
+      if (img && t && t.w && win && img.complete !== undefined) {
+        const scale = Math.max(fw / (win.w * t.w), fh / (win.h * t.h));
+        img.style.width = (t.w * scale) + "px";
+        img.style.height = (t.h * scale) + "px";
+        img.style.left = (fw / 2 - (win.x + win.w / 2) * t.w * scale) + "px";
+        img.style.top = (fh / 2 - (win.y + win.h / 2) * t.h * scale) + "px";
+        img.style.transform = `rotate(${(crop && crop.rotate) || 0}deg)`;
+      }
+      const availW = win ? Math.round(t.w * win.w) : 0;
+      const availH = win ? Math.round(t.h * win.h) : 0;
+      const short = t && t.w && (pw > availW + 1 || ph > availH + 1);
       el.classList.toggle("short", !!short);
       el.querySelector(".arr-dim").textContent = `${pw} × ${ph}`;
       el.querySelector(".arr-verdict").textContent =
-        short ? `SHORT — TAKE ${t.w} × ${t.h}` : (t ? "" : "NO APPROVED TAKE");
+        short ? `SHORT — PLATE SHOWS ${availW} × ${availH}`
+          : (t ? "" : "NO APPROVED TAKE");
     }
     return R;
   };
@@ -9078,11 +9135,18 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     }
   });
 
-  /* crop — WYSIWYG (user 2026-08-13): opens exactly as the panel shows
-     it — current crop, position, and the slot's own aspect. HAND drags
-     the image inside the frame to reposition what displays (wheel
-     zooms); CROP redraws the region on the full plate. The frame never
-     rotates; the image moves inside it. */
+  /* crop — one stage, two tools (2026-08-13, from the Reflow Lab): the
+     WHOLE plate with the crop box on the region the panel displays,
+     outside dimmed, live ON-THE-PANEL preview beside it. HAND (icon)
+     slides the window from anywhere; CROP (icon) edits the box — edges
+     resize, inside moves, outside draws fresh, ratio chips apply. The
+     crop is framing intent: the server re-derives the drawn window for
+     the frame's aspect (sheet.display_window), so what this modal sets
+     can grow back out when the frame changes. */
+  const ARR_TOOL_ICON = {
+    hand: `<svg viewBox="0 0 12 12" fill="none"><path d="M4 6 V2.8 a.7 .7 0 0 1 1.4 0 V5.4 M5.4 5.4 V2.2 a.7 .7 0 0 1 1.4 0 V5.4 M6.8 5.4 V2.9 a.7 .7 0 0 1 1.4 0 V6.2 M8.2 6.2 V4.2 a.7 .7 0 0 1 1.4 0 V7.8 c0 2 -1.2 3.2 -3 3.2 h-.7 c-1 0 -1.8 -.5 -2.4 -1.3 L2.1 7.6 a.75 .75 0 0 1 1.2 -.9 L4 7.6" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    crop: `<svg viewBox="0 0 12 12" fill="none"><path d="M3.2 1 V8.8 H11 M1 3.2 H8.8 V11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  };
   const cropPanel = async pid => {
     let bid = null, sid = null, slot = null;
     for (const b of sh.blocks || []) {
@@ -9090,143 +9154,190 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         if (s.panel_id === pid) { bid = b.block_id; sid = s.slot_id; slot = s; }
       }
     }
-    if (!slot?.candidate_id) return toast("No take in this frame to crop.", true);
+    const t = factsFor(pid);
+    if (!slot?.candidate_id || !t) {
+      return toast("No take in this frame to crop.", true);
+    }
     const src = `/api/specs/${esc(slot.spec_id)}/candidates/${esc(slot.candidate_id)}/image?size=md`;
     const rect = rectsOf(arr)[pid];
-    const slotA = rect ? (rect.w * BW) / (rect.h * BH) : 16 / 9;
-    const RATS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39], ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
+    const frameA = rect ? (rect.w * BW) / (rect.h * BH) : 16 / 9;
+    const RATS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39],
+                  ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
     let f = { x: 0, y: 0, w: 1, h: 1, rotate: 0, ...(slot.crop || {}) };
     let ratio = 0;
+    let tool = "hand";
+    const wantAspect = () => ratio === 0 ? frameA : ratio;
+    if (t.w && Math.abs((f.w * t.w) / (f.h * t.h) - frameA) / frameA > 0.01) {
+      f = { ...f, ...winFor(f, frameA, t.w, t.h) };
+    }
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
     ov.innerHTML = `
       <div class="modal arr-crop-modal" role="dialog" aria-modal="true">
-        <div class="modal-title">${esc(pid)} — as it appears on the board</div>
+        <div class="modal-title">${esc(pid)} — crop on the full plate</div>
         <div class="arr-crop-tools">
-          <button class="vchip on" data-tool="hand" title="Drag to reposition what the frame shows; wheel zooms">HAND</button>
-          <button class="vchip" data-tool="crop" title="Redraw the crop on the full plate">CROP</button>
+          <button class="arr-tool on" data-tool="hand" title="Hand — drag anywhere to reposition the image within the crop">${ARR_TOOL_ICON.hand}</button>
+          <button class="arr-tool" data-tool="crop" title="Crop — resize the box by its edges, draw fresh outside it">${ARR_TOOL_ICON.crop}</button>
           <span class="arr-crop-ratios hidden">${RATS.map(([n]) =>
             `<button class="vchip${n === "SLOT" ? " on" : ""}" data-ratio="${n}">${n}</button>`).join("")}</span>
           <label class="mono lb-rot">ROTATE <input type="number" id="arr-rot" min="-45" max="45" step="0.5" value="${f.rotate || 0}">°</label>
         </div>
-        <div class="arr-crop-hand">
-          <div class="arr-crop-view"><img src="${src}" draggable="false" alt=""></div>
+        <div class="arr-crop-side">
+          <div class="arr-crop-plate">
+            <div class="arr-crop-stage"><img src="${src}" draggable="false" alt="">
+              <div class="arr-crop-box"><span class="bk mono"></span></div></div>
+          </div>
+          <div class="arr-crop-preview-wrap">
+            <div class="arr-crop-preview-k mono">ON THE PANEL</div>
+            <div class="arr-crop-preview"><img src="${src}" draggable="false" alt=""></div>
+          </div>
         </div>
-        <div class="lb-crop-stage hidden"><img src="${src}" draggable="false" alt="">
-          <div class="lb-crop-box"></div></div>
-        <p class="hint" data-f="tool-hint">Drag the image to reposition what the frame shows; wheel zooms. Save returns it to the board.</p>
+        <p class="hint" data-f="tool-hint">Hand — drag anywhere to slide what the frame shows.</p>
         <div class="modal-actions">
           <button class="ghost" data-f="cancel">Cancel</button>
           <button class="primary" data-f="save">Save crop</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
-    const handWrap = $(".arr-crop-hand", ov);
-    const view = $(".arr-crop-view", ov);
-    const handImg = $("img", view);
-    const stage = $(".lb-crop-stage", ov), box = $(".lb-crop-box", ov), im = $("img", stage);
+    const stage = $(".arr-crop-stage", ov);
+    const box = $(".arr-crop-box", ov);
+    const bk = $(".bk", box);
+    const prev = $(".arr-crop-preview", ov);
+    const prevImg = $("img", prev);
     const ratioRow = $(".arr-crop-ratios", ov);
-    view.style.aspectRatio = `${slotA}`;
+    prev.style.aspectRatio = `${frameA}`;
 
+    const lockH = () => {
+      const want = wantAspect();
+      if (want > 0 && t.w) f.h = (f.w * t.w) / (want * t.h);
+    };
     const clampF = () => {
-      f.w = Math.min(1, Math.max(0.05, f.w));
-      f.h = Math.min(1, Math.max(0.05, f.h));
+      f.w = Math.min(1, Math.max(0.04, f.w));
+      f.h = Math.min(1, Math.max(0.04, f.h));
+      if (f.h > 1) {
+        f.h = 1;
+        const want = wantAspect();
+        if (want > 0 && t.w) f.w = (want * t.h) / t.w;
+      }
       f.x = Math.min(1 - f.w, Math.max(0, f.x));
       f.y = Math.min(1 - f.h, Math.max(0, f.y));
     };
-    // Cover-fit the crop REGION into the slot-aspect viewport — the same
-    // rule the renderer applies, so the modal shows the board's truth.
-    const paintHand = () => {
-      const vw = view.clientWidth, vh = view.clientHeight;
-      const iw = handImg.naturalWidth || 16, ih = handImg.naturalHeight || 9;
-      if (!vw || !iw) return;
-      const scale = Math.max(vw / (f.w * iw), vh / (f.h * ih));
-      handImg.style.width = (iw * scale) + "px";
-      handImg.style.height = (ih * scale) + "px";
-      const cx = (f.x + f.w / 2) * iw * scale, cy = (f.y + f.h / 2) * ih * scale;
-      handImg.style.left = (vw / 2 - cx) + "px";
-      handImg.style.top = (vh / 2 - cy) + "px";
-    };
-    const paintBox = () => {
-      box.style.left = `${f.x * 100}%`; box.style.top = `${f.y * 100}%`;
-      box.style.width = `${f.w * 100}%`; box.style.height = `${f.h * 100}%`;
-    };
-    handImg.onload = paintHand;
-    im.onload = paintBox;
-    if (handImg.complete) paintHand();
-    if (im.complete) paintBox();
-
-    /* HAND: drag pans the window across the plate; wheel zooms about it */
-    let hd = null;
-    view.addEventListener("pointerdown", e => {
-      hd = { x: e.clientX, y: e.clientY, fx: f.x, fy: f.y };
-      view.setPointerCapture(e.pointerId);
-      view.classList.add("grabbing");
-    });
-    view.addEventListener("pointermove", e => {
-      if (!hd) return;
-      const vw = view.clientWidth, vh = view.clientHeight;
-      // dragging the image right reveals more of the LEFT — crop x falls
-      f.x = hd.fx - (e.clientX - hd.x) / vw * f.w;
-      f.y = hd.fy - (e.clientY - hd.y) / vh * f.h;
-      clampF();
-      paintHand();
-    });
-    const endHand = () => { hd = null; view.classList.remove("grabbing"); };
-    view.addEventListener("pointerup", endHand);
-    view.addEventListener("pointercancel", endHand);
-    view.addEventListener("wheel", e => {
-      e.preventDefault();
-      const k = e.deltaY > 0 ? 1.06 : 1 / 1.06;
-      const cx = f.x + f.w / 2, cy = f.y + f.h / 2;
-      f.w *= k; f.h *= k;
-      f.x = cx - f.w / 2; f.y = cy - f.h / 2;
-      clampF();
-      paintHand();
-    }, { passive: false });
-
-    /* CROP: redraw the region on the full plate (ratio chips apply) */
-    let d0 = null;
-    stage.onpointerdown = e => {
-      const r = stage.getBoundingClientRect();
-      d0 = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
-      stage.setPointerCapture(e.pointerId);
-    };
-    stage.onpointermove = e => {
-      if (!d0) return;
-      const r = stage.getBoundingClientRect();
-      const x1 = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-      const y1 = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
-      f.x = Math.min(d0.x, x1); f.y = Math.min(d0.y, y1);
-      f.w = Math.abs(x1 - d0.x) || 0.01; f.h = Math.abs(y1 - d0.y) || 0.01;
-      const want = ratio === 0 ? slotA : ratio;
-      if (want > 0) {
-        const ia = (im.naturalWidth || 16) / (im.naturalHeight || 9);
-        f.h = f.w * ia / want;
-        if (f.y + f.h > 1) { f.h = 1 - f.y; f.w = f.h * want / ia; }
+    const paintCrop = () => {
+      box.style.left = `${f.x * 100}%`;
+      box.style.top = `${f.y * 100}%`;
+      box.style.width = `${f.w * 100}%`;
+      box.style.height = `${f.h * 100}%`;
+      bk.textContent = t.w
+        ? `${Math.round(f.w * t.w)} × ${Math.round(f.h * t.h)} PX` : "";
+      const vw = prev.clientWidth, vh = prev.clientHeight;
+      if (vw && t.w) {
+        const scale = Math.max(vw / (f.w * t.w), vh / (f.h * t.h));
+        prevImg.style.width = (t.w * scale) + "px";
+        prevImg.style.height = (t.h * scale) + "px";
+        prevImg.style.left = (vw / 2 - (f.x + f.w / 2) * t.w * scale) + "px";
+        prevImg.style.top = (vh / 2 - (f.y + f.h / 2) * t.h * scale) + "px";
       }
-      paintBox();
     };
-    stage.onpointerup = () => { d0 = null; };
+    requestAnimationFrame(paintCrop);
+    prevImg.onload = paintCrop;
 
-    const setTool = t => {
-      $$("[data-tool]", ov).forEach(b => b.classList.toggle("on", b.dataset.tool === t));
-      handWrap.classList.toggle("hidden", t !== "hand");
-      stage.classList.toggle("hidden", t !== "crop");
-      ratioRow.classList.toggle("hidden", t !== "crop");
-      $("[data-f=tool-hint]", ov).textContent = t === "hand"
-        ? "Drag the image to reposition what the frame shows; wheel zooms. Save returns it to the board."
-        : "Drag to redraw the crop on the full plate. A ratio other than SLOT lets the sheet's paper show inside the frame.";
-      if (t === "hand") paintHand(); else paintBox();
+    const C = 12;
+    let act = null;
+    const boxMode = ev => {
+      const b = box.getBoundingClientRect();
+      const x = ev.clientX - b.left, y = ev.clientY - b.top;
+      if (x < -C || x > b.width + C || y < -C || y > b.height + C) return null;
+      const L = Math.abs(x) < C, R2 = Math.abs(b.width - x) < C;
+      const T = Math.abs(y) < C, B = Math.abs(b.height - y) < C;
+      if (L || R2 || T || B) return { l: L, r: R2, t: T, b: B };
+      if (x >= 0 && x <= b.width && y >= 0 && y <= b.height) return "move";
+      return null;
     };
+    const setCursor = ev => {
+      if (act) return;
+      if (tool === "hand") { stage.style.cursor = "grab"; return; }
+      const m = ev ? boxMode(ev) : null;
+      stage.style.cursor = !m ? "crosshair" : m === "move" ? "move"
+        : (m.l && m.t) || (m.r && m.b) ? "nwse-resize"
+        : (m.l && m.b) || (m.r && m.t) ? "nesw-resize"
+        : (m.l || m.r) ? "ew-resize" : "ns-resize";
+    };
+    stage.addEventListener("pointermove", ev => setCursor(ev));
+    stage.addEventListener("pointerdown", ev => {
+      const rc = stage.getBoundingClientRect();
+      const px = (ev.clientX - rc.left) / rc.width;
+      const py = (ev.clientY - rc.top) / rc.height;
+      if (tool === "hand") {
+        act = { kind: "move", px, py, f0: { ...f } };
+        stage.style.cursor = "grabbing";
+      } else {
+        const m = boxMode(ev);
+        act = m === "move" ? { kind: "move", px, py, f0: { ...f } }
+          : m ? { kind: "edge", m, px, py, f0: { ...f } }
+          : { kind: "draw", px, py };
+      }
+      stage.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    stage.addEventListener("pointermove", ev => {
+      if (!act) return;
+      const rc = stage.getBoundingClientRect();
+      const px = Math.max(0, Math.min(1, (ev.clientX - rc.left) / rc.width));
+      const py = Math.max(0, Math.min(1, (ev.clientY - rc.top) / rc.height));
+      if (act.kind === "move") {
+        f.x = act.f0.x + (px - act.px);
+        f.y = act.f0.y + (py - act.py);
+        clampF();
+      } else if (act.kind === "draw") {
+        f.x = Math.min(act.px, px);
+        f.y = Math.min(act.py, py);
+        f.w = Math.abs(px - act.px) || 0.01;
+        f.h = Math.abs(py - act.py) || 0.01;
+        lockH();
+        clampF();
+      } else {
+        const m = act.m, f0 = act.f0;
+        f = { ...f, x: f0.x, y: f0.y, w: f0.w, h: f0.h };
+        if (m.l) { f.x = f0.x + (px - act.px); f.w = f0.w - (px - act.px); }
+        if (m.r) f.w = f0.w + (px - act.px);
+        if (m.t) { f.y = f0.y + (py - act.py); f.h = f0.h - (py - act.py); }
+        if (m.b) f.h = f0.h + (py - act.py);
+        if (f.w < 0.04) f.w = 0.04;
+        if (f.h < 0.04) f.h = 0.04;
+        if (wantAspect() > 0) {
+          const anchorBottom = m.t && !m.b;
+          const oldH = f.h;
+          lockH();
+          if (anchorBottom) f.y += oldH - f.h;
+        }
+        clampF();
+      }
+      paintCrop();
+    });
+    const endAct = () => { act = null; setCursor(); };
+    stage.addEventListener("pointerup", endAct);
+    stage.addEventListener("pointercancel", endAct);
 
-    ov.onclick = async e => {
+    const setTool = tl => {
+      tool = tl;
+      $$("[data-tool]", ov).forEach(b =>
+        b.classList.toggle("on", b.dataset.tool === tl));
+      ratioRow.classList.toggle("hidden", tl !== "crop");
+      $("[data-f=tool-hint]", ov).textContent = tl === "hand"
+        ? "Hand — drag anywhere to slide what the frame shows."
+        : "Crop — drag the box's edges to resize, inside to move, outside to draw fresh. SLOT keeps the frame's ratio.";
+      setCursor();
+    };
+    ov.addEventListener("click", async e => {
       const tb = e.target.closest("[data-tool]");
       if (tb) return setTool(tb.dataset.tool);
-      const chipEl = e.target.closest("[data-ratio]");
-      if (chipEl) {
-        ratio = RATS.find(r => r[0] === chipEl.dataset.ratio)[1];
-        $$("[data-ratio]", ov).forEach(b => b.classList.toggle("on", b === chipEl));
+      const rc = e.target.closest("[data-ratio]");
+      if (rc) {
+        ratio = RATS.find(x => x[0] === rc.dataset.ratio)[1];
+        $$("[data-ratio]", ov).forEach(b => b.classList.toggle("on", b === rc));
+        lockH();
+        clampF();
+        paintCrop();
         return;
       }
       if (e.target.dataset.f === "cancel" || e.target === ov) { ov.remove(); return; }
@@ -9242,7 +9353,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
           paint();
         } catch (err) { toast(err.message, true); }
       }
-    };
+    });
   };
 
   /* --------------------------------------------------------- pointers */

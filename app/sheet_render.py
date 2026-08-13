@@ -131,7 +131,8 @@ def _type_px(sheet: dict, block: dict | None, frac: float, W: int) -> int:
 
 # ------------------------------------------------------------ image placing
 
-def _prepare_source(img_path: Path, crop: dict | None) -> Image.Image:
+def _prepare_source(img_path: Path, crop: dict | None,
+                    aspect: float | None = None) -> Image.Image:
     im = Image.open(img_path).convert("RGB")
     c = crop or {}
     rot = float(c.get("rotate", 0.0) or 0.0)
@@ -139,6 +140,10 @@ def _prepare_source(img_path: Path, crop: dict | None) -> Image.Image:
         # The frame never rotates — the image rotates inside it; the fill
         # this needs is charged to the crop budget like any other zoom.
         im = im.rotate(-rot, resample=Image.BICUBIC, expand=True)
+    if aspect:
+        # The crop is framing intent (2026-08-13): draw the slot-aspect
+        # window derived from it — the same window readiness judged.
+        c = sheet_mod.display_window(c, aspect, im.width, im.height)
     x = float(c.get("x", 0.0)); y = float(c.get("y", 0.0))
     w = float(c.get("w", 1.0)); h = float(c.get("h", 1.0))
     if (x, y, w, h) != (0.0, 0.0, 1.0, 1.0):
@@ -158,7 +163,7 @@ def _place_image(canvas: Image.Image, draw: ImageDraw.ImageDraw,
     if style.get("keyline"):
         draw.rectangle([rx, ry, rx + rw - 1, ry + rh - 1],
                        outline=style["keyline"], width=1)
-    with _prepare_source(img_path, crop) as im:
+    with _prepare_source(img_path, crop, rw / max(rh, 1)) as im:
         orig_w, orig_h = im.size
         # Cover-crop: scale DOWN to cover the slot, crop the overflow,
         # center. No upscaling, ever.

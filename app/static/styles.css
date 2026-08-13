@@ -2695,3 +2695,33 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   cursor: grab; touch-action: none; user-select: none; }
 .arr-crop-view.grabbing { cursor: grabbing; }
 .arr-crop-view img { position: absolute; max-width: none; }
+/* arrange room migration 2026-08-13 (from the Reflow Lab): tiles render
+   THROUGH the crop's display window via an inner img; the crop modal is
+   one full-plate stage with hand/crop icon tools and a live panel
+   preview. Crop-as-framing-intent semantics live in sheet.display_window. */
+.arr-img { position: absolute; max-width: none; pointer-events: none; }
+.arr-tool { width: 32px; height: 32px; padding: 0; display: flex;
+  align-items: center; justify-content: center; color: var(--ink-dim);
+  background: var(--field); border: 1px solid var(--line); cursor: pointer; }
+.arr-tool svg { width: 16px; height: 16px; display: block; }
+.arr-tool:hover { color: var(--ink); border-color: var(--ink-faint); }
+.arr-tool.on { color: var(--accent); border-color: var(--accent); }
+.arr-crop-side { display: flex; gap: 12px; align-items: flex-start; }
+.arr-crop-plate { flex: 1; min-width: 0; }
+.arr-crop-stage { position: relative; width: 100%; background: var(--field);
+  border: 1px solid var(--line); touch-action: none; user-select: none;
+  overflow: hidden; }
+.arr-crop-stage img { display: block; width: 100%; height: auto;
+  pointer-events: none; }
+.arr-crop-box { position: absolute; border: 1px solid var(--accent);
+  box-shadow: 0 0 0 9999px rgba(15, 17, 20, .62); cursor: move; }
+.arr-crop-box .bk { position: absolute; left: 4px; top: 3px;
+  font-size: 9.5px; letter-spacing: .1em; color: var(--accent);
+  background: var(--field); padding: 1px 5px; pointer-events: none;
+  white-space: nowrap; }
+.arr-crop-preview-wrap { width: 240px; flex: none; }
+.arr-crop-preview-k { font-size: 9px; letter-spacing: .14em;
+  color: var(--ink-faint); margin-bottom: 6px; }
+.arr-crop-preview { position: relative; overflow: hidden; width: 100%;
+  background: var(--field); border: 1px solid var(--line); }
+.arr-crop-preview img { position: absolute; max-width: none; }

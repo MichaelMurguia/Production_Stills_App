@@ -265,22 +265,72 @@ def rendered_size(block: dict, medium: str, width: float) -> float:
     return max(s, LADDERS[medium]["floor"]) if bd.elastic else s
 
 
-def slot_pixel_need(sheet: dict, block: dict, slot: dict) -> tuple[int, int]:
-    """Source pixels this slot needs at the sheet's size. Print renders at
-    300 dpi. A crop keeps a fraction of the source, so cropping divides the
-    pixels a candidate has — the need scales by 1/crop."""
+def _slot_px(sheet: dict, block: dict, slot: dict) -> tuple[int, int]:
+    """The slot's own pixels at the sheet's size (print at 300 dpi) —
+    what the drawn window must hold, before any crop consideration."""
     w, h = sheet["size"]
     if sheet["medium"] == "PRINT":
         px_w, px_h = w * PRINT_DPI, h * PRINT_DPI
     else:
         px_w, px_h = w, h
     cw, ch, _, _ = _content_rect_fracs(sheet)
-    need_w = px_w * cw * block["frac"]["w"] * slot["frac"]["w"]
-    need_h = px_h * ch * block["frac"]["h"] * slot["frac"]["h"]
+    return (int(round(px_w * cw * block["frac"]["w"] * slot["frac"]["w"])),
+            int(round(px_h * ch * block["frac"]["h"] * slot["frac"]["h"])))
+
+
+def slot_pixel_need(sheet: dict, block: dict, slot: dict) -> tuple[int, int]:
+    """Source pixels this slot needs at the sheet's size. A crop keeps a
+    fraction of the source, so cropping divides the pixels a candidate
+    has — the need scales by 1/crop. (Legacy shape; readiness judges the
+    ADAPTED display window instead — see display_window.)"""
+    need_w, need_h = _slot_px(sheet, block, slot)
     crop = slot.get("crop") or {}
-    need_w /= max(float(crop.get("w", 1.0)) or 1.0, 1e-6)
-    need_h /= max(float(crop.get("h", 1.0)) or 1.0, 1e-6)
-    return (int(round(need_w)), int(round(need_h)))
+    return (int(round(need_w / max(float(crop.get("w", 1.0)) or 1.0, 1e-6))),
+            int(round(need_h / max(float(crop.get("h", 1.0)) or 1.0, 1e-6))))
+
+
+def display_window(crop: dict | None, aspect: float,
+                   src_w: int, src_h: int) -> dict:
+    """The crop is FRAMING INTENT, not a hard window (user-hit
+    2026-08-13, found in the Reflow Lab): the drawn region is the
+    smallest slot-aspect window CONTAINING the crop, centered on it,
+    clamped to the plate. A crop made under one frame shape grows back
+    out when the frame changes; a deliberate slot-aspect zoom is honored
+    exactly; only the plate itself limits the window. One function feeds
+    the renderer, readiness and the size ladder so they cannot drift."""
+    c = crop or {}
+    fx, fy = float(c.get("x", 0.0)), float(c.get("y", 0.0))
+    fw = float(c.get("w", 1.0)) or 1.0
+    fh = float(c.get("h", 1.0)) or 1.0
+    if src_w <= 0 or src_h <= 0 or aspect <= 0:
+        return {"x": fx, "y": fy, "w": fw, "h": fh}
+    w = fw
+    h = (w * src_w) / (aspect * src_h)
+    if h < fh:
+        h = fh
+        w = (aspect * src_h * h) / src_w
+    if w > 1.0:
+        w = 1.0
+        h = (w * src_w) / (aspect * src_h)
+    if h > 1.0:
+        h = 1.0
+        w = (aspect * src_h * h) / src_w
+    w, h = min(w, 1.0), min(h, 1.0)
+    x = min(max(0.0, 1.0 - w), max(0.0, fx + fw / 2 - w / 2))
+    y = min(max(0.0, 1.0 - h), max(0.0, fy + fh / 2 - h / 2))
+    return {"x": round(x, 4), "y": round(y, 4),
+            "w": round(w, 4), "h": round(h, 4)}
+
+
+def shown_pixels(sheet: dict, block: dict, slot: dict,
+                 have: tuple[int, int]) -> tuple[tuple[int, int],
+                                                 tuple[int, int]]:
+    """(shown, need): the source pixels the slot's adapted display window
+    holds, against the slot's own pixels."""
+    need = _slot_px(sheet, block, slot)
+    aspect = need[0] / max(need[1], 1)
+    win = display_window(slot.get("crop"), aspect, have[0], have[1])
+    return ((int(have[0] * win["w"]), int(have[1] * win["h"])), need)
 
 
 def _content_rect_fracs(sheet: dict) -> tuple[float, float, float, float]:
@@ -323,8 +373,10 @@ def _any_slot_short(sheet: dict, size: tuple[int, int]) -> bool:
         if not s.get("candidate_id"):
             continue  # empty slots gate export, not the recommendation
         have = _candidate_dims(s)
-        need = slot_pixel_need(probe, b, s)
-        if have[0] < need[0] or have[1] < need[1]:
+        if not have[0] or not have[1]:
+            return True
+        shown, need = shown_pixels(probe, b, s, have)
+        if shown[0] + 1 < need[0] or shown[1] + 1 < need[1]:
             return True
     return False
 
@@ -364,12 +416,22 @@ def readiness(sheet: dict) -> dict:
             blocked.append({"kind": "TYPE_FLOOR", "block_id": b["block_id"],
                             "size": round(size, 1), "floor": L["floor"]})
     for b, s in _iter_slots(sheet):
-        need = slot_pixel_need(sheet, b, s)
         have = _candidate_dims(s) if s.get("candidate_id") else (0, 0)
-        if have[0] < need[0] or have[1] < need[1]:
+        if not have[0] or not have[1]:
+            need = _slot_px(sheet, b, s)
             blocked.append({"kind": "SLOT_PIXELS", "block_id": b["block_id"],
                             "slot_id": s["slot_id"],
-                            "have": list(have), "need": list(need)})
+                            "have": [0, 0], "need": list(need)})
+        else:
+            # Judge the ADAPTED display window (crop = framing intent):
+            # short only when the window the renderer would draw cannot
+            # cover the slot's own pixels.
+            shown, need = shown_pixels(sheet, b, s, have)
+            if shown[0] + 1 < need[0] or shown[1] + 1 < need[1]:
+                blocked.append({"kind": "SLOT_PIXELS",
+                                "block_id": b["block_id"],
+                                "slot_id": s["slot_id"],
+                                "have": list(shown), "need": list(need)})
         # A take rejected or reverted after placement blocks export here —
         # slots hold approved takes only, and the gate must say so before
         # a pixel is spent. (A vanished candidate reads as (0,0) above.)

@@ -1167,6 +1167,17 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-13** — **Lab migration + mode switch** (user): Arrange is a
+  MODE — the readiness map hands over to the room and `Done arranging`
+  brings it back (two boards on one page read as a copy). Tiles render
+  THROUGH the crop's display window; the crop modal is one full-plate
+  stage with HAND/CROP icon tools and a live ON-THE-PANEL preview.
+  **Crop-as-framing-intent canonized in code** (`sheet.display_window`,
+  one function feeding renderer, readiness and the ladder): the drawn
+  window re-derives for the frame's aspect and only the plate gates —
+  `SHORT — PLATE SHOWS…`. Claims are one-step (through the next panel;
+  refugees stack, never dock beside). Boards remember the breakdown and
+  drilled board being worked on; slots follow the latest approved take.
 - **2026-08-12** — **The arrange room gets its physics** (user-directed,
   iterated in the Reflow Lab artifact until it felt right): tiles are
   the real takes, ghosted; linked resize, split-docking, claim arrows,

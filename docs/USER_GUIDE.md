@@ -317,14 +317,13 @@ upscaling, which never happens — regenerate larger) · `NO CANDIDATE`. The
 title and canon blocks are marked APP-DRAWN: all board typography is drawn
 by the app, never by the model.
 
-**Arrange this board** (the one door, beside Assemble) unfolds the arrange
-room right below the slot map, on this scene's own `BOARD` sheet — created
-on first use from the current slot map, then always the same sheet. Its
-slots arrive filled with the scene's approved takes; existing derived
-MATERIALS/PALETTE takes travel as a trailing strip whose note states the
-swap available (`THE PALETTE BLOCK CAN DRAW THESE FROM STAGE 02`).
-Readiness travels with it: a stage-05 `TOO SMALL` reads as a short slot in
-the room's gate. **Close arrange** folds the room away.
+**Arrange this board** (the one door, beside Assemble) switches the page
+into **arrange mode**: the readiness map hands over to the arrange room —
+one board on screen, never two. The room works on this scene's own
+`BOARD` sheet — created on first use from the current slot map, then
+always the same sheet — with slots filled by each panel's **latest
+approved take**. **Done arranging** (or the room's Close) brings the map
+back; every change was already saved.
 
 **Assemble 4K board** enables when every slot reads OK. Canvas choices: 4K
 UHD, DCI-flavor wide, print-leaning. The board renders through the same
@@ -373,13 +372,18 @@ structure commits whole; the server maps it to stored geometry).
 - **Trash and +** — the trash benches a panel off the board (the take
   is untouched); every tile's `+` docks a benched panel next to it, and
   the corner `+` returns one as a bottom row.
-- **Crop** (the tile's crop chip) opens the frame **exactly as it
-  appears on the board** — current crop, position, and the slot's own
-  aspect. The **HAND** tool drags the image inside the frame to
-  reposition what displays (wheel zooms); the **CROP** tool redraws the
-  region on the full plate (film-ratio chips apply). The frame never
-  rotates; the image moves inside it. Over-cropping is **allowed and
-  kept**: the slot reads short and export blocks.
+- **Crop** (the tile's crop chip) opens the **whole plate** with the
+  crop box sitting on the region the panel currently displays, the
+  outside dimmed, and a live ON THE PANEL preview beside it. The
+  **HAND** icon slides the window from anywhere; the **CROP** icon
+  edits the box — edges resize, inside moves, outside draws fresh,
+  film-ratio chips apply. The frame never rotates; the image moves
+  inside it.
+- **A crop is framing intent, not a prison** — when a frame changes
+  shape, the displayed window re-derives for the new aspect, growing
+  back out toward the full plate. A deliberate slot-shaped zoom is
+  honored exactly and still gates; `SHORT — PLATE SHOWS…` fires only
+  when the plate itself runs out of pixels.
 - **Gutter and readouts** — the gutter slider sets the board's breathing
   space (a sheet property, honored by exports); READOUTS toggles the
   per-frame pixel figures.
