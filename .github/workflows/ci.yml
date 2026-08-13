@@ -36,7 +36,12 @@ jobs:
       - name: Install storefront dependencies only
         run: |
           python -m pip install --upgrade pip
-          pip install -r storefront/requirements.txt httpx
+          # pillow is a BUILD-TOOL test dep (scripts/build_images.py +
+          # test_store_images), not a runtime requirement — the store
+          # never decodes images in production. It broke this job for
+          # four days (2026-08-09..13) because every dev machine had it
+          # globally; keep it HERE, never in storefront/requirements.txt.
+          pip install -r storefront/requirements.txt httpx pillow
       - name: Storefront suite (isolated deps — catches missing requirements)
         working-directory: storefront
         run: python -m unittest discover -s tests -v
