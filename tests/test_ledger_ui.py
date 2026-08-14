@@ -64,6 +64,21 @@ class WorkbenchScopePins(unittest.TestCase):
         self.assertIn('class="ghost" data-f="cam-open"', JS)
 
 
+class AddReferenceInPlacePins(unittest.TestCase):
+    def test_unreferenced_objects_offer_the_widget_in_both_lives(self):
+        self.assertIn('data-addref="${esc(o)}"', JS)
+        self.assertIn(">Add reference</button>", JS)
+        self.assertIn(">+ REF</button>", JS)
+
+    def test_the_widget_is_the_existing_dialog_approved_and_refreshing(self):
+        self.assertIn("addReferenceDialog({ head: \"PROP_REFERENCE\", title: b.dataset.addref }",
+                      JS)
+        self.assertIn("{ approve: true, onDone: () => renderBoardPanels(specId) }",
+                      JS)
+        self.assertIn('confirmLabel: approve ? "Add & approve" : "Add to library"',
+                      JS)
+
+
 class RepairEraserPins(unittest.TestCase):
     def test_the_painter_has_a_paint_erase_pair(self):
         self.assertIn('data-f="mode-paint"', JS)

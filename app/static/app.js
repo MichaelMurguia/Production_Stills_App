@@ -5125,10 +5125,16 @@ function buildUncastCard(rec, onChange) {
 
 // Adding to the library is a dialog now (the intake row moved behind the
 // button per ONE_LIBRARY_PLAN D2) — the vocabulary picker plus a file field.
-async function addReferenceDialog(prefill = {}) {
+// Callable from anywhere (user 2026-08-14: supply a reference right on the
+// panels screen): `approve` skips the provisional step — deliberately
+// supplying a reference for a named object IS the review — and `onDone`
+// lets the calling view refresh itself instead of the library.
+async function addReferenceDialog(prefill = {}, { approve = false, onDone = null } = {}) {
   const r = await roleDialog({
     title: "Add reference",
-    body: "One image, one job. It enters the library provisional; approve it to make it a canon anchor.",
+    body: approve
+      ? "One image, one job. It enters the library APPROVED — you are supplying it deliberately; reject it later in Reference if it disappoints."
+      : "One image, one job. It enters the library provisional; approve it to make it a canon anchor.",
     prefillHead: prefill.head || "CHARACTER_LIKENESS",
     prefillTitle: prefill.title || "",
     fields: [
@@ -5137,7 +5143,7 @@ async function addReferenceDialog(prefill = {}) {
       { name: "does_not_control", label: "Does not control", placeholder: "e.g. costume, lighting, camera angle" },
       { name: "notes", label: "Notes", placeholder: "provenance — where it came from, what it anchors" },
     ],
-    confirmLabel: "Add to library",
+    confirmLabel: approve ? "Add & approve" : "Add to library",
   });
   if (r === null) return;
   if (!r.file) { toast("Pick an image file.", true); return; }
@@ -5148,9 +5154,13 @@ async function addReferenceDialog(prefill = {}) {
   fd.append("does_not_control", r.does_not_control || "");
   fd.append("notes", r.notes || "");
   try {
-    const ref = await api("/api/references", { method: "POST", body: fd });
-    toast(`${ref.id} added as ${ref.role} (provisional).`);
-    renderReferences();
+    let ref = await api("/api/references", { method: "POST", body: fd });
+    if (approve) {
+      ref = await api(`/api/references/${ref.id}/status`,
+        { method: "POST", json: { status: "APPROVED" } });
+    }
+    toast(`${ref.id} added as ${ref.role} (${approve ? "approved" : "provisional"}).`);
+    if (onDone) onDone(ref); else renderReferences();
   } catch (err) { toast(err.message, true); }
 }
 
@@ -7223,14 +7233,19 @@ async function renderBoardPanels(specId) {
         <span class="mini mono">${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE</span></div>
       <div class="req-table">${reqObjs.map((o, i) => {
         const ev = evidenceOf(o);
+        // An object without a reference offers the fix where the gap is
+        // stated (user 2026-08-14): Add reference opens the library
+        // widget right here, prefilled with the object.
         const mark = objHasRef(o) ? '<span class="req-mark ok">✓ REF</span>'
-          : ev && ev.status !== "PASS" ? '<span class="req-mark hold">HOLD</span>' : "";
+          : `${ev && ev.status !== "PASS" ? '<span class="req-mark hold">HOLD</span>' : ""}
+             <button type="button" class="text-act" data-addref="${esc(o)}" title="Supply a reference image for this object without leaving the workbench — it enters the library approved and attaches like any other">Add reference</button>`;
         return `<div class="req-row"><span class="req-ord">${String(i + 1).padStart(2, "0")}</span><span class="req-obj">${esc(o)}</span>${mark}</div>`;
       }).join("") || '<div class="req-row"><span class="req-obj mini">none — this panel is steered by its purpose alone</span></div>'}</div>`;
     // Light-table state: the spec is context — compact bordered chips.
     const reqChipsHtml = `
       <div class="spec-chips"><span class="f-label">Required · ${reqObjs.length}</span>
-        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}</span>`).join("")
+        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}${objHasRef(o) ? ""
+          : ` <button type="button" class="text-act" data-addref="${esc(o)}" title="No reference matches this object — supply one right here; it enters the library approved and attaches like any other">+ REF</button>`}</span>`).join("")
           || '<span class="mini">none</span>'}</div>`;
 
     // P3: the user is about to spend a render — everything the render
@@ -7596,6 +7611,14 @@ async function renderBoardPanels(specId) {
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
+
+    // Add-reference-in-place (user 2026-08-14): the library widget opens
+    // prefilled with the required object; approved on save (supplying it
+    // deliberately IS the review) and the card re-renders so the new
+    // group appears in the attach list immediately.
+    $$("[data-addref]", card).forEach(b => b.onclick = () =>
+      addReferenceDialog({ head: "PROP_REFERENCE", title: b.dataset.addref },
+        { approve: true, onDone: () => renderBoardPanels(specId) }));
 
     // Palette selector: stated summary, toggled menu, count kept live.
     const swatchOpen = $("[data-f=swatch-open]", card);

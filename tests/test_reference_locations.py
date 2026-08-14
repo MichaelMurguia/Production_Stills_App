@@ -74,8 +74,11 @@ class TheRegister(unittest.TestCase):
         self.assertIn("CASTING STAYS SUBJECTS-ONLY", JS[i:i + 2400])
 
     def test_the_dialog_accepts_the_prefill(self):
-        i = JS.index("async function addReferenceDialog(prefill = {})")
-        block = JS[i:i + 500]
+        # Signature extended 2026-08-14 (add-reference-in-place): approve
+        # skips the provisional step, onDone refreshes the calling view.
+        i = JS.index("async function addReferenceDialog(prefill = {}, "
+                     "{ approve = false, onDone = null } = {})")
+        block = JS[i:i + 1400]
         self.assertIn("prefillHead: prefill.head", block)
         self.assertIn("prefillTitle: prefill.title", block)
 
