@@ -7235,8 +7235,11 @@ async function renderBoardPanels(specId) {
         const ev = evidenceOf(o);
         // An object without a reference offers the fix where the gap is
         // stated (user 2026-08-14): Add reference opens the library
-        // widget right here, prefilled with the object.
-        const mark = objHasRef(o) ? '<span class="req-mark ok">✓ REF</span>'
+        // widget right here, prefilled with the object. One WITH a
+        // reference offers View — the matching plates in the lightbox.
+        const mark = objHasRef(o)
+          ? `<span class="req-mark ok">✓ REF</span>
+             <button type="button" class="text-act" data-viewref="${esc(o)}" title="View the matching reference plate(s) in the lightbox">View</button>`
           : `${ev && ev.status !== "PASS" ? '<span class="req-mark hold">HOLD</span>' : ""}
              <button type="button" class="text-act" data-addref="${esc(o)}" title="Supply a reference image for this object without leaving the workbench — it enters the library approved and attaches like any other">Add reference</button>`;
         return `<div class="req-row"><span class="req-ord">${String(i + 1).padStart(2, "0")}</span><span class="req-obj">${esc(o)}</span>${mark}</div>`;
@@ -7244,7 +7247,8 @@ async function renderBoardPanels(specId) {
     // Light-table state: the spec is context — compact bordered chips.
     const reqChipsHtml = `
       <div class="spec-chips"><span class="f-label">Required · ${reqObjs.length}</span>
-        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}${objHasRef(o) ? ""
+        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}${objHasRef(o)
+          ? ` <button type="button" class="text-act" data-viewref="${esc(o)}" title="View the matching reference plate(s) in the lightbox">view</button>`
           : ` <button type="button" class="text-act" data-addref="${esc(o)}" title="No reference matches this object — supply one right here; it enters the library approved and attaches like any other">+ REF</button>`}</span>`).join("")
           || '<span class="mini">none</span>'}</div>`;
 
@@ -7619,6 +7623,20 @@ async function renderBoardPanels(specId) {
     $$("[data-addref]", card).forEach(b => b.onclick = () =>
       addReferenceDialog({ head: "PROP_REFERENCE", title: b.dataset.addref },
         { approve: true, onDone: () => renderBoardPanels(specId) }));
+
+    // View (user 2026-08-14): the object's matching plates, full-size in
+    // the lightbox — the same match the ✓ REF verdict is built from.
+    $$("[data-viewref]", card).forEach(b => b.onclick = () => {
+      const obj = b.dataset.viewref;
+      const ids = groupList.filter(g => matches(obj, g.name))
+        .flatMap(g => g.ids);
+      if (!ids.length) { toast("No matching reference found.", true); return; }
+      openLightbox(ids.map(id => {
+        const r = refs.find(x => x.id === id);
+        return { src: `/api/references/${id}/image`,
+                 caption: `${id} — ${r?.role || ""}` };
+      }), 0);
+    });
 
     // Palette selector: stated summary, toggled menu, count kept live.
     const swatchOpen = $("[data-f=swatch-open]", card);

@@ -70,6 +70,14 @@ class AddReferenceInPlacePins(unittest.TestCase):
         self.assertIn(">Add reference</button>", JS)
         self.assertIn(">+ REF</button>", JS)
 
+    def test_referenced_objects_offer_view_into_the_lightbox(self):
+        self.assertIn('data-viewref="${esc(o)}"', JS)
+        self.assertIn(">View</button>", JS)
+        self.assertIn(">view</button>", JS)
+        i = JS.index("[data-viewref]")
+        self.assertIn("openLightbox", JS[i:i + 700],
+                      "View opens the matching plates, not a navigation")
+
     def test_the_widget_is_the_existing_dialog_approved_and_refreshing(self):
         self.assertIn("addReferenceDialog({ head: \"PROP_REFERENCE\", title: b.dataset.addref }",
                       JS)
