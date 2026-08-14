@@ -8,6 +8,7 @@ behind the anchors and lost. Role scoping, not position, binds style.
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from app import generate, store
@@ -83,6 +84,56 @@ class SubjectRefsRideFirst(unittest.TestCase):
     def test_lighting_geometry_still_leads(self):
         self.assertEqual(self._resolve(geometry="REF-77"),
                          ["REF-77", "REF-40", "REF-90", "REF-91"])
+
+
+class UserPaletteOwnsTheRole(unittest.TestCase):
+    """2026-08-13 (user): the workbench used to attach ALL swatches (one
+    suffix-less checkbox carried the whole palette — 19 references).
+    Swatches are now picked individually; a picked palette replaces the
+    auto shelf's palette top-up entirely, and no pick means the shelf's
+    capped newest-2 ride as ruled 2026-08-03."""
+
+    def _resolve(self, ref_ids):
+        spec = {"specification_id": "S", "panels": [{"id": "P01"}]}
+        lib = {
+            "REF-40": ref("REF-40", "VEHICLE_GEOMETRY", "2026-08-01T10:00:00"),
+            "REF-50": ref("REF-50", "COLOR_PALETTE", "2026-08-01T10:00:00"),
+            "REF-51": ref("REF-51", "COLOR_PALETTE", "2026-08-02T10:00:00"),
+        }
+        anchors = [ref("REF-90", "CINEMATOGRAPHY_STYLE", "2026-08-02T10:00:00"),
+                   ref("REF-98", "COLOR_PALETTE", "2026-08-03T10:00:00"),
+                   ref("REF-99", "COLOR_PALETTE", "2026-08-03T11:00:00")]
+        with patch.object(store, "get_spec", return_value=spec), \
+             patch.object(store, "spec_locked", return_value=True), \
+             patch.object(store, "get_reference", side_effect=lib.get), \
+             patch.object(store, "auto_style_references", return_value=anchors):
+            _s, _p, refs = generate._resolve_generation_inputs(
+                "S", "P01", ref_ids)
+        return [r["id"] for r in refs]
+
+    def test_picked_swatches_replace_the_auto_palette(self):
+        self.assertEqual(self._resolve(["REF-40", "REF-50", "REF-51"]),
+                         ["REF-40", "REF-50", "REF-51", "REF-90"],
+                         "exactly these swatches — the shelf's newest-2 "
+                         "palette top-up stands down")
+
+    def test_no_pick_keeps_the_capped_auto_palette(self):
+        self.assertEqual(self._resolve(["REF-40"]),
+                         ["REF-40", "REF-90", "REF-98", "REF-99"])
+
+
+class SwatchSelectorWiring(unittest.TestCase):
+    JS = (Path(__file__).resolve().parents[1] / "app/static/app.js") \
+        .read_text(encoding="utf-8")
+
+    def test_swatches_leave_the_generic_groups(self):
+        self.assertIn('roleHead(r.role) !== "COLOR_PALETTE"', self.JS)
+        self.assertIn("const swatchRefs", self.JS)
+
+    def test_the_selector_sits_in_the_gen_row_and_feeds_the_send(self):
+        self.assertIn('data-f="swatch-menu"', self.JS)
+        self.assertIn("checkedSwatches()", self.JS)
+        self.assertIn("NONE SELECTED = AUTO", self.JS)
 
 
 if __name__ == "__main__":

@@ -6942,7 +6942,14 @@ async function renderBoardPanels(specId) {
   const isAutoStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"]
     .includes(roleHead(r.role));
   const styleAnchors = refs.filter(r => r.status === "APPROVED" && isAutoStyle(r));
-  const approvedRefs = refs.filter(r => r.status === "APPROVED" && !isAutoStyle(r));
+  // Swatches leave the generic subject groups (2026-08-13, user): they
+  // have no role suffix, so all of them collapsed into ONE checkbox that
+  // attached the whole palette — 19 references on every render. They get
+  // their own per-swatch selector at the top of the rendering settings.
+  const swatchRefs = refs.filter(r =>
+    r.status === "APPROVED" && roleHead(r.role) === "COLOR_PALETTE");
+  const approvedRefs = refs.filter(r => r.status === "APPROVED"
+    && !isAutoStyle(r) && roleHead(r.role) !== "COLOR_PALETTE");
   host.innerHTML = "";
 
   // The workbench can add a panel to the locked sheet (it lands as a work
@@ -7278,6 +7285,36 @@ async function renderBoardPanels(specId) {
         </div>
       </div>
       <div class="gen-row">
+        ${swatchRefs.length ? (() => {
+          // Per-swatch palette selection (2026-08-13, user): never all
+          // swatches by default. Empty selection = the four-anchor auto
+          // shelf (the 2 newest swatches, server-side, as ruled
+          // 2026-08-03); picking ANY swatch takes over the role entirely.
+          const lastTake = panelCands[0];
+          const lastIds = new Set((lastTake?.references || []).map(r => r.id));
+          const meta = r => {
+            const parts = String(r.notes || "").split("·").map(s => s.trim());
+            const hex = (parts[1] || "").split("/")[0].trim();
+            return { name: parts[0] || r.id,
+                     hex: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#666666" };
+          };
+          return `<div class="fgroup" style="position:relative"
+            title="Which palette swatches ride this render as color references. Unselected = the style shelf's automatic pick (the 2 newest approved swatches); selecting any swatch replaces that with exactly your set — never the whole palette.">
+            <span class="f-label">Palette</span>
+            <button type="button" class="ghost" data-f="swatch-open"></button>
+            <div class="hidden" data-f="swatch-menu"
+              style="position:absolute;top:100%;left:0;z-index:30;background:var(--panel2);border:1px solid var(--line);padding:10px 12px;max-height:260px;overflow:auto;min-width:250px">
+              ${swatchRefs.map(r => { const m = meta(r); return `
+                <label class="check" style="display:flex;align-items:center;gap:8px;margin:3px 0">
+                  <input type="checkbox" data-sid="${esc(r.id)}" ${lastIds.has(r.id) ? "checked" : ""}>
+                  <span style="flex:none;width:12px;height:12px;background:${esc(m.hex)};border:1px solid var(--line)"></span>
+                  <span class="mini mono" style="color:var(--ink)">${esc(m.name)}</span>
+                  <span class="mini mono">${esc(m.hex.toUpperCase())}</span>
+                </label>`; }).join("")}
+              <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
+            </div>
+          </div>`;
+        })() : ""}
         <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses; its image tool only accepts preset sizes, so pipeline output caps near 1.5K whatever Size says. All engines get identical spec, style, and references.">
           <span class="f-label">Model</span>
           <select data-f="model">${providerOptions(appSettings, prefProvider)}</select>
@@ -7303,8 +7340,12 @@ async function renderBoardPanels(specId) {
       <div data-f="busy"></div>
       <div data-f="report"></div>`;
 
-    const checkedRefs = () =>
-      $$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids));
+    const checkedSwatches = () =>
+      $$("[data-f=swatch-menu] input:checked", card).map(x => x.dataset.sid);
+    const checkedRefs = () => [
+      ...$$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids)),
+      ...checkedSwatches(),
+    ];
     const report = $("[data-f=report]", card);
     const busyHost = $("[data-f=busy]", card);
 
@@ -7312,18 +7353,41 @@ async function renderBoardPanels(specId) {
     const dispatchFacts = $("[data-f=dispatch-facts]", card);
     const updateRefCount = () => {
       const n = checkedRefs().length;
-      const total = n + styleAnchors.length;
+      // With no explicit swatch, the auto shelf tops the palette role up
+      // server-side (≤2) — count what will actually attach.
+      const autoSwatch = checkedSwatches().length ? 0
+        : Math.min(2, swatchRefs.length);
+      const total = n + styleAnchors.length + autoSwatch;
       refCount.textContent =
-        `${n} SUBJECT + ${styleAnchors.length} STYLE = ${total} OF 14 ATTACHED` +
+        `${n} SUBJECT + ${styleAnchors.length + autoSwatch} STYLE = ${total} OF 14 ATTACHED` +
         (total > 14 ? " — OVER LIMIT, UNCHECK A GROUP" : "");
       refCount.style.color = total > 14 ? "var(--bad)" : "";
       // P6: what is about to be sent, legible at the moment of sending.
       dispatchFacts.innerHTML =
-        `${styleAnchors.length} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
+        `${styleAnchors.length + autoSwatch} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
         + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
     };
     $(".ref-groups", card).addEventListener("change", updateRefCount);
     updateRefCount();
+
+    // Palette selector: stated summary, toggled menu, count kept live.
+    const swatchOpen = $("[data-f=swatch-open]", card);
+    if (swatchOpen) {
+      const menu = $("[data-f=swatch-menu]", card);
+      const summary = () => {
+        const picked = $$("input[data-sid]:checked", menu);
+        swatchOpen.innerHTML = picked.length
+          ? `${picked.map(x =>
+              `<span style="display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:middle;background:${
+                x.parentElement.children[1].style.background}"></span>`).join("")}` +
+            `${picked.length} OF ${swatchRefs.length}`
+          : `AUTO · ${Math.min(2, swatchRefs.length)} NEWEST OF ${swatchRefs.length}`;
+      };
+      swatchOpen.onclick = () => menu.classList.toggle("hidden");
+      menu.addEventListener("change", () => { summary(); updateRefCount(); });
+      summary();
+      updateRefCount();
+    }
 
     // The brief editor — swap the purpose line for a textarea, save through
     // the journaled amend, repaint so the header and the next prompt agree.

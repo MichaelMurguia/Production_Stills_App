@@ -17,13 +17,6 @@ become:
 So the approved-state row reads `Crop · Reject · Edit` — no bare
 `Delete`.
 
-## 2. Panel rendering — selectable palette swatches (2026-08-13)
-
-Panel rendering today always references the full color palette — all 19
-swatches go into every render. Instead, individual swatch references
-must be selectable per panel, not all-or-nothing. The selector lives in
-a dropdown at the top of the rendering settings.
-
 ## 3. Panels rail — render-in-progress spinner (2026-08-13)
 
 When a render is in progress for a panel, that panel's thumbnail in the

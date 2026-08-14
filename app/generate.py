@@ -975,8 +975,18 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     # hover jet plate attached as "image 7 of 8" behind the style shelf
     # and lost. Identity anchors take the early positions; role scoping,
     # not position, is what binds the style anchors.
+    #
+    # A user-picked palette OWNS the role (2026-08-13): when the explicit
+    # refs already include any COLOR_PALETTE swatch, the shelf's automatic
+    # palette top-up stands down — "exactly these swatches" must mean
+    # exactly these, not these plus the two newest.
     seen_ids = {r["id"] for r in refs}
-    refs = refs + [r for r in store.auto_style_references() if r["id"] not in seen_ids]
+    user_palette = any(store.role_head(r.get("role", "")) == "COLOR_PALETTE"
+                       for r in refs)
+    refs = refs + [r for r in store.auto_style_references()
+                   if r["id"] not in seen_ids
+                   and not (user_palette and store.role_head(r.get("role", ""))
+                            == "COLOR_PALETTE")]
 
     # Lighting studies are anchored to their parent board's approved geometry:
     # same place, same camera — only the light varies.
