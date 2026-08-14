@@ -6250,9 +6250,24 @@ async function openSpecEditor(specId) {
   function addLedgerRow(r = {}) {
     const row = document.createElement("div");
     row.className = "ledger-row";
+    // Selectable, not typed (user 2026-08-13): the panel is one of the
+    // sheet's own ids; the object is one of that panel's required objects
+    // that does not have a row yet. The citation stays typeable but gains
+    // reference-library type-ahead via a shared datalist.
+    if (!$("#sp-ref-list", panel)) {
+      const dl = document.createElement("datalist");
+      dl.id = "sp-ref-list";
+      dl.innerHTML = allRefs.filter(x => x.status === "APPROVED")
+        .map(x => `<option value="${esc(`${x.id} — ${x.role}`)}"></option>`).join("");
+      ledgerHost.parentElement.append(dl);
+    }
+    const pids = $$(".panel-card", panelsHost).map(x => x.dataset.pid);
+    if (r.panel_id && !pids.includes(r.panel_id)) pids.unshift(r.panel_id);
     row.innerHTML = `
-      <input type="text" data-f="panel_id" placeholder="P01" value="${esc(r.panel_id || "")}" ${locked ? "disabled" : ""} title="Which panel this evidence row belongs to (its Panel ID, e.g. P01).">
-      <input type="text" data-f="object" placeholder="Visible object" value="${esc(r.object || "")}" ${locked ? "disabled" : ""} title="The visible object this row justifies — should match one of the panel's required objects. Every required object needs a PASS row.">
+      <select data-f="panel_id" ${locked ? "disabled" : ""} title="Which panel this evidence row belongs to.">
+        ${pids.map(p => `<option ${r.panel_id === p ? "selected" : ""}>${esc(p)}</option>`).join("") || '<option value=""></option>'}
+      </select>
+      <select data-f="object" ${locked ? "disabled" : ""} title="The visible object this row justifies — offered from the chosen panel's required objects that do not have an evidence row yet. Every required object needs a PASS row."></select>
       <select data-f="evidence_class" ${locked ? "disabled" : ""} title="How strongly the canon supports this object:
 SCRIPT_EXPLICIT — the screenplay states it outright.
 SCRIPT_NECESSARY_INFERENCE — must exist for the scene to work.
@@ -6264,13 +6279,33 @@ PROPOSED_NOT_CANON — a pitch, not canon yet.
 UNSUPPORTED — no basis; never passes (budget pinned to 0).">
         ${EVIDENCE_CLASSES.map(c => `<option ${r.evidence_class === c ? "selected" : ""}>${c}</option>`).join("")}
       </select>
-      <input type="text" data-f="source" placeholder="Source citation / reference ID" value="${esc(r.source || "")}" ${locked ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference ID, or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Typing a reference ID here does NOT attach that reference to generations — use the checkboxes on the Boards tab.)">
+      <input type="text" data-f="source" list="sp-ref-list" placeholder="Source citation — type, or search the reference library" value="${esc(r.source || "")}" ${locked ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference (start typing to search the library), or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Citing a reference here does NOT attach it to generations — use the checkboxes on the Panels tab.)">
       <select data-f="status" ${locked ? "disabled" : ""} title="PASS — evidence accepted, the object may render.
 HOLD — needs your review; blocks approval until resolved.
 REMOVE — marked for removal from the board.">
         ${LEDGER_STATUSES.map(s => `<option ${r.status === s ? "selected" : ""}>${s}</option>`).join("")}
       </select>
       ${locked ? "<span></span>" : '<button class="danger" title="Remove row">×</button>'}`;
+    // The object select follows the chosen panel: required objects of
+    // that panel that no OTHER row already covers; a stored value always
+    // stays offered so existing rows round-trip untouched.
+    const pidSel = $("[data-f=panel_id]", row);
+    const objSel = $("[data-f=object]", row);
+    const syncObjects = keep => {
+      const pid = (pidSel.value || "").trim().toUpperCase();
+      const card = $$(".panel-card", panelsHost).find(x => x.dataset.pid === pid);
+      const objs = card ? $$(".chip", card).map(c => c.dataset.obj) : [];
+      const rowed = $$(".ledger-row", ledgerHost).filter(x => x !== row)
+        .filter(x => ($("[data-f=panel_id]", x).value || "").trim().toUpperCase() === pid)
+        .map(x => ($("[data-f=object]", x).value || "").trim().toLowerCase());
+      const open = objs.filter(o => !rowed.includes(o.toLowerCase())
+                                    && o.toLowerCase() !== String(keep).toLowerCase());
+      objSel.innerHTML = (keep ? `<option selected>${esc(keep)}</option>`
+          : `<option value="">${open.length ? "— object —" : "— every required object has a row —"}</option>`)
+        + open.map(o => `<option>${esc(o)}</option>`).join("");
+    };
+    syncObjects(r.object || "");
+    if (!locked) pidSel.addEventListener("change", () => syncObjects(""));
     if (!locked) $("button.danger", row).onclick = () => row.remove();
     // Non-PASS rows read at a glance: status colors the row's left border
     // and tints its ground. Inline style so it beats the zebra rule.
@@ -7051,6 +7086,9 @@ async function renderBoardPanels(specId) {
     : "";
   const isAutoStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"]
     .includes(roleHead(r.role));
+  // Panels this revision declared unchanged (scope survives the lock):
+  // locked on this workbench, takes flow to the board from elsewhere.
+  const carriedRail = new Set(spec.revision_scope?.carried || []);
   const styleAnchors = refs.filter(r => r.status === "APPROVED" && isAutoStyle(r));
   // Swatches leave the generic subject groups (2026-08-13, user): they
   // have no role suffix, so all of them collapsed into ONE checkbox that
@@ -7250,7 +7288,7 @@ async function renderBoardPanels(specId) {
         const frozen = panelCands.some(c => c.status === "APPROVED");
         return `<div class="brief-row" data-f="brief-row">
           <p class="mini" data-f="brief-text">${esc(p.purpose)}</p>
-          <button type="button" class="text-act act-dim" data-f="brief-edit"
+          <button type="button" class="ghost" data-f="brief-edit"
             ${frozen ? "disabled" : ""} title="${frozen
               ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
               : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>
@@ -7285,7 +7323,7 @@ async function renderBoardPanels(specId) {
           <div class="cam-stated">
             <span class="mono cam-sum">CAMERA&ensp;${esc(summary)}
               <span class="cam-src">— ${own ? "THIS PANEL" : "FROM BIBLE"}</span></span>
-            <button type="button" class="text-act" data-f="cam-open"
+            <button type="button" class="ghost" data-f="cam-open"
               ${frozen ? `disabled title="Frozen by an approved take — it was composed at this camera; the setting unfreezes if the take is rejected"` : ""}>Change camera</button>
           </div>
           <div class="cam-editor hidden" data-f="cam-editor">
@@ -8053,6 +8091,23 @@ async function renderBoardPanels(specId) {
         } catch (err) { toast(err.message, true); }
       }, { title: "Permanently remove this rejected image and its record from disk" }));
     }
+    // Carried panels are LOCKED on the workbench (user 2026-08-13): this
+    // revision declared it unchanged, so no work happens here — its take
+    // flows to the board from where it was approved. The server refuses
+    // amends on carried panels too; this states the gate before it's hit.
+    if (carriedRail.has(p.id)) {
+      const note = document.createElement("div");
+      note.className = "report";
+      note.innerHTML = `<b class="mono">CARRIED — NOT IN THIS REVISION</b>
+        <p style="margin:6px 0 0">This revision declared ${esc(p.id)} unchanged, so it is locked
+        here — its approved take keeps flowing to the board. To work it in this
+        revision, use <b>Also revise</b> on the Breakdowns tab.</p>`;
+      card.prepend(note);
+      for (const f of ["generate", "prose", "compcheck", "brief-edit", "cam-open"]) {
+        const b = $(`[data-f=${f}]`, card);
+        if (b) { b.disabled = true; b.title = "Carried — not in this revision; Also revise it on the Breakdowns tab first."; }
+      }
+    }
     return card;
   }
 
@@ -8121,8 +8176,12 @@ async function renderBoardPanels(specId) {
   const roomSel = boardRoomSel[specId] ??=
     (uiGet("roomSel", {})[specId] || {});
   const pids = spec.panels.map(p => p.id);
+  // A scoped revision lands on the panel it was created to revise
+  // (user 2026-08-13); carried panels stay reachable but locked.
+  const revisedFirst = (spec.revision_scope?.revised || [])
+    .find(id => pids.includes(id));
   if (roomSel.panel !== "__derived" && !pids.includes(roomSel.panel))
-    roomSel.panel = pids[0] || "__derived";
+    roomSel.panel = revisedFirst || pids[0] || "__derived";
 
   const slotStatus = {};
   (slotMap?.slots || []).forEach(s => { slotStatus[s.panel_id] = s.status; });
@@ -8130,6 +8189,8 @@ async function renderBoardPanels(specId) {
     candidates.some(c => c.panel_id === pid && c.status === "APPROVED")).length;
 
   const railMark = pid => {
+    if (carriedRail.has(pid))
+      return '<span class="rail-mark none" title="Carried — not in this revision; its approved take flows to the board. Also revise it on the Breakdowns tab to work it here.">CARRIED</span>';
     const st = slotStatus[pid];
     const n = candidates.filter(c => c.panel_id === pid).length;
     if (st === "TOO_SMALL") return '<span class="rail-mark bad">SIZE</span>';
