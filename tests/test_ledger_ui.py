@@ -70,13 +70,21 @@ class AddReferenceInPlacePins(unittest.TestCase):
         self.assertIn(">Add reference</button>", JS)
         self.assertIn(">+ REF</button>", JS)
 
-    def test_referenced_objects_offer_view_into_the_lightbox(self):
+    def test_referenced_objects_offer_view_as_the_full_widget(self):
+        """User 2026-08-14: a bare lightbox hid that only ONE rear-view
+        plate anchored the object. View is the full reference widget —
+        every matching plate with role + jurisdiction, the thin-anchor
+        warning, and Add another plate in place."""
         self.assertIn('data-viewref="${esc(o)}"', JS)
         self.assertIn(">View</button>", JS)
         self.assertIn(">view</button>", JS)
-        i = JS.index("[data-viewref]")
-        self.assertIn("openLightbox", JS[i:i + 700],
-                      "View opens the matching plates, not a navigation")
+        self.assertIn("function viewObjectReferences", JS)
+        i = JS.index("function viewObjectReferences")
+        block = JS[i:i + 2600]
+        self.assertIn("THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", block)
+        self.assertIn("One plate is a thin", block)
+        self.assertIn('data-f="vr-add"', block)
+        self.assertIn("CONTROLS ", block)
 
     def test_the_widget_is_the_existing_dialog_approved_and_refreshing(self):
         self.assertIn("addReferenceDialog({ head: \"PROP_REFERENCE\", title: b.dataset.addref }",

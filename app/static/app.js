@@ -5164,6 +5164,52 @@ async function addReferenceDialog(prefill = {}, { approve = false, onDone = null
   } catch (err) { toast(err.message, true); }
 }
 
+// What the render actually sees for one required object (user
+// 2026-08-14, after a single rear-view GT40 plate produced weird
+// renders): the full library anatomy for EVERY matching plate — role,
+// jurisdiction, notes — plus a stated thin-anchor warning when only one
+// plate matches, and Add another plate without leaving the view.
+function viewObjectReferences(obj, recs, addPrefill, onChanged) {
+  const lbItems = recs.map(r => ({ src: `/api/references/${r.id}/image`,
+                                   caption: `${r.id} — ${r.role}` }));
+  return modal({
+    custom: `
+      <div class="modal-title">Reference — ${esc(obj)}</div>
+      <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ALL ATTACH WHEN ITS GROUP IS CHECKED · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW</p>
+      <div style="max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px;margin:0 14px">
+        ${recs.map((r, i) => `
+          <div class="ref-card ${esc(r.status)}" style="display:flex;gap:12px;align-items:flex-start">
+            <img src="/api/references/${esc(r.id)}/image?size=thumb" style="width:180px;flex:none;cursor:zoom-in" data-lb="${i}" alt="${esc(r.id)}">
+            <div class="body">
+              <div><span class="badge ${esc(r.status)}">${esc(r.status)}</span> <b>${esc(r.id)}</b></div>
+              <div class="role">${esc(r.role)}</div>
+              <div class="juris ok">CONTROLS ${esc((r.controls || []).join(" · ") || "—")}</div>
+              <div class="juris bad">NOT ${esc((r.does_not_control || []).join(" · ") || "—")}</div>
+              ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
+            </div>
+          </div>`).join("")}
+      </div>
+      ${recs.length === 1 ? `
+        <p class="modal-body" style="color:var(--ink-dim)">One plate is a thin
+        anchor — a single angle steers every render toward that angle. Add the
+        other angles under the same title so they group and all attach.</p>` : ""}
+      <div class="modal-actions" style="margin:12px 14px">
+        <button class="ghost" data-f="vr-add" title="Opens the add-reference widget prefilled with this group's role and title, so the new plate joins the same group and attaches with it">Add another plate</button>
+        <span style="flex:1"></span>
+        <button class="primary" data-f="vr-close">Close</button>
+      </div>`,
+    mount: (ov, done) => {
+      $$("[data-lb]", ov).forEach(img => img.onclick = () =>
+        openLightbox(lbItems, +img.dataset.lb));
+      $("[data-f=vr-close]", ov).onclick = () => done(null);
+      $("[data-f=vr-add]", ov).onclick = () => {
+        done(null);
+        addReferenceDialog(addPrefill, { approve: true, onDone: onChanged });
+      };
+    },
+  });
+}
+
 const SHELVES = [
   { key: "STYLE", name: "STYLE", ride: "RIDES ALONG — EVERY RENDER, AUTOMATICALLY",
     note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
@@ -7624,18 +7670,20 @@ async function renderBoardPanels(specId) {
       addReferenceDialog({ head: "PROP_REFERENCE", title: b.dataset.addref },
         { approve: true, onDone: () => renderBoardPanels(specId) }));
 
-    // View (user 2026-08-14): the object's matching plates, full-size in
-    // the lightbox — the same match the ✓ REF verdict is built from.
+    // View (user 2026-08-14, corrected same day): not a bare lightbox —
+    // the full reference widget for the object, showing every matching
+    // plate with its role and jurisdiction (the same match the ✓ REF
+    // verdict and the generation itself are built from), the stated
+    // thin-anchor warning, and Add another plate in place.
     $$("[data-viewref]", card).forEach(b => b.onclick = () => {
       const obj = b.dataset.viewref;
-      const ids = groupList.filter(g => matches(obj, g.name))
-        .flatMap(g => g.ids);
-      if (!ids.length) { toast("No matching reference found.", true); return; }
-      openLightbox(ids.map(id => {
-        const r = refs.find(x => x.id === id);
-        return { src: `/api/references/${id}/image`,
-                 caption: `${id} — ${r?.role || ""}` };
-      }), 0);
+      const gs = groupList.filter(g => matches(obj, g.name));
+      const recs = gs.flatMap(g => g.ids)
+        .map(id => refs.find(x => x.id === id)).filter(Boolean);
+      if (!recs.length) { toast("No matching reference found.", true); return; }
+      viewObjectReferences(obj, recs,
+        { head: gs[0]?.head || "PROP_REFERENCE", title: gs[0]?.name || obj },
+        () => renderBoardPanels(specId));
     });
 
     // Palette selector: stated summary, toggled menu, count kept live.
