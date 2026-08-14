@@ -156,6 +156,8 @@ function openRepair(imgUrl, onSubmit) {
         <label class="mini" style="display:flex;align-items:center;gap:6px;margin:0">brush
           <input type="range" data-f="brush" min="8" max="140" value="46" style="width:110px">
         </label>
+        <button type="button" class="vchip on" data-f="mode-paint" title="Paint the region to repair">Paint</button>
+        <button type="button" class="vchip" data-f="mode-erase" title="Erase painted area — fix an overshoot without starting over">Erase</button>
         <select data-f="prov" title="Either engine paints only your painted region — the app composites the result into the original, so every pixel outside your paint is carried over from the source unchanged (no re-encode noise, ever). They are simply different painters for the patch: GPT Image 2 works from a true mask; Gemini from a highlighted guide copy.">
           <option value="openai">GPT Image 2 — masked patch</option>
           <option value="gemini">Gemini (Nano Banana Pro) — guided patch</option>
@@ -187,12 +189,16 @@ function openRepair(imgUrl, onSubmit) {
     ctx.lineCap = ctx.lineJoin = "round";
     const k = img.clientWidth / img.naturalWidth;
     for (const st of strokes) {
+      // Strokes replay in order: an eraser stroke un-paints whatever
+      // earlier paint it crosses (user 2026-08-13).
+      ctx.globalCompositeOperation = st.erase ? "destination-out" : "source-over";
       ctx.lineWidth = st.r * 2 * k;
       ctx.beginPath();
       st.pts.forEach((p, i) => i ? ctx.lineTo(p.x * k, p.y * k) : ctx.moveTo(p.x * k, p.y * k));
       if (st.pts.length === 1) ctx.lineTo(st.pts[0].x * k + 0.01, st.pts[0].y * k);
       ctx.stroke();
     }
+    ctx.globalCompositeOperation = "source-over";
   };
   const sizeCanvas = () => {
     canvas.width = img.clientWidth;
@@ -207,11 +213,22 @@ function openRepair(imgUrl, onSubmit) {
     return { x: (e.clientX - r.left) * (img.naturalWidth / r.width),
              y: (e.clientY - r.top) * (img.naturalHeight / r.height) };
   };
-  const update = () => { goBtn.disabled = !(strokes.length && instr.value.trim()); };
+  const update = () => {
+    goBtn.disabled = !(strokes.some(s => !s.erase) && instr.value.trim());
+  };
+  let erasing = false;
+  const modeP = $("[data-f=mode-paint]", ov), modeE = $("[data-f=mode-erase]", ov);
+  const setMode = wantErase => {
+    erasing = wantErase;
+    modeP.classList.toggle("on", !wantErase);
+    modeE.classList.toggle("on", wantErase);
+  };
+  modeP.onclick = () => setMode(false);
+  modeE.onclick = () => setMode(true);
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
     const r = (+$("[data-f=brush]", ov).value) * (img.naturalWidth / img.clientWidth) / 2;
-    drawing = { r, pts: [toNat(e)] };
+    drawing = { r, pts: [toNat(e)], erase: erasing };
     strokes.push(drawing);
     redraw(); update();
   });
@@ -238,16 +255,19 @@ function openRepair(imgUrl, onSubmit) {
     const mc = m.getContext("2d");
     mc.fillStyle = "#000";
     mc.fillRect(0, 0, m.width, m.height);
-    mc.globalCompositeOperation = "destination-out";
-    mc.strokeStyle = "#fff";
     mc.lineCap = mc.lineJoin = "round";
     for (const st of strokes) {
+      // Paint punches transparency into the mask; an eraser stroke lays
+      // opacity back — replayed in order, the mask matches the preview.
+      mc.globalCompositeOperation = st.erase ? "source-over" : "destination-out";
+      mc.strokeStyle = st.erase ? "#000" : "#fff";
       mc.lineWidth = st.r * 2;
       mc.beginPath();
       st.pts.forEach((p, i) => i ? mc.lineTo(p.x, p.y) : mc.moveTo(p.x, p.y));
       if (st.pts.length === 1) mc.lineTo(st.pts[0].x + 0.01, st.pts[0].y);
       mc.stroke();
     }
+    mc.globalCompositeOperation = "source-over";
     const blob = await new Promise(res => m.toBlob(res, "image/png"));
     goBtn.disabled = true;
     // The render runs server-side either way — closing this screen doesn't

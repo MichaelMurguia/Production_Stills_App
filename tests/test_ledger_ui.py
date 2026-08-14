@@ -48,5 +48,23 @@ class WorkbenchScopePins(unittest.TestCase):
         self.assertIn('class="ghost" data-f="cam-open"', JS)
 
 
+class RepairEraserPins(unittest.TestCase):
+    def test_the_painter_has_a_paint_erase_pair(self):
+        self.assertIn('data-f="mode-paint"', JS)
+        self.assertIn('data-f="mode-erase"', JS)
+
+    def test_strokes_carry_the_mode_and_both_surfaces_replay_it(self):
+        self.assertIn("erase: erasing", JS)
+        i = JS.index("const redraw = () => {")
+        self.assertIn('st.erase ? "destination-out" : "source-over"',
+                      JS[i:i + 900])
+        j = JS.index("// Paint punches transparency into the mask")
+        self.assertIn('st.erase ? "source-over" : "destination-out"',
+                      JS[j:j + 500])
+
+    def test_repair_needs_at_least_one_paint_stroke(self):
+        self.assertIn("strokes.some(s => !s.erase)", JS)
+
+
 if __name__ == "__main__":
     unittest.main()
