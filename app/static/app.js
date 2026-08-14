@@ -6274,13 +6274,6 @@ async function openSpecEditor(specId) {
     // sheet's own ids; the object is one of that panel's required objects
     // that does not have a row yet. The citation stays typeable but gains
     // reference-library type-ahead via a shared datalist.
-    if (!$("#sp-ref-list", panel)) {
-      const dl = document.createElement("datalist");
-      dl.id = "sp-ref-list";
-      dl.innerHTML = allRefs.filter(x => x.status === "APPROVED")
-        .map(x => `<option value="${esc(`${x.id} — ${x.role}`)}"></option>`).join("");
-      ledgerHost.parentElement.append(dl);
-    }
     const pids = $$(".panel-card", panelsHost).map(x => x.dataset.pid);
     if (r.panel_id && !pids.includes(r.panel_id)) pids.unshift(r.panel_id);
     row.innerHTML = `
@@ -6299,7 +6292,7 @@ PROPOSED_NOT_CANON — a pitch, not canon yet.
 UNSUPPORTED — no basis; never passes (budget pinned to 0).">
         ${EVIDENCE_CLASSES.map(c => `<option ${r.evidence_class === c ? "selected" : ""}>${c}</option>`).join("")}
       </select>
-      <input type="text" data-f="source" list="sp-ref-list" placeholder="Source citation — type, or search the reference library" value="${esc(r.source || "")}" ${locked ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference (start typing to search the library), or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Citing a reference here does NOT attach it to generations — use the checkboxes on the Panels tab.)">
+      <input type="text" data-f="source" placeholder="Source citation — type, or search the reference library" value="${esc(r.source || "")}" ${locked ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference (start typing to search the library), or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Citing a reference here does NOT attach it to generations — use the checkboxes on the Panels tab.)">
       <select data-f="status" ${locked ? "disabled" : ""} title="PASS — evidence accepted, the object may render.
 HOLD — needs your review; blocks approval until resolved.
 REMOVE — marked for removal from the board.">
@@ -6325,8 +6318,47 @@ REMOVE — marked for removal from the board.">
         + open.map(o => `<option>${esc(o)}</option>`).join("");
     };
     syncObjects(r.object || "");
-    if (!locked) pidSel.addEventListener("change", () => syncObjects(""));
-    if (!locked) $("button.danger", row).onclick = () => row.remove();
+    if (!locked) {
+      pidSel.addEventListener("change", () => syncObjects(""));
+      // Recompute the offer EVERY time the select opens — rows created
+      // earlier could only see the rows that existed before them, and
+      // add/remove elsewhere goes stale otherwise (user-hit 2026-08-13).
+      objSel.addEventListener("mousedown", () => syncObjects(objSel.value));
+      $("button.danger", row).onclick = () => row.remove();
+
+      // Citation search — a real, visible suggestion list over the
+      // approved reference library (the native datalist proved inert,
+      // user-hit 2026-08-13). Free typing stays; a pick fills the field.
+      const srcInput = $("[data-f=source]", row);
+      row.style.position = "relative";
+      const sug = document.createElement("div");
+      sug.className = "hidden";
+      sug.style.cssText = "position:absolute;z-index:40;background:var(--panel2);border:1px solid var(--line);max-height:220px;overflow:auto;min-width:340px";
+      row.append(sug);
+      const lib = allRefs.filter(x => x.status === "APPROVED");
+      const paintSug = () => {
+        const t = srcInput.value.trim().toLowerCase();
+        const hits = t ? lib.filter(x =>
+          `${x.id} ${x.role} ${x.notes || ""}`.toLowerCase().includes(t))
+          .slice(0, 8) : [];
+        if (!hits.length) { sug.classList.add("hidden"); return; }
+        sug.style.left = srcInput.offsetLeft + "px";
+        sug.style.top = (srcInput.offsetTop + srcInput.offsetHeight + 2) + "px";
+        sug.innerHTML = hits.map(x =>
+          `<button type="button" class="text-act" style="display:block;width:100%;text-align:left;padding:6px 10px" data-v="${esc(`${x.id} — ${x.role}`)}">
+             <span class="mono">${esc(x.id)}</span> ${esc(String(x.role).slice(0, 48))}</button>`).join("");
+        $$("button", sug).forEach(b => b.onmousedown = e => {
+          e.preventDefault();
+          srcInput.value = b.dataset.v;
+          sug.classList.add("hidden");
+        });
+        sug.classList.remove("hidden");
+      };
+      srcInput.addEventListener("input", paintSug);
+      srcInput.addEventListener("focus", paintSug);
+      srcInput.addEventListener("blur", () =>
+        setTimeout(() => sug.classList.add("hidden"), 150));
+    }
     // Non-PASS rows read at a glance: status colors the row's left border
     // and tints its ground. Inline style so it beats the zebra rule.
     const paint = () => {

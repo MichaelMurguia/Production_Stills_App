@@ -455,6 +455,16 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 .grid-head.ledger-row { padding: 4px 9px 3px; }
 #sp-ledger .ledger-row:nth-child(odd) { background: var(--bg2); }
 #sp-ledger .ledger-row input[type=text] { font-size: 13px; }
+/* UNCANONIZED — 2026-08-13 — a locked sheet reads as a DOCUMENT, not a
+   form: disabled controls drop their dropdown/field affordance and read
+   as plain values (a greyed dropdown invites a click it will not honor,
+   user-hit). Values stay in real controls so nothing else changes. */
+#sp-ledger select:disabled, #sp-ledger input:disabled,
+.panel-card select:disabled {
+  appearance: none; -webkit-appearance: none;
+  background: transparent; border-color: transparent;
+  opacity: 1; color: var(--ink-dim);
+}
 #sp-ledger { margin-bottom: 9px; }
 
 .mini { font-size: 12px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans); }

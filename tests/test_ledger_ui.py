@@ -28,9 +28,25 @@ class LedgerRowPins(unittest.TestCase):
         self.assertIn("— every required object has a row —", JS)
         self.assertIn("const syncObjects = keep", JS)
 
+    def test_object_offer_recomputes_every_open(self):
+        """Rows created earlier could only see rows that existed before
+        them (user-hit 2026-08-13) — the offer recomputes on open."""
+        self.assertIn('objSel.addEventListener("mousedown", () => syncObjects(objSel.value))',
+                      JS)
+
     def test_citation_searches_the_reference_library(self):
-        self.assertIn('list="sp-ref-list"', JS)
-        self.assertIn('dl.id = "sp-ref-list"', JS)
+        """A real visible suggestion list — the native datalist proved
+        inert (user-hit 2026-08-13). Typing stays free."""
+        self.assertNotIn("sp-ref-list", JS)
+        self.assertIn("const paintSug = () => {", JS)
+        self.assertIn('srcInput.addEventListener("input", paintSug)', JS)
+
+    def test_a_locked_ledger_reads_as_a_document(self):
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertIn("#sp-ledger select:disabled, #sp-ledger input:disabled",
+                      css)
+        i = css.index("#sp-ledger select:disabled")
+        self.assertIn("border-color: transparent", css[i:i + 300])
 
 
 class WorkbenchScopePins(unittest.TestCase):
