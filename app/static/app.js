@@ -6025,6 +6025,7 @@ async function openSpecEditor(specId) {
     row.dataset.pid = pid;
     row.innerHTML = `
       <div class="head">
+        <button type="button" class="text-act mono" data-f="pc-toggle" title="Collapse panel details">▾</button>
         <span class="pid-badge" title="Panel ID — assigned automatically; the evidence ledger and layout refer to it.">${esc(pid)}</span>
         ${!locked && carriedSet.has(pid) ? `
           <span class="mini mono" title="Carried from the locked revision — this panel is not being revised here. Its approved take keeps flowing to the board.">CARRIED — NOT IN THIS REVISION</span>
@@ -6213,6 +6214,19 @@ async function openSpecEditor(specId) {
       $("#sp-scene", panel)?.addEventListener("input", syncSuggest);
       syncSuggest();
     }
+    // Collapsible rows (user 2026-08-13): every panel can fold to its
+    // head line; carried panels of a scoped revision open COLLAPSED —
+    // present (the sheet stays whole) but not in the way. Collapse only
+    // hides; every input stays in the DOM, so collect() reads unchanged.
+    const tog = $("[data-f=pc-toggle]", row);
+    const setCollapsed = c => {
+      row.classList.toggle("pc-collapsed", c);
+      tog.textContent = c ? "▸" : "▾";
+      tog.title = c ? "Expand panel details" : "Collapse panel details";
+    };
+    tog.onclick = () => setCollapsed(!row.classList.contains("pc-collapsed"));
+    if (carriedSet.has(pid)) setCollapsed(true);
+
     // Also revise (2026-08-13): the one-way upgrade — the carried row
     // joins the revision. In-flight edits to OTHER rows are saved first
     // so the re-render loses nothing.

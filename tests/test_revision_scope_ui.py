@@ -50,6 +50,16 @@ class CarriedRowPins(unittest.TestCase):
     def test_the_header_states_the_scope(self):
         self.assertIn("REVISES ${spec.revision_scope.revised.length} OF", JS)
 
+    def test_carried_rows_open_collapsed_and_rows_fold_in_general(self):
+        """User 2026-08-13: carried panels are listed, not in the way —
+        one head line, details folded; any row can fold by its toggle.
+        Folding must HIDE, never remove — collect() reads the DOM."""
+        self.assertIn('data-f="pc-toggle"', JS)
+        self.assertIn("if (carriedSet.has(pid)) setCollapsed(true)", JS)
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertIn(".panel-card.pc-collapsed > :not(.head) { display: none; }",
+                      css)
+
 
 class StageFivePins(unittest.TestCase):
     def test_the_picker_lists_bases_with_revision_counts(self):

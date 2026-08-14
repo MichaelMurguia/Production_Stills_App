@@ -407,6 +407,10 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
   display: flex; flex-direction: column; gap: 13px;
 }
 .panel-card .head { display: flex; gap: 12px; align-items: center; }
+/* UNCANONIZED — 2026-08-13 — collapsible panel rows: folding hides the
+   detail sections but keeps them in the DOM, so saving reads unchanged.
+   Carried panels of a scoped revision open collapsed. */
+.panel-card.pc-collapsed > :not(.head) { display: none; }
 /* Panel ID is an identifier — Courier, bordered, but not amber-filled. */
 .pid-badge, .pid {
   flex: none; color: var(--ink); border: 1px solid var(--line);
