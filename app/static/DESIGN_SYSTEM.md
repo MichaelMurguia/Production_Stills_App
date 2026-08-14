@@ -1191,6 +1191,17 @@ well — this log records what changed, it does not replace the rules.
   rejection debrief): the shared camera row gains a fifth `View` select
   (azimuth — front/three-quarter/side/rear); no baseline, unset = model's
   choice, stated line omits it when unset.
+- **2026-08-13** — **The arrange room works in the content field**
+  (user bug report, second round: the room still disagreed with the
+  board). The sheet grammar renders panels inside the content rect —
+  margins plus the masthead band, a ~2.02:1 field on a 16:9 page — but
+  the room previewed tiles across a full 16:9 surface and computed its
+  pixel readouts against the full canvas, so every panel previewed
+  ~14% narrower than the export rendered it, and the advisory readouts
+  disagreed with the gate. Corrected: `GET /api/sheets/{id}` states the
+  derived `content_rect`, and the room's surface aspect, readouts,
+  ratio snap, and crop aspects all work in that field — room, map, gate
+  and export now describe identical panels.
 - **2026-08-13** — **Dress is additive** (user bug report: exported
   panels cropped differently than arranged, and the slot map disagreed
   with the room). The original model carved dress bands out of the

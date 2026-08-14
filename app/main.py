@@ -2156,6 +2156,13 @@ def api_get_sheet(sheet_id: str) -> dict:
     # inferred from their slot geometry (not persisted by a read).
     if rec.get("archetype") == "BOARD" and "arrangement" not in rec:
         rec["arrangement"] = sheet.derive_arrangement(rec)
+    # The sheet states where its panels actually live (derived, never
+    # persisted): blocks render inside the content rect — margins plus
+    # the masthead band — not the full page. The arrange room MUST work
+    # at this field's aspect or it previews panel shapes the export will
+    # not have (user bug, 2026-08-13: room disagreed with map + export).
+    cw, ch, cx, cy = sheet._content_rect_fracs(rec)
+    rec["content_rect"] = {"w": cw, "h": ch, "x": cx, "y": cy}
     return rec
 
 

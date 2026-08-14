@@ -8796,6 +8796,14 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   const cands = specId
     ? await api(`/api/specs/${specId}/candidates`).catch(() => []) : [];
   const BW = sh.size[0], BH = sh.size[1];
+  // The panels live in the sheet's CONTENT field (inside margins and the
+  // masthead band), not the full page — the server states the rect. All
+  // room geometry (surface aspect, pixel readouts, ratio snap, crop
+  // aspects) works in this field, so the room, the slot map, the gate
+  // and the export all describe the same panels (bug 2026-08-13: the
+  // room previewed 16:9-canvas shapes the export never had).
+  const CR = sh.content_rect || { w: 1, h: 1, x: 0, y: 0 };
+  const CW = BW * CR.w, CH = BH * CR.h;
   const GRID_X = 24, GRID_Y = 12, SNAP_PX = 10;
   let GUT = 6;  // CSS px, derived from the sheet-pixel gutter in layout()
   const MIN_W = 0.07, MIN_H = 0.09, MIN_CELL = 0.2;
@@ -9061,7 +9069,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   const gateEl = $("[data-f=gate]", root);
   const menuEl = $("[data-f=menu]", root);
   const cornerAdd = $("[data-f=corner-add]", root);
-  boardEl.style.aspectRatio = `${BW} / ${BH}`;
+  boardEl.style.aspectRatio = `${CW} / ${CH}`;
 
   /* tiles — one per panel this sheet knows (placed or benched) */
   const tiles = {};
@@ -9103,7 +9111,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       el.style.width = fw + "px";
       el.style.height = fh + "px";
       const t = factsFor(pid);
-      const pw = Math.round(r.w * BW), ph = Math.round(r.h * BH);
+      const pw = Math.round(r.w * CW), ph = Math.round(r.h * CH);
       const crop = cropFor(pid);
       const win = t && t.w ? winFor(crop, pw / ph, t.w, t.h) : null;
       const img = el.querySelector(".arr-img");
@@ -9167,7 +9175,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     const r = rectsOf(arr)[pid];
     const t = factsFor(pid);
     if (!r) return;
-    const pw = Math.round(r.w * BW), ph = Math.round(r.h * BH);
+    const pw = Math.round(r.w * CW), ph = Math.round(r.h * CH);
     const short = t && t.w && (pw > t.w || ph > t.h);
     hud.innerHTML = `<b>${esc(pid)}</b> · slot ${pw} × ${ph} px `
       + `(${(pw / ph).toFixed(2)}:1)`
@@ -9286,7 +9294,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     arr.bench = arr.bench.filter(b => b !== id);
     const r = rectsOf(arr)[targetId];
     if (r) {
-      const wide = (r.w * BW) / (r.h * BH) > 1.55;
+      const wide = (r.w * CW) / (r.h * CH) > 1.55;
       arr = placedIn(arr, id, { kind: wide ? "beside" : "stack",
                                 side: wide ? "right" : "bottom", target: targetId });
     } else {
@@ -9361,7 +9369,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     }
     const src = `/api/specs/${esc(slot.spec_id)}/candidates/${esc(slot.candidate_id)}/image?size=md`;
     const rect = rectsOf(arr)[pid];
-    const frameA = rect ? (rect.w * BW) / (rect.h * BH) : 16 / 9;
+    const frameA = rect ? (rect.w * CW) / (rect.h * CH) : 16 / 9;
     const RATS = [["SLOT", 0], ["16:9", 16 / 9], ["2.39:1", 2.39],
                   ["4:3", 4 / 3], ["1:1", 1], ["FREE", -1]];
     let f = { x: 0, y: 0, w: 1, h: 1, rotate: 0, ...(slot.crop || {}) };
@@ -9738,10 +9746,10 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         const t = factsFor(drag.pid);
         const cellAbsH = drag.startRowH * drag.startCellH;
         const cand = t && t.w ? [[`TAKE ${t.w}×${t.h}`, t.w / t.h], ...RATIOS] : RATIOS;
-        const aspect = (w * BW) / (cellAbsH * BH);
+        const aspect = (w * CW) / (cellAbsH * CH);
         for (const [name, target] of cand) {
           if (Math.abs(aspect - target) / target < 0.05) {
-            w = (target * cellAbsH * BH) / BW;
+            w = (target * cellAbsH * CH) / CW;
             caught = name;
             break;
           }

@@ -319,6 +319,20 @@ class LookApiTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(sheet.get_sheet(sid)["look"]["key"], "ART_BOARD")
 
+    def test_sheet_states_its_content_rect(self):
+        # The arrange room works at the content field's aspect (bug
+        # 2026-08-13: it previewed 16:9-canvas panel shapes the export
+        # never had). The GET response must state the derived rect and
+        # it must never be persisted.
+        rec = self._board()
+        sid = rec["sheet_id"]
+        got = self.client.get(f"/api/sheets/{sid}").json()
+        cw, ch, cx, cy = sheet._content_rect_fracs(rec)
+        self.assertEqual(got["content_rect"],
+                         {"w": cw, "h": ch, "x": cx, "y": cy})
+        self.assertNotIn("content_rect", sheet.get_sheet(sid),
+                         "derived, never stored")
+
     def test_readiness_endpoint_judges_the_dressed_sheet(self):
         rec = self._board()
         sid = rec["sheet_id"]
