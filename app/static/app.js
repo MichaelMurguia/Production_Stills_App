@@ -5176,10 +5176,10 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged) {
     custom: `
       <div class="modal-title">Reference — ${esc(obj)}</div>
       <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ALL ATTACH WHEN ITS GROUP IS CHECKED · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW</p>
-      <div style="max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px;margin:0 14px">
+      <div class="ref-grid" style="max-height:60vh;overflow-y:auto;margin:0 14px;align-content:start">
         ${recs.map((r, i) => `
-          <div class="ref-card ${esc(r.status)}" style="display:flex;gap:12px;align-items:flex-start">
-            <img src="/api/references/${esc(r.id)}/image?size=thumb" style="width:180px;flex:none;cursor:zoom-in" data-lb="${i}" alt="${esc(r.id)}">
+          <div class="ref-card ${esc(r.status)}">
+            <img src="/api/references/${esc(r.id)}/image?size=thumb" data-lb="${i}" alt="${esc(r.id)}" loading="lazy">
             <div class="body">
               <div><span class="badge ${esc(r.status)}">${esc(r.status)}</span> <b>${esc(r.id)}</b></div>
               <div class="role">${esc(r.role)}</div>
@@ -5196,7 +5196,7 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged) {
       <div class="modal-actions" style="margin:12px 14px">
         <button class="ghost" data-f="vr-add" title="Opens the add-reference widget prefilled with this group's role and title, so the new plate joins the same group and attaches with it">Add another plate</button>
         <span style="flex:1"></span>
-        <button class="primary" data-f="vr-close">Close</button>
+        <button class="ghost" data-f="vr-close">Close</button>
       </div>`,
     mount: (ov, done) => {
       $$("[data-lb]", ov).forEach(img => img.onclick = () =>

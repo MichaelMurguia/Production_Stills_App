@@ -86,6 +86,17 @@ class AddReferenceInPlacePins(unittest.TestCase):
         self.assertIn('data-f="vr-add"', block)
         self.assertIn("CONTROLS ", block)
 
+    def test_the_gallery_uses_the_library_grid_not_a_shrinking_column(self):
+        """User-hit 2026-08-14: a flex column shrank five cards to 76px
+        and .ref-card's overflow:hidden clipped every image. The library's
+        own grid gives each card its natural height."""
+        i = JS.index("function viewObjectReferences")
+        block = JS[i:i + 2600]
+        self.assertIn('class="ref-grid"', block)
+        self.assertNotIn("flex-direction:column", block)
+        self.assertNotIn('class="primary" data-f="vr-close"', block,
+                         "a dismissal is not the view's primary action")
+
     def test_the_widget_is_the_existing_dialog_approved_and_refreshing(self):
         self.assertIn("addReferenceDialog({ head: \"PROP_REFERENCE\", title: b.dataset.addref }",
                       JS)
