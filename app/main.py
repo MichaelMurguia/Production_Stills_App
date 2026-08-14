@@ -183,6 +183,29 @@ def api_preview_render():
     }
 
 
+def _app_sha() -> str:
+    """Short git sha of the serving checkout, resolved once at process
+    start. The fixture recorder stamps it into every bundle so the replay
+    harness can tell the designer when its copy of the app has drifted
+    from what the fixtures were recorded against (HARNESS tooling,
+    2026-08-13). Deploys carry no .git — Railway's env sha is the same
+    fact from the platform; "unknown" means no provenance at all."""
+    try:
+        import subprocess
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                           cwd=str(paths.ROOT), capture_output=True,
+                           text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    except Exception:
+        pass
+    env = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
+    return env[:7] if env else "unknown"
+
+
+APP_SHA = _app_sha()
+
+
 @app.get("/api/healthz")
 def api_healthz():
     """Liveness, serving revision, and product version — the provisioner's
@@ -190,6 +213,7 @@ def api_healthz():
     ver = paths.ROOT / "VERSION"
     return {"ok": True,
             "rev": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local")[:12],
+            "app_sha": APP_SHA,
             "version": ver.read_text(encoding="utf-8").strip()
                        if ver.exists() else "dev"}
 

@@ -685,6 +685,14 @@
   </section>
 </template>
 
+<!-- Fixture recorder (HARNESS tooling): dev-only, ?record=1 only, and it
+     must wrap fetch BEFORE app.js boots — hence document.write, which
+     blocks until recorder.js has executed. A normal load leaves no trace. -->
+<script>
+  if (new URLSearchParams(location.search).has("record")) {
+    document.write('<script src="/recorder.js"><\/script>');
+  }
+</script>
 <script src="/app.js"></script>
 </body>
 </html>

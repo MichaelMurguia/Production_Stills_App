@@ -54,6 +54,10 @@ class ApiTests(unittest.TestCase):
         r = self.client.get("/api/healthz")
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["ok"])
+        # HARNESS tooling (2026-08-13): the recorder stamps this into
+        # every fixture bundle so the replay harness can detect drift.
+        self.assertTrue(r.json().get("app_sha"),
+                        "healthz must carry app_sha for the recorder")
 
     def test_auth_gate_when_token_set(self):
         appmain.ACCESS_TOKEN = "sekrit"

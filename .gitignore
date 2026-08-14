@@ -25,4 +25,11 @@ settings.json
 
 # Design handoff bundles are local working files, not repo content
 design_handoff/
+
+# Replay-harness output and recorded fixture bundles: real production
+# content, and large — they belong in a hand-off, not in the repo. The
+# tools that make them (app/static/recorder.js, tools/build_harness.py)
+# DO live in the repo.
+harness/
+fixtures-*.json
 connectors.json
