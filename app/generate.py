@@ -913,16 +913,48 @@ def _reference_role_lines(refs: list[dict]) -> list[str]:
             "this exact object's design, construction, and materials",
             "its placement, scale in frame, lighting, or the scene"),
     }
-    lines: list[str] = []
+    # Plates that share a role title are ONE subject photographed several
+    # ways — declared once, together (user-hit 2026-08-14: five GT40
+    # plates each got their own "this EXACT vehicle" line, so nothing
+    # told the model they were one car from five angles; a model can read
+    # five separate lines as five different vehicles and assemble a
+    # contradictory one).
+    groups: dict[str, list[tuple[int, dict]]] = {}
     for i, r in enumerate(refs, 1):
-        head = store.role_head(r.get("role", ""))
+        groups.setdefault(str(r.get("role", "")), []).append((i, r))
+
+    def _numbers(nums: list[int]) -> str:
+        if len(nums) == 1:
+            return f"image {nums[0]}"
+        if nums == list(range(nums[0], nums[-1] + 1)):
+            return f"images {nums[0]}–{nums[-1]}"
+        return "images " + ", ".join(str(n) for n in nums)
+
+    lines: list[str] = []
+    for role, members in groups.items():
+        nums = [i for i, _ in members]
+        r = members[0][1]
+        head = store.role_head(role)
         d_controls, d_not = style_defaults.get(head, ("its assigned role", ""))
         controls = ", ".join(r.get("controls", [])) or d_controls
-        lines.append(f"- Attached image {i} ({r['id']}, role {r['role']}): "
-                     f"controls {controls}.")
+        ids = ", ".join(m["id"] for _, m in members)
+        if len(members) == 1:
+            lines.append(f"- Attached {_numbers(nums)} ({ids}, role {role}): "
+                         f"controls {controls}.")
+        else:
+            lines.append(
+                f"- Attached {_numbers(nums)} ({ids}, role {role}): "
+                f"{len(members)} IMAGES OF THE SAME SUBJECT — one subject "
+                f"photographed {len(members)} ways, never {len(members)} "
+                "different things. Read them TOGETHER as one description of "
+                "it, and build it at the angle the CAMERA block specifies "
+                "even when no single image shows that angle. Together they "
+                f"control {controls}.")
         not_ctrl = ", ".join(r.get("does_not_control", [])) or d_not
         if not_ctrl:
-            lines.append(f"  It does NOT control: {not_ctrl}.")
+            lines.append(f"  It does NOT control: {not_ctrl}."
+                         if len(members) == 1 else
+                         f"  They do NOT control: {not_ctrl}.")
     return lines
 
 

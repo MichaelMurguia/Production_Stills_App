@@ -305,6 +305,38 @@ class RejectionReasonsArePrimaryRules(_IsolatedStyleContext):
                       rules.replace("\n  ", " "))
         self.assertIn("CAMERA block is binding framing", rules)
 
+    def test_plates_of_one_subject_are_declared_as_one_subject(self):
+        """User-hit 2026-08-14: five GT40 plates each got their own
+        "this EXACT vehicle" line and NOTHING said they were one car from
+        five angles — a model can read that as five different vehicles."""
+        plates = [{"id": f"REF-002{n}", "role": "VEHICLE_GEOMETRY — GT40"}
+                  for n in range(5)]
+        out = "\n".join(generate._reference_role_lines(plates))
+        self.assertIn("Attached images 1–5", out)
+        self.assertIn("REF-0020, REF-0021, REF-0022, REF-0023, REF-0024", out)
+        self.assertIn("5 IMAGES OF THE SAME SUBJECT", out)
+        self.assertIn("never 5 different things", out)
+        self.assertIn("They do NOT control", out)
+        self.assertEqual(out.count("Attached image"), 1,
+                         "one declaration for the set, not five")
+
+    def test_a_lone_plate_reads_exactly_as_before(self):
+        out = "\n".join(generate._reference_role_lines(
+            [{"id": "REF-0040", "role": "VEHICLE_GEOMETRY — GRM JET"}]))
+        self.assertIn("- Attached image 1 (REF-0040, "
+                      "role VEHICLE_GEOMETRY — GRM JET): controls", out)
+        self.assertIn("It does NOT control", out)
+        self.assertNotIn("SAME SUBJECT", out)
+
+    def test_different_subjects_keep_their_own_declarations(self):
+        out = "\n".join(generate._reference_role_lines([
+            {"id": "REF-0001", "role": "VEHICLE_GEOMETRY — GT40"},
+            {"id": "REF-0002", "role": "CHARACTER_LIKENESS — KYRA"},
+            {"id": "REF-0003", "role": "VEHICLE_GEOMETRY — GT40"},
+        ]))
+        self.assertIn("Attached images 1, 3 (REF-0001, REF-0003", out)
+        self.assertIn("Attached image 2 (REF-0002", out)
+
     def test_vehicle_geometry_no_longer_argues_for_the_reference_angle(self):
         """The role line used to say 'match that image closely' about the
         angle — directly opposing a corrected angle. Camera and
