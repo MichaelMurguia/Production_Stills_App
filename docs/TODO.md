@@ -22,28 +22,3 @@ So the approved-state row reads `Crop · Reject · Edit` — no bare
 When a render is in progress for a panel, that panel's thumbnail in the
 PANELS rail must show a spinning indicator. Today there is no visible
 sign in the rail that a render is underway.
-
-## 4. One board across revisions + revision panel picker (2026-08-13)
-
-Product-model change, user-specified. Today a revision forks the board;
-approved takes strand on the old one. Instead:
-
-- **One board per base spec id.** Revisions are versions of the same
-  creative unit (the app already treats them so for carried rejections).
-  The newest LOCKED revision defines the board's structure (panels,
-  layout); a draft revision never changes the board.
-- **Create revision opens a modal**: "What panels would you like to
-  include in revision" — checkbox per panel. Checked = being revised
-  (editable in the new draft; their old approved takes do NOT auto-seat
-  on the board — each slot states "approved against R<n> — re-render or
-  keep"). Unchecked = unchanged (come along read-only; their approved
-  takes carry to the board automatically). An "also revise this panel"
-  act on a read-only row upgrades the declaration mid-edit.
-- Same panel approved in two revisions: newest wins by default; the
-  existing swap-in take picker is the override.
-- Boards-stage picker lists bases, not revisions. Readiness gates
-  evaluate the newest locked revision's panel list but accept approvals
-  from any revision. Derived panels (palette/materials) sample
-  base-wide. One-time migration for existing per-revision boards.
-- Provenance stated, never hidden: a slot filled from an older revision
-  carries a `FROM R<n>` chip (each take already records its spec hash).
