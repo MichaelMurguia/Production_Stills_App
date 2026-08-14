@@ -842,8 +842,17 @@ def _board_records(spec_id: str) -> list[dict]:
 
 
 def _approved_outputs(spec_id: str) -> list[str]:
-    return [r.get("candidate_id") for r in _board_records(spec_id)
-            if r.get("status") == "APPROVED"]
+    """Approved takes/boards generated AGAINST this spec id — scanned
+    across the unit's sibling revision dirs (2026-08-13): board artifacts
+    now land in the base dir but carry the structure revision's id, so a
+    board built on R2 must keep blocking R2's unlock wherever it lives."""
+    out = []
+    for rid in revisions.revisions_of(revisions.base_of(spec_id)) or [spec_id]:
+        for r in _board_records(rid):
+            if (r.get("status") == "APPROVED"
+                    and str(r.get("specification_id") or rid) == spec_id):
+                out.append(r.get("candidate_id"))
+    return out
 
 
 def unlock_spec(spec_id: str) -> dict:
@@ -1147,6 +1156,17 @@ def delete_spec(spec_id: str) -> dict:
     spec = get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
+
+    # Units dismantle newest-first (2026-08-13): the base dir is shared —
+    # it is R1's take dir AND holds the unit's board artifacts, keeps and
+    # floor history — so a revision with later siblings must not fall.
+    newer = [rid for rid in revisions.revisions_of(revisions.base_of(spec_id))
+             if revisions.revision_of(rid) > revisions.revision_of(spec_id)]
+    if newer:
+        raise PermissionError(
+            f"{spec_id} has later revisions ({', '.join(newer)}) — the "
+            "unit's board history and carried panels feed from it. Delete "
+            "the newest revision first.")
 
     board_dir = paths.BOARDS_DIR / spec_id
     records = _board_records(spec_id)

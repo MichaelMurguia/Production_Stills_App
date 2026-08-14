@@ -105,11 +105,17 @@ def blocking() -> list[dict]:
                             })
 
     # Undersized approved renders on locked sheets (never upscaled — 4b rule).
-    from . import assemble
+    # One row per UNIT (2026-08-13): revisions share one board, so the
+    # slot map is evaluated once per base with a locked revision.
+    from . import assemble, revisions
+    seen_bases: set[str] = set()
     for meta in specs:
         if not meta["locked"]:
             continue
-        sid = meta["specification_id"]
+        sid = revisions.base_of(meta["specification_id"])
+        if sid in seen_bases:
+            continue
+        seen_bases.add(sid)
         try:
             sm = assemble.slot_map(sid)
         except Exception:

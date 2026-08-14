@@ -389,6 +389,41 @@ class BoardAcrossRevisionsTests(unittest.TestCase):
         self.assertEqual(by_pid["P02"]["from_revision"], 2)
         self.assertTrue(sm["assemblable"])
 
+    def test_units_dismantle_newest_first(self):
+        with self.assertRaises(PermissionError) as ctx:
+            store.delete_spec("B_V001")
+        self.assertIn("later revisions", str(ctx.exception))
+
+    def test_a_board_built_on_the_structure_blocks_its_unlock(self):
+        from app import assemble
+        revisions.set_keep("B_V001", "P02", "CAND-0002")
+        rec = assemble.assemble_board("B_V001_R2")
+        # approve the board record in place
+        d = paths.BOARDS_DIR / "B_V001"
+        p = d / f"{rec['candidate_id']}.json"
+        j = json.loads(p.read_text(encoding="utf-8"))
+        j["status"] = "APPROVED"
+        p.write_text(json.dumps(j), encoding="utf-8")
+        with self.assertRaises(PermissionError):
+            store.unlock_spec("B_V001_R2")
+        # ...while R1's unlock is blocked by its own approved takes, not
+        # the board (which names R2).
+        self.assertNotIn(rec["candidate_id"],
+                         store._approved_outputs("B_V001"))
+
+    def test_derived_panel_lands_in_the_structure_dir_and_qualifies(self):
+        from app import assemble, generate
+        revisions.set_keep("B_V001", "P02", "CAND-0002")
+        generate.derive_palette("B_V001")
+        q = revisions.qualifying_approved_by_panel("B_V001")
+        # derived takes start CANDIDATE; approve it and it must qualify
+        d = paths.BOARDS_DIR / "B_V001_R2"
+        rec_p = sorted(d.glob("CAND-*.json"))[-1]
+        j = json.loads(rec_p.read_text(encoding="utf-8"))
+        self.assertEqual(j["panel_id"], "PALETTE")
+        self.assertEqual(j["specification_id"], "B_V001_R2",
+                         "derived output binds to the structure revision")
+
 
 if __name__ == "__main__":
     unittest.main()

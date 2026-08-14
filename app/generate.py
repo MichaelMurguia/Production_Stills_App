@@ -2119,9 +2119,14 @@ DERIVED_PANELS = {"PALETTE", "MATERIALS"}
 
 
 def _approved_panel_candidates(spec_id: str) -> list[dict]:
-    return [c for c in list_candidates(spec_id)
-            if c.get("status") == "APPROVED"
-            and c.get("panel_id") not in DERIVED_PANELS
+    """The UNIT's qualifying panel takes (2026-08-13): derived panels
+    sample the same cross-revision pool the board seats, so the palette
+    can never disagree with what is actually on the board. Records carry
+    take_spec_id for image lookups in their own revision's dir."""
+    qual = revisions.qualifying_approved_by_panel(
+        revisions.base_of(spec_id))["qualifying"]
+    return [c for pid, c in sorted(qual.items())
+            if pid not in DERIVED_PANELS
             and c.get("kind") != "assembled_board"]
 
 
@@ -2142,7 +2147,8 @@ def derive_palette(spec_id: str) -> dict:
 
     thumbs = []
     for c in sources:
-        p = candidate_image_path(spec_id, c["candidate_id"])
+        p = candidate_image_path(str(c.get("take_spec_id") or spec_id),
+                                 c["candidate_id"])
         if p is None:
             continue
         with Image.open(p) as im:
@@ -2182,14 +2188,18 @@ def derive_palette(spec_id: str) -> dict:
         draw.text((x0 + 12, h - label_h + 18), hexcode, fill=(232, 229, 221))
 
     cand_id = _new_candidate_id()
-    d = _spec_board_dir(spec_id)
+    # The derived take lands in the STRUCTURE revision's dir (2026-08-13)
+    # so its own revision is the newest — it always qualifies for the
+    # unit's board.
+    spec = store.resolve_spec_current(spec_id) or {}
+    target_id = str(spec.get("specification_id") or spec_id)
+    d = _spec_board_dir(target_id)
     out.save(d / f"{cand_id}.png")
 
     from common import stable_hash
-    spec = store.get_spec(spec_id) or {}
     record = {
         "candidate_id": cand_id,
-        "specification_id": spec_id,
+        "specification_id": target_id,
         "spec_hash": stable_hash(spec) if spec else "",
         "panel_id": "PALETTE",
         "kind": "derived_palette",
@@ -2224,13 +2234,14 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
     if not sources:
         raise GenerationError(
             "no approved panels to derive from — approve at least one panel candidate first.")
-    spec = store.get_spec(spec_id)
+    spec = store.resolve_spec_current(spec_id)
     if spec is None:
         raise KeyError(spec_id)
 
     src_paths = []
     for c in sources:
-        p = candidate_image_path(spec_id, c["candidate_id"])
+        p = candidate_image_path(str(c.get("take_spec_id") or spec_id),
+                                 c["candidate_id"])
         if p:
             src_paths.append(p)
     src_paths = src_paths[:MAX_REFERENCE_IMAGES]
@@ -2266,7 +2277,9 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
     # Refuse before the spend, not after it: a full volume used to
     # surface as a 502 from the middle of a paid render (2026-08-07).
     _require_room("this study")
-    d = _spec_board_dir(spec_id)
+    # Structure revision's dir — the derived take always qualifies.
+    target_id = str(spec.get("specification_id") or spec_id)
+    d = _spec_board_dir(target_id)
     img_path = d / f"{cand_id}.png"
     if provider == "mock":
         notes = mockflow.render(prompt, src_paths, image_size, "21:9", img_path)
@@ -2284,7 +2297,7 @@ def derive_materials(spec_id: str, provider: str = DEFAULT_PROVIDER,
 
     record = {
         "candidate_id": cand_id,
-        "specification_id": spec_id,
+        "specification_id": target_id,
         "spec_hash": stable_hash(spec),
         "panel_id": "MATERIALS",
         "kind": "derived_materials",
