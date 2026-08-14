@@ -168,13 +168,13 @@ class LookModelTests(LooksHomeTest):
         _seed_swatches([("BELT TECH", "Deep Sea", "#1B3A4B")])
         stored = sheet.get_sheet(rec["sheet_id"])
         strips = [e for e in looks.dressed(stored)["dress"]
-                  if e["kind"] == "SWATCH_STRIP"]
+                  if e["kind"] == "PALETTE"]
         hexes = [s["hex"] for s in strips[0]["data"]["swatches"]]
         self.assertEqual(hexes, ["#1B3A4B"])
         _seed_swatches([("BELT TECH", "Deep Sea", "#1B3A4B"),
                         ("BELT TECH", "Signal Blue", "#3E7CB1")])
         strips = [e for e in looks.dressed(stored)["dress"]
-                  if e["kind"] == "SWATCH_STRIP"]
+                  if e["kind"] == "PALETTE"]
         hexes = [s["hex"] for s in strips[0]["data"]["swatches"]]
         self.assertIn("#3E7CB1", hexes,
                       "a swatch added after set_look must appear — no "

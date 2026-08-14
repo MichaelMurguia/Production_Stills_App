@@ -384,7 +384,8 @@ function swatchNotes(notes) {
 
 
 function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
-                danger = false, custom = "", mount = null }) {
+                danger = false, custom = "", mount = null,
+                extraLabel = "", extraDanger = false }) {
   return new Promise(resolve => {
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
@@ -409,6 +410,8 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
                 title="Use this brief again">${esc(rc)}</button>`).join("")}</span>` : ""}
           </label>`).join("")}
         ${custom ? "" : `<div class="modal-actions">
+          ${extraLabel ? `<button class="${extraDanger ? "danger" : "ghost"}"
+            data-mf="extra" style="margin-right:auto">${esc(extraLabel)}</button>` : ""}
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="${danger ? "danger" : "primary"}" data-mf="ok">${esc(confirmLabel)}</button>
         </div>`}
@@ -456,6 +459,10 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
     }
     $("[data-mf=cancel]", ov).onclick = () => done(null);
     $("[data-mf=ok]", ov).onclick = () => done(collect());
+    // A destructive act inside an edit modal (R17): resolves with a
+    // sentinel; the caller runs its own confirm before acting.
+    const extra = $("[data-mf=extra]", ov);
+    if (extra) extra.onclick = () => done({ __extra: true });
     const first = $("input, textarea", ov);
     (first || $("[data-mf=ok]", ov)).focus();
   });
@@ -1812,6 +1819,11 @@ async function renderStatus() {
   const blockers = state.blocking.filter(b => b.kind !== "CARE");
   const advisories = state.blocking.filter(b => b.kind === "CARE");
   const first = blockers[0];
+  // U2 (HARNESS_AUDIT): the lead is a promotion, not a copy. The
+  // promoted blocker leaves the list below and the count excludes it —
+  // one fact, one place, one act. (The upload lead promotes the
+  // screenplay blocker the same way.)
+  const rest = first ? blockers.slice(1) : blockers;
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
@@ -1848,7 +1860,7 @@ async function renderStatus() {
   // Everything that stops the next render, as structured rows (kind badge,
   // text, resolving jump). The panel hides entirely when nothing blocks.
   const blocking = $("#dash-missing");
-  if (state.blocking.length) {
+  if (rest.length || advisories.length) {
     blocking.classList.remove("hidden");
     const row = b => {
       const i = state.blocking.indexOf(b);
@@ -1860,11 +1872,13 @@ async function renderStatus() {
         </div>`;
     };
     blocking.innerHTML =
-      (blockers.length
-        ? `<h2>Blocking — ${blockers.length} <span class="hint">everything that stops the next render</span></h2>`
-          + blockers.map(row).join("")
-        : `<h2>Advisory <span class="hint">care of existing work — nothing blocks the next render</span></h2>`)
-      + (advisories.length && blockers.length
+      (rest.length
+        ? `<h2>Blocking — ${rest.length} more <span class="hint">beyond the one stated above</span></h2>`
+          + rest.map(row).join("")
+        : `<h2>Advisory <span class="hint">${first
+            ? "care of existing work — the one blocker is stated above"
+            : "care of existing work — nothing blocks the next render"}</span></h2>`)
+      + (advisories.length && rest.length
         ? `<div class="advisory-label">ADVISORY</div>` : "")
       + advisories.map(row).join("");
     $$("[data-block]", blocking).forEach(btn => {
@@ -6045,10 +6059,10 @@ async function openSpecEditor(specId) {
     row.dataset.pid = pid;
     row.innerHTML = `
       <div class="head">
-        <button type="button" class="text-act mono" data-f="pc-toggle" title="Collapse panel details">▾</button>
+        <button type="button" class="text-act mono" data-f="pc-toggle" title="Collapse panel details">−</button>
         <span class="pid-badge" title="Panel ID — assigned automatically; the evidence ledger and layout refer to it.">${esc(pid)}</span>
         ${!locked && carriedSet.has(pid) ? `
-          <span class="mini mono" title="Carried from the locked revision — this panel is not being revised here. Its approved take keeps flowing to the board.">CARRIED — NOT IN THIS REVISION</span>
+          <span class="mini mono" title="Carried from the locked revision — this panel is not being revised here. Its approved take keeps flowing to the board.">CARRIED</span>
           <button type="button" class="text-act" data-f="also-revise" title="Upgrade this panel into the revision — editable here from now on, and the board will ask for a new take for its slot. Journaled.">Also revise</button>` : ""}
         <input type="text" data-f="title" placeholder="Panel title — e.g. The Pioneer's Workshop" value="${esc(p.title || "")}" ${ro ? "disabled" : ""} title="Short display name for this panel.">
         <span class="alloc ptod-wrap" title="Light for THIS panel — location and lighting-study boards choose it per panel. Pick a time of day (the hour) or one of the Bible's atmosphere studies (hour + weather + light character). Overrides any style image's hour or hue.">
@@ -6241,7 +6255,10 @@ async function openSpecEditor(specId) {
     const tog = $("[data-f=pc-toggle]", row);
     const setCollapsed = c => {
       row.classList.toggle("pc-collapsed", c);
-      tog.textContent = c ? "▸" : "▾";
+      // R13 (HARNESS_AUDIT): open/closed is the app's density vocabulary
+      // — minus/plus, Courier-safe at small sizes. Never persisted: a
+      // fold is a reading posture, not a setting.
+      tog.textContent = c ? "+" : "−";
       tog.title = c ? "Expand panel details" : "Collapse panel details";
     };
     tog.onclick = () => setCollapsed(!row.classList.contains("pc-collapsed"));
@@ -6864,13 +6881,23 @@ async function renderBoards() {
       revOf(s) > 1 ? `${esc(baseOf(s.specification_id))} · R${revOf(s)}`
                    : esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
   sel.onchange = () => { uiSet("boardSpec", sel.value); syncUrl(true); sel.value && renderBoardPanels(sel.value); };
+  // U3 (HARNESS_AUDIT): a stage that knows what you were doing must not
+  // ask. Land on the last breakdown worked (remembered per production),
+  // else the first signed-off one — the select stays as a switcher above
+  // the loaded work, never as the whole screen.
   const rememberedB = uiGet("boardSpec", "");
   if (rememberedB && specs.some(s2 => s2.specification_id === rememberedB)) {
     sel.value = rememberedB; renderBoardPanels(rememberedB);
-  } else if (specs.length === 1) { sel.value = specs[0].specification_id; renderBoardPanels(sel.value); }
+  } else if (specs.length) {
+    sel.value = specs[0].specification_id;
+    uiSet("boardSpec", sel.value);
+    renderBoardPanels(sel.value);
+  }
   if (!specs.length) {
     $("#board-panels").innerHTML =
-      `<div class="panel mini">No signed-off breakdowns yet. Approve one on the Breakdowns tab first.</div>`;
+      `<div class="panel mini">No signed-off breakdowns yet — panels render from a locked breakdown.
+       <button class="text-act" data-f="to-specs">Open Breakdowns</button></div>`;
+    $("[data-f=to-specs]").onclick = () => showView("specs");
   }
 }
 
@@ -7503,7 +7530,7 @@ async function renderBoardPanels(specId) {
             <span class="f-label">Palette</span>
             <button type="button" class="ghost" data-f="swatch-open"></button>
             <div class="hidden" data-f="swatch-menu"
-              style="position:absolute;top:100%;left:0;z-index:30;background:var(--panel2);border:1px solid var(--line);padding:10px 12px;max-height:260px;overflow:auto;min-width:250px">
+              style="position:absolute;top:100%;left:0;z-index:30;background:var(--panel);border:1px solid var(--line);padding:10px 12px;max-height:min(260px,60vh);overflow:auto;min-width:250px">
               ${swatchRefs.map(r => { const m = meta(r); return `
                 <label class="check" style="display:flex;align-items:center;gap:8px;margin:3px 0">
                   <input type="checkbox" data-sid="${esc(r.id)}" ${lastIds.has(r.id) ? "checked" : ""}>
@@ -7583,7 +7610,23 @@ async function renderBoardPanels(specId) {
             `${picked.length} OF ${swatchRefs.length}`
           : `AUTO · ${Math.min(2, swatchRefs.length)} NEWEST OF ${swatchRefs.length}`;
       };
-      swatchOpen.onclick = () => menu.classList.toggle("hidden");
+      // R15 (HARNESS_AUDIT) — THE dropdown contract: --panel ground,
+      // --line border, no shadow, no rounding, no animation, ≤60vh,
+      // below-left of its summary, closes on Escape and outside click.
+      const closeOn = ev => {
+        if (ev.type === "keydown" && ev.key !== "Escape") return;
+        if (ev.type === "mousedown" &&
+            (menu.contains(ev.target) || swatchOpen.contains(ev.target))) return;
+        menu.classList.add("hidden");
+        document.removeEventListener("mousedown", closeOn, true);
+        document.removeEventListener("keydown", closeOn, true);
+      };
+      swatchOpen.onclick = () => {
+        const nowOpen = !menu.classList.toggle("hidden");
+        const op = nowOpen ? "addEventListener" : "removeEventListener";
+        document[op]("mousedown", closeOn, true);
+        document[op]("keydown", closeOn, true);
+      };
       menu.addEventListener("change", () => { summary(); updateRefCount(); });
       summary();
       updateRefCount();
@@ -7737,6 +7780,9 @@ async function renderBoardPanels(specId) {
           <div class="report-head"><b>Composition check — ${esc(p.id)} · ${warns ? `${warns} WARNING${warns === 1 ? "" : "S"}` : "OK"}</b>
             <button class="ghost" data-f="close-report">Close</button></div>
           <div class="mini mono">${anchorLine} · SPEC ${esc(String(v.spec_hash || "").toUpperCase())} · ${esc(String(v.model || v.provider || ""))}</div>
+          ${warns ? "" : `<div class="mini mono">NO AXIS CONFLICT · CHECKED AGAINST ${
+            v.anchor?.matched ? esc(String(v.anchor.location || "").toUpperCase())
+                              : "THE SHEET'S SCENE PROSE"}</div>`}
           <ul>${rows}</ul>
           ${v.purpose_amendment ? `<div class="mono" style="color:var(--ink-dim)">BRIEF AMENDMENT PROPOSED — ${esc(v.purpose_amendment)}</div>` : ""}
           ${sugLine ? `<div class="mini mono">${sugLine}${canApply
@@ -8320,6 +8366,13 @@ async function renderBoardPanels(specId) {
     const carried = (carriedFb.items || [])
       .filter(f => f.panel_id === c.panel_id);
     const liveByCand = Object.fromEntries(panelCands.map(t => [t.candidate_id, t]));
+    // Correction-intake delta, named in the app's own vocabulary — used
+    // by the rail checklist and the >4-delta review modal (R18) alike.
+    const intakeLabel = d => d.kind === "camera"
+      ? `CAMERA ${(CAMERA_AXES.find(a => a.key === d.field)?.label || d.field.replace("camera_", "")).toUpperCase()} → ${String(d.value).replace(/_/g, " ")}`
+      : d.kind === "require" ? `REQUIRE "${d.value}"`
+      : d.kind === "forbid" ? `FORBID "${d.value}"`
+      : `BRIEF + "${d.value}"`;
     // P8: one bordered panel with rules between sections — the rail was
     // ~60% empty while the prompt was a five-line peephole.
     const shapeClass = Math.max(c.width || 0, c.height || 0) >= 3200 ? "4K"
@@ -8368,23 +8421,25 @@ async function renderBoardPanels(specId) {
       </div>` : ""}
       ${carried.length ? `
       <div class="side-sec">
-        <div class="rail-label bad">CARRIED REJECTIONS · ${carried.length}</div>
+        <div class="rail-label carried-label">CARRIED NOTES · ${carried.length}<span>RIDE THE NEXT TAKE</span></div>
         ${carried.map(f => `<div class="carried${f.retired ? " retired" : ""}">
-          <span>${esc(f.source)} — ${esc(f.reason.toUpperCase())}${
-            f.archived ? " · TAKE DELETED, NOTE CARRIES" : ""}${
-            f.retired ? " · RETIRED" : ""}</span>
-          <span style="display:inline-flex;gap:12px;flex:none">
-          <button class="text-act" data-fb-edit="${esc(f.source)}"
-            title="Rewrite this note — journaled; it keeps carrying with the new words">Edit</button>
-          <button class="text-act" data-retire="${esc(f.source)}"
-            data-retired="${f.retired ? "1" : ""}"
-            title="${f.retired
-              ? "Carry this correction into future prompts again"
-              : "Stop carrying this correction into future prompts — the rejection and its history stay. Retire a note once it is satisfied, or when it contradicts a newer one (an old ‘closer adherence’ can stand as a counter-order against ‘remove X’)."}">${
-            f.retired ? "Reinstate" : "Retire"}</button>
-          <button class="text-act" data-fb-delete="${esc(f.source)}"
-            title="Remove this note from every future prompt — asks first, is journaled, and touches nothing else (the take's history stays)">Delete</button>
-          </span>
+          <div class="carried-head">
+            <span class="carried-id">${esc(f.source)}</span>
+            <span style="display:inline-flex;gap:12px;flex:none">
+            <button class="text-act" data-fb-edit="${esc(f.source)}"
+              title="Rewrite this note — journaled; deleting it forever also lives in this modal">Edit</button>
+            <button class="text-act" data-retire="${esc(f.source)}"
+              data-retired="${f.retired ? "1" : ""}"
+              title="${f.retired
+                ? "Carry this note into future prompts again — journaled"
+                : "Stop carrying this note into future prompts — reversible, journaled; the note stays here, stated NOT CARRIED. Stop a note once it is satisfied, or when it contradicts a newer one."}">Stop carrying</button>
+            </span>
+          </div>
+          <div class="carried-note">${esc(f.reason)}</div>
+          ${f.archived || f.retired ? `<div class="carried-state">${[
+              f.archived ? (f.retired ? "TAKE DELETED" : "TAKE DELETED, NOTE CARRIES") : "",
+              f.retired ? "NOT CARRIED" : "",
+            ].filter(Boolean).join(" · ")}</div>` : ""}
         </div>${(() => {
           const t = liveByCand[f.source];
           if (!t) return "";
@@ -8393,22 +8448,27 @@ async function renderBoardPanels(specId) {
           // applies; applied rows read as state, not verbs.
           const ci = t.correction_intake;
           if (!ci || ci.dismissed || !(ci.deltas || []).length) return "";
-          const label = d => d.kind === "camera"
-            ? `CAMERA ${(CAMERA_AXES.find(a => a.key === d.field)?.label || d.field.replace("camera_", "")).toUpperCase()} → ${String(d.value).replace(/_/g, " ")}`
-            : d.kind === "require" ? `REQUIRE "${d.value}"`
-            : d.kind === "forbid" ? `FORBID "${d.value}"`
-            : `BRIEF + "${d.value}"`;
           const open = ci.deltas.some(d => !d.applied);
+          // R18 (HARNESS_AUDIT): a rail is 300px and cannot host an
+          // arbitrary form — past four deltas the rail states the count
+          // and the checklist opens in a modal.
+          if (ci.deltas.length > 4) {
+            return `<div class="mini mono" style="margin:2px 0 8px 12px">
+              <span style="color:var(--ink-dim)">PROPOSED STRUCTURE · ${ci.deltas.length} DELTAS${open ? "" : " · ALL APPLIED"}</span>
+              ${open ? ` <button class="text-act" data-intake-modal="${esc(t.candidate_id)}"
+                title="Review and apply the proposed deltas — the model proposes, you promote">Review</button>` : ""}
+            </div>`;
+          }
           return `<div class="mini mono" data-intake="${esc(t.candidate_id)}" style="margin:2px 0 8px 12px">
             <span style="color:var(--ink-dim)">PROPOSED STRUCTURE — FROM THIS REJECTION</span>
             ${ci.deltas.map((d, i) => `<label style="display:block;margin:2px 0${d.applied ? ";color:var(--ink-faint)" : ""}">
               <input type="checkbox" data-di="${i}" ${d.applied ? "disabled checked" : "checked"}>
-              ${esc(label(d))}${d.applied ? " · APPLIED" : ""}</label>`).join("")}
+              ${esc(intakeLabel(d))}${d.applied ? " · APPLIED" : ""}</label>`).join("")}
             ${open ? `<div style="display:flex;gap:16px;margin-top:5px">
               <button class="text-act" data-apply-intake="${esc(t.candidate_id)}"
-                title="Apply the checked deltas to the panel — journaled, lock re-stamped; the verbatim correction above still carries until you retire it">Apply selected</button>
+                title="Apply the checked deltas to the panel — journaled, lock re-stamped; the verbatim note above still carries until you stop it">Apply selected</button>
               <button class="text-act" data-dismiss-intake="${esc(t.candidate_id)}"
-                title="Drop this proposal — the rejection and its verbatim carry are untouched">Dismiss</button></div>` : ""}
+                title="Drop this proposal — the note and its verbatim carry are untouched">Dismiss</button></div>` : ""}
           </div>`;
         })()}`).join("")}
       </div>` : ""}
@@ -8426,8 +8486,8 @@ async function renderBoardPanels(specId) {
           await api(`/api/specs/${specId}/candidates/${b.dataset.retire}/feedback-retire`,
             { method: "POST", json: { retired: !b.dataset.retired } });
           toast(b.dataset.retired
-            ? `${b.dataset.retire} reinstated — it carries into future prompts again.`
-            : `${b.dataset.retire} retired — future prompts no longer carry it.`);
+            ? `${b.dataset.retire} carries again — future prompts ride it.`
+            : `${b.dataset.retire} no longer carried — the note stays, stated in the rail.`);
           renderBoardPanels(specId);
         } catch (err) { toast(err.message, true); }
       });
@@ -8475,33 +8535,83 @@ async function renderBoardPanels(specId) {
         [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),
          c.image_size].filter(Boolean).join(" · "));
     }
-    // Rejection-note verbs (2026-08-13): a note is edited in place or
-    // deleted only by its own stated verb — never as a side effect of
-    // deleting the take. Both are journaled server-side.
+    // Rejection-note verbs (2026-08-13, restructured by HARNESS_AUDIT
+    // R17): the rail offers Edit and one reversible Stop carrying; the
+    // only door to hard delete is inside the Edit modal, out of pointer
+    // range, and still confirmed. All three acts are journaled.
     $$("[data-fb-edit]", el).forEach(b => b.onclick = async () => {
       const item = carried.find(f => f.source === b.dataset.fbEdit);
-      const next = await askText(`Edit ${b.dataset.fbEdit}'s rejection note`, "Note",
-        { value: item?.reason || "",
-          hint: "journaled — the note keeps carrying into future prompts with the new words; use Delete to remove it entirely",
-          confirmLabel: "Save note" });
-      if (next === null) return;
+      const r = await modal({
+        title: `Edit ${b.dataset.fbEdit}'s note`,
+        fields: [{ name: "v", label: "Note", value: item?.reason || "",
+                   hint: "journaled — the note keeps carrying into future prompts with the new words" }],
+        confirmLabel: "Save note",
+        extraLabel: "Delete forever", extraDanger: true,
+      });
+      if (r === null) return;
+      if (r.__extra) {
+        if (!(await askConfirm(`Delete ${b.dataset.fbEdit}'s note forever`,
+            "The note leaves the rail and every future prompt for this panel. The take's history and the approval log keep the record. This cannot be undone.",
+            "Delete note", true))) return;
+        try {
+          await api(`/api/specs/${specId}/candidates/${b.dataset.fbEdit}/feedback-delete`,
+            { method: "POST", json: {} });
+          toast(`${b.dataset.fbEdit} note deleted — journaled; no longer carried.`);
+          renderBoardPanels(specId);
+        } catch (err) { toast(err.message, true); }
+        return;
+      }
       try {
         await api(`/api/specs/${specId}/candidates/${b.dataset.fbEdit}/feedback-edit`,
-          { method: "POST", json: { reason: next } });
+          { method: "POST", json: { reason: r.v } });
         toast(`${b.dataset.fbEdit} note updated — it carries into future prompts as written.`);
         renderBoardPanels(specId);
       } catch (err) { toast(err.message, true); }
     });
-    $$("[data-fb-delete]", el).forEach(b => b.onclick = async () => {
-      if (!(await askConfirm(`Delete ${b.dataset.fbDelete}'s rejection note`,
-          "The note stops carrying into every future prompt for this panel. The take's history and the approval log keep the record. This cannot be undone.",
-          "Delete note", true))) return;
-      try {
-        await api(`/api/specs/${specId}/candidates/${b.dataset.fbDelete}/feedback-delete`,
-          { method: "POST", json: {} });
-        toast(`${b.dataset.fbDelete} note deleted — journaled; no longer carried.`);
-        renderBoardPanels(specId);
-      } catch (err) { toast(err.message, true); }
+    // R18: past four deltas the checklist opens here instead of the rail.
+    $$("[data-intake-modal]", el).forEach(b => b.onclick = () => {
+      const t = liveByCand[b.dataset.intakeModal];
+      const ci = t?.correction_intake;
+      if (!ci) return;
+      modal({
+        custom: `<div class="modal-title">Proposed structure — ${esc(t.candidate_id)}</div>
+          <p class="modal-body">Parsed from this note. The model proposes, you promote.</p>
+          <div class="mini mono" data-intake="${esc(t.candidate_id)}">
+            ${ci.deltas.map((d, i) => `<label style="display:block;margin:3px 0${d.applied ? ";color:var(--ink-faint)" : ""}">
+              <input type="checkbox" data-di="${i}" ${d.applied ? "disabled checked" : "checked"}>
+              ${esc(intakeLabel(d))}${d.applied ? " · APPLIED" : ""}</label>`).join("")}
+          </div>
+          <div class="modal-actions">
+            <button class="ghost" data-x="dismiss" style="margin-right:auto"
+              title="Drop this proposal — the note and its verbatim carry are untouched">Dismiss proposal</button>
+            <button class="ghost" data-x="cancel">Cancel</button>
+            <button class="primary" data-x="apply"
+              title="Apply the checked deltas to the panel — journaled, lock re-stamped">Apply selected</button>
+          </div>`,
+        mount: (ov, done) => {
+          $("[data-x=cancel]", ov).onclick = () => done(null);
+          $("[data-x=dismiss]", ov).onclick = async () => {
+            try {
+              await api(`/api/specs/${specId}/candidates/${t.candidate_id}/correction-intake/dismiss`,
+                { method: "POST", json: {} });
+              done(null);
+              renderBoardPanels(specId);
+            } catch (err) { toast(err.message, true); }
+          };
+          $("[data-x=apply]", ov).onclick = async () => {
+            const indices = $$("input[data-di]:checked", ov)
+              .filter(x => !x.disabled).map(x => +x.dataset.di);
+            if (!indices.length) { toast("Nothing selected.", true); return; }
+            try {
+              const r = await api(`/api/specs/${specId}/candidates/${t.candidate_id}/correction-intake/apply`,
+                { method: "POST", json: { indices } });
+              toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied — journaled; the next take paints from them.`);
+              done(null);
+              renderBoardPanels(specId);
+            } catch (err) { toast(err.message, true); }
+          };
+        },
+      });
     });
     // Correction-intake acts — wired outside the prompt block so a take
     // without a stored prompt still gets them.
@@ -8794,7 +8904,10 @@ async function renderAssemblyFor(specId) {
   const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
                     TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE",
                     STALE_APPROVAL: "REVISED SINCE" };
-  // A STALE_APPROVAL slot states the choice in full (one board per unit,
+  // A STALE_APPROVAL slot states the choice in full in its own title and
+  // Keep act; the not-ready alert speaks the one shared verdict
+  // vocabulary (R14, HARNESS_AUDIT: a third member, not a third
+  // mechanism). (One board per unit,
   // 2026-08-13): the panel changed in a later revision, so its old take
   // is OFFERED — re-render on the workbench, or Keep it explicitly.
   const staleLine = s =>
@@ -8805,8 +8918,8 @@ async function renderAssemblyFor(specId) {
     const minY = Math.min(1, ...sm.slots.map(s => s.y));
     return `
       ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
-        ${esc(notReady.map(s => s.status === "STALE_APPROVAL" ? staleLine(s)
-          : `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
+        ${esc(notReady.map(s =>
+          `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
         — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
       <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
         <div class="slot apdrawn" style="left:1.7%;top:3%;width:96.6%;height:${Math.max(4, (minY - 0.05) * 100).toFixed(1)}%">
@@ -9477,7 +9590,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       b.kind === "TYPE_FLOOR"
         ? `<span>${esc(b.block_id)} sets type under the floor — pick a larger size.</span>`
         : b.kind === "SLOT_APPROVAL"
-        ? `<span>${esc(panelOf(b.block_id, b.slot_id))} holds <span class="mono">${esc(b.candidate_id)}</span>, which is not approved — approve it on the workbench.</span>`
+        ? `<span>${esc(panelOf(b.block_id, b.slot_id))} — <span class="mono">${esc(b.candidate_id)}</span> is not approved — approve it on the workbench.</span>`
         : b.kind === "SLOT_OFFERED"
         ? `<span>${esc(b.panel_id || panelOf(b.block_id, b.slot_id))}'s take <span class="mono">${esc(b.candidate_id)}</span> was approved against R${b.from_revision} and the panel changed in R${b.floor} — re-render on the workbench or <button type="button" class="text-act" data-gate-keep="${esc(b.panel_id || "")}" data-cand="${esc(b.candidate_id)}">Keep</button> it.</span>`
         : `<span>${esc(panelOf(b.block_id, b.slot_id))} ${b.have?.[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "has no approved take — approve one on the workbench"}.</span>`)

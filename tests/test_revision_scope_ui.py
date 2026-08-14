@@ -37,7 +37,11 @@ class CarriedRowPins(unittest.TestCase):
         self.assertIn("const ro = locked || carriedSet.has(pid)", JS)
 
     def test_the_chip_and_the_upgrade_act(self):
-        self.assertIn("CARRIED — NOT IN THIS REVISION", JS)
+        # R8 (HARNESS_AUDIT): a chip is a label, not a sentence — the row
+        # chip reads CARRIED; the full sentence lives in its title and in
+        # the editor header, which already states the scope.
+        self.assertIn('title="Carried from the locked revision', JS)
+        self.assertIn(">CARRIED</span>", JS)
         self.assertIn('data-f="also-revise"', JS)
         self.assertIn("/revision-scope", JS)
 

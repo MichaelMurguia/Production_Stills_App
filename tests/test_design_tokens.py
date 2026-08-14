@@ -513,5 +513,43 @@ class MiniMonoTests(unittest.TestCase):
         self.assertIn(".mini.mono { font-family: var(--mono); }", CSS)
 
 
+class HarnessAuditTests(unittest.TestCase):
+    """HARNESS_AUDIT_2026-08-14 — the first audit-by-use. Each contract
+    pins a ruling that a source read alone failed to catch."""
+
+    def assert_decls(self, sel, decls):
+        b = block(sel)
+        for d in decls:
+            self.assertIn(d, b, f"{sel}: missing '{d}'")
+
+    def test_a_record_has_no_status_colour(self):
+        """U1: the carried-notes rail is history, not failure — no --bad
+        anywhere in the block; ids Courier dim, the person's sentence
+        Archivo ink as typed, status lines Courier faint."""
+        self.assertNotIn("--bad", block(".carried"))
+        self.assert_decls(".carried-id", [
+            "font-family: var(--mono)", "color: var(--ink-dim)"])
+        self.assert_decls(".carried-note", [
+            "font-family: var(--sans)", "color: var(--ink)"])
+        self.assert_decls(".carried-state", [
+            "font-family: var(--mono)", "color: var(--ink-faint)"])
+
+    def test_a_stopped_note_is_not_struck_through(self):
+        self.assertNotIn("line-through", block(".carried.retired .carried-note"))
+
+    def test_verbs_never_wrap(self):
+        """U4/U5: a verb that wraps is not a verb any more."""
+        self.assert_decls("button.ghost, a.ghost", ["white-space: nowrap"])
+        self.assert_decls(".text-act", ["white-space: nowrap"])
+
+    def test_camera_row_is_a_grid_that_never_orphans(self):
+        """U6/R6: five peers break 3+2, never 4+1."""
+        self.assert_decls(".cam-row", [
+            "display: grid",
+            "grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))"])
+        self.assertIn("repeat(3, minmax(150px, 1fr))", CSS,
+                      "the forced 3-column break below ~1000px")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -317,6 +317,9 @@ button.ghost, a.ghost {
   display: inline-block; text-decoration: none;
   background: none; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 9px 15px;
+  /* HARNESS_AUDIT U4: a verb that wraps is not a verb any more. If the
+     label cannot fit, the container is wrong, not the label. */
+  white-space: nowrap;
 }
 button.ghost:hover { border-color: var(--ink-faint); color: var(--ink); }
 button.danger { background: none; border: 1px solid var(--bad-line); color: var(--bad); padding: 9px 15px; }
@@ -427,11 +430,15 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 /* UNCANONIZED — 2026-08-09 — camera & composition axes. A labelled row of
    compact selects (angle/lens/tilt/shot), reused by the sheet editor, the
    panels workbench, and the bible-default card. Tokens only. */
-.cam-row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+/* HARNESS_AUDIT U6: five peers never split one-off. The row is a grid
+   that fills whole columns — at width it sits 5 across; squeezed, it
+   breaks 3 + 2, never 4 + 1 with an orphaned fifth axis. */
+.cam-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; align-items: end; }
 .cam-field { display: flex; flex-direction: column; gap: 4px; }
 .cam-field > span { color: var(--ink-faint); font-family: var(--mono);
   font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .cam-field select { min-width: 150px; }
+@media (max-width: 1000px) { .cam-row { grid-template-columns: repeat(3, minmax(150px, 1fr)); } }
 .cam-lens { display: flex; gap: 6px; align-items: center; }
 .cam-lens .cam-lens-mm { width: 70px; text-align: right; font-family: var(--mono); }
 .panel-card .two-col { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 15px 18px; align-items: start; }
@@ -735,6 +742,7 @@ label.check {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
   color: var(--ink-dim); font-weight: 700;
+  white-space: nowrap; /* HARNESS_AUDIT U4 — verbs never wrap */
 }
 .text-act:hover { color: var(--ink); text-decoration: underline; }
 
@@ -1170,7 +1178,7 @@ details.meta pre {
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
   margin: 0; max-height: 300px; overflow-y: auto;
 }
-.carried { font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--bad); }
+.carried { font-size: 11px; line-height: 1.5; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 
 /* reference library: filter chips + status counts + jurisdiction block */
 /* Intake row — canonical (design review 2026-07-30): one-line entry into
@@ -1715,6 +1723,9 @@ details.meta pre {
    tokens only. */
 .brief-row { display: flex; align-items: baseline; gap: 12px; }
 .brief-row .mini { margin: 0; flex: 1; }
+/* HARNESS_AUDIT U4: the verb keeps its stated-line place (R7) but never
+   cedes its label width to the prose beside it. */
+.brief-row .ghost { flex: none; margin-left: auto; }
 .brief-editor { margin: 4px 0 8px; }
 .brief-editor textarea { width: 100%; }
 .brief-acts { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
@@ -2419,10 +2430,20 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .shelf-quarantine { margin-top: 18px; }
 .shelf-quarantine .ref-grid { margin-top: 10px; }
 
-/* A retired correction stays readable as history but no longer commands. */
-.carried { display: flex; align-items: baseline; gap: 10px; }
+/* Carried notes (HARNESS_AUDIT U1/R17, mock au2): a record is not a
+   state. Ids and status lines stay Courier; the person's sentence is
+   Archivo in the case it was typed; no status colour anywhere. A
+   stopped note stays legible and stated — the verb goes quiet. */
+.carried { display: block; }
 .carried .text-act { flex: none; font-size: 10px; }
-.carried.retired > span { color: var(--ink-faint); text-decoration: line-through; }
+.carried-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.carried-id { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ink-dim); }
+.carried-note { font-family: var(--sans); font-size: 12.5px; color: var(--ink); margin: 3px 0 2px; }
+.carried-state { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); }
+.carried.retired .carried-note { color: var(--ink-dim); }
+.carried.retired [data-retire] { color: var(--ink-faint); }
+.rail-label.carried-label { color: var(--ink-dim); }
+.rail-label.carried-label span { color: var(--ink-faint); }
 
 /* UNCANONIZED — 2026-08-10 — Lookbook shelf & sheet composer
    (SHEET_SYSTEM_PLAN §11, mocks lb-1a..lb-3c). Tray · fitted sheet ·
@@ -2589,6 +2610,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .cam-sum { font-size: 11px; letter-spacing: .08em; color: var(--ink); }
 .cam-sum .cam-src { color: var(--ink-faint); }
 .cam-stated .text-act { margin-left: auto; flex: none; }
+.cam-stated .ghost { margin-left: auto; flex: none; } /* HARNESS_AUDIT U4 */
 .cam-open-k { display: block; font-size: 9.5px; letter-spacing: .12em;
   color: var(--ink-faint); margin-bottom: 8px; }
 .cam-editor-acts { display: flex; gap: 10px; margin: 10px 0 6px; }

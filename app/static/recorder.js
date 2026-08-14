@@ -57,8 +57,9 @@
   };
 
   // ---------------------------------------------------------------- chip
-  // Fixed, bottom-left, Courier, --accent border: the operator can see
-  // the session is being captured and how much they have. Click downloads
+  // Fixed, bottom-left, Courier, --hold border (HARNESS_AUDIT R16:
+  // "this session is being captured" is attention-not-blocking, an
+  // operator state — dev tooling may not borrow amber). Click downloads
   // the bundle. Styles are inline (tokens via var()) because this file
   // must leave styles.css untouched — it never ships to a normal session.
   const chip = document.createElement("button");
@@ -69,7 +70,7 @@
     "position:fixed", "left:14px", "bottom:14px", "z-index:99999",
     "font-family:var(--mono)", "font-size:12px", "letter-spacing:.4px",
     "color:var(--ink)", "background:var(--panel)",
-    "border:1px solid var(--accent)", "border-radius:0",
+    "border:1px solid var(--hold)", "border-radius:0",
     "padding:7px 12px", "cursor:pointer",
   ].join(";");
 

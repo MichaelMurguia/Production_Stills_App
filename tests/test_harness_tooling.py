@@ -74,9 +74,9 @@ class RecorderLoaderTests(unittest.TestCase):
 
     def test_chip_speaks_the_design_system(self):
         """The chip styles inline (styles.css must stay untouched by a
-        dev-only tool) but still through tokens: Courier voice, --accent
-        border — machine data in the machine voice."""
-        for decl in ("font-family:var(--mono)", "border:1px solid var(--accent)",
+        dev-only tool) but still through tokens: Courier voice, --hold
+        border (R16: dev tooling may not borrow amber) — machine data in the machine voice."""
+        for decl in ("font-family:var(--mono)", "border:1px solid var(--hold)",
                      "background:var(--panel)", "border-radius:0"):
             self.assertIn(decl, RECORDER, f"recorder chip: missing '{decl}'")
 

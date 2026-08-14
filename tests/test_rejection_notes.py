@@ -147,14 +147,30 @@ class UiWiringTests(unittest.TestCase):
         self.assertIn("/carried-feedback", self.JS)
         self.assertIn("TAKE DELETED, NOTE CARRIES", self.JS)
 
-    def test_every_note_has_its_three_verbs(self):
-        for probe in ("data-fb-edit", "data-retire", "data-fb-delete"):
+    def test_the_rail_offers_two_verbs_only(self):
+        """HARNESS_AUDIT R17: Edit + one reversible Stop carrying — never
+        two verbs for one outcome. Hard delete left the rail entirely."""
+        for probe in ("data-fb-edit", "data-retire"):
             self.assertIn(probe, self.JS)
+        self.assertNotIn("data-fb-delete", self.JS,
+                         "delete is no longer a rail verb")
+        self.assertIn(">Stop carrying</button>", self.JS)
 
-    def test_delete_asks_first(self):
-        i = self.JS.index("data-fb-delete]")
-        self.assertIn("askConfirm", self.JS[i:i + 600],
+    def test_delete_lives_in_the_edit_modal_and_asks_first(self):
+        """R17: the destructive door sits inside the Edit modal, out of
+        pointer range, and is still a confirmed journaled act."""
+        i = self.JS.index('extraLabel: "Delete forever"')
+        seg = self.JS[i:i + 900]
+        self.assertIn("askConfirm", seg,
                       "note deletion is an explicit confirmed act")
+        self.assertIn("feedback-delete", seg)
+
+    def test_a_stopped_note_reads_as_state_not_history_paint(self):
+        """U1: a record has no status colour — the stopped state is a
+        stated Courier line, not a struck-through red row."""
+        self.assertIn("NOT CARRIED", self.JS)
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertNotIn("text-decoration: line-through", css.split(".carried")[1][:400])
 
 
 if __name__ == "__main__":

@@ -580,18 +580,18 @@ def _draw_dress(canvas, draw, sheet, style, W, cx, cy, cw, ch, warnings):
                 max(1, int(f.get("h", 0) * ch)))
         data = d.get("data") or {}
         kind = d.get("kind")
-        if kind == "SWATCH_STRIP":
+        if kind == "PALETTE":
             _draw_swatch_strip(draw, rect, style, W,
                                data.get("swatches") or [],
                                compact=bool(data.get("compact")))
-        elif kind == "MATERIAL_CHIPS":
+        elif kind == "MATERIAL":
             _draw_material_chips(canvas, draw, rect, style, W,
                                  data.get("refs") or [], warnings)
-        elif kind == "SPEC_TABLE":
+        elif kind == "SPEC":
             _draw_spec_table(draw, rect, style, W, data.get("rows") or [])
-        elif kind == "ATMOSPHERE":
+        elif kind == "STRIP":
             _draw_atmosphere(draw, rect, style, W, data.get("text", ""))
-        elif kind == "PROFILE":
+        elif kind == "PRINCIPLES":
             _draw_profile(draw, rect, style, W, data.get("text", ""))
 
 
@@ -604,6 +604,13 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
                  image_tier: str = "full") -> Image.Image:
     """The sheet as ink on paper. Composer overlays are app chrome and are
     drawn in the DOM — nothing here marks selection, snapping or state."""
+    # R4(2) (HARNESS_AUDIT 2026-08-14): display tiers may feed a PREVIEW
+    # render, never an export. A preview is not an artifact — the scoped
+    # exception is enforced here, not by caller convention.
+    if image_tier != "full" and scale > 0.25:
+        raise sheet_mod.SheetError(
+            "display-tier sources are preview-only (scale <= 0.25); "
+            "exports render from full sources")
     style = STYLE_INK.get(sheet.get("style"))
     if style is None:
         raise sheet_mod.SheetError(f"unknown style: {sheet.get('style')}")

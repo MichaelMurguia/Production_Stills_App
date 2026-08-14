@@ -561,6 +561,40 @@ renders the dashed withheld-verb tag (`NEEDS THE OPENAI KEY`), never a
 disabled dropdown. First run carries required information only: no
 footnotes, no rationale cards, no zero-count stat tiles.
 
+**A record has no status colour** (HARNESS_AUDIT U1, ruled 2026-08-14).
+Status colour marks live state — what blocks, what needs attention. A
+resolved judgement, an applied delta, a past rejection is history:
+`--ink` and `--ink-dim`. The mirror of *a report has no amber*. Worked
+example: the carried-notes rail — the `SIZE` tag on Status earns `--bad`;
+a note riding the next take does not.
+
+**A person's sentence is never Courier** (HARNESS_AUDIT U1, ruled
+2026-08-14). Courier is for ids, sizes, counts and statuses.
+User-authored prose is Archivo in the case it was typed, even when it
+sits in a rail full of machine facts.
+
+**The lead promotes, it does not copy** (HARNESS_AUDIT U2, ruled
+2026-08-14). A row promoted into `.panel-lead` is removed from the list
+it came from, and that list's count excludes it (`Blocking — 1 more`;
+the section is omitted at zero). One fact, one place, one act.
+
+**A stage that knows what you were doing must not ask** (HARNESS_AUDIT
+U3, ruled 2026-08-14). A surface with a remembered or single-valued
+selection opens on the work; the selector remains as a switcher above
+it, never as the whole screen. At genuinely zero, one stated line points
+at the stage that resolves it — never an empty select as the screen.
+
+**A locked surface reads as a document, not a disabled form**
+(HARNESS_AUDIT R10, promoted 2026-08-14 from the evidence ledger).
+Controls drop their affordance and read as values (`:disabled` with
+transparent chrome). Applies to every locked surface, not just the
+ledger.
+
+**Sheet-render typography is the artifact's; app chrome is the
+system's** (HARNESS_AUDIT R4.6b, ruled 2026-08-14). A render may bundle
+a face the chrome may not use — the same separation as sheet ink not
+being a design token. The font ban in this file governs chrome.
+
 ---
 
 ## Copy
@@ -961,6 +995,14 @@ cannot express "no Onyx Unit black, and no reds".
 2026-08-07). Duplicate, then Import backup, then Delete — terminal and
 last, separated from what precedes it by the menu's own rule.
 
+**The dropdown panel** (HARNESS_AUDIT R15, ruled 2026-08-14; first use:
+the workbench palette selector). A ghost summary states the live outcome
+(`AUTO · 2 NEWEST OF 19`) and opens a floating panel: `--panel` ground,
+`--line` border, no shadow, no radius, no animation, never taller than
+60vh, below-left of its summary unless clipped, closes on Escape and on
+outside click. One pattern — the next dropdown is a reuse, not a
+reinvention.
+
 ## Scrollbars
 
 Scrollbars are chrome, not content. The global rules in `styles.css` cover
@@ -1129,6 +1171,21 @@ for the manifest's maskable purpose.
   meter. A capacity is a Courier number line whose colour carries its
   state — `FREE 214 GB OF 500 GB · 57% USED`, uncoloured while healthy,
   `--hold` when tight, `--bad` once a render would be refused.
+- **Put a verb where it must wrap** (HARNESS_AUDIT U4, ruled 2026-08-14).
+  `.ghost` and `.text-act` carry `white-space: nowrap`; if the label
+  cannot fit, the container is wrong, not the label.
+- **Offer two verbs for one outcome** (HARNESS_AUDIT R17, ruled
+  2026-08-14). `Retire` and `Delete` both stopped a note carrying; one
+  reversible act plus a stated state (`NOT CARRIED`) replaces both, and
+  the destructive door moves out of pointer range (into the Edit modal,
+  confirmed).
+- **Dress dev tooling in product signals** (HARNESS_AUDIT R16, ruled
+  2026-08-14). Tooling outside the product (the recorder chip, the
+  harness chrome) is exempt from this system, but may not borrow its
+  colours — a status colour on a non-product surface teaches the wrong
+  lesson to the next reader. The recorder chip is `--hold`
+  (attention-not-blocking); the harness staleness banner is `--bad`
+  precisely because a stale harness does block trustworthy review.
 
 ---
 
@@ -1156,24 +1213,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-12 | Composer approval gate: `SLOT_APPROVAL` row in the blocked-export lead ("holds CAND-…, which is not approved — approve it on the workbench or swap in an approved take") and an `UNAPPROVED` slot chip in the rail | Arrange room (stage 05) | Built from canon — review copy only. Bug-fix: slots could carry unapproved takes past the export gate; the gate now states the condition using the existing lb-blocked rows and lb-slot state chips |
-| 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry) |
-| 2026-08-12 | Deep-link URL vocabulary: `/screenplay` · `/production-design` · `/breakdowns/<spec>` · `/panels/<spec>[/<panel>]` · `/boards/<spec>[/arrange\|/<board-id>]` · `/reference` · `/productions` · `/settings` | Every view (address bar) | No visible UI — built from the product's stage names, not internal view names; review the vocabulary only (these words appear in shared links) |
-| 2026-08-13 | **Board looks** (`.arr-style-*`, user-directed): a `Style…` verb in the arrange room opens a picker whose cards are REAL small-scale renders of this board (INK — none, Art Board, Tech Design), with per-look option checkboxes; the chosen look dresses previews/export/assembly only — the room always works in INK. Renderer-side: two new sheet ink styles (`ART_BOARD` parchment/serif/hand-annotations, `TECH_DESIGN` near-black/mono/keylines+ticks), a `dress` element channel (swatch strip, material chips, spec table, atmosphere strip, profile prose) derived from canon at render time, and bundled OFL render faces incl. a new `hand` voice (Caveat) | Arrange room (stage 05) + board export/assembly | Open questions for the ruling: (1) the `dress` channel as a parallel grammar beside the closed twelve block types; (2) md-tier sources feeding preview-scale renders (scoped exception to "display tiers never feed a render"); (3) which palette languages a board's strip draws (ships: all live); (4) Art Board per-panel taglines vs. atmosphere-strip-only; (5) Tech Design comparison block, ortho-tick styling, and both styles' exact ink values; (6) hand-annotation collision rules, Caveat minimum size, and a ruling distinguishing sheet-render typography from app chrome (canon forbids new fonts in chrome); (7) whether the room's advisory SHORT readouts should read dressed geometry (the gate already does) |
-| 2026-08-13 | **Composition check report**: a `Check composition` text-act beside Preview prompt / Draft prose (never amber — Generate keeps the card's primacy) posts a free narrative pass and renders its verdict into the existing `.report` host — Courier body, `WARN — AXIS` tag in `--hold`, `NOTE` uncolored, `.pass` border when clean, stated screenplay-anchor line either way, and a ghost `Apply suggested camera` that opens the EXISTING camera inline editor prefilled (act-where-condition-is-met; the user still saves through the journaled POST; withheld with the stated frozen reason when a take is approved) | Panels workbench card (`/panels/<spec>`) | Built from canon (`.report`, `text-act`, capacity-color severity) — review placement/copy and the Apply-camera handoff; zero new CSS classes |
-| 2026-08-13 | **Camera `View` axis** in the shared five-select camera row: orientation (Front / 3-4 front / Side — profile / 3-4 rear / Rear) with a `— free —` unset option that appears even on the defaults card (whose other axes are always concrete); the workbench stated Courier line includes the orientation only when set | All three camera surfaces (`dcam`/`pcam`/`cam`) | Built from canon (the existing `cam-field` row) — review the axis label wording (`View`), the `— free —` unset copy, and the five-select row's width behavior |
-| 2026-08-13 | **Revise-scope modal**: Create revision opens "What panels would you like to include in revision" — `label.check` rows (Courier pid + title) in a `.modal-custom`, nothing pre-checked, Create revision disabled at 0 with the stated Courier counter (`2 OF 5 PANELS REVISED · 3 CARRIED`), `Select all` text-act | Breakdowns (stage 03), locked sheets | Built from canon (modal shell, label.check, text-acts) — review the copy, the disabled-at-zero rule, and the counter grammar |
-| 2026-08-13 | **Carried panel rows**: in a scoped draft revision, unchecked panels render read-only with a `CARRIED — NOT IN THIS REVISION` Courier chip and an `Also revise` text-act in the row head; the editor header states `REVISES n OF m PANELS · k CARRIED FROM <id>` | Breakdown sheet editor | Built from canon (the locked-row treatment, per-row) — review chip wording and head density |
-| 2026-08-13 | **Repair-region eraser** (user-directed): the repair painter gains a Paint/Erase single-choice `vchip` pair; eraser strokes replay in order over the paint (destination-out on the preview, opacity laid back on the mask) so an overshoot is fixed without starting over; Repair stays gated on at least one PAINT stroke | Repair overlay (workbench/gallery takes) | Built from canon (`vchip.on` single-choice pair) — review the Paint/Erase labels and whether brush size should differ per mode |
-| 2026-08-13 | **Evidence ledger row is selectable** (user-directed, corrected same day): panel id and object are `<select>`s — the object offer recomputes on every open, excluding objects any other row already covers; the citation input searches the approved reference library through a visible suggestion list (mono id + role rows, pick fills, typing stays free — the native datalist proved inert); on a LOCKED sheet all ledger controls (and panel-card selects) drop their control affordance and read as plain values | Breakdown sheet editor, evidence ledger | Suggestion list is inline-styled from tokens; review its row format, and the locked read-as-document treatment (`:disabled` transparent chrome) |
-| 2026-08-13 | **Workbench brief/camera verbs are ghost buttons** (user-directed): `Edit brief` and `Change camera` upgraded from text-acts to `.ghost` buttons | Panels workbench card | **Reverses part of canon R7 (au-wb-camera: stated line + text verb)** at the user's direction — designer to ratify or restyle |
-| 2026-08-13 | **Carried panels lock on the workbench** (user-directed): on a scoped revision, stage 04 lands on the first revised panel; carried panels show a `CARRIED` rail mark, and their card leads with a stated report ("CARRIED — NOT IN THIS REVISION … use Also revise") with generate/prose/check/brief/camera verbs disabled | Panels workbench (stage 04) | Built from canon (`.report`, rail marks, disabled-with-stated-reason) — review the rail-mark word length and the report copy |
-| 2026-08-13 | **Collapsible panel rows** (user-directed): every `.panel-card` head gains a mono `▾/▸` text-act toggle; folding hides all detail sections (`.pc-collapsed > :not(.head)`) while inputs stay in the DOM so saves read unchanged; carried panels of a scoped revision open COLLAPSED — listed on one head line (pid · CARRIED chip · Also revise · title · alloc), out of the way | Breakdown sheet editor | One new structural CSS rule, marked UNCANONIZED — review the caret glyph choice and whether collapse state should persist |
-| 2026-08-13 | **Unit provenance grammar on stage 05**: picker lists one option per base (`· N REVISIONS` suffix); slot verdict `REVISED SINCE` (STALE_APPROVAL) with the full-sentence alert ("P03 APPROVED AGAINST R1 — P03 CHANGED IN R2; RE-RENDER ON THE WORKBENCH OR KEEP") and an in-slot `Keep` text-act; seated slots suffix `· FROM R(n)` / `· KEPT`; board cards `· BUILT ON R(n)`; arrange-room tiles chip `FROM R(n)` and the gate gains a SLOT_OFFERED row with Keep in place | Boards (stage 05) + arrange room | New vocabulary over canon parts (hatch slots, text-acts, Courier chips) — review the whole provenance grammar as one system |
-| 2026-08-13 | **Palette swatch selector** leading the rendering settings: a `Palette` fgroup whose ghost summary states the live outcome (`AUTO · 2 NEWEST OF 19` or color-chipped `3 OF 19`) and opens a checkbox menu of individual swatches (color chip · Courier name · hex). Unselected = the four-anchor shelf's capped auto pick; selecting any swatch takes over the COLOR_PALETTE role entirely (server-enforced). Swatches no longer appear in the generic subject groups | Panels workbench gen-row | Built from canon (fgroup, ghost, `.check`, tokens; inline-styled floating menu) — review the summary copy, the floating-menu pattern (first dropdown panel in the app), and the auto-pick wording |
-| 2026-08-13 | **Rejection-note verbs + archived-note state**: every CARRIED REJECTIONS row now renders from the server's own carry list (live takes AND archive rows from deleted takes — a deleted take's note reads `· TAKE DELETED, NOTE CARRIES`, never vanishes) with three text-acts: `Edit` (prefilled modal, journaled), `Retire`/`Reinstate` (existing), `Delete` (confirmed, journaled — the only way a note dies; user ruling 2026-08-13) | Provenance rail, panels workbench | Built from canon (the `.carried` row + text-acts) — review the `· TAKE DELETED, NOTE CARRIES` copy and the three-verb density on one row |
-| 2026-08-13 | **Harness tooling chrome** (HARNESS_PLAN, designer-authored): the recorder chip — fixed bottom-left, Courier, `--accent` border, `REC ● n CAPTURED — DOWNLOAD`, dev-only behind `?record=1`, inline-styled from tokens (never in styles.css; a normal session has no trace of it) — and two harness-only surfaces the app never shows: the non-dismissible staleness banner (`--bad` on `--panel`, Courier, top-fixed) and the `NO FIXTURE IMAGE` placeholder (`--panel` ground, `--ink-faint` Courier) | `?record=1` sessions (app/static/recorder.js); the generated replay harness (tools/build_harness.py) | Plan-specified by Claude Design, so review is ratification: the chip's amber border sits outside the three sanctioned amber roles (it signals "this session is being captured" — an operator state, arguably a fourth role or a `--hold` candidate) |
-| 2026-08-13 | **Correction-intake proposal** under a CARRIED REJECTIONS row: after a reject saves, the reason is parsed into a Courier delta checklist (`CAMERA VIEW → SIDE` / `REQUIRE "…"` / `FORBID "…"` / `BRIEF + "…"`) with ghost `Apply selected` / `Dismiss` text-acts; applied rows read as faint checked state (`· APPLIED`), never verbs; the model proposes, the user promotes | Provenance rail, panels workbench | Built from canon (the existing `.carried` row, `mini mono`, text-acts) — review placement/copy and the checklist-inside-a-rail pattern; inline styles only, no new classes |
+| 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry)  **DEFERRED by HARNESS_AUDIT R2 (2026-08-14)** — the room was not in the recorded bundle and the designer will not rule it from a description; top item of the next recording walk. Already ruled: square chips stand (canon forbids rounding) and the amended R2 reading (client owns arrangement STRUCTURE, server owns GEOMETRY). Remaining: chip sizes, ghost-scrim strength, snap values, claim arrows |
+| 2026-08-13 | **Board looks** (`.arr-style-*`, user-directed): a `Style…` verb in the arrange room opens a picker whose cards are REAL small-scale renders of this board (INK — none, Art Board, Tech Design), with per-look option checkboxes; the chosen look dresses previews/export/assembly only — the room always works in INK. Renderer-side: two new sheet ink styles (`ART_BOARD` parchment/serif/hand-annotations, `TECH_DESIGN` near-black/mono/keylines+ticks), a `dress` element channel (swatch strip, material chips, spec table, atmosphere strip, profile prose) derived from canon at render time, and bundled OFL render faces incl. a new `hand` voice (Caveat) | Arrange room (stage 05) + board export/assembly | Open questions for the ruling: (1) the `dress` channel as a parallel grammar beside the closed twelve block types; (2) md-tier sources feeding preview-scale renders (scoped exception to "display tiers never feed a render"); (3) which palette languages a board's strip draws (ships: all live); (4) Art Board per-panel taglines vs. atmosphere-strip-only; (5) Tech Design comparison block, ortho-tick styling, and both styles' exact ink values; (6) hand-annotation collision rules, Caveat minimum size, and a ruling distinguishing sheet-render typography from app chrome (canon forbids new fonts in chrome); (7) whether the room's advisory SHORT readouts should read dressed geometry (the gate already does)  **PARTLY RULED by HARNESS_AUDIT R4 (2026-08-14)** — shipped: dress is a selector over the closed block set (PALETTE / MATERIAL / STRIP / SPEC / PRINCIPLES); md-tier feeds previews only, enforced in sheet_render; the chrome/artifact typography split is Layout canon. Still open, needing a rendered sheet: (3) which palette languages a strip draws, (4) Art Board taglines, (5) exact ink values + Tech Design comparison block, (6a) hand-annotation collision + Caveat minimum size, (7) dressed geometry in advisory readouts |
 
 ---
 
@@ -1182,6 +1223,23 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-14** — **RULED (HARNESS_AUDIT_2026-08-14, the first
+  audit-by-use):** 16 of 18 Uncanonized rows ruled and emptied; R2
+  (arrange room) and four parts of R4 (board looks) deferred pending the
+  next recording walk. Six Layout canons added (record-has-no-status-
+  colour, person's-sentence-never-Courier, lead-promotes-not-copies,
+  knowing-stage-must-not-ask, locked-reads-as-document, artifact-vs-
+  chrome typography), the dropdown panel componentized, three Do-nots
+  (no wrapping verbs, no two-verbs-one-outcome, no product signals on
+  dev tooling). Six use-found defects fixed: carried-notes rail
+  repainted as a record (label `CARRIED NOTES · n`, notes in Archivo as
+  typed, `Edit` + one reversible `Stop carrying`, hard delete inside the
+  Edit modal); Status lead now promotes its blocker out of the list;
+  stage 04 lands on the last breakdown worked; `.ghost`/`.text-act`
+  never wrap; camera row breaks 3+2; composition check states its clean
+  verdict. Dress kinds renamed into the closed block vocabulary;
+  md-tier-preview-only enforced in the renderer; recorder chip to
+  `--hold`.
 - **2026-08-13** — **Harness tooling** (HARNESS_PLAN): `?record=1` loads
   app/static/recorder.js, which wraps `window.fetch`, records every /api/
   response off a real session, and downloads a fixture bundle via an

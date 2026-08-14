@@ -10,8 +10,12 @@ resolved from canon AT DERIVATION TIME (always current, no staleness
 bookkeeping). Render, readiness, export and assemble all consume
 dressed() — one derivation, no drift (the display_window pattern).
 
-Dress is NOT blocks: the twelve-type canon stays closed, readiness never
-judges dress imagery, and _validate never sees it.
+Dress is NOT blocks — but it SPEAKS blocks (HARNESS_AUDIT R4.1,
+2026-08-14): every dress element's kind is drawn from the closed block
+vocabulary (PALETTE, MATERIAL, STRIP, SPEC, PRINCIPLES) — a selector
+over the block set, never a second vocabulary. The twelve-type canon
+stays closed, readiness never judges dress imagery, and _validate never
+sees it.
 
 User rulings (2026-08-13): annotations are canon-first (a narrative
 "polish" verb comes later); looks show in previews and export only —
@@ -181,23 +185,23 @@ def dressed(rec: dict) -> dict:
         mats = _materials() if opts["materials"] else []
         if sw and mats:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
-                {"kind": "SWATCH_STRIP", "span": (0.0, 0.5 - GAP / 2),
+                {"kind": "PALETTE", "span": (0.0, 0.5 - GAP / 2),
                  "data": {"swatches": sw}},
-                {"kind": "MATERIAL_CHIPS", "span": (0.5 + GAP / 2,
+                {"kind": "MATERIAL", "span": (0.5 + GAP / 2,
                                                     0.5 - GAP / 2),
                  "data": {"refs": mats}}]))
         elif sw:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
-                {"kind": "SWATCH_STRIP", "span": (0.0, 1.0),
+                {"kind": "PALETTE", "span": (0.0, 1.0),
                  "data": {"swatches": sw}}]))
         elif mats:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
-                {"kind": "MATERIAL_CHIPS", "span": (0.0, 1.0),
+                {"kind": "MATERIAL", "span": (0.0, 1.0),
                  "data": {"refs": mats}}]))
         text = _atmosphere_text(spec) if opts["atmosphere"] else ""
         if text:
             bands.append(("ATMOSPHERE", 0.045 * CH, [
-                {"kind": "ATMOSPHERE", "span": (0.0, 1.0),
+                {"kind": "STRIP", "span": (0.0, 1.0),
                  "data": {"text": text}}]))
     elif key == "TECH_DESIGN":
         rows = _spec_rows(out, spec) if opts["spec_table"] else []
@@ -206,28 +210,28 @@ def dressed(rec: dict) -> dict:
         if rows or profile:
             col_w = 0.16 * CW
             if rows:
-                col.append({"kind": "SPEC_TABLE",
+                col.append({"kind": "SPEC",
                             "vspan": (0.0, 0.6 if profile else 1.0),
                             "data": {"rows": rows}})
             if profile:
-                col.append({"kind": "PROFILE", "vspan": (0.62, 0.38),
+                col.append({"kind": "PRINCIPLES", "vspan": (0.62, 0.38),
                             "data": {"text": profile}})
         mats = _materials() if opts["materials"] else []
         sw = _swatches() if opts["palette"] else []
         if mats and sw:
             bands.append(("TECH_BAND", 0.07 * CH, [
-                {"kind": "MATERIAL_CHIPS", "span": (0.0, 0.5 - GAP / 2),
+                {"kind": "MATERIAL", "span": (0.0, 0.5 - GAP / 2),
                  "data": {"refs": mats}},
-                {"kind": "SWATCH_STRIP", "span": (0.5 + GAP / 2,
+                {"kind": "PALETTE", "span": (0.5 + GAP / 2,
                                                   0.5 - GAP / 2),
                  "data": {"swatches": sw, "compact": True}}]))
         elif mats:
             bands.append(("TECH_BAND", 0.07 * CH, [
-                {"kind": "MATERIAL_CHIPS", "span": (0.0, 1.0),
+                {"kind": "MATERIAL", "span": (0.0, 1.0),
                  "data": {"refs": mats}}]))
         elif sw:
             bands.append(("TECH_BAND", 0.07 * CH, [
-                {"kind": "SWATCH_STRIP", "span": (0.0, 1.0),
+                {"kind": "PALETTE", "span": (0.0, 1.0),
                  "data": {"swatches": sw, "compact": True}}]))
 
     gap_y = GAP * CH
