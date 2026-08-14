@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 
-from . import generate, looks, paths, sheet, sheet_render, store
+from . import generate, looks, paths, revisions, sheet, sheet_render, store
 
 # The packing functions moved to sheet.py (SHEET_SYSTEM_PLAN §2) so boards
 # and sheets share one layout implementation. Aliased under their old names
@@ -31,18 +31,23 @@ class AssemblyError(Exception):
 
 
 def _arranged_sheet(spec_id: str) -> dict | None:
-    """The spec's arranged BOARD sheet, if the user has arranged one.
+    """The UNIT's arranged BOARD sheet, if the user has arranged one.
     Once it exists it IS the board's layout truth (user 2026-08-13):
     the slot map reports it and assembly renders it — the packer only
-    speaks for never-arranged boards."""
+    speaks for never-arranged boards. Matching is by BASE (one board per
+    unit, 2026-08-13): a legacy pair of sheets — one per revision —
+    resolves to the newest sheet id; the older stays inert on disk."""
     if not paths.SHEETS_DIR.exists():
         return None
+    base = revisions.base_of(spec_id)
+    hit = None
     for p in sorted(paths.SHEETS_DIR.glob("SH-*.json")):
         s = json.loads(p.read_text(encoding="utf-8"))
-        if (s.get("archetype") == "BOARD" and s.get("spec_id") == spec_id
+        if (s.get("archetype") == "BOARD"
+                and revisions.base_of(s.get("spec_id") or "") == base
                 and s.get("arrangement")):
-            return sheet.get_sheet(s["sheet_id"])
-    return None
+            hit = s["sheet_id"]  # sorted glob: the last match is newest
+    return sheet.get_sheet(hit) if hit else None
 
 
 def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
@@ -53,6 +58,9 @@ def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
     # the honest map and a look never makes the map disagree with the
     # room the user just arranged.
     cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
+    base = revisions.base_of(spec_id)
+    keeps = revisions.load_keeps(base)
+    floors: dict[str, int] = {}
     slots = []
     for b in rec.get("blocks", []):
         bf = b["frac"]
@@ -65,21 +73,34 @@ def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
             aw = f["w"] * bf["w"] * cwf
             ah = f["h"] * bf["h"] * chf
             cand_id = s.get("candidate_id")
-            cand = generate.get_candidate(spec_id, cand_id) if cand_id else None
+            # The slot's OWN spec_id — the load-bearing cross-revision
+            # lookup (one board per unit, 2026-08-13): a seated take may
+            # live in any revision's directory.
+            take_spec = s.get("spec_id") or spec_id
+            cand = generate.get_candidate(take_spec, cand_id) if cand_id else None
             have = ((int(cand.get("width") or 0), int(cand.get("height") or 0))
                     if cand else (0, 0))
+            pid = s["panel_id"]
+            from_rev = revisions.revision_of(take_spec)
+            floor = floors.setdefault(
+                pid, revisions.panel_revision_floor(base, pid))
+            kept = keeps.get(pid, {}).get("candidate_id") == cand_id
             if not cand:
                 status = "NO_CANDIDATE"
             elif cand.get("status") != "APPROVED":
                 status = "UNAPPROVED"
+            elif from_rev < floor and not kept:
+                # The panel was revised after this take was approved —
+                # the seat is stale until re-rendered or explicitly kept.
+                status = "STALE_APPROVAL"
             else:
                 shown, need = sheet.shown_pixels(rec, b, s, have)
                 status = ("TOO_SMALL" if (shown[0] + 1 < need[0]
                                           or shown[1] + 1 < need[1]) else "OK")
             panel = next((p for p in spec.get("panels", [])
-                          if p.get("id") == s["panel_id"]), {})
+                          if p.get("id") == pid), {})
             slots.append({
-                "panel_id": s["panel_id"],
+                "panel_id": pid,
                 "title": panel.get("title") or panel.get("purpose", ""),
                 "x": ax, "y": ay, "w": aw, "h": ah,
                 "slot_width": int(aw * width),
@@ -89,12 +110,20 @@ def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
                 "candidate_width": have[0] or None,
                 "candidate_height": have[1] or None,
                 "allocation_percent": None,
+                "take_spec_id": take_spec if cand else None,
+                "from_revision": from_rev if cand else None,
+                "kept": kept,
+                **({"offered_candidate_id": cand_id,
+                    "offered_from_revision": from_rev}
+                   if status == "STALE_APPROVAL" else {}),
             })
     not_ready = [s for s in slots if s["status"] != "OK"]
     return {
-        "spec_id": spec_id,
+        "spec_id": base,
+        "base_id": base,
+        "structure_spec_id": spec.get("specification_id"),
         "canvas": {"width": width, "height": height},
-        "locked": store.spec_locked(spec_id),
+        "locked": store.spec_locked(str(spec.get("specification_id"))),
         "board_type": str(spec.get("board_type") or "LOCATION").upper(),
         "layout_variant": "arranged",
         "derived_strip": [],
@@ -131,29 +160,40 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
                                       warnings=warnings)
     used: dict[str, str] = {}
     rects: dict[str, list[float]] = {}
+    provenance: dict[str, dict] = {}
     out_w, out_h = board.width, board.height
     cwf, chf, cxf, cyf = sheet._content_rect_fracs(view)
+    base = revisions.base_of(spec_id)
+    keeps = revisions.load_keeps(base)
     for b in view.get("blocks", []):
         bf = b["frac"]
         for s in b.get("slots", []):
             if not (s.get("panel_id") and s.get("candidate_id")):
                 continue
-            used[s["panel_id"]] = s["candidate_id"]
+            pid = s["panel_id"]
+            used[pid] = s["candidate_id"]
+            take_spec = str(s.get("spec_id") or spec_id)
+            provenance[pid] = {
+                "spec_id": take_spec,
+                "from_revision": revisions.revision_of(take_spec),
+                "kept": keeps.get(pid, {}).get("candidate_id")
+                == s["candidate_id"]}
             f = s["frac"]
-            rects[s["panel_id"]] = [
+            rects[pid] = [
                 (cxf + (bf["x"] + f["x"] * bf["w"]) * cwf) * out_w,
                 (cyf + (bf["y"] + f["y"] * bf["h"]) * chf) * out_h,
                 f["w"] * bf["w"] * cwf * out_w,
                 f["h"] * bf["h"] * chf * out_h,
             ]
     board_id = store.next_counter("board_counter", "BOARD")
-    d = paths.BOARDS_DIR / spec_id
+    d = paths.BOARDS_DIR / paths.safe_id(base)
     d.mkdir(parents=True, exist_ok=True)
     board.save(d / f"{board_id}.png", "PNG")
     record = {
         "candidate_id": board_id,
         "kind": "assembled_board",
-        "specification_id": spec_id,
+        "specification_id": str(spec.get("specification_id") or spec_id),
+        "base_id": base,
         "spec_hash": stable_hash(spec),
         "panel_id": "BOARD",
         "status": "CANDIDATE",
@@ -162,6 +202,7 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
         "layout_variant": "arranged",
         "look": look,
         "panels_used": used,
+        "provenance": provenance,
         "rects": rects,
         "warnings": warnings,
         "created_at": store.utcnow(),
@@ -173,11 +214,12 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
 
 
 def _latest_approved_by_panel(spec_id: str) -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    for c in generate.list_candidates(spec_id):
-        if c.get("status") == "APPROVED" and c.get("candidate_id", "").startswith("CAND-"):
-            out[c["panel_id"]] = c  # list is sorted by id; last approved wins
-    return out
+    """The unit's qualifying take per panel — across every revision of the
+    base, floor-gated, newest wins, keeps honored (one board per unit,
+    2026-08-13). Records ride annotated take_spec_id / from_revision /
+    kept so every consumer can state provenance."""
+    return revisions.qualifying_approved_by_panel(
+        revisions.base_of(spec_id))["qualifying"]
 
 
 def _slug(spec: dict) -> str:
@@ -268,21 +310,31 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
     need upscaling, which never happens), NO_CANDIDATE. Mirrors
     assemble_board's exact geometry so the preview is honest."""
     check_canvas(width, height)
-    spec = store.get_spec(spec_id)
+    # One board per unit (2026-08-13): any revision id resolves to the
+    # base; the newest LOCKED revision defines the structure. The base id
+    # is also R1's spec id, so never read the "unit" through get_spec(base)
+    # — always through the resolved structure spec.
+    base, structure_id = revisions.resolve_board_id(spec_id)
+    all_revs = revisions.revisions_of(base)
+    if not all_revs:
+        raise KeyError(spec_id)
+    spec = store.get_spec(structure_id or all_revs[-1])
     if spec is None:
         raise KeyError(spec_id)
     # An arranged board IS the layout truth — the map reports it, with
     # verdicts judged the way the renderer will draw it.
-    arranged = _arranged_sheet(spec_id)
+    arranged = _arranged_sheet(base)
     if arranged is not None:
-        return _arranged_slot_map(spec_id, spec, arranged, width, height)
+        return _arranged_slot_map(base, spec, arranged, width, height)
     variant = check_variant(spec, variant)
 
-    approved = _latest_approved_by_panel(spec_id)
+    qmap = revisions.qualifying_approved_by_panel(base)
+    approved, offered = qmap["qualifying"], qmap["offered"]
     have: dict[str, dict] = {}
-    for c in generate.list_candidates(spec_id):
-        if c.get("candidate_id", "").startswith("CAND-"):
-            have[c["panel_id"]] = c
+    for rid in all_revs:
+        for c in generate.list_candidates(rid):
+            if c.get("candidate_id", "").startswith("CAND-"):
+                have[c["panel_id"]] = c
 
     alloc = {lp["id"]: float(lp.get("allocation_percent", 0))
              for lp in spec.get("layout", {}).get("panels", [])}
@@ -312,6 +364,7 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
         status = "NO_CANDIDATE"
         cw = ch = None
         cand_id = None
+        extra: dict = {}
         if cand:
             cand_id = cand["candidate_id"]
             cw = int(cand.get("width") or 0)
@@ -319,6 +372,16 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
             # Cover-crop policy: filling the slot needs BOTH dimensions at
             # native size — a shortfall in either means letterboxing.
             status = "TOO_SMALL" if (cw < rw or ch < img_h) else "OK"
+            extra = {"take_spec_id": cand.get("take_spec_id"),
+                     "from_revision": cand.get("from_revision"),
+                     "kept": bool(cand.get("kept"))}
+        elif pid in offered:
+            # Approved once, but the panel was revised since — offered,
+            # not seated: "approved against R(m) — re-render or keep".
+            off = offered[pid][0]
+            status = "STALE_APPROVAL"
+            extra = {"offered_candidate_id": off["candidate_id"],
+                     "offered_from_revision": off["from_revision"]}
         elif pid in have:
             cand_id = have[pid]["candidate_id"]
             status = "UNAPPROVED"
@@ -332,13 +395,16 @@ def slot_map(spec_id: str, width: int = 3840, height: int = 2160,
             "candidate_id": cand_id,
             "candidate_width": cw, "candidate_height": ch,
             "allocation_percent": alloc.get(pid),
+            **extra,
         })
 
     not_ready = [s for s in slots if s["status"] != "OK"]
     return {
-        "spec_id": spec_id,
+        "spec_id": base,
+        "base_id": base,
+        "structure_spec_id": spec.get("specification_id"),
         "canvas": {"width": width, "height": height},
-        "locked": store.spec_locked(spec_id),
+        "locked": structure_id is not None,
         "board_type": btype,
         "layout_variant": variant,
         "derived_strip": derived,
@@ -355,26 +421,38 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
     from common import stable_hash
 
     check_canvas(width, height)
-    spec = store.get_spec(spec_id)
+    base, structure_id = revisions.resolve_board_id(spec_id)
+    if not revisions.revisions_of(base):
+        raise KeyError(spec_id)
+    if structure_id is None:
+        raise AssemblyError(
+            f"{base} is not approved; only locked specs can assemble.")
+    spec = store.get_spec(structure_id)
     if spec is None:
         raise KeyError(spec_id)
-    if not store.spec_locked(spec_id):
-        raise AssemblyError(f"{spec_id} is not approved; only locked specs can assemble.")
     # An arranged board assembles AS ARRANGED (user 2026-08-13): the
     # sheet renders at the requested canvas — fractional geometry makes
     # the size free — gated on the sheet's own readiness (which covers
     # pixels and approval; deliberately benched panels don't block).
-    arranged = _arranged_sheet(spec_id)
+    arranged = _arranged_sheet(base)
     if arranged is not None:
-        return _assemble_arranged(spec_id, spec, arranged, width, height)
+        return _assemble_arranged(base, spec, arranged, width, height)
     variant = check_variant(spec, variant)
 
-    approved = _latest_approved_by_panel(spec_id)
+    qmap = revisions.qualifying_approved_by_panel(base)
+    approved, offered = qmap["qualifying"], qmap["offered"]
     missing = [p["id"] for p in spec.get("panels", []) if p["id"] not in approved]
     if missing:
+        stale = [pid for pid in missing if pid in offered]
+        detail = ", ".join(missing)
+        if stale:
+            detail += (". " + ", ".join(
+                f"{pid} was approved against R{offered[pid][0]['from_revision']} "
+                "and revised since — re-render it or keep the old take"
+                for pid in stale))
         raise AssemblyError(
             "every panel needs an APPROVED candidate before assembly; missing: "
-            + ", ".join(missing))
+            + detail)
 
     alloc = {lp["id"]: float(lp.get("allocation_percent", 0))
              for lp in spec.get("layout", {}).get("panels", [])}
@@ -382,9 +460,9 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
                for pid, c in approved.items()
                if int(c.get("width") or 0) and int(c.get("height") or 0)}
 
-    eph, (cx, cy, cw, ch) = _board_frame(spec, spec_id, width, height)
+    eph, (cx, cy, cw, ch) = _board_frame(spec, structure_id, width, height)
     sub = "  ·  ".join(x for x in [
-        _slug(spec), spec_id, str(spec.get("mode", "")),
+        _slug(spec), structure_id, str(spec.get("mode", "")),
         "BOARD CANDIDATE — UNAPPROVED"] if x)
     eph["masthead"]["subject"] = sub
 
@@ -408,16 +486,22 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
             "caption": None,
             "frac": {"x": 0.0, "y": 0.0, "w": 1.0, "h": inner_h / ch},
             "slots": []}
+    provenance: dict[str, dict] = {}
     for panel in spec["panels"]:
         pid = panel["id"]
         cand = approved[pid]
         used[pid] = cand["candidate_id"]
-        if generate.candidate_image_path(spec_id, cand["candidate_id"]) is None:
+        # The take's OWN spec id — it may live in any revision's directory.
+        take_spec = str(cand.get("take_spec_id") or structure_id)
+        provenance[pid] = {"spec_id": take_spec,
+                           "from_revision": cand.get("from_revision"),
+                           "kept": bool(cand.get("kept"))}
+        if generate.candidate_image_path(take_spec, cand["candidate_id"]) is None:
             raise AssemblyError(f"image file missing for {cand['candidate_id']}")
         rx, ry, rw, rh = rects[pid]
         main["slots"].append({
             "slot_id": f"S{len(main['slots']) + 1}",
-            "spec_id": spec_id, "candidate_id": cand["candidate_id"],
+            "spec_id": take_spec, "candidate_id": cand["candidate_id"],
             "panel_id": pid,
             "label": f"{pid} — {panel.get('title') or panel.get('purpose', '')}",
             "frac": {"x": (rx - cx) / cw, "y": (ry - cy) / inner_h,
@@ -442,7 +526,8 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
             used[pid] = cand["candidate_id"]
             strip["slots"].append({
                 "slot_id": f"S{i + 1}",
-                "spec_id": spec_id, "candidate_id": cand["candidate_id"],
+                "spec_id": str(cand.get("take_spec_id") or structure_id),
+                "candidate_id": cand["candidate_id"],
                 "panel_id": pid, "label": strip_labels.get(pid, pid),
                 "frac": {"x": i / n, "y": 0.0,
                          "w": 1 / n - (0.012 if n > 1 else 0), "h": 1.0},
@@ -457,7 +542,9 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
 
     board_id = store.next_counter("board_counter", "BOARD")
 
-    d = paths.BOARDS_DIR / spec_id
+    # Board artifacts live in the UNIT's dir (the base) — one board per
+    # creative unit, whatever revision structured it.
+    d = paths.BOARDS_DIR / paths.safe_id(base)
     d.mkdir(parents=True, exist_ok=True)
     img_path = d / f"{board_id}.png"
     board.save(img_path, "PNG")
@@ -465,7 +552,8 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
     record = {
         "candidate_id": board_id,
         "kind": "assembled_board",
-        "specification_id": spec_id,
+        "specification_id": structure_id,
+        "base_id": base,
         "spec_hash": stable_hash(spec),
         "panel_id": "BOARD",
         "status": "CANDIDATE",
@@ -473,6 +561,7 @@ def assemble_board(spec_id: str, width: int = 3840, height: int = 2160,
         "height": height,
         "layout_variant": variant,
         "panels_used": used,
+        "provenance": provenance,
         # The structural layout (user ruling 2026-08-02): the board page
         # keeps panels as individual images in these frames — click-through
         # to the uncropped take — and the composite PNG becomes the export.

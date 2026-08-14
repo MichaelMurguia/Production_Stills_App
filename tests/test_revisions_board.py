@@ -300,5 +300,95 @@ class ReviseScopeTests(unittest.TestCase):
         self.assertIn(out["id"], scope["revised"])
 
 
+def _real_spec(spec_id, panels=("P01", "P02")):
+    """A spec rich enough for slot_map/assemble (layout + evidence)."""
+    return {
+        "specification_id": spec_id,
+        "revision": revisions.revision_of(spec_id),
+        "status": "DRAFT", "mode": "CANON_EXTRACTION", "subject": "CANYON",
+        "board_type": "SCENE",
+        "panels": [{"id": p, "title": p, "purpose": f"{p} purpose",
+                    "required_objects": []} for p in panels],
+        "layout": {"panels": [{"id": p,
+                               "allocation_percent": 100 // len(panels)}
+                              for p in panels]},
+        "evidence_ledger": [],
+    }
+
+
+def _png_take(spec_id, cand, panel, w=3900, h=2200, status="APPROVED"):
+    from PIL import Image
+    d = paths.BOARDS_DIR / spec_id
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{cand}.json").write_text(json.dumps(
+        {"candidate_id": cand, "panel_id": panel, "status": status,
+         "specification_id": spec_id, "width": w, "height": h}),
+        encoding="utf-8")
+    Image.new("RGB", (w, h), (40, 40, 40)).save(d / f"{cand}.png", "PNG")
+
+
+class BoardAcrossRevisionsTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-board-"))
+        _redirect_home(self.tmp)
+        store.create_spec_from_dict(_real_spec("B_V001"))
+        store.approve_spec("B_V001", lambda s: [])
+        _png_take("B_V001", "CAND-0001", "P01")
+        _png_take("B_V001", "CAND-0002", "P02")
+        # Revise only P02; lock the revision — the board's new structure.
+        store.revise_spec("B_V001", ["P02"])
+        store.approve_spec("B_V001_R2", lambda s: [])
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_slot_map_unifies_the_unit(self):
+        from app import assemble
+        sm = assemble.slot_map("B_V001_R2")
+        self.assertEqual(sm["base_id"], "B_V001")
+        self.assertEqual(sm["structure_spec_id"], "B_V001_R2")
+        by_pid = {s["panel_id"]: s for s in sm["slots"]}
+        self.assertEqual(by_pid["P01"]["status"], "OK",
+                         "carried panel's R1 approval seats automatically")
+        self.assertEqual(by_pid["P01"]["from_revision"], 1)
+        self.assertEqual(by_pid["P02"]["status"], "STALE_APPROVAL",
+                         "revised panel's old take is offered, not seated")
+        self.assertEqual(by_pid["P02"]["offered_candidate_id"], "CAND-0002")
+        self.assertFalse(sm["assemblable"])
+        # Any revision id (or the base) resolves to the same map.
+        self.assertEqual(assemble.slot_map("B_V001")["base_id"], "B_V001")
+
+    def test_keep_seats_the_stale_slot_and_assembly_lands_in_the_base(self):
+        from app import assemble, generate
+        revisions.set_keep("B_V001", "P02", "CAND-0002")
+        sm = assemble.slot_map("B_V001_R2")
+        by_pid = {s["panel_id"]: s for s in sm["slots"]}
+        self.assertEqual(by_pid["P02"]["status"], "OK")
+        self.assertTrue(by_pid["P02"]["kept"])
+        rec = assemble.assemble_board("B_V001_R2")
+        self.assertEqual(rec["base_id"], "B_V001")
+        self.assertEqual(rec["specification_id"], "B_V001_R2")
+        self.assertEqual(rec["provenance"]["P01"]["from_revision"], 1)
+        self.assertTrue(rec["provenance"]["P02"]["kept"])
+        self.assertIsNotNone(generate.candidate_image_path(
+            "B_V001", rec["candidate_id"]),
+            "the board artifact lands in the unit's base dir")
+
+    def test_stale_slot_blocks_assembly_with_the_stated_choice(self):
+        from app import assemble
+        with self.assertRaises(assemble.AssemblyError) as ctx:
+            assemble.assemble_board("B_V001_R2")
+        self.assertIn("re-render it or keep the old take", str(ctx.exception))
+
+    def test_new_take_in_the_revision_supersedes_everything(self):
+        from app import assemble
+        _png_take("B_V001_R2", "CAND-0009", "P02")
+        sm = assemble.slot_map("B_V001")
+        by_pid = {s["panel_id"]: s for s in sm["slots"]}
+        self.assertEqual(by_pid["P02"]["candidate_id"], "CAND-0009")
+        self.assertEqual(by_pid["P02"]["from_revision"], 2)
+        self.assertTrue(sm["assemblable"])
+
+
 if __name__ == "__main__":
     unittest.main()

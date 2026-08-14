@@ -164,7 +164,9 @@ def dressed(rec: dict) -> dict:
     look = LOOKS[key]
     opts = resolved_options(key, (out.get("look") or {}).get("options"))
     spec_id = str(out.get("spec_id") or "")
-    spec = store.get_spec(spec_id) or {}
+    # The unit's current truth — a board sheet's spec_id is the BASE, and
+    # reading it via get_spec would silently serve R1 (2026-08-13).
+    spec = store.resolve_spec_current(spec_id) or {}
 
     W, H = float(out["size"][0]), float(out["size"][1])
     cwf, chf, _, _ = sheet._content_rect_fracs(out)

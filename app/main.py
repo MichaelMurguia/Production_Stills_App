@@ -1003,6 +1003,29 @@ def api_upgrade_revision_panel(spec_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
 
 
+@app.put("/api/specs/{spec_id}/board-keeps/{panel_id}")
+def api_set_board_keep(spec_id: str, panel_id: str, body: dict) -> dict:
+    """The KEEP act: seat a below-floor approved take on the unit's board
+    anyway — explicit and journaled; the slot stops asking."""
+    from . import revisions
+    try:
+        return revisions.set_keep(revisions.base_of(spec_id), panel_id,
+                                  str(body.get("candidate_id", "")))
+    except KeyError as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/api/specs/{spec_id}/board-keeps/{panel_id}")
+def api_clear_board_keep(spec_id: str, panel_id: str) -> dict:
+    from . import revisions
+    try:
+        return revisions.clear_keep(revisions.base_of(spec_id), panel_id)
+    except KeyError as e:
+        raise _err(e)
+
+
 @app.get("/api/specs/{spec_id}/revisions")
 def api_list_revisions(spec_id: str) -> dict:
     """The unit's revision family — feeds the boards-stage base picker
@@ -1563,8 +1586,20 @@ async def api_composition_check(spec_id: str, panel_id: str, body: dict) -> dict
 
 
 @app.get("/api/specs/{spec_id}/candidates")
-def api_list_candidates(spec_id: str) -> list[dict]:
-    return generate.list_candidates(spec_id)
+def api_list_candidates(spec_id: str, scope: str = "") -> list[dict]:
+    """One revision's takes by default; ?scope=base aggregates the whole
+    unit — ordered revision-major, oldest first, each row annotated
+    spec_id + revision, so a newest-wins fold over the list is correct
+    (one board per unit, 2026-08-13)."""
+    if scope != "base":
+        return generate.list_candidates(spec_id)
+    from . import revisions
+    out = []
+    for rid in revisions.revisions_of(revisions.base_of(spec_id)):
+        for c in generate.list_candidates(rid):
+            out.append({**c, "spec_id": rid,
+                        "revision": revisions.revision_of(rid)})
+    return out
 
 
 @app.get("/api/specs/{spec_id}/carried-feedback")
@@ -1820,6 +1855,18 @@ def api_purge_rejected(spec_id: str) -> dict:
 def api_candidate_image(spec_id: str, cand_id: str, size: str = "full", thumb: bool = False):
     try:
         p = generate.candidate_variant_path(spec_id, cand_id, "thumb" if thumb else size)
+        if p is None:
+            # Base-keyed URLs (one board per unit): the take may live in a
+            # sibling revision's directory — candidate ids are production-
+            # global, so the first hit is the only hit.
+            from . import revisions
+            for rid in revisions.revisions_of(revisions.base_of(spec_id)):
+                if rid == spec_id:
+                    continue
+                p = generate.candidate_variant_path(rid, cand_id,
+                                                    "thumb" if thumb else size)
+                if p is not None:
+                    break
     except KeyError as e:  # traversal-shaped ids → the same 404 as unknown ids
         raise _err(e)
     if p is None:
@@ -2134,12 +2181,19 @@ async def api_assemble(spec_id: str, body: dict) -> dict:
 
 @app.get("/api/specs/{spec_id}/boards")
 def api_list_boards(spec_id: str) -> list[dict]:
-    d = paths.BOARDS_DIR / spec_id
-    if not d.exists():
-        return []
+    """The UNIT's assembled boards — aggregated across every revision's
+    directory (new boards land in the base dir; legacy per-revision
+    boards still list), ordered by board id."""
+    from . import revisions
     import json as _json
-    return [_json.loads(p.read_text(encoding="utf-8"))
-            for p in sorted(d.glob("BOARD-*.json"))]
+    out = []
+    for rid in revisions.revisions_of(revisions.base_of(spec_id)) or [spec_id]:
+        d = paths.BOARDS_DIR / paths.safe_id(rid)
+        if not d.exists():
+            continue
+        out += [_json.loads(p.read_text(encoding="utf-8"))
+                for p in sorted(d.glob("BOARD-*.json"))]
+    return sorted(out, key=lambda b: str(b.get("candidate_id", "")))
 
 
 # ------------------------------------------------- sheets & lookbooks (§9)

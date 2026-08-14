@@ -777,6 +777,15 @@ def create_spec_from_dict(spec: dict) -> dict:
     return spec
 
 
+def resolve_spec_current(spec_id: str) -> dict | None:
+    """The unit's CURRENT truth: the newest locked revision of the id's
+    base, else the spec itself. Board-facing reads use this instead of
+    get_spec because the base id is also R1's id — reading it directly
+    silently serves a stale revision (one board per unit, 2026-08-13)."""
+    current = revisions.newest_locked_revision(revisions.base_of(spec_id))
+    return get_spec(current or spec_id)
+
+
 def save_spec(spec_id: str, spec: dict) -> dict:
     if spec_locked(spec_id):
         raise PermissionError(

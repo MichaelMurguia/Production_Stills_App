@@ -465,7 +465,9 @@ def resolve_binding(binding: dict) -> str:
         head = " — ".join(x for x in [s.get("name", ""), s.get("subtitle", "")] if x)
         return "\n".join([head] + [str(t) for t in s.get("traits", []) if t])
     if kind == "PANEL":
-        spec = store.get_spec(str(binding.get("id", "")))
+        # Bindings resolve to the unit's CURRENT truth (newest locked
+        # revision), not the possibly-stale revision the id names.
+        spec = store.resolve_spec_current(str(binding.get("id", "")))
         if not spec:
             return ""
         pid = str(binding.get("panel", ""))
@@ -474,7 +476,7 @@ def resolve_binding(binding: dict) -> str:
             return ""
         return str(p.get("title") or p.get("purpose") or "")
     if kind == "SPEC_FIELD":
-        spec = store.get_spec(str(binding.get("id", "")))
+        spec = store.resolve_spec_current(str(binding.get("id", "")))
         if not spec:
             return ""
         v = spec.get(str(binding.get("field", "")), "")
@@ -858,35 +860,41 @@ def resolve_caption(sheet_id: str, block_id: str, action: str,
 # ------------------------------------------------------------------- arrange
 
 def arrange_board(spec_id: str) -> dict:
-    """Stage 05's one new door (plan §9): idempotent — a spec has at most
-    one BOARD sheet, created on first call from the spec's current slot
-    map. Readiness travels with the candidates; the composer never grows a
+    """Stage 05's one new door (plan §9): idempotent — a UNIT has at most
+    one BOARD sheet (one board per base across revisions, user
+    2026-08-13), created on first call from the unit's current slot map.
+    Readiness travels with the candidates; the composer never grows a
     second opinion about whether a panel is big enough."""
-    from . import assemble  # function-level: assemble imports our packers
+    from . import assemble, revisions  # function-level: assemble imports our packers
 
+    base = revisions.base_of(spec_id)
+    hit = None
     for p in (sorted(paths.SHEETS_DIR.glob("SH-*.json"))
               if paths.SHEETS_DIR.exists() else []):
         s = json.loads(p.read_text(encoding="utf-8"))
-        if s.get("archetype") == "BOARD" and s.get("spec_id") == spec_id:
-            return get_sheet(s["sheet_id"])
+        if (s.get("archetype") == "BOARD"
+                and revisions.base_of(s.get("spec_id") or "") == base):
+            hit = s["sheet_id"]  # sorted: newest sheet id wins (lazy dedupe)
+    if hit:
+        return get_sheet(hit)
 
-    # "The spec's current slot map": the layout the user last assembled
+    # "The unit's current slot map": the layout the user last assembled
     # under, read from the latest board record — default when none exists.
     variant = None
-    bdir = paths.BOARDS_DIR / paths.safe_id(spec_id)
+    bdir = paths.BOARDS_DIR / paths.safe_id(base)
     if bdir.exists():
         boards = sorted(bdir.glob("BOARD-*.json"))
         if boards:
             rec = json.loads(boards[-1].read_text(encoding="utf-8"))
             variant = rec.get("layout_variant")
-    sm = assemble.slot_map(spec_id, variant=variant)
-    spec = store.get_spec(spec_id) or {}
+    sm = assemble.slot_map(base, variant=variant)
+    spec = store.resolve_spec_current(base) or {}
     variant = sm["layout_variant"]
 
-    sheet = create_sheet("BOARD", BOARD_STYLE, "SCREEN", spec_id=spec_id,
-                         title=str(spec.get("subject", spec_id)),
+    sheet = create_sheet("BOARD", BOARD_STYLE, "SCREEN", spec_id=base,
+                         title=str(spec.get("subject", base)),
                          subject=assemble._slug(spec))
-    sheet["masthead"]["binding"] = {"kind": "SPEC_FIELD", "id": spec_id,
+    sheet["masthead"]["binding"] = {"kind": "SPEC_FIELD", "id": base,
                                     "field": "subject"}
     sheet["masthead"]["bound_hash"] = _hash_text(
         resolve_binding(sheet["masthead"]["binding"]))
@@ -922,7 +930,11 @@ def arrange_board(spec_id: str) -> dict:
                              else None)
             block["slots"].append({
                 "slot_id": f"S{len(block['slots']) + 1}",
-                "spec_id": spec_id, "candidate_id": approved_take,
+                # The take's own spec id — it may live in any revision's
+                # directory; the base is only the fallback for empty slots.
+                "spec_id": (e.get("take_spec_id") or base
+                            if approved_take else base),
+                "candidate_id": approved_take,
                 "panel_id": e["panel_id"],
                 "frac": {"x": round((e["x"] - bx) / bw, 4),
                          "y": round((e["y"] - by) / bh, 4),
@@ -954,7 +966,7 @@ def arrange_board(spec_id: str) -> dict:
     # blocks — they travel as a trailing STRIP naming the swap. Nothing is
     # dropped, and nothing is left for the user to diagnose.
     derived = []
-    approved = assemble._latest_approved_by_panel(spec_id)
+    approved = assemble._latest_approved_by_panel(base)
     for pid in sm.get("derived_strip", []):
         cand = approved.get(pid)
         if cand:
@@ -964,8 +976,8 @@ def arrange_board(spec_id: str) -> dict:
                            {"x": 0.0, "y": 0.86, "w": 1.0, "h": 0.14})
         strip["slots"] = _seed_slots("STRIP", len(derived))
         for (pid, cand), s in zip(derived, strip["slots"]):
-            s.update(spec_id=spec_id, candidate_id=cand["candidate_id"],
-                     panel_id=pid)
+            s.update(spec_id=cand.get("take_spec_id") or base,
+                     candidate_id=cand["candidate_id"], panel_id=pid)
         strip["caption"] = {"text": DERIVED_SWAP_NOTE, "state": "AUTHORED"}
         sheet["blocks"].append(strip)
 
@@ -992,7 +1004,10 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
     rows = arrangement.get("rows") or []
     bench = [str(b) for b in (arrangement.get("bench") or [])]
     spec_id = str(sheet.get("spec_id") or "")
-    spec = store.get_spec(spec_id) or {}
+    # The known-panel census reads the unit's CURRENT structure (the
+    # newest locked revision), not whatever revision the sheet happens to
+    # name — one board per unit (2026-08-13).
+    spec = store.resolve_spec_current(spec_id) or {}
     known = ({p["id"] for p in spec.get("panels", [])}
              | {"MATERIALS", "PALETTE"})
     carried: dict[str, dict] = {}
@@ -1027,9 +1042,14 @@ def set_arrangement(sheet_id: str, arrangement: dict) -> dict:
         # approval exists (e.g. it lost approval after placement — the
         # SLOT_APPROVAL gate then states it).
         old = carried.get(pid) or {}
-        cand = ((approved.get(pid) or {}).get("candidate_id")
-                or old.get("candidate_id"))
-        return {"slot_id": "", "spec_id": old.get("spec_id") or spec_id,
+        latest = approved.get(pid) or {}
+        cand = latest.get("candidate_id") or old.get("candidate_id")
+        # The seat records the take's own spec id (cross-revision seating,
+        # 2026-08-13); the carried slot's id only survives when no current
+        # approval exists.
+        take_spec = (latest.get("take_spec_id") if latest.get("candidate_id")
+                     else old.get("spec_id")) or spec_id
+        return {"slot_id": "", "spec_id": take_spec,
                 "candidate_id": cand, "panel_id": pid, "frac": frac,
                 "crop": old.get("crop") or {"x": 0.0, "y": 0.0, "w": 1.0,
                                             "h": 1.0, "rotate": 0.0},
