@@ -12,7 +12,7 @@ from typing import Any
 
 from PIL import Image
 
-from . import imaging, paths
+from . import imaging, paths, revisions
 
 REF_STATUSES = {"PROVISIONAL", "APPROVED", "REJECTED"}
 
@@ -1138,7 +1138,7 @@ def revise_spec(spec_id: str) -> dict:
     spec = get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
-    base = re.sub(r"_R\d+$", "", spec_id)
+    base = revisions.base_of(spec_id)
     revision = int(spec.get("revision", 1)) + 1
     new_id = f"{base}_R{revision}"
     p = _spec_path(new_id)

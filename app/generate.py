@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from . import bible, imaging, mockflow, paths, storage, store
+from . import bible, imaging, mockflow, paths, revisions, storage, store
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -355,7 +355,7 @@ def archive_feedback(spec_id: str, panel_id: str, reason: str, source: str,
         return
     p = _feedback_archive_path()
     items = json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
-    base = re.sub(r"_R\d+$", "", spec_id)
+    base = revisions.base_of(spec_id)
     if any(i["base"] == base and i["panel_id"] == panel_id
            and i["reason"].casefold() == reason.casefold() for i in items):
         return
@@ -372,7 +372,7 @@ def carried_feedback(spec_id: str) -> list[dict]:
     THIS list, so what the user sees is exactly what carries (found
     2026-08-13: the rail read only live records, so deleting a take made
     its still-carrying note invisible and it looked destroyed)."""
-    base = re.sub(r"_R\d+$", "", spec_id)
+    base = revisions.base_of(spec_id)
     items: list[dict] = []
     p = _feedback_archive_path()
     if p.exists():
@@ -385,7 +385,7 @@ def carried_feedback(spec_id: str) -> list[dict]:
                               "archived": True})
     if paths.BOARDS_DIR.exists():
         for d in sorted(paths.BOARDS_DIR.iterdir()):
-            if not d.is_dir() or re.sub(r"_R\d+$", "", d.name) != base:
+            if not d.is_dir() or revisions.base_of(d.name) != base:
                 continue
             for meta in sorted(d.glob("CAND-*.json")):
                 r = json.loads(meta.read_text(encoding="utf-8"))
@@ -476,7 +476,7 @@ def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
     across all revisions of the same spec — from live candidate records plus the
     archive of deleted ones. These are corrections to FOLLOW — injected in their
     own prompt section, never under a never-include header."""
-    base = re.sub(r"_R\d+$", "", spec_id)
+    base = revisions.base_of(spec_id)
     out: list[str] = []
     seen: set[str] = set()
 
@@ -502,7 +502,7 @@ def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
                 pairs.append((str(i.get("source", "")), i.get("reason", "")))
     if paths.BOARDS_DIR.exists():
         for d in sorted(paths.BOARDS_DIR.iterdir()):
-            if not d.is_dir() or re.sub(r"_R\d+$", "", d.name) != base:
+            if not d.is_dir() or revisions.base_of(d.name) != base:
                 continue
             for meta in sorted(d.glob("CAND-*.json")):
                 r = json.loads(meta.read_text(encoding="utf-8"))
@@ -2336,7 +2336,7 @@ def create_lighting_study(spec_id: str, cand_id: str,
         notes=f"geometry anchor promoted from {cand_id} of {spec_id}")
     ref = store.set_reference_status(ref["id"], "APPROVED")
 
-    base = re.sub(r"_R\d+$", "", spec_id)
+    base = revisions.base_of(spec_id)
     study_id = f"{base}_LIGHT"
     n = 1
     while store.get_spec(f"{study_id}_V{n:03d}") is not None:
