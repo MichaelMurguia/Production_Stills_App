@@ -109,32 +109,58 @@ class LookModelTests(LooksHomeTest):
         self.assertEqual(d, rec)
         self.assertIsNot(d, rec, "identity must still be a copy")
 
-    def test_band_math_scales_blocks_and_never_overlaps(self):
+    def test_dress_is_additive_and_panels_keep_their_exact_pixels(self):
+        # Corrected 2026-08-13 (user: exported panels were cropped
+        # differently than arranged): the page GROWS to hold the dress;
+        # every panel keeps its arranged pixel rect, so the crop's
+        # display window — framing intent — re-derives identically bare
+        # and dressed.
         rec = self._board(2)
         sheet.set_arrangement(rec["sheet_id"], {"rows": [
             {"h": 1, "cols": [{"w": 0.5, "cells": [{"id": "P1", "h": 1}]},
                               {"w": 0.5, "cells": [{"id": "P2", "h": 1}]}]},
         ]})
-        looks.set_look(rec["sheet_id"], "ART_BOARD")  # two bands
+        _seed_swatches([("BELT TECH", "Deep Sea", "#1B3A4B")])
+        looks.set_look(rec["sheet_id"], "ART_BOARD")
         stored = sheet.get_sheet(rec["sheet_id"])
         d = looks.dressed(stored)
         self.assertEqual(d["style"], "ART_BOARD")
         self.assertEqual(d["dress_annotations"], "hand")
-        bands = [("PALETTE_BAND", 0.08), ("ATMOSPHERE", 0.045)]
-        reserved = sum(h for _, h in bands) + looks.GAP * len(bands)
-        keep_h = 1.0 - reserved
+        self.assertGreater(d["size"][1], stored["size"][1],
+                           "the page must grow, never the panels shrink")
+        self.assertEqual(d["size"][0], stored["size"][0])
+        cw0, ch0, _, _ = sheet._content_rect_fracs(stored)
+        cw1, ch1, _, _ = sheet._content_rect_fracs(d)
+        W0, H0 = stored["size"]
+        W1, H1 = d["size"]
         for b0, b1 in zip(stored["blocks"], d["blocks"]):
-            self.assertAlmostEqual(b1["frac"]["y"],
-                                   round(b0["frac"]["y"] * keep_h, 4))
-            self.assertAlmostEqual(b1["frac"]["h"],
-                                   round(b0["frac"]["h"] * keep_h, 4))
-        # dress lives strictly below the scaled panel area
+            for s0, s1, axis, unit in (
+                    (b0["frac"]["x"], b1["frac"]["x"], cw0 * W0, cw1 * W1),
+                    (b0["frac"]["w"], b1["frac"]["w"], cw0 * W0, cw1 * W1),
+                    (b0["frac"]["y"], b1["frac"]["y"], ch0 * H0, ch1 * H1),
+                    (b0["frac"]["h"], b1["frac"]["h"], ch0 * H0, ch1 * H1)):
+                self.assertAlmostEqual(s0 * axis, s1 * unit, delta=0.5)
+        # dress lives strictly below the panel field
+        field_frac = (ch0 * H0) / (ch1 * H1)
         for el in d["dress"]:
-            self.assertGreaterEqual(el["frac"]["y"], keep_h)
+            self.assertGreaterEqual(el["frac"]["y"], field_frac - 1e-6)
         # the arrangement itself is untouched — the room's truth
         self.assertEqual(d["arrangement"], stored["arrangement"])
         # and derivation never mutates its input
         self.assertEqual(stored, sheet.get_sheet(rec["sheet_id"]))
+
+    def test_a_look_with_nothing_to_say_claims_no_page(self):
+        # No swatches, no materials, no atmosphere (ASSET-less setting is
+        # seeded, so drop atmosphere) — the page stays its exact size.
+        rec = self._board(1)
+        looks.set_look(rec["sheet_id"], "ART_BOARD",
+                       {"palette_strip": True, "atmosphere": False})
+        stored = sheet.get_sheet(rec["sheet_id"])
+        d = looks.dressed(stored)
+        self.assertEqual(d["size"], stored["size"])
+        self.assertEqual(d["dress"], [])
+        self.assertEqual(d["style"], "ART_BOARD",
+                         "the paint style still swaps")
 
     def test_dress_data_is_fresh_at_derivation(self):
         rec = self._board(1)
@@ -154,17 +180,40 @@ class LookModelTests(LooksHomeTest):
                       "a swatch added after set_look must appear — no "
                       "staleness bookkeeping")
 
-    def test_readiness_judges_dress_geometry_but_never_dress_content(self):
-        # A 3840×2160 take that exactly fills its slot goes SHORT once a
-        # look shrinks the panel area — honesty about what ships. But the
-        # blocked list must only ever name slots, never dress.
+    def test_dressed_verdicts_equal_bare_verdicts(self):
+        # Additive dress: panel pixels are identical bare and dressed,
+        # so a take that reads OK in the room can never go SHORT on
+        # export because a look was applied — and dress itself never
+        # adds blocked entries.
         rec = self._board(2)
-        self.assertTrue(sheet.readiness(rec)["ready"])
+        _seed_swatches([("BELT TECH", "Deep Sea", "#1B3A4B")])
+        bare = sheet.readiness(rec)
         looks.set_look(rec["sheet_id"], "ART_BOARD")
         d = looks.dressed(sheet.get_sheet(rec["sheet_id"]))
-        for e in sheet.readiness(d)["blocked"]:
+        dressed_gate = sheet.readiness(d)
+        self.assertEqual(bare["ready"], dressed_gate["ready"])
+        self.assertEqual(bare["blocked"], dressed_gate["blocked"])
+        for e in dressed_gate["blocked"]:
             self.assertIn("slot_id", e,
                           f"dress must never add blocked entries: {e}")
+
+    def test_slot_map_mirrors_the_room_regardless_of_look(self):
+        # The user saw the board differ between arranging and viewing
+        # (2026-08-13): the map must show the raw arrangement whether or
+        # not a look is set.
+        rec = self._board(2)
+        _seed_swatches([("BELT TECH", "Deep Sea", "#1B3A4B")])
+        spec = store.get_spec("SPEC-0001")
+        stored = sheet.get_sheet(rec["sheet_id"])
+        bare = assemble._arranged_slot_map("SPEC-0001", spec, stored,
+                                           3840, 2160)
+        looks.set_look(rec["sheet_id"], "ART_BOARD")
+        dressed_map = assemble._arranged_slot_map(
+            "SPEC-0001", spec, sheet.get_sheet(rec["sheet_id"]),
+            3840, 2160)
+        for a, b in zip(bare["slots"], dressed_map["slots"]):
+            self.assertEqual((a["x"], a["y"], a["w"], a["h"]),
+                             (b["x"], b["y"], b["w"], b["h"]))
 
 
 class InkTests(LooksHomeTest):
@@ -208,6 +257,11 @@ class InkTests(LooksHomeTest):
             encoding="utf-8")
         board = assemble.assemble_board("SPEC-0001", 1920, 1080)
         self.assertEqual(board["look"]["key"], "TECH_DESIGN")
+        # additive dress: the spec-table column widens the page (and the
+        # margins, aspect-proportional, pull height along a little); the
+        # record states the artifact's REAL dims, never the request
+        self.assertGreater(board["width"], 1920)
+        self.assertGreaterEqual(board["height"], 1080)
 
 
 class LookApiTests(unittest.TestCase):

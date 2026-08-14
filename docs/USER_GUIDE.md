@@ -401,10 +401,11 @@ structure commits whole; the server maps it to stored geometry).
   **The room always works in INK** — the look dresses previews, export
   and the assembled board only, and everything it shows is pulled live
   from canon at render time, so an approved swatch added tomorrow is
-  on tomorrow's export. Panel space shrinks slightly to make room for
-  the dress bands, and the pixel gate honestly judges that smaller
-  area — a take can read `OK` bare and `SHORT` dressed. Material chips
-  never upscale: a small source is skipped with a warning, never
+  on tomorrow's export. **Dress is additive**: the page grows to hold
+  the bands and column, and your arranged panels keep their exact
+  pixels and crops — what you framed in the room is what exports, and
+  the pixel verdicts never change because a style was applied. Material
+  chips never upscale: a small source is skipped with a warning, never
   stretched, and never blocks export.
 
 **The export gate** — one list, every kind of unready stated before a

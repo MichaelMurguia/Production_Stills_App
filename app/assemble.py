@@ -47,9 +47,11 @@ def _arranged_sheet(spec_id: str) -> dict | None:
 
 def _arranged_slot_map(spec_id: str, spec: dict, rec: dict,
                        width: int, height: int) -> dict:
-    # Judge and report the DRESSED geometry: a look shrinks the panel
-    # area, and the stage-05 verdicts must match what assembly renders.
-    rec = looks.dressed(rec)
+    # The map mirrors the ROOM (corrected 2026-08-13): dress is additive
+    # — the dressed page grows around the panel field, panel pixels and
+    # verdicts are identical bare and dressed, so the raw arrangement is
+    # the honest map and a look never makes the map disagree with the
+    # room the user just arranged.
     cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
     slots = []
     for b in rec.get("blocks", []):
@@ -109,21 +111,29 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
     from common import stable_hash
 
     look = rec.get("look")
-    rec = looks.dressed(rec)
+    # Dress is additive: the panel field keeps the requested width×height
+    # exactly, and a look extends the page around it — so the dressed
+    # sheet derives from a probe at the REQUESTED canvas, and the artifact
+    # dims are whatever the dressed page came to.
+    probe = dict(rec, size=[width, height], size_source="CHOSEN")
+    view = looks.dressed(probe)
+    # Gate at the sheet's own size, as always (the letterbox contract
+    # allows smaller renders); additive dress makes dressed and bare
+    # verdicts identical, so the raw record is the same gate.
     gate = sheet.readiness(rec)
     if not gate["ready"]:
         raise AssemblyError(
             "the arranged board blocks assembly: "
             + "; ".join(f"{e['kind']} {e.get('slot_id', '')}".strip()
                         for e in gate["blocked"]))
-    probe = dict(rec, size=[width, height], size_source="CHOSEN")
     warnings: list[str] = []
-    board = sheet_render.render_sheet(probe, 1.0, allow_letterbox=True,
+    board = sheet_render.render_sheet(view, 1.0, allow_letterbox=True,
                                       warnings=warnings)
     used: dict[str, str] = {}
     rects: dict[str, list[float]] = {}
-    cwf, chf, cxf, cyf = sheet._content_rect_fracs(rec)
-    for b in rec.get("blocks", []):
+    out_w, out_h = board.width, board.height
+    cwf, chf, cxf, cyf = sheet._content_rect_fracs(view)
+    for b in view.get("blocks", []):
         bf = b["frac"]
         for s in b.get("slots", []):
             if not (s.get("panel_id") and s.get("candidate_id")):
@@ -131,10 +141,10 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
             used[s["panel_id"]] = s["candidate_id"]
             f = s["frac"]
             rects[s["panel_id"]] = [
-                (cxf + (bf["x"] + f["x"] * bf["w"]) * cwf) * width,
-                (cyf + (bf["y"] + f["y"] * bf["h"]) * chf) * height,
-                f["w"] * bf["w"] * cwf * width,
-                f["h"] * bf["h"] * chf * height,
+                (cxf + (bf["x"] + f["x"] * bf["w"]) * cwf) * out_w,
+                (cyf + (bf["y"] + f["y"] * bf["h"]) * chf) * out_h,
+                f["w"] * bf["w"] * cwf * out_w,
+                f["h"] * bf["h"] * chf * out_h,
             ]
     board_id = store.next_counter("board_counter", "BOARD")
     d = paths.BOARDS_DIR / spec_id
@@ -147,8 +157,8 @@ def _assemble_arranged(spec_id: str, spec: dict, rec: dict,
         "spec_hash": stable_hash(spec),
         "panel_id": "BOARD",
         "status": "CANDIDATE",
-        "width": width,
-        "height": height,
+        "width": out_w,
+        "height": out_h,
         "layout_variant": "arranged",
         "look": look,
         "panels_used": used,

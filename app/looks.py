@@ -23,8 +23,7 @@ import copy
 
 from . import sheet, store, wizard
 
-GAP = 0.015          # breathing space between reserved dress regions
-MAX_RESERVED = 0.35  # dress may never eat more than a third of the board
+GAP = 0.015          # breathing space between dress regions
 MAX_SWATCHES = 24
 MAX_MATERIALS = 8
 
@@ -116,11 +115,14 @@ def _materials() -> list[dict]:
 
 
 def _atmosphere_text(spec: dict) -> str:
+    """Place and hour only — the render intent already reads as the
+    masthead tagline, and a board must never say one thing twice
+    (user-visible duplication, 2026-08-13)."""
     s = spec.get("setting") or {}
     place = " ".join(x for x in [str(s.get("int_ext", "")).strip(),
                                  str(s.get("location", "")).strip()] if x)
-    parts = [p for p in [place, str(s.get("time_of_day", "")).strip().upper(),
-                         str(spec.get("render_intent", "")).strip()] if p]
+    parts = [p for p in [place, str(s.get("time_of_day", "")).strip().upper()]
+             if p]
     return "  ·  ".join(parts)
 
 
@@ -145,7 +147,16 @@ def _spec_rows(rec: dict, spec: dict) -> list[tuple[str, str]]:
 
 def dressed(rec: dict) -> dict:
     """The ephemeral presentation sheet. Identity (deep copy) when the
-    sheet has no look — today's pipeline byte-identical."""
+    sheet has no look — today's pipeline byte-identical.
+
+    Dress is ADDITIVE (corrected 2026-08-13, user: exported panels were
+    cropped differently than arranged): the page GROWS to hold the dress
+    bands/column and the panel field keeps its exact arranged pixels —
+    the original carve-and-rescale warped every slot's aspect, and since
+    a crop is framing intent, the display window re-derived differently
+    on export than in the room. With additive dress the arranged
+    geometry, the crops, and every pixel verdict are identical bare and
+    dressed."""
     out = copy.deepcopy(rec or {})
     key = (out.get("look") or {}).get("key")
     if key not in LOOKS:
@@ -155,97 +166,74 @@ def dressed(rec: dict) -> dict:
     spec_id = str(out.get("spec_id") or "")
     spec = store.get_spec(spec_id) or {}
 
-    bands: list[tuple[str, float]] = []
+    W, H = float(out["size"][0]), float(out["size"][1])
+    cwf, chf, _, _ = sheet._content_rect_fracs(out)
+    CW, CH = cwf * W, chf * H  # the arranged panel field, in sheet units
+
+    # Resolve the data FIRST — a band with nothing to say claims no page.
+    bands: list[tuple[str, float, list[dict]]] = []  # kind, height, elements
+    col: list[dict] = []
     col_w = 0.0
     if key == "ART_BOARD":
-        if opts["palette_strip"] or opts["materials"]:
-            bands.append(("PALETTE_BAND", 0.08))
-        if opts["atmosphere"]:
-            bands.append(("ATMOSPHERE", 0.045))
+        sw = _swatches() if opts["palette_strip"] else []
+        mats = _materials() if opts["materials"] else []
+        if sw and mats:
+            bands.append(("PALETTE_BAND", 0.08 * CH, [
+                {"kind": "SWATCH_STRIP", "span": (0.0, 0.5 - GAP / 2),
+                 "data": {"swatches": sw}},
+                {"kind": "MATERIAL_CHIPS", "span": (0.5 + GAP / 2,
+                                                    0.5 - GAP / 2),
+                 "data": {"refs": mats}}]))
+        elif sw:
+            bands.append(("PALETTE_BAND", 0.08 * CH, [
+                {"kind": "SWATCH_STRIP", "span": (0.0, 1.0),
+                 "data": {"swatches": sw}}]))
+        elif mats:
+            bands.append(("PALETTE_BAND", 0.08 * CH, [
+                {"kind": "MATERIAL_CHIPS", "span": (0.0, 1.0),
+                 "data": {"refs": mats}}]))
+        text = _atmosphere_text(spec) if opts["atmosphere"] else ""
+        if text:
+            bands.append(("ATMOSPHERE", 0.045 * CH, [
+                {"kind": "ATMOSPHERE", "span": (0.0, 1.0),
+                 "data": {"text": text}}]))
     elif key == "TECH_DESIGN":
-        if opts["spec_table"] or opts["profile"]:
-            col_w = 0.16
-        if opts["materials"] or opts["palette"]:
-            bands.append(("TECH_BAND", 0.07))
-
-    reserved = min(sum(h for _, h in bands) + GAP * len(bands), MAX_RESERVED)
-    keep_w = 1.0 - (col_w + GAP if col_w else 0.0)
-    keep_h = 1.0 - reserved
-
-    for b in out.get("blocks", []):
-        f = b["frac"]
-        f["x"] = round(f["x"] * keep_w, 4)
-        f["w"] = round(f["w"] * keep_w, 4)
-        f["y"] = round(f["y"] * keep_h, 4)
-        f["h"] = round(f["h"] * keep_h, 4)
-
-    dress: list[dict] = []
-    cursor = keep_h
-    for kind, h in bands:
-        cursor += GAP
-        frac = {"x": 0.0, "y": round(cursor, 4),
-                "w": round(keep_w, 4), "h": round(h, 4)}
-        cursor += h
-        if kind == "PALETTE_BAND":
-            sw = _swatches() if opts.get("palette_strip") else []
-            mats = _materials() if opts.get("materials") else []
-            if sw and mats:
-                half = round(keep_w / 2 - GAP / 2, 4)
-                dress.append({"kind": "SWATCH_STRIP",
-                              "frac": {**frac, "w": half},
-                              "data": {"swatches": sw}})
-                dress.append({"kind": "MATERIAL_CHIPS",
-                              "frac": {**frac, "x": round(half + GAP, 4),
-                                       "w": half},
-                              "data": {"refs": mats}})
-            elif sw:
-                dress.append({"kind": "SWATCH_STRIP", "frac": frac,
-                              "data": {"swatches": sw}})
-            elif mats:
-                dress.append({"kind": "MATERIAL_CHIPS", "frac": frac,
-                              "data": {"refs": mats}})
-        elif kind == "ATMOSPHERE":
-            text = _atmosphere_text(spec)
-            if text:
-                dress.append({"kind": "ATMOSPHERE", "frac": frac,
-                              "data": {"text": text}})
-        elif kind == "TECH_BAND":
-            mats = _materials() if opts.get("materials") else []
-            sw = _swatches() if opts.get("palette") else []
-            if mats and sw:
-                half = round(keep_w / 2 - GAP / 2, 4)
-                dress.append({"kind": "MATERIAL_CHIPS",
-                              "frac": {**frac, "w": half},
-                              "data": {"refs": mats}})
-                dress.append({"kind": "SWATCH_STRIP",
-                              "frac": {**frac, "x": round(half + GAP, 4),
-                                       "w": half},
-                              "data": {"swatches": sw, "compact": True}})
-            elif mats:
-                dress.append({"kind": "MATERIAL_CHIPS", "frac": frac,
-                              "data": {"refs": mats}})
-            elif sw:
-                dress.append({"kind": "SWATCH_STRIP", "frac": frac,
-                              "data": {"swatches": sw, "compact": True}})
-
-    if col_w:
-        cx = round(keep_w + GAP, 4)
-        table_h = 0.6 if opts.get("profile") else 1.0
-        if opts.get("spec_table"):
-            dress.append({"kind": "SPEC_TABLE",
-                          "frac": {"x": cx, "y": 0.0, "w": col_w,
-                                   "h": round(table_h, 4)},
-                          "data": {"rows": _spec_rows(out, spec)}})
-        if opts.get("profile"):
-            profile = str(spec.get("scene", "") or "").strip()
+        rows = _spec_rows(out, spec) if opts["spec_table"] else []
+        profile = (str(spec.get("scene", "") or "").strip()
+                   if opts["profile"] else "")
+        if rows or profile:
+            col_w = 0.16 * CW
+            if rows:
+                col.append({"kind": "SPEC_TABLE",
+                            "vspan": (0.0, 0.6 if profile else 1.0),
+                            "data": {"rows": rows}})
             if profile:
-                dress.append({"kind": "PROFILE",
-                              "frac": {"x": cx, "y": 0.62, "w": col_w,
-                                       "h": 0.38},
-                              "data": {"text": profile}})
+                col.append({"kind": "PROFILE", "vspan": (0.62, 0.38),
+                            "data": {"text": profile}})
+        mats = _materials() if opts["materials"] else []
+        sw = _swatches() if opts["palette"] else []
+        if mats and sw:
+            bands.append(("TECH_BAND", 0.07 * CH, [
+                {"kind": "MATERIAL_CHIPS", "span": (0.0, 0.5 - GAP / 2),
+                 "data": {"refs": mats}},
+                {"kind": "SWATCH_STRIP", "span": (0.5 + GAP / 2,
+                                                  0.5 - GAP / 2),
+                 "data": {"swatches": sw, "compact": True}}]))
+        elif mats:
+            bands.append(("TECH_BAND", 0.07 * CH, [
+                {"kind": "MATERIAL_CHIPS", "span": (0.0, 1.0),
+                 "data": {"refs": mats}}]))
+        elif sw:
+            bands.append(("TECH_BAND", 0.07 * CH, [
+                {"kind": "SWATCH_STRIP", "span": (0.0, 1.0),
+                 "data": {"swatches": sw, "compact": True}}]))
+
+    gap_y = GAP * CH
+    gap_x = GAP * CW
+    extra_h = sum(h + gap_y for _, h, _ in bands)
+    extra_w = (col_w + gap_x) if col_w else 0.0
 
     out["style"] = look["style"]
-    out["dress"] = dress
     out["dress_annotations"] = look["annotations"]
     out["dress_panel_marks"] = key == "TECH_DESIGN"
     if key == "ART_BOARD":
@@ -254,4 +242,58 @@ def dressed(rec: dict) -> dict:
         tagline = "  ·  ".join(x for x in [spec_id,
                                            str(spec.get("mode", ""))] if x)
     out["dress_masthead"] = {"tagline": tagline}
+    if not extra_h and not extra_w:
+        out["dress"] = []
+        return out
+
+    # Grow the page until the new content rect holds the old panel field
+    # plus the dress exactly. The margins mix W- and H-terms, so solve by
+    # fixed point — it converges in a few steps and survives any future
+    # margin change without a second copy of the constants.
+    W2, H2 = W + extra_w, H + extra_h
+    for _ in range(6):
+        probe = dict(out, size=[W2, H2])
+        cw2f, ch2f, _, _ = sheet._content_rect_fracs(probe)
+        W2 += (CW + extra_w) - cw2f * W2
+        H2 += (CH + extra_h) - ch2f * H2
+    if out.get("medium") == "PRINT":
+        out["size"] = [round(W2, 2), round(H2, 2)]
+    else:
+        out["size"] = [int(round(W2)), int(round(H2))]
+    cw2f, ch2f, _, _ = sheet._content_rect_fracs(out)
+    CW2, CH2 = cw2f * out["size"][0], ch2f * out["size"][1]
+
+    # Panels keep their exact arranged pixels, anchored at the content
+    # origin — only the denominators changed.
+    sx, sy = CW / CW2, CH / CH2
+    for b in out.get("blocks", []):
+        f = b["frac"]
+        f["x"] = round(f["x"] * sx, 6)
+        f["w"] = round(f["w"] * sx, 6)
+        f["y"] = round(f["y"] * sy, 6)
+        f["h"] = round(f["h"] * sy, 6)
+
+    dress: list[dict] = []
+    cursor = CH  # sheet units below the panel field, inside content
+    for _kind, h, els in bands:
+        cursor += gap_y
+        for el in els:
+            x0, wf = el["span"]
+            dress.append({"kind": el["kind"],
+                          "frac": {"x": round(x0 * CW / CW2, 6),
+                                   "y": round(cursor / CH2, 6),
+                                   "w": round(wf * CW / CW2, 6),
+                                   "h": round(h / CH2, 6)},
+                          "data": el["data"]})
+        cursor += h
+    if col_w:
+        cx = (CW + gap_x) / CW2
+        for el in col:
+            y0, hf = el["vspan"]
+            dress.append({"kind": el["kind"],
+                          "frac": {"x": round(cx, 6), "y": round(y0, 6),
+                                   "w": round(col_w / CW2, 6),
+                                   "h": round(hf, 6)},
+                          "data": el["data"]})
+    out["dress"] = dress
     return out

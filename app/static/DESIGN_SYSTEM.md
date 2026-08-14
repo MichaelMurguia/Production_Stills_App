@@ -1191,6 +1191,20 @@ well — this log records what changed, it does not replace the rules.
   rejection debrief): the shared camera row gains a fifth `View` select
   (azimuth — front/three-quarter/side/rear); no baseline, unset = model's
   choice, stated line omits it when unset.
+- **2026-08-13** — **Dress is additive** (user bug report: exported
+  panels cropped differently than arranged, and the slot map disagreed
+  with the room). The original model carved dress bands out of the
+  fixed canvas and rescaled the panels, warping every slot's aspect —
+  and since a crop is framing intent, the display window re-derived
+  differently on export. Corrected: the page GROWS to hold the dress
+  (Art Board taller, Tech Design wider+taller) and the panel field
+  keeps its exact arranged pixels — crops, room, map, and pixel
+  verdicts identical bare and dressed; the slot map shows the raw
+  arrangement again. Also: swatch labels clip to their own cell,
+  compact swatches keyline (VOID BLACK vanished on the dark ground),
+  and the atmosphere strip states place/hour only (the render intent
+  already reads as the masthead tagline). The assembled record states
+  the artifact's real dims.
 - **2026-08-13** — **Board looks** (user): an arranged board can carry a
   presentation style — Art Board (parchment, serif masthead + tagline,
   hand annotations from the slots' own annotation text, palette swatch

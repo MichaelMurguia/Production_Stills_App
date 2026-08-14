@@ -433,6 +433,11 @@ def _draw_swatch_strip(draw, rect, style, W, swatches, compact=False):
         except (ValueError, IndexError):
             continue
         draw.rectangle([x, ry, x + cell_w - 1, ry + cell_h - 1], fill=rgb)
+        if compact and style.get("keyline"):
+            # A swatch near the paper's own value vanishes without an
+            # edge (VOID BLACK on Tech Design, user export 2026-08-13).
+            draw.rectangle([x, ry, x + cell_w - 1, ry + cell_h - 1],
+                           outline=style["keyline"], width=1)
         if sw.get("hero"):
             draw.rectangle([x, ry, x + cell_w - 1, ry + cell_h - 1],
                            outline=style["ink"], width=max(1, W // 1600))
@@ -442,11 +447,22 @@ def _draw_swatch_strip(draw, rect, style, W, swatches, compact=False):
             draw.text((x + 3, ry + cell_h - label_px - 3), hx.upper(),
                       font=label_f, fill=fill)
         else:
-            draw.text((x, ry + cell_h + 4),
-                      str(sw.get("name") or "")[:14].upper(),
-                      font=label_f, fill=style["ink"])
-            draw.text((x, ry + cell_h + 4 + int(label_px * 1.3)),
-                      hx.upper(), font=label_f, fill=style["dim"])
+            # Labels stay inside their own cell — neighboring names were
+            # colliding on swatch-heavy boards (user export, 2026-08-13).
+            room = cell_w - 6
+            name = str(sw.get("name") or "").upper()
+            clipped = name
+            while clipped and draw.textlength(
+                    clipped + ("…" if clipped != name else ""),
+                    font=label_f) > room:
+                clipped = clipped[:-1]
+            if clipped:
+                draw.text((x, ry + cell_h + 4),
+                          clipped + ("…" if clipped != name else ""),
+                          font=label_f, fill=style["ink"])
+            if draw.textlength(hx.upper(), font=label_f) <= room:
+                draw.text((x, ry + cell_h + 4 + int(label_px * 1.3)),
+                          hx.upper(), font=label_f, fill=style["dim"])
         x += cell_w + gap
 
 
