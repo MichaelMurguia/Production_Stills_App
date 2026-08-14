@@ -788,6 +788,14 @@ def save_spec(spec_id: str, spec: dict) -> dict:
     p = _spec_path(spec_id)
     if not p.exists():
         raise KeyError(spec_id)
+    violation = _carried_panel_violation(spec_id, spec)
+    if violation:
+        raise ValueError(violation)
+    # The scope declaration itself is server-owned: a save may not
+    # rewrite it (the panel floors trust what revise/upgrade journaled).
+    stored_scope = (get_spec(spec_id) or {}).get("revision_scope")
+    if stored_scope is not None:
+        spec["revision_scope"] = stored_scope
     _atomic_write_json(p, spec)
     return spec
 
@@ -863,6 +871,21 @@ def unlock_spec(spec_id: str) -> dict:
     return spec
 
 
+def _refuse_carried(spec: dict, panel_id: str) -> None:
+    """A panel carried by a revision's scope is read-only in that revision
+    file forever — the stored scope is what the unit's panel floors trust,
+    so it must always match what actually happened to the panels. The way
+    to change a carried panel is a newer revision that declares it
+    revised (or 'Also revise' while this one is a draft)."""
+    scope = spec.get("revision_scope")
+    if scope and panel_id in (scope.get("carried") or []):
+        raise PermissionError(
+            f"{panel_id} is carried read-only in "
+            f"{spec.get('specification_id')} — it is not part of this "
+            "revision. Use 'Also revise' (while a draft) or a new revision "
+            "to change it.")
+
+
 def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     """Amend one panel's purpose — the brief that rides into its prompt —
     without unlocking the sheet (user 2026-08-08: a purpose that says
@@ -881,6 +904,7 @@ def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
     approved = [r.get("candidate_id") for r in _board_records(spec_id)
                 if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
     if approved:
@@ -958,6 +982,7 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
     approved = [r.get("candidate_id") for r in _board_records(spec_id)
                 if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
     if approved:
@@ -1005,6 +1030,7 @@ def amend_panel_content(spec_id: str, panel_id: str,
     panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
     approved = [r.get("candidate_id") for r in _board_records(spec_id)
                 if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
     if approved:
@@ -1084,6 +1110,12 @@ def add_panel(spec_id: str, title: str, purpose: str) -> dict:
     panels.append(panel)
     spec.setdefault("layout", {}).setdefault("panels", []).append(
         {"id": pid, "allocation_percent": 0})
+    # A panel born inside a scoped revision is by definition revised there
+    # — record it so the unit's panel floors stay truthful.
+    if spec.get("revision_scope"):
+        rs = spec["revision_scope"]
+        if pid not in (rs.get("revised") or []):
+            rs["revised"] = list(rs.get("revised") or []) + [pid]
     _atomic_write_json(_spec_path(spec_id), spec)
     if spec_locked(spec_id):
         from common import stable_hash  # scripts/common.py via paths sys.path hook
@@ -1133,8 +1165,15 @@ def delete_spec(spec_id: str) -> dict:
             "candidates_removed": len(records), "images_removed": n_images}
 
 
-def revise_spec(spec_id: str) -> dict:
-    """Clone a locked spec into the next revision as an editable DRAFT."""
+def revise_spec(spec_id: str, revise_panels: list[str] | None = None) -> dict:
+    """Clone a locked spec into the next revision as an editable DRAFT.
+
+    revise_panels (user model 2026-08-13) declares WHICH panels the
+    revision changes: those become editable; the rest are CARRIED —
+    read-only in the clone, and their approvals keep feeding the unit's
+    board (see app/revisions.py panel floors). None = all revised
+    (legacy callers). Empty list = a layout-only revision. The scope is
+    a canon-shaping declaration, so it is journaled."""
     spec = get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
@@ -1144,11 +1183,76 @@ def revise_spec(spec_id: str) -> dict:
     p = _spec_path(new_id)
     if p.exists():
         raise FileExistsError(f"revision already exists: {new_id}")
+    panel_ids = [str(x.get("id")) for x in spec.get("panels", [])]
+    if revise_panels is None:
+        revised = list(panel_ids)
+    else:
+        unknown = sorted(set(revise_panels) - set(panel_ids))
+        if unknown:
+            raise ValueError(
+                f"unknown panel(s) for revision scope: {', '.join(unknown)}")
+        revised = [pid for pid in panel_ids if pid in set(revise_panels)]
+    carried = [pid for pid in panel_ids if pid not in set(revised)]
     clone = json.loads(json.dumps(spec))
     clone["specification_id"] = new_id
     clone["revision"] = revision
     clone["status"] = "DRAFT"
     clone["revised_from"] = {"specification_id": spec_id,
                              "locked": spec_locked(spec_id)}
+    clone["revision_scope"] = {"revised": revised, "carried": carried}
     _atomic_write_json(p, clone)
+    append_approval_log(
+        f"SPECIFICATION {new_id} drafted from {spec_id} — revising: "
+        f"{', '.join(revised) or 'layout only'}; carried read-only: "
+        f"{', '.join(carried) or 'none'}.")
     return clone
+
+
+def upgrade_revision_panel(spec_id: str, panel_id: str) -> dict:
+    """'Also revise this panel' — a carried panel joins the revision.
+    DRAFT-only, one-way, journaled: the stored scope is what the panel
+    floors trust, so it only ever moves toward 'revised'."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    scope = spec.get("revision_scope")
+    if spec_locked(spec_id) or spec.get("status") == "APPROVED" or not scope:
+        raise ValueError(
+            f"{spec_id} is not a draft revision with a scope — nothing to upgrade")
+    if panel_id in (scope.get("revised") or []):
+        raise ValueError(f"{panel_id} is already being revised")
+    if panel_id not in (scope.get("carried") or []):
+        raise KeyError(f"{spec_id} has no carried panel {panel_id}")
+    scope["carried"] = [p for p in scope["carried"] if p != panel_id]
+    scope["revised"] = list(scope.get("revised") or []) + [panel_id]
+    _atomic_write_json(_spec_path(spec_id), spec)
+    append_approval_log(
+        f"SPECIFICATION {spec_id}: {panel_id} upgraded into the revision "
+        "(carried → revised) — its board slot will ask for a new take.")
+    return scope
+
+
+def _carried_panel_violation(spec_id: str, incoming: dict) -> str | None:
+    """The carried-panel contract: while a draft revision declares a
+    scope, its carried panels must remain byte-identical to the source
+    revision's. Returns a stated violation, or None."""
+    stored = get_spec(spec_id) or {}
+    scope = stored.get("revision_scope")
+    if not scope or stored.get("status") == "APPROVED" or spec_locked(spec_id):
+        return None
+    source_id = str((stored.get("revised_from") or {})
+                    .get("specification_id", ""))
+    source = get_spec(source_id) or {}
+    src_by_id = {str(p.get("id")): p for p in source.get("panels", [])}
+    inc_by_id = {str(p.get("id")): p for p in incoming.get("panels", [])}
+    for pid in scope.get("carried", []):
+        if pid not in src_by_id:
+            continue
+        if pid not in inc_by_id:
+            return (f"{pid} is carried read-only in this revision and cannot "
+                    "be removed — use 'Also revise' first")
+        if (json.dumps(inc_by_id[pid], sort_keys=True)
+                != json.dumps(src_by_id[pid], sort_keys=True)):
+            return (f"{pid} is carried read-only in this revision — use "
+                    "'Also revise' to edit it")
+    return None

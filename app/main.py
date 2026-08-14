@@ -973,11 +973,51 @@ def api_approve_spec(spec_id: str) -> dict:
 
 
 @app.post("/api/specs/{spec_id}/revise")
-def api_revise_spec(spec_id: str) -> dict:
+async def api_revise_spec(spec_id: str, request: Request) -> dict:
+    """Clone into the next revision. Body may carry {"revise_panels":
+    ["P01", ...]} — the panels being revised; the rest are carried
+    read-only and keep feeding the unit's board. No body = all revised
+    (legacy behavior)."""
     try:
-        return store.revise_spec(spec_id)
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        return store.revise_spec(spec_id, (body or {}).get("revise_panels"))
     except (KeyError, FileExistsError) as e:
         raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/specs/{spec_id}/revision-scope")
+def api_upgrade_revision_panel(spec_id: str, body: dict) -> dict:
+    """'Also revise this panel' — a carried panel joins the draft
+    revision. One-way, journaled."""
+    try:
+        return store.upgrade_revision_panel(spec_id,
+                                            str(body.get("panel_id", "")))
+    except KeyError as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/specs/{spec_id}/revisions")
+def api_list_revisions(spec_id: str) -> dict:
+    """The unit's revision family — feeds the boards-stage base picker
+    and the FROM R(n) provenance chips."""
+    from . import revisions
+    base, structure = revisions.resolve_board_id(spec_id)
+    out = []
+    for rid in revisions.revisions_of(base):
+        s = store.get_spec(rid) or {}
+        out.append({"specification_id": rid,
+                    "revision": revisions.revision_of(rid),
+                    "status": s.get("status", ""),
+                    "locked": store.spec_locked(rid),
+                    "revision_scope": s.get("revision_scope")})
+    return {"base": base, "structure_spec_id": structure, "revisions": out}
 
 
 @app.post("/api/specs/{spec_id}/unlock")

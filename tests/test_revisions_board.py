@@ -212,5 +212,93 @@ class QualifyingMapTests(unittest.TestCase):
                       paths.APPROVAL_LOG.read_text(encoding="utf-8"))
 
 
+class ReviseScopeTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-scope-"))
+        _redirect_home(self.tmp)
+        _write_spec("S_V001", locked=True)
+
+    def tearDown(self):
+        _restore_home()
+
+    def test_revise_stores_the_scope_and_journals_it(self):
+        clone = store.revise_spec("S_V001", ["P02"])
+        self.assertEqual(clone["revision_scope"],
+                         {"revised": ["P02"], "carried": ["P01"]})
+        log = paths.APPROVAL_LOG.read_text(encoding="utf-8")
+        self.assertIn("revising: P02", log)
+        self.assertIn("carried read-only: P01", log)
+
+    def test_no_selection_means_all_revised(self):
+        clone = store.revise_spec("S_V001")
+        self.assertEqual(clone["revision_scope"]["revised"], ["P01", "P02"])
+        self.assertEqual(clone["revision_scope"]["carried"], [])
+
+    def test_empty_selection_is_a_layout_only_revision(self):
+        clone = store.revise_spec("S_V001", [])
+        self.assertEqual(clone["revision_scope"]["carried"], ["P01", "P02"])
+
+    def test_unknown_panel_is_refused(self):
+        with self.assertRaises(ValueError):
+            store.revise_spec("S_V001", ["P99"])
+
+    def test_carried_panels_are_read_only_on_save(self):
+        store.revise_spec("S_V001", ["P02"])
+        draft = store.get_spec("S_V001_R2")
+        draft["panels"][0]["purpose"] = "changed"  # P01 is carried
+        with self.assertRaises(ValueError) as ctx:
+            store.save_spec("S_V001_R2", draft)
+        self.assertIn("P01 is carried read-only", str(ctx.exception))
+
+    def test_carried_panels_cannot_be_removed(self):
+        store.revise_spec("S_V001", ["P02"])
+        draft = store.get_spec("S_V001_R2")
+        draft["panels"] = [p for p in draft["panels"] if p["id"] != "P01"]
+        with self.assertRaises(ValueError) as ctx:
+            store.save_spec("S_V001_R2", draft)
+        self.assertIn("cannot be removed", str(ctx.exception))
+
+    def test_revised_panels_edit_freely_and_scope_is_server_owned(self):
+        store.revise_spec("S_V001", ["P02"])
+        draft = store.get_spec("S_V001_R2")
+        draft["panels"][1]["purpose"] = "a new brief"
+        draft["revision_scope"] = {"revised": ["P01", "P02"], "carried": []}
+        saved = store.save_spec("S_V001_R2", draft)
+        self.assertEqual(saved["panels"][1]["purpose"], "a new brief")
+        self.assertEqual(saved["revision_scope"]["carried"], ["P01"],
+                         "a save may not rewrite the scope declaration")
+
+    def test_also_revise_upgrades_one_way_and_journals(self):
+        store.revise_spec("S_V001", ["P02"])
+        scope = store.upgrade_revision_panel("S_V001_R2", "P01")
+        self.assertIn("P01", scope["revised"])
+        self.assertNotIn("P01", scope["carried"])
+        self.assertIn("P01 upgraded into the revision",
+                      paths.APPROVAL_LOG.read_text(encoding="utf-8"))
+        with self.assertRaises(ValueError):
+            store.upgrade_revision_panel("S_V001_R2", "P01")  # already revised
+        draft = store.get_spec("S_V001_R2")
+        draft["panels"][0]["purpose"] = "changed"
+        store.save_spec("S_V001_R2", draft)  # now legal
+
+    def test_amend_verbs_refuse_carried_panels(self):
+        store.revise_spec("S_V001", ["P02"])
+        with self.assertRaises(PermissionError):
+            store.amend_panel_purpose("S_V001_R2", "P01", "new brief")
+        with self.assertRaises(PermissionError):
+            store.amend_panel_camera("S_V001_R2", "P01",
+                                     {"camera_orientation": "SIDE"})
+        with self.assertRaises(PermissionError):
+            store.amend_panel_content("S_V001_R2", "P01",
+                                      add_required=["a thing"])
+        store.amend_panel_purpose("S_V001_R2", "P02", "revised brief")  # ok
+
+    def test_a_panel_added_inside_a_scoped_revision_counts_as_revised(self):
+        store.revise_spec("S_V001", ["P02"])
+        out = store.add_panel("S_V001_R2", "NEW", "a brand new panel")
+        scope = store.get_spec("S_V001_R2")["revision_scope"]
+        self.assertIn(out["id"], scope["revised"])
+
+
 if __name__ == "__main__":
     unittest.main()
