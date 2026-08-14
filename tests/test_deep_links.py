@@ -115,8 +115,9 @@ class DeepLinkClientWiring(unittest.TestCase):
     def test_history_stays_wired(self):
         self.assertIn('window.addEventListener("popstate"', JS)
         self.assertIn("applyRoute(location.pathname)", JS)
-        # a drilled board is addressable
-        self.assertIn('"/boards/"\n      + encodeURIComponent(b._spec.specification_id)',
+        # a drilled board is addressable — by its UNIT's base id since
+        # one-board-across-revisions (2026-08-13)
+        self.assertIn('"/boards/"\n      + encodeURIComponent(b._base || baseOf(b._spec.specification_id))',
                       JS)
 
     def test_selection_changes_update_the_address(self):

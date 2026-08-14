@@ -443,6 +443,12 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
 const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
   (await modal({ title, body, confirmLabel, danger })) !== null;
 
+// Revision identity (one board per unit, 2026-08-13) — mirrors
+// app/revisions.py. Prefer server-sent revision fields when present;
+// the regex is the client's fallback.
+const baseOf = id => String(id).replace(/_R\d+$/, "");
+const revOf = s => Number(s?.revision || 1);
+
 /* F5 (SETTINGS_FIRST_RUN_PLAN) — the Authenticate modal: icon, name, one
    key field, Test & save, and a deep link to the provider's key page.
    Pasted keys live here now. */
@@ -5659,6 +5665,13 @@ async function openSpecEditor(specId) {
   const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs] = await Promise.all([
     api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references")]);
 
+  // Carried panels of a scoped draft revision are read-only rows (one
+  // board per unit, 2026-08-13): their approvals keep feeding the board,
+  // so the declaration must stay provably true. Server enforces too.
+  const carriedSet = new Set(
+    !locked && spec.status === "DRAFT"
+      ? (spec.revision_scope?.carried || []) : []);
+
   // An object "has reference material" when it matches a cast/subject card
   // with linked images, or an approved reference's role suffix.
   const approvedRefs = allRefs.filter(r => r.status === "APPROVED");
@@ -5741,6 +5754,8 @@ async function openSpecEditor(specId) {
       ${spec.autofilled ? '<span class="badge PROVISIONAL">AUTO-FILLED — REVIEW BEFORE APPROVING</span>' : ""}
     </h3>
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
+    ${!locked && spec.status === "DRAFT" && spec.revision_scope ? `
+      <p class="mini mono">REVISES ${spec.revision_scope.revised.length} OF ${(spec.panels || []).length} PANELS · ${spec.revision_scope.carried.length} CARRIED FROM ${esc(spec.revised_from?.specification_id || "")}</p>` : ""}
     ${locked ? `
     <div class="gate-strip lock-strip">
       <span class="gate-label" style="color:var(--ink-dim)">LOCKED</span>
@@ -6001,15 +6016,22 @@ async function openSpecEditor(specId) {
 
   function addPanelRow(p = {}) {
     const pid = String(p.id || nextPanelId()).toUpperCase();
+    // Per-row editability (2026-08-13): a carried panel of a scoped
+    // draft revision is read-only exactly like a locked sheet's row —
+    // the sheet-wide flag stays `locked`; this row's is `ro`.
+    const ro = locked || carriedSet.has(pid);
     const row = document.createElement("div");
     row.className = "panel-card";
     row.dataset.pid = pid;
     row.innerHTML = `
       <div class="head">
         <span class="pid-badge" title="Panel ID — assigned automatically; the evidence ledger and layout refer to it.">${esc(pid)}</span>
-        <input type="text" data-f="title" placeholder="Panel title — e.g. The Pioneer's Workshop" value="${esc(p.title || "")}" ${locked ? "disabled" : ""} title="Short display name for this panel.">
+        ${!locked && carriedSet.has(pid) ? `
+          <span class="mini mono" title="Carried from the locked revision — this panel is not being revised here. Its approved take keeps flowing to the board.">CARRIED — NOT IN THIS REVISION</span>
+          <button type="button" class="text-act" data-f="also-revise" title="Upgrade this panel into the revision — editable here from now on, and the board will ask for a new take for its slot. Journaled.">Also revise</button>` : ""}
+        <input type="text" data-f="title" placeholder="Panel title — e.g. The Pioneer's Workshop" value="${esc(p.title || "")}" ${ro ? "disabled" : ""} title="Short display name for this panel.">
         <span class="alloc ptod-wrap" title="Light for THIS panel — location and lighting-study boards choose it per panel. Pick a time of day (the hour) or one of the Bible's atmosphere studies (hour + weather + light character). Overrides any style image's hour or hue.">
-          <select data-f="ptod" ${locked ? "disabled" : ""}>
+          <select data-f="ptod" ${ro ? "disabled" : ""}>
             <option value="">— light —</option>
             <optgroup label="Time of day">
               ${TIMES_OF_DAY.map(t =>
@@ -6024,18 +6046,18 @@ async function openSpecEditor(specId) {
         </span>
         <span class="scope-flag hidden" data-f="scope-flag" title="This panel deliberately diverges from the board's scope — see its override below.">SCOPE OVERRIDE</span>
         <span class="alloc" title="Share of the assembled board this panel occupies, in percent. All panels together should total 100.">
-          <input type="number" data-f="alloc" placeholder="—" min="1" max="100" value="${esc(allocById[p.id] ?? "")}" ${locked ? "disabled" : ""}>
+          <input type="number" data-f="alloc" placeholder="—" min="1" max="100" value="${esc(allocById[p.id] ?? "")}" ${ro ? "disabled" : ""}>
           <span class="unit">%</span>
         </span>
-        ${locked ? "" : '<button class="danger" data-f="del-panel" title="Remove panel">×</button>'}
+        ${ro ? "" : '<button class="danger" data-f="del-panel" title="Remove panel">×</button>'}
       </div>
       <div class="fgroup" title="The production question this panel answers. Becomes PANEL PURPOSE in the render prompt — the model's main steer for what the image is about. If no required objects are added, the model composes the panel from this alone (within canon).">
         <span class="f-label">Purpose</span>
-        <input type="text" data-f="purpose" placeholder="The production question this panel answers" value="${esc(p.purpose || "")}" ${locked ? "disabled" : ""}>
+        <input type="text" data-f="purpose" placeholder="The production question this panel answers" value="${esc(p.purpose || "")}" ${ro ? "disabled" : ""}>
       </div>
       <div class="fgroup" title="Camera and composition for this panel. Each axis falls back to the production's Art Direction Bible camera default when blank, and overrides it when set. The app writes the professional directive into the render prompt.">
         <span class="f-label">Camera <span class="hint">(blank = the bible default)</span></span>
-        ${cameraRow("pcam", p, "— from bible —", locked)}
+        ${cameraRow("pcam", p, "— from bible —", ro)}
       </div>
       <div class="two-col">
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
@@ -6044,11 +6066,11 @@ async function openSpecEditor(specId) {
         </div>
         <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements and project lessons in the prompt.">
           <span class="f-label">Forbidden objects</span>
-          <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${locked ? "disabled" : ""}>
+          <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${ro ? "disabled" : ""}>
         </div>
       </div>
       ${bible_catalog?.exists ? `<div class="pscope" data-f="pscope"></div>` : ""}
-      ${locked ? "" : `
+      ${ro ? "" : `
       <div class="obj-suggest" data-f="suggest"></div>
       <div class="chip-add">
         <input type="text" data-f="req-new" placeholder="or type an object — it also gets its evidence-ledger row…">
@@ -6072,7 +6094,7 @@ async function openSpecEditor(specId) {
         chip.title = `Reference material available — ${refInfo}. Attach it on the Boards tab when generating.`;
       }
       chip.append(document.createTextNode(obj));
-      if (!locked) {
+      if (!ro) {
         const x = document.createElement("button");
         x.type = "button"; x.textContent = "×";
         x.title = "Remove this required object (also removes its matching evidence row)";
@@ -6096,28 +6118,28 @@ async function openSpecEditor(specId) {
         if (!overriding) {
           pscopeHost.innerHTML = `
             <span class="pscope-line"></span>
-            ${locked ? "" : `<button class="text-act" data-f="ovr" title="Give this panel its own design languages and environment — a declared exception to the board's scope.">Override</button>`}`;
+            ${ro ? "" : `<button class="text-act" data-f="ovr" title="Give this panel its own design languages and environment — a declared exception to the board's scope.">Override</button>`}`;
           const b = $("[data-f=ovr]", pscopeHost);
           if (b) b.onclick = () => { overriding = true; renderPScope(); };
         } else {
           pscopeHost.innerHTML = `
             <div class="fgroup" title="This panel's own visual cultures — its prompt carries these instead of the board's languages.">
               <span class="f-label" style="display:flex;align-items:center;gap:10px">Panel design languages
-                ${locked ? "" : `<button class="text-act" data-f="revert" style="margin-left:auto" title="Clear the exception — this panel goes back to inheriting the board's scope.">Revert to board</button>`}</span>
+                ${ro ? "" : `<button class="text-act" data-f="revert" style="margin-left:auto" title="Clear the exception — this panel goes back to inheriting the board's scope.">Revert to board</button>`}</span>
               <div class="chips" style="margin-top:4px">
                 ${bible_catalog.design_languages.map(n =>
-                  `<button type="button" class="vchip${(p.design_languages || []).includes(n) ? " set" : ""}" data-plang="${esc(n)}" ${locked ? "disabled" : ""}>${esc(n)}</button>`).join("")}
+                  `<button type="button" class="vchip${(p.design_languages || []).includes(n) ? " set" : ""}" data-plang="${esc(n)}" ${ro ? "disabled" : ""}>${esc(n)}</button>`).join("")}
               </div>
             </div>
             <div class="fgroup" title="The one place THIS panel lives — replaces the board's environment in this panel's prompt.">
               <span class="f-label">Panel environment</span>
-              <select data-f="penv" ${locked ? "disabled" : ""}>
+              <select data-f="penv" ${ro ? "disabled" : ""}>
                 <option value="">— board's environment —</option>
                 ${[...new Set([...envOptions, ...(p.environment ? [p.environment] : [])])].map(n =>
                   `<option value="${esc(n)}"${(p.environment || "") === n ? " selected" : ""}>${esc(n)}</option>`).join("")}
               </select>
             </div>`;
-          if (!locked) {
+          if (!ro) {
             $$("[data-plang]", pscopeHost).forEach(ch =>
               ch.onclick = () => { ch.classList.toggle("set"); updateCarry(); });
             $("[data-f=penv]", pscopeHost).onchange = updateCarry;
@@ -6134,7 +6156,7 @@ async function openSpecEditor(specId) {
       renderPScope();
     }
 
-    if (!locked) {
+    if (!ro) {
       const inp = $("[data-f=req-new]", row);
       const doAdd = () => {
         const v = inp.value.trim();
@@ -6191,6 +6213,21 @@ async function openSpecEditor(specId) {
       $("#sp-scene", panel)?.addEventListener("input", syncSuggest);
       syncSuggest();
     }
+    // Also revise (2026-08-13): the one-way upgrade — the carried row
+    // joins the revision. In-flight edits to OTHER rows are saved first
+    // so the re-render loses nothing.
+    $("[data-f=also-revise]", row)?.addEventListener("click", async () => {
+      if (!(await askConfirm(`Revise ${pid} in this revision`,
+        "This panel joins the revision — editable here from now on, and the board will ask for a new take for its slot. Recorded in the revision's journal.",
+        "Also revise"))) return;
+      try {
+        await api(`/api/specs/${specId}`, { method: "PUT", json: collect() });
+        await api(`/api/specs/${specId}/revision-scope`,
+          { method: "POST", json: { panel_id: pid } });
+        toast(`${pid} joined the revision — it is editable now.`);
+        openSpecEditor(specId);
+      } catch (err) { toast(err.message, true); }
+    });
     panelsHost.append(row);
     wireCameraRow("pcam", row);  // reveal the custom focal-length input on demand
     updateSettingVis();
@@ -6358,6 +6395,15 @@ REMOVE — marked for removal from the board.">
       // confidence/rationale below) must survive a Save — hardcoding
       // them here once silently wiped autofill's work on every save.
       const orig = (spec.panels || []).find(x => x.id === id) || {};
+      if (carriedSet.has(id)) {
+        // Carried rows pass through VERBATIM — the read-only promise the
+        // revision scope makes; the server deep-compares and refuses any
+        // drift too.
+        out.panels.push(orig);
+        layoutPanels.push({ id,
+          allocation_percent: parseFloat($("[data-f=alloc]", row).value) || 0 });
+        continue;
+      }
       const p = {
         ...orig,
         id,
@@ -6451,10 +6497,56 @@ REMOVE — marked for removal from the board.">
       } catch (err) { toast(err.message, true); }
     };
   } else {
+    // The revise-scope modal (one board per unit, 2026-08-13): the user
+    // declares WHICH panels the revision changes. Checked = revised
+    // (editable in the draft; their board slots re-gate). Unchecked =
+    // carried (read-only; approvals keep flowing to the board). Nothing
+    // pre-checked and Confirm disabled at 0 — a revision that revises
+    // nothing is ledger noise; the explicit choice IS the feature.
+    const reviseScopeDialog = () => modal({
+      custom: `
+        <div class="modal-title">What panels would you like to include in revision</div>
+        <p class="modal-body">Checked panels are REVISED — editable in the new
+        draft, and their board slots will ask for a new take. Unchecked panels
+        are CARRIED — read-only in the draft; their approved takes keep flowing
+        to the board. A carried panel can join later with its Also revise act.</p>
+        <div style="max-height:300px;overflow:auto;margin:10px 14px">
+          ${(spec.panels || []).map(p => `
+            <div><label class="check"><input type="checkbox" value="${esc(p.id)}">
+              <span class="mono">${esc(p.id)}</span> ${esc(p.title || p.purpose || "")}</label></div>`).join("")}
+        </div>
+        <div class="mini mono" data-f="rev-count" style="margin:0 14px">NOTHING REVISED YET — CHECK AT LEAST ONE PANEL</div>
+        <div class="modal-actions" style="margin:12px 14px">
+          <button type="button" class="text-act" data-f="rev-all">Select all</button>
+          <span style="flex:1"></span>
+          <button class="ghost" data-f="rev-cancel">Cancel</button>
+          <button class="primary" data-f="rev-ok" disabled>Create revision</button>
+        </div>`,
+      mount: (ov, done) => {
+        const picked = () => $$("input[type=checkbox]:checked", ov).map(x => x.value);
+        const recount = () => {
+          const n = picked().length, total = (spec.panels || []).length;
+          $("[data-f=rev-count]", ov).textContent = n
+            ? `${n} OF ${total} PANELS REVISED · ${total - n} CARRIED`
+            : "NOTHING REVISED YET — CHECK AT LEAST ONE PANEL";
+          $("[data-f=rev-ok]", ov).disabled = n === 0;
+        };
+        ov.addEventListener("change", recount);
+        $("[data-f=rev-all]", ov).onclick = () => {
+          $$("input[type=checkbox]", ov).forEach(x => { x.checked = true; });
+          recount();
+        };
+        $("[data-f=rev-cancel]", ov).onclick = () => done(null);
+        $("[data-f=rev-ok]", ov).onclick = () => done(picked());
+      },
+    });
     const doRevise = async () => {
+      const ids = await reviseScopeDialog();
+      if (ids === null) return;
       try {
-        const clone = await api(`/api/specs/${specId}/revise`, { method: "POST" });
-        toast(`Revision ${clone.specification_id} created.`);
+        const clone = await api(`/api/specs/${specId}/revise`,
+          { method: "POST", json: { revise_panels: ids } });
+        toast(`Revision ${clone.specification_id} created — ${ids.length} of ${(spec.panels || []).length} panel(s) revised.`);
         renderSpecs(clone.specification_id);
       } catch (err) { toast(err.message, true); }
     };
@@ -6664,8 +6756,12 @@ async function renderBoards() {
   useTemplate("tpl-boards");
   const specs = (await api("/api/specs")).filter(s => s.locked);
   const sel = $("#board-spec");
+  // Stage 04 stays per-revision (it is the working surface); a revision
+  // labels itself as one: "BASE · R2 — subject".
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
-    specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
+    specs.map(s => `<option value="${esc(s.specification_id)}">${
+      revOf(s) > 1 ? `${esc(baseOf(s.specification_id))} · R${revOf(s)}`
+                   : esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
   sel.onchange = () => { uiSet("boardSpec", sel.value); syncUrl(true); sel.value && renderBoardPanels(sel.value); };
   const rememberedB = uiGet("boardSpec", "");
   if (rememberedB && specs.some(s2 => s2.specification_id === rememberedB)) {
@@ -8334,10 +8430,25 @@ async function renderBoardPanels(specId) {
 
 async function renderAssembly() {
   useTemplate("tpl-assembly");
-  const specs = (await api("/api/specs")).filter(s => s.locked);
+  // One board per UNIT (2026-08-13): the picker lists bases, not
+  // revisions — the newest locked revision labels the unit.
+  const allSpecs = await api("/api/specs");
+  const byBase = {};
+  const units = [];
+  for (const s of allSpecs.filter(x => x.locked)) {
+    const b = baseOf(s.specification_id);
+    if (!byBase[b]) { byBase[b] = { base: b, structure: s, family: 0 }; units.push(byBase[b]); }
+    else if (revOf(s) > revOf(byBase[b].structure)) byBase[b].structure = s;
+  }
+  for (const s of allSpecs) {
+    const b = baseOf(s.specification_id);
+    if (byBase[b]) byBase[b].family += 1;
+  }
+  const specs = units;  // downstream: one entry per unit
   const sel = $("#asm-spec");
   sel.innerHTML = `<option value="">— select a signed-off breakdown —</option>` +
-    specs.map(s => `<option value="${esc(s.specification_id)}">${esc(s.specification_id)} — ${esc(s.subject)}</option>`).join("");
+    units.map(u => `<option value="${esc(u.base)}">${esc(u.base)} — ${esc(u.structure.subject)}${
+      u.family > 1 ? ` · ${u.family} REVISIONS` : ""}</option>`).join("");
   sel.onchange = () => { uiSet("asmSpec", sel.value); syncUrl(true); sel.value ? renderAssemblyFor(sel.value) : renderAssembly(); };
 
   const host = $("#assembly-host");
@@ -8364,9 +8475,9 @@ async function renderAssembly() {
   // every assembled wall under the sheet picker, newest first. Clicking
   // one replaces the grid with that board full-width; the picker above
   // still opens a sheet's assembly bench.
-  const all = (await Promise.all(specs.map(s =>
-    api(`/api/specs/${s.specification_id}/boards`)
-      .then(bs => bs.map(b => ({ ...b, _spec: s })))
+  const all = (await Promise.all(units.map(u =>
+    api(`/api/specs/${u.base}/boards`)
+      .then(bs => bs.map(b => ({ ...b, _spec: u.structure, _base: u.base, _family: u.family })))
       .catch(() => []))))
     .flat()
     .sort((a, b) => String(b.candidate_id).localeCompare(String(a.candidate_id)));
@@ -8376,15 +8487,15 @@ async function renderAssembly() {
     // checklist — the picker and bench already state the path by being
     // present. The line disappears the moment a board exists.
     const note = `<div class="mini mono asm-none">NO BOARDS YET &mdash; APPROVE EVERY PANEL IN A SHEET, THEN ASSEMBLE</div>`;
-    const rememberedA = uiGet("asmSpec", "");
-    if (rememberedA && specs.some(s2 => s2.specification_id === rememberedA)) {
+    const rememberedA = baseOf(uiGet("asmSpec", ""));
+    if (rememberedA && units.some(u => u.base === rememberedA)) {
       sel.value = rememberedA;
       await renderAssemblyFor(rememberedA);
       host.insertAdjacentHTML("afterbegin", note);
       return;
     }
-    if (specs.length === 1) {
-      sel.value = specs[0].specification_id;
+    if (units.length === 1) {
+      sel.value = units[0].base;
       await renderAssemblyFor(sel.value);
       host.insertAdjacentHTML("afterbegin", note);
       return;
@@ -8394,7 +8505,7 @@ async function renderAssembly() {
   }
 
   const lbItems = all.map(b => ({
-    src: `/api/specs/${b._spec.specification_id}/candidates/${b.candidate_id}/image`,
+    src: `/api/specs/${b._base}/candidates/${b.candidate_id}/image`,
     caption: `${b.candidate_id} — ${b._spec.subject || b._spec.specification_id} (${b.status}) ${b.width}×${b.height}`,
   }));
 
@@ -8418,7 +8529,8 @@ async function renderAssembly() {
         <div class="body">
           <div><span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span> <b>${esc(b.candidate_id)}</b></div>
           <div class="meta">${esc(b._spec.subject || b._spec.specification_id)}</div>
-          <div class="meta">${b.width}×${b.height}${b.layout_variant ? ` · ${esc(b.layout_variant)} layout` : ""} · ${esc((b.created_at || "").slice(0, 16).replace("T", " "))}</div>
+          <div class="meta">${b.width}×${b.height}${b.layout_variant ? ` · ${esc(b.layout_variant)} layout` : ""} · ${esc((b.created_at || "").slice(0, 16).replace("T", " "))}${
+            b._family > 1 ? ` · BUILT ON R${String(b.specification_id || "").match(/_R(\d+)$/)?.[1] || 1}` : ""}</div>
         </div>`;
       card.onclick = () => showBoard(b, i);
       grid.append(card);
@@ -8430,7 +8542,7 @@ async function renderAssembly() {
     // The drilled board is addressable AND remembered.
     uiSet("drilledBoard", b.candidate_id);
     history.pushState(null, "", "/boards/"
-      + encodeURIComponent(b._spec.specification_id) + "/"
+      + encodeURIComponent(b._base || baseOf(b._spec.specification_id)) + "/"
       + encodeURIComponent(b.candidate_id));
     host.innerHTML = "";
     const p = document.createElement("div");
@@ -8447,7 +8559,7 @@ async function renderAssembly() {
       // Structural board (user ruling 2026-08-02): the layout frames hold
       // the individual panel images — click one to see the full-sized,
       // uncropped take. The composite single image is the EXPORT.
-      const sid = b._spec.specification_id;
+      const sid = b._base || baseOf(b._spec.specification_id);
       const takeOf = pid => b.panels_used?.[pid];
       const takeItems = Object.keys(b.rects)
         .filter(pid => takeOf(pid))
@@ -8532,12 +8644,20 @@ async function renderAssembly() {
 async function renderAssemblyFor(specId) {
   const host = $("#assembly-host");
   host.innerHTML = `<div class="panel mini">Loading…</div>`;
+  // The slot map resolves the unit first: the base id is also R1's spec
+  // id, so the STRUCTURE spec (newest locked revision) must come from the
+  // map, never from a bare specs read (one board per unit, 2026-08-13).
+  let sm = null;
+  try { sm = await api(`/api/specs/${specId}/slot-map`); }
+  catch { /* the map is a preview; assembly still states its own errors */ }
+  const structureId = sm?.structure_spec_id || specId;
   const [{ spec }, candidates, boards] = await Promise.all([
-    api(`/api/specs/${specId}`),
-    api(`/api/specs/${specId}/candidates`),
+    api(`/api/specs/${structureId}`),
+    api(`/api/specs/${specId}/candidates?scope=base`),
     api(`/api/specs/${specId}/boards`),
   ]);
   host.innerHTML = "";
+  const structRev = Number(String(structureId).match(/_R(\d+)$/)?.[1] || 1);
 
   // The slot map makes the never-upscaled rule visible BEFORE a render is
   // spent: exact assembler geometry, one verdict per slot (Part A.4 canonical:
@@ -8545,13 +8665,21 @@ async function renderAssemblyFor(specId) {
   // Layout is presentation grammar, not canon — the variant chips rearrange
   // how approved work hangs on the canvas and are recorded on the board.
   const VERDICT = { OK: "OK", UNAPPROVED: "UNAPPROVED",
-                    TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE" };
+                    TOO_SMALL: "TOO SMALL", NO_CANDIDATE: "NO CANDIDATE",
+                    STALE_APPROVAL: "REVISED SINCE" };
+  // A STALE_APPROVAL slot states the choice in full (one board per unit,
+  // 2026-08-13): the panel changed in a later revision, so its old take
+  // is OFFERED — re-render on the workbench, or Keep it explicitly.
+  const staleLine = s =>
+    `${s.panel_id} APPROVED AGAINST R${s.offered_from_revision} — ` +
+    `${s.panel_id} CHANGED IN R${structRev}; RE-RENDER ON THE WORKBENCH OR KEEP`;
   const slotHtml = sm => {
     const notReady = sm.slots.filter(s => s.status !== "OK");
     const minY = Math.min(1, ...sm.slots.map(s => s.y));
     return `
       ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
-        ${esc(notReady.map(s => `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
+        ${esc(notReady.map(s => s.status === "STALE_APPROVAL" ? staleLine(s)
+          : `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
         — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
       <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
         <div class="slot apdrawn" style="left:1.7%;top:3%;width:96.6%;height:${Math.max(4, (minY - 0.05) * 100).toFixed(1)}%">
@@ -8560,17 +8688,18 @@ async function renderAssemblyFor(specId) {
         </div>
         ${sm.slots.map(s => `
           <div class="slot ${s.status === "OK" ? "clean" : s.status === "TOO_SMALL" ? "hatch-bad" : "hatch"} ${esc(s.status)}" style="left:${(s.x * 100).toFixed(2)}%;top:${(s.y * 100).toFixed(2)}%;width:${(s.w * 100).toFixed(2)}%;height:${(s.h * 100).toFixed(2)}%"
-               title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}">
-            ${s.candidate_id ? `<img class="slot-img" src="/api/specs/${encodeURIComponent(specId)}/candidates/${esc(s.candidate_id)}/image?size=thumb" loading="lazy" alt="">` : ""}
-            <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}</span>
+               title="${esc(s.title)} — slot ${s.slot_width}×${s.slot_height}px${s.candidate_id ? ` · ${s.candidate_id}${s.candidate_width ? ` ${s.candidate_width}×${s.candidate_height}px` : ""}` : ""}${s.status === "STALE_APPROVAL" ? ` · ${esc(staleLine(s))}` : ""}">
+            ${s.candidate_id || s.offered_candidate_id ? `<img class="slot-img" src="/api/specs/${encodeURIComponent(specId)}/candidates/${esc(s.candidate_id || s.offered_candidate_id)}/image?size=thumb" loading="lazy" alt="">` : ""}
+            <span class="slot-id">${esc(s.panel_id)}${s.allocation_percent ? ` · ${s.allocation_percent}%` : ""}${s.status === "TOO_SMALL" ? ` · ${s.candidate_width} PX` : ""}${
+              s.from_revision && s.from_revision !== structRev ? ` · FROM R${s.from_revision}` : ""}${s.kept ? " · KEPT" : ""}</span>
+            ${s.status === "STALE_APPROVAL" ? `<button type="button" class="text-act" data-keep="${esc(s.panel_id)}" data-cand="${esc(s.offered_candidate_id)}"
+              title="Keep the R${s.offered_from_revision} take for this slot — an explicit, journaled decision; the slot stops asking">Keep</button>` : ""}
             <span class="slot-verdict ${esc(s.status)}">${VERDICT[s.status]}</span>
           </div>`).join("")}
       </div>`;
   };
 
-  let sm = null;
-  try { sm = await api(`/api/specs/${specId}/slot-map`); }
-  catch { /* the map is a preview; assembly still states its own errors */ }
+  // (sm was fetched at the top — the structure spec depends on it.)
 
   // Layout moved to the sheet grammar (SHEET_SYSTEM_PLAN ba-4a): stage 05
   // judges readiness, the arrange room arranges. The variant chips are
@@ -8615,6 +8744,19 @@ async function renderAssemblyFor(specId) {
     <div id="asm-busy"></div>
     <div class="ref-grid" id="asm-gallery" style="margin-top:12px"></div>`;
   host.append(asm);
+
+  // The Keep act — delegated, because the slot map re-renders on every
+  // canvas change. An explicit, journaled seat of the old take.
+  asm.addEventListener("click", async e => {
+    const kb = e.target.closest("[data-keep]");
+    if (!kb) return;
+    try {
+      await api(`/api/specs/${specId}/board-keeps/${kb.dataset.keep}`,
+        { method: "PUT", json: { candidate_id: kb.dataset.cand } });
+      toast(`${kb.dataset.keep} — old take kept; journaled. The slot stops asking.`);
+      refreshMap();
+    } catch (err) { toast(err.message, true); }
+  });
 
   const refreshMap = async () => {
     const [w, h] = $("#asm-size", asm).value.split("x").map(Number);
@@ -8857,8 +8999,10 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   let sh = await api(`/api/sheets/${sheetId}`);
   let ready = await api(`/api/sheets/${sheetId}/readiness`);
   const specId = sh.spec_id || "";
+  // The unit's whole pool, ordered revision-major oldest-first — the
+  // last-wins fold below then reads "newest revision's newest approved".
   const cands = specId
-    ? await api(`/api/specs/${specId}/candidates`).catch(() => []) : [];
+    ? await api(`/api/specs/${baseOf(specId)}/candidates?scope=base`).catch(() => []) : [];
   const BW = sh.size[0], BH = sh.size[1];
   // The panels live in the sheet's CONTENT field (inside margins and the
   // masthead band), not the full page — the server states the rect. All
@@ -8893,7 +9037,8 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     // Latest approved wins (2026-08-13): the pinned slot id is only the
     // fallback for panels whose take lost approval.
     const la = latestApproved[pid];
-    const t = la ? { spec: specId, cand: la.candidate_id } : takeOf[pid];
+    const t = la ? { spec: la.spec_id || specId, cand: la.candidate_id,
+                     rev: la.revision } : takeOf[pid];
     if (!t) return null;
     const rec = cands.find(c => c.candidate_id === t.cand);
     return { ...t, w: rec?.width || 0, h: rec?.height || 0 };
@@ -9149,7 +9294,9 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     el.className = "arr-tile";
     el.dataset.pid = pid;
     el.innerHTML = `${t ? `<img class="arr-img" draggable="false" alt="" src="/api/specs/${encodeURIComponent(t.spec)}/candidates/${encodeURIComponent(t.cand)}/image?size=md">` : ""}
-      <span class="arr-tag mono">${esc(pid)}</span>
+      <span class="arr-tag mono">${esc(pid)}${
+        t && t.rev && cands.some(c => (c.revision || 1) > t.rev)
+          ? ` · FROM R${t.rev}` : ""}</span>
       <span class="arr-dim mono"></span>
       <span class="arr-verdict mono"></span>
       <button class="arr-act arr-trash" data-act="bench" title="Remove from the board — the take goes to the bench; + docks it back">${ICON.trash}</button>
@@ -9204,6 +9351,8 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         ? `<span>${esc(b.block_id)} sets type under the floor — pick a larger size.</span>`
         : b.kind === "SLOT_APPROVAL"
         ? `<span>${esc(panelOf(b.block_id, b.slot_id))} holds <span class="mono">${esc(b.candidate_id)}</span>, which is not approved — approve it on the workbench.</span>`
+        : b.kind === "SLOT_OFFERED"
+        ? `<span>${esc(b.panel_id || panelOf(b.block_id, b.slot_id))}'s take <span class="mono">${esc(b.candidate_id)}</span> was approved against R${b.from_revision} and the panel changed in R${b.floor} — re-render on the workbench or <button type="button" class="text-act" data-gate-keep="${esc(b.panel_id || "")}" data-cand="${esc(b.candidate_id)}">Keep</button> it.</span>`
         : `<span>${esc(panelOf(b.block_id, b.slot_id))} ${b.have?.[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "has no approved take — approve one on the workbench"}.</span>`)
       .join("");
     return ready.ready ? "" : `
@@ -9215,6 +9364,16 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   };
   const paintChrome = () => {
     gateEl.innerHTML = gateHtml();
+    // Keep, where the gate states the condition (act-where-condition-is-met).
+    $$("[data-gate-keep]", gateEl).forEach(b => b.onclick = async () => {
+      try {
+        await api(`/api/specs/${baseOf(specId)}/board-keeps/${b.dataset.gateKeep}`,
+          { method: "PUT", json: { candidate_id: b.dataset.cand } });
+        toast(`${b.dataset.gateKeep} — old take kept; journaled.`);
+        ready = await api(`/api/sheets/${sheetId}/readiness`);
+        paintChrome();
+      } catch (err) { toast(err.message, true); }
+    });
     $("[data-f=export-slot]", root).innerHTML = exportBtns(ready.ready);
     const stBtn = $("[data-f=style]", root);
     if (stBtn) {

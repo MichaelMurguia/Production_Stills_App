@@ -442,6 +442,27 @@ def readiness(sheet: dict) -> dict:
                                 "block_id": b["block_id"],
                                 "slot_id": s["slot_id"],
                                 "candidate_id": s["candidate_id"]})
+            elif (rec is not None and sheet.get("archetype") == "BOARD"
+                  and str(sheet.get("spec_id") or "").strip()):
+                # One board per unit (2026-08-13): a seated take approved
+                # against a revision OLDER than the panel's floor is a
+                # stated choice — re-render, or keep it explicitly.
+                from . import revisions
+                base = revisions.base_of(str(sheet.get("spec_id") or ""))
+                floor = revisions.panel_revision_floor(
+                    base, str(s.get("panel_id") or ""))
+                from_rev = revisions.revision_of(str(s["spec_id"]))
+                kept = revisions.load_keeps(base).get(
+                    str(s.get("panel_id") or ""), {}).get(
+                    "candidate_id") == s["candidate_id"]
+                if from_rev < floor and not kept:
+                    blocked.append({"kind": "SLOT_OFFERED",
+                                    "block_id": b["block_id"],
+                                    "slot_id": s["slot_id"],
+                                    "panel_id": s.get("panel_id"),
+                                    "candidate_id": s["candidate_id"],
+                                    "from_revision": from_rev,
+                                    "floor": floor})
     return {"ready": not blocked, "blocked": blocked}
 
 
