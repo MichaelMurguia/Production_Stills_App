@@ -1642,6 +1642,10 @@ async function showView(name, { push = true } = {}) {
   // restores (persistent UI state) and both nav bars stay in sync free.
   document.body.classList.toggle("tool-mode",
     ["status", "references", "projects", "settings"].includes(name));
+  // The active view is addressable from CSS so a surface can own its
+  // measure (§1.11: the workbench is authored at 1920 with fixed rails;
+  // every other view keeps the standing 1560px measure).
+  document.body.dataset.view = name;
   activeView = name;
   uiSet("view", name);
   syncUrl(push);
@@ -7265,43 +7269,13 @@ async function renderBoardPanels(specId) {
     };
     const objHasRef = obj => groupList.some(g => matches(obj, g.name));
     const reqObjs = p.required_objects || [];
-    const evidenceOf = obj => (spec.evidence_ledger || []).find(r =>
-      String(r.panel_id).toUpperCase() === p.id
-      && String(r.object).toLowerCase() === String(obj).toLowerCase());
-
-    // P2: the work order's largest block — required content as a numbered
-    // table (Courier ordinal, Archivo object), each row marked from state:
-    // ✓ REF when a library group matches, HOLD when its evidence row is
-    // not PASS. Twelve objects in a comma run cannot be read or counted.
     const withRef = reqObjs.filter(objHasRef).length;
-    const reqTableHtml = `
-      <div class="req-head"><span class="f-label">Required content</span>
-        <span class="mini mono">${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE</span></div>
-      <div class="req-table">${reqObjs.map((o, i) => {
-        const ev = evidenceOf(o);
-        // An object without a reference offers the fix where the gap is
-        // stated (user 2026-08-14): Add reference opens the library
-        // widget right here, prefilled with the object. One WITH a
-        // reference offers View — the matching plates in the lightbox.
-        const mark = objHasRef(o)
-          ? `<span class="req-mark ok">✓ REF</span>
-             <button type="button" class="text-act" data-viewref="${esc(o)}" title="View the matching reference plate(s) in the lightbox">View</button>`
-          : `${ev && ev.status !== "PASS" ? '<span class="req-mark hold">HOLD</span>' : ""}
-             <button type="button" class="text-act" data-addref="${esc(o)}" title="Supply a reference image for this object without leaving the workbench — it enters the library approved and attaches like any other">Add reference</button>`;
-        return `<div class="req-row"><span class="req-ord">${String(i + 1).padStart(2, "0")}</span><span class="req-obj">${esc(o)}</span>${mark}</div>`;
-      }).join("") || '<div class="req-row"><span class="req-obj mini">none — this panel is steered by its purpose alone</span></div>'}</div>`;
-    // Light-table state: the spec is context — compact bordered chips.
-    const reqChipsHtml = `
-      <div class="spec-chips"><span class="f-label">Required · ${reqObjs.length}</span>
-        ${reqObjs.map(o => `<span class="req-chip">${esc(o)}${objHasRef(o)
-          ? ` <button type="button" class="text-act" data-viewref="${esc(o)}" title="View the matching reference plate(s) in the lightbox">view</button>`
-          : ` <button type="button" class="text-act" data-addref="${esc(o)}" title="No reference matches this object — supply one right here; it enters the library approved and attaches like any other">+ REF</button>`}</span>`).join("")
-          || '<span class="mini">none</span>'}</div>`;
 
     // P3: the user is about to spend a render — everything the render
-    // obeys goes on the card. Forbidden states its provenance (panel vs
-    // inherited from the board); SCOPE carries the languages, environment
-    // and slugline the prompt will actually use.
+    // obeys goes in the sequence. Forbidden states its provenance (panel
+    // vs inherited from the board) in step 02; SCOPE carries the
+    // languages, environment and slugline the prompt will actually use,
+    // stated in step 05 beside the prompt it feeds.
     const ownForbid = p.forbidden_objects || [];
     const boardForbid = (spec.forbidden_elements || [])
       .filter(f => !ownForbid.some(o => String(o).toLowerCase() === String(f).toLowerCase()));
@@ -7310,11 +7284,6 @@ async function renderBoardPanels(specId) {
     const forbidHead =
       `${ownForbid.length ? `${ownForbid.length} ON THIS PANEL` : "NOTHING ON THIS PANEL"}`
       + ` · ${boardForbid.length} INHERITED FROM THE BOARD`;
-    const forbiddenHtml = `
-      <div class="req-head"><span class="f-label">Forbidden</span>
-        <span class="mini mono">${forbidHead}</span></div>
-      ${forbidChips ? `<div class="spec-chips">${forbidChips}</div>`
-        : '<p class="mini">nothing forbidden anywhere — the drift rule still applies</p>'}`;
 
     const scopeLangs = p.design_languages?.length ? p.design_languages
       : (spec.design_languages || []);
@@ -7327,14 +7296,46 @@ async function renderBoardPanels(specId) {
       String(setting.int_ext || "").toUpperCase(),
       String(p.time_of_day || setting.time_of_day || "").toUpperCase(),
     ].filter(Boolean);
-    const scopeHtml = scopeBits.length ? `
-      <div class="req-head"><span class="f-label">Scope</span>
-        <span class="mini mono">${scopeOverride ? "PANEL OVERRIDE" : "INHERITED FROM THE BOARD"}</span></div>
-      <p class="scope-line mono">${esc(scopeBits.join("  ·  "))}</p>` : "";
+
     const roomSel = boardRoomSel[specId];
     roomSel.staged ??= {};
     let staged = panelCands.find(c => c.candidate_id === roomSel.staged[p.id]) || panelCands[0] || null;
     const role = p.composition_role === "hero" ? "HERO" : "STRIP";
+
+    // STEP_SEQUENCE_SPEC §1.0/§2.15: the take is displayed at the PANEL's
+    // own shape, never a fixed height that letterboxes it. A panel has no
+    // declared aspect field — its established shape is whatever its last
+    // take rendered at, which is also what the Aspect select must default
+    // to (§2.4: the select hardcoded 16:9 and silently re-shaped a hero
+    // panel between takes).
+    const aspectList = appSettings.aspects || ASPECT_FALLBACK;
+    const panelAspect = panelCands[0]?.aspect_ratio
+      || (aspectList.some(a => a.id === "16:9") ? "16:9" : aspectList[0]?.id) || "16:9";
+    const aspectLabel = (aspectList.find(a => a.id === panelAspect) || {}).label
+      || panelAspect;
+    const aspectCss = (() => {
+      const [w, h] = String(panelAspect).split(":").map(Number);
+      return w > 0 && h > 0 ? `${w}/${h}` : "16/9";
+    })();
+
+    // Step confirmations (§1.7). Advisory by design — §2.4 rules the gate
+    // honest, so an unconfirmed step never blocks a render. That makes a
+    // tick a reading posture over data already on screen, so it lives in
+    // per-production UI state rather than canon. Editing a step's own
+    // subject clears its tick, and any change upstream clears 05: a
+    // confirmation that outlives what it confirmed is a lie.
+    const CONF_STEPS = ["brief", "objects", "camera", "references", "prompt"];
+    const confKey = `wbconf.${specId}.${p.id}`;
+    const confAll = () => uiGet(confKey, {});
+    const confIs = s => !!confAll()[s];
+    const confSet = (s, on) => {
+      const c = { ...confAll() };
+      if (on) c[s] = 1; else delete c[s];
+      if (s !== "prompt") delete c.prompt;
+      uiSet(confKey, c);
+    };
+    const confCount = CONF_STEPS.filter(confIs).length;
+
     const takeItems = panelCands.map(c => ({
       src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
       caption: `${c.candidate_id} — ${p.id} (${c.status}) ${c.width}×${c.height}`,
@@ -7350,15 +7351,20 @@ async function renderBoardPanels(specId) {
     // missing thing — before its first take the card is a WORK ORDER (the
     // spec is the content); no hatched placeholder, no "nothing here" line.
     const stagedHtml = !staged ? "" : `
-      <div class="stage-shot" title="Click to open at full size">
+      <div class="stage-shot stage-hero" style="aspect-ratio:${aspectCss}" title="Click to open at full size">
         <img src="/api/specs/${specId}/candidates/${staged.candidate_id}/image?size=md" alt="${esc(staged.candidate_id)}" data-f="shot-img">
         <!-- T1 (TAKE_ACTIONS): state and identity ride the image so the
              row beneath carries verbs only and can fit. A chip swallows
-             its own click; the picture opens the lightbox. -->
+             its own click; the picture opens the lightbox. §2.15 adds the
+             pixel size to the image it describes — the frame carries the
+             PANEL's shape, so a take is never letterboxed into a frame
+             that lies about it. -->
         <span class="shot-tag shot-tag-state shot-status ${esc(staged.status)}">${staged.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : esc(staged.status)}</span>
         <span class="shot-tag shot-tag-id">${esc(staged.candidate_id)} · TAKE ${
           panelCands.length - panelCands.indexOf(staged)} OF ${panelCands.length}${
           stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
+        <span class="shot-tag shot-tag-size">${staged.width} × ${staged.height} · ${
+          esc(staged.aspect_ratio || "")} · NATIVE, NEVER UPSCALED</span>
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
            amber verdict, six text acts in two LABELLED groups, Reject
@@ -7366,11 +7372,18 @@ async function renderBoardPanels(specId) {
            produces another take of THIS panel; DERIVE produces a record
            somewhere else, and reads dimmer because nothing in it advances
            this panel toward approval. -->
+      <!-- §2.5: the USE / DERIVE kickers say what the labels cannot — USE
+           produces another take of THIS panel, DERIVE produces a record
+           somewhere else. Reject joins its own group (the spec and mock
+           4a both place it under USE beside Approve; 17a had fenced it
+           right, where it read as a fourth group of one). The run facts
+           take the right edge — they describe the picture above. -->
       <div class="act-bar">
-        <span class="act-zone act-approve" data-f="act-approve"></span>
         <span class="act-zone act-use">
           <span class="act-kicker">USE</span>
+          <span class="act-items act-approve" data-f="act-approve"></span>
           <span class="act-items" data-f="act-use"></span>
+          <span class="act-items" data-f="act-danger"></span>
         </span>
         <span class="act-zone act-derive">
           <span class="act-kicker">DERIVE</span>
@@ -7379,7 +7392,11 @@ async function renderBoardPanels(specId) {
             title="Derive — Reference, Crop to reference, Light study">&ctdot;</button>
         </span>
         <span class="act-spacer" aria-hidden="true"></span>
-        <span class="act-zone act-right" data-f="act-danger"></span>
+        <span class="act-run mono">${[
+          staged.created_at ? `RUN ${esc(String(staged.created_at).slice(0, 16).replace("T", " "))}` : "",
+          esc(staged.model || ""),
+          staged.spec_hash ? `HASH ${esc(String(staged.spec_hash).slice(0, 8))}` : "",
+        ].filter(Boolean).join("  ·  ")}</span>
       </div>
       <div data-f="shot-busy"></div>
       ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--hold)">⚠ ${esc(w)}</div>`).join("")}
@@ -7410,7 +7427,11 @@ async function renderBoardPanels(specId) {
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
-              <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?size=thumb" loading="lazy" alt="">
+              <!-- §2.15: the strip thumbs carry the panel's ratio too, so
+                   a take never changes shape between hero and strip. -->
+              <span class="take-frame" style="aspect-ratio:${aspectCss}">
+                <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?size=thumb" loading="lazy" alt="">
+              </span>
               <span class="take-cap">${esc(c.candidate_id)}${word ? ` · ${word}` : ""}${pr ? " · REF" : ""}</span>
             </button>`;
           }).join("")}
@@ -7418,216 +7439,297 @@ async function renderBoardPanels(specId) {
       </div>`;
 
     const card = document.createElement("div");
-    card.className = "panel";
+    card.className = "panel wb-card";
+
+    // The brief is editable BETWEEN takes (user 2026-08-08: a purpose that
+    // says "the three people" keeps painting three people, and the only fix
+    // lived behind a full unlock). The amend is journaled server-side and
+    // the lock re-stamps; an APPROVED take freezes the brief it was
+    // approved against — the gate reads as state here, before it is hit.
+    const frozen = panelCands.some(c => c.status === "APPROVED");
+
+    // The reference selection is REMEMBERED generation to generation (user
+    // 2026-08-08): every take records which references it attached, so the
+    // newest take of this panel is the memory — no new storage, survives
+    // reloads and devices, and unticking everything is remembered too. The
+    // keyword matcher is only the first-take default.
+    const lastTake = panelCands[0];
+    const lastRefIds = new Set((lastTake?.references || []).map(r => r.id));
+    buildWorkbench.isChecked = g => lastTake
+      ? g.ids.some(id => lastRefIds.has(id))
+      : reqObjs.some(o => matches(o, g.name));
+    // §2.3: references are not a free choice — the app has already ticked
+    // them and can say why, so every row states its reason AND the off rows
+    // state theirs. The two rules never both fire (matches-an-object is the
+    // first-take default only), so a row never shows a reason it cannot have.
+    const refWhy = lastTake ? "RODE THE PREVIOUS TAKE" : "MATCHES A REQUIRED OBJECT";
+    const refWhyOff = lastTake
+      ? "DID NOT RIDE THE PREVIOUS TAKE"
+      : "NOTHING ON THIS PANEL NAMES THEIR SUBJECT";
+
+    const approvedN = panelCands.filter(c => c.status === "APPROVED").length;
+    const takesWord = !panelCands.length ? "NO TAKES YET"
+      : `${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}, ${
+          approvedN ? `${approvedN} APPROVED` : "NONE APPROVED"}`;
+
+    // §1.6/§1.7 — the step spine. A 46px gutter holds a two-digit Courier
+    // number, one per section: a label gutter says what KIND of thing a row
+    // is, a number says where you are in the work, and on a surface whose
+    // job is a sequence of confirmations that is the more useful fact. Two
+    // states only; a confirmed step dims but stays fully legible, because it
+    // is evidence you already ruled, not clutter to be hidden.
+    const step = ({ n, id = "", label, meta = "", verbs = "", body = "" }) => {
+      const done = id && confIs(id);
+      return `
+      <section class="step${+n % 2 === 0 ? " step-band" : ""}${done ? " step-done" : ""}"
+               data-step="${esc(id || n)}">
+        <span class="step-num mono">${n}</span>
+        <div class="step-main">
+          <div class="step-head">
+            <span class="step-label mono">${label}</span>
+            ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
+            <span class="step-acts">
+              ${done ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
+                 title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
+              ${verbs}
+              ${id && !done ? `<button type="button" class="verb" data-confirm="${esc(id)}"
+                 title="Mark this step confirmed. Advisory — it never blocks the render.">Confirm</button>` : ""}
+            </span>
+          </div>
+          ${body ? `<div class="step-content">${body}</div>` : ""}
+        </div>
+      </section>`;
+    };
+
+    const camAxes = ["camera_angle", "camera_orientation", "camera_lens",
+                     "camera_tilt", "scale"];
+    const camOwn = camAxes.some(k => p[k]);
+    const camRv = k => String(p[k] || camDefaults?.[k] || "—").replace(/_/g, " ");
+    // Orientation states itself only when set — it has no baseline, and a
+    // standing "—" would read as a missing value rather than a free axis.
+    const camOrient = String(p.camera_orientation
+      || camDefaults?.camera_orientation || "").replace(/_/g, " ");
+    // The axes are stored uppercase (EYE_LEVEL); §1.2 makes this line prose,
+    // and prose is sentence case — the Courier caps beside it are the
+    // machine facts, this is what a person reads.
+    const camSummary = (() => {
+      const s = [camRv("camera_angle"), camOrient, camRv("camera_lens"),
+                 camRv("camera_tilt"), camRv("scale")]
+        .filter(Boolean).join(" · ").toLowerCase();
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    })();
+
+    const onGroups = groupList.filter(buildWorkbench.isChecked);
+    const offGroups = groupList.filter(g => !buildWorkbench.isChecked(g));
+    const groupRow = (g, on) => `
+      <label class="ref-row${on ? " on" : ""}" title="${esc(g.ids.join(", "))}">
+        <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${on ? "checked" : ""}>
+        <span class="ref-name mono">${esc(g.name)}</span>
+        <span class="ref-kind">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
+        ${on ? `<span class="ref-why mono">${refWhy}</span>` : ""}
+      </label>`;
+
     card.innerHTML = `
-      <h2><span class="pid-badge">${esc(p.id)}</span> ${esc(p.title || p.purpose)}
-        <span class="hint" style="float:right">${alloc ? alloc + "%" : ""} · ${role}${staged ? ` · ${esc(((appSettings.aspects || []).find(x => x.id === staged.aspect_ratio) || {}).label || staged.aspect_ratio || "")}` : ""}</span></h2>
-      ${(() => {
-        // The brief is editable BETWEEN takes (user 2026-08-08: a purpose
-        // that says "the three people" keeps painting three people, and
-        // the only fix lived behind a full unlock). The amend is journaled
-        // server-side and the lock re-stamps; an APPROVED take freezes the
-        // brief it was approved against — the gate reads as state here,
-        // before it is hit.
-        const frozen = panelCands.some(c => c.status === "APPROVED");
-        return `<div class="brief-row" data-f="brief-row">
-          <p class="mini" data-f="brief-text">${esc(p.purpose)}</p>
-          <button type="button" class="ghost" data-f="brief-edit"
-            ${frozen ? "disabled" : ""} title="${frozen
-              ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
-              : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>
-        </div>
-        <div class="brief-editor hidden" data-f="brief-editor">
-          <textarea data-f="brief-input" rows="2"></textarea>
-          <div class="brief-acts">
-            <button type="button" class="ghost" data-f="brief-save">Save brief</button>
-            <button type="button" class="text-act" data-f="brief-cancel">Cancel</button>
-            <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF · NOTHING ELSE INHERITS IT</span>
-          </div>
-        </div>
-        <div class="cam-inline" data-f="cam-inline">
-          ${(() => {
-            // R7 (canon pass, mock au-wb-camera): one control, two
-            // presentations. The workbench judges takes — the camera in
-            // force is a stated Courier line with its verb beside it;
-            // the four selects open only when asked. Three states:
-            // inherited-and-stated, opened, fixed by an approved take.
-            const axes = ["camera_angle", "camera_orientation", "camera_lens",
-              "camera_tilt", "scale"];
-            const own = axes.some(k => p[k]);
-            const rv = k => String(p[k] || camDefaults?.[k] || "—")
-              .replace(/_/g, " ");
-            // Orientation states itself only when set — it has no baseline,
-            // and a standing "—" would read as a missing value, not a choice.
-            const orient = String(p.camera_orientation
-              || camDefaults?.camera_orientation || "").replace(/_/g, " ");
-            const summary = [rv("camera_angle"), orient, rv("camera_lens"),
-              rv("camera_tilt"), rv("scale")].filter(Boolean).join(" · ");
-            return `
-          <div class="cam-stated">
-            <span class="mono cam-sum">CAMERA&ensp;${esc(summary)}
-              <span class="cam-src">— ${own ? "THIS PANEL" : "FROM BIBLE"}</span></span>
-            <button type="button" class="ghost" data-f="cam-open"
-              ${frozen ? `disabled title="Frozen by an approved take — it was composed at this camera; the setting unfreezes if the take is rejected"` : ""}>Change camera</button>
-          </div>
-          <div class="cam-editor hidden" data-f="cam-editor">
-            <span class="mono cam-open-k">CAMERA OPENED · NEXT TAKE PAINTS FROM THESE</span>
-            ${cameraRow("cam", p, "— from bible —", false)}
-            <div class="cam-editor-acts">
-              <button type="button" class="primary" data-f="cam-save">Save camera</button>
-              <button type="button" class="ghost" data-f="cam-cancel">Cancel</button>
-            </div>
-            <span class="mini mono">JOURNALED · RE-STAMPS THE LOCK · A CUSTOM LENS STATES ITS MM IN THE LINE, NEVER "CUSTOM"</span>
-          </div>`;
-          })()}
-        </div>`;
-      })()}
-      ${workOrder ? reqTableHtml + forbiddenHtml + scopeHtml : reqChipsHtml + `
-      <div class="spec-chips"><span class="f-label">Forbidden · ${ownForbid.length + boardForbid.length}</span>
-        ${forbidChips || '<span class="mini">nothing</span>'}</div>`}
+      <div class="wb-head">
+        <span class="pid-badge">${esc(p.id)}</span>
+        <h2 class="wb-subject">${esc(p.title || p.purpose)}</h2>
+        <span class="wb-facts mono">${[alloc ? `${alloc}%` : "", role,
+          String(aspectLabel).toUpperCase()].filter(Boolean).join("  ·  ")}</span>
+        <span class="wb-progress mono">${confCount} OF 5 STEPS CONFIRMED  ·  ${takesWord}</span>
+      </div>
       ${stagedHtml}
       ${takesHtml}
-      <div class="spec-section">
-        <div class="bench-head">
-          <span class="f-label">Generate next take</span>
-          <span class="bench-count" data-f="ref-count"></span>
-        </div>
-        <h4>Style anchors
-          ${styleAnchors.length ? '<span class="always-on" title="Auto-attached to every render on this board — they control style only, never content">ALWAYS ON</span>' : ""}
-        </h4>
-        ${(() => {
-          // P4: auto-attached and un-uncheckable — a wall of full-size
-          // badges spends the card's best space on data the user can only
-          // read. One row per role with a plate count; IDs behind a
-          // disclosure, unchanged.
-          if (!styleAnchors.length)
-            return '<div class="mini" style="margin-bottom:10px">none yet — upload a Board rendering style or Cinematography style image on the Production Design tab</div>';
-          const heads = {};
-          for (const r of styleAnchors) (heads[roleHead(r.role)] ??= []).push(r);
-          const pretty = h => {
-            const t = h.replace(/_STYLE$/, "").replaceAll("_", " ").toLowerCase();
-            return t.charAt(0).toUpperCase() + t.slice(1);
-          };
-          const ids = styleAnchors.map(r => r.id);
-          const range = ids.length > 2 ? `${ids[0]} … ${ids[ids.length - 1]}` : ids.join(" · ");
-          return `
-            <p class="mini" style="margin:2px 0 8px">Set on Production Design. Attached to every render on this board — they control style only, never content.</p>
-            <div class="anchor-sum">${Object.entries(heads).map(([h, rs]) => `
-              <div class="anchor-sum-row"><span>${esc(pretty(h))}</span>
-                <span class="mono">${rs.length} PLATE${rs.length === 1 ? "" : "S"}</span></div>`).join("")}
+      <div class="steps">
+        ${step({ n: "01", id: "brief", label: "BRIEF",
+          verbs: `<button type="button" class="verb" data-f="brief-edit"
+            ${frozen ? "disabled" : ""} title="${frozen
+              ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
+              : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>`,
+          body: `
+            <div class="brief-row" data-f="brief-row">
+              <p class="step-prose" data-f="brief-text">${esc(p.purpose)}</p>
             </div>
-            <div class="mini mono" style="margin:6px 0 10px">${esc(range)}
-              <button class="text-act mono" data-f="show-ids" style="font-size:10.5px;letter-spacing:.08em">SHOW IDS</button></div>
-            <div class="mini hidden" data-f="anchor-ids" style="margin-bottom:10px">${styleAnchors.map(r =>
-              `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
-            </div>`;
-        })()}
-        ${(() => {
-          // The selection is REMEMBERED generation to generation (user
-          // 2026-08-08): every take records which references it attached,
-          // so the newest take of this panel is the memory — no new
-          // storage, survives reloads and devices, and unticking
-          // everything is remembered too. The matcher is only the
-          // first-take default.
-          const lastTake = panelCands[0];
-          const lastIds = new Set((lastTake?.references || []).map(r => r.id));
-          buildWorkbench.isChecked = g => lastTake
-            ? g.ids.some(id => lastIds.has(id))
-            : reqObjs.some(o => matches(o, g.name));
-          return "";
-        })()}
-        <h4>Attach subject references
-          <span class="mini mono" style="float:right">${groupList.filter(buildWorkbench.isChecked).length} / ${groupList.length}</span>
-          <span class="hint">${panelCands.length
-            ? "(grouped by subject — ✓ green groups RODE THE PREVIOUS TAKE)"
-            : "(grouped by subject — ✓ green groups match this panel's required objects and are pre-checked)"}</span></h4>
-        ${(() => {
-          // P5: four unchecked boxes read as a choice not yet made; in
-          // fact the app decided and the answer was NOTHING MATCHED. Say
-          // so before a 4K spend — this is a quality warning. With a
-          // previous take the selection is the user's own memory, and an
-          // empty one is their decision — no warning second-guesses it.
-          if (!groupList.length || panelCands.length
-              || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
-            return "";
-          // Name what actually went unmatched. The old copy hardcoded
-          // "this panel requires places and objects", which told the user
-          // nothing they could act on (2026-08-07); the objects ARE the
-          // actionable fact — rename one, or tick a group below.
-          const shown = reqObjs.slice(0, 4).map(o => `"${esc(o)}"`).join(", ");
-          const more = reqObjs.length > 4 ? ` (+${reqObjs.length - 4} more)` : "";
-          return `<div class="nomatch">
-            <b class="mono">NO MATCHES</b>
-            <p>${reqObjs.length
-              ? `Nothing in the library matches what this panel requires: ${shown}${more}.`
-              : "This panel lists no required objects, so nothing could be matched."}
-            It will render from text and style alone — tick a group below to
-            attach one anyway.</p></div>`;
-        })()}
-        <div class="ref-groups">${groupList.map(g => {
-            const matched = buildWorkbench.isChecked(g);
-            return `<label class="check ref-group ${matched ? "has-ref" : ""}"
-              title="${esc(g.ids.join(", "))}${matched ? (panelCands.length
-                ? " — RODE THE PREVIOUS TAKE"
-                : " — matches a required object of this panel; pre-checked") : ""}">
-              <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${matched ? "checked" : ""}>
-              ${esc(g.name)} <span class="mini">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
-            </label>`;
-          }).join("") || '<span class="mini">no approved subject references yet — add them via the cast & subjects cards on Production Design</span>'}
-        </div>
-      </div>
-      <div class="gen-row">
-        ${swatchRefs.length ? (() => {
-          // Per-swatch palette selection (2026-08-13, user): never all
-          // swatches by default. Empty selection = the four-anchor auto
-          // shelf (the 2 newest swatches, server-side, as ruled
-          // 2026-08-03); picking ANY swatch takes over the role entirely.
-          const lastTake = panelCands[0];
-          const lastIds = new Set((lastTake?.references || []).map(r => r.id));
-          const meta = r => {
-            const parts = String(r.notes || "").split("·").map(s => s.trim());
-            const hex = (parts[1] || "").split("/")[0].trim();
-            return { name: parts[0] || r.id,
-                     hex: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#666666" };
-          };
-          return `<div class="fgroup" style="position:relative"
-            title="Which palette swatches ride this render as color references. Unselected = the style shelf's automatic pick (the 2 newest approved swatches); selecting any swatch replaces that with exactly your set — never the whole palette.">
-            <span class="f-label">Palette</span>
-            <button type="button" class="ghost" data-f="swatch-open"></button>
-            <div class="hidden" data-f="swatch-menu"
-              style="position:absolute;top:100%;left:0;z-index:30;background:var(--panel);border:1px solid var(--line);padding:10px 12px;max-height:min(260px,60vh);overflow:auto;min-width:250px">
-              ${swatchRefs.map(r => { const m = meta(r); return `
-                <label class="check" style="display:flex;align-items:center;gap:8px;margin:3px 0">
-                  <input type="checkbox" data-sid="${esc(r.id)}" ${lastIds.has(r.id) ? "checked" : ""}>
-                  <span style="flex:none;width:12px;height:12px;background:${esc(m.hex)};border:1px solid var(--line)"></span>
-                  <span class="mini mono" style="color:var(--ink)">${esc(m.name)}</span>
-                  <span class="mini mono">${esc(m.hex.toUpperCase())}</span>
-                </label>`; }).join("")}
-              <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
+            <div class="brief-editor hidden" data-f="brief-editor">
+              <textarea data-f="brief-input" rows="2"></textarea>
+              <div class="brief-acts">
+                <button type="button" class="ghost" data-f="brief-save">Save brief</button>
+                <button type="button" class="verb" data-f="brief-cancel">Cancel</button>
+                <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF · NOTHING ELSE INHERITS IT</span>
+              </div>
+            </div>` })}
+
+        ${step({ n: "02", id: "objects", label: "REQUIRED",
+          meta: `${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE`,
+          verbs: `<button type="button" class="verb" data-f="to-breakdown"
+            title="Required objects are authored on the breakdown — opens 03 Breakdowns for this sheet">Edit objects</button>`,
+          body: `
+            <div class="obj-grid">${reqObjs.map(o => `
+              <span class="obj-tile">${esc(o)}${objHasRef(o)
+                ? `<button type="button" class="obj-ref" data-viewref="${esc(o)}"
+                     title="View the matching reference plate(s) in the lightbox">REF</button>`
+                : `<button type="button" class="obj-ref obj-ref-add" data-addref="${esc(o)}"
+                     title="No reference matches this object — supply one right here; it enters the library approved and attaches like any other">+ REF</button>`}</span>`).join("")
+              || '<span class="mini">none — this panel is steered by its purpose alone</span>'}</div>
+            <div class="step-note mono">+ FORBIDDEN ${ownForbid.length + boardForbid.length} · ${forbidHead}</div>
+            ${forbidChips ? `<div class="step-note mono step-forbid">${
+              [...ownForbid, ...boardForbid].map(f => esc(String(f).toUpperCase())).join("  ·  ")}</div>` : ""}` })}
+
+        ${step({ n: "03", id: "camera", label: "CAMERA",
+          meta: camOwn ? "— THIS PANEL" : "— FROM BIBLE",
+          verbs: `<button type="button" class="verb" data-f="cam-open"
+            ${frozen ? `disabled title="Frozen by an approved take — it was composed at this camera; the setting unfreezes if the take is rejected"` : ""}>Change camera</button>`,
+          body: `
+            <div class="cam-inline" data-f="cam-inline">
+              <div class="cam-stated">
+                <span class="step-prose cam-sum">${esc(camSummary)}</span>
+              </div>
+              ${(() => {
+                const notes = [
+                  camOrient ? "" : "VIEW NOT FIXED — FROM BIBLE",
+                  scopeBits.length ? `SETTING ${esc(scopeBits.slice(-2).join(" "))} OVERRIDES THE HOUR AND HUE OF ANY ATTACHED STYLE IMAGE` : "",
+                ].filter(Boolean);
+                return notes.length ? `<div class="step-note mono">${notes.join("  ·  ")}</div>` : "";
+              })()}
+              <div class="cam-editor hidden" data-f="cam-editor">
+                <span class="mono cam-open-k">CAMERA OPENED · NEXT TAKE PAINTS FROM THESE</span>
+                ${cameraRow("cam", p, "— from bible —", false)}
+                <div class="cam-editor-acts">
+                  <button type="button" class="primary" data-f="cam-save">Save camera</button>
+                  <button type="button" class="verb" data-f="cam-cancel">Cancel</button>
+                </div>
+                <span class="mini mono">JOURNALED · RE-STAMPS THE LOCK · A CUSTOM LENS STATES ITS MM IN THE LINE, NEVER "CUSTOM"</span>
+              </div>
+            </div>` })}
+
+        ${step({ n: "04", id: "references", label: "REFERENCES",
+          meta: `<span data-f="ref-count"></span>`,
+          verbs: `<button type="button" class="verb mono" data-f="show-ids"
+            title="Show the plate ids of the always-on style anchors">Show ids</button>`,
+          body: `
+            <div class="step-note mono">GROUPED BY SUBJECT · EACH CONTROLS ONLY ITS OWN ROLE</div>
+            ${(() => {
+              // P5: unchecked boxes read as a choice not yet made; in fact
+              // the app decided and the answer was NOTHING MATCHED. Say so
+              // before a 4K spend. With a previous take the selection is the
+              // user's own memory and an empty one is their decision — no
+              // warning second-guesses it.
+              if (!groupList.length || panelCands.length
+                  || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
+                return "";
+              const shown = reqObjs.slice(0, 4).map(o => `"${esc(o)}"`).join(", ");
+              const more = reqObjs.length > 4 ? ` (+${reqObjs.length - 4} more)` : "";
+              return `<div class="nomatch">
+                <b class="mono">NO MATCHES</b>
+                <p>${reqObjs.length
+                  ? `Nothing in the library matches what this panel requires: ${shown}${more}.`
+                  : "This panel lists no required objects, so nothing could be matched."}
+                It will render from text and style alone — tick a group below to
+                attach one anyway.</p></div>`;
+            })()}
+            <div class="ref-groups">
+              ${onGroups.map(g => groupRow(g, true)).join("")}
+              ${offGroups.length ? `<div class="ref-off-head mono">OFF · ${offGroups.length}
+                <span>${refWhyOff}</span></div>` : ""}
+              <div class="ref-off">${offGroups.map(g => groupRow(g, false)).join("")}</div>
+              ${groupList.length ? "" : '<span class="mini">no approved subject references yet — add them via the cast &amp; subjects cards on Production Design</span>'}
             </div>
-          </div>`;
-        })() : ""}
-        <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses; its image tool only accepts preset sizes, so pipeline output caps near 1.5K whatever Size says. All engines get identical spec, style, and references.">
-          <span class="f-label">Model</span>
-          <select data-f="model">${providerOptions(appSettings, prefProvider)}</select>
-        </div>
-        <div class="fgroup" title="Output resolution class: 1K for quick drafts, 2K for review candidates, 4K for finals. Always native resolution — never upscaled. (OpenAI flags output above 2560×1440 as experimental; prefer Gemini for 4K.)">
-          <span class="f-label">Size</span>
-          <select data-f="size">${IMAGE_SIZES.map(s => `<option ${s === "2K" ? "selected" : ""}>${s}</option>`).join("")}</select>
-          <span class="eng-note warn size-cap hidden" data-f="size-cap">PIPELINE CAP — RENDERS AT ≈1.5K PRESET</span>
-        </div>
-        <div class="fgroup" title="Width-to-height shape of the panel image. Film formats carry their names (CinemaScope 2.55:1, Scope 2.39:1, VistaVision 3:2, Academy 1.37:1). Ratios the selected engine cannot genuinely render are greyed — Gemini has a fixed set, the ChatGPT pipeline only 1:1 / 3:2 / 2:3, GPT Image 2 and custom engines render everything. Nothing is ever approximated.">
-          <span class="f-label">Aspect</span>
-          <select data-f="aspect">${(appSettings.aspects || ASPECT_FALLBACK).map(a =>
-            `<option value="${esc(a.id)}" ${a.id === "16:9" ? "selected" : ""}>${esc(a.label)}</option>`).join("")}</select>
-        </div>
-        <div class="dispatch-facts mono" data-f="dispatch-facts"></div>
-        <div class="gen-actions">
-          <button class="text-act" data-f="preview" title="Show the exact compiled prompt this panel would send — free, no generation">Preview prompt</button>
-          <button class="text-act" data-f="compcheck" title="Have the narrative model read this panel's scene in the screenplay and judge whether the compiled prompt's angle and composition serve its action — one text call, no image spend">Check composition</button>
-          <button class="text-act" data-f="prose" title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>
-          <button class="${workOrder ? "primary" : "ghost gen-go"}" data-f="generate" ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : workOrder ? "Render this panel's first take — the one action that fills the card" : "Render the next take with the model, size, aspect, and references above — not amber after the first take; nothing here is the one thing to do"}">${workOrder ? "Generate first take" : "Generate candidate"}</button>
-        </div>
+            ${(() => {
+              // §2.3: the always-on style anchors are not optional and must
+              // not sit among the toggles — they are set on Production
+              // Design and ride every render on this board.
+              if (!styleAnchors.length)
+                return '<div class="step-note mono">NO STYLE ANCHORS YET — UPLOAD A BOARD RENDERING STYLE OR CINEMATOGRAPHY STYLE IMAGE ON PRODUCTION DESIGN</div>';
+              const heads = {};
+              for (const r of styleAnchors) (heads[roleHead(r.role)] ??= []).push(r);
+              const pretty = h => h.replace(/_STYLE$/, "").replaceAll("_", " ");
+              return `<div class="step-note mono anchors-line">
+                <span class="anchors-k">STYLE ANCHORS</span>
+                ${Object.entries(heads).map(([h, rs]) =>
+                  `${esc(pretty(h))} ${rs.length} PLATE${rs.length === 1 ? "" : "S"}`).join("  ·  ")}
+                <span class="always-on" title="Auto-attached to every render on this board — they control style only, never content">ALWAYS ON</span>
+                <span class="anchors-src">SET ON PRODUCTION DESIGN · ATTACHED TO EVERY RENDER ON THIS BOARD</span>
+              </div>
+              <div class="mini hidden" data-f="anchor-ids">${styleAnchors.map(r =>
+                `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
+              </div>`;
+            })()}
+            ${swatchRefs.length ? (() => {
+              // Per-swatch palette selection (2026-08-13, user): never all
+              // swatches by default. Empty selection = the four-anchor auto
+              // shelf (the 2 newest, server-side, as ruled 2026-08-03);
+              // picking ANY swatch takes over the role entirely.
+              const meta = r => {
+                const parts = String(r.notes || "").split("·").map(s => s.trim());
+                const hex = (parts[1] || "").split("/")[0].trim();
+                return { name: parts[0] || r.id,
+                         hex: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#666666" };
+              };
+              return `<div class="fgroup pal-group"
+                title="Which palette swatches ride this render as color references. Unselected = the style shelf's automatic pick (the 2 newest approved swatches); selecting any swatch replaces that with exactly your set — never the whole palette.">
+                <span class="f-label">Palette</span>
+                <button type="button" class="ghost" data-f="swatch-open"></button>
+                <div class="hidden dropdown-panel" data-f="swatch-menu">
+                  ${swatchRefs.map(r => { const m = meta(r); return `
+                    <label class="check" style="display:flex;align-items:center;gap:8px;margin:3px 0">
+                      <input type="checkbox" data-sid="${esc(r.id)}" ${lastRefIds.has(r.id) ? "checked" : ""}>
+                      <span style="flex:none;width:12px;height:12px;background:${esc(m.hex)};border:1px solid var(--line)"></span>
+                      <span class="mini mono" style="color:var(--ink)">${esc(m.name)}</span>
+                      <span class="mini mono">${esc(m.hex.toUpperCase())}</span>
+                    </label>`; }).join("")}
+                  <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
+                </div>
+              </div>`;
+            })() : ""}` })}
+
+        ${step({ n: "05", id: "prompt", label: "PROMPT",
+          meta: `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`,
+          verbs: `
+            <button type="button" class="verb" data-f="preview"
+              title="Show the exact compiled prompt this panel would send — free, no generation">Read &amp; edit</button>
+            <button type="button" class="verb" data-f="compcheck"
+              title="Have the narrative model read this panel's scene in the screenplay and judge whether the compiled prompt's angle and composition serve its action — one text call, no image spend">Check composition</button>
+            <button type="button" class="verb" data-f="prose"
+              title="Have GPT-5.6 rewrite the compiled spec into editable render prose without generating an image">Draft prose</button>`,
+          body: `
+            <pre class="step-prompt mono" data-f="prompt-peek">READING THE COMPILED PROMPT…</pre>
+            ${scopeBits.length ? `<div class="step-note mono">SCOPE ${
+              scopeOverride ? "PANEL OVERRIDE" : "INHERITED FROM THE BOARD"} · ${
+              esc(scopeBits.join("  ·  "))}</div>` : ""}
+            <div class="dispatch-facts mono" data-f="dispatch-facts"></div>` })}
+
+        ${step({ n: "06", label: "GENERATE",
+          verbs: `
+            <button type="button" class="verb" data-f="gen-change"
+              title="Change the model, size or aspect for this render">Change</button>
+            <button class="${workOrder ? "primary" : "ghost gen-go"}" data-f="generate"
+              ${prefKeyFailed ? "disabled" : ""} title="${prefKeyFailed ? genGateTitle : workOrder
+                ? "Render this panel's first take — the one action that fills the card"
+                : "Render the next take with the model, size, aspect and references confirmed above"}">${
+              workOrder ? "Generate first take" : "Generate candidate"}</button>`,
+          body: `
+            <div class="gen-stated mono">
+              <span><i>MODEL</i> <b data-f="say-model">—</b></span>
+              <span><i>SIZE</i> <b data-f="say-size">—</b></span>
+              <span><i>ASPECT</i> <b data-f="say-aspect">—</b></span>
+            </div>
+            <div class="gen-row hidden" data-f="gen-row">
+              <div class="fgroup" title="Which image engine renders this candidate. Gemini (Nano Banana Pro) — direct, supports native 4K. GPT Image 2 (direct) — OpenAI's image model given the compiled spec as-is. ChatGPT pipeline — GPT-5.6 first rewrites the spec into render prose (zero-invention rules), then calls the same image model ChatGPT uses; its image tool only accepts preset sizes, so pipeline output caps near 1.5K whatever Size says. All engines get identical spec, style, and references.">
+                <span class="f-label">Model</span>
+                <select data-f="model">${providerOptions(appSettings, prefProvider)}</select>
+              </div>
+              <div class="fgroup" title="Output resolution class: 1K for quick drafts, 2K for review candidates, 4K for finals. Always native resolution — never upscaled. (OpenAI flags output above 2560×1440 as experimental; prefer Gemini for 4K.)">
+                <span class="f-label">Size</span>
+                <select data-f="size">${IMAGE_SIZES.map(s => `<option ${s === "2K" ? "selected" : ""}>${s}</option>`).join("")}</select>
+                <span class="eng-note warn size-cap hidden" data-f="size-cap">PIPELINE CAP — RENDERS AT ≈1.5K PRESET</span>
+              </div>
+              <div class="fgroup" title="Width-to-height shape of the panel image. Film formats carry their names (CinemaScope 2.55:1, Scope 2.39:1, VistaVision 3:2, Academy 1.37:1). Ratios the selected engine cannot genuinely render are greyed — Gemini has a fixed set, the ChatGPT pipeline only 1:1 / 3:2 / 2:3, GPT Image 2 and custom engines render everything. Nothing is ever approximated.">
+                <span class="f-label">Aspect</span>
+                <select data-f="aspect">${aspectList.map(a =>
+                  `<option value="${esc(a.id)}" ${a.id === panelAspect ? "selected" : ""}>${esc(a.label)}</option>`).join("")}</select>
+              </div>
+            </div>
+            <div class="gen-warn mono hidden" data-f="aspect-warn"></div>
+            <div class="gen-gate mono" data-f="gen-gate"></div>` })}
       </div>
       <div data-f="busy"></div>
       <div data-f="report"></div>`;
@@ -7659,8 +7761,54 @@ async function renderBoardPanels(specId) {
         `${styleAnchors.length + autoSwatch} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
         + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
     };
-    $(".ref-groups", card).addEventListener("change", updateRefCount);
+    $(".ref-groups", card).addEventListener("change", () => {
+      updateRefCount();
+      // §1.7: a confirmation that outlives what it confirmed is a lie.
+      if (confIs("references")) { confSet("references", false); renderBoardPanels(specId); }
+    });
     updateRefCount();
+
+    // Step confirmations (§1.7) — two states, both reversible. Repainting
+    // the card is what re-reads the state, so the head count, the step's
+    // own dimming and the gate line stay one fact.
+    $$("[data-confirm]", card).forEach(b => b.onclick = () => {
+      confSet(b.dataset.confirm, true);
+      renderBoardPanels(specId);
+    });
+    $$("[data-unconfirm]", card).forEach(b => b.onclick = () => {
+      confSet(b.dataset.unconfirm, false);
+      renderBoardPanels(specId);
+    });
+
+    // Required objects are authored on the breakdown; the step points at
+    // where the edit actually happens rather than growing a second editor.
+    const toBreakdown = $("[data-f=to-breakdown]", card);
+    if (toBreakdown) toBreakdown.onclick = () => {
+      uiSet("openSpec", specId);
+      showView("specs");
+    };
+
+    // §2.15/§2.1 step 05 shows the real compiled prompt, but that is a
+    // server round-trip PER PANEL — so it loads when the step first scrolls
+    // into view rather than on every repaint of a 24-panel sheet.
+    const peek = $("[data-f=prompt-peek]", card);
+    if (peek) {
+      const load = async () => {
+        try {
+          const r = await api(`/api/specs/${specId}/panels/${p.id}/prompt`);
+          const text = String(r.prompt || r.text || "").trim();
+          peek.textContent = text || "THE COMPILED PROMPT IS EMPTY.";
+        } catch (err) {
+          peek.textContent = `COULD NOT READ THE COMPILED PROMPT — ${String(err.message || "").toUpperCase()}`;
+        }
+      };
+      if (typeof IntersectionObserver === "function") {
+        const io = new IntersectionObserver(es => {
+          if (es.some(e => e.isIntersecting)) { io.disconnect(); load(); }
+        }, { rootMargin: "200px" });
+        io.observe(peek);
+      } else load();
+    }
 
     // Add-reference-in-place (user 2026-08-14): the library widget opens
     // prefilled with the required object; approved on save (supplying it
@@ -7788,8 +7936,14 @@ async function renderBoardPanels(specId) {
     // change persists — refresh and view switches keep them.
     const gen = uiGet("gen", {});
     for (const [selEl, k] of [[modelSel, "model"], [sizeSel, "size"], [aspectSel, "aspect"]]) {
-      if (gen[k] && [...selEl.options].some(o => o.value === gen[k] && !o.disabled))
-        selEl.value = gen[k];
+      // §2.4 (STEP_SEQUENCE_SPEC): the remembered generation settings are
+      // INSTALL-wide, but a panel's shape is its own. Once this panel has
+      // rendered a take, that ratio is its established shape and outranks
+      // the global memory — the select used to reopen at a hardcoded 16:9
+      // and silently re-shape a 21:9 hero panel on the next Generate.
+      const remembered = k === "aspect" && panelCands.length ? null : gen[k];
+      if (remembered && [...selEl.options].some(o => o.value === remembered && !o.disabled))
+        selEl.value = remembered;
       selEl.addEventListener("change", () =>
         uiSet("gen", { ...uiGet("gen", {}), [k]: selEl.value }));
     }
@@ -7821,16 +7975,109 @@ async function renderBoardPanels(specId) {
       }
     };
     modelSel.addEventListener("change", () => syncAspects(false));
+
+    // §2.4 — step 06 states its three values and its gate. The selects are
+    // the same controls as before, folded behind Change; what the step
+    // SHOWS is what the render will use.
+    const genChange = $("[data-f=gen-change]", card);
+    const genRow = $("[data-f=gen-row]", card);
+    if (genChange && genRow) genChange.onclick = () => {
+      const opening = genRow.classList.toggle("hidden") === false;
+      genChange.textContent = opening ? "Done" : "Change";
+    };
+    const sayModel = $("[data-f=say-model]", card);
+    const saySize = $("[data-f=say-size]", card);
+    const sayAspect = $("[data-f=say-aspect]", card);
+    const aspectWarn = $("[data-f=aspect-warn]", card);
+    const genGate = $("[data-f=gen-gate]", card);
+    const syncStated = () => {
+      sayModel.textContent = modelSel.options[modelSel.selectedIndex]?.text || "—";
+      saySize.textContent = sizeSel.value || "—";
+      sayAspect.textContent =
+        aspectSel.options[aspectSel.selectedIndex]?.text || aspectSel.value || "—";
+      // The mismatch is the single best argument for the whole sequence:
+      // three facts that used to live in three places — the panel head, the
+      // rail, and a select 3000px down — now contradict each other in one
+      // step, where a wasted 4K render is still preventable.
+      const mismatch = !!(lastTake && aspectSel.value
+        && aspectSel.value !== panelAspect);
+      aspectWarn.classList.toggle("hidden", !mismatch);
+      if (mismatch) {
+        aspectWarn.textContent =
+          `ASPECT DOES NOT MATCH THE PANEL — ${p.id} IS ${String(aspectLabel).toUpperCase()}`
+          + ` AND THE LAST TAKE RENDERED ${lastTake.width} × ${lastTake.height}`;
+      }
+      // §2.4 the gate is honest: unconfirmed steps do NOT block a render,
+      // so the surface says so rather than grey out the button. A render is
+      // the end of a sequence, not a reward for finishing one.
+      const left = CONF_STEPS.length - confCount;
+      genGate.textContent = left
+        ? `${left} STEP${left === 1 ? "" : "S"} UNCONFIRMED — YOU CAN STILL RENDER`
+        : "ALL FIVE STEPS CONFIRMED";
+      genGate.classList.toggle("gate-clear", !left);
+    };
+    [modelSel, sizeSel, aspectSel].forEach(s =>
+      s.addEventListener("change", syncStated));
+    // syncAspects may snap the ratio to one the chosen engine can render,
+    // so the stated line is written after it, never before.
     syncAspects(true);
+    syncStated();
 
     $("[data-f=preview]", card).onclick = async () => {
       try {
         const r = await api(`/api/specs/${specId}/panels/${p.id}/prompt?refs=${checkedRefs().join(",")}`);
+        // The prompt's own acts travel WITH the prompt (they used to sit on
+        // the rail block that step 05 replaced): a 16k-character prompt is a
+        // file, not a clipboard payload (user 2026-08-06).
         report.innerHTML = `<div class="report">
           <div class="report-head"><b>Compiled prompt — ${esc(p.id)}</b>
-            <button class="ghost" data-f="close-report">Close</button></div>
+            <span style="display:inline-flex;gap:16px;align-items:baseline">
+              <button class="verb" data-f="copy" title="Copy the full prompt to the clipboard">Copy</button>
+              <button class="verb" data-f="dl" title="Download this prompt as a .md file — the exact text this take was rendered from, with its conditions in the header">Download</button>
+              <button class="ghost" data-f="close-report">Close</button>
+            </span></div>
           <pre style="white-space:pre-wrap;margin:0">${esc(r.prompt)}</pre></div>`;
         $("[data-f=close-report]", report).onclick = () => { report.innerHTML = ""; };
+        $("[data-f=copy]", report).onclick = () => copyText(r.prompt, "Compiled prompt");
+        // The header carries what the prompt text itself does not: the
+        // engine, the size, and WHICH references were actually attached —
+        // the first thing to check when a render appears to ignore one.
+        $("[data-f=dl]", report).onclick = () => {
+          const c = staged;
+          const attached = c?.references || [];
+          const lines = [
+            `# ${c?.candidate_id || p.id} — compiled prompt`,
+            "",
+            `- **Panel** — ${p.id}`,
+            `- **Sheet** — ${specId}`,
+            `- **Engine** — ${c?.model || modelSel.value || "unrecorded"}`,
+            `- **Size** — ${c?.image_size || sizeSel.value || "unrecorded"}${
+              c?.aspect_ratio ? " · " + c.aspect_ratio : ""}`,
+            `- **Rendered** — ${c?.created_at || "not yet rendered"}`,
+            `- **Status** — ${c?.status || "no take yet"}`,
+            "",
+          ];
+          if (attached.length) {
+            lines.push(`## Attached references — ${attached.length}`, "");
+            attached.forEach(x => lines.push(
+              `- ${x.id} — ${x.role || "role unrecorded"}`));
+          } else {
+            lines.push("## Attached references — none", "",
+                       "This take rendered from the written spec and the style",
+                       "anchors alone. No subject reference was attached.");
+          }
+          lines.push("", "---", "", "```text", r.prompt, "```", "");
+          const blob = new Blob([lines.join("\n")],
+                                { type: "text/markdown;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `${c?.candidate_id || p.id}.md`;
+          document.body.append(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+          toast(`${a.download} downloaded.`);
+        };
       } catch (err) { toast(err.message, true); }
     };
 
@@ -8446,8 +8693,6 @@ async function renderBoardPanels(specId) {
   // Provenance rail (plan v3 C9): everything about the staged render, all
   // Courier, from fields already on the candidate — no new data.
   function buildSide(c, panelCands) {
-    const promptText = c.render_prompt
-      ? `RENDER PROMPT (user-edited):\n${c.render_prompt}` : (c.prompt || "");
     // The carried list is the server's own carry sources — live rejected
     // takes AND archive rows from deleted takes (2026-08-13: rendering
     // only live records made a deleted take's still-carrying note
@@ -8475,39 +8720,31 @@ async function renderBoardPanels(specId) {
     el.innerHTML = `
       <div class="rail-block side-dossier">
       <div class="side-sec">
-        <div class="rail-label">THIS RENDER</div>
-        <div class="fact"><span>MODEL</span><b>${esc(c.model || "—")}</b></div>
-        <div class="fact"><span>RENDERED</span><b>${c.width} × ${c.height}</b></div>
-        <div class="fact"><span>SHAPE</span><b>${esc(c.aspect_ratio || "—")} · ${shapeClass}</b></div>
-        <div class="fact"><span>RUN</span><b>${esc((c.created_at || "").slice(0, 16).replace("T", " "))}</b></div>
-        <div class="fact"><span>SPEC HASH</span><b>${esc((c.spec_hash || "").slice(0, 8) || "—")}</b></div>
-        <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NATIVE RENDER · NEVER UPSCALED</div>
-      </div>
-      <div class="side-sec">
         <div class="rail-label">ANCHORED TO · ${allRefs.length}</div>
         ${subjRefs.length === 0 ? `
           <div class="nomatch" style="margin:6px 0 2px">
             <b class="mono">NO SUBJECT REFERENCES</b>
             <p>This take was painted from the written spec${styleCount ? ` and the ${styleCount} style plate${styleCount === 1 ? "" : "s"} only` : " alone"}.</p>
           </div>` : ""}
-        ${allRefs.map(r => `
-          <div class="anchor-row" title="${esc(r.role)}">
-            <span class="rail-thumb"><img src="/api/references/${esc(r.id)}/image?size=thumb" loading="lazy" alt="" onerror="this.remove()"></span>
-            <span class="anchor-meta"><b>${esc(roleHead(r.role))}</b><i>${esc(r.id)}</i></span>
-          </div>`).join("")}
+        ${(() => {
+          // Grouped by kind (§2.15): eleven plate ids read as four facts,
+          // and consecutive ids collapse to a range — the rail states what
+          // rode the render, it does not re-show the pictures.
+          const byHead = {};
+          for (const r of allRefs) (byHead[roleHead(r.role)] ??= []).push(r.id);
+          return Object.entries(byHead).map(([h, ids]) => {
+            const n = ids.map(i => +String(i).replace(/\D/g, ""));
+            const run = n.length > 2 && n.every((x, i) => i === 0 || x === n[i - 1] + 1);
+            return `<div class="anchor-kind">
+              <span class="anchor-head mono">${esc(h)}</span>
+              <span class="anchor-ids mono">${run
+                ? `${esc(ids[0])} → ${esc(ids[ids.length - 1])}`
+                : ids.map(esc).join(" · ")}</span>
+            </div>`;
+          }).join("");
+        })()}
+        <div class="mini mono" style="margin-top:8px;color:var(--ink-faint)">${allRefs.length} PLATE${allRefs.length === 1 ? "" : "S"} RODE THIS RENDER</div>
       </div>
-      ${promptText ? `
-      <div class="side-sec">
-        <div class="rail-label">COMPILED PROMPT
-          <span style="display:inline-flex;gap:10px">
-            <button class="block-act" data-f="copy" style="font-size:11px;padding:0" title="Copy the full prompt to the clipboard">Copy</button>
-            <button class="block-act" data-f="detach" style="font-size:11px;padding:0" title="Open the full prompt in a reading view">Expand</button>
-            <button class="block-act" data-f="dl" style="font-size:11px;padding:0" title="Download this prompt as a .md file — the exact text this take was rendered from, with its conditions in the header">Download</button>
-            <button class="block-act" data-f="full" style="font-size:11px;padding:0">Full</button>
-          </span>
-        </div>
-        <pre class="side-prompt side-prompt-tall" data-f="ppre">${esc(promptText)}</pre>
-      </div>` : ""}
       ${carried.length ? `
       <div class="side-sec">
         <div class="rail-label carried-label">CARRIED NOTES · ${carried.length}<span>RIDE THE NEXT TAKE</span></div>
@@ -8562,68 +8799,16 @@ async function renderBoardPanels(specId) {
         })()}`).join("")}
       </div>` : ""}
       </div>`;
-    const fullBtn = $("[data-f=full]", el);
-    if (fullBtn) {
-      fullBtn.onclick = () => {
-        const pre = $("[data-f=ppre]", el);
-        const capped = pre.classList.toggle("side-prompt-tall");
-        fullBtn.textContent = capped ? "Full" : "Less";
-      };
-      $("[data-f=copy]", el).onclick = () => copyText(promptText, "Compiled prompt");
-      $$("[data-retire]", el).forEach(b => b.onclick = async () => {
-        try {
-          await api(`/api/specs/${specId}/candidates/${b.dataset.retire}/feedback-retire`,
-            { method: "POST", json: { retired: !b.dataset.retired } });
-          toast(b.dataset.retired
-            ? `${b.dataset.retire} carries again — future prompts ride it.`
-            : `${b.dataset.retire} no longer carried — the note stays, stated in the rail.`);
-          renderBoardPanels(specId);
-        } catch (err) { toast(err.message, true); }
-      });
-      // A 16k-character prompt is a file, not a clipboard payload (user
-      // 2026-08-06). The header carries what the prompt text itself does
-      // not: the engine, the size, and WHICH references were actually
-      // attached — the first thing to check when a render appears to
-      // ignore a reference.
-      $("[data-f=dl]", el).onclick = () => {
-        const attached = c.references || [];
-        const lines = [
-          `# ${c.candidate_id} — compiled prompt`,
-          "",
-          `- **Panel** — ${c.panel_id}`,
-          `- **Sheet** — ${specId}`,
-          `- **Engine** — ${c.model || "unrecorded"}`,
-          `- **Size** — ${c.image_size || "unrecorded"}${c.aspect_ratio ? " · " + c.aspect_ratio : ""}`,
-          `- **Rendered** — ${c.created_at || "unrecorded"}`,
-          `- **Status** — ${c.status || "unrecorded"}`,
-          "",
-        ];
-        if (attached.length) {
-          lines.push(`## Attached references — ${attached.length}`, "");
-          attached.forEach(r => lines.push(
-            `- ${r.id} — ${r.role || "role unrecorded"}`));
-        } else {
-          lines.push("## Attached references — none", "",
-                     "This take rendered from the written spec and the style",
-                     "anchors alone. No subject reference was attached.");
-        }
-        lines.push("", "---", "", "```text", promptText, "```", "");
-        const blob = new Blob([lines.join("\n")],
-                              { type: "text/markdown;charset=utf-8" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${c.candidate_id || "prompt"}.md`;
-        document.body.append(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-        toast(`${a.download} downloaded.`);
-      };
-      $("[data-f=detach]", el).onclick = () => promptOverlay(
-        "COMPILED PROMPT", promptText,
-        [c.panel_id, c.candidate_id, (c.model || "").toUpperCase(),
-         c.image_size].filter(Boolean).join(" · "));
-    }
+    $$("[data-retire]", el).forEach(b => b.onclick = async () => {
+      try {
+        await api(`/api/specs/${specId}/candidates/${b.dataset.retire}/feedback-retire`,
+          { method: "POST", json: { retired: !b.dataset.retired } });
+        toast(b.dataset.retired
+          ? `${b.dataset.retire} carries again — future prompts ride it.`
+          : `${b.dataset.retire} no longer carried — the note stays, stated in the rail.`);
+        renderBoardPanels(specId);
+      } catch (err) { toast(err.message, true); }
+    });
     // Rejection-note verbs (2026-08-13, restructured by HARNESS_AUDIT
     // R17): the rail offers Edit and one reversible Stop carrying; the
     // only door to hard delete is inside the Edit modal, out of pointer

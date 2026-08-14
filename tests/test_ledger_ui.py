@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 
 
 class LedgerRowPins(unittest.TestCase):
@@ -59,9 +60,20 @@ class WorkbenchScopePins(unittest.TestCase):
         self.assertIn('["generate", "prose", "compcheck", "brief-edit", "cam-open"]',
                       JS)
 
-    def test_brief_and_camera_are_real_buttons(self):
-        self.assertIn('class="ghost" data-f="brief-edit"', JS)
-        self.assertIn('class="ghost" data-f="cam-open"', JS)
+    def test_brief_and_camera_are_verbs_on_the_shared_edge(self):
+        """SUPERSEDED 2026-08-14. The user's 2026-08-13 direction upgraded
+        these from quiet text-acts to ghost BUTTONS, and HARNESS_AUDIT R11
+        ratified that with U4's nowrap fix. STEP_SEQUENCE_SPEC §1.4 rules
+        the whole surface instead: at 11.5px colour alone cannot separate a
+        verb from the fact beside it, so a verb is full ink + underlined and
+        every verb on the surface aligns to ONE right edge. Mock
+        hier-4a shows both as verbs, and the box is what goes. The
+        substance the user asked for — these two must not read as part of
+        the string they act on — is what §1.4 delivers."""
+        self.assertIn('class="verb" data-f="brief-edit"', JS)
+        self.assertIn('class="verb" data-f="cam-open"', JS)
+        for decl in ("text-decoration: underline", "white-space: nowrap"):
+            self.assertIn(decl, CSS[CSS.index(".wb-card .verb, .wb-card .text-act"):][:420])
 
 
 class AddReferenceInPlacePins(unittest.TestCase):
@@ -75,9 +87,17 @@ class AddReferenceInPlacePins(unittest.TestCase):
         plate anchored the object. View is the full reference widget —
         every matching plate with role + jurisdiction, the thin-anchor
         warning, and Add another plate in place."""
+        # §1.3/§2 (STEP_SEQUENCE_SPEC): the tile carries the object's
+        # STATE in Courier (REF / + REF) rather than a prose verb, but the
+        # act behind it is unchanged — the full widget, never a bare
+        # lightbox. What the user ruled was the destination, not the word.
         self.assertIn('data-viewref="${esc(o)}"', JS)
-        self.assertIn(">View</button>", JS)
-        self.assertIn(">view</button>", JS)
+        self.assertIn(">REF</button>", JS)
+        i = JS.index('data-viewref="${esc(o)}"')
+        self.assertIn("View the matching reference plate(s)", JS[i:i + 200])
+        j = JS.index("$$(\"[data-viewref]\", card)")
+        self.assertIn("viewObjectReferences", JS[j:j + 600],
+                      "the tile opens the widget, not a lightbox")
         self.assertIn("function viewObjectReferences", JS)
         i = JS.index("function viewObjectReferences")
         block = JS[i:i + 2600]

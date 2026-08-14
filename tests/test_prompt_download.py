@@ -21,35 +21,43 @@ sys.path.insert(0, str(ROOT))
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 
 
+def _dl_handler() -> str:
+    """The download handler, wherever it lives. STEP_SEQUENCE_SPEC moved the
+    compiled prompt off the provenance rail and into step 05, and its acts
+    travelled with it — a verb belongs with its object."""
+    h = JS[JS.index('$("[data-f=dl]", report).onclick'):]
+    return h[:h.index("toast(")]
+
+
 class PromptDownloadTests(unittest.TestCase):
     def test_the_button_sits_with_the_other_prompt_acts(self):
         self.assertIn('data-f="dl"', JS)
         self.assertIn(">Download</button>", JS)
-        # Copy, Expand, Download, Full — one row of peer verbs.
-        row = JS[JS.index('data-f="copy"'):JS.index('data-f="full"') + 200]
-        for act in ("copy", "detach", "dl", "full"):
+        # Copy and Download are peers in the prompt's reading view. Expand
+        # and Full retired with the rail block: the reading view IS the
+        # expansion, and a height toggle on a full-height pre said nothing.
+        row = JS[JS.index('data-f="copy"'):JS.index('data-f="dl"') + 260]
+        for act in ("copy", "dl"):
             self.assertIn(f'data-f="{act}"', row)
+        self.assertIn("close-report", row, "the reading view still closes")
 
     def test_the_header_states_the_render_conditions(self):
-        h = JS[JS.index('$("[data-f=dl]", el).onclick'):]
-        h = h[:h.index("toast(")]
-        for fact in ("c.panel_id", "specId", "c.model", "c.image_size",
-                     "c.created_at", "c.status"):
+        h = _dl_handler()
+        for fact in ("p.id", "specId", "c?.model", "c?.image_size",
+                     "c?.created_at", "c?.status"):
             self.assertIn(fact, h, f"the header must record {fact}")
 
     def test_it_names_the_attached_references_or_says_there_were_none(self):
-        h = JS[JS.index('$("[data-f=dl]", el).onclick'):]
-        h = h[:h.index("toast(")]
-        self.assertIn("c.references", h)
+        h = _dl_handler()
+        self.assertIn("c?.references", h)
         self.assertIn("Attached references — none", h)
         self.assertIn("style", h.lower(),
                       "the empty case must say what it DID render from")
 
     def test_it_downloads_markdown_named_for_the_take(self):
-        h = JS[JS.index('$("[data-f=dl]", el).onclick'):]
-        h = h[:h.index("toast(")]
+        h = _dl_handler()
         self.assertIn("text/markdown", h)
-        self.assertIn("c.candidate_id", h)
+        self.assertIn("c?.candidate_id", h)
         self.assertIn(".md", h)
         self.assertIn("revokeObjectURL", h, "the blob url must be released")
 

@@ -299,8 +299,10 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         the act with the condition in its title."""
         self.assertIn('cameraRow("cam"', JS)
         self.assertIn("/panels/${p.id}/camera", JS)
-        i = JS.index('data-f="cam-inline"')
-        block = JS[i:i + 2600]
+        # The verb now lives on the step's shared right edge (§1.4), which
+        # is authored before the body — so the window starts at the step.
+        i = JS.index('n: "03", id: "camera"')
+        block = JS[i:i + 3200]
         self.assertIn("cam-stated", block)
         self.assertIn("Change camera", block)
         self.assertIn("FROM BIBLE", block)

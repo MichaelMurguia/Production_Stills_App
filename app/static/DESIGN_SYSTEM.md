@@ -36,7 +36,10 @@ Use variables. Never hardcode a hex in new CSS.
 ```
 surfaces   --bg #121417  --bg2 #15181b  --panel #1a1d21  --panel2 #21252a
            --field #0f1114   (inputs sit INSET, darker than everything)
+           --band #131619    (step-sequence alternating ground, 2026-08-14)
+           --tile #181b1f    (a set member, one value ABOVE its ground)
 lines      --line #2b3037    --line-soft #23272c
+           --hairline #1e2226 (section separation inside a sequence)
 ink        --ink #eceef0     --ink-dim #9aa1a8    --ink-faint #6b7278
 accent     --accent #e0a33f  --accent-ink #0b0c0e (text on amber)
 status     --ok #6fae7a  --bad #cd6155  --hold #7d8fd0   (--warn deleted R3:
@@ -45,8 +48,13 @@ type       --sans Archivo    --mono "Courier New"
 radius     --radius 0px      (square. do not add rounding)
 ```
 
-Surfaces layer `--bg` < `--bg2` < `--panel` < `--panel2`. Going deeper means
-"more active/selected", never "more important".
+Surfaces layer `--field` < `--bg` < `--band` < `--bg2` < `--tile` < `--panel`
+< `--panel2`. Going deeper means "more active/selected", never "more
+important". `--band` and `--tile` (STEP_SEQUENCE_SPEC §1.5, 2026-08-14) slot
+INTO that ladder rather than beside it: a band sits one step below its
+surface's ground and a set-member tile one step above, so a tile never falls
+back to its border. `#111316` was tried for the band and measured 1.016:1 —
+below perception, spending fill for nothing.
 
 Amber has exactly two values: `--accent` at rest, `--accent-hover` under
 the pointer — no third tint may be created (R1). Translucent amber is
@@ -66,6 +74,70 @@ where low contrast is the signal.
 ---
 
 ## Layout patterns
+
+**The image is the hero** (STEP_SEQUENCE_SPEC §1.0, ruled 2026-08-14 —
+this outranks the rest of this section where they conflict). **This app
+makes movies.** Every surface exists to produce, judge or assemble a
+picture, so on any surface that has one the picture is the largest element
+on it, at the subject's own declared aspect ratio (`aspect-ratio`, never a
+fixed height that letterboxes or drifts). Alternates are a filmstrip
+directly beneath it at the same ratio, the shown one outlined; a rejected
+take stays in the strip as a record. **Specification follows the image,
+never precedes it** — the confirmation steps are what the picture was told
+to be, and a form above an image inverts the reason the screen exists.
+Facts about an image ride on it (id, take number, state, pixel size). A
+rail holds only what has **no** picture. **A surface that could show
+imagery and does not is a defect**, not a layout to preserve.
+
+**Three type sizes per surface, and the largest anchors the rest**
+(§1.2). `24px/600/-.015em` the subject, exactly one per surface · `15px`
+headings (600, `--ink`) and body (400, `--ink-dim`) · `11.5px` everything
+else. Two roles may share 15px separated by weight ONLY because 24px
+exists above them. At 11.5px the family carries the meaning: Courier is a
+machine fact, Archivo is a verb. The measured fault this replaced was nine
+sizes between 9.5px and 15px — nine steps inside five and a half pixels,
+which is not a weak hierarchy but a continuum, and a continuum reads as
+one size with noise. Gradations are not contrast.
+
+**Fill classifies; border does not** (§1.3). A border cannot classify
+because a tag and a button both carry one. `--accent` fill is the primary
+act (already canon); `--tile` + a `--line` stroke is a set member; no fill
++ a stroke is a secondary control. A set-member tile always sits one value
+above its ground. Alternating `--band` grounds are the one sanctioned
+exception — a ground is not a tile.
+
+**A verb is full ink and underlined, and every verb on a surface aligns to
+one right edge** (§1.4). At 11.5px colour alone fails: an `--ink-dim` verb
+sits at the same value as the fact beside it, so `Change camera` read as
+part of the camera string. `color: var(--ink)`, `text-decoration:
+underline`, `text-decoration-color: var(--ink-dim)`,
+`text-underline-offset: 3px`, `white-space: nowrap`; hover raises the
+underline to `--ink`. Not each row's own right edge — ONE shared vertical
+line, so the eye finds actions by running down a single column.
+
+**A surface whose job is a sequence numbers its steps** (§1.6/§1.7), and
+the number — not a label gutter — is the spine: a label says what KIND of
+thing a row is, a number says where you are in the work. Two states only,
+`NEEDS YOU` (number `--ink`, its own verb) and `CONFIRMED` (number
+`--ok`, label `--ink-dim`, a stated `✓ CONFIRMED`). A confirmed step dims
+but stays fully legible — it is evidence you already ruled, not clutter to
+be hidden. Do not collapse it.
+
+**A gate states its condition and does not lie** (§2.4). If unconfirmed
+steps do not block the act, say so — `3 STEPS UNCONFIRMED — YOU CAN STILL
+RENDER` — rather than disabling the button. A render is the end of a
+sequence, not a reward for finishing one.
+
+**The gutter is for rows, not blocks** (§1.8). A label with a one-line
+value earns an aligned gutter; a label with a grid under it does not —
+reserving a label column plus a verb column squeezed a twelve-tile grid
+into two wrapped columns. A block label sits above its content and the
+content takes the full column.
+
+**Cap prose measures independent of surface width** (§1.9). 15px body
+across a 1200px column runs to ~140 characters a line: cap prose at
+`max-width: 720px` and Courier annotation at `900px` whatever the surface
+is. Extra width goes to rails and grid columns, never to line length.
 
 **Pipeline band.** `nav#nav` is the product's spine: numbered stages 01–04 in
 work order, then `.nav-gap`, then off-pipeline tools (Reference, Settings). A new
@@ -1167,6 +1239,16 @@ for the manifest's maskable purpose.
   block chip became the tags-ride-the-image label, `AUTHORED` a plain
   Courier fact (amber marks what blocks, and an authored caption blocks
   nothing), and the stale acts equal ghosts.
+- **Truncate a title** (STEP_SEQUENCE_SPEC §1.10, 2026-08-14).
+  `Residence and Workshop Interior` and `Residence and Workshop Exterior`
+  are the same string once cut. In a narrow rail the title takes its own
+  row and wraps in full — height is the cheap axis there.
+- **State a count without making it provable** (§9). `2 WITH A REFERENCE`
+  requires a mark on those two. Never mix an image count against a group
+  denominator — `12 OF 19 ATTACHED` claimed most references were attached
+  when one group was selected.
+- **Use two words for one state** (§10). `✓ REVIEWED` and `✓ CONFIRMED`
+  on one surface invents a third state the head then miscounts.
 - **Add a second bar** (canon pass R6). The coverage meter is the only
   meter. A capacity is a Courier number line whose colour carries its
   state — `FREE 214 GB OF 500 GB · 57% USED`, uncoloured while healthy,
@@ -1213,9 +1295,10 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-14 | **Stage 04 as a six-step sequence** (STEP_SEQUENCE_SPEC, mock hier-4a — the reference implementation of the Part 1 vocabulary now folded into canon above): head with the 24px subject and a live `n OF 5 STEPS CONFIRMED` count; the take as the hero at the PANEL's own ratio with its facts riding it and a filmstrip beneath at the same ratio; act bar carrying USE / DERIVE and the run facts; then `01 BRIEF · 02 REQUIRED · 03 CAMERA · 04 REFERENCES · 05 PROMPT · 06 GENERATE` on a numbered spine with alternating `--band` grounds and every verb on one right edge. Confirmations are advisory (they never gate — §2.4) and live in per-production UI state; any edit upstream of 05 unconfirms it. Right rail reduced to what has no picture: anchored plates by kind, carried notes | Panels workbench (`/panels/<spec>`), scoped to `.wb-card` | Built from a designer spec, so review is mostly ratification — but four judgement calls want a ruling: (1) Generate stays a ghost once a take exists so `Approve panel` keeps the surface's single amber, where the mock draws BOTH amber against §1.3's own "one per surface"; (2) OFF reference rows read `DID NOT RIDE THE PREVIOUS TAKE` on a panel with takes, following §2.3's rule rather than the mock's label, which shows the first-take reason in a state that cannot have it; (3) `Read & edit` opens the prompt with Copy/Download inside it — restoring rail acts the spec's rail deletion would otherwise have taken with it; (4) brief/camera verbs lost their ghost boxes to §1.4, reversing the user's 2026-08-13 direction that R11 had ratified |
 | 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry)  **DEFERRED by HARNESS_AUDIT R2 (2026-08-14)** — the room was not in the recorded bundle and the designer will not rule it from a description; top item of the next recording walk. Already ruled: square chips stand (canon forbids rounding) and the amended R2 reading (client owns arrangement STRUCTURE, server owns GEOMETRY). Remaining: chip sizes, ghost-scrim strength, snap values, claim arrows |
 | 2026-08-13 | **Board looks** (`.arr-style-*`, user-directed): a `Style…` verb in the arrange room opens a picker whose cards are REAL small-scale renders of this board (INK — none, Art Board, Tech Design), with per-look option checkboxes; the chosen look dresses previews/export/assembly only — the room always works in INK. Renderer-side: two new sheet ink styles (`ART_BOARD` parchment/serif/hand-annotations, `TECH_DESIGN` near-black/mono/keylines+ticks), a `dress` element channel (swatch strip, material chips, spec table, atmosphere strip, profile prose) derived from canon at render time, and bundled OFL render faces incl. a new `hand` voice (Caveat) | Arrange room (stage 05) + board export/assembly | Open questions for the ruling: (1) the `dress` channel as a parallel grammar beside the closed twelve block types; (2) md-tier sources feeding preview-scale renders (scoped exception to "display tiers never feed a render"); (3) which palette languages a board's strip draws (ships: all live); (4) Art Board per-panel taglines vs. atmosphere-strip-only; (5) Tech Design comparison block, ortho-tick styling, and both styles' exact ink values; (6) hand-annotation collision rules, Caveat minimum size, and a ruling distinguishing sheet-render typography from app chrome (canon forbids new fonts in chrome); (7) whether the room's advisory SHORT readouts should read dressed geometry (the gate already does)  **PARTLY RULED by HARNESS_AUDIT R4 (2026-08-14)** — shipped: dress is a selector over the closed block set (PALETTE / MATERIAL / STRIP / SPEC / PRINCIPLES); md-tier feeds previews only, enforced in sheet_render; the chrome/artifact typography split is Layout canon. Still open, needing a rendered sheet: (3) which palette languages a strip draws, (4) Art Board taglines, (5) exact ink values + Tech Design comparison block, (6a) hand-annotation collision + Caveat minimum size, (7) dressed geometry in advisory readouts |
-| 2026-08-14 | **Add reference in place + View** (user-directed): a required object without a matching reference offers `Add reference` (work-order table) / `+ REF` (light-table chip) right in the workbench card — opens the existing add-reference dialog prefilled with the object; the reference enters the library APPROVED (supplying it deliberately is the review; Reject in Reference remains the recourse) and the card re-renders so the group attaches immediately. An object WITH a reference offers `View` beside its ✓ REF — a modal reference widget (library card anatomy: badge · id · role · CONTROLS/NOT · notes per matching plate), a Courier fact line "N PLATES MATCH · ALL ATTACH · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", a stated thin-anchor warning at one plate, thumbs opening the lightbox, and `Add another plate` prefilled to the same group | Panels workbench card | Built from canon (roleDialog, ref-card anatomy, lightbox, act-where-condition-is-met) — review the auto-approve rule, the `+ REF` chip density, and the thin-anchor warning copy |
+| 2026-08-14 | **Add reference in place + View** (user-directed): a required object without a matching reference offers `+ REF` right in the workbench card (the work-order TABLE that carried the long-form `Add reference` was replaced by step 02's tile grid, 2026-08-14) — opens the existing add-reference dialog prefilled with the object; the reference enters the library APPROVED (supplying it deliberately is the review; Reject in Reference remains the recourse) and the card re-renders so the group attaches immediately. An object WITH a reference is marked `REF` on its tile, and that marker opens — a modal reference widget (library card anatomy: badge · id · role · CONTROLS/NOT · notes per matching plate), a Courier fact line "N PLATES MATCH · ALL ATTACH · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", a stated thin-anchor warning at one plate, thumbs opening the lightbox, and `Add another plate` prefilled to the same group | Panels workbench card | Built from canon (roleDialog, ref-card anatomy, lightbox, act-where-condition-is-met) — review the auto-approve rule, the `+ REF` chip density, and the thin-anchor warning copy |
 
 ---
 
@@ -1224,6 +1307,22 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-14** — **The step sequence** (STEP_SEQUENCE_SPEC, mock
+  hier-4a): stage 04 rebuilt as six confirmations ending in a render, and
+  Part 1's vocabulary folded into canon above — the image is the hero
+  (outranking the rest of Layout patterns), three type sizes, fill
+  classifies, verbs ink + underlined on one right edge, the step number as
+  the spine, honest gates, row-not-block gutters, capped prose measures;
+  three Do-nots (no truncated titles, no unprovable counts, no two words
+  for one state). Three tokens added: `--band`, `--tile`, `--hairline`.
+  **Fixed a live defect the sequence surfaced**: the Aspect select
+  hardcoded 16:9 while the panel head reported the LAST TAKE's ratio, so
+  Generate silently re-shaped a 21:9 hero panel — it now opens on the
+  panel's established shape and states a mismatch in `--bad`. Also
+  removed a headless `.stor-bar` rule body orphaned by canon-pass R6,
+  which had left this stylesheet's braces unbalanced since 2026-08-10.
+  Scoped to `.wb-card`; stage 03 is the next transfer, stage 02 only
+  after this survives real use.
 - **2026-08-14** — **RULED (HARNESS_AUDIT_2026-08-14, the first
   audit-by-use):** 16 of 18 Uncanonized rows ruled and emptied; R2
   (arrange room) and four parts of R4 (board looks) deferred pending the

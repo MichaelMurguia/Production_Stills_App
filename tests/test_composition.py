@@ -206,8 +206,9 @@ class UiWiringTests(unittest.TestCase):
 
     def test_check_sits_with_the_free_actions_and_stays_text_act(self):
         i = self.JS.index('data-f="compcheck"')
-        self.assertIn('class="text-act"', self.JS[i - 120:i + 40],
-                      "never amber — Generate keeps the card's primacy")
+        self.assertIn('class="verb"', self.JS[i - 120:i + 40],
+                      "never amber — Generate keeps the card's primacy; "
+                      "STEP_SEQUENCE_SPEC §1.4 makes a verb ink + underlined")
         self.assertIn("/composition-check", self.JS)
 
     def test_apply_goes_through_the_existing_camera_editor(self):

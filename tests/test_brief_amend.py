@@ -120,9 +120,11 @@ class TheWorkbenchOffersTheEdit(unittest.TestCase):
         self.assertIn("Edit brief", block)
 
     def test_the_frozen_gate_reads_as_state_before_it_is_hit(self):
+        self.assertIn('const frozen = panelCands.some(c => c.status === "APPROVED")', JS,
+                      "the gate is one computed fact for the whole card")
         i = JS.index('data-f="brief-edit"')
-        block = JS[i - 800:i + 900]
-        self.assertIn('panelCands.some(c => c.status === "APPROVED")', JS[i - 900:i])
+        block = JS[i - 200:i + 900]
+        self.assertIn("${frozen ? \"disabled\" : \"\"}", block)
         self.assertIn("Reject it first", block)
 
     def test_save_posts_the_journaled_amend_and_repaints(self):

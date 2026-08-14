@@ -29,6 +29,16 @@
   --field:     #0f1114;
   --line:      #2b3037;
   --line-soft: #23272c;
+  /* step-sequence surfaces (STEP_SEQUENCE_SPEC §1.5, 2026-08-14). They
+     slot into the existing ladder rather than beside it:
+     --field < --bg < --band < --bg2 < --tile < --panel < --panel2.
+     --band is deliberately at the faint end — #111316 measured 1.016:1
+     against the ground (below perception) and #15181b matched it exactly,
+     which made the alternation shout. --tile keeps a set member one value
+     ABOVE its ground so it never falls back to its border. */
+  --band:      #131619;
+  --tile:      #181b1f;
+  --hairline:  #1e2226;
 
   /* ink — three tiers, all cleared for contrast on --bg and --panel */
   --ink:       #eceef0;
@@ -1085,7 +1095,7 @@ details.meta pre {
 .rail-state { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--ok); display: flex; align-items: center; gap: 6px; }
 .rail-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .rail-panel {
-  display: flex; align-items: center; gap: 10px; width: 100%;
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
   background: none; border: none; border-left: 2px solid transparent;
   padding: 6px 6px 6px 8px; margin: 0 -6px; cursor: pointer; font: inherit;
   color: var(--ink-dim); text-align: left;
@@ -1759,9 +1769,12 @@ details.meta pre {
    that explains the dots, derived rows that state their condition. */
 .rail-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .rail-title {
-  font-size: 10.5px; color: var(--ink-faint); overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; font-family: var(--sans, inherit);
-  letter-spacing: 0; text-transform: none;
+  /* §1.10 (STEP_SEQUENCE_SPEC): never truncate a title — two panel titles
+     that differ only in their last word are the SAME string once cut. In a
+     narrow rail the title wraps in full; height is the cheap axis there. */
+  font-size: 10.5px; color: var(--ink-faint);
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.35;
+  font-family: var(--sans, inherit); letter-spacing: 0; text-transform: none;
 }
 .rail-legend {
   display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
@@ -2376,9 +2389,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sv-remove { margin-left: 16px; color: var(--bad); }
 
 /* Storage readout (user 2026-08-07). A healthy disk is not news, so the
-   bar carries no colour until it matters: --hold when it is getting
-   tight, --bad once a render would be refused. */
-  margin: 4px 0 8px; }
+   line carries no colour until it matters: --hold when it is getting
+   tight, --bad once a render would be refused. (The bar's selector went
+   with R6's deletion; its orphaned body survived as a headless rule until
+   2026-08-14 — invalid CSS the parser skipped, and the reason a brace
+   count over this file never balanced.) */
 .stor-line { font-size: 10px; letter-spacing: .1em; color: var(--ink-dim); }
 /* R6: no bar — the line's colour carries the state. */
 .stor-line.hold { color: var(--hold); }
@@ -2796,3 +2811,201 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   cursor: pointer; }
 .lb-head [data-f=style].on { color: var(--ink);
   border-color: var(--ink-faint); }
+
+/* ==========================================================================
+   UNCANONIZED — 2026-08-14 — the step sequence (STEP_SEQUENCE_SPEC Part 1,
+   mock hier-4a-panels-workbench). Scoped to .wb-card: the vocabulary is
+   proved on stage 04 first, transfers to stage 03 next, and reaches stage
+   02 only after it survives real use. Nothing here restyles the rest of the
+   app, so a half-migrated app never disagrees with itself mid-surface.
+
+   §1.0 the image is the hero · §1.2 three type sizes · §1.3 fill classifies
+   · §1.4 verbs are ink + underlined on one right edge · §1.5 hairline +
+   faint band · §1.6 the step number is the spine · §1.7 two states.
+   ========================================================================== */
+.wb-card { background: var(--bg2); padding: 0; overflow: hidden; }
+
+/* §1.2 — three sizes, and the largest anchors the rest. Two roles may share
+   15px separated by weight ONLY because 24px exists above them. */
+.wb-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 18px 22px 14px;
+}
+.wb-card .wb-subject {
+  /* Specificity matters here: .panel h2 sets 11px uppercase Courier, and
+     the 24px anchor is the whole reason two roles may share 15px below. */
+  font-family: var(--sans); font-size: 24px; font-weight: 600;
+  letter-spacing: -.015em; text-transform: none; color: var(--ink);
+  margin: 0; border: none; padding: 0;
+}
+.wb-facts { font-size: 11.5px; letter-spacing: .1em; color: var(--ink-faint); }
+.wb-progress {
+  margin-left: auto; font-size: 11.5px; letter-spacing: .1em;
+  color: var(--ink-dim);
+}
+
+/* §1.0/§2.15 — the take is the top of the surface, at the PANEL's own
+   shape and as wide as the column allows. aspect-ratio, never a fixed
+   height: a frame that lies about the shape is worse than no frame.
+   contain, never cover — a crop would hide pixels the user is judging. */
+.wb-card .stage-hero {
+  width: 100%; margin: 0; min-height: 0; display: block;
+  border-left: none; border-right: none;
+}
+.wb-card .stage-hero img {
+  width: 100%; height: 100%; max-height: none; object-fit: contain;
+}
+.shot-tag-size { right: 10px; bottom: 10px; color: var(--ink-dim); }
+
+.wb-card .act-bar { margin: 0; border: none; border-bottom: 1px solid var(--hairline); }
+.act-run {
+  font-size: 11.5px; letter-spacing: .08em; color: var(--ink-faint);
+  padding: 8px 22px 8px 0; white-space: nowrap;
+}
+
+/* the filmstrip sits directly under the hero, at the same ratio */
+.wb-card .takes { margin: 0; border-top: none; padding: 14px 22px 16px; }
+.wb-card .take { width: 156px; }
+.take-frame { display: block; width: 100%; background: var(--field); }
+.take-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.wb-card .take img { height: auto; }
+
+/* §1.6 — the step number is the spine. A 46px gutter replaces the label
+   gutter entirely: a label says what KIND of row this is, a number says
+   where you are in the work. §1.5 — hairline and band share extents. */
+.step { display: flex; gap: 0; padding: 18px 22px; border-top: 1px solid var(--hairline); }
+.step-band { background: var(--band); }
+.step-num {
+  flex: 0 0 46px; font-size: 11.5px; letter-spacing: .1em;
+  color: var(--ink); padding-top: 1px;
+}
+.step-done .step-num { color: var(--ok); }
+.step-main { flex: 1; min-width: 0; }
+.step-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.step-label { font-size: 11.5px; letter-spacing: .14em; color: var(--ink); }
+.step-done .step-label { color: var(--ink-dim); }
+.step-meta { font-size: 11.5px; letter-spacing: .08em; color: var(--ink-faint); }
+/* §1.4 — every verb on the surface right-aligns to ONE shared edge, so the
+   eye finds actions by running down a single column. */
+.step-acts { margin-left: auto; display: flex; align-items: baseline; gap: 18px; flex: none; }
+.step-confirmed {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 11.5px; letter-spacing: .1em; color: var(--ok);
+}
+.step-content { margin-top: 10px; }
+
+/* §1.9 — prose measures are capped independent of surface width; extra
+   width goes to rails and grid columns, never to line length. */
+.step-prose, .wb-card .cam-sum {
+  font-size: 15px; font-weight: 400; color: var(--ink-dim);
+  margin: 0; max-width: 720px;
+}
+.step-note {
+  font-size: 11.5px; letter-spacing: .06em; color: var(--ink-faint);
+  max-width: 900px; margin-top: 8px; line-height: 1.7;
+}
+.step-forbid { color: var(--ink-faint); opacity: .8; }
+.step-prompt {
+  font-size: 11.5px; line-height: 1.7; color: var(--ink-faint);
+  max-width: 900px; margin: 0; white-space: pre-wrap;
+  max-height: 132px; overflow: hidden;
+}
+
+/* §1.4 — a verb is full ink and underlined. At 11.5px colour alone fails:
+   an --ink-dim verb sits at the same value as the fact beside it, so
+   "Change camera" reads as part of the camera string. Scoped to the card,
+   which upgrades the act-bar's existing text-acts for free. */
+.wb-card .verb, .wb-card .text-act {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--sans); font-size: 11.5px; font-weight: 400;
+  letter-spacing: 0; color: var(--ink);
+  text-decoration: underline; text-decoration-color: var(--ink-dim);
+  text-underline-offset: 3px; white-space: nowrap;
+}
+.wb-card .verb:hover, .wb-card .text-act:hover { text-decoration-color: var(--ink); }
+.wb-card .verb:disabled {
+  color: var(--ink-faint); text-decoration-color: transparent; cursor: not-allowed;
+}
+/* §1.2 — a standalone button is a string like any other: 15px, no fourth size. */
+.wb-card button.primary, .wb-card button.ghost { font-size: 15px; }
+
+/* §1.3 — fill classifies, border does not. A set member is --tile + a
+   hairline stroke; it always sits one value above its ground. §1.8 — a
+   label with a grid under it does not earn a gutter: the grid takes the
+   full column. */
+.obj-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+.obj-tile {
+  background: var(--tile); border: 1px solid var(--line-soft);
+  padding: 7px 11px; font-size: 15px; color: var(--ink-dim);
+  display: flex; align-items: baseline; gap: 8px; justify-content: space-between;
+}
+.obj-ref {
+  background: none; border: none; padding: 0; cursor: pointer; flex: none;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--ok);
+}
+.obj-ref-add { color: var(--ink-faint); }
+
+/* §2.3 — references state their reason, on AND off. The marker is the
+   pair's state, never a bare dot: a check is --ok, a ring is --ink-dim. */
+.wb-card .ref-groups { display: block; }
+.ref-row {
+  display: flex; align-items: baseline; gap: 12px; padding: 3px 0;
+  font-size: 11.5px; cursor: pointer;
+}
+.ref-row input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: none;
+  width: 13px; height: 13px; background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1;
+}
+.ref-row input[type="checkbox"]::before { content: "\25CB"; color: var(--ink-dim); }
+.ref-row input[type="checkbox"]:checked::before { content: "\2713"; color: var(--ok); }
+.ref-name { letter-spacing: .08em; color: var(--ink-dim); flex: 0 0 auto; min-width: 210px; }
+.ref-row.on .ref-name { color: var(--ink); }
+.ref-kind { font-size: 11.5px; color: var(--ink-faint); flex: 1; }
+.ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
+.ref-off-head {
+  display: flex; gap: 14px; margin: 12px 0 4px;
+  font-size: 11.5px; letter-spacing: .1em; color: var(--ink-faint);
+}
+.ref-off { columns: 2; column-gap: 28px; }
+.ref-off .ref-row { break-inside: avoid; }
+.anchors-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; max-width: none; }
+.anchors-k { letter-spacing: .14em; color: var(--ink-dim); }
+.anchors-src { color: var(--ink-faint); }
+.pal-group { position: relative; margin-top: 14px; }
+.dropdown-panel {
+  position: absolute; top: 100%; left: 0; z-index: 30;
+  background: var(--panel); border: 1px solid var(--line);
+  padding: 10px 12px; max-height: min(260px, 60vh); overflow: auto; min-width: 250px;
+}
+
+/* §2.4 — the step states its three values; the selects fold behind Change.
+   The gate is honest: unconfirmed steps do not block a render, so it says
+   so rather than greying the button. */
+.gen-stated { display: flex; gap: 28px; flex-wrap: wrap; font-size: 11.5px; }
+.gen-stated i { font-style: normal; letter-spacing: .12em; color: var(--ink-faint); margin-right: 8px; }
+.gen-stated b { font-family: var(--sans); font-size: 15px; font-weight: 400; color: var(--ink); }
+.wb-card .gen-row { margin-top: 12px; }
+.gen-warn {
+  margin-top: 10px; font-size: 11.5px; letter-spacing: .06em; color: var(--bad);
+}
+.gen-gate {
+  margin-top: 8px; font-size: 11.5px; letter-spacing: .08em; color: var(--hold);
+}
+.gen-gate.gate-clear { color: var(--ok); }
+
+/* §1.11 — design width. Every other view keeps the 1560px measure. */
+body[data-view="boards"] main { max-width: 1920px; }
+
+/* §2.15 — the anchored plates state their kind, not their thumbnails: the
+   rail holds only what has NO picture, and eleven ids read as four facts
+   when consecutive ones collapse to a range. */
+.anchor-kind {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; padding: 2px 0; font-size: 10.5px; letter-spacing: .06em;
+}
+.anchor-head { color: var(--ink-dim); }
+.anchor-ids { color: var(--ink-faint); flex: none; }

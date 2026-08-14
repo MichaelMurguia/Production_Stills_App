@@ -116,7 +116,7 @@ class TheSelectionIsRemembered(unittest.TestCase):
         b = self.block()
         self.assertIn("const lastTake = panelCands[0]", b)
         self.assertIn("(lastTake?.references || []).map(r => r.id)", b)
-        self.assertIn("g.ids.some(id => lastIds.has(id))", b)
+        self.assertIn("g.ids.some(id => lastRefIds.has(id))", b)
 
     def test_the_matcher_is_only_the_first_take_default(self):
         b = self.block()
@@ -124,11 +124,21 @@ class TheSelectionIsRemembered(unittest.TestCase):
         self.assertIn("reqObjs.some(o => matches(o, g.name))", b)
 
     def test_the_hint_says_which_rule_is_in_force(self):
-        self.assertIn("RODE THE PREVIOUS TAKE", JS)
-        self.assertIn("match this panel's required objects and are pre-checked", JS)
+        """STEP_SEQUENCE_SPEC §2.3 moved this off a group hint and onto the
+        rows themselves — every row states its reason, and the OFF rows
+        state theirs too. The two rules never appear in one state: the
+        matcher is the first-take default, so a panel WITH takes never
+        claims a group is off because nothing names its subject."""
+        self.assertIn('"RODE THE PREVIOUS TAKE"', JS)
+        self.assertIn('"MATCHES A REQUIRED OBJECT"', JS)
+        self.assertIn('"DID NOT RIDE THE PREVIOUS TAKE"', JS)
+        self.assertIn('"NOTHING ON THIS PANEL NAMES THEIR SUBJECT"', JS)
+        i = JS.index("const refWhy =")
+        self.assertIn("lastTake ?", JS[i:i + 320],
+                      "which reason is in force follows the rule, not the row")
 
     def test_no_match_warning_never_second_guesses_a_remembered_choice(self):
-        i = JS.index("P5: four unchecked boxes")
+        i = JS.index("P5: unchecked boxes read as a choice not yet made")
         self.assertIn("panelCands.length", JS[i:i + 700],
                       "an empty remembered selection is a decision, not a gap")
 
