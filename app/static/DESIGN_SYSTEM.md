@@ -1307,16 +1307,19 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
-- **2026-08-14** — **Palette picker reads the canonical parser, and
-  shows colours** (user-caught): the workbench picker carried its own
-  inline notes reader that assumed the hex sat at index 1. The real shape
-  is `language · name · hex[/pair] · cite`, so it read the NAME as the hex
-  — falling back to `#666666` for all nineteen — and the LANGUAGE as the
-  name, printing "RESISTANCE #666666" nineteen times. It now reads through
-  `swatchNotes()` like every other surface, and presents as a compact grid
-  of the swatches themselves grouped by design language: the colour is the
-  content, its name and hex ride the title, selection is an amber outline
-  (focus), and a two-tone swatch shows both halves rather than a blend.
+- **2026-08-14** — **The palette picker attaches a palette whole**
+  (user-caught, twice). First fault: it carried its own inline notes
+  reader that assumed the hex sat at index 1, but the shape is `language ·
+  name · hex[/pair] · cite` — so it read the NAME as the hex (falling back
+  to `#666666` for all nineteen) and the LANGUAGE as the name, printing
+  "RESISTANCE #666666" nineteen times. It now reads through
+  `swatchNotes()` like every other surface. Second fault: the rebuild
+  offered a grid of individual colours, which is the exact shape *a set
+  that means something as a set renders as one object* names as wrong —
+  the ramp IS the swatch and the colours are its inside. It now offers one
+  row per design language drawn with the shelf's own `.sw-ramp` (hero band
+  leftmost, luminance order, pair split top/bottom), selection is an amber
+  outline, and choosing a row attaches that palette whole.
 - **2026-08-14** — **The step sequence** (STEP_SEQUENCE_SPEC, mock
   hier-4a): stage 04 rebuilt as six confirmations ending in a render, and
   Part 1's vocabulary folded into canon above — the image is the hero

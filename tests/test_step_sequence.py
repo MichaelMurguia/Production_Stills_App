@@ -219,11 +219,12 @@ class ThePalettePicker(unittest.TestCase):
     (falling back to grey) and the LANGUAGE as the name."""
 
     def test_it_reads_through_the_canonical_parser(self):
-        i = JS.index("const rows = swatchRefs")
-        b = JS[i:i + 400]
+        i = JS.index('data-f="swatch-menu"')
+        b = JS[max(0, i - 3000):i]
         self.assertIn("swatchNotes(r.notes)", b)
-        self.assertIn("filter(x => x.sw.hex)", b,
-                      "a swatch with no parseable hex is not drawn as grey")
+        self.assertIn("if (!sw.hex) continue", b,
+                      "a swatch with no parseable hex is skipped, never "
+                      "drawn as grey")
 
     def test_no_hand_rolled_notes_parser_survives(self):
         self.assertNotIn('"#666666"', JS,
@@ -236,29 +237,39 @@ class ThePalettePicker(unittest.TestCase):
                          "notes are split on ' · ', and only swatchNotes "
                          "knows where the hex actually sits")
 
-    def test_the_swatch_is_the_content_not_a_row_of_text(self):
-        self.assertIn("pal-chips", JS)
-        b = block(".pal-swatch")
-        self.assertIn("width: 26px", b)
-        self.assertIn("height: 26px", b)
-        self.assertNotIn("border-radius", b, "square, like everything else")
+    def test_a_palette_attaches_whole_never_colour_by_colour(self):
+        """User ruling 2026-08-14, and canon since 2026-08-06: a set that
+        means something as a set renders as ONE object — the ramp IS the
+        swatch, the colours are its inside. The first build of this picker
+        offered a grid of individual colours, which is the exact shape the
+        canon names as wrong."""
+        i = JS.index('data-f="swatch-menu"')
+        b = JS[max(0, i - 3000):i + 2200]
+        self.assertIn('data-ids="${esc(JSON.stringify(ids))}"', b,
+                      "a row carries its whole group's ids")
+        self.assertNotIn("data-sid", b, "no per-colour control survives")
+        self.assertIn("A PALETTE ATTACHES WHOLE", b)
 
-    def test_the_checkbox_survives_as_the_contract(self):
-        """checkedRefs() reads input[data-sid]:checked — hiding the control
-        visually must not remove it."""
-        self.assertIn('<input type="checkbox" data-sid="${esc(r.id)}"', JS)
-        self.assertIn("position: absolute; opacity: 0", block(".pal-chip input"))
+    def test_it_reuses_the_canonical_ramp(self):
+        """The shelf's own component, not a second drawing of a palette:
+        luminance order, hero band at flex:2, pair split top/bottom."""
+        i = JS.index('data-f="swatch-menu"')
+        b = JS[max(0, i - 3000):i + 2200]
+        self.assertIn("rampOrder(row.swatches).map(band)", b)
+        self.assertIn('class="sw-ramp pal-ramp"', b)
 
-    def test_selection_reads_as_focus_and_two_tone_is_two_blocks(self):
-        self.assertIn("outline: 2px solid var(--accent)",
-                      block(".pal-chip input:checked + .pal-swatch"))
-        self.assertNotIn("gradient", block(".pal-swatch i"),
-                         "a pair is two declared colours, never a blend")
+    def test_selecting_a_row_attaches_every_id_in_its_group(self):
+        i = JS.index("const checkedSwatches =")
+        self.assertIn("JSON.parse(x.dataset.ids)", JS[i:i + 260])
 
-    def test_the_denominator_counts_what_parsed(self):
-        i = JS.index("const parsed =")
-        self.assertIn('$$("input[data-sid]", menu).length', JS[i:i + 120],
-                      "never state a count you cannot prove on screen")
+    def test_the_summary_names_the_palette_it_chose(self):
+        """The palette is the object; a colour count is its inside, not
+        its identity."""
+        i = JS.index("const summary = () =>")
+        b = JS[i:i + 900]
+        self.assertIn("pal-sum-ramp", b)
+        self.assertIn("PALETTES", b)
+        self.assertIn("AUTO ·", b)
 
 
 class TheAspectRegression(unittest.TestCase):

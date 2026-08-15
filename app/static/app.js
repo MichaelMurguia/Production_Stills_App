@@ -7654,40 +7654,51 @@ async function renderBoardPanels(specId) {
               </div>`;
             })()}
             ${swatchRefs.length ? (() => {
-              // Per-swatch palette selection (2026-08-13, user): never all
-              // swatches by default. Empty selection = the four-anchor auto
-              // shelf (the 2 newest, server-side, as ruled 2026-08-03);
-              // picking ANY swatch takes over the role entirely.
-              //
-              // Read through swatchNotes — the canonical parser. This picker
-              // shipped with its own inline reader that assumed the hex sat
-              // at index 1; the real shape is `language · name · hex[/pair]
-              // · cite`, so every chip drew #666666 and every name read as
-              // its LANGUAGE (user-caught 2026-08-14).
-              const rows = swatchRefs
-                .map(r => ({ r, sw: swatchNotes(r.notes) }))
-                .filter(x => x.sw.hex);
+              // A palette is applied WHOLE (user, 2026-08-14; canon
+              // "a set that means something as a set renders as one
+              // object", PALETTE_GROUPS 2026-08-06): the ramp IS the
+              // swatch and the colours are its inside, so this offers one
+              // row per design language, never a grid of loose colours.
+              // Unselected = the style shelf's automatic pick (the 2
+              // newest, server-side, ruled 2026-08-03); choosing any
+              // palette takes over the COLOR_PALETTE role entirely.
+              const rows = [];
+              const byLang = new Map();
+              for (const r of swatchRefs) {
+                const sw = { ...swatchNotes(r.notes), ref_id: r.id };
+                if (!sw.hex) continue;
+                const key = sw.language || sw.name || r.id;
+                if (!byLang.has(key)) {
+                  const row = { label: key, unfiled: !sw.language, swatches: [] };
+                  byLang.set(key, row);
+                  rows.push(row);
+                }
+                byLang.get(key).swatches.push(sw);
+              }
               if (!rows.length) return "";
-              const byLang = {};
-              for (const x of rows) (byLang[x.sw.language || "UNFILED"] ??= []).push(x);
               return `<div class="fgroup pal-group"
-                title="Which palette swatches ride this render as color references. Unselected = the style shelf's automatic pick (the 2 newest approved swatches); selecting any swatch replaces that with exactly your set — never the whole palette.">
+                title="Which palette rides this render as its colour reference. Unselected = the style shelf's automatic pick; choosing a palette replaces that with exactly the one you pick — a palette attaches whole, never colour by colour.">
                 <span class="f-label">Palette</span>
                 <button type="button" class="ghost" data-f="swatch-open"></button>
                 <div class="hidden dropdown-panel pal-menu" data-f="swatch-menu">
-                  ${Object.entries(byLang).map(([lang, xs]) => `
-                    <div class="pal-lang-k mono">${esc(lang)} · ${xs.length}</div>
-                    <div class="pal-chips">
-                      ${xs.map(({ r, sw }) => `
-                        <label class="pal-chip" title="${esc(sw.name || r.id)} · ${
-                          esc(sw.hex.toUpperCase())}${sw.pair_hex ? ` / ${esc(sw.pair_hex.toUpperCase())}` : ""}${
-                          sw.hero ? " · HERO" : ""}">
-                          <input type="checkbox" data-sid="${esc(r.id)}" ${lastRefIds.has(r.id) ? "checked" : ""}>
-                          <span class="pal-swatch" style="background:${esc(sw.hex)}">${
-                            sw.pair_hex ? `<i style="background:${esc(sw.pair_hex)}"></i>` : ""}</span>
-                        </label>`).join("")}
-                    </div>`).join("")}
-                  <div class="mini mono pal-foot">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
+                  ${rows.map(row => {
+                    const ids = row.swatches.map(s => s.ref_id);
+                    const hero = row.swatches.find(s => s.hero);
+                    return `
+                    <label class="pal-row" title="${esc(row.label)} — ${ids.length} colour${ids.length === 1 ? "" : "s"}${
+                      hero ? ` · hero ${esc(hero.hex.toUpperCase())}` : ""}; attaches whole">
+                      <input type="checkbox" data-ids="${esc(JSON.stringify(ids))}"
+                             ${ids.some(id => lastRefIds.has(id)) ? "checked" : ""}>
+                      <span class="sw-ramp pal-ramp">${rampOrder(row.swatches).map(band).join("")}</span>
+                      <span class="sw-ramp-label pal-row-label">
+                        <span class="lang">${esc(row.label)}</span>
+                        <span class="n">${ids.length} COLOUR${ids.length === 1 ? "" : "S"}</span>
+                        ${hero ? `<span class="hero">HERO ${esc(hero.hex.toUpperCase())}</span>`
+                               : `<span class="hero open">OPEN</span>`}
+                      </span>
+                    </label>`;
+                  }).join("")}
+                  <div class="mini mono pal-foot">NONE SELECTED = AUTO · A PALETTE ATTACHES WHOLE</div>
                 </div>
               </div>`;
             })() : ""}` })}
@@ -7745,8 +7756,11 @@ async function renderBoardPanels(specId) {
       <div data-f="busy"></div>
       <div data-f="report"></div>`;
 
+    // A palette row carries every id in its group: selecting it attaches
+    // the whole ramp, which is the object the user actually chose.
     const checkedSwatches = () =>
-      $$("[data-f=swatch-menu] input:checked", card).map(x => x.dataset.sid);
+      $$("[data-f=swatch-menu] input:checked", card)
+        .flatMap(x => JSON.parse(x.dataset.ids));
     const checkedRefs = () => [
       ...$$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids)),
       ...checkedSwatches(),
@@ -7853,15 +7867,26 @@ async function renderBoardPanels(specId) {
       // shows the actual colours chosen, capped so a 19-swatch pick cannot
       // outgrow its own button; the denominator counts swatches that
       // PARSED, never the raw role count (a count must be provable).
-      const parsed = $$("input[data-sid]", menu).length;
+      // The summary states the live outcome — the rule AND the result. It
+      // names the palette chosen and shows its ramp, because the palette
+      // is the object; a colour count is its inside, not its identity.
+      const palRows = $$("input[data-ids]", menu);
+      const totalSwatches = palRows
+        .reduce((n, x) => n + JSON.parse(x.dataset.ids).length, 0);
       const summary = () => {
-        const picked = $$("input[data-sid]:checked", menu);
-        const dots = picked.slice(0, 10).map(x =>
-          `<span class="pal-dot" style="background:${
-            x.parentElement.querySelector(".pal-swatch")?.style.background || ""}"></span>`).join("");
-        swatchOpen.innerHTML = picked.length
-          ? `${dots}<span class="mono">${picked.length} OF ${parsed}</span>`
-          : `<span class="mono">AUTO · ${Math.min(2, parsed)} NEWEST OF ${parsed}</span>`;
+        const picked = palRows.filter(x => x.checked);
+        if (!picked.length) {
+          swatchOpen.innerHTML =
+            `<span class="mono">AUTO · ${Math.min(2, totalSwatches)} NEWEST OF ${totalSwatches}</span>`;
+          return;
+        }
+        const names = picked.map(x =>
+          x.parentElement.querySelector(".lang")?.textContent || "").filter(Boolean);
+        const ramp = picked[0].parentElement.querySelector(".pal-ramp");
+        swatchOpen.innerHTML =
+          `<span class="pal-sum-ramp">${ramp ? ramp.innerHTML : ""}</span>` +
+          `<span class="mono">${esc(names.length === 1 ? names[0]
+            : `${names.length} PALETTES`)}</span>`;
       };
       // R15 (HARNESS_AUDIT) — THE dropdown contract: --panel ground,
       // --line border, no shadow, no rounding, no animation, ≤60vh,

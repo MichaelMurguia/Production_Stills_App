@@ -3010,32 +3010,23 @@ body[data-view="boards"] main { max-width: 1920px; }
 .anchor-head { color: var(--ink-dim); }
 .anchor-ids { color: var(--ink-faint); flex: none; }
 
-/* The palette picker is a grid of the colours themselves (user-caught
-   2026-08-14: a 19-row list of names was tall, and every row read
-   "RESISTANCE #666666" because the inline parser was wrong). The swatch
-   IS the content, so it takes the space; its name and hex ride the title.
-   Grouped by design language, because that is how a palette is authored. */
-.pal-menu { min-width: 268px; max-width: 320px; padding: 10px 12px 8px; }
-.pal-lang-k {
-  font-size: 9.5px; letter-spacing: .14em; color: var(--ink-faint);
-  margin: 8px 0 5px;
-}
-.pal-lang-k:first-child { margin-top: 0; }
-.pal-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.pal-chip { display: block; cursor: pointer; line-height: 0; }
-/* the checkbox stays in the DOM — it is what the render reads */
-.pal-chip input { position: absolute; opacity: 0; pointer-events: none; }
-.pal-swatch {
-  display: block; width: 26px; height: 26px; position: relative;
-  border: 1px solid var(--line); box-sizing: border-box;
-}
-/* a two-tone swatch shows both halves, never a gradient between them */
-.pal-swatch i { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; }
-/* selection is focus, which is one of amber's three sanctioned roles */
-.pal-chip input:checked + .pal-swatch { outline: 2px solid var(--accent); outline-offset: 1px; }
-.pal-chip input:focus-visible + .pal-swatch { box-shadow: var(--focus-ring); }
+/* The palette picker offers whole palettes, never loose colours (user,
+   2026-08-14): canon rules that a set meaning something as a set renders
+   as ONE object — the ramp IS the swatch, the colours are its inside — so
+   this reuses the shelf's own .sw-ramp and selects the group. */
+.pal-menu { min-width: 300px; max-width: 340px; padding: 10px 12px 8px; }
+.pal-row { display: block; cursor: pointer; margin-bottom: 12px; }
+.pal-row:last-of-type { margin-bottom: 6px; }
+/* the checkboxes stay in the DOM — they are what the render reads */
+.pal-row input { position: absolute; opacity: 0; pointer-events: none; }
+.pal-ramp { height: 30px; margin-top: 0; }
+/* selection is focus, one of amber's three sanctioned roles */
+.pal-row input:checked + .pal-ramp { outline: 2px solid var(--accent); }
+.pal-row input:focus-visible + .pal-ramp { box-shadow: var(--focus-ring); }
+.pal-row-label { margin-top: 5px; }
 .pal-foot { margin-top: 9px; color: var(--ink-faint); }
-.pal-dot {
-  display: inline-block; width: 10px; height: 10px; margin-right: 3px;
-  vertical-align: middle; border: 1px solid var(--line);
+.pal-sum-ramp {
+  display: inline-flex; width: 46px; height: 11px; margin-right: 8px;
+  vertical-align: middle; outline: 1px solid var(--line);
 }
+.pal-sum-ramp i { display: block; min-width: 0; }
