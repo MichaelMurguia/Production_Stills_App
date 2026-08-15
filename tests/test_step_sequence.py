@@ -70,8 +70,8 @@ class TheVocabulary(unittest.TestCase):
     def test_three_type_sizes_and_the_largest_anchors_them(self):
         """§1.2 — 24 / 15 / 11.5. The measured fault was nine sizes inside
         five and a half pixels, which reads as one size with noise."""
-        self.assertIn("font-size: 24px", block(".wb-card .wb-subject"))
-        self.assertIn("font-size: 15px", block(".step-prose, .wb-card .cam-sum"))
+        self.assertIn("font-size: 24px", block(".seq .seq-subject"))
+        self.assertIn("font-size: 15px", block(".step-prose, .seq .cam-sum"))
         for sel in (".step-label", ".step-meta", ".wb-facts"):
             self.assertIn("font-size: 11.5px", block(sel))
 
@@ -79,8 +79,8 @@ class TheVocabulary(unittest.TestCase):
         """.panel h2 sets 11px uppercase Courier; without the extra
         specificity the 24px anchor silently lost and the whole scale
         collapsed to a continuum again."""
-        self.assertIn(".wb-card .wb-subject", CSS)
-        b = block(".wb-card .wb-subject")
+        self.assertIn(".seq .seq-subject", CSS)
+        b = block(".seq .seq-subject")
         self.assertIn("text-transform: none", b)
         self.assertIn("font-family: var(--sans)", b)
 
@@ -103,7 +103,7 @@ class TheVocabulary(unittest.TestCase):
         """§1.4 — at 11.5px colour alone fails: an --ink-dim verb sits at
         the same value as the fact beside it, so "Change camera" read as
         part of the camera string."""
-        b = block(".wb-card .verb, .wb-card .text-act")
+        b = block(".seq .verb, .seq .text-act")
         for decl in ("color: var(--ink)", "text-decoration: underline",
                      "text-decoration-color: var(--ink-dim)",
                      "text-underline-offset: 3px", "white-space: nowrap",
@@ -131,7 +131,7 @@ class TheVocabulary(unittest.TestCase):
     def test_prose_measures_are_capped(self):
         """§1.9 — extra width goes to rails and grid columns, never to
         line length."""
-        self.assertIn("max-width: 720px", block(".step-prose, .wb-card .cam-sum"))
+        self.assertIn("max-width: 720px", block(".step-prose, .seq .cam-sum"))
         self.assertIn("max-width: 900px", block(".step-note"))
 
     def test_a_title_is_never_truncated(self):

@@ -139,15 +139,19 @@ class AnsweredQuestionsReachThePrompt(_IsolatedStyleContext):
     def test_the_copy_no_longer_contradicts_itself(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         self.assertNotIn("decide them yourself or run a DESIGN_EXPLORATION board", js)
-        self.assertIn("exploring is how you decide them", js)
+        # The mode-aware copy survives; STEP_SEQUENCE_SPEC §3.2 made the
+        # step's own note Courier, so it states the same thing in caps.
+        self.assertIn("EXPLORING IS HOW YOU DECIDE THEM", js)
+        self.assertIn("ANSWER ONE AND IT BECOMES CANON", js)
         self.assertIn('data-f="answer-qs"', js)
 
     def test_the_answer_verb_does_not_spend_amber(self):
         """.block-act is canonically the amber verb on a BLOCKING row; the
-        questions block is a report, so its verb is a plain text act."""
+        questions STEP is a report, so its verb is a plain verb — ink and
+        underlined since §1.4 (2026-08-14), never amber."""
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         i = js.index('data-f="answer-qs"')
-        self.assertIn("text-act", js[i - 60:i])
+        self.assertIn('class="verb"', js[i - 60:i])
 
 
 class RescanKnowsWhatItHas(unittest.TestCase):

@@ -2823,15 +2823,16 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    · §1.4 verbs are ink + underlined on one right edge · §1.5 hairline +
    faint band · §1.6 the step number is the spine · §1.7 two states.
    ========================================================================== */
-.wb-card { background: var(--bg2); padding: 0; overflow: hidden; }
+.seq { background: var(--bg2); padding: 0; overflow: hidden; }
 
-/* §1.2 — three sizes, and the largest anchors the rest. Two roles may share
+/* §1.2 — three sizes, and the largest anchors the rest. .seq is the
+   vocabulary class; .wb-card adds only what is the workbench's own. Two roles may share
    15px separated by weight ONLY because 24px exists above them. */
 .wb-head {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
   padding: 18px 22px 14px;
 }
-.wb-card .wb-subject {
+.seq .seq-subject {
   /* Specificity matters here: .panel h2 sets 11px uppercase Courier, and
      the 24px anchor is the whole reason two roles may share 15px below. */
   font-family: var(--sans); font-size: 24px; font-weight: 600;
@@ -2896,7 +2897,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 
 /* §1.9 — prose measures are capped independent of surface width; extra
    width goes to rails and grid columns, never to line length. */
-.step-prose, .wb-card .cam-sum {
+.step-prose, .seq .cam-sum {
   font-size: 15px; font-weight: 400; color: var(--ink-dim);
   margin: 0; max-width: 720px;
 }
@@ -2915,19 +2916,19 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    an --ink-dim verb sits at the same value as the fact beside it, so
    "Change camera" reads as part of the camera string. Scoped to the card,
    which upgrades the act-bar's existing text-acts for free. */
-.wb-card .verb, .wb-card .text-act {
+.seq .verb, .seq .text-act {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--sans); font-size: 11.5px; font-weight: 400;
   letter-spacing: 0; color: var(--ink);
   text-decoration: underline; text-decoration-color: var(--ink-dim);
   text-underline-offset: 3px; white-space: nowrap;
 }
-.wb-card .verb:hover, .wb-card .text-act:hover { text-decoration-color: var(--ink); }
-.wb-card .verb:disabled {
+.seq .verb:hover, .seq .text-act:hover { text-decoration-color: var(--ink); }
+.seq .verb:disabled {
   color: var(--ink-faint); text-decoration-color: transparent; cursor: not-allowed;
 }
 /* §1.2 — a standalone button is a string like any other: 15px, no fourth size. */
-.wb-card button.primary, .wb-card button.ghost { font-size: 15px; }
+.seq button.primary, .seq button.ghost { font-size: 15px; }
 
 /* §1.3 — fill classifies, border does not. A set member is --tile + a
    hairline stroke; it always sits one value above its ground. §1.8 — a
@@ -2950,7 +2951,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 
 /* §2.3 — references state their reason, on AND off. The marker is the
    pair's state, never a bare dot: a check is --ok, a ring is --ink-dim. */
-.wb-card .ref-groups { display: block; }
+.seq .ref-groups { display: block; }
 .ref-row {
   display: flex; align-items: baseline; gap: 12px; padding: 3px 0;
   font-size: 11.5px; cursor: pointer;
@@ -2998,7 +2999,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .gen-gate.gate-clear { color: var(--ok); }
 
 /* §1.11 — design width. Every other view keeps the 1560px measure. */
-body[data-view="boards"] main { max-width: 1920px; }
+body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px; }
 
 /* §2.15 — the anchored plates state their kind, not their thumbnails: the
    rail holds only what has NO picture, and eleven ids read as four facts
@@ -3030,3 +3031,78 @@ body[data-view="boards"] main { max-width: 1920px; }
   vertical-align: middle; outline: 1px solid var(--line);
 }
 .pal-sum-ramp i { display: block; min-width: 0; }
+
+/* ==========================================================================
+   UNCANONIZED — 2026-08-14 — stage 03 in the step vocabulary
+   (STEP_SEQUENCE_SPEC Part 3, mock hier-5a). The transfer the spec says
+   should cost nothing: the same .step spine, the same verbs, one new
+   component — the opener that shows what the board has MADE.
+   ========================================================================== */
+.seq-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 18px 22px 14px;
+}
+.seq-progress {
+  margin-left: auto; font-size: 11.5px; letter-spacing: .1em;
+  color: var(--ink-dim);
+}
+.seq-autofill { margin: 0 22px 10px; }
+/* a deep link scrolls the editor into view; the band is sticky, so the
+   24px subject must not land underneath it */
+.spec-editor { scroll-margin-top: 96px; }
+.spec-editor.seq .spec-section {
+  border: none; padding: 0; margin: 0;   /* the step owns the chrome now */
+}
+.spec-editor.seq .step-content > .grid-form { margin-top: 0; }
+
+/* §3.15 — the breakdown opens on what it has made. Reviewing a
+   specification without seeing the pictures it produced is reviewing it
+   blind, and this surface's whole job is describing pictures. */
+.made { display: flex; gap: 20px; padding: 0 22px 18px; align-items: flex-start; }
+.made-grid {
+  flex: 1; min-width: 0; display: grid; gap: 14px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-auto-rows: min-content;
+}
+.made-frame {
+  position: relative; background: var(--field); border: 1px solid var(--line);
+  overflow: hidden;
+}
+.made-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* The empty frame is a REPORT, not a placeholder: the shape is the panel's
+   own ratio and the frame states the blocker that keeps it empty — the one
+   place a blocker reads as a consequence rather than a red tag in a rail. */
+.made-empty {
+  background: var(--panel); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+}
+.made-id {
+  position: absolute; left: 8px; top: 8px; font-size: 10px; letter-spacing: .1em;
+  background: rgba(11, 12, 14, .82); color: var(--ink-dim); padding: 3px 7px;
+}
+.made-empty .made-id { position: absolute; background: none; }
+.made-state {
+  position: absolute; left: 8px; bottom: 8px; font-size: 10px; letter-spacing: .1em;
+  background: rgba(11, 12, 14, .82); padding: 3px 7px; color: var(--ink-dim);
+}
+.made-state.ok { color: var(--ok); }
+.made-state.hold { color: var(--hold); }
+.made-none { font-size: 11.5px; letter-spacing: .12em; color: var(--ink-faint); }
+.made-blocker {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; text-align: center;
+  font-size: 10px; letter-spacing: .08em; color: var(--bad);
+}
+.made-item { min-width: 0; }
+.made-cap {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; margin-top: 7px; font-size: 12.5px; color: var(--ink-dim);
+}
+.made-cap .mono { font-size: 10.5px; color: var(--ink-faint); }
+.made-stake { flex: 0 0 260px; }
+.made-stake .step-prose { margin: 8px 0 10px; font-size: 13px; }
+
+.q-list { margin: 8px 0 0; padding-left: 18px; }
+.q-list li { font-size: 15px; color: var(--ink-dim); margin: 3px 0; max-width: 720px; }
+.q-list li.answered { color: var(--ink-faint); }
+.q-list .q-ans { display: block; font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .06em; color: var(--ok); }

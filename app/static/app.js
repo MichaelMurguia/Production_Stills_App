@@ -383,6 +383,36 @@ function swatchNotes(notes) {
 }
 
 
+/* STEP_SEQUENCE_SPEC §1.6/§1.7 — the step renderer, shared by every
+   surface whose job is a sequence. A 46px gutter holds a two-digit Courier
+   number: a label gutter says what KIND of thing a row is, a number says
+   where you are in the work. Two states only, and a confirmed step dims
+   but stays fully legible — it is evidence the user already ruled.
+   Each surface owns where `done` is stored; the drawing is one thing. */
+function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
+                   done = false }) {
+  return `
+  <section class="step${+n % 2 === 0 ? " step-band" : ""}${done ? " step-done" : ""}"
+           data-step="${esc(id || n)}">
+    <span class="step-num mono">${n}</span>
+    <div class="step-main">
+      <div class="step-head">
+        <span class="step-label mono">${label}</span>
+        ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
+        <span class="step-acts">
+          ${done && id ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
+             title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
+          ${verbs}
+          ${id && !done ? `<button type="button" class="verb" data-confirm="${esc(id)}"
+             title="Mark this step confirmed. Advisory — it never blocks the act.">Confirm</button>` : ""}
+        </span>
+      </div>
+      ${body ? `<div class="step-content">${body}</div>` : ""}
+    </div>
+  </section>`;
+}
+
+
 function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
                 danger = false, custom = "", mount = null,
                 extraLabel = "", extraDanger = false }) {
@@ -5756,8 +5786,13 @@ async function renderSpecs(openId = null) {
 async function openSpecEditor(specId) {
   uiSet("openSpec", specId);
   syncUrl(true);
-  const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs] = await Promise.all([
-    api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references")]);
+  // §3.15: the breakdown opens on what it has MADE. Reviewing a
+  // specification without seeing the pictures it produced is reviewing it
+  // blind, and this surface's whole job is describing two pictures.
+  const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs,
+         specCands] = await Promise.all([
+    api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references"),
+    api(`/api/specs/${specId}/candidates`).catch(() => [])]);
 
   // Carried panels of a scoped draft revision are read-only rows (one
   // board per unit, 2026-08-13): their approvals keep feeding the board,
@@ -5819,6 +5854,116 @@ async function openSpecEditor(specId) {
   };
   const host = $("#spec-editor");
   host.innerHTML = "";
+
+  // ---- the step sequence's supporting facts (STEP_SEQUENCE_SPEC Part 3)
+  // Confirmations are advisory here exactly as on stage 04 (§2.4): a draft
+  // with twelve open questions CAN be approved, so nothing here gates —
+  // the step count and the gate line simply state where the work stands.
+  const SPEC_STEPS = ["identity", "direction", "questions", "scope",
+                      "panels", "evidence"];
+  const confKeySpec = `spconf.${specId}`;
+  const confAllSpec = () => uiGet(confKeySpec, {});
+  const confIs = s => !!confAllSpec()[s];
+  const confSetSpec = (s, on) => {
+    const c = { ...confAllSpec() };
+    if (on) c[s] = 1; else delete c[s];
+    uiSet(confKeySpec, c);
+  };
+  const confCountSpec = SPEC_STEPS.filter(confIs).length;
+  const allocTotal = (spec.panels || [])
+    .reduce((n, p) => n + (+p.allocation_percent || 0), 0);
+
+  // §3.2 — Approve states its gate and does not lie.
+  const qAll = spec.unresolved_questions || [];
+  const qAns = spec.question_answers || {};
+  const qOpen = qAll.filter(q => !String(qAns[q] || "").trim());
+  const stepsLeft = SPEC_STEPS.length - confCountSpec;
+  const approveGate = locked
+    ? "LOCKED — APPROVED AND READ-ONLY"
+    : [qOpen.length ? `${qOpen.length} QUESTION${qOpen.length === 1 ? "" : "S"} OPEN` : "",
+       stepsLeft ? `${stepsLeft} STEP${stepsLeft === 1 ? "" : "S"} UNCONFIRMED` : "",
+      ].filter(Boolean).join(" AND ") +
+      (qOpen.length || stepsLeft ? " — YOU CAN STILL APPROVE"
+                                 : "EVERY STEP CONFIRMED, EVERY QUESTION ANSWERED");
+
+  // §3.15 — the breakdown opens on what it has made. The empty frame is
+  // the valuable half: it is the only place a blocker reads as a
+  // CONSEQUENCE (the picture that does not exist because of it) rather
+  // than as a red tag in a rail. Sanctioned exception to "never reserve
+  // the shape of the missing thing" — the shape is the panel's own ratio
+  // and the frame states its blocker, so it is a report, not a
+  // placeholder.
+  const boardMadeHtml = (() => {
+    const panels = spec.panels || [];
+    if (!panels.length) return "";
+    const cands = Array.isArray(specCands) ? specCands : [];
+    const forPanel = pid => cands.filter(c => c.panel_id === pid);
+    const approvedN = panels.filter(p =>
+      forPanel(p.id).some(c => c.status === "APPROVED")).length;
+    const frames = panels.map(p => {
+      const list = forPanel(p.id);
+      const shown = list.find(c => c.status === "APPROVED") || list[0] || null;
+      const ratio = shown?.aspect_ratio || "21:9";
+      const [aw, ah] = String(ratio).split(":").map(Number);
+      const css = aw > 0 && ah > 0 ? `${aw}/${ah}` : "21/9";
+      if (!shown) {
+        return `<div class="made-item">
+        <div class="made-frame made-empty" style="aspect-ratio:${css}">
+          <span class="made-id mono">${esc(p.id)}</span>
+          <span class="made-none mono">NO TAKE YET</span>
+          <span class="made-blocker mono">SIZE — NO APPROVED TAKE FOR THIS SLOT</span>
+        </div>
+        <div class="made-cap"><span>${esc(p.title || p.purpose || "")}</span>
+          <span class="mono">${p.allocation_percent ? `${p.allocation_percent}%` : ""}</span></div>
+        </div>`;
+      }
+      const ok = shown.status === "APPROVED";
+      return `<div class="made-item">
+      <div class="made-frame" style="aspect-ratio:${css}">
+        <img src="/api/specs/${specId}/candidates/${esc(shown.candidate_id)}/image?size=md"
+             loading="lazy" alt="${esc(p.id)}">
+        <span class="made-id mono">${esc(p.id)} · ${esc(shown.candidate_id)}</span>
+        <span class="made-state mono ${ok ? "ok" : "hold"}">${
+          ok ? "APPROVED" : esc(shown.status)} · ${shown.width} × ${shown.height}</span>
+      </div>
+      <div class="made-cap"><span>${esc(p.title || p.purpose || "")}</span>
+        <span class="mono">${p.allocation_percent ? `${p.allocation_percent}%` : ""}</span></div>
+      </div>`;
+    }).join("");
+    const stake = approvedN === panels.length
+      ? `Every panel approved. This board can be assembled.`
+      : `${approvedN === 0 ? "No panels" : `${approvedN} panel${approvedN === 1 ? "" : "s"}`} approved of ${panels.length}. The board cannot be assembled until ${
+          panels.length - approvedN === 1 ? "the last one has" : "each of the rest has"} an approved take.`;
+    return `
+      <div class="made">
+        <div class="made-grid">${frames}</div>
+        <div class="made-stake">
+          <div class="rail-label">WHAT THIS BOARD HAS MADE</div>
+          <p class="step-prose">${esc(stake)}</p>
+          <button type="button" class="verb" data-f="to-panels">04 Panels</button>
+        </div>
+      </div>`;
+  })();
+
+  // §3.2 — open questions are a step, not a bullet under the header. They
+  // are the highest-leverage thing on the page: each answer becomes canon
+  // for every future render, and each blank one is a licence to invent.
+  const qStepHtml = !qAll.length ? "" : seqStep({
+    n: "03", id: "questions", label: "OPEN QUESTIONS",
+    meta: `${qAll.length - qOpen.length} OF ${qAll.length} ANSWERED`,
+    done: confIs("questions"),
+    verbs: `<button type="button" class="verb" data-f="answer-qs"${locked ? " disabled" : ""}>${
+      qOpen.length === qAll.length ? "Answer these" : "Edit answers"}</button>`,
+    body: `
+      <div class="step-note mono">${spec.mode === "DESIGN_EXPLORATION"
+        ? "THESE DO NOT NEED ANSWERS ON A DESIGN EXPLORATION — EXPLORING IS HOW YOU DECIDE THEM"
+        : "THE SCREENPLAY DOES NOT ANSWER THESE · ANSWER ONE AND IT BECOMES CANON FOR THIS BOARD · LEAVE IT OPEN AND EVERY RENDER IS TOLD NOT TO INVENT ONE"}</div>
+      <ul class="q-list">${qAll.slice(0, 4).map(q => `
+        <li${qAns[q] ? ' class="answered"' : ""}>${esc(q)}${
+          String(qAns[q] || "").trim() ? `<span class="q-ans">${esc(qAns[q])}</span>` : ""}</li>`).join("")}
+      </ul>
+      ${qAll.length > 4 ? `<div class="step-note mono">+ ${qAll.length - 4} MORE</div>` : ""}`,
+  });
   // Environment scope (plan P8, mock 6c). Options come from the Bible's
   // Environments section; analysis-only names stay selectable but say so —
   // the gate readable before it's hit (their entry lands on the next
@@ -5840,13 +5985,16 @@ async function openSpecEditor(specId) {
   const envCurrent = spec.environments?.[0] ?? envInferred;
   let updateCarry = () => {};  // real implementation assigned after markup
   const panel = document.createElement("div");
-  panel.className = "panel spec-editor";
+  panel.className = "panel spec-editor seq";
   panel.innerHTML = `
-    <h3>${esc(spec.specification_id)}
-      <span class="badge ${spec.status}">${spec.status}</span>
-      ${locked ? '<span class="badge LOCKED">LOCKED</span>' : ""}
-      ${spec.autofilled ? '<span class="badge PROVISIONAL">AUTO-FILLED — REVIEW BEFORE APPROVING</span>' : ""}
-    </h3>
+    <div class="seq-head">
+      <span class="pid-badge">${esc(spec.specification_id)}</span>
+      <h2 class="seq-subject">${esc(spec.subject || spec.specification_id)}</h2>
+      <span class="seq-progress mono">${[
+        esc(spec.status), locked ? "LOCKED" : "", `R${spec.revision || 1}`,
+      ].filter(Boolean).join("  ·  ")}  ·  ${confCountSpec} OF ${SPEC_STEPS.length} CONFIRMED</span>
+    </div>
+    ${spec.autofilled ? '<div class="step-note mono seq-autofill">AUTO-FILLED — REVIEW BEFORE APPROVING</div>' : ""}
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
     ${!locked && spec.status === "DRAFT" && spec.revision_scope ? `
       <p class="mini mono">REVISES ${spec.revision_scope.revised.length} OF ${(spec.panels || []).length} PANELS · ${spec.revision_scope.carried.length} CARRIED FROM ${esc(spec.revised_from?.specification_id || "")}</p>` : ""}
@@ -5858,30 +6006,14 @@ async function openSpecEditor(specId) {
       <button class="block-act" data-f="lock-unlock">Unlock &amp; edit</button>
     </div>` : ""}
     <div id="sp-gate"></div>
-    ${(spec.unresolved_questions || []).length ? (() => {
-      // The old copy told the user to "run a DESIGN_EXPLORATION board"
-      // while they were reading one (user 2026-08-07). What is true
-      // depends on the mode, so say the true thing.
-      const ans = spec.question_answers || {};
-      const open = spec.unresolved_questions.filter(q => !String(ans[q] || "").trim());
-      const explore = spec.mode === "DESIGN_EXPLORATION";
-      return `<div class="report q-block" style="margin-bottom:12px">
-        <b>Design questions</b> — ${explore
-          ? "these do not need answers on a design exploration: exploring is how you decide them. Answer any you have already settled and every panel will obey."
-          : "the screenplay does not answer these. Answer one and it becomes canon for this board; leave it open and the render is told not to invent one."}
-        <ul>${spec.unresolved_questions.map(q => `<li${ans[q] ? ' class="answered"' : ""}>${esc(q)}${
-          String(ans[q] || "").trim() ? `<span class="q-ans">${esc(ans[q])}</span>` : ""}</li>`).join("")}</ul>
-        <div class="q-bar">
-          <button class="text-act" data-f="answer-qs"${locked ? " disabled" : ""}>${
-            open.length === spec.unresolved_questions.length ? "Answer these" : "Edit answers"}</button>
-          <span class="mini mono">${spec.unresolved_questions.length - open.length} OF ${
-            spec.unresolved_questions.length} ANSWERED${open.length ? "" : " · ALL DECIDED"}</span>
-        </div>
-      </div>`;
-    })() : ""}
-    <div class="spec-section" style="margin-top:14px;border-top:none;padding-top:0">
-      <h4>Identity <span class="hint">(what this breakdown is)</span></h4>
-      <div class="grid-form">
+
+    ${boardMadeHtml}
+    <div class="steps">
+        ${seqStep({ n: "01", id: "identity", label: "IDENTITY",
+          meta: "WHAT THIS BREAKDOWN IS",
+          verbs: `<button type="button" class="verb" data-f="focus-identity">Edit</button>`,
+          done: confIs("identity"),
+          body: `      <div class="grid-form">
       <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
         <select id="sp-mode" ${locked ? "disabled" : ""}>
@@ -5896,9 +6028,6 @@ async function openSpecEditor(specId) {
       </label>
       <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${locked ? "disabled" : ""}></label>
       </div>
-    </div>
-    <div class="spec-section">
-      <h4>Setting <span class="hint">(the slugline — fields follow the board type)</span></h4>
       <div class="grid-form">
       <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the slugline; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
         <select id="sp-intext" ${locked ? "disabled" : ""}>
@@ -5918,24 +6047,27 @@ async function openSpecEditor(specId) {
       <label class="setf" data-setf="atmo" title="Optional weather / light character layered on the hour — one of the Bible's approved atmosphere studies (or your own words). DUSK is the hour; 'dusk and lanterns' is the atmosphere.">Atmosphere <input type="text" id="sp-atmo" list="atmo-list" placeholder="e.g. dusk and lanterns, storm approach…" value="${esc(spec.setting?.atmosphere || "")}" ${locked ? "disabled" : ""}>
         <datalist id="atmo-list">${(bible_catalog?.atmospheres || []).map(t => `<option value="${esc(t)}">`).join("")}</datalist>
       </label>
-      </div>
-    </div>
-    <div class="spec-section">
-      <h4>Direction <span class="hint">(what the panels are told)</span></h4>
-      <div class="grid-form">
+      </div>` })}
+
+        ${seqStep({ n: "02", id: "direction", label: "DIRECTION",
+          meta: "WHAT THE PANELS ARE TOLD",
+          verbs: "",
+          done: confIs("direction"),
+          body: `      <div class="grid-form">
       <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${locked ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
       <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${locked ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
       <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects and the project lessons-learned into every render prompt.">Forbidden elements <span class="hint">(one per line — seeded from the rejection history on the dashboard)</span>
         <textarea id="sp-forbidden" ${locked ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
       <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${locked ? "disabled" : ""}></label>
-      </div>
-    </div>
+      </div>` })}
 
-    ${bible_catalog?.exists ? `
-    <div class="spec-section">
-      <h4>Art direction scope <span class="hint">(which Bible sections apply to this board — the global rendering language is always included)</span></h4>
-      <div class="scope-cols">
+        ${qStepHtml}
+
+        ${bible_catalog?.exists ? seqStep({ n: "04", id: "scope", label: "SCOPE",
+          meta: "WHICH BIBLE SECTIONS REACH THIS BOARD",
+          done: confIs("scope"),
+          body: `      <div class="scope-cols">
         <div class="fgroup" title="Design languages are the Bible's per-faction / per-world / per-technology look sections. Check the ones whose content appears on this board — their design and material language go into every panel prompt.">
           <span class="f-label">Design languages</span>
           <div id="sp-design">${bible_catalog.design_languages.map(n => {
@@ -5961,18 +6093,20 @@ async function openSpecEditor(specId) {
         </div>
       </div>
       <div class="scope-carry" id="sp-carry"></div>
-      ${spec.design_languages ? "" : '<p class="mini" style="margin:8px 0 0">Pre-checked from keyword inference — save the spec to make this selection explicit and governed.</p>'}
-    </div>` : ""}
+      ${spec.design_languages ? "" : '<p class="mini" style="margin:8px 0 0">Pre-checked from keyword inference — save the spec to make this selection explicit and governed.</p>'}` }) : ""}
 
-    <div class="spec-section">
-      <h4>Panels <span class="hint">(allocation must total 100%)</span></h4>
-      <div id="sp-panels"></div>
-      ${locked ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}
-    </div>
+        ${seqStep({ n: "05", id: "panels", label: "PANELS",
+          meta: `${(spec.panels || []).length} · ALLOCATION ${allocTotal}%`,
+          verbs: "",
+          done: confIs("panels"),
+          body: `      <div id="sp-panels"></div>
+      ${locked ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}` })}
 
-    <div class="spec-section">
-      <h4>Evidence ledger <span class="hint">(every required object needs a PASS row — added automatically when you add an object)</span></h4>
-      <div class="ledger-row grid-head">
+        ${seqStep({ n: "06", id: "evidence", label: "EVIDENCE",
+          meta: `${(spec.evidence_ledger || []).length} ROWS · EVERY REQUIRED OBJECT HAS A PASS ROW`,
+          verbs: "",
+          done: confIs("evidence"),
+          body: `      <div class="ledger-row grid-head">
         <span title="Which panel this evidence row belongs to (its Panel ID, e.g. P01).">ID</span>
         <span title="The visible object this row justifies.">Object</span>
         <span title="How strongly the canon supports this object — the evidence class.">Source</span>
@@ -5981,21 +6115,45 @@ async function openSpecEditor(specId) {
         <span></span>
       </div>
       <div id="sp-ledger"></div>
-      ${locked ? "" : '<button class="ghost" id="sp-add-ledger">+ Add evidence row</button>'}
-    </div>
+      ${locked ? "" : '<button class="ghost" id="sp-add-ledger">+ Add evidence row</button>'}` })}
 
-    <div class="spec-section row">
-      ${locked ? "" : `
+        ${seqStep({ n: "07", label: "APPROVE & LOCK",
+          meta: "APPROVING LOCKS THE OBJECTS, PANELS AND LEDGER · ONLY THEN CAN STAGE 04 GENERATE",
+          verbs: `${locked ? "" : `
         <button class="primary" id="sp-save">Save</button>
         <button class="ghost" id="sp-validate">Validate</button>
         <button class="ghost" id="sp-approve">Approve &amp; lock</button>`}
       ${locked ? `
         <button class="ghost" id="sp-revise">Create revision</button>
         <button class="danger" id="sp-unlock" title="Void the approval and edit this spec in place — refused if approved candidates or boards depend on it">Unlock &amp; edit</button>
-        <span class="hint">revision keeps the approved version as history; unlock voids it and edits in place (refused while approved candidates/boards depend on this spec)</span>` : ""}
-    </div>
+        <span class="hint">revision keeps the approved version as history; unlock voids it and edits in place (refused while approved candidates/boards depend on this spec)</span>` : ""}`,
+          body: `<div class="gen-gate mono">${approveGate}</div>` })}
+      </div>
+
     <div id="sp-report"></div>`;
   host.append(panel);
+
+  // Step confirmations — same two-state model as stage 04, same advisory
+  // rule: repainting is what re-reads the state, so the head count, the
+  // step's dimming and the approve gate stay one fact.
+  $$("[data-confirm]", panel).forEach(b => b.onclick = () => {
+    confSetSpec(b.dataset.confirm, true); openSpecEditor(specId);
+  });
+  $$("[data-unconfirm]", panel).forEach(b => b.onclick = () => {
+    confSetSpec(b.dataset.unconfirm, false); openSpecEditor(specId);
+  });
+  // A confirmed ledger is a record, so the act that grows it steps aside
+  // with the controls (the step's own Unconfirm brings both back).
+  const addLedgerBtn = $("#sp-add-ledger", panel);
+  if (addLedgerBtn) addLedgerBtn.classList.toggle("hidden", confIs("evidence"));
+
+  const focusIdentity = $("[data-f=focus-identity]", panel);
+  if (focusIdentity) focusIdentity.onclick = () => $("#sp-subject", panel)?.focus();
+  const toPanels = $("[data-f=to-panels]", panel);
+  if (toPanels) toPanels.onclick = () => {
+    uiSet("boardSpec", specId);
+    showView("boards");
+  };
   window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 80,
                     behavior: "smooth" });
 
@@ -6347,6 +6505,12 @@ async function openSpecEditor(specId) {
   function addLedgerRow(r = {}) {
     const row = document.createElement("div");
     row.className = "ledger-row";
+    // §3.35 as the user ruled it (2026-08-14): a CONFIRMED ledger reads as
+    // a provenance record — 21 rows of five selects is 105 controls on a
+    // page whose best content is the citations themselves. Drafting keeps
+    // the selects the user directed on 2026-08-13; editing is behind the
+    // step's own Unconfirm, and locking keeps it read-only for good.
+    const ro = locked || confIs("evidence");
     // Selectable, not typed (user 2026-08-13): the panel is one of the
     // sheet's own ids; the object is one of that panel's required objects
     // that does not have a row yet. The citation stays typeable but gains
@@ -6354,11 +6518,11 @@ async function openSpecEditor(specId) {
     const pids = $$(".panel-card", panelsHost).map(x => x.dataset.pid);
     if (r.panel_id && !pids.includes(r.panel_id)) pids.unshift(r.panel_id);
     row.innerHTML = `
-      <select data-f="panel_id" ${locked ? "disabled" : ""} title="Which panel this evidence row belongs to.">
+      <select data-f="panel_id" ${ro ? "disabled" : ""} title="Which panel this evidence row belongs to.">
         ${pids.map(p => `<option ${r.panel_id === p ? "selected" : ""}>${esc(p)}</option>`).join("") || '<option value=""></option>'}
       </select>
-      <select data-f="object" ${locked ? "disabled" : ""} title="The visible object this row justifies — offered from the chosen panel's required objects that do not have an evidence row yet. Every required object needs a PASS row."></select>
-      <select data-f="evidence_class" ${locked ? "disabled" : ""} title="How strongly the canon supports this object:
+      <select data-f="object" ${ro ? "disabled" : ""} title="The visible object this row justifies — offered from the chosen panel's required objects that do not have an evidence row yet. Every required object needs a PASS row."></select>
+      <select data-f="evidence_class" ${ro ? "disabled" : ""} title="How strongly the canon supports this object:
 SCRIPT_EXPLICIT — the screenplay states it outright.
 SCRIPT_NECESSARY_INFERENCE — must exist for the scene to work.
 VISUAL_CANON_LOCKED — locked by an approved board/reference.
@@ -6369,8 +6533,8 @@ PROPOSED_NOT_CANON — a pitch, not canon yet.
 UNSUPPORTED — no basis; never passes (budget pinned to 0).">
         ${EVIDENCE_CLASSES.map(c => `<option ${r.evidence_class === c ? "selected" : ""}>${c}</option>`).join("")}
       </select>
-      <input type="text" data-f="source" placeholder="Source citation — type, or search the reference library" value="${esc(r.source || "")}" ${locked ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference (start typing to search the library), or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Citing a reference here does NOT attach it to generations — use the checkboxes on the Panels tab.)">
-      <select data-f="status" ${locked ? "disabled" : ""} title="PASS — evidence accepted, the object may render.
+      <input type="text" data-f="source" placeholder="Source citation — type, or search the reference library" value="${esc(r.source || "")}" ${ro ? "disabled" : ""} title="Where the evidence comes from — a screenplay page/line quote, an approved reference (start typing to search the library), or your directive. Free text for the human audit trail: validation only requires it to be non-empty, nothing looks it up, and it is never sent to the image model. (Citing a reference here does NOT attach it to generations — use the checkboxes on the Panels tab.)">
+      <select data-f="status" ${ro ? "disabled" : ""} title="PASS — evidence accepted, the object may render.
 HOLD — needs your review; blocks approval until resolved.
 REMOVE — marked for removal from the board.">
         ${LEDGER_STATUSES.map(s => `<option ${r.status === s ? "selected" : ""}>${s}</option>`).join("")}
@@ -7439,7 +7603,7 @@ async function renderBoardPanels(specId) {
       </div>`;
 
     const card = document.createElement("div");
-    card.className = "panel wb-card";
+    card.className = "panel seq wb-card";
 
     // The brief is editable BETWEEN takes (user 2026-08-08: a purpose that
     // says "the three people" keeps painting three people, and the only fix
@@ -7472,34 +7636,9 @@ async function renderBoardPanels(specId) {
       : `${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}, ${
           approvedN ? `${approvedN} APPROVED` : "NONE APPROVED"}`;
 
-    // §1.6/§1.7 — the step spine. A 46px gutter holds a two-digit Courier
-    // number, one per section: a label gutter says what KIND of thing a row
-    // is, a number says where you are in the work, and on a surface whose
-    // job is a sequence of confirmations that is the more useful fact. Two
-    // states only; a confirmed step dims but stays fully legible, because it
-    // is evidence you already ruled, not clutter to be hidden.
-    const step = ({ n, id = "", label, meta = "", verbs = "", body = "" }) => {
-      const done = id && confIs(id);
-      return `
-      <section class="step${+n % 2 === 0 ? " step-band" : ""}${done ? " step-done" : ""}"
-               data-step="${esc(id || n)}">
-        <span class="step-num mono">${n}</span>
-        <div class="step-main">
-          <div class="step-head">
-            <span class="step-label mono">${label}</span>
-            ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
-            <span class="step-acts">
-              ${done ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
-                 title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
-              ${verbs}
-              ${id && !done ? `<button type="button" class="verb" data-confirm="${esc(id)}"
-                 title="Mark this step confirmed. Advisory — it never blocks the render.">Confirm</button>` : ""}
-            </span>
-          </div>
-          ${body ? `<div class="step-content">${body}</div>` : ""}
-        </div>
-      </section>`;
-    };
+    // The shared renderer (seqStep) with this surface's confirmation store
+    // bound in — stage 03 binds its own.
+    const step = o => seqStep({ ...o, done: !!(o.id && confIs(o.id)) });
 
     const camAxes = ["camera_angle", "camera_orientation", "camera_lens",
                      "camera_tilt", "scale"];
@@ -7532,7 +7671,7 @@ async function renderBoardPanels(specId) {
     card.innerHTML = `
       <div class="wb-head">
         <span class="pid-badge">${esc(p.id)}</span>
-        <h2 class="wb-subject">${esc(p.title || p.purpose)}</h2>
+        <h2 class="seq-subject">${esc(p.title || p.purpose)}</h2>
         <span class="wb-facts mono">${[alloc ? `${alloc}%` : "", role,
           String(aspectLabel).toUpperCase()].filter(Boolean).join("  ·  ")}</span>
         <span class="wb-progress mono">${confCount} OF 5 STEPS CONFIRMED  ·  ${takesWord}</span>

@@ -73,7 +73,7 @@ class WorkbenchScopePins(unittest.TestCase):
         self.assertIn('class="verb" data-f="brief-edit"', JS)
         self.assertIn('class="verb" data-f="cam-open"', JS)
         for decl in ("text-decoration: underline", "white-space: nowrap"):
-            self.assertIn(decl, CSS[CSS.index(".wb-card .verb, .wb-card .text-act"):][:420])
+            self.assertIn(decl, CSS[CSS.index(".seq .verb, .seq .text-act"):][:420])
 
 
 class AddReferenceInPlacePins(unittest.TestCase):

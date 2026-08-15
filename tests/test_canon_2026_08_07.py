@@ -51,14 +51,19 @@ class R1_TwoFactsTwoVoices(unittest.TestCase):
 
 
 class R2_AReportHasNoAmber(unittest.TestCase):
-    def test_the_questions_verb_is_a_text_act(self):
+    def test_the_questions_verb_never_spends_amber(self):
+        """R2 stands; §1.4 (2026-08-14) changed WHICH non-amber treatment a
+        verb wears — ink + underlined, on the step's shared right edge."""
         i = JS.index('data-f="answer-qs"')
-        self.assertIn("text-act", JS[i - 60:i])
+        self.assertIn('class="verb"', JS[i - 60:i])
+        self.assertNotIn("accent", JS[i - 120:i + 60])
 
     def test_the_count_reads_as_a_fact(self):
-        i = JS.index("ANSWERED${")
-        window = JS[i - 200:i + 80]
-        self.assertIn("mini mono", window)
+        """The answered count is the step's meta line — Courier, faint, and
+        never coloured: a report has no amber."""
+        i = JS.index("OF ${qAll.length} ANSWERED")
+        window = JS[i - 220:i + 90]
+        self.assertIn("meta:", window)
         self.assertNotIn("accent", window)
         self.assertNotIn("--bad", window)
 
