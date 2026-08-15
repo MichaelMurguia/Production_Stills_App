@@ -396,6 +396,53 @@ function idSpan(ids) {
 }
 
 
+// Drag-to-scroll with momentum, for a strip you read along rather than
+// page through (user 2026-08-15). Pointer events so pen and touch behave
+// like a mouse; the flick decays on a fixed per-frame factor so a long
+// strip and a short one feel the same. Momentum is motion, so
+// prefers-reduced-motion gets the drag without the glide.
+function dragScroll(el) {
+  let down = false, startX = 0, startLeft = 0, lastX = 0, lastT = 0;
+  let vel = 0, raf = 0;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const glide = () => {
+    el.scrollLeft -= vel;
+    vel *= 0.94;
+    // stop at rest, and at either end — coasting into a wall reads broken
+    const atEnd = el.scrollLeft <= 0
+      || el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
+    if (Math.abs(vel) > 0.4 && !atEnd) raf = requestAnimationFrame(glide);
+  };
+  el.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    down = true;
+    cancelAnimationFrame(raf);
+    startX = lastX = e.clientX;
+    startLeft = el.scrollLeft;
+    lastT = performance.now();
+    vel = 0;
+    el.classList.add("dragging");
+  });
+  el.addEventListener("pointermove", e => {
+    if (!down) return;
+    el.scrollLeft = startLeft - (e.clientX - startX);
+    const now = performance.now();
+    const dt = now - lastT;
+    // px per frame at 60Hz, so the glide matches the hand that threw it
+    if (dt > 0) { vel = ((e.clientX - lastX) / dt) * 16; lastX = e.clientX; lastT = now; }
+  });
+  const release = () => {
+    if (!down) return;
+    down = false;
+    el.classList.remove("dragging");
+    if (!reduce && Math.abs(vel) > 0.4) raf = requestAnimationFrame(glide);
+  };
+  el.addEventListener("pointerup", release);
+  el.addEventListener("pointercancel", release);
+  el.addEventListener("pointerleave", release);
+}
+
+
 /* STEP_SEQUENCE_SPEC §1.6/§1.7 — the step renderer, shared by every
    surface whose job is a sequence. A 46px gutter holds a two-digit Courier
    number: a label gutter says what KIND of thing a row is, a number says
@@ -6201,6 +6248,9 @@ async function openSpecEditor(specId) {
 
   const focusIdentity = $("[data-f=focus-identity]", panel);
   if (focusIdentity) focusIdentity.onclick = () => $("#sp-subject", panel)?.focus();
+  const madeStrip = $(".made-grid", panel);
+  if (madeStrip) dragScroll(madeStrip);
+
   const toPanels = $("[data-f=to-panels]", panel);
   if (toPanels) toPanels.onclick = () => {
     uiSet("boardSpec", specId);

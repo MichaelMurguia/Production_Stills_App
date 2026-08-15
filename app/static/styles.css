@@ -3114,11 +3114,17 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    specification without seeing the pictures it produced is reviewing it
    blind, and this surface's whole job is describing pictures. */
 .made { display: flex; gap: 20px; padding: 0 22px 18px; align-items: flex-start; }
+/* One strip, not a wrapping grid (user 2026-08-15): nine panels wrapped
+   to three rows and pushed the specification off the screen. The board's
+   panels are a sequence, and a sequence reads along one line. */
 .made-grid {
-  flex: 1; min-width: 0; display: grid; gap: 14px 16px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  grid-auto-rows: min-content;
+  flex: 1; min-width: 0; display: flex; gap: 16px;
+  overflow-x: auto; overflow-y: hidden; cursor: grab;
+  scrollbar-width: thin; padding-bottom: 4px;
 }
+.made-grid.dragging { cursor: grabbing; user-select: none; }
+.made-grid.dragging img { pointer-events: none; }
+.made-item { flex: 0 0 300px; }
 .made-frame {
   position: relative; background: var(--field); border: 1px solid var(--line);
   overflow: hidden;
@@ -3147,7 +3153,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   position: absolute; left: 8px; right: 8px; bottom: 8px; text-align: center;
   font-size: 10px; letter-spacing: .08em; color: var(--bad);
 }
-.made-item { min-width: 0; }
+
 .made-cap {
   display: flex; justify-content: space-between; align-items: baseline;
   gap: 10px; margin-top: 7px; font-size: 12.5px; color: var(--ink-dim);

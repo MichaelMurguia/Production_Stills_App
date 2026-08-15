@@ -72,8 +72,33 @@ class TheBoardOpensOnWhatItMade(unittest.TestCase):
 
     def test_each_panel_is_one_cell_frame_and_caption(self):
         self.assertIn('class="made-item"', JS)
-        self.assertIn("grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))",
-                      block(".made-grid"))
+        self.assertIn("flex: 0 0 300px", block(".made-item"),
+                      "frame and caption travel together in the strip")
+
+    def test_the_panels_read_along_one_strip(self):
+        """User 2026-08-15: nine panels wrapped to three rows and pushed
+        the specification off the screen. A board's panels are a sequence,
+        and a sequence reads along one line."""
+        b = block(".made-grid")
+        self.assertIn("display: flex", b)
+        self.assertIn("overflow-x: auto", b)
+        self.assertNotIn("grid-template-columns", b)
+        self.assertIn("cursor: grab", b)
+        self.assertIn("cursor: grabbing", block(".made-grid.dragging"))
+
+    def test_the_strip_drags_with_momentum_but_not_under_reduced_motion(self):
+        i = JS.index("function dragScroll")
+        b = JS[i:JS.index("function seqStep")]
+        self.assertIn("pointerdown", b)
+        self.assertIn("pointermove", b)
+        self.assertIn("requestAnimationFrame(glide)", b)
+        self.assertIn("prefers-reduced-motion: reduce", b,
+                      "momentum is motion, and motion is opt-out")
+        self.assertIn("el.scrollWidth - el.clientWidth", b,
+                      "the glide stops at the ends rather than coasting "
+                      "into a wall")
+        j = JS.index('const madeStrip = $(".made-grid", panel)')
+        self.assertIn("dragScroll(madeStrip)", JS[j:j + 140])
 
     def test_the_empty_frame_is_a_report_not_a_placeholder(self):
         """The sanctioned exception to 'never reserve the shape of the

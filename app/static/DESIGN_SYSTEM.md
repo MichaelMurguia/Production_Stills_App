@@ -1311,6 +1311,13 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **A board's panels read along one strip** (user): the
+  opener wrapped nine panels into three rows and pushed the specification
+  off the screen. It is now a single horizontal strip you drag — pointer
+  events, so pen and touch behave like a mouse — with momentum on a flick
+  that decays per frame and stops at either end rather than coasting into
+  a wall. Momentum is motion, so `prefers-reduced-motion` gets the drag
+  without the glide.
 - **2026-08-15** — **An object's REF shows what actually covers it**
   (user): clicking `REF` on a required object opened the whole library
   group; it now opens the plates SELECTED for that object, with `Show all
