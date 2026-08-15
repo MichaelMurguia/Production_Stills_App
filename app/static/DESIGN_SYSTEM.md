@@ -1310,6 +1310,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-14** — **A reference row names its plates** (user asked "I
+  can't tell what references are being used for the panel"): the rows
+  stated a GROUP and a count, the plate ids sat in a hover title, and the
+  verb called `Show ids` revealed the always-on anchors' ids only. Show
+  ids now names every plate on every row — ticked and unticked — with a
+  consecutive run collapsing to its ends (`REF-0028 → REF-0032`). The
+  provenance rail and the reference rows share one renderer, so the two
+  can never disagree about what rode a render.
 - **2026-08-14** — **An approved take keeps its tools** (user-reported
   bug): approving a take hid the entire USE group — Full-size take,
   Repair region and Reject — because the empty-zone check tested only the

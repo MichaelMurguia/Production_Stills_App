@@ -221,6 +221,27 @@ class ReferencesStateTheirReason(unittest.TestCase):
         j = JS.index('class="ref-groups"')
         self.assertLess(j, i, "the toggles are their own list, above")
 
+    def test_which_plates_is_answerable_without_a_mouse(self):
+        """User-asked 2026-08-14: "I can't tell what references are being
+        used for the panel." The rows named their GROUP and count; the
+        plate ids lived in a hover title, and the verb called Show ids
+        revealed the style anchors' ids ONLY."""
+        i = JS.index("const groupRow =")
+        self.assertIn("idSpan(g.ids)", JS[i:i + 700],
+                      "every row names the plates it will attach")
+        j = JS.index("const showIds =")
+        seg = JS[j:j + 500]
+        self.assertIn('card.classList.toggle("ids-open")', seg,
+                      "the verb reveals every row's ids, not just anchors")
+        self.assertIn("display: inline", block(".ids-open .ref-ids"))
+
+    def test_one_rendering_of_a_plate_set(self):
+        """The rail and the reference rows state the same fact, so they
+        share one function — a consecutive run collapses to its ends."""
+        self.assertEqual(JS.count("function idSpan("), 1)
+        i = JS.index('class="anchor-ids mono"')
+        self.assertIn("idSpan(ids)", JS[i:i + 120])
+
     def test_counts_never_mix_an_image_against_a_group_denominator(self):
         i = JS.index("refCount.textContent")
         b = JS[i:i + 260]

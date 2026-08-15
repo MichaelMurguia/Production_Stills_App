@@ -2964,6 +2964,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ref-row.on .ref-name { color: var(--ink); }
 .ref-kind { font-size: 11.5px; color: var(--ink-faint); flex: 1; }
 .ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
+/* The plates a row will attach, named on demand. They sit behind a verb
+   rather than always-on because a 19-row list of ids is a wall — but they
+   must be reachable WITHOUT a hover, which a title attribute is not. */
+.ref-ids { display: none; color: var(--ink-faint); letter-spacing: .06em; flex: none; }
+.ids-open .ref-ids { display: inline; }
+.ids-open .ref-kind { flex: none; }
+.ids-open .ref-row { gap: 10px; }
 .ref-off-head {
   display: flex; gap: 14px; margin: 12px 0 4px;
   font-size: 11.5px; letter-spacing: .1em; color: var(--ink-faint);

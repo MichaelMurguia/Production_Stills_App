@@ -383,6 +383,19 @@ function swatchNotes(notes) {
 }
 
 
+// A set of plate ids, stated compactly: a consecutive run collapses to
+// its ends so eleven plates read as four facts. Used by the workbench's
+// reference rows and by the take's provenance rail — one rendering, so
+// the two can never disagree about what rode a render.
+function idSpan(ids) {
+  if (!ids || !ids.length) return "";
+  const n = ids.map(i => +String(i).replace(/\D/g, ""));
+  const run = n.length > 2 && n.every((x, i) => i === 0 || x === n[i - 1] + 1);
+  return run ? `${esc(ids[0])} → ${esc(ids[ids.length - 1])}`
+             : ids.map(esc).join(" · ");
+}
+
+
 /* STEP_SEQUENCE_SPEC §1.6/§1.7 — the step renderer, shared by every
    surface whose job is a sequence. A 46px gutter holds a two-digit Courier
    number: a label gutter says what KIND of thing a row is, a number says
@@ -7665,6 +7678,7 @@ async function renderBoardPanels(specId) {
         <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${on ? "checked" : ""}>
         <span class="ref-name mono">${esc(g.name)}</span>
         <span class="ref-kind">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
+        <span class="ref-ids mono">${idSpan(g.ids)}</span>
         ${on ? `<span class="ref-why mono">${refWhy}</span>` : ""}
       </label>`;
 
@@ -7743,7 +7757,7 @@ async function renderBoardPanels(specId) {
         ${step({ n: "04", id: "references", label: "REFERENCES",
           meta: `<span data-f="ref-count"></span>`,
           verbs: `<button type="button" class="verb mono" data-f="show-ids"
-            title="Show the plate ids of the always-on style anchors">Show ids</button>`,
+            title="Name every plate this render will attach — the ticked groups AND the always-on style anchors">Show ids</button>`,
           body: `
             <div class="step-note mono">GROUPED BY SUBJECT · EACH CONTROLS ONLY ITS OWN ROLE</div>
             ${(() => {
@@ -8098,11 +8112,14 @@ async function renderBoardPanels(specId) {
     }
 
     // P4 disclosure: the full anchor badge list, unchanged, on demand.
+    // "Which references is this panel using?" must be answerable without a
+    // mouse (user-asked 2026-08-14): the ids used to live in a hover title
+    // on each row, and this verb revealed the style anchors' ids ONLY.
     const showIds = $("[data-f=show-ids]", card);
     if (showIds) showIds.onclick = () => {
-      const list = $("[data-f=anchor-ids]", card);
-      const open = list.classList.toggle("hidden");
-      showIds.textContent = open ? "SHOW IDS" : "HIDE IDS";
+      const open = card.classList.toggle("ids-open");
+      $("[data-f=anchor-ids]", card)?.classList.toggle("hidden", !open);
+      showIds.textContent = open ? "Hide ids" : "Show ids";
     };
 
     // Ratios grey per the selected engine's real contract; switching models
@@ -8920,16 +8937,11 @@ async function renderBoardPanels(specId) {
           // rode the render, it does not re-show the pictures.
           const byHead = {};
           for (const r of allRefs) (byHead[roleHead(r.role)] ??= []).push(r.id);
-          return Object.entries(byHead).map(([h, ids]) => {
-            const n = ids.map(i => +String(i).replace(/\D/g, ""));
-            const run = n.length > 2 && n.every((x, i) => i === 0 || x === n[i - 1] + 1);
-            return `<div class="anchor-kind">
+          return Object.entries(byHead).map(([h, ids]) => `
+            <div class="anchor-kind">
               <span class="anchor-head mono">${esc(h)}</span>
-              <span class="anchor-ids mono">${run
-                ? `${esc(ids[0])} → ${esc(ids[ids.length - 1])}`
-                : ids.map(esc).join(" · ")}</span>
-            </div>`;
-          }).join("");
+              <span class="anchor-ids mono">${idSpan(ids)}</span>
+            </div>`).join("");
         })()}
         <div class="mini mono" style="margin-top:8px;color:var(--ink-faint)">${allRefs.length} PLATE${allRefs.length === 1 ? "" : "S"} RODE THIS RENDER</div>
       </div>
