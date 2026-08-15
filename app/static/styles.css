@@ -2873,9 +2873,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    where you are in the work. §1.5 — hairline and band share extents. */
 .step { display: flex; gap: 0; padding: 18px 22px; border-top: 1px solid var(--hairline); }
 .step-band { background: var(--band); }
+/* The spine carries the largest size in the scale (user 2026-08-16). It
+   is a second use of 24px beside the subject, which §1.2 reserved for one
+   element per surface — deliberate, and flagged for review: on a surface
+   whose job IS a sequence, the sequence is as much the subject as its
+   title. Courier, because a step number is a machine fact. */
 .step-num {
-  flex: 0 0 46px; font-size: 11.5px; letter-spacing: .1em;
-  color: var(--ink); padding-top: 1px;
+  flex: 0 0 58px; font-family: var(--mono); font-size: 24px;
+  font-weight: 600; letter-spacing: -.01em; line-height: 1;
+  color: var(--ink); padding-top: 0;
 }
 .step-done .step-num { color: var(--ok); }
 .step-main { flex: 1; min-width: 0; }

@@ -462,7 +462,14 @@ function dragScroll(el) {
    but stays fully legible — it is evidence the user already ruled.
    Each surface owns where `done` is stored; the drawing is one thing. */
 function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
-                   done = false }) {
+                   done = false, frozen = false, frozenWhy = "" }) {
+  // Two ways a step is done. A TICK is advisory — the user saying "I have
+  // read this" — and is theirs to take back. FROZEN is the app stating a
+  // fact: an approved take was rendered from this, so it is settled and
+  // cannot be edited (user ruling 2026-08-16). A frozen step therefore
+  // offers no Confirm and no way to unconfirm — the way back is
+  // withdrawing the approval, which is an act on the take, not the step.
+  done = done || frozen;
   return `
   <section class="step${+n % 2 === 0 ? " step-band" : ""}${done ? " step-done" : ""}"
            data-step="${esc(id || n)}">
@@ -472,7 +479,9 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
         <span class="step-label mono">${label}</span>
         ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
         <span class="step-acts">
-          ${done && id ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
+          ${frozen && id ? `<span class="step-confirmed mono" title="${esc(frozenWhy
+             || "Settled by an approved take — withdraw the approval to change it")}">✓ CONFIRMED</span>` : ""}
+          ${done && id && !frozen ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
              title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
           ${verbs}
           ${id && !done ? `<button type="button" class="verb" data-confirm="${esc(id)}"
@@ -6022,7 +6031,19 @@ async function openSpecEditor(specId) {
     if (on) c[s] = 1; else delete c[s];
     uiSet(confKeySpec, c);
   };
-  const confCountSpec = SPEC_STEPS.filter(confIs).length;
+  // Board-level fields freeze on the first approval (user ruling
+  // 2026-08-16), so the steps that hold them are settled, not pending.
+  const approvedCands = (Array.isArray(specCands) ? specCands : [])
+    .filter(c => c.status === "APPROVED");
+  const boardFrozen = approvedCands.length > 0;
+  const BOARD_STEPS = ["identity", "direction", "scope"];
+  const frozenWhyBoard = boardFrozen
+    ? `Board-level and settled by ${approvedCands.map(c => c.candidate_id).join(", ")}`
+      + " — withdraw that approval to change it"
+    : "";
+  const isFrozenStep = id => boardFrozen && BOARD_STEPS.includes(id);
+  const confCountSpec = SPEC_STEPS
+    .filter(s => confIs(s) || isFrozenStep(s)).length;
   const allocTotal = (spec.panels || [])
     .reduce((n, p) => n + (+p.allocation_percent || 0), 0);
 
@@ -6125,6 +6146,7 @@ async function openSpecEditor(specId) {
     n: "03", id: "questions", label: "OPEN QUESTIONS",
     meta: `${qAll.length - qOpen.length} OF ${qAll.length} ANSWERED`,
     done: confIs("questions"),
+    frozen: isFrozenStep("questions"), frozenWhy: frozenWhyBoard,
     verbs: `<button type="button" class="verb" data-f="answer-qs"${locked ? " disabled" : ""}>${
       qOpen.length === qAll.length ? "Answer these" : "Edit answers"}</button>`,
     body: `
@@ -6186,6 +6208,7 @@ async function openSpecEditor(specId) {
           meta: "WHAT THIS BREAKDOWN IS",
           verbs: `<button type="button" class="verb" data-f="focus-identity">Edit</button>`,
           done: confIs("identity"),
+          frozen: isFrozenStep("identity"), frozenWhy: frozenWhyBoard,
           body: `      <div class="grid-form">
       <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
@@ -6226,6 +6249,7 @@ async function openSpecEditor(specId) {
           meta: "WHAT THE PANELS ARE TOLD",
           verbs: "",
           done: confIs("direction"),
+          frozen: isFrozenStep("direction"), frozenWhy: frozenWhyBoard,
           body: `      <div class="grid-form">
       <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${locked ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
       <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${locked ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
@@ -6240,6 +6264,7 @@ async function openSpecEditor(specId) {
         ${bible_catalog?.exists ? seqStep({ n: "04", id: "scope", label: "SCOPE",
           meta: "WHICH BIBLE SECTIONS REACH THIS BOARD",
           done: confIs("scope"),
+          frozen: isFrozenStep("scope"), frozenWhy: frozenWhyBoard,
           body: `      <div class="scope-cols">
         <div class="fgroup" title="Design languages are the Bible's per-faction / per-world / per-technology look sections. Check the ones whose content appears on this board — their design and material language go into every panel prompt.">
           <span class="f-label">Design languages</span>
@@ -6272,6 +6297,7 @@ async function openSpecEditor(specId) {
           meta: `${(spec.panels || []).length} · ALLOCATION ${allocTotal}%`,
           verbs: "",
           done: confIs("panels"),
+          frozen: isFrozenStep("panels"), frozenWhy: frozenWhyBoard,
           body: `      <div id="sp-panels"></div>
       ${locked ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}` })}
 
@@ -6279,6 +6305,7 @@ async function openSpecEditor(specId) {
           meta: `${(spec.evidence_ledger || []).length} ROWS · EVERY REQUIRED OBJECT HAS A PASS ROW`,
           verbs: "",
           done: confIs("evidence"),
+          frozen: isFrozenStep("evidence"), frozenWhy: frozenWhyBoard,
           body: `      <div class="ledger-row grid-head">
         <span title="Which panel this evidence row belongs to (its Panel ID, e.g. P01).">ID</span>
         <span title="The visible object this row justifies.">Object</span>
@@ -7733,7 +7760,10 @@ async function renderBoardPanels(specId) {
       if (s !== "prompt") delete c.prompt;
       uiSet(confKey, c);
     };
-    const confCount = CONF_STEPS.filter(confIs).length;
+    // An approved take settles every step of its panel, so the count says
+    // so rather than reporting ticks the user never had to make.
+    const confCount = panelCands.some(c => c.status === "APPROVED")
+      ? CONF_STEPS.length : CONF_STEPS.filter(confIs).length;
 
     const takeItems = panelCands.map(c => ({
       src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
@@ -7875,7 +7905,17 @@ async function renderBoardPanels(specId) {
 
     // The shared renderer (seqStep) with this surface's confirmation store
     // bound in — stage 03 binds its own.
-    const step = o => seqStep({ ...o, done: !!(o.id && confIs(o.id)) });
+    const approvedTakes = panelCands.filter(c => c.status === "APPROVED")
+      .map(c => c.candidate_id);
+    const step = o => seqStep({
+      ...o,
+      done: !!(o.id && confIs(o.id)),
+      frozen: approvedTakes.length > 0,
+      frozenWhy: approvedTakes.length
+        ? `Settled by ${approvedTakes.join(", ")} — withdraw that approval to `
+          + "change what this panel asks for"
+        : "",
+    });
 
     const camAxes = ["camera_angle", "camera_orientation", "camera_lens",
                      "camera_tilt", "scale"];

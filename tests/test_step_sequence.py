@@ -216,11 +216,34 @@ class TheVocabulary(unittest.TestCase):
 
     def test_the_step_number_is_the_spine(self):
         """§1.6 — a label gutter says what KIND of row this is; a number
-        says where you are in the work."""
+        says where you are in the work. User 2026-08-16: the spine carries
+        the LARGEST size in the scale, a deliberate second use of 24px
+        beside the subject."""
         b = block(".step-num")
-        self.assertIn("flex: 0 0 46px", b)
-        self.assertIn("font-size: 11.5px", b)
+        self.assertIn("flex: 0 0 58px", b)
+        self.assertIn("font-size: 24px", b)
+        self.assertIn("font-family: var(--mono)", b,
+                      "a step number is a machine fact")
         self.assertIn("color: var(--ok)", block(".step-done .step-num"))
+
+    def test_an_approved_take_settles_every_step_of_its_panel(self):
+        """User 2026-08-16: an approved take freezes the panel, so its
+        steps are settled — not pending ticks the user never had to make.
+        A frozen step offers no Confirm and no way to unconfirm; the way
+        back is withdrawing the approval, an act on the take."""
+        i = JS.index("function seqStep")
+        seg = JS[i:JS.index("async function updateBand")]
+        self.assertIn("done = done || frozen", seg)
+        self.assertIn('${frozen && id ? `<span class="step-confirmed', seg,
+                      "frozen states a fact — it is not a button, and the "
+                      "act step (06 GENERATE) is not a confirmation at all")
+        self.assertIn("done && id && !frozen", seg,
+                      "only a TICK can be taken back")
+        j = JS.index("const approvedTakes = panelCands")
+        self.assertIn("frozen: approvedTakes.length > 0", JS[j:j + 420])
+        k = JS.index("const confCount =")
+        self.assertIn('c.status === "APPROVED"', JS[k:k + 220],
+                      "the head count says so too")
 
     def test_hairline_and_band_share_extents(self):
         """§1.5 — a rule that stops short of a visible band reads as a bug."""
