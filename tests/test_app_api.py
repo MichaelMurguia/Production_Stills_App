@@ -72,6 +72,23 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/specs").status_code, 200,
                          "the session cookie must open the API")
 
+    def test_a_parked_tab_learns_about_a_release(self):
+        """User 2026-08-15: "it says live but there are no changes live."
+        The server was correct — no-cache, fresh ETag, new bytes — but the
+        SPA re-renders from in-memory JS, and the staleness check rode on
+        NAVIGATION alone. A tab parked on one panel (exactly the tab
+        someone has open while a fix ships for them) never learned."""
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        i = js.index("function watchForUpdates")
+        seg = js[i:i + 600]
+        self.assertIn("setInterval(check", seg)
+        self.assertIn("visibilitychange", seg,
+                      "coming back to the tab is when it is most likely stale")
+        self.assertIn("watchForUpdates();", js[js.index("async function boot"):
+                                               js.index("async function boot") + 400])
+        # stated, never auto-reloaded — reloading is the user's act
+        self.assertNotIn("location.reload()", seg)
+
     def test_ui_never_runs_stale(self):
         # Regression (2026-08-01): a hosted studio kept serving an old
         # app.js from browser cache after the server updated. Every UI

@@ -1312,6 +1312,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **A parked tab now learns about a release** (user:
+  "it says live but there are no changes live"). The server was correct —
+  `no-cache`, a fresh ETag, the new bytes on disk — but this is a SPA that
+  re-renders from in-memory JS, and the staleness check rode on NAVIGATION
+  alone. A tab parked on one panel, which is exactly the tab someone has
+  open while a fix is being shipped for them, never learned. It now also
+  checks on a 60s timer and whenever the tab is brought back to the front.
+  Still stated, never auto-reloaded: reloading is the user's act, mid-work.
 - **2026-08-15** — **Film, tiers, and full size** (user, three
   corrections). The takes strip now actually looks like 35mm: a dark
   base, ROUNDED perforations along both edges drawn as a repeated inline

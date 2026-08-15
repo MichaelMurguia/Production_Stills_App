@@ -1768,6 +1768,48 @@ async function showView(name, { push = true } = {}) {
    subline per stage from stage_summary, top border --ok complete /
    --accent current / --bad blocked / --line not reached, HERE on the
    viewed stage, engine dots from credentials. */
+/* A long-lived tab is a time capsule: the SPA re-renders from in-memory
+   JS while the studio updates beneath it (user-hit three times 2026-08-05,
+   and again on 2026-08-15 — "it says live but there are no changes
+   live"). A mismatch is STATED, never auto-reloaded: reloading is the
+   user's act, mid-work. */
+function showUpdateBarIfStale(h) {
+  const boot = window.SB_BOOT_VERSION;
+  const stale = boot && h && h.version && h.version !== boot;
+  let bar = document.getElementById("update-bar");
+  if (!stale) { bar?.remove(); return; }
+  if (bar) return;
+  bar = document.createElement("div");
+  bar.id = "update-bar";
+  bar.className = "update-bar mono";
+  bar.innerHTML = `THIS TAB IS ON ${esc(boot)} — THE STUDIO NOW SERVES ${esc(h.version)}. `
+    + `<button class="text-act mono" onclick="location.reload()">RELOAD TO GET IT</button>`;
+  // D8 ruling: below the band — the product's map is not pushed down
+  // for a condition that is not about the production.
+  const nav = document.querySelector("nav#nav");
+  if (nav) {
+    nav.insertAdjacentElement("afterend", bar);
+    bar.style.top = `${nav.offsetHeight}px`;
+  } else {
+    document.body.prepend(bar);
+  }
+}
+
+/* The check used to ride on navigation alone, so a tab parked on one
+   panel never noticed a release — which is precisely the tab someone has
+   open while a fix is being shipped for them. It now also runs on a timer
+   and whenever the tab is brought back to the front, which is when a
+   long-lived tab is most likely to be out of date. */
+function watchForUpdates() {
+  const check = () => api("/api/healthz").then(showUpdateBarIfStale).catch(() => {});
+  setInterval(check, 60000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) check();
+  });
+  check();
+}
+
+
 async function updateBand() {
   let state, settings;
   try {
@@ -1784,28 +1826,7 @@ async function updateBand() {
   // 2026-08-05). Every navigation compares the server's version to the
   // one this tab booted with; a mismatch is STATED, never auto-reloaded —
   // reloading is the user's act, mid-work.
-  api("/api/healthz").then(h => {
-    const boot = window.SB_BOOT_VERSION;
-    const stale = boot && h.version && h.version !== boot;
-    let bar = document.getElementById("update-bar");
-    if (!stale) { bar?.remove(); return; }
-    if (!bar) {
-      bar = document.createElement("div");
-      bar.id = "update-bar";
-      bar.className = "update-bar mono";
-      bar.innerHTML = `THIS TAB IS ON ${esc(boot)} — THE STUDIO NOW SERVES ${esc(h.version)}. `
-        + `<button class="text-act mono" onclick="location.reload()">RELOAD TO GET IT</button>`;
-      // D8 ruling: below the band — the product's map is not pushed down
-      // for a condition that is not about the production.
-      const nav = document.querySelector("nav#nav");
-      if (nav) {
-        nav.insertAdjacentElement("afterend", bar);
-        bar.style.top = `${nav.offsetHeight}px`;
-      } else {
-        document.body.prepend(bar);
-      }
-    }
-  }).catch(() => {});
+  api("/api/healthz").then(showUpdateBarIfStale).catch(() => {});
 
   // C8 — one square per ROLE, not per provider: can this app do its two
   // jobs right now? Worst state among everything each role needs.
@@ -9909,6 +9930,7 @@ async function boot() {
   // corrected; fire-and-forget chip for text-edit mode.
   loadTextOverrides().then(() => applyTextOverrides());
   updateTextEditChip();
+  watchForUpdates();
   let first = false;
   try {
     const pr = await api("/api/projects");
