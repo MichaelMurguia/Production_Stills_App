@@ -1312,6 +1312,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **The roll loses its scrollbar and its edge print**
+  (user): a bar drawn across a piece of film is chrome, so both rolls
+  hide it — honest only because both drag, and wheel/trackpad still work.
+  The edge marking is retired: it cost two lines of height on a strip
+  whose job is the pictures. (The rule that put OUR data there rather
+  than a stock name stands, should it ever return.) A board frame now
+  opens its take full size on click, like a take frame; a drag swallows
+  exactly one click so ending a swipe never opens the lightbox.
 - **2026-08-15** — **One roll, every strip of frames** (user, after four
   rounds of "I don't see it"): the film treatment went on the TAKES strip
   on stage 04 while the user was looking at the BOARD strip on the

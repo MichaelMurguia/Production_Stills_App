@@ -72,18 +72,33 @@ class TheImageIsTheHero(unittest.TestCase):
         self.assertIn('class="takes-row filmroll"', JS)
         self.assertIn('class="made-grid filmroll"', JS)
 
-    def test_the_edge_marking_states_our_own_data(self):
-        """A real film-stock name would be set dressing claiming something
-        untrue about the render; the margin carries the panel and take
-        count instead."""
-        # the marking prints on the ROW, so it travels with the film
-        i = JS.index('class="takes-row filmroll"')
-        self.assertIn("data-edge=", JS[i:i + 300])
-        self.assertIn("TAKE", JS[i:i + 300])
-        j = JS.index('class="made-grid filmroll"')
-        self.assertIn("PANEL", JS[j:j + 300], "the board roll prints its own")
+    def test_the_roll_carries_no_stock_branding(self):
+        """The edge marking was retired 2026-08-15 (it cost two lines of
+        height on a strip whose job is the pictures), but the rule that
+        put OUR data there rather than a film-stock name still stands: a
+        real stock name would be set dressing claiming something untrue
+        about how these frames were made."""
         for brand in ("KODAK", "FUJI", "VISION3"):
             self.assertNotIn(brand, JS)
+            self.assertNotIn(brand, CSS)
+
+    def test_the_roll_hides_its_scrollbar_and_stays_reachable(self):
+        """A bar drawn across a piece of film is chrome (user 2026-08-15).
+        Hiding it is only honest if the strip can still be moved — both
+        rolls drag."""
+        b = block(".filmroll")
+        self.assertIn("scrollbar-width: none", b)
+        self.assertIn(".filmroll::-webkit-scrollbar", CSS)
+        self.assertIn("dragScroll(madeStrip)", JS)
+        self.assertIn("dragScroll(takesRoll)", JS)
+
+    def test_a_drag_does_not_fire_a_click(self):
+        """The pointerup that ends a drag would otherwise land as a click
+        on the frame under it and open the lightbox."""
+        i = JS.index("function dragScroll")
+        seg = JS[i:JS.index("function seqStep")]
+        self.assertIn("swallow = moved > 5", seg)
+        self.assertIn("e.stopPropagation()", seg)
 
     def test_the_lightbox_ends_at_full_size_without_waiting(self):
         """User 2026-08-15: "I do not get the full sized image." It opened

@@ -403,7 +403,16 @@ function idSpan(ids) {
 // prefers-reduced-motion gets the drag without the glide.
 function dragScroll(el) {
   let down = false, startX = 0, startLeft = 0, lastX = 0, lastT = 0;
-  let vel = 0, raf = 0;
+  let vel = 0, raf = 0, moved = 0, swallow = false;
+  // A strip you drag is also a strip you click. The pointerup that ends a
+  // drag would otherwise land as a click on whatever is under it, so a
+  // real drag swallows exactly one click.
+  el.addEventListener("click", e => {
+    if (!swallow) return;
+    swallow = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const glide = () => {
     el.scrollLeft -= vel;
@@ -419,6 +428,7 @@ function dragScroll(el) {
     cancelAnimationFrame(raf);
     startX = lastX = e.clientX;
     startLeft = el.scrollLeft;
+    moved = 0;
     lastT = performance.now();
     vel = 0;
     el.classList.add("dragging");
@@ -426,6 +436,7 @@ function dragScroll(el) {
   el.addEventListener("pointermove", e => {
     if (!down) return;
     el.scrollLeft = startLeft - (e.clientX - startX);
+    moved = Math.max(moved, Math.abs(e.clientX - startX));
     const now = performance.now();
     const dt = now - lastT;
     // px per frame at 60Hz, so the glide matches the hand that threw it
@@ -435,6 +446,7 @@ function dragScroll(el) {
     if (!down) return;
     down = false;
     el.classList.remove("dragging");
+    swallow = moved > 5;
     if (!reduce && Math.abs(vel) > 0.4) raf = requestAnimationFrame(glide);
   };
   el.addEventListener("pointerup", release);
@@ -6097,8 +6109,7 @@ async function openSpecEditor(specId) {
           panels.length - approvedN === 1 ? "the last one has" : "each of the rest has"} an approved take.`;
     return `
       <div class="made">
-        <div class="made-grid filmroll"
-             data-edge="${esc(`${String(specId).toUpperCase()}   ${panels.length} PANEL${panels.length === 1 ? "" : "S"}   ${approvedN} APPROVED`)}">${frames}</div>
+        <div class="made-grid filmroll">${frames}</div>
         <div class="made-stake">
           <div class="rail-label">WHAT THIS BOARD HAS MADE</div>
           <p class="step-prose">${esc(stake)}</p>
@@ -6312,7 +6323,32 @@ async function openSpecEditor(specId) {
   const focusIdentity = $("[data-f=focus-identity]", panel);
   if (focusIdentity) focusIdentity.onclick = () => $("#sp-subject", panel)?.focus();
   const madeStrip = $(".made-grid", panel);
-  if (madeStrip) dragScroll(madeStrip);
+  if (madeStrip) {
+    dragScroll(madeStrip);
+    // The frames are 35mm windows with the panel fitted into them, so they
+    // show less than the take — clicking one opens it full size, the same
+    // bargain the takes strip makes (user 2026-08-15).
+    const shots = (spec.panels || [])
+      .map(pn => ({ pn, c: (Array.isArray(specCands) ? specCands : [])
+        .filter(c => c.panel_id === pn.id)
+        .find(c => c.status === "APPROVED")
+        || (Array.isArray(specCands) ? specCands : [])
+             .find(c => c.panel_id === pn.id) }))
+      .filter(x => x.c);
+    const items = shots.map(({ pn, c }) => ({
+      src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
+      caption: `${c.candidate_id} — ${pn.id} (${c.status}) ${c.width}×${c.height}`,
+    }));
+    $$(".made-item", madeStrip).forEach(item => {
+      const frame = $(".made-frame", item);
+      if (!frame || frame.classList.contains("made-empty")) return;
+      const id = ($(".made-id", frame)?.textContent || "").split("·").pop().trim();
+      const idx = shots.findIndex(s => s.c.candidate_id === id);
+      frame.style.cursor = "zoom-in";
+      frame.title = "Open this take at full size";
+      frame.onclick = () => { if (idx >= 0) openLightbox(items, idx); };
+    });
+  }
 
   const toPanels = $("[data-f=to-panels]", panel);
   if (toPanels) toPanels.onclick = () => {
@@ -7744,7 +7780,7 @@ async function renderBoardPanels(specId) {
           ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
-        <div class="takes-row filmroll" data-edge="${esc(`${p.id}   ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}   ${String(specId).toUpperCase()}`)}">
+        <div class="takes-row filmroll">
           ${pending.map(pendingTileHtml).join("")}
           ${panelCands.map(c => {
             const pr = promotedRefOf(c);
@@ -8759,6 +8795,12 @@ async function renderBoardPanels(specId) {
         btn.textContent = "Draft prose";
       }
     };
+
+    // The takes roll hides its scrollbar like the board roll, so it needs
+    // the same way to move: drag with momentum. Without this a long strip
+    // would be reachable only by wheel.
+    const takesRoll = $(".takes-row", card);
+    if (takesRoll) dragScroll(takesRoll);
 
     // Takes filmstrip: a click makes that take current AND opens it full
     // size (user 2026-08-15). The frame is a 35mm window with the image

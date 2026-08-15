@@ -3228,18 +3228,16 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
     var(--perf) left bottom 7px / 22px 13px repeat-x,
     #0d0e10;
   border: 1px solid #2b3037;
-  padding: 40px 18px 42px;
+  /* just enough margin to carry the perforations — the edge marking was
+     costing two lines of height on a strip whose job is the pictures
+     (user 2026-08-15) */
+  padding: 26px 18px 28px;
   align-items: flex-start;
+  /* the strip is dragged, so the bar is redundant chrome across a piece
+     of film. Scrolling still works by wheel, trackpad and keyboard. */
+  scrollbar-width: none;
 }
-.filmroll[data-edge]::before,
-.filmroll[data-edge]::after {
-  content: attr(data-edge);
-  position: absolute; left: 18px;
-  font-family: var(--mono); font-size: 8.5px; letter-spacing: .3em;
-  color: #7e868e; pointer-events: none; white-space: nowrap;
-}
-.filmroll[data-edge]::before { top: 22px; }
-.filmroll[data-edge]::after { bottom: 22px; }
+.filmroll::-webkit-scrollbar { width: 0; height: 0; }
 
 /* the takes strip */
 .filmstrip .takes-row { gap: 0; }
