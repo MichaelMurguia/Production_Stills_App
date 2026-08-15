@@ -146,6 +146,22 @@ class UserPaletteOwnsTheRole(unittest.TestCase):
         self.assertEqual(sum(1 for r in refs
                              if store.role_head(r["role"]) == "COLOR_PALETTE"), 1)
 
+    def test_the_plate_carries_every_field_a_take_record_reads(self):
+        """Production bug 2026-08-15: generation failed with
+        {"detail": "'sha256'"} — a 404 raised by the RECORD write, which
+        runs after the image has come back and been paid for. The
+        synthetic palette reference had no sha256, so a user lost a render
+        they were charged for. A synthetic record must satisfy every field
+        the pipeline reads from a real one."""
+        refs = self._resolve(["REF-40", "REF-50", "REF-51"], full=True)
+        pal = next(r for r in refs if r["id"] == "PALETTE")
+        for field in ("id", "role", "status", "sha256"):
+            self.assertTrue(pal.get(field),
+                            f"the composite plate must carry {field}")
+        # exactly the shape the take record builds
+        row = {"id": pal["id"], "role": pal["role"], "sha256": pal["sha256"]}
+        self.assertEqual(set(row), {"id", "role", "sha256"})
+
     def test_a_single_swatch_needs_no_plate(self):
         """One swatch is already one image — compositing it would only
         add a caption the model did not ask for."""

@@ -65,5 +65,24 @@ class RenderResilienceWiring(unittest.TestCase):
                       block, "landed() must verify the view before re-rendering")
 
 
+
+class TheRecordSurvivesAnOddReference(unittest.TestCase):
+    """A paid render must never be thrown away by bookkeeping.
+
+    2026-08-15, production: generation returned {"detail": "'sha256'"} —
+    a KeyError from the take-record write, which happens AFTER the image
+    has come back from the engine. The reference list was built with
+    r["sha256"], so one reference missing one field destroyed a render
+    the user had already paid for."""
+
+    def test_the_record_reads_references_defensively(self):
+        src = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        i = src.index('"references": [{"id": r.get("id"')
+        row = src[i:i + 260]
+        for f in ('r.get("id"', 'r.get("role"', 'r.get("sha256"'):
+            self.assertIn(f, row)
+        self.assertNotIn('r["sha256"]', row,
+                         "a missing field must not raise after the spend")
+
 if __name__ == "__main__":
     unittest.main()

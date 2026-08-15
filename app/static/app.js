@@ -5225,13 +5225,21 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
   const lbItems = recs.map(r => ({ src: `/api/references/${r.id}/image`,
                                    caption: `${r.id} — ${r.role}` }));
   const chosen = new Set(pick || recs.map(r => r.id));
+  // Default to showing ONLY what the render works from (user 2026-08-15:
+  // clicking an object's REF should show the plates selected for it, not
+  // the whole library group). The rest stay one verb away — a set you
+  // cannot see is a set you cannot widen again.
+  const narrowed = chosen.size < recs.length;
   return modal({
     custom: `
       <div class="modal-title">Reference — ${esc(obj)}</div>
       <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ${onPick
         ? `<span data-f="vr-count">${chosen.size} OF ${recs.length} RIDE THE NEXT RENDER</span> · UNTICK ONE TO SPEND FEWER OF THE FOURTEEN`
-        : "ALL ATTACH WHEN ITS GROUP IS CHECKED"} · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW</p>
-      <div class="ref-grid" style="max-height:60vh;overflow-y:auto;margin:0 14px;align-content:start">
+        : "ALL ATTACH WHEN ITS GROUP IS CHECKED"} · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW
+        ${narrowed ? `<button type="button" class="verb" data-f="vr-all"
+          style="margin-left:12px">Show all ${recs.length}</button>` : ""}</p>
+      <div class="ref-grid${narrowed ? " vr-only" : ""}" data-f="vr-grid"
+           style="max-height:60vh;overflow-y:auto;margin:0 14px;align-content:start">
         ${recs.map((r, i) => `
           <div class="ref-card ${esc(r.status)}${onPick && !chosen.has(r.id) ? " vr-off" : ""}" data-card="${esc(r.id)}">
             <img src="/api/references/${esc(r.id)}/image?size=thumb" data-lb="${i}" alt="${esc(r.id)}" loading="lazy">
@@ -5258,6 +5266,14 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
     mount: (ov, done) => {
       $$("[data-lb]", ov).forEach(img => img.onclick = () =>
         openLightbox(lbItems, +img.dataset.lb));
+      const grid = $("[data-f=vr-grid]", ov);
+      const allBtn = $("[data-f=vr-all]", ov);
+      if (allBtn) allBtn.onclick = () => {
+        const only = grid.classList.toggle("vr-only");
+        allBtn.textContent = only
+          ? `Show all ${recs.length}`
+          : `Show only the ${chosen.size} that ride`;
+      };
       if (onPick) {
         const countEl = $("[data-f=vr-count]", ov);
         $$("[data-use]", ov).forEach(box => box.onchange = () => {
@@ -8116,9 +8132,19 @@ async function renderBoardPanels(specId) {
       const recs = gs.flatMap(g => g.ids)
         .map(id => refs.find(x => x.id === id)).filter(Boolean);
       if (!recs.length) { toast("No matching reference found.", true); return; }
+      // What covers this object is what will actually RIDE for it — the
+      // plates chosen from its group, not the whole library group (user
+      // 2026-08-15). Choosing here writes back to the same per-panel pick
+      // the reference row reads, so the two can never disagree.
+      const picked = gs.flatMap(pickFor);
       viewObjectReferences(obj, recs,
         { head: gs[0]?.head || "PROP_REFERENCE", title: gs[0]?.name || obj },
-        () => renderBoardPanels(specId));
+        () => renderBoardPanels(specId),
+        { pick: picked,
+          onPick: ids => {
+            for (const g of gs) setPick(g, g.ids.filter(id => ids.includes(id)));
+            renderBoardPanels(specId);
+          } });
     });
 
     // "Choose plates" opens the photos, because choosing which image the

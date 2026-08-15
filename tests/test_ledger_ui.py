@@ -96,11 +96,18 @@ class AddReferenceInPlacePins(unittest.TestCase):
         i = JS.index('data-viewref="${esc(o)}"')
         self.assertIn("View the matching reference plate(s)", JS[i:i + 200])
         j = JS.index("$$(\"[data-viewref]\", card)")
-        self.assertIn("viewObjectReferences", JS[j:j + 600],
+        seg = JS[j:j + 1100]
+        self.assertIn("viewObjectReferences", seg,
                       "the tile opens the widget, not a lightbox")
+        self.assertIn("gs.flatMap(pickFor)", seg,
+                      "and it opens on the plates SELECTED for that object, "
+                      "not the whole library group (user 2026-08-15)")
         self.assertIn("function viewObjectReferences", JS)
+        # Bounded by the function's end, not a guessed character count — a
+        # fixed slice stops covering the code the moment the function
+        # grows, and this one already walked off twice (2026-08-14/15).
         i = JS.index("function viewObjectReferences")
-        block = JS[i:i + 2600]
+        block = JS[i:JS.index(chr(10) + "const SHELVES", i)]
         self.assertIn("THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", block)
         self.assertIn("One plate is a thin", block)
         self.assertIn('data-f="vr-add"', block)
@@ -110,9 +117,14 @@ class AddReferenceInPlacePins(unittest.TestCase):
         """User-hit 2026-08-14: a flex column shrank five cards to 76px
         and .ref-card's overflow:hidden clipped every image. The library's
         own grid gives each card its natural height."""
+        # Bounded by the function's end, not a guessed character count — a
+        # fixed slice stops covering the code the moment the function
+        # grows, and this one already walked off twice (2026-08-14/15).
         i = JS.index("function viewObjectReferences")
-        block = JS[i:i + 2600]
-        self.assertIn('class="ref-grid"', block)
+        block = JS[i:JS.index(chr(10) + "const SHELVES", i)]
+        self.assertIn('class="ref-grid${narrowed ? " vr-only" : ""}"', block,
+                      "the library grid, optionally narrowed to the plates "
+                      "that actually ride (user 2026-08-15)")
         self.assertNotIn("flex-direction:column", block)
         self.assertNotIn('class="primary" data-f="vr-close"', block,
                          "a dismissal is not the view's primary action")

@@ -1311,6 +1311,20 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **An object's REF shows what actually covers it**
+  (user): clicking `REF` on a required object opened the whole library
+  group; it now opens the plates SELECTED for that object, with `Show all
+  n` one verb away — a set you cannot see is a set you cannot widen
+  again. Choosing there writes back to the same per-panel pick the
+  reference row reads, so the two can never disagree.
+- **2026-08-15** — **Production bug: a paid render was thrown away by
+  bookkeeping.** Generation returned `{"detail": "'sha256'"}` — a
+  KeyError raised by the take-RECORD write, which runs after the image
+  has come back from the engine. The synthetic palette plate carried no
+  `sha256`, so one missing field on one reference destroyed a render the
+  user had been charged for. The plate now carries its own hash, and the
+  record reads every reference field defensively: nothing about
+  bookkeeping may discard work that already succeeded.
 - **2026-08-15** — **One palette, one reference** (user): the swatches of
   a palette now composite into a single labelled plate and ride as one
   image. Colour by colour, an eight-colour design language quietly spent

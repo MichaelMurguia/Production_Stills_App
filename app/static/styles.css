@@ -2984,6 +2984,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    about, which is the same fault as the act bar's vanished tools. */
 .ref-plates { margin-left: 14px; flex: none; }
 /* a plate the render will not work from reads as set aside, not deleted */
+/* Showing only what rides: the rest are hidden, not deleted — the header
+   verb brings them back. */
+.ref-grid.vr-only .ref-card.vr-off { display: none; }
 .ref-card.vr-off { opacity: .38; }
 .ref-card.vr-off img { filter: grayscale(1); }
 .vr-use { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }

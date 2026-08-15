@@ -143,10 +143,16 @@ def collapse(refs: list[dict]) -> list[dict]:
         if s["language"] and s["language"] not in langs:
             langs.append(s["language"])
     label = " + ".join(langs) if langs else "PALETTE"
+    # The take's record identifies every reference by hash, so the plate
+    # carries its own — it is a real file, and a synthetic record missing
+    # a field the pipeline requires cost a user a paid render on
+    # 2026-08-15 (the record write raised KeyError AFTER the image came
+    # back).
     synth = {
         "id": "PALETTE",
         "role": f"COLOR_PALETTE — {label}",
         "status": "APPROVED",
+        "sha256": store.sha256_file(plate),
         "notes": f"{len(swatches)} swatches on one plate · "
                  + " · ".join(s["hex"].upper() for s in swatch_rows(swatches)),
         "_plate": str(plate),

@@ -2056,7 +2056,12 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         "aspect_ratio": aspect_ratio,
         "width": width,
         "height": height,
-        "references": [{"id": r["id"], "role": r["role"], "sha256": r["sha256"]} for r in refs],
+        # .get, not [] — this runs AFTER the render has been paid for, so
+        # a reference missing a field must not throw away the image that
+        # came back (it did, 2026-08-15: a synthetic palette plate had no
+        # sha256 and the whole generation surfaced as {"detail": "'sha256'"}).
+        "references": [{"id": r.get("id", ""), "role": r.get("role", ""),
+                        "sha256": r.get("sha256", "")} for r in refs],
         "prompt": prompt,
         "prompt_source": "edited" if override else "spec",
         "model_notes": notes,
