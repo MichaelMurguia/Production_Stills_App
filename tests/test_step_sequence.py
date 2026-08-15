@@ -54,21 +54,49 @@ class TheImageIsTheHero(unittest.TestCase):
         b = block(".take-frame")
         self.assertIn("aspect-ratio: 3 / 2", b)
         self.assertIn("object-fit: contain", block(".take-frame img"))
-        # perforations are a PATTERN (hard stops), never a decorative blend
-        perf = block(".filmstrip .takes-row::before," + chr(10)
-                     + ".filmstrip .takes-row::after")
-        self.assertIn("repeating-linear-gradient", perf)
-        self.assertNotIn("border-radius", perf)
+        # Perforations are a repeated inline-SVG TILE, not an asset and not
+        # a decorative blend. They are the one rounded corner in the app:
+        # a perf depicts a physical hole, it is not a control.
+        strip = block(".filmstrip")
+        self.assertIn("data:image/svg+xml", strip)
+        self.assertIn("rx=", strip, "a real perforation is rounded")
+        row = block(".filmstrip .takes-row")
+        self.assertIn("repeat-x", row)
+        self.assertIn("left bottom", row, "perfs run along BOTH edges")
 
     def test_the_edge_marking_states_our_own_data(self):
         """A real film-stock name would be set dressing claiming something
         untrue about the render; the margin carries the panel and take
         count instead."""
-        i = JS.index('class="takes filmstrip"')
-        self.assertIn("data-edge=", JS[i:i + 260])
-        self.assertIn("TAKE", JS[i:i + 260])
+        # the marking prints on the ROW, so it travels with the film
+        i = JS.index('class="takes-row"')
+        self.assertIn("data-edge=", JS[i:i + 300])
+        self.assertIn("TAKE", JS[i:i + 300])
         for brand in ("KODAK", "FUJI", "VISION3"):
             self.assertNotIn(brand, JS)
+
+    def test_the_lightbox_ends_at_full_size_without_waiting(self):
+        """User 2026-08-15: "I do not get the full sized image." It opened
+        at the md tier and only fetched the raw file if you zoomed — which
+        was the 2026-08-09 ruling against stalling on open. Both hold now:
+        md paints immediately, the full image loads behind it and swaps in
+        when decoded."""
+        i = JS.index("function lbShow")
+        seg = JS[i:JS.index("function lbStep")]
+        self.assertIn('img.src = lbSize(item.src, "md")', seg,
+                      "the fast tier still paints first")
+        self.assertIn("new Image()", seg)
+        self.assertIn("lb.full !== full", seg,
+                      "a swap must not land on a take you stepped away from")
+        self.assertIn("lb.atFull = true", seg)
+
+    def test_strips_ask_for_the_thumbnail_tier(self):
+        """Never pull a bigger file than the frame can show (user
+        2026-08-15). The board strip was requesting md for a 300px cell."""
+        i = JS.index('class="made-frame"')
+        self.assertIn("image?size=thumb", JS[i:i + 300])
+        j = JS.index('class="take-frame"')
+        self.assertIn("image?size=thumb", JS[j:j + 300])
 
     def test_a_frame_click_shows_the_take_full_size(self):
         """The frame deliberately shows LESS than the take (it is a 35mm

@@ -1312,6 +1312,17 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **Film, tiers, and full size** (user, three
+  corrections). The takes strip now actually looks like 35mm: a dark
+  base, ROUNDED perforations along both edges drawn as a repeated inline
+  SVG tile, edge markings printed in the margin between the perfs and the
+  frames, and thin frame lines between takes. The perf is the one rounded
+  corner in the app — it depicts a physical hole, not a control. Strips
+  ask for the `thumb` tier (the board strip had been pulling `md` for a
+  300px cell). And the lightbox now ENDS at full size without ever
+  waiting to open: `md` paints immediately, the raw file loads behind it
+  and swaps in when decoded, so the 2026-08-09 no-stall ruling and the
+  ask for full size both hold.
 - **2026-08-15** — **The board strip stops inventing a blocker**
   (user-caught). Every empty frame carried a hardcoded `SIZE —`, naming a
   problem the panel did not have: a panel that has simply never been

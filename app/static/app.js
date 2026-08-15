@@ -1009,6 +1009,24 @@ function lbShow() {
       : "";
   };
   img.complete ? setZoomLabel() : (img.onload = setZoomLabel);
+  // The md tier paints immediately (2026-08-09: loading the raw 20-40MB
+  // file on open was slow and sometimes stalled), and then the FULL image
+  // is fetched behind it and swapped in when it has decoded — so the
+  // lightbox always ends at full size without ever waiting to open
+  // (user 2026-08-15: "I do not get the full sized image"). Zoom no
+  // longer has to be the way you reach it.
+  const full = lb.full;
+  if (full && lbSize(full, "md") !== full) {
+    const pre = new Image();
+    pre.onload = () => {
+      // the viewer may have stepped to another take while this loaded
+      if (lb.full !== full) return;
+      img.src = full;
+      lb.atFull = true;
+      setZoomLabel();
+    };
+    pre.src = full;
+  }
   $(".lb-prev").style.visibility = lb.items.length > 1 ? "visible" : "hidden";
   $(".lb-next").style.visibility = lb.items.length > 1 ? "visible" : "hidden";
 }
@@ -6039,7 +6057,7 @@ async function openSpecEditor(specId) {
       const ok = shown.status === "APPROVED";
       return `<div class="made-item">
       <div class="made-frame">
-        <img src="/api/specs/${specId}/candidates/${esc(shown.candidate_id)}/image?size=md"
+        <img src="/api/specs/${specId}/candidates/${esc(shown.candidate_id)}/image?size=thumb"
              loading="lazy" alt="${esc(p.id)}">
         <span class="made-id mono">${esc(p.id)} · ${esc(shown.candidate_id)}</span>
         <span class="made-foot">
@@ -7697,14 +7715,14 @@ async function renderBoardPanels(specId) {
     // Work-order state: no takes strip either — unless a render is already
     // painting, whose pending tile must never disappear.
     const takesHtml = !panelCands.length && !pending.length ? "" : `
-      <div class="takes filmstrip" data-edge="${esc(`${p.id}  ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}  ${String(specId).toUpperCase()}`)}">
+      <div class="takes filmstrip">
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
           <span class="hint">rejected takes stay as a record</span>
           ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
-        <div class="takes-row">
+        <div class="takes-row" data-edge="${esc(`${p.id}   ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}   ${String(specId).toUpperCase()}`)}">
           ${pending.map(pendingTileHtml).join("")}
           ${panelCands.map(c => {
             const pr = promotedRefOf(c);
