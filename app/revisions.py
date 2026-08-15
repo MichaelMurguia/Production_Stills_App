@@ -414,3 +414,44 @@ def consolidate(base: str) -> dict:
     return {"base": base, "collapsed": gone, "content_from": living_id,
             "files_moved": len(moved), "takes_retagged": retagged,
             "locked": was_locked, "backup": str(bak)}
+
+
+def migrate_all_projects() -> list[dict]:
+    """Collapse every legacy revision chain in every production, at boot.
+
+    Revisions are retired (2026-08-16). Any `_R<n>` still on disk is legacy
+    data, and leaving it there leaves the user with two breakdowns and two
+    panel screens for one piece of work — the thing the retirement was
+    supposed to end. So this is a MIGRATION, not an offer: no button, no
+    modal, nothing to find. It runs once per chain and is naturally
+    idempotent, because after it there is nothing left to collapse.
+
+    Best-effort per project: one unmigratable chain (a take id colliding
+    across revisions) must not take the boot down with it, and must not
+    stop the next project migrating."""
+    from . import store
+    out = []
+    with paths.SWITCH_LOCK:
+        prev = paths.ACTIVE_PROJECT
+        try:
+            for proj in paths.list_projects():
+                paths.set_project(proj["slug"])
+                if not paths.SPECS_DIR.exists():
+                    continue
+                bases = sorted({base_of(p.stem)
+                                for p in paths.SPECS_DIR.glob("*.json")
+                                if p.name != "locks.json"})
+                for b in bases:
+                    if len(revisions_of(b)) < 2:
+                        continue
+                    try:
+                        r = consolidate(b)
+                        r["project"] = proj["slug"]
+                        out.append(r)
+                    except Exception as e:  # noqa: BLE001 — boot must survive
+                        store.append_approval_log(
+                            f"BOARD {b}: CONSOLIDATION SKIPPED — {e} "
+                            "(the chain stays split; nothing was moved).")
+        finally:
+            paths.set_project(prev)
+    return out

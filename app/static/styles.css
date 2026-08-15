@@ -203,11 +203,6 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .lock-strip .gate-text { flex: none; }
 .lock-strip .block-act { color: var(--ink); }
 .lock-strip .block-act:hover { text-decoration: underline; }
-/* UNCANONIZED — 2026-08-16 — revision consolidation. The lock strip states
-   one short fact in a row; this one states a migration, so its text wraps
-   and the verb keeps its own line when the row runs out. No new tokens. */
-#spec-consolidate .lock-strip { flex-wrap: wrap; }
-#spec-consolidate .lock-strip .gate-text { flex: 1 1 340px; }
 
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {

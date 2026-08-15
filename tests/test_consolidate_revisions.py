@@ -248,5 +248,71 @@ class TheBoardStopsSeeingTwoOfEverything(Chain):
         self.assertEqual(q["qualifying"]["P01"]["candidate_id"], "CAND-0002")
 
 
+class ItMigratesRatherThanOffering(Chain):
+    """User 2026-08-16, on being shown a strip with a Consolidate verb:
+    "we dont need UI to do this type of consolodation. I was asking you to
+    migrate it." A legacy data shape is not a decision the user has — it
+    is work we should simply have finished."""
+
+    def test_boot_collapses_every_chain_it_finds(self):
+        revisions.migrate_all_projects()
+        self.assertEqual(revisions.revisions_of(BASE), [BASE])
+        self.assertEqual(store.get_spec(BASE)["scene"], "The revised scene.")
+
+    def test_running_it_again_changes_nothing(self):
+        revisions.migrate_all_projects()
+        again = revisions.migrate_all_projects()
+        self.assertEqual(again, [], "idempotent — nothing left to collapse")
+
+    def test_it_reports_what_it_did_per_project(self):
+        done = revisions.migrate_all_projects()
+        self.assertEqual(len(done), 1)
+        self.assertEqual(done[0]["collapsed"], [R2])
+        self.assertIn("project", done[0])
+
+    def test_one_bad_chain_does_not_stop_the_boot(self):
+        """A take id colliding across revisions refuses that chain. The
+        boot must survive it, and the refusal must be journaled rather
+        than swallowed."""
+        self.take(R2, "CAND-0001", "CANDIDATE")
+        done = revisions.migrate_all_projects()
+        self.assertEqual(done, [])
+        self.assertTrue((paths.SPECS_DIR / f"{R2}.json").exists(),
+                        "the chain stays split rather than half-folded")
+        log = paths.APPROVAL_LOG.read_text(encoding="utf-8")
+        self.assertIn("CONSOLIDATION SKIPPED", log)
+
+    def test_the_active_project_survives_the_sweep(self):
+        before = paths.ACTIVE_PROJECT
+        revisions.migrate_all_projects()
+        self.assertEqual(paths.ACTIVE_PROJECT, before)
+
+    def test_it_runs_at_boot_before_anything_serves(self):
+        src = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn("def _collapse_legacy_revisions", src)
+        self.assertIn("migrate_all_projects()", src)
+        self.assertLess(src.index("def _collapse_legacy_revisions"),
+                        src.index("def _warm_display_variants"),
+                        "ahead of the warm — a request mid-migration could "
+                        "read a half-folded unit")
+
+    def test_there_is_no_surface_for_it(self):
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        html = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+        for probe in ("renderConsolidateStrips", "Consolidate into one",
+                      "spec-consolidate"):
+            self.assertNotIn(probe, js, probe)
+            self.assertNotIn(probe, html, probe)
+
+    def test_the_routes_remain_for_a_chain_the_sweep_skipped(self):
+        """No UI, but a chain that refused at boot needs a way through
+        that is not a redeploy."""
+        src = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn('@app.get("/api/specs/{spec_id}/consolidation")', src)
+        self.assertIn('@app.post("/api/specs/{spec_id}/consolidate")', src)
+        i = src.index('@app.post("/api/specs/{spec_id}/consolidate")')
+        self.assertIn("except (ValueError, FileExistsError)", src[i:i + 700])
+
+
 if __name__ == "__main__":
     unittest.main()

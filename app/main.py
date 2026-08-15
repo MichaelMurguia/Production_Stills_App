@@ -658,6 +658,26 @@ async def activity_middleware(request: Request, call_next):
 
 
 @app.on_event("startup")
+def _collapse_legacy_revisions() -> None:
+    """Revisions are retired (2026-08-16) — collapse any chain still on
+    disk before the first request sees it.
+
+    Synchronous and ahead of the variant warm: a request that arrived
+    mid-migration could read a half-folded unit, and this is file moves on
+    a handful of documents, not a render. The user asked for a migration,
+    not a button: "we dont need UI to do this type of consolodation."
+    """
+    from . import revisions
+    try:
+        done = revisions.migrate_all_projects()
+    except Exception:  # noqa: BLE001 — a boot that dies here serves nothing
+        return
+    for r in done:
+        print(f"[migrate] {r['base']}: collapsed {', '.join(r['collapsed'])} "
+              f"({r['files_moved']} take file(s) folded)", flush=True)
+
+
+@app.on_event("startup")
 def _warm_display_variants() -> None:
     """Pre-build the back-catalogue's display variants in the background at boot,
     so a cold board never triggers a storm of synchronous 4K resizes on first
