@@ -78,8 +78,11 @@ class TheFold(unittest.TestCase):
         scrollWidth never exceeds clientWidth (the first live check found
         the fold never firing). The real test is whether any zone left the
         first line."""
+        # Bounded by the block's own end, not a guessed character count —
+        # a fixed slice stops covering the code the moment a comment grows
+        # (it did, 2026-08-14).
         i = JS.index("// 17a — a group folds before the row breaks")
-        block = JS[i:i + 2900]
+        block = JS[i:JS.index("new ResizeObserver(fit).observe(bar);", i) + 60]
         self.assertIn("new ResizeObserver(fit).observe(bar)", block)
         self.assertIn('bar.classList.add("derive-collapsed")', block)
         # Same-line items of different heights have different offsetTops
@@ -100,6 +103,33 @@ class TheFold(unittest.TestCase):
     def test_an_empty_group_hides_kicker_and_all(self):
         i = JS.index("// 17a — a group folds before the row breaks")
         self.assertIn('zone.classList.add("hidden")', JS[i:i + 1800])
+
+
+class AnApprovedTakeKeepsItsTools(unittest.TestCase):
+    """Regression, user-reported 2026-08-14: "there is no reject button on
+    approved panels". Approve panel correctly steps aside once a take is
+    approved — but the empty-zone check tested only the FIRST .act-items
+    in the zone, and after the step-sequence rebuild that span was
+    act-approve. So approving a take hid the whole USE group: Full-size
+    take, Repair region and Reject went with it. Rejecting an approved
+    take is exactly when Reject matters most."""
+
+    def test_the_zone_counts_every_button_it_holds(self):
+        i = JS.index("for (const zn of [\".act-use\", \".act-derive\"])")
+        seg = JS[i:i + 700]
+        self.assertIn('$$(".act-items button", zone).length', seg)
+        self.assertNotIn('$(".act-items", zone).children.length', seg)
+
+    def test_use_holds_three_item_spans(self):
+        """The reason the first-span test stopped being equivalent."""
+        i = JS.index('<span class="act-zone act-use">')
+        seg = JS[i:i + 400]
+        for f in ("act-approve", "act-use", "act-danger"):
+            self.assertIn(f'data-f="{f}"', seg)
+
+    def test_reject_is_withheld_only_from_an_already_rejected_take(self):
+        i = JS.index('mk("Reject"')
+        self.assertIn('c.status !== "REJECTED"', JS[i - 90:i])
 
 
 class TheSelectionIsRemembered(unittest.TestCase):

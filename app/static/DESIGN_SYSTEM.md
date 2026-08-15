@@ -1310,6 +1310,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-14** — **An approved take keeps its tools** (user-reported
+  bug): approving a take hid the entire USE group — Full-size take,
+  Repair region and Reject — because the empty-zone check tested only the
+  FIRST `.act-items` span in the zone, which after the step-sequence
+  rebuild was `act-approve`. Approve panel correctly steps aside once a
+  take is approved; everything beside it went too. The zone now counts
+  every button it holds. Rejecting an approved take is precisely when
+  Reject matters most.
 - **2026-08-14** — **A tool in a toolbar is a button** (user): the act
   bar's verbs went back to bordered controls at 13.5px/600. §1.4 still
   governs a verb inline beside its fact; a bar of tools is a different

@@ -8654,7 +8654,15 @@ async function renderBoardPanels(specId) {
         const deriveItems = $("[data-f=act-derive]", bar);
         for (const zn of [".act-use", ".act-derive"]) {
           const zone = $(zn, bar);
-          if (!$(".act-items", zone).children.length) zone.classList.add("hidden");
+          // Count the buttons in the WHOLE zone, not the first .act-items
+          // in it. USE holds three spans now (approve · use · danger), and
+          // testing only the first hid the entire group the moment a take
+          // was approved — Approve correctly steps aside on an approved
+          // take, and Full-size take, Repair region and Reject went with
+          // it (user-reported 2026-08-14: "no reject button on approved
+          // panels"). A rejected take needs Reject gone; an approved one
+          // needs it most.
+          if (!$$(".act-items button", zone).length) zone.classList.add("hidden");
         }
         let menu = null;
         const closeMenu = () => {
