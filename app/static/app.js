@@ -5937,9 +5937,78 @@ async function renderSpecs(openId = null) {
     tbody.append(tr);
   }
 
+  renderConsolidateStrips(specs);
+
   const remembered = openId || uiGet("openSpec", null);
   if (remembered && specs.some(x => x.specification_id === remembered))
     openSpecEditor(remembered);
+}
+
+// Revisions are retired (user ruling 2026-08-16). A unit that still exists
+// as _R2 is two breakdowns and two panel screens for one piece of work —
+// the state this strip names, and the act that ends it. It renders nothing
+// once every unit is a single breakdown, which is the intended resting
+// state: this is a migration surface, not a permanent control.
+function renderConsolidateStrips(specs) {
+  const host = $("#spec-consolidate");
+  if (!host) return;
+  host.innerHTML = "";
+  const chains = new Map();
+  for (const s of specs) {
+    const b = baseOf(s.specification_id);
+    if (!chains.has(b)) chains.set(b, []);
+    chains.get(b).push(s);
+  }
+  for (const [base, rows] of chains) {
+    if (rows.length < 2) continue;
+    // The list rows carry no revision field — the id is the authority,
+    // same as revisions.revision_of() server-side.
+    const revNum = id => Number(/_R(\d+)$/.exec(String(id))?.[1] || 1);
+    rows.sort((a, b2) => revNum(a.specification_id) - revNum(b2.specification_id));
+    const strip = document.createElement("div");
+    strip.className = "gate-strip lock-strip";
+    strip.innerHTML = `
+      <span class="gate-label">REVISIONS</span>
+      <span class="gate-text"><span class="mono">${esc(base)}</span> exists as
+        ${rows.length} breakdowns —
+        ${rows.map(r => `<span class="mono">${esc(r.specification_id)}</span>`).join(", ")}.
+        Revisions are retired: one breakdown is edited in place and gated
+        panel by panel by its own approved takes.</span>
+      <button class="block-act" data-f="consolidate">Consolidate into one</button>`;
+    $("[data-f=consolidate]", strip).onclick = async () => {
+      let plan;
+      try {
+        plan = await api(`/api/specs/${base}/consolidation`);
+      } catch (err) { return toast(err.message, true); }
+      if (!plan.can_consolidate) return toast(plan.why_not);
+      const takes = plan.revisions.reduce((n, r) => n + r.takes, 0);
+      const approved = plan.revisions.reduce((n, r) => n + r.approved, 0);
+      const gone = plan.revisions.filter(r => r.spec_id !== base)
+        .map(r => r.spec_id);
+      const body =
+        `${base} becomes the one breakdown, carrying ${plan.content_from}'s `
+        + `content — the version you have been working in.\n\n`
+        + `All ${takes} take${takes === 1 ? "" : "s"} `
+        + `(${approved} approved) fold into one pool under ${base}, keeping `
+        + `their images and the snapshot each was approved against. Every `
+        + `approved take goes on gating its own panel.\n\n`
+        + `${gone.join(", ")} stop existing as separate breakdowns — their `
+        + `documents are archived inside ${base} as history, and a copy of `
+        + `every file is written to data/consolidations/ first.\n\n`
+        + `Nothing is deleted. This cannot be undone from the app.`;
+      if (!(await askConfirm(`Consolidate ${base}`, body,
+                             "Consolidate into one"))) return;
+      try {
+        const r = await api(`/api/specs/${base}/consolidate`, { method: "POST" });
+        toast(`${r.collapsed.join(", ")} collapsed into ${r.base} — `
+              + `${r.files_moved} file(s) folded, `
+              + `${r.takes_retagged.length} take(s) retagged.`);
+        uiSet("openSpec", r.base);
+        renderSpecs(r.base);
+      } catch (err) { toast(err.message, true); }
+    };
+    host.append(strip);
+  }
 }
 
 async function openSpecEditor(specId) {

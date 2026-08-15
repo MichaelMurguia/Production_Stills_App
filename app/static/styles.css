@@ -203,6 +203,11 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .lock-strip .gate-text { flex: none; }
 .lock-strip .block-act { color: var(--ink); }
 .lock-strip .block-act:hover { text-decoration: underline; }
+/* UNCANONIZED — 2026-08-16 — revision consolidation. The lock strip states
+   one short fact in a row; this one states a migration, so its text wraps
+   and the verb keeps its own line when the row runs out. No new tokens. */
+#spec-consolidate .lock-strip { flex-wrap: wrap; }
+#spec-consolidate .lock-strip .gate-text { flex: 1 1 340px; }
 
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {
@@ -2871,8 +2876,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* §1.6 — the step number is the spine. A 46px gutter replaces the label
    gutter entirely: a label says what KIND of row this is, a number says
    where you are in the work. §1.5 — hairline and band share extents. */
-.step { display: flex; gap: 0; padding: 18px 22px; border-top: 1px solid var(--hairline); }
-.step-band { background: var(--band); }
+/* SCOPED TO .steps (user-caught 2026-08-16, "the formatting of the Script
+   Scene Scan section has been messed up"): the production-design wizard has
+   owned `.panel.step` since long before this vocabulary existed — a numbered
+   PANEL, its number drawn in a 46px gutter by ::before. An unscoped `.step`
+   turned every one of those panels into a flex row and scattered its
+   contents across columns. Both sequence surfaces wrap their steps in
+   `<div class="steps">`; that is the vocabulary's edge. */
+.steps .step { display: flex; gap: 0; padding: 18px 22px; border-top: 1px solid var(--hairline); }
+.steps .step-band { background: var(--band); }
 /* The spine carries the largest size in the scale (user 2026-08-16). It
    is a second use of 24px beside the subject, which §1.2 reserved for one
    element per surface — deliberate, and flagged for review: on a surface

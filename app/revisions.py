@@ -17,8 +17,10 @@ can import this module without a cycle.
 """
 from __future__ import annotations
 
+import copy
 import json
 import re
+import shutil
 
 from . import paths
 
@@ -218,3 +220,197 @@ def qualifying_approved_by_panel(base: str) -> dict:
                 rest, key=lambda r: _cand_num(r["candidate_id"]),
                 reverse=True)
     return {"qualifying": qualifying, "offered": offered}
+
+
+# ------------------------------------------------------------- consolidation
+# One breakdown, per-panel gates (user rulings 2026-08-16). Revisions were
+# how a locked sheet got edited; a snapshot on each approved take answers
+# "what was this approved AS?" better, so the chain is now a duplicate of
+# itself. Collapsing is a migration, not an edit: it writes through the
+# save_spec() gates deliberately, because those gates exist to stop a user
+# rewriting history and this is the act that ENDS the history.
+#
+# Nothing is destroyed that a take needs. Candidate ids are allocated from
+# one project-wide counter, so folding every revision's takes into the base
+# directory cannot collide; each record keeps its own approval snapshot and
+# gains consolidated_from, so provenance survives the id change.
+
+def _spec_path(spec_id: str):
+    return paths.SPECS_DIR / f"{paths.safe_id(spec_id)}.json"
+
+
+def _board_dir(spec_id: str):
+    return paths.BOARDS_DIR / paths.safe_id(spec_id)
+
+
+def _takes_in(spec_id: str) -> list[dict]:
+    d = _board_dir(spec_id)
+    if not d.exists():
+        return []
+    out = []
+    for p in sorted(d.glob("CAND-*.json")):
+        try:
+            out.append(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return out
+
+
+def consolidation_plan(base: str) -> dict:
+    """What collapsing this unit would do, stated before it is done.
+
+    The gate is readable as state: the caller renders this, not an error
+    after the act."""
+    from . import store
+    base = base_of(base)
+    revs = revisions_of(base)
+    locks = store._load_locks()
+    rows = []
+    for rid in revs:
+        takes = _takes_in(rid)
+        rows.append({
+            "spec_id": rid,
+            "revision": revision_of(rid),
+            "exists": _spec_path(rid).exists(),
+            "locked": bool(locks.get(rid)),
+            "takes": len(takes),
+            "approved": sum(1 for r in takes if r.get("status") == "APPROVED"),
+        })
+    living = revs[-1] if revs else base
+    return {
+        "base": base,
+        "revisions": rows,
+        "content_from": living,
+        "can_consolidate": len(revs) > 1,
+        "why_not": "" if len(revs) > 1 else
+                   f"{base} is already one breakdown.",
+    }
+
+
+def consolidate(base: str) -> dict:
+    """Collapse a revision chain into one breakdown at the base id.
+
+    The newest revision's document becomes the breakdown; older documents
+    are archived INSIDE it (consolidated_from) rather than left as separate
+    files, because a file on disk is a breakdown the user can open, and
+    "I have two breakdowns" is the problem being solved. Every take moves
+    to the base's directory and is retagged. A copy of every document
+    touched is written to data/consolidations/ first."""
+    from . import store
+    base = base_of(base)
+    revs = revisions_of(base)
+    if len(revs) < 2:
+        raise ValueError(f"{base} is already one breakdown — nothing to "
+                         "consolidate.")
+    living_id = revs[-1]
+    living = store.get_spec(living_id)
+    if not living:
+        raise KeyError(living_id)
+
+    # --- 1. a copy of everything, before anything moves
+    stamp = "".join(c for c in store.utcnow() if c.isdigit())
+    bak = paths.DATA / "consolidations" / f"{paths.safe_id(base)}-{stamp}"
+    bak.mkdir(parents=True, exist_ok=True)
+    for rid in revs:
+        p = _spec_path(rid)
+        if p.exists():
+            shutil.copy2(p, bak / p.name)
+    if paths.SPEC_LOCKS.exists():
+        shutil.copy2(paths.SPEC_LOCKS, bak / "locks.json")
+
+    # --- 2. one take pool. Collisions are checked across the whole chain
+    #        before a single file moves — a half-folded board is worse than
+    #        a refusal.
+    dest = _board_dir(base)
+    dest.mkdir(parents=True, exist_ok=True)
+    pending = []
+    for rid in revs:
+        if rid == base:
+            continue
+        src = _board_dir(rid)
+        if not src.exists():
+            continue
+        for f in sorted(src.iterdir()):
+            if f.is_dir() or f.name == "keeps.json":
+                continue
+            if (dest / f.name).exists():
+                raise FileExistsError(
+                    f"{f.name} exists in both {rid} and {base} — refusing to "
+                    "fold takes that would overwrite each other.")
+            pending.append((rid, f))
+    moved = []
+    for rid, f in pending:
+        shutil.move(str(f), str(dest / f.name))
+        moved.append(f.name)
+
+    retagged = []
+    for meta in sorted(dest.glob("CAND-*.json")):
+        try:
+            rec = json.loads(meta.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        sid = str(rec.get("specification_id") or "")
+        if sid and sid != base and base_of(sid) == base:
+            rec["consolidated_from"] = sid
+            rec["consolidated_at"] = store.utcnow()
+            rec["specification_id"] = base
+            store._atomic_write_json(meta, rec)
+            retagged.append(rec.get("candidate_id"))
+
+    # --- 3. one document. The older ones are archived inside it.
+    locks = store._load_locks()
+    history = list(living.get("consolidated_from") or [])
+    for rid in revs:
+        if rid == living_id:
+            continue
+        doc = store.get_spec(rid)
+        if doc is None:
+            continue
+        history.append({"spec_id": rid, "revision": revision_of(rid),
+                        "locked": bool(locks.get(rid)),
+                        "archived_at": store.utcnow(),
+                        "spec": copy.deepcopy(doc)})
+    living = copy.deepcopy(living)
+    living["specification_id"] = base
+    living["revision"] = 1
+    living["consolidated_from"] = history
+    living["consolidated"] = {"at": store.utcnow(), "content_from": living_id,
+                              "collapsed": list(revs)}
+
+    from common import stable_hash  # scripts/common.py via paths sys.path hook
+    prev = locks.get(living_id) or locks.get(base) or {}
+    was_locked = bool(prev)
+    store._atomic_write_json(_spec_path(base), living)
+
+    # --- 4. the revisions stop existing as breakdowns
+    for rid in revs:
+        if rid == base:
+            continue
+        _spec_path(rid).unlink(missing_ok=True)
+        locks.pop(rid, None)
+        d = _board_dir(rid)
+        if d.exists():
+            keep = d / "keeps.json"
+            if keep.exists() and not (dest / "keeps.json").exists():
+                shutil.move(str(keep), str(dest / "keeps.json"))
+            keep.unlink(missing_ok=True)
+            try:
+                d.rmdir()
+            except OSError:
+                pass  # something unexpected lives there; leave it visible
+    if was_locked:
+        locks[base] = {**prev, "hash": stable_hash(living),
+                       "consolidated_at": living["consolidated"]["at"]}
+    store._atomic_write_json(paths.SPEC_LOCKS, locks)
+
+    gone = [r for r in revs if r != base]
+    store.append_approval_log(
+        f"BOARD {base}: CONSOLIDATED — {', '.join(gone)} collapsed into "
+        f"{base}. Content taken from {living_id}; {len(moved)} take files "
+        f"folded into one pool ({len(retagged)} retagged); older documents "
+        f"archived inside the breakdown. Backup: {bak.name}. Revisions are "
+        "retired — this breakdown is edited in place, gated per panel by "
+        "its approved takes.")
+    return {"base": base, "collapsed": gone, "content_from": living_id,
+            "files_moved": len(moved), "takes_retagged": retagged,
+            "locked": was_locked, "backup": str(bak)}

@@ -458,5 +458,32 @@ class TheAspectRegression(unittest.TestCase):
         self.assertIn("color: var(--bad)", block(".gen-warn"))
 
 
+class TheVocabularyStaysInsideItsSurface(unittest.TestCase):
+    """User-caught 2026-08-16: "the formatting of the Script Scene Scan
+    section of production-design has been messed up". The wizard has owned
+    `.panel.step` since long before this vocabulary — a numbered PANEL with
+    its number in a ::before gutter. An unscoped `.step { display: flex }`
+    turned every wizard panel into a flex row and scattered its contents
+    into columns. A shared class name is not a shared component."""
+
+    def test_the_step_row_is_scoped_to_the_sequence_container(self):
+        self.assertIn(".steps .step { display: flex", CSS)
+        self.assertNotIn(chr(10) + ".step { display: flex", CSS,
+                         "unscoped, it captures the wizard's panels")
+
+    def test_the_band_is_scoped_with_it(self):
+        self.assertIn(".steps .step-band {", CSS)
+        self.assertNotIn(chr(10) + ".step-band {", CSS)
+
+    def test_the_wizard_keeps_its_own_numbered_panel(self):
+        self.assertIn(".panel.step { position: relative; padding-left: 46px; }",
+                      CSS)
+        self.assertIn(".panel.step::before", CSS)
+
+    def test_both_sequence_surfaces_supply_that_container(self):
+        """The scope only holds if every seqStep() lands inside it."""
+        self.assertGreaterEqual(JS.count('<div class="steps">'), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

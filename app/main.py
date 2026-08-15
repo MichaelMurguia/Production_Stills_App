@@ -1067,6 +1067,28 @@ def api_list_revisions(spec_id: str) -> dict:
     return {"base": base, "structure_spec_id": structure, "revisions": out}
 
 
+@app.get("/api/specs/{spec_id}/consolidation")
+def api_consolidation_plan(spec_id: str) -> dict:
+    """What collapsing this unit into one breakdown would do — read before
+    the act, so the consequence is state rather than an after-the-fact
+    report."""
+    from . import revisions
+    return revisions.consolidation_plan(spec_id)
+
+
+@app.post("/api/specs/{spec_id}/consolidate")
+def api_consolidate(spec_id: str) -> dict:
+    """Collapse a revision chain into one breakdown (user ruling
+    2026-08-16). Revisions are retired; this is the migration off them."""
+    from . import revisions
+    try:
+        return revisions.consolidate(spec_id)
+    except KeyError as e:
+        raise _err(e)
+    except (ValueError, FileExistsError) as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/unlock")
 def api_unlock_spec(spec_id: str) -> dict:
     try:
