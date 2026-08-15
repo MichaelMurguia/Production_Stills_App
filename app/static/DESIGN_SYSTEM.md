@@ -1312,6 +1312,11 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **A perforation is a hole** (user, twice: "I don't
+  see the filmstrip look"). The CSS was deployed and correct, but the
+  perfs were drawn DARKER than the film base — which reads as an embossed
+  rectangle, not a hole. On a lit strip a perforation transmits light and
+  reads LIGHTER than the base. Inverted, and the strip is unmistakable.
 - **2026-08-15** — **A parked tab now learns about a release** (user:
   "it says live but there are no changes live"). The server was correct —
   `no-cache`, a fresh ETag, the new bytes on disk — but this is a SPA that
