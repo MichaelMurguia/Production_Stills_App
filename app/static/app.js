@@ -7658,25 +7658,36 @@ async function renderBoardPanels(specId) {
               // swatches by default. Empty selection = the four-anchor auto
               // shelf (the 2 newest, server-side, as ruled 2026-08-03);
               // picking ANY swatch takes over the role entirely.
-              const meta = r => {
-                const parts = String(r.notes || "").split("·").map(s => s.trim());
-                const hex = (parts[1] || "").split("/")[0].trim();
-                return { name: parts[0] || r.id,
-                         hex: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#666666" };
-              };
+              //
+              // Read through swatchNotes — the canonical parser. This picker
+              // shipped with its own inline reader that assumed the hex sat
+              // at index 1; the real shape is `language · name · hex[/pair]
+              // · cite`, so every chip drew #666666 and every name read as
+              // its LANGUAGE (user-caught 2026-08-14).
+              const rows = swatchRefs
+                .map(r => ({ r, sw: swatchNotes(r.notes) }))
+                .filter(x => x.sw.hex);
+              if (!rows.length) return "";
+              const byLang = {};
+              for (const x of rows) (byLang[x.sw.language || "UNFILED"] ??= []).push(x);
               return `<div class="fgroup pal-group"
                 title="Which palette swatches ride this render as color references. Unselected = the style shelf's automatic pick (the 2 newest approved swatches); selecting any swatch replaces that with exactly your set — never the whole palette.">
                 <span class="f-label">Palette</span>
                 <button type="button" class="ghost" data-f="swatch-open"></button>
-                <div class="hidden dropdown-panel" data-f="swatch-menu">
-                  ${swatchRefs.map(r => { const m = meta(r); return `
-                    <label class="check" style="display:flex;align-items:center;gap:8px;margin:3px 0">
-                      <input type="checkbox" data-sid="${esc(r.id)}" ${lastRefIds.has(r.id) ? "checked" : ""}>
-                      <span style="flex:none;width:12px;height:12px;background:${esc(m.hex)};border:1px solid var(--line)"></span>
-                      <span class="mini mono" style="color:var(--ink)">${esc(m.name)}</span>
-                      <span class="mini mono">${esc(m.hex.toUpperCase())}</span>
-                    </label>`; }).join("")}
-                  <div class="mini mono" style="margin-top:6px;color:var(--ink-faint)">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
+                <div class="hidden dropdown-panel pal-menu" data-f="swatch-menu">
+                  ${Object.entries(byLang).map(([lang, xs]) => `
+                    <div class="pal-lang-k mono">${esc(lang)} · ${xs.length}</div>
+                    <div class="pal-chips">
+                      ${xs.map(({ r, sw }) => `
+                        <label class="pal-chip" title="${esc(sw.name || r.id)} · ${
+                          esc(sw.hex.toUpperCase())}${sw.pair_hex ? ` / ${esc(sw.pair_hex.toUpperCase())}` : ""}${
+                          sw.hero ? " · HERO" : ""}">
+                          <input type="checkbox" data-sid="${esc(r.id)}" ${lastRefIds.has(r.id) ? "checked" : ""}>
+                          <span class="pal-swatch" style="background:${esc(sw.hex)}">${
+                            sw.pair_hex ? `<i style="background:${esc(sw.pair_hex)}"></i>` : ""}</span>
+                        </label>`).join("")}
+                    </div>`).join("")}
+                  <div class="mini mono pal-foot">NONE SELECTED = AUTO · THE 2 NEWEST RIDE</div>
                 </div>
               </div>`;
             })() : ""}` })}
@@ -7838,14 +7849,19 @@ async function renderBoardPanels(specId) {
     const swatchOpen = $("[data-f=swatch-open]", card);
     if (swatchOpen) {
       const menu = $("[data-f=swatch-menu]", card);
+      // The summary states the live outcome — the rule AND the result. It
+      // shows the actual colours chosen, capped so a 19-swatch pick cannot
+      // outgrow its own button; the denominator counts swatches that
+      // PARSED, never the raw role count (a count must be provable).
+      const parsed = $$("input[data-sid]", menu).length;
       const summary = () => {
         const picked = $$("input[data-sid]:checked", menu);
+        const dots = picked.slice(0, 10).map(x =>
+          `<span class="pal-dot" style="background:${
+            x.parentElement.querySelector(".pal-swatch")?.style.background || ""}"></span>`).join("");
         swatchOpen.innerHTML = picked.length
-          ? `${picked.map(x =>
-              `<span style="display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:middle;background:${
-                x.parentElement.children[1].style.background}"></span>`).join("")}` +
-            `${picked.length} OF ${swatchRefs.length}`
-          : `AUTO · ${Math.min(2, swatchRefs.length)} NEWEST OF ${swatchRefs.length}`;
+          ? `${dots}<span class="mono">${picked.length} OF ${parsed}</span>`
+          : `<span class="mono">AUTO · ${Math.min(2, parsed)} NEWEST OF ${parsed}</span>`;
       };
       // R15 (HARNESS_AUDIT) — THE dropdown contract: --panel ground,
       // --line border, no shadow, no rounding, no animation, ≤60vh,

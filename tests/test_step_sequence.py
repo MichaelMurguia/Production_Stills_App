@@ -211,6 +211,56 @@ class ReferencesStateTheirReason(unittest.TestCase):
         self.assertIn("OF 14 ATTACHED", b)
 
 
+class ThePalettePicker(unittest.TestCase):
+    """Regression, user-caught 2026-08-14: every chip drew #666666 and
+    every name read RESISTANCE / GRM. The picker had its own inline notes
+    reader that took the hex from index 1, but the canonical shape is
+    `language · name · hex[/pair] · cite` — so it read the NAME as the hex
+    (falling back to grey) and the LANGUAGE as the name."""
+
+    def test_it_reads_through_the_canonical_parser(self):
+        i = JS.index("const rows = swatchRefs")
+        b = JS[i:i + 400]
+        self.assertIn("swatchNotes(r.notes)", b)
+        self.assertIn("filter(x => x.sw.hex)", b,
+                      "a swatch with no parseable hex is not drawn as grey")
+
+    def test_no_hand_rolled_notes_parser_survives(self):
+        self.assertNotIn('"#666666"', JS,
+                         "the grey fallback WAS the bug being reported "
+                         "(the hex may still appear in the comment that "
+                         "records it, never as a value)")
+        i = JS.index('data-f="swatch-menu"')
+        b = JS[max(0, i - 2600):i]
+        self.assertNotIn('split("·")', b,
+                         "notes are split on ' · ', and only swatchNotes "
+                         "knows where the hex actually sits")
+
+    def test_the_swatch_is_the_content_not_a_row_of_text(self):
+        self.assertIn("pal-chips", JS)
+        b = block(".pal-swatch")
+        self.assertIn("width: 26px", b)
+        self.assertIn("height: 26px", b)
+        self.assertNotIn("border-radius", b, "square, like everything else")
+
+    def test_the_checkbox_survives_as_the_contract(self):
+        """checkedRefs() reads input[data-sid]:checked — hiding the control
+        visually must not remove it."""
+        self.assertIn('<input type="checkbox" data-sid="${esc(r.id)}"', JS)
+        self.assertIn("position: absolute; opacity: 0", block(".pal-chip input"))
+
+    def test_selection_reads_as_focus_and_two_tone_is_two_blocks(self):
+        self.assertIn("outline: 2px solid var(--accent)",
+                      block(".pal-chip input:checked + .pal-swatch"))
+        self.assertNotIn("gradient", block(".pal-swatch i"),
+                         "a pair is two declared colours, never a blend")
+
+    def test_the_denominator_counts_what_parsed(self):
+        i = JS.index("const parsed =")
+        self.assertIn('$$("input[data-sid]", menu).length', JS[i:i + 120],
+                      "never state a count you cannot prove on screen")
+
+
 class TheAspectRegression(unittest.TestCase):
     """The live defect the sequence surfaced (§2.4). P01 is a hero panel
     whose last take rendered 3136 × 1344 (21:9) while the Aspect select
