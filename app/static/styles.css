@@ -2859,10 +2859,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .shot-tag-size { right: 10px; bottom: 10px; color: var(--ink-dim); }
 
 .wb-card .act-bar { margin: 0; border: none; border-bottom: 1px solid var(--hairline); }
-.act-run {
-  font-size: 11.5px; letter-spacing: .08em; color: var(--ink-faint);
-  padding: 8px 22px 8px 0; white-space: nowrap;
-}
+.shot-tag-run { left: 10px; bottom: 10px; color: var(--ink-faint); }
 
 /* the filmstrip sits directly under the hero, at the same ratio */
 .wb-card .takes { margin: 0; border-top: none; padding: 14px 22px 16px; }
@@ -3106,3 +3103,33 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .q-list li.answered { color: var(--ink-faint); }
 .q-list .q-ans { display: block; font-family: var(--mono); font-size: 10.5px;
   letter-spacing: .06em; color: var(--ok); }
+
+/* UNCANONIZED — 2026-08-14 — a TOOL is a button (user ruling).
+   §1.4 makes a verb ink + underlined, which is right for a verb sitting
+   inline beside the fact it acts on — "Change camera" next to the camera
+   string. It is wrong for a BAR OF TOOLS: at 11.5px/400 the act bar read
+   as a row of footnotes and the user reported its tools as GONE. The
+   distinction this draws: a verb in a sentence is text, a tool in a
+   toolbar is a control, and a control carries an edge. */
+.seq .act-bar .text-act {
+  font-size: 13.5px; font-weight: 600; color: var(--ink-dim);
+  text-decoration: none;
+  border: 1px solid var(--line); padding: 7px 13px;
+}
+.seq .act-bar .text-act:hover:not(:disabled) {
+  border-color: var(--ink-faint); color: var(--ink); text-decoration: none;
+}
+.seq .act-bar .text-act:disabled {
+  color: #4a4d52; border-color: var(--line-soft); text-decoration: none;
+}
+/* Reject keeps its own hover: the one act on the bar that ends a take. */
+.seq .act-bar .act-reject:hover:not(:disabled) {
+  border-color: var(--bad); color: var(--bad);
+}
+/* the ⋯ fold is a tool too, and sits at the same height as its peers */
+.seq .act-bar .act-more { padding: 7px 11px; }
+.seq .act-bar { gap: 0; }
+.seq .act-zone { gap: 9px; }
+/* The act bar is tools only. The run facts moved onto the image, where
+   canon already puts facts about a picture — in the bar they cost ~400px
+   and folded three real tools behind ⋯ to protect a caption. */

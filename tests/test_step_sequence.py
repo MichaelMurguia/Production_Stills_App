@@ -62,8 +62,25 @@ class TheImageIsTheHero(unittest.TestCase):
         self.assertIn("CARRIED NOTES", rail)
 
     def test_facts_about_an_image_ride_on_it(self):
+        """Canon: facts about an image ride ON it. The run facts started in
+        the act bar, where they cost ~400px and folded three real tools
+        behind the ⋯ — the user reported the tools as gone (2026-08-14)."""
         self.assertIn("NATIVE, NEVER UPSCALED", JS)
         self.assertIn("shot-tag-size", JS)
+        self.assertIn("shot-tag-run", JS)
+        i = JS.index('<div class="act-bar">')
+        self.assertNotIn("RUN ${", JS[i:i + 1400],
+                         "the act bar carries tools, not captions")
+
+    def test_a_tool_in_a_toolbar_is_a_button(self):
+        """User ruling 2026-08-14. §1.4's ink+underline is right for a verb
+        inline beside the fact it acts on; a BAR OF TOOLS at 11.5px/400
+        read as footnotes and the tools were reported missing."""
+        b = block(".seq .act-bar .text-act")
+        self.assertIn("border: 1px solid var(--line)", b)
+        self.assertIn("text-decoration: none", b)
+        self.assertIn("font-size: 13.5px", b)
+        self.assertIn("font-weight: 600", b)
 
 
 class TheVocabulary(unittest.TestCase):

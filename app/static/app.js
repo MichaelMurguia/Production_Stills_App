@@ -7529,6 +7529,11 @@ async function renderBoardPanels(specId) {
           stagedRef ? ` · REF ${esc(stagedRef)}` : ""}</span>
         <span class="shot-tag shot-tag-size">${staged.width} × ${staged.height} · ${
           esc(staged.aspect_ratio || "")} · NATIVE, NEVER UPSCALED</span>
+        <span class="shot-tag shot-tag-run">${[
+          staged.created_at ? `RUN ${esc(String(staged.created_at).slice(0, 16).replace("T", " "))}` : "",
+          esc(staged.model || ""),
+          staged.spec_hash ? `HASH ${esc(String(staged.spec_hash).slice(0, 8))}` : "",
+        ].filter(Boolean).join("  ·  ")}</span>
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
            amber verdict, six text acts in two LABELLED groups, Reject
@@ -7556,11 +7561,6 @@ async function renderBoardPanels(specId) {
             title="Derive — Reference, Crop to reference, Light study">&ctdot;</button>
         </span>
         <span class="act-spacer" aria-hidden="true"></span>
-        <span class="act-run mono">${[
-          staged.created_at ? `RUN ${esc(String(staged.created_at).slice(0, 16).replace("T", " "))}` : "",
-          esc(staged.model || ""),
-          staged.spec_hash ? `HASH ${esc(String(staged.spec_hash).slice(0, 8))}` : "",
-        ].filter(Boolean).join("  ·  ")}</span>
       </div>
       <div data-f="shot-busy"></div>
       ${(staged.warnings || []).map(w => `<div class="meta" style="color:var(--hold)">⚠ ${esc(w)}</div>`).join("")}
