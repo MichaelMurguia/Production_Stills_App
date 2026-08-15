@@ -56,22 +56,32 @@ class TheImageIsTheHero(unittest.TestCase):
         self.assertIn("object-fit: contain", block(".take-frame img"))
         # Perforations are a repeated inline-SVG TILE, not an asset and not
         # a decorative blend. They are the one rounded corner in the app:
-        # a perf depicts a physical hole, it is not a control.
-        strip = block(".filmstrip")
-        self.assertIn("data:image/svg+xml", strip)
-        self.assertIn("rx=", strip, "a real perforation is rounded")
-        row = block(".filmstrip .takes-row")
-        self.assertIn("repeat-x", row)
-        self.assertIn("left bottom", row, "perfs run along BOTH edges")
+        # a perf depicts a physical hole, it is not a control. And a hole
+        # passes light, so it is LIGHTER than the base — drawn dark it
+        # read as embossing and nobody saw film (user-caught 2026-08-15).
+        roll = block(".filmroll")
+        self.assertIn("data:image/svg+xml", roll)
+        self.assertIn("rx=", roll, "a real perforation is rounded")
+        self.assertIn("repeat-x", roll)
+        self.assertIn("left bottom", roll, "perfs run along BOTH edges")
+
+    def test_one_roll_serves_every_strip_of_frames(self):
+        """The treatment belongs to "a row of frames", not to one page. It
+        went on the takes strip alone and the user was looking at the
+        BOARD strip on the breakdown the whole time (2026-08-15)."""
+        self.assertIn('class="takes-row filmroll"', JS)
+        self.assertIn('class="made-grid filmroll"', JS)
 
     def test_the_edge_marking_states_our_own_data(self):
         """A real film-stock name would be set dressing claiming something
         untrue about the render; the margin carries the panel and take
         count instead."""
         # the marking prints on the ROW, so it travels with the film
-        i = JS.index('class="takes-row"')
+        i = JS.index('class="takes-row filmroll"')
         self.assertIn("data-edge=", JS[i:i + 300])
         self.assertIn("TAKE", JS[i:i + 300])
+        j = JS.index('class="made-grid filmroll"')
+        self.assertIn("PANEL", JS[j:j + 300], "the board roll prints its own")
         for brand in ("KODAK", "FUJI", "VISION3"):
             self.assertNotIn(brand, JS)
 

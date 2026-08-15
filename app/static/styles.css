@@ -3207,47 +3207,42 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    canon already puts facts about a picture — in the bar they cost ~400px
    and folded three real tools behind ⋯ to protect a caption. */
 
-/* UNCANONIZED — 2026-08-15 — the takes strip is FILM (user-directed,
-   corrected same day: the first pass drew two thin dotted rules and did
-   not read as film at all).
+/* UNCANONIZED — 2026-08-15 — a strip of frames is FILM (user-directed).
+   ONE treatment, two surfaces: the takes strip on the workbench and the
+   board strip on the breakdown. It went on the takes strip first and the
+   user was looking at the board strip the whole time — a treatment that
+   belongs to "a row of frames" has to be written as that, not as one
+   page's styling.
 
-   Real 35mm: a dark base, two rows of ROUNDED perforations along both
-   edges, edge markings printed in the margin between the perfs and the
-   image, and frames separated by thin frame lines. The perforations are
-   one inline SVG tile repeated on the x-axis — a pattern, not an asset,
-   and the only place in the app that rounds a corner: a perf is a
-   depiction of a physical hole, not a control. */
-.filmstrip {
+   Real 35mm: a dark base, ROUNDED perforations along both edges, edge
+   markings printed in the margin between the perfs and the image. The
+   perfs are one inline SVG tile repeated on x — a pattern, not an asset,
+   and the only rounded corner in the app: a perf depicts a physical
+   hole, not a control. A perforation is LIGHTER than the base, because a
+   hole passes light; drawn dark it reads as embossing (user-caught). */
+.filmroll {
   position: relative;
-  /* A perforation is a HOLE: on a lit strip it reads LIGHTER than the
-     base, not darker. Drawing them dark made an embossed rectangle that
-     nobody read as film (user 2026-08-15, twice). */
   --perf: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='13'%3E%3Crect x='5' y='2.5' width='12' height='8' rx='2' fill='%236e767e'/%3E%3C/svg%3E");
-}
-.filmstrip .takes-row {
-  position: relative;
   background:
     var(--perf) left 7px / 22px 13px repeat-x,
     var(--perf) left bottom 7px / 22px 13px repeat-x,
     #0d0e10;
   border: 1px solid #2b3037;
   padding: 40px 18px 42px;
-  gap: 0;
   align-items: flex-start;
 }
-/* the edge markings print in the margin between the perfs and the frame,
-   and travel with the film as it scrolls */
-.filmstrip .takes-row[data-edge]::before,
-.filmstrip .takes-row[data-edge]::after {
+.filmroll[data-edge]::before,
+.filmroll[data-edge]::after {
   content: attr(data-edge);
   position: absolute; left: 18px;
   font-family: var(--mono); font-size: 8.5px; letter-spacing: .3em;
   color: #7e868e; pointer-events: none; white-space: nowrap;
 }
-.filmstrip .takes-row[data-edge]::before { top: 22px; }
-.filmstrip .takes-row[data-edge]::after { bottom: 22px; }
+.filmroll[data-edge]::before { top: 22px; }
+.filmroll[data-edge]::after { bottom: 22px; }
 
-/* a frame, and the thin frame line that separates it from the next */
+/* the takes strip */
+.filmstrip .takes-row { gap: 0; }
 .wb-card .take {
   width: 176px; background: none; padding: 0 9px;
   border: none; border-right: 1px solid #14171b;
@@ -3269,3 +3264,10 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .filmstrip .take.shown .take-cap { color: var(--ok); }
 .filmstrip .take.rejected .take-cap { color: var(--bad); }
+
+/* the board strip — the same roll, one frame per panel */
+.made-grid.filmroll { gap: 0; }
+.made-grid.filmroll .made-item {
+  flex: 0 0 300px; padding: 0 9px; border-right: 1px solid #14171b;
+}
+.made-grid.filmroll .made-item:last-child { border-right: none; }

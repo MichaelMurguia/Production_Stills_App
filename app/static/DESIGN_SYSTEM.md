@@ -1312,6 +1312,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **One roll, every strip of frames** (user, after four
+  rounds of "I don't see it"): the film treatment went on the TAKES strip
+  on stage 04 while the user was looking at the BOARD strip on the
+  breakdown page the whole time. Both are a row of frames, so the
+  treatment is now a `.filmroll` class both wear — perforated base, edge
+  marking, frame lines — rather than one page's styling. A visual
+  vocabulary that names a THING ("a strip of frames") must be written as
+  that thing, or it lands on one surface and silently misses its twin.
 - **2026-08-15** — **A perforation is a hole** (user, twice: "I don't
   see the filmstrip look"). The CSS was deployed and correct, but the
   perfs were drawn DARKER than the film base — which reads as an embossed

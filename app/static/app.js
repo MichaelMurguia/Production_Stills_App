@@ -6097,7 +6097,8 @@ async function openSpecEditor(specId) {
           panels.length - approvedN === 1 ? "the last one has" : "each of the rest has"} an approved take.`;
     return `
       <div class="made">
-        <div class="made-grid">${frames}</div>
+        <div class="made-grid filmroll"
+             data-edge="${esc(`${String(specId).toUpperCase()}   ${panels.length} PANEL${panels.length === 1 ? "" : "S"}   ${approvedN} APPROVED`)}">${frames}</div>
         <div class="made-stake">
           <div class="rail-label">WHAT THIS BOARD HAS MADE</div>
           <p class="step-prose">${esc(stake)}</p>
@@ -7743,7 +7744,7 @@ async function renderBoardPanels(specId) {
           ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
-        <div class="takes-row" data-edge="${esc(`${p.id}   ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}   ${String(specId).toUpperCase()}`)}">
+        <div class="takes-row filmroll" data-edge="${esc(`${p.id}   ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}   ${String(specId).toUpperCase()}`)}">
           ${pending.map(pendingTileHtml).join("")}
           ${panelCands.map(c => {
             const pr = promotedRefOf(c);
