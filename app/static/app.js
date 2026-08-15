@@ -5892,6 +5892,9 @@ async function openSpecEditor(specId) {
          specCands] = await Promise.all([
     api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references"),
     api(`/api/specs/${specId}/candidates`).catch(() => [])]);
+  // The slot map is the authority on WHY a slot is not ready. Without it
+  // the frame can only say a take is missing — which is what it shows.
+  const slotMap = await api(`/api/specs/${specId}/slot-map`).catch(() => null);
 
   // Carried panels of a scoped draft revision are read-only rows (one
   // board per unit, 2026-08-13): their approvals keep feeding the board,
@@ -5995,6 +5998,25 @@ async function openSpecEditor(specId) {
   const boardMadeHtml = (() => {
     const panels = spec.panels || [];
     if (!panels.length) return "";
+    // Say the true thing or say nothing. Every empty frame used to carry
+    // a hardcoded "SIZE —", which named a blocker the panel did not have:
+    // a panel that has simply never been rendered has no size problem
+    // (user-caught 2026-08-15). The slot map knows the real verdict.
+    const slotBy = {};
+    for (const s of (slotMap?.slots || [])) slotBy[s.panel_id] = s;
+    const VERDICT_LINE = {
+      TOO_SMALL: s => `SIZE — ${s.candidate_width}×${s.candidate_height} INTO A ${
+        s.slot_width}×${s.slot_height} SLOT · NEVER UPSCALED`,
+      UNAPPROVED: () => "NO APPROVED TAKE — APPROVE ONE ON THE WORKBENCH",
+      NO_CANDIDATE: () => "",
+      STALE_APPROVAL: s => `REVISED SINCE — APPROVED AGAINST R${s.offered_from_revision}`,
+    };
+    const verdictOf = pid => {
+      const s = slotBy[pid];
+      if (!s || s.status === "OK") return "";
+      const line = (VERDICT_LINE[s.status] || (() => ""))(s);
+      return line ? `<span class="made-blocker mono">${esc(line)}</span>` : "";
+    };
     const cands = Array.isArray(specCands) ? specCands : [];
     const forPanel = pid => cands.filter(c => c.panel_id === pid);
     const approvedN = panels.filter(p =>
@@ -6002,15 +6024,13 @@ async function openSpecEditor(specId) {
     const frames = panels.map(p => {
       const list = forPanel(p.id);
       const shown = list.find(c => c.status === "APPROVED") || list[0] || null;
-      const ratio = shown?.aspect_ratio || "21:9";
-      const [aw, ah] = String(ratio).split(":").map(Number);
-      const css = aw > 0 && ah > 0 ? `${aw}/${ah}` : "21/9";
+
       if (!shown) {
         return `<div class="made-item">
-        <div class="made-frame made-empty" style="aspect-ratio:${css}">
+        <div class="made-frame made-empty">
           <span class="made-id mono">${esc(p.id)}</span>
           <span class="made-none mono">NO TAKE YET</span>
-          <span class="made-blocker mono">SIZE — NO APPROVED TAKE FOR THIS SLOT</span>
+          <span class="made-foot">${verdictOf(p.id)}</span>
         </div>
         <div class="made-cap"><span>${esc(p.title || p.purpose || "")}</span>
           <span class="mono">${p.allocation_percent ? `${p.allocation_percent}%` : ""}</span></div>
@@ -6018,12 +6038,15 @@ async function openSpecEditor(specId) {
       }
       const ok = shown.status === "APPROVED";
       return `<div class="made-item">
-      <div class="made-frame" style="aspect-ratio:${css}">
+      <div class="made-frame">
         <img src="/api/specs/${specId}/candidates/${esc(shown.candidate_id)}/image?size=md"
              loading="lazy" alt="${esc(p.id)}">
         <span class="made-id mono">${esc(p.id)} · ${esc(shown.candidate_id)}</span>
-        <span class="made-state mono ${ok ? "ok" : "hold"}">${
-          ok ? "APPROVED" : esc(shown.status)} · ${shown.width} × ${shown.height}</span>
+        <span class="made-foot">
+          ${ok ? verdictOf(p.id) : ""}
+          <span class="made-state mono ${ok ? "ok" : "hold"}">${
+            ok ? "APPROVED" : esc(shown.status)} · ${shown.width} × ${shown.height}</span>
+        </span>
       </div>
       <div class="made-cap"><span>${esc(p.title || p.purpose || "")}</span>
         <span class="mono">${p.allocation_percent ? `${p.allocation_percent}%` : ""}</span></div>

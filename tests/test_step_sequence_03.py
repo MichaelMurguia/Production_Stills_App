@@ -102,13 +102,33 @@ class TheBoardOpensOnWhatItMade(unittest.TestCase):
 
     def test_the_empty_frame_is_a_report_not_a_placeholder(self):
         """The sanctioned exception to 'never reserve the shape of the
-        missing thing': the shape is the panel's own ratio and the frame
-        states the blocker that keeps it empty."""
+        missing thing': the frame states the blocker that keeps it
+        empty."""
         self.assertIn("NO TAKE YET", JS)
         self.assertIn("made-blocker", JS)
         self.assertIn("color: var(--bad)", block(".made-blocker"))
+
+    def test_every_frame_is_the_same_window(self):
+        """User 2026-08-15: frames that took each take's own ratio made a
+        ragged strip that would not line up."""
+        self.assertIn("aspect-ratio: 3 / 2", block(".made-frame"))
         i = JS.index('class="made-frame made-empty"')
-        self.assertIn("aspect-ratio:${css}", JS[i:i + 120])
+        self.assertNotIn("aspect-ratio", JS[i:i + 120],
+                         "the window is the constant, not the take")
+
+    def test_the_frame_never_invents_a_blocker(self):
+        """User-caught 2026-08-15: every empty frame carried a hardcoded
+        "SIZE —", naming a blocker the panel did not have. A panel that
+        has simply never been rendered has no size problem. The slot map
+        is the authority, and a status it has no line for says nothing."""
+        self.assertNotIn('SIZE — NO APPROVED TAKE FOR THIS SLOT', JS)
+        i = JS.index("const VERDICT_LINE")
+        seg = JS[i:i + 700]
+        for status in ("TOO_SMALL", "UNAPPROVED", "STALE_APPROVAL"):
+            self.assertIn(status, seg)
+        j = JS.index("const verdictOf")
+        self.assertIn('s.status === "OK"', JS[j:j + 260])
+        self.assertIn("slot-map", JS, "the verdict comes from the authority")
 
     def test_the_frame_never_lies_about_the_take(self):
         self.assertIn("object-fit: contain", block(".made-frame img"))
@@ -174,8 +194,10 @@ class ConfirmationsAreAdvisoryHereToo(unittest.TestCase):
         self.assertIn("advisory", JS[i - 400:i + 200].lower())
 
     def test_both_states_are_reversible(self):
+        # Bounded by the function's end, not a character count — this slice
+        # has now walked off its assertion twice as the editor grew.
         i = JS.index("async function openSpecEditor")
-        seg = JS[i:i + 24000]
+        seg = JS[i:JS.index("function cameraSelect(", i)]
         self.assertIn("[data-confirm]", seg)
         self.assertIn("[data-unconfirm]", seg)
 

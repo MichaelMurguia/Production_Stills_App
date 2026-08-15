@@ -1312,6 +1312,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **The board strip stops inventing a blocker**
+  (user-caught). Every empty frame carried a hardcoded `SIZE —`, naming a
+  problem the panel did not have: a panel that has simply never been
+  rendered has no size problem. The frame now reads the SLOT MAP and
+  states the real verdict — the true `SIZE — 3136×1344 INTO A 3479×795
+  SLOT` where one exists, `NO APPROVED TAKE` where that is the issue, and
+  nothing at all for a status it has no line for. Say the true thing or
+  say nothing. The frames are also one window shape now (35mm, the take
+  fitted inside), because per-take ratios made a strip that would not
+  line up.
 - **2026-08-15** — **The takes strip is film** (user): 35mm windows with
   each take fitted inside longest-edge first, perforated edges, and an
   edge marking carrying the panel and take count where a stock name would

@@ -3125,9 +3125,12 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .made-grid.dragging { cursor: grabbing; user-select: none; }
 .made-grid.dragging img { pointer-events: none; }
 .made-item { flex: 0 0 300px; }
+/* One window shape for every panel (user 2026-08-15): frames that took
+   each take's own ratio made a ragged strip that would not line up. The
+   frame is a 35mm window; the take is fitted into it. */
 .made-frame {
   position: relative; background: var(--field); border: 1px solid var(--line);
-  overflow: hidden;
+  overflow: hidden; aspect-ratio: 3 / 2;
 }
 .made-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
 /* The empty frame is a REPORT, not a placeholder: the shape is the panel's
@@ -3142,16 +3145,22 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   background: rgba(11, 12, 14, .82); color: var(--ink-dim); padding: 3px 7px;
 }
 .made-empty .made-id { position: absolute; background: none; }
+/* One footer, stacked — a verdict and a state both wanted the bottom-left
+   corner and drew on top of each other (2026-08-15). */
+.made-foot {
+  position: absolute; left: 8px; right: 8px; bottom: 8px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+}
 .made-state {
-  position: absolute; left: 8px; bottom: 8px; font-size: 10px; letter-spacing: .1em;
+  font-size: 10px; letter-spacing: .1em;
   background: rgba(11, 12, 14, .82); padding: 3px 7px; color: var(--ink-dim);
 }
 .made-state.ok { color: var(--ok); }
 .made-state.hold { color: var(--hold); }
 .made-none { font-size: 11.5px; letter-spacing: .12em; color: var(--ink-faint); }
 .made-blocker {
-  position: absolute; left: 8px; right: 8px; bottom: 8px; text-align: center;
   font-size: 10px; letter-spacing: .08em; color: var(--bad);
+  background: rgba(11, 12, 14, .82); padding: 3px 7px;
 }
 
 .made-cap {
