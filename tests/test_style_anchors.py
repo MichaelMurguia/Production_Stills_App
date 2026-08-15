@@ -15,7 +15,13 @@ from app import generate, store
 
 
 def ref(rid, role, added, status="APPROVED"):
-    return {"id": rid, "role": role, "status": status, "added_at": added}
+    r = {"id": rid, "role": role, "status": status, "added_at": added}
+    # A COLOR_PALETTE reference is a swatch, and a swatch carries its hex —
+    # the composite plate is built by reading it back.
+    if role == "COLOR_PALETTE":
+        n = abs(hash(rid)) % 0xFFFFFF
+        r["notes"] = f"RESISTANCE · {rid} · #{n:06x} · bible"
+    return r
 
 
 class StyleAnchorTests(unittest.TestCase):
@@ -93,7 +99,7 @@ class UserPaletteOwnsTheRole(unittest.TestCase):
     auto shelf's palette top-up entirely, and no pick means the shelf's
     capped newest-2 ride as ruled 2026-08-03."""
 
-    def _resolve(self, ref_ids):
+    def _resolve(self, ref_ids, full=False):
         spec = {"specification_id": "S", "panels": [{"id": "P01"}]}
         lib = {
             "REF-40": ref("REF-40", "VEHICLE_GEOMETRY", "2026-08-01T10:00:00"),
@@ -109,17 +115,43 @@ class UserPaletteOwnsTheRole(unittest.TestCase):
              patch.object(store, "auto_style_references", return_value=anchors):
             _s, _p, refs = generate._resolve_generation_inputs(
                 "S", "P01", ref_ids)
-        return [r["id"] for r in refs]
+        return refs if full else [r["id"] for r in refs]
 
     def test_picked_swatches_replace_the_auto_palette(self):
-        self.assertEqual(self._resolve(["REF-40", "REF-50", "REF-51"]),
-                         ["REF-40", "REF-50", "REF-51", "REF-90"],
-                         "exactly these swatches — the shelf's newest-2 "
-                         "palette top-up stands down")
+        """The 2026-08-13 ruling stands — exactly these swatches, the
+        shelf's newest-2 top-up stands down. What changed on 2026-08-15 is
+        that they then ride as ONE plate, so the ids to check are the ones
+        the plate was built FROM."""
+        refs = self._resolve(["REF-40", "REF-50", "REF-51"], full=True)
+        self.assertEqual([r["id"] for r in refs],
+                         ["REF-40", "PALETTE", "REF-90"])
+        pal = next(r for r in refs if r["id"] == "PALETTE")
+        self.assertEqual(pal["_from"], ["REF-50", "REF-51"],
+                         "exactly these swatches — no auto top-up joined them")
+        self.assertTrue(pal["_plate"], "the palette rides as one image")
 
     def test_no_pick_keeps_the_capped_auto_palette(self):
-        self.assertEqual(self._resolve(["REF-40"]),
-                         ["REF-40", "REF-90", "REF-98", "REF-99"])
+        refs = self._resolve(["REF-40"], full=True)
+        self.assertEqual([r["id"] for r in refs],
+                         ["REF-40", "REF-90", "PALETTE"])
+        pal = next(r for r in refs if r["id"] == "PALETTE")
+        self.assertEqual(pal["_from"], ["REF-98", "REF-99"],
+                         "the shelf's capped newest-2 still ride — on one plate")
+
+    def test_a_palette_costs_one_of_the_fourteen(self):
+        """The bug this fixes: an eight-colour language spent eight slots,
+        so a panel with ONE subject group ticked reported 13 subject
+        references and sat over the cap (user-reported 2026-08-14)."""
+        refs = self._resolve(["REF-40", "REF-50", "REF-51"], full=True)
+        self.assertEqual(sum(1 for r in refs
+                             if store.role_head(r["role"]) == "COLOR_PALETTE"), 1)
+
+    def test_a_single_swatch_needs_no_plate(self):
+        """One swatch is already one image — compositing it would only
+        add a caption the model did not ask for."""
+        refs = self._resolve(["REF-40", "REF-50"], full=True)
+        self.assertIn("REF-50", [r["id"] for r in refs])
+        self.assertNotIn("PALETTE", [r["id"] for r in refs])
 
 
 class SwatchSelectorWiring(unittest.TestCase):

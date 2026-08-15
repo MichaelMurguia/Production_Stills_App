@@ -5216,19 +5216,29 @@ async function addReferenceDialog(prefill = {}, { approve = false, onDone = null
 // renders): the full library anatomy for EVERY matching plate — role,
 // jurisdiction, notes — plus a stated thin-anchor warning when only one
 // plate matches, and Add another plate without leaving the view.
-function viewObjectReferences(obj, recs, addPrefill, onChanged) {
+// A group of five plates need not ride as five (user ruling 2026-08-15):
+// the viewer is where you SEE the photos, so it is where you choose which
+// of them the render works from. `pick` is the current subset and
+// `onPick` receives the new one; without them the viewer stays read-only.
+function viewObjectReferences(obj, recs, addPrefill, onChanged,
+                              { pick = null, onPick = null } = {}) {
   const lbItems = recs.map(r => ({ src: `/api/references/${r.id}/image`,
                                    caption: `${r.id} — ${r.role}` }));
+  const chosen = new Set(pick || recs.map(r => r.id));
   return modal({
     custom: `
       <div class="modal-title">Reference — ${esc(obj)}</div>
-      <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ALL ATTACH WHEN ITS GROUP IS CHECKED · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW</p>
+      <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ${onPick
+        ? `<span data-f="vr-count">${chosen.size} OF ${recs.length} RIDE THE NEXT RENDER</span> · UNTICK ONE TO SPEND FEWER OF THE FOURTEEN`
+        : "ALL ATTACH WHEN ITS GROUP IS CHECKED"} · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW</p>
       <div class="ref-grid" style="max-height:60vh;overflow-y:auto;margin:0 14px;align-content:start">
         ${recs.map((r, i) => `
-          <div class="ref-card ${esc(r.status)}">
+          <div class="ref-card ${esc(r.status)}${onPick && !chosen.has(r.id) ? " vr-off" : ""}" data-card="${esc(r.id)}">
             <img src="/api/references/${esc(r.id)}/image?size=thumb" data-lb="${i}" alt="${esc(r.id)}" loading="lazy">
             <div class="body">
-              <div><span class="badge ${esc(r.status)}">${esc(r.status)}</span> <b>${esc(r.id)}</b></div>
+              <div>${onPick ? `<label class="vr-use" title="Attach this plate to the next render">
+                <input type="checkbox" data-use="${esc(r.id)}" ${chosen.has(r.id) ? "checked" : ""}>
+                <span class="mono">USE</span></label> ` : ""}<span class="badge ${esc(r.status)}">${esc(r.status)}</span> <b>${esc(r.id)}</b></div>
               <div class="role">${esc(r.role)}</div>
               <div class="juris ok">CONTROLS ${esc((r.controls || []).join(" · ") || "—")}</div>
               <div class="juris bad">NOT ${esc((r.does_not_control || []).join(" · ") || "—")}</div>
@@ -5248,6 +5258,19 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged) {
     mount: (ov, done) => {
       $$("[data-lb]", ov).forEach(img => img.onclick = () =>
         openLightbox(lbItems, +img.dataset.lb));
+      if (onPick) {
+        const countEl = $("[data-f=vr-count]", ov);
+        $$("[data-use]", ov).forEach(box => box.onchange = () => {
+          box.checked ? chosen.add(box.dataset.use) : chosen.delete(box.dataset.use);
+          $(`[data-card="${box.dataset.use}"]`, ov)
+            ?.classList.toggle("vr-off", !box.checked);
+          if (countEl) countEl.textContent =
+            `${chosen.size} OF ${recs.length} RIDE THE NEXT RENDER`;
+          // Report every change as it happens: a choice that only lands on
+          // Close is a choice you cannot see working.
+          onPick([...chosen]);
+        });
+      }
       $("[data-f=vr-close]", ov).onclick = () => done(null);
       $("[data-f=vr-add]", ov).onclick = () => {
         done(null);
@@ -7671,17 +7694,45 @@ async function renderBoardPanels(specId) {
       return s.charAt(0).toUpperCase() + s.slice(1);
     })();
 
+    // Which PLATES of a group ride (user ruling 2026-08-15). Precedence:
+    // an explicit narrowing the user made in the viewer, then the memory
+    // of what rode the last take, then the whole group. A group whose
+    // plates were all unticked is off, not empty.
+    const pickKey = `refpick.${specId}.${p.id}`;
+    const picks = () => uiGet(pickKey, {});
+    const pickFor = g => {
+      const saved = picks()[g.name];
+      if (Array.isArray(saved)) return g.ids.filter(id => saved.includes(id));
+      if (lastTake) {
+        const rode = g.ids.filter(id => lastRefIds.has(id));
+        if (rode.length) return rode;
+      }
+      return g.ids;
+    };
+    const setPick = (g, ids) => {
+      uiSet(pickKey, { ...picks(), [g.name]: ids });
+    };
+
     const onGroups = groupList.filter(buildWorkbench.isChecked);
     const offGroups = groupList.filter(g => !buildWorkbench.isChecked(g));
-    const groupRow = (g, on) => `
+    const groupRow = (g, on) => {
+      const use = pickFor(g);
+      const narrowed = use.length !== g.ids.length;
+      return `
       <label class="ref-row${on ? " on" : ""}" data-was="${on ? "1" : ""}"
-             title="${esc(g.ids.join(", "))} — click to ${on ? "detach" : "attach"} this group">
-        <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${on ? "checked" : ""}>
+             data-group="${esc(g.name)}"
+             title="${esc(use.join(", ") || "no plates selected")} — click to ${on ? "detach" : "attach"} this group">
+        <input type="checkbox" data-ids="${esc(JSON.stringify(use))}" ${on && use.length ? "checked" : ""}>
         <span class="ref-name mono">${esc(g.name)}</span>
-        <span class="ref-kind">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
-        <span class="ref-ids mono">${idSpan(g.ids)}</span>
+        <span class="ref-kind">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${
+          narrowed ? `${use.length} OF ${g.ids.length}` : g.ids.length}</span>
+        <span class="ref-ids mono">${idSpan(use)}</span>
         <span class="ref-why mono">${on ? refWhy : ""}</span>
+        <button type="button" class="verb ref-plates" data-plates="${esc(g.name)}"
+          title="See the photos and choose which of them the render works from">${
+          g.ids.length > 1 ? "Choose plates" : "View plate"}</button>
       </label>`;
+    };
 
     card.innerHTML = `
       <div class="wb-head">
@@ -7807,6 +7858,7 @@ async function renderBoardPanels(specId) {
                 `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
               </div>`;
             })()}
+            <div class="attached mono" data-f="attached"></div>
             ${swatchRefs.length ? (() => {
               // A palette is applied WHOLE (user, 2026-08-14; canon
               // "a set that means something as a set renders as one
@@ -7924,20 +7976,60 @@ async function renderBoardPanels(specId) {
 
     const refCount = $("[data-f=ref-count]", card);
     const dispatchFacts = $("[data-f=dispatch-facts]", card);
+    // The palette is its OWN role, and counting it as SUBJECT was why a
+    // panel with ONE ticked group reported "13 SUBJECT" and sat over the
+    // cap with nothing on screen to explain it (user 2026-08-14). Since a
+    // palette attaches whole, its swatches are a real share of the 14 and
+    // have to be named as such.
+    const attachedHost = $("[data-f=attached]", card);
     const updateRefCount = () => {
-      const n = checkedRefs().length;
-      // With no explicit swatch, the auto shelf tops the palette role up
-      // server-side (≤2) — count what will actually attach.
-      const autoSwatch = checkedSwatches().length ? 0
-        : Math.min(2, swatchRefs.length);
-      const total = n + styleAnchors.length + autoSwatch;
+      const subject = $$(".ref-groups input:checked", card)
+        .flatMap(x => JSON.parse(x.dataset.ids));
+      // A palette rides as ONE composite plate however many colours it
+      // holds (user ruling 2026-08-15) — so it costs one of the fourteen,
+      // and the count says so. With no explicit pick the shelf still tops
+      // the role up server-side, and that collapses to one plate too.
+      const palPicked = checkedSwatches();
+      const palSwatches = palPicked.length || Math.min(2, swatchRefs.length);
+      const palCount = palSwatches ? 1 : 0;
+      const total = subject.length + palCount + styleAnchors.length;
+      const over = total > 14;
       refCount.textContent =
-        `${n} SUBJECT + ${styleAnchors.length + autoSwatch} STYLE = ${total} OF 14 ATTACHED` +
-        (total > 14 ? " — OVER LIMIT, UNCHECK A GROUP" : "");
-      refCount.style.color = total > 14 ? "var(--bad)" : "";
+        `${subject.length} SUBJECT + ${palCount} PALETTE + ${styleAnchors.length} STYLE`
+        + ` = ${total} OF 14 ATTACHED`
+        + (over ? " — OVER LIMIT, UNTICK A GROUP OR NARROW THE PALETTE" : "");
+      refCount.style.color = over ? "var(--bad)" : "";
+
+      // "How can I see every one?" — every plate that will ride, named,
+      // without a click. Consecutive ids collapse to their ends so the
+      // manifest stays a few facts rather than a wall.
+      const parts = [];
+      $$(".ref-groups input:checked", card).forEach(x => {
+        const row = x.closest(".ref-row");
+        const name = ($(".ref-name", row)?.textContent || "").trim();
+        parts.push(`${esc(name)} ${idSpan(JSON.parse(x.dataset.ids))}`);
+      });
+      const menu = $("[data-f=swatch-menu]", card);
+      const picked = menu ? $$("input[data-ids]:checked", menu) : [];
+      if (picked.length) {
+        const names = picked.map(x =>
+          ($(".lang", x.parentElement)?.textContent || "PALETTE").trim());
+        parts.push(`${esc(names.join(" + "))} — ${palSwatches} SWATCHES ON ONE PLATE`);
+      } else if (swatchRefs.length) {
+        parts.push(`PALETTE AUTO · ${palSwatches} NEWEST ON ONE PLATE`);
+      }
+      const byHead = {};
+      for (const r of styleAnchors) (byHead[roleHead(r.role)] ??= []).push(r.id);
+      for (const [h, ids] of Object.entries(byHead))
+        parts.push(`${esc(h)} ${idSpan(ids)}`);
+      attachedHost.innerHTML =
+        `<span class="attached-k">ATTACHED · ${total}</span>`
+        + (parts.length ? parts.join("&ensp;·&ensp;") : "NOTHING ATTACHED");
+      attachedHost.classList.toggle("over", over);
+
       // P6: what is about to be sent, legible at the moment of sending.
       dispatchFacts.innerHTML =
-        `${styleAnchors.length + autoSwatch} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
+        `${styleAnchors.length} STYLE · ${palCount} PALETTE · ${subject.length} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
         + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
     };
     // A tick has to LAND: the row brightens and states what it now is, so
@@ -8027,6 +8119,36 @@ async function renderBoardPanels(specId) {
       viewObjectReferences(obj, recs,
         { head: gs[0]?.head || "PROP_REFERENCE", title: gs[0]?.name || obj },
         () => renderBoardPanels(specId));
+    });
+
+    // "Choose plates" opens the photos, because choosing which image the
+    // render works from is a thing you do by LOOKING at them. The pick
+    // lands live — the row's ids, its count and the manifest all follow.
+    $$("[data-plates]", card).forEach(b => b.onclick = ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const g = groupList.find(x => x.name === b.dataset.plates);
+      if (!g) return;
+      const recs = g.ids.map(id => refs.find(x => x.id === id)).filter(Boolean);
+      if (!recs.length) { toast("No plates found for this group.", true); return; }
+      const row = b.closest(".ref-row");
+      const box = $("input", row);
+      viewObjectReferences(g.name, recs,
+        { head: g.head, title: g.name },
+        () => renderBoardPanels(specId),
+        { pick: pickFor(g),
+          onPick: ids => {
+            setPick(g, ids);
+            box.dataset.ids = JSON.stringify(ids);
+            box.checked = box.checked && ids.length > 0;
+            $(".ref-kind", row).textContent =
+              `${g.head.replaceAll("_", " ").toLowerCase()} · ${
+                ids.length === g.ids.length ? g.ids.length
+                                            : `${ids.length} OF ${g.ids.length}`}`;
+            $(".ref-ids", row).innerHTML = idSpan(ids);
+            row.classList.toggle("on", box.checked);
+            updateRefCount();
+          } });
     });
 
     // Palette selector: stated summary, toggled menu, count kept live.

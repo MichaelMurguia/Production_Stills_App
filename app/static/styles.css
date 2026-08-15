@@ -2979,6 +2979,16 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
 /* a change YOU just made reads as your decision, not as the app's */
 .ref-why-user { color: var(--hold); }
+/* The verb that opens a group's photos is always visible: a control that
+   appears only under the pointer is a control you have to already know
+   about, which is the same fault as the act bar's vanished tools. */
+.ref-plates { margin-left: 14px; flex: none; }
+/* a plate the render will not work from reads as set aside, not deleted */
+.ref-card.vr-off { opacity: .38; }
+.ref-card.vr-off img { filter: grayscale(1); }
+.vr-use { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.vr-use input { accent-color: var(--ok); }
+.vr-use .mono { font-size: 9.5px; letter-spacing: .12em; color: var(--ink-faint); }
 /* The plates a row will attach, named on demand. They sit behind a verb
    rather than always-on because a 19-row list of ids is a wall — but they
    must be reachable WITHOUT a hover, which a title attribute is not. */
@@ -2995,6 +3005,29 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .anchors-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; max-width: none; }
 .anchors-k { letter-spacing: .14em; color: var(--ink-dim); }
 .anchors-src { color: var(--ink-faint); }
+/* The manifest: every plate that will ride the next render, named,
+   without a click (user 2026-08-14: "how can I see every one?"). It sits
+   at the end of the step because it is the step's answer. */
+.attached {
+  margin-top: 12px; font-size: 11.5px; letter-spacing: .06em;
+  color: var(--ink-dim); line-height: 1.8; max-width: 900px;
+}
+.attached .attached-k {
+  color: var(--ink-faint); letter-spacing: .14em; margin-right: 12px;
+}
+.attached.over .attached-k { color: var(--bad); }
+/* The manifest: every plate that will ride the next render, named,
+   without a click (user 2026-08-14: "how can I see every one?"). It sits
+   at the end of the step because it is the step's answer. */
+.attached {
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--hairline);
+  font-size: 11.5px; letter-spacing: .06em; color: var(--ink-dim);
+  line-height: 1.9; max-width: 900px;
+}
+.attached .attached-k {
+  color: var(--ink-faint); letter-spacing: .14em; margin-right: 12px;
+}
+.attached.over .attached-k { color: var(--bad); }
 .pal-group { position: relative; margin-top: 14px; }
 .dropdown-panel {
   position: absolute; top: 100%; left: 0; z-index: 30;

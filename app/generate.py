@@ -4,7 +4,8 @@ import json
 import re
 from pathlib import Path
 
-from . import bible, imaging, mockflow, paths, revisions, storage, store
+from . import (bible, imaging, mockflow, palette_plate, paths, revisions,
+               storage, store)
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -1031,6 +1032,12 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
                 "study cannot generate without its location anchor.")
         refs.insert(0, g)
 
+    # A palette is ONE reference (user ruling 2026-08-15): it is a swatch
+    # OF colours, so its swatches collapse into a single composite plate
+    # before the cap is counted. Colour by colour, an eight-colour design
+    # language quietly spent eight of the fourteen slots.
+    refs = palette_plate.collapse(refs)
+
     if len(refs) > MAX_REFERENCE_IMAGES:
         raise GenerationError(f"at most {MAX_REFERENCE_IMAGES} reference images per generation")
     return spec, panel, refs
@@ -1142,6 +1149,11 @@ def _render_ready(p: Path) -> Path:
 def _reference_image_paths(refs: list[dict]) -> list[Path]:
     out = []
     for r in refs:
+        # A synthetic reference (the composite palette plate) carries its
+        # own file: it is a rendering OF references, not a library row.
+        if r.get("_plate"):
+            out.append(_render_ready(Path(r["_plate"])))
+            continue
         p = store.reference_image_path(r["id"])
         if p is None:
             raise GenerationError(f"image file missing for {r['id']}")

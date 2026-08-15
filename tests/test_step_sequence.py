@@ -243,8 +243,9 @@ class ReferencesStateTheirReason(unittest.TestCase):
         plate ids lived in a hover title, and the verb called Show ids
         revealed the style anchors' ids ONLY."""
         i = JS.index("const groupRow =")
-        self.assertIn("idSpan(g.ids)", JS[i:i + 700],
-                      "every row names the plates it will attach")
+        self.assertIn("idSpan(use)", JS[i:i + 900],
+                      "every row names the plates it will attach — the ones "
+                      "actually chosen, not the whole group")
         j = JS.index("const showIds =")
         seg = JS[j:j + 500]
         self.assertIn('card.classList.toggle("ids-open")', seg,
