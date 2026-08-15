@@ -1909,6 +1909,19 @@ async def api_candidate_status(spec_id: str, cand_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
 
 
+@app.post("/api/specs/{spec_id}/candidates/{cand_id}/unapprove")
+async def api_candidate_unapprove(spec_id: str, cand_id: str) -> dict:
+    """Withdraw an approval without rejecting the take (user 2026-08-16).
+    Its own act because a rejection is a judgement that carries into every
+    future prompt for the panel — wanting to edit the brief is not that."""
+    try:
+        return generate.unapprove_candidate(spec_id, cand_id)
+    except KeyError as e:
+        raise _err(e)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/candidates/{cand_id}/promote")
 async def api_candidate_promote(spec_id: str, cand_id: str, body: dict) -> dict:
     """Promote an APPROVED render into the reference library with a role —

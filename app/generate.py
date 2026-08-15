@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import re
 from pathlib import Path
@@ -2444,6 +2445,41 @@ def create_lighting_study(spec_id: str, cand_id: str,
     return study
 
 
+# The document a take was approved against, frozen onto the take itself
+# (user rulings 2026-08-16). Revisions existed to answer "what was this
+# approved AS?" — a snapshot answers it better: it is attached to the
+# artifact instead of scattered across sibling records, and it stays true
+# however the breakdown moves on afterwards.
+#
+# Board-level fields ride into the prompt as surely as the panel's own, so
+# they are frozen too. Evidence rows are frozen for THIS panel's objects
+# only — they are the justification for what actually got rendered.
+SNAPSHOT_BOARD_FIELDS = (
+    "subject", "board_type", "setting", "scene", "mode", "render_intent",
+    "forbidden_elements", "canon_budget", "design_languages", "scene_lessons",
+    "environments", "layout",
+)
+
+
+def approval_snapshot(spec: dict, panel_id: str) -> dict:
+    """The exact specification that produced a take, as of now."""
+    panel = next((p for p in spec.get("panels", [])
+                  if p.get("id") == panel_id), None) or {}
+    objects = {str(o).lower() for o in (panel.get("required_objects") or [])}
+    rows = [r for r in (spec.get("evidence_ledger") or [])
+            if str(r.get("panel_id", "")).upper() == str(panel_id).upper()
+            or str(r.get("object", "")).lower() in objects]
+    return {
+        "taken_at": store.utcnow(),
+        "specification_id": spec.get("specification_id", ""),
+        "revision": spec.get("revision", 1),
+        "panel": copy.deepcopy(panel),
+        "board": {k: copy.deepcopy(spec[k]) for k in SNAPSHOT_BOARD_FIELDS
+                  if k in spec},
+        "evidence": copy.deepcopy(rows),
+    }
+
+
 def set_candidate_status(spec_id: str, cand_id: str, status: str, reason: str = "") -> dict:
     if status not in CANDIDATE_STATUSES:
         raise GenerationError(f"invalid status: {status}")
@@ -2458,6 +2494,13 @@ def set_candidate_status(spec_id: str, cand_id: str, status: str, reason: str = 
         # never-include lessons, which inverted directive-style feedback.
         # Project-wide rules are curated by hand in Settings.
     record["updated_at"] = store.utcnow()
+    if status == "APPROVED":
+        # Freeze the document that produced it. Everything downstream —
+        # the as-approved reading view, the drift check, the amendment
+        # ledger's "which takes did this invalidate" — reads this.
+        _spec = store.get_spec(spec_id)
+        if _spec is not None:
+            record["approved_spec"] = approval_snapshot(_spec, record["panel_id"])
     d = paths.BOARDS_DIR / spec_id
     (d / f"{cand_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -2465,4 +2508,30 @@ def set_candidate_status(spec_id: str, cand_id: str, status: str, reason: str = 
         store.append_approval_log(
             f"PANEL CANDIDATE {cand_id} ({spec_id} / {record['panel_id']}) approved. "
             f"Spec hash {record['spec_hash'][:16]}…")
+    return record
+
+
+def unapprove_candidate(spec_id: str, cand_id: str) -> dict:
+    """Withdraw an approval without rejecting the take (user ruling
+    2026-08-16). "I want to change the brief" is not "this render was
+    wrong": a rejection carries its reason into every future prompt for
+    this panel, so using Reject to unlock an edit would poison the work
+    that follows. The take returns to CANDIDATE with its image untouched.
+
+    The snapshot STAYS on the record — it is the history of what was once
+    approved and against what, and withdrawing does not make that untrue."""
+    record = get_candidate(spec_id, cand_id)
+    if record is None:
+        raise KeyError(cand_id)
+    if record.get("status") != "APPROVED":
+        raise GenerationError(f"{cand_id} is not approved — nothing to withdraw.")
+    record["status"] = "CANDIDATE"
+    record["unapproved_at"] = store.utcnow()
+    record.pop("status_reason", None)
+    (paths.BOARDS_DIR / spec_id / f"{cand_id}.json").write_text(
+        json.dumps(record, indent=2, ensure_ascii=False) + chr(10), encoding="utf-8")
+    store.append_approval_log(
+        f"PANEL CANDIDATE {cand_id} ({spec_id} / {record['panel_id']}) approval "
+        "WITHDRAWN — not a rejection; the take stands as a candidate, carries "
+        "nothing into future prompts, and its panel is editable again.")
     return record
