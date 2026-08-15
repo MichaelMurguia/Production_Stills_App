@@ -130,6 +130,37 @@ class TheBoardOpensOnWhatItMade(unittest.TestCase):
         self.assertIn('s.status === "OK"', JS[j:j + 260])
         self.assertIn("slot-map", JS, "the verdict comes from the authority")
 
+    def test_an_empty_frame_goes_where_the_picture_gets_made(self):
+        """User 2026-08-15: clicking a NO TAKE YET frame opens the panels
+        workbench with that panel active. An empty frame has no picture to
+        open, so its click is the act that resolves the consequence it
+        states — while a filled frame opens its take full size."""
+        i = JS.index('$$(".made-item", madeStrip)')
+        seg = JS[i:i + 2000]
+        self.assertIn('frame.classList.contains("made-empty")', seg)
+        self.assertIn("goToPanel(pn.id)", seg)
+        self.assertIn("openLightbox(items, idx)", seg,
+                      "a filled frame still opens full size")
+        j = JS.index("const goToPanel =")
+        sel = JS[j:j + 420]
+        self.assertIn("panel: pid", sel,
+                      "the workbench selects by roomSel.panel")
+        self.assertIn("persistRoomSel()", sel)
+        self.assertIn('uiSet("boardSpec", specId)', sel)
+        self.assertIn('showView("boards")', sel)
+
+    def test_a_draft_states_the_gate_instead_of_going_nowhere(self):
+        """Stage 04 lists SIGNED-OFF breakdowns only, so on a draft the
+        click would land on whatever sheet stage 04 falls back to — which
+        is how it behaved when first written. Gates read as state before
+        they are hit."""
+        i = JS.index('$$(".made-item", madeStrip)')
+        seg = JS[i:i + 2000]
+        self.assertIn("if (!locked)", seg)
+        self.assertIn("approve & lock this", seg)
+        self.assertIn("made-gated", seg)
+        self.assertIn("cursor: not-allowed", block(".made-gated"))
+
     def test_the_frame_never_lies_about_the_take(self):
         self.assertIn("object-fit: contain", block(".made-frame img"))
 

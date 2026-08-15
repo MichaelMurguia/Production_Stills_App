@@ -6339,9 +6339,43 @@ async function openSpecEditor(specId) {
       src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
       caption: `${c.candidate_id} — ${pn.id} (${c.status}) ${c.width}×${c.height}`,
     }));
-    $$(".made-item", madeStrip).forEach(item => {
+    // Selecting a panel on the workbench is roomSel.panel — the route's
+    // one-shot scroll target only finds a card that is already rendered,
+    // and this surface renders one panel at a time.
+    const goToPanel = pid => {
+      boardRoomSel[specId] = {
+        ...(boardRoomSel[specId] || uiGet("roomSel", {})[specId] || {}),
+        panel: pid,
+      };
+      persistRoomSel();
+      uiSet("boardSpec", specId);
+      showView("boards");
+    };
+
+    $$(".made-item", madeStrip).forEach((item, i) => {
       const frame = $(".made-frame", item);
-      if (!frame || frame.classList.contains("made-empty")) return;
+      if (!frame) return;
+      const pn = (spec.panels || [])[i];
+      if (frame.classList.contains("made-empty")) {
+        // An empty frame has no picture to open, so its click goes where
+        // the picture gets MADE — stage 04, with this panel active (user
+        // 2026-08-15). The frame states a consequence; this is the act
+        // that resolves it.
+        if (!pn) return;
+        // Stage 04 lists SIGNED-OFF breakdowns only, so on a draft this
+        // click would land on whatever sheet stage 04 falls back to.
+        // State the gate instead of moving somewhere that ignores you.
+        if (!locked) {
+          frame.title = `${pn.id} cannot render yet — approve & lock this `
+            + `breakdown first (step 07 below)`;
+          frame.classList.add("made-gated");
+          return;
+        }
+        frame.style.cursor = "pointer";
+        frame.title = `Render ${pn.id} — opens the panels workbench with it active`;
+        frame.onclick = () => goToPanel(pn.id);
+        return;
+      }
       const id = ($(".made-id", frame)?.textContent || "").split("·").pop().trim();
       const idx = shots.findIndex(s => s.c.candidate_id === id);
       frame.style.cursor = "zoom-in";

@@ -1312,6 +1312,13 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-15** — **An empty frame is the way to the work that fills
+  it** (user): clicking a `NO TAKE YET` frame opens the panels workbench
+  with that panel active. A filled frame opens its take full size; an
+  empty one has no picture to open, so its click is the act that resolves
+  the consequence it states. On a sheet that is not signed off yet the
+  frame states the gate instead — stage 04 lists locked breakdowns only,
+  so the click would otherwise land on whatever sheet it falls back to.
 - **2026-08-15** — **The roll loses its scrollbar and its edge print**
   (user): a bar drawn across a piece of film is chrome, so both rolls
   hide it — honest only because both drag, and wheel/trackpad still work.
