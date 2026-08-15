@@ -116,7 +116,14 @@ underline to `--ink`. Not each row's own right edge — ONE shared vertical
 line, so the eye finds actions by running down a single column.
 
 **A surface whose job is a sequence numbers its steps** (§1.6/§1.7), and
-the number — not a label gutter — is the spine: a label says what KIND of
+the number — not a label gutter — is the spine. **The vocabulary is scoped
+to `.steps`** — every `.step*` declaration lives under that container and
+none is written bare. `.panel.step` is the production-design wizard's own,
+older pattern (a numbered PANEL, its number drawn in a 46px `::before`
+gutter) and shares nothing but the word: an unscoped `.step { display:
+flex }` captured every wizard panel and scattered its contents into
+columns (user-caught 2026-08-16). A shared class name is not a shared
+component. Within that scope: a label says what KIND of
 thing a row is, a number says where you are in the work. Two states only,
 `NEEDS YOU` (number `--ink`, its own verb) and `CONFIRMED` (number
 `--ok`, label `--ink-dim`, a stated `✓ CONFIRMED`). A confirmed step dims
@@ -1295,6 +1302,10 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-16 | **A migration has no surface** (user, on being shown a strip with a `Consolidate` verb: "we dont need UI to do this type of consolodation. I was asking you to migrate it"). Retiring revisions left users holding two breakdowns for one piece of work; the collapse now runs at boot over every production and there is nothing to find, nothing to click, and no row in the breakdown table. **This is a proposed boundary on a canon rule**, not a component: §2.4 says a gate must be readable as state before it is hit, and the strip was written in obedience to it | Nothing — the pattern is the ABSENCE of one | Rule to ratify or refuse: does "gates are readable as state" cover only decisions the user still has, so legacy data we should already have migrated gets no surface at all? The counter-argument is that silent mutation of a user's work is exactly what stated gates exist to prevent — the compromise shipped is a journal line and an on-disk backup instead of a screen |
+| 2026-08-15 | **The roll goes compact** (user, three corrections in a row): the scrollbar is hidden on both film rolls, the edge marking is retired, and the id headings above and below the strip are gone — a bar drawn across a piece of film is chrome, and the edge print cost two lines of height on a strip whose job is the pictures. Frames load the `thumb` tier and the full image only on click; a board frame now opens its take full size like a take frame does; and a drag swallows exactly one click so ending a swipe never opens the lightbox | Both film rolls (stage 03 board strip, stage 04 takes strip) | Extends the film row above rather than repeating it. Ruling wanted on (1) hiding a scrollbar on a strip whose only other affordance is `cursor: grab` — honest because both drag and the wheel still works, but it is the one place the app removes a standard control; (2) whether the retired edge marking should ever come back once the strip has vertical room, since the rule that put OUR data there rather than a stock name still stands |
+| 2026-08-15 | **A frame can be a way in rather than a way to look** (user): clicking a `NO TAKE YET` frame opens stage 04 with that panel active. A filled frame opens its take full size; an empty one has no picture to open, so its click becomes the act that resolves the consequence it states. On a sheet that is not signed off the frame states the gate instead (`approve & lock this breakdown first`) and refuses, because stage 04 lists locked breakdowns only and the click would otherwise land on whatever sheet it falls back to | Stage 03, the board strip | The stage-03 row above ratified the empty frame as a REPORT; this asks a further question — whether a report may also be a control, and whether two frames sitting side by side in one strip may do materially different things on click (zoom vs navigate) with nothing but their content to tell them apart |
+| 2026-08-05 | **A stale tab says so** (`.update-bar`, extended 2026-08-15 after "It says live but there are no changes live"): when the running build no longer matches the server's `app_sha`, a persistent bar states it and offers the reload. The staleness check originally ran only on navigation, so a tab left open on one view never noticed; it now also polls every 60s and re-checks on `visibilitychange` | App-wide | Never queued — it predates the 2026-08-14 audit but was not among the 18 rows it emptied, so it has never been ruled. Review the bar's insistence (persistent, never dismissable), its placement, and whether a 60s poll is the right cadence for a tool where a stale tab means the user is reading a UI that no longer exists |
 | 2026-08-14 | **A tool in a toolbar is a button** (user ruling, reported as "these tools are gone"): §1.4's ink + underline is right for a verb sitting inline beside the fact it acts on, but at 11.5px/400 a BAR of tools read as a row of footnotes. The act bar's tools carry an edge again — `--line` border, 13.5px/600, no underline, Reject keeping its `--bad` hover, `Approve panel` still the one amber. The run facts left the bar for the image, where canon already puts facts about a picture: in the bar they cost ~400px and folded three real tools behind the `⋯` | Panels workbench act bar | Review where the line sits between a VERB (inline, underlined) and a TOOL (in a bar, bordered) — the distinction is new and the rest of the app has both |
 | 2026-08-15 | **The takes strip is film** (user-directed): one 35mm window per take (`aspect-ratio: 3/2`), the image FITTED inside it longest-edge first rather than cropped, perforated bands above and below drawn as a repeating hard-stop pattern, and an edge marking in the margin carrying the panel id, take count and sheet id. A frame click makes that take current AND opens it full size, because the window deliberately shows less than the take | Panels workbench, takes strip | Ruling wanted on: (1) the perforations as a PATTERN (hard stops, like the existing hatch) versus canon's no-gradients rule; (2) the edge marking stating our own data rather than a stock name — a real one would be set dressing claiming something untrue about the render; (3) whether the fitted (letterboxed) frame is right when every take shares the panel's ratio anyway, since the bars are then always the same |
 | 2026-08-16 | **A step is settled by a fact, not only by a tick** (user): an approved take freezes its panel, so all of that panel's steps read `✓ CONFIRMED` and the head counts them — they are not pending ticks the user never had to make. A frozen step offers no `Confirm` and no way to unconfirm; its title names the takes that settled it and says withdrawing is the way back. Same on stage 03 for the board-level steps, which freeze on the first approval. **And the step number now carries 24px** — the largest size in the scale | Both step surfaces | Ruling wanted on the 24px spine: §1.2 reserves the largest size for ONE element per surface, and this is a second use of it beside the subject. The argument for it: on a surface whose job IS a sequence, the sequence is as much the subject as its title. Also review whether a frozen step should read `CONFIRMED` at all or wants its own word (`SETTLED`, `LOCKED`) — a tick and a fact currently look identical |
@@ -1313,6 +1324,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **The step vocabulary is scoped to `.steps`**
+  (user-caught): `.panel.step` has been the production-design wizard's
+  own pattern since long before the sequence existed, and a bare
+  `.step { display: flex }` captured it — every wizard panel became a
+  flex row with its contents in columns. Recorded in the sequence canon
+  above: a shared class name is not a shared component.
+- **2026-08-16** — **Four rows added to the queue** — the migration-has-
+  no-surface rule, the compact roll, the frame-as-a-way-in, and the
+  stale-tab bar (which predates the 2026-08-14 audit but was never among
+  the rows it emptied). The table stands at fourteen.
 - **2026-08-16** — **Revisions collapse into one breakdown — with no
   surface at all** (user ruling "Yes Collapse"; then, on being shown a
   strip with a verb: "we dont need UI to do this type of consolodation. I
