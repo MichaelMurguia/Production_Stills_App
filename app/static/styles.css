@@ -3197,3 +3197,61 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 /* The act bar is tools only. The run facts moved onto the image, where
    canon already puts facts about a picture — in the bar they cost ~400px
    and folded three real tools behind ⋯ to protect a caption. */
+
+/* UNCANONIZED — 2026-08-15 — the takes strip is FILM (user-directed).
+   The takes are frames of one shot, so they read as a strip of film: one
+   35mm window per take, the image fitted inside it longest-edge first, a
+   perforated base above and below, and an edge marking carrying this
+   panel's own id and take count.
+
+   Two deliberate departures, both flagged for review: the perforations
+   are drawn with repeating hard-stop gradients (a PATTERN, like the
+   existing hatch, never a decorative blend), and the edge marking states
+   OUR data rather than a film-stock name — real stock branding would be
+   set dressing claiming something untrue about the render. */
+.filmstrip { position: relative; }
+.filmstrip .takes-row {
+  position: relative;
+  background: #0b0c0e;
+  border: 1px solid var(--line-soft);
+  padding: 20px 14px 22px;
+  gap: 10px;
+  align-items: flex-start;
+}
+/* perforations: sharp rectangles, because canon does not round corners
+   and a square perf still reads as film */
+.filmstrip .takes-row::before,
+.filmstrip .takes-row::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 9px;
+  background: repeating-linear-gradient(to right,
+    #16181c 0 9px, transparent 9px 24px);
+  pointer-events: none;
+}
+.filmstrip .takes-row::before { top: 6px; }
+.filmstrip .takes-row::after { bottom: 6px; }
+/* the edge marking sits in the margin where a stock name would be */
+.filmstrip[data-edge]::after {
+  content: attr(data-edge);
+  position: absolute; left: 16px; bottom: 8px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .26em;
+  color: var(--ink-faint); pointer-events: none; opacity: .75;
+}
+
+.wb-card .take { width: 168px; background: none; border: none; padding: 0; }
+/* the 35mm window: the FRAME is the constant, the take is fitted into it */
+.take-frame {
+  display: block; width: 100%; aspect-ratio: 3 / 2;
+  background: #050607; border: 1px solid #23272c;
+  position: relative; overflow: hidden;
+}
+.take-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.take.shown .take-frame,
+.take.approved .take-frame { border-color: var(--ok); }
+.take.rejected .take-frame { border-color: var(--bad-line); }
+.take.rejected .take-frame img { opacity: .45; }
+.wb-card .take-cap {
+  padding: 5px 0 0; color: var(--ink-faint);
+  font-size: 9px; letter-spacing: .08em;
+}
+.filmstrip .take.shown .take-cap { color: var(--ok); }
+.filmstrip .take.rejected .take-cap { color: var(--bad); }

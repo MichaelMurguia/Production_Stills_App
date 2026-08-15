@@ -45,9 +45,40 @@ class TheImageIsTheHero(unittest.TestCase):
         self.assertIn("object-fit: contain", b)
         self.assertIn("max-height: none", b)
 
-    def test_the_filmstrip_sits_beneath_at_the_same_ratio(self):
-        self.assertIn('class="take-frame" style="aspect-ratio:${aspectCss}"', JS)
+    def test_the_filmstrip_is_film(self):
+        """User 2026-08-15: the takes are frames of one shot, so the strip
+        reads as film — a 35mm window per take with the image FITTED into
+        it longest-edge first. The frame is the constant now; a strip that
+        changed shape per panel read as a grid."""
+        self.assertIn('class="take-frame"', JS)
+        b = block(".take-frame")
+        self.assertIn("aspect-ratio: 3 / 2", b)
         self.assertIn("object-fit: contain", block(".take-frame img"))
+        # perforations are a PATTERN (hard stops), never a decorative blend
+        perf = block(".filmstrip .takes-row::before," + chr(10)
+                     + ".filmstrip .takes-row::after")
+        self.assertIn("repeating-linear-gradient", perf)
+        self.assertNotIn("border-radius", perf)
+
+    def test_the_edge_marking_states_our_own_data(self):
+        """A real film-stock name would be set dressing claiming something
+        untrue about the render; the margin carries the panel and take
+        count instead."""
+        i = JS.index('class="takes filmstrip"')
+        self.assertIn("data-edge=", JS[i:i + 260])
+        self.assertIn("TAKE", JS[i:i + 260])
+        for brand in ("KODAK", "FUJI", "VISION3"):
+            self.assertNotIn(brand, JS)
+
+    def test_a_frame_click_shows_the_take_full_size(self):
+        """The frame deliberately shows LESS than the take (it is a 35mm
+        window with the image fitted in it), so the way to the rest has to
+        be the obvious one: the click that selects it also opens it."""
+        i = JS.index('$$("[data-take]", card)')
+        seg = JS[i:i + 700]
+        self.assertIn("openLightbox(takeItems", seg)
+        self.assertIn("roomSel.staged[p.id] = id", seg,
+                      "and it still makes that take the current one")
 
     def test_the_rail_holds_only_what_has_no_picture(self):
         """§2.15: the takes do NOT go in a side rail (the spec's own §2.5

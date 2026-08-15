@@ -7674,7 +7674,7 @@ async function renderBoardPanels(specId) {
     // Work-order state: no takes strip either — unless a render is already
     // painting, whose pending tile must never disappear.
     const takesHtml = !panelCands.length && !pending.length ? "" : `
-      <div class="takes">
+      <div class="takes filmstrip" data-edge="${esc(`${p.id}  ${panelCands.length} TAKE${panelCands.length === 1 ? "" : "S"}  ${String(specId).toUpperCase()}`)}">
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
           <span class="hint">rejected takes stay as a record</span>
@@ -7693,9 +7693,11 @@ async function renderBoardPanels(specId) {
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
                     title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
-              <!-- §2.15: the strip thumbs carry the panel's ratio too, so
-                   a take never changes shape between hero and strip. -->
-              <span class="take-frame" style="aspect-ratio:${aspectCss}">
+              <!-- The frame is a 35mm window (user 2026-08-15) and the take
+                   is FITTED inside it, longest edge first — a strip of
+                   identical frames reads as film; a strip that changes
+                   shape per panel reads as a grid. -->
+              <span class="take-frame">
                 <img src="/api/specs/${specId}/candidates/${c.candidate_id}/image?size=thumb" loading="lazy" alt="">
               </span>
               <span class="take-cap">${esc(c.candidate_id)}${word ? ` · ${word}` : ""}${pr ? " · REF" : ""}</span>
@@ -8695,11 +8697,17 @@ async function renderBoardPanels(specId) {
       }
     };
 
-    // Takes filmstrip: clicking a thumb stages that candidate.
+    // Takes filmstrip: a click makes that take current AND opens it full
+    // size (user 2026-08-15). The frame is a 35mm window with the image
+    // fitted inside it, so the strip deliberately shows less than the
+    // take — the way to see the rest must be the obvious one.
     $$("[data-take]", card).forEach(btn => {
       btn.onclick = () => {
-        roomSel.staged[p.id] = btn.dataset.take;
+        const id = btn.dataset.take;
+        roomSel.staged[p.id] = id;
         persistRoomSel();
+        const idx = panelCands.findIndex(c => c.candidate_id === id);
+        if (idx >= 0) openLightbox(takeItems, idx);
         renderBoardPanels(specId);
       };
     });
