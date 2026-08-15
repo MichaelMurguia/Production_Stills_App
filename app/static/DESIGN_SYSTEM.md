@@ -1310,6 +1310,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-14** — **A reference row can be ticked, and looks it**
+  (user: "nothing there lets me ADD a ref that was not automatically
+  selected"). The off rows were tickable the whole time — the marker was
+  a 13px `○` with no box, which reads as a bullet, not a control. §2.3
+  ruled `○` over a bare dot so the off state read as half of a PAIR
+  rather than as absence; an empty bordered box keeps that and adds the
+  affordance `○` lacked. The row is now the hit target and says so on
+  hover, and a tick confirms itself — the row brightens and states
+  `ATTACHED — RIDES THE NEXT TAKE` in `--hold`, because a change you just
+  made is your decision, not the app's.
 - **2026-08-14** — **A reference row names its plates** (user asked "I
   can't tell what references are being used for the panel"): the rows
   stated a GROUP and a count, the plate ids sat in a hover title, and the

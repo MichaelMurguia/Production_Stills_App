@@ -2950,20 +2950,35 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    pair's state, never a bare dot: a check is --ok, a ring is --ink-dim. */
 .seq .ref-groups { display: block; }
 .ref-row {
-  display: flex; align-items: baseline; gap: 12px; padding: 3px 0;
+  display: flex; align-items: center; gap: 12px;
   font-size: 11.5px; cursor: pointer;
 }
+/* The marker is a CONTROL, so it carries an edge (user 2026-08-14: the
+   off rows were tickable all along, but a 13px glyph with no box reads as
+   a bullet — "nothing there lets me ADD a ref"). Same lesson as the act
+   bar: a thing you can act on has to look like a thing you can act on. */
 .ref-row input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; margin: 0; flex: none;
-  width: 13px; height: 13px; background: none; border: none; cursor: pointer;
-  font-family: var(--mono); font-size: 11.5px; line-height: 1;
+  width: 16px; height: 16px; background: none; cursor: pointer;
+  border: 1px solid var(--line); box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; line-height: 1;
 }
-.ref-row input[type="checkbox"]::before { content: "\25CB"; color: var(--ink-dim); }
+.ref-row input[type="checkbox"]:checked { border-color: var(--ok); }
+.ref-row input[type="checkbox"]::before { content: ""; }
 .ref-row input[type="checkbox"]:checked::before { content: "\2713"; color: var(--ok); }
+.ref-row input[type="checkbox"]:focus-visible { box-shadow: var(--focus-ring); }
+/* the whole row is the hit target, and says so under the pointer */
+.ref-row { padding: 3px 6px; margin: 0 -6px; }
+.ref-row:hover { background: var(--tile); }
+.ref-row:hover input[type="checkbox"] { border-color: var(--ink-faint); }
+.ref-row:hover .ref-name { color: var(--ink); }
 .ref-name { letter-spacing: .08em; color: var(--ink-dim); flex: 0 0 auto; min-width: 210px; }
 .ref-row.on .ref-name { color: var(--ink); }
 .ref-kind { font-size: 11.5px; color: var(--ink-faint); flex: 1; }
 .ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
+/* a change YOU just made reads as your decision, not as the app's */
+.ref-why-user { color: var(--hold); }
 /* The plates a row will attach, named on demand. They sit behind a verb
    rather than always-on because a 19-row list of ids is a wall — but they
    must be reachable WITHOUT a hover, which a title attribute is not. */

@@ -7674,12 +7674,13 @@ async function renderBoardPanels(specId) {
     const onGroups = groupList.filter(buildWorkbench.isChecked);
     const offGroups = groupList.filter(g => !buildWorkbench.isChecked(g));
     const groupRow = (g, on) => `
-      <label class="ref-row${on ? " on" : ""}" title="${esc(g.ids.join(", "))}">
+      <label class="ref-row${on ? " on" : ""}" data-was="${on ? "1" : ""}"
+             title="${esc(g.ids.join(", "))} — click to ${on ? "detach" : "attach"} this group">
         <input type="checkbox" data-ids="${esc(JSON.stringify(g.ids))}" ${on ? "checked" : ""}>
         <span class="ref-name mono">${esc(g.name)}</span>
         <span class="ref-kind">${esc(g.head.replaceAll("_", " ").toLowerCase())} · ${g.ids.length}</span>
         <span class="ref-ids mono">${idSpan(g.ids)}</span>
-        ${on ? `<span class="ref-why mono">${refWhy}</span>` : ""}
+        <span class="ref-why mono">${on ? refWhy : ""}</span>
       </label>`;
 
     card.innerHTML = `
@@ -7939,7 +7940,23 @@ async function renderBoardPanels(specId) {
         `${styleAnchors.length + autoSwatch} STYLE · ${n} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
         + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
     };
-    $(".ref-groups", card).addEventListener("change", () => {
+    // A tick has to LAND: the row brightens and states what it now is, so
+    // attaching a group is visibly an act rather than a glyph flip
+    // (user 2026-08-14). The reason follows the live state — a group the
+    // app chose keeps its own reason when re-ticked.
+    $(".ref-groups", card).addEventListener("change", ev => {
+      const row = ev.target.closest(".ref-row");
+      if (row) {
+        const on = ev.target.checked;
+        row.classList.toggle("on", on);
+        const why = $(".ref-why", row);
+        if (why) {
+          why.textContent = on
+            ? (row.dataset.was ? refWhy : "ATTACHED — RIDES THE NEXT TAKE")
+            : (row.dataset.was ? "DETACHED — WILL NOT RIDE" : "");
+          why.classList.toggle("ref-why-user", on ? !row.dataset.was : !!row.dataset.was);
+        }
+      }
       updateRefCount();
       // §1.7: a confirmation that outlives what it confirmed is a lie.
       if (confIs("references")) { confSet("references", false); renderBoardPanels(specId); }

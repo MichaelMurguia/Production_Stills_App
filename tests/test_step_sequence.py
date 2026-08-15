@@ -206,13 +206,29 @@ class ReferencesStateTheirReason(unittest.TestCase):
         self.assertIn("ref-off-head", JS)
         self.assertIn("DID NOT RIDE THE PREVIOUS TAKE", JS)
 
-    def test_the_marker_is_a_pair_never_a_bare_dot(self):
-        """A bare dot reads as absence rather than as the off state of a
-        pair, and #4a4d52 is disabled ink that must carry no readable text."""
-        self.assertIn('content: "\\25CB"', block('.ref-row input[type="checkbox"]::before'))
+    def test_the_marker_is_a_pair_and_affords_the_click(self):
+        """§2.3 ruled the off marker ○ rather than a bare dot, because a
+        dot reads as ABSENCE instead of as the off state of a pair. An
+        empty bordered box keeps that — it is still the off half of a pair
+        — and adds what ○ lacked: it looks like something you can click.
+        The user could not find the way to attach a reference until it did
+        (2026-08-14: "nothing there lets me ADD a ref")."""
+        b = block('.ref-row input[type="checkbox"]')
+        self.assertIn("border: 1px solid var(--line)", b)
+        self.assertIn("cursor: pointer", b)
+        self.assertNotIn("border: none", b)
         on = block('.ref-row input[type="checkbox"]:checked::before')
         self.assertIn('content: "\\2713"', on)
         self.assertIn("color: var(--ok)", on)
+        self.assertIn("background: var(--tile)", block(".ref-row:hover"),
+                      "the whole row is the hit target and says so")
+
+    def test_a_tick_confirms_itself(self):
+        """A glyph flipping is not feedback that an act landed."""
+        i = JS.index('$(".ref-groups", card).addEventListener')
+        seg = JS[i:i + 1100]
+        self.assertIn('row.classList.toggle("on", on)', seg)
+        self.assertIn("ATTACHED — RIDES THE NEXT TAKE", seg)
 
     def test_the_always_on_anchors_never_sit_among_the_toggles(self):
         i = JS.index('<span class="anchors-k">STYLE ANCHORS</span>')
