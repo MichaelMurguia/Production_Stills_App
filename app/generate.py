@@ -2454,11 +2454,10 @@ def create_lighting_study(spec_id: str, cand_id: str,
 # Board-level fields ride into the prompt as surely as the panel's own, so
 # they are frozen too. Evidence rows are frozen for THIS panel's objects
 # only — they are the justification for what actually got rendered.
-SNAPSHOT_BOARD_FIELDS = (
-    "subject", "board_type", "setting", "scene", "mode", "render_intent",
-    "forbidden_elements", "canon_budget", "design_languages", "scene_lessons",
-    "environments", "layout",
-)
+# One list, read by both the snapshot and the gate that protects it: what
+# an approval freezes and what a locked breakdown refuses must be the same
+# set, or the app promises one thing and guards another.
+SNAPSHOT_BOARD_FIELDS = store.BOARD_LEVEL_FIELDS
 
 
 def approval_snapshot(spec: dict, panel_id: str) -> dict:

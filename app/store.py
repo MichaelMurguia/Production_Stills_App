@@ -786,10 +786,53 @@ def resolve_spec_current(spec_id: str) -> dict | None:
     return get_spec(current or spec_id)
 
 
+def _refuse_frozen_edits(spec_id: str, current: dict, incoming: dict) -> None:
+    """What a locked breakdown will not accept (user rulings 2026-08-16).
+
+    One breakdown, edited in place. An approval freezes exactly what it
+    was approved against and nothing else: that panel's own fields, the
+    evidence rows justifying its objects, and — because they ride into
+    every prompt — the board-level fields for the whole sheet."""
+    approved = approved_takes_by_panel(spec_id)
+    if not approved:
+        return
+
+    changed_board = [f for f in BOARD_LEVEL_FIELDS
+                     if f in incoming and incoming.get(f) != current.get(f)]
+    if changed_board:
+        refuse_if_any_panel_approved(spec_id, changed_board)
+
+    cur_panels = {p.get("id"): p for p in (current.get("panels") or [])}
+    new_panels = {p.get("id"): p for p in (incoming.get("panels") or [])}
+    for pid in approved:
+        if pid not in new_panels and pid in cur_panels:
+            raise PermissionError(
+                f"{pid} has an approved take and cannot be removed from the "
+                "breakdown. Withdraw that approval first.")
+        if pid in new_panels and new_panels[pid] != cur_panels.get(pid):
+            refuse_if_panel_approved(spec_id, pid, "specification")
+
+    # Evidence rows are frozen for an approved panel's objects — they are
+    # the justification for what actually got rendered (user ruling).
+    def rows_for(spec, pid):
+        objs = {str(o).lower()
+                for o in ((spec.get("panels") or [{}]) and
+                          next((p.get("required_objects") or []
+                                for p in (spec.get("panels") or [])
+                                if p.get("id") == pid), []))}
+        return [r for r in (spec.get("evidence_ledger") or [])
+                if str(r.get("panel_id", "")).upper() == str(pid).upper()
+                or str(r.get("object", "")).lower() in objs]
+
+    for pid in approved:
+        if rows_for(incoming, pid) != rows_for(current, pid):
+            raise PermissionError(
+                f"the evidence rows justifying {pid}'s objects are frozen — "
+                f"{pid} has an approved take that those rows account for. "
+                "Withdraw that approval to change them.")
+
+
 def save_spec(spec_id: str, spec: dict) -> dict:
-    if spec_locked(spec_id):
-        raise PermissionError(
-            f"{spec_id} is APPROVED and locked; create a revision instead.")
     if spec.get("specification_id") != spec_id:
         raise ValueError("specification_id may not change on save")
     if spec.get("status") == "APPROVED":
@@ -802,10 +845,30 @@ def save_spec(spec_id: str, spec: dict) -> dict:
         raise ValueError(violation)
     # The scope declaration itself is server-owned: a save may not
     # rewrite it (the panel floors trust what revise/upgrade journaled).
-    stored_scope = (get_spec(spec_id) or {}).get("revision_scope")
+    current = get_spec(spec_id) or {}
+    stored_scope = current.get("revision_scope")
     if stored_scope is not None:
         spec["revision_scope"] = stored_scope
+    locked = spec_locked(spec_id)
+    if locked:
+        _refuse_frozen_edits(spec_id, current, spec)
     _atomic_write_json(p, spec)
+    if locked:
+        # The lock re-stamps to the amended document and the change is
+        # journaled — every take keeps the hash it was rendered against,
+        # so provenance stays per-candidate rather than per-sheet.
+        from common import stable_hash
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+        changed = [f for f in BOARD_LEVEL_FIELDS
+                   if f in spec and spec.get(f) != current.get(f)]
+        append_approval_log(
+            f"SPECIFICATION {spec_id} amended post-lock (lock re-stamped "
+            f"{prev.get('hash', '?')[:16]}… → {locks[spec_id]['hash'][:16]}…)"
+            + (f": {', '.join(changed)}." if changed else ".")
+            + " Existing takes keep the hash they were generated against.")
     return spec
 
 
@@ -889,6 +952,59 @@ def unlock_spec(spec_id: str) -> dict:
     return spec
 
 
+# The fields that belong to the BOARD rather than to one panel. They ride
+# into every panel's prompt, so they are exactly what an approval freezes
+# — and this one list is both what a snapshot captures and what the gate
+# protects, so the promise and the guard can never drift apart.
+BOARD_LEVEL_FIELDS = (
+    "subject", "board_type", "setting", "scene", "mode", "render_intent",
+    "forbidden_elements", "canon_budget", "design_languages", "scene_lessons",
+    "environments", "layout",
+)
+
+
+def approved_takes_by_panel(spec_id: str) -> dict[str, list[str]]:
+    """panel_id → the approved candidate ids that freeze it."""
+    out: dict[str, list[str]] = {}
+    for r in _board_records(spec_id):
+        if r.get("status") == "APPROVED":
+            out.setdefault(str(r.get("panel_id", "")), []).append(
+                str(r.get("candidate_id", "")))
+    return out
+
+
+def refuse_if_panel_approved(spec_id: str, panel_id: str, what: str) -> None:
+    """The one gate of the one-breakdown model (user ruling 2026-08-16): a
+    locked breakdown is edited in place, and the only thing that stops an
+    edit is an approved take ON THAT PANEL.
+
+    Withdrawing is the way through, NOT rejecting — a rejection is a
+    judgement that rides into every future prompt for the panel, and
+    wanting to change what the panel asks for is not that."""
+    approved = approved_takes_by_panel(spec_id).get(panel_id, [])
+    if approved:
+        raise PermissionError(
+            f"{panel_id} has approved canon output ({', '.join(approved)}) "
+            f"painted from its current {what}. Withdraw that approval first "
+            "if you intend to change what this panel asks for — withdrawing "
+            "keeps the image and carries nothing into future prompts.")
+
+
+def refuse_if_any_panel_approved(spec_id: str, fields: list[str]) -> None:
+    """Board-level fields lock the moment ANY panel is approved (user
+    ruling 2026-08-16). They ride into every prompt, so letting them drift
+    under an approved image would leave that image accounted for by a
+    document it was never rendered from."""
+    approved = approved_takes_by_panel(spec_id)
+    if not approved:
+        return
+    who = ", ".join(f"{pid} ({', '.join(ids)})" for pid, ids in sorted(approved.items()))
+    raise PermissionError(
+        f"{', '.join(fields)} {'is' if len(fields) == 1 else 'are'} board-level "
+        f"and every panel renders from it. {who} already approved against the "
+        "current text, so it is frozen. Withdraw that approval to change it.")
+
+
 def _refuse_carried(spec: dict, panel_id: str) -> None:
     """A panel carried by a revision's scope is read-only in that revision
     file forever — the stored scope is what the unit's panel floors trust,
@@ -923,13 +1039,7 @@ def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
     _refuse_carried(spec, panel_id)
-    approved = [r.get("candidate_id") for r in _board_records(spec_id)
-                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
-    if approved:
-        raise PermissionError(
-            f"{panel_id} has approved canon output ({', '.join(approved)}) painted "
-            "from its current purpose. Reject that take first if you truly intend "
-            "to change what this panel asks for.")
+    refuse_if_panel_approved(spec_id, panel_id, "purpose")
     if not str(purpose).strip() and not panel.get("required_objects"):
         # validation's own rule, held through the amend: a panel needs a
         # purpose or at least one required object, else nothing to render
@@ -1001,13 +1111,7 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
     _refuse_carried(spec, panel_id)
-    approved = [r.get("candidate_id") for r in _board_records(spec_id)
-                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
-    if approved:
-        raise PermissionError(
-            f"{panel_id} has approved canon output ({', '.join(approved)}) composed "
-            "at its current camera. Reject that take first if you truly intend to "
-            "change the shot.")
+    refuse_if_panel_approved(spec_id, panel_id, "camera")
     for field in CAMERA_FIELDS:
         if field in fields:  # only touch fields the caller sent
             v = clean.get(field, "")
@@ -1049,13 +1153,7 @@ def amend_panel_content(spec_id: str, panel_id: str,
     if panel is None:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
     _refuse_carried(spec, panel_id)
-    approved = [r.get("candidate_id") for r in _board_records(spec_id)
-                if r.get("status") == "APPROVED" and r.get("panel_id") == panel_id]
-    if approved:
-        raise PermissionError(
-            f"{panel_id} has approved canon output ({', '.join(approved)}) painted "
-            "from its current content. Reject that take first if you truly intend "
-            "to change what this panel asks for.")
+    refuse_if_panel_approved(spec_id, panel_id, "content")
     changed = []
     for key, items in (("required_objects", add_required or []),
                        ("forbidden_objects", add_forbidden or [])):

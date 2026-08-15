@@ -102,10 +102,17 @@ class SheetLifecycleTests(_Base):
         self.assertTrue(locks["P1LOCK_V001"]["hash"])
         r = self.client.get("/api/specs/P1LOCK_V001")
         self.assertTrue(r.json()["locked"])
-        # Locked means locked: saves refuse, re-approval refuses.
+        # SUPERSEDED 2026-08-16 (user ruling, one-breakdown model): a
+        # locked sheet is no longer read-only — it is edited IN PLACE, and
+        # the only thing that refuses is an approved take. With no approved
+        # take yet, a save on a locked sheet lands and re-stamps the lock.
         self.assertEqual(
             self.client.put("/api/specs/P1LOCK_V001",
-                            json=_valid_spec("P1LOCK_V001")).status_code, 423)
+                            json=_valid_spec("P1LOCK_V001")).status_code, 200)
+        after = json.loads(paths.SPEC_LOCKS.read_text(encoding="utf-8"))
+        self.assertTrue(after["P1LOCK_V001"].get("amended_at"),
+                        "an in-place amend re-stamps the lock and is journaled")
+        # Re-approval still refuses: approving twice is meaningless.
         self.assertEqual(
             self.client.post("/api/specs/P1LOCK_V001/approve").status_code, 423)
 

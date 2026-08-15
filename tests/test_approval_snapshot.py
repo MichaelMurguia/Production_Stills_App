@@ -147,19 +147,119 @@ class UnapproveTests(SnapshotTests):
         self.assertIn("not a rejection", log)
 
 
-class ThePanelGateAlreadyExists(unittest.TestCase):
-    """The gate the one-breakdown model needs is already written — it is
-    just not reachable from the UI. Pinning it so the rebuild keeps it."""
+class TheGatesBehave(SnapshotTests):
+    """One breakdown, edited in place. The only thing that refuses is an
+    approved take — its own panel for panel fields, the whole sheet for
+    board fields (user rulings 2026-08-16)."""
 
-    def test_amending_a_panel_refuses_only_on_its_own_approved_take(self):
+    def lock(self):
+        from common import stable_hash
+        spec = store.get_spec("S1")
+        paths.SPEC_LOCKS.parent.mkdir(parents=True, exist_ok=True)
+        paths.SPEC_LOCKS.write_text(json.dumps(
+            {"S1": {"hash": stable_hash(spec)}}), encoding="utf-8")
+        return spec
+
+    def test_a_locked_sheet_is_edited_in_place_when_nothing_is_approved(self):
+        spec = self.lock()
+        spec["scene"] = "Rewritten."
+        store.save_spec("S1", spec)
+        self.assertEqual(store.get_spec("S1")["scene"], "Rewritten.")
+
+    def test_an_unapproved_panel_stays_editable_beside_an_approved_one(self):
+        """The whole point of per-panel: P02 is editable while P01 is not."""
+        self.approve()
+        spec = self.lock()
+        spec["panels"][1]["purpose"] = "A different exterior."
+        store.save_spec("S1", spec)
+        self.assertEqual(store.get_spec("S1")["panels"][1]["purpose"],
+                         "A different exterior.")
+
+    def test_an_approved_panel_refuses_and_names_the_way_through(self):
+        self.approve()
+        spec = self.lock()
+        spec["panels"][0]["purpose"] = "Something else."
+        with self.assertRaises(PermissionError) as e:
+            store.save_spec("S1", spec)
+        self.assertIn("CAND-0001", str(e.exception))
+        self.assertIn("Withdraw", str(e.exception))
+
+    def test_board_fields_freeze_once_any_panel_is_approved(self):
+        self.approve()
+        spec = self.lock()
+        spec["scene"] = "Rewritten under an approved take."
+        with self.assertRaises(PermissionError) as e:
+            store.save_spec("S1", spec)
+        self.assertIn("board-level", str(e.exception))
+        self.assertIn("P01", str(e.exception))
+
+    def test_an_approved_panel_cannot_be_removed(self):
+        self.approve()
+        spec = self.lock()
+        spec["panels"] = [p for p in spec["panels"] if p["id"] != "P01"]
+        with self.assertRaises(PermissionError):
+            store.save_spec("S1", spec)
+
+    def test_the_evidence_for_an_approved_panel_is_frozen(self):
+        self.approve()
+        spec = self.lock()
+        for r in spec["evidence_ledger"]:
+            if r["panel_id"] == "P01":
+                r["source"] = "rewritten citation"
+        with self.assertRaises(PermissionError) as e:
+            store.save_spec("S1", spec)
+        self.assertIn("evidence rows", str(e.exception))
+
+    def test_withdrawing_reopens_everything_that_take_froze(self):
+        self.approve()
+        generate.unapprove_candidate("S1", "CAND-0001")
+        spec = self.lock()
+        spec["scene"] = "Now editable again."
+        spec["panels"][0]["purpose"] = "And so is the panel."
+        store.save_spec("S1", spec)
+        out = store.get_spec("S1")
+        self.assertEqual(out["scene"], "Now editable again.")
+        self.assertEqual(out["panels"][0]["purpose"], "And so is the panel.")
+
+    def test_an_in_place_amend_restamps_and_journals(self):
+        spec = self.lock()
+        spec["scene"] = "Amended."
+        store.save_spec("S1", spec)
+        locks = json.loads(paths.SPEC_LOCKS.read_text(encoding="utf-8"))
+        self.assertTrue(locks["S1"].get("amended_at"))
+        log = paths.APPROVAL_LOG.read_text(encoding="utf-8")
+        self.assertIn("amended post-lock", log)
+        self.assertIn("scene", log)
+
+
+class OneGateForEveryEdit(unittest.TestCase):
+    """The gate the one-breakdown model needs was already written three
+    times over — purpose, camera and content each carried their own copy.
+    They are one function now, so the rule cannot drift between them."""
+
+    def test_one_gate_serves_every_panel_edit(self):
         src = (ROOT / "app/store.py").read_text(encoding="utf-8")
-        i = src.index("def amend_panel_purpose")
-        body = src[i:src.index("\ndef ", i + 10)]
-        self.assertIn('r.get("panel_id") == panel_id', body,
-                      "the gate is scoped to THIS panel, not the sheet")
-        self.assertIn("PermissionError", body)
-        self.assertIn("spec_locked(spec_id)", body,
-                      "a locked sheet is amended in place, not unlocked")
+        self.assertEqual(src.count("def refuse_if_panel_approved"), 1)
+        self.assertGreaterEqual(
+            src.count("refuse_if_panel_approved(spec_id, panel_id"), 3,
+            "purpose, camera and content all go through it")
+        gate = src[src.index("def refuse_if_panel_approved"):]
+        gate = gate[:gate.index(chr(10) + "def ")]
+        self.assertIn("approved_takes_by_panel(spec_id).get(panel_id", gate,
+                      "scoped to THIS panel, not the sheet")
+        self.assertIn("Withdraw that approval", gate,
+                      "withdrawing is the way through, never rejecting")
+
+    def test_board_fields_freeze_on_the_first_approval(self):
+        """User ruling 2026-08-16: board-level fields ride into every
+        prompt, so one approved panel freezes them for the sheet."""
+        src = (ROOT / "app/store.py").read_text(encoding="utf-8")
+        self.assertIn("def refuse_if_any_panel_approved", src)
+        self.assertIn("BOARD_LEVEL_FIELDS", src)
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        self.assertIn("SNAPSHOT_BOARD_FIELDS = store.BOARD_LEVEL_FIELDS", gen,
+                      "what an approval freezes and what the gate protects "
+                      "must be one list")
 
 
 if __name__ == "__main__":
