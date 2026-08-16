@@ -58,3 +58,17 @@ delta as new instructions.
   forbade starting stage 02 until stage 04 had a week of real use; stage 02
   was rebuilt anyway and the rebuild is ratified by RULE_PASS Part B. Do not
   implement Part 4.
+- **RULE_PASS_2026-08-16_C_SEQUENCE.md** — implemented 2026-08-16. Eight
+  rows cleared. Ratified: stage 04's six steps (all four mock deviations —
+  the build followed canon, the mock did not), stage 03's transfer, the
+  35mm window and fitted image, the empty frame as a way in, the palette
+  plate and Choose plates, the stale-tab bar. Corrected: the ledger
+  freezes on the LOCK not the confirmation; the manifest moved to step 05;
+  the film rolls gained arrow-key stepping. C8 (arrange room) deferred a
+  second time and stays in the table.
+- **RULE_PASS_2026-08-16_D_SETTINGS.md** — implemented 2026-08-16.
+  Productions as Settings' first tab ratified, with a gap in the strip
+  marking the one tab you act on rather than set. D2 ruled via A3.
+- **RULE_PASS_2026-08-16_E_STORE.md** — implemented 2026-08-16. Both store
+  rows cleared. The fleet table stays whole and gains a headline;
+  UNREACHABLE splits from CANNOT MEASURE. Responsive imagery ratified.

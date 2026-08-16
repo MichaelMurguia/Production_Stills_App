@@ -190,33 +190,51 @@ class TheGateAndTheQuestions(unittest.TestCase):
         self.assertIn("EXPLORING IS HOW YOU DECIDE THEM", JS)
 
 
-class TheLedgerIsHybrid(unittest.TestCase):
-    """User ruling 2026-08-14, declining §3.35's always-a-table reading:
-    the selects the user directed on 2026-08-13 stay while a sheet is
-    drafting; a confirmed or locked ledger reads as the record it is."""
+class TheLedgerFreezesOnTheLock(unittest.TestCase):
+    """CORRECTED by RULE_PASS_2026-08-16 C3. The hybrid stands — selects
+    while drafting, a stated provenance record once frozen — but the
+    trigger is the LOCK, not step 06's confirmation.
 
-    def test_read_as_document_follows_the_step_not_only_the_lock(self):
+    A confirmation is advisory (§2.4, and C1 says it again), so a control
+    that loses its affordance when you confirm a step is a confirmation
+    that gated something. Two rules cannot both be true. The user's
+    2026-08-13 direction that the selects stay while drafting is untouched
+    — a draft is unlocked, so they stay."""
+
+    def test_the_trigger_is_the_lock_alone(self):
         i = JS.index("function addLedgerRow")
         seg = JS[i:i + 2600]
-        self.assertIn('const ro = locked || confIs("evidence")', seg)
-        self.assertIn('${ro ? "disabled" : ""}', seg)
-        self.assertNotIn('${locked ? "disabled" : ""}', seg,
-                         "every control in the row follows the one fact")
+        self.assertIn("const ro = locked;", seg)
+        self.assertNotIn('locked || confIs("evidence")', seg)
+        self.assertIn('${ro ? "disabled" : ""}', seg,
+                      "every control in the row follows the one fact")
+
+    def test_confirming_step_06_changes_the_step_and_nothing_else(self):
+        i = JS.index("function addLedgerRow")
+        seg = JS[i:i + 2600]
+        self.assertNotIn('confIs("evidence")', seg)
 
     def test_drafting_keeps_the_selects(self):
-        """confIs() is false on a fresh draft, so ro is false and the
-        controls render as controls — the 2026-08-13 direction stands."""
+        """confIs() no longer reaches the ledger at all, and an unlocked
+        sheet is unlocked — the 2026-08-13 direction stands."""
         i = JS.index("const confIs = s =>")
         self.assertIn("uiGet(confKeySpec", JS[i - 400:i + 200])
 
-    def test_the_add_row_act_steps_aside_with_the_controls(self):
+    def test_the_add_row_act_follows_the_ledger(self):
         i = JS.index("const addLedgerBtn")
-        self.assertIn('confIs("evidence")', JS[i:i + 220])
+        seg = JS[i:i + 320]
+        self.assertIn("!!locked", seg)
+        self.assertNotIn('confIs("evidence")', seg)
 
     def test_a_locked_sheet_still_reads_as_a_document(self):
-        b = block("#sp-ledger select:disabled, #sp-ledger input:disabled,\n.panel-card select:disabled")
+        b = block("#sp-ledger select:disabled, #sp-ledger input:disabled,"
+                  + chr(10) + ".panel-card select:disabled")
         self.assertIn("border-color: transparent", b)
         self.assertIn("appearance: none", b)
+
+    def test_editing_after_the_lock_goes_through_withdraw(self):
+        self.assertIn("Withdraw that approval", (ROOT / "app/store.py")
+                      .read_text(encoding="utf-8"))
 
 
 class ConfirmationsAreAdvisoryHereToo(unittest.TestCase):

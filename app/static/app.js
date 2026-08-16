@@ -401,6 +401,26 @@ function idSpan(ids) {
 // like a mouse; the flick decays on a fixed per-frame factor so a long
 // strip and a short one feel the same. Momentum is motion, so
 // prefers-reduced-motion gets the drag without the glide.
+// C4 (RULE_PASS 2026-08-16): the hidden scrollbar is allowed — drag and
+// wheel both work and the contents are visible at rest — on condition the
+// strip gains the last standard control it lacks. Arrow keys step it when
+// it has focus, which closes the honesty gap hiding the bar opened.
+function stripKeys(el) {
+  if (!el) return;
+  el.tabIndex = 0;
+  el.addEventListener("keydown", e => {
+    const step = el.clientWidth * 0.6;
+    const by = e.key === "ArrowRight" ? step
+      : e.key === "ArrowLeft" ? -step
+      : e.key === "Home" ? -el.scrollLeft
+      : e.key === "End" ? el.scrollWidth
+      : 0;
+    if (!by) return;
+    e.preventDefault();
+    el.scrollBy({ left: by, behavior: "smooth" });
+  });
+}
+
 function dragScroll(el) {
   let down = false, startX = 0, startLeft = 0, lastX = 0, lastT = 0;
   let vel = 0, raf = 0, moved = 0, swallow = false;
@@ -6849,13 +6869,14 @@ async function openSpecEditor(specId) {
   // A confirmed ledger is a record, so the act that grows it steps aside
   // with the controls (the step's own Unconfirm brings both back).
   const addLedgerBtn = $("#sp-add-ledger", panel);
-  if (addLedgerBtn) addLedgerBtn.classList.toggle("hidden", confIs("evidence"));
+  // C3: the add act follows the ledger, and the ledger follows the lock.
+  if (addLedgerBtn) addLedgerBtn.classList.toggle("hidden", !!locked);
 
   const focusIdentity = $("[data-f=focus-identity]", panel);
   if (focusIdentity) focusIdentity.onclick = () => $("#sp-subject", panel)?.focus();
   const madeStrip = $(".made-grid", panel);
   if (madeStrip) {
-    dragScroll(madeStrip);
+    dragScroll(madeStrip); stripKeys(madeStrip);
     // The frames are 35mm windows with the panel fitted into them, so they
     // show less than the take — clicking one opens it full size, the same
     // bargain the takes strip makes (user 2026-08-15).
@@ -7276,7 +7297,13 @@ async function openSpecEditor(specId) {
     // page whose best content is the citations themselves. Drafting keeps
     // the selects the user directed on 2026-08-13; editing is behind the
     // step's own Unconfirm, and locking keeps it read-only for good.
-    const ro = locked || confIs("evidence");
+    // C3 (RULE_PASS 2026-08-16), CORRECTED: the trigger is the LOCK, not
+    // the confirmation. A confirmation is advisory — §2.4 and C1 both say
+    // it never gates — and a control that loses its affordance when you
+    // confirm a step is a confirmation that gated something. Two rules
+    // cannot both be true. Confirming step 06 changes the step; editing
+    // after the lock goes through the withdraw path.
+    const ro = locked;
     // Selectable, not typed (user 2026-08-13): the panel is one of the
     // sheet's own ids; the object is one of that panel's required objects
     // that does not have a row yet. The citation stays typeable but gains
@@ -9044,7 +9071,6 @@ async function renderBoardPanels(specId) {
                 `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
               </div>`;
             })()}
-            <div class="attached mono" data-f="attached"></div>
             ${swatchRefs.length ? (() => {
               // A palette is applied WHOLE (user, 2026-08-14; canon
               // "a set that means something as a set renders as one
@@ -9109,6 +9135,11 @@ async function renderBoardPanels(specId) {
             ${scopeBits.length ? `<div class="step-note mono">SCOPE ${
               scopeOverride ? "PANEL OVERRIDE" : "INHERITED FROM THE BOARD"} · ${
               esc(scopeBits.join("  ·  "))}</div>` : ""}
+            <!-- C6 (RULE_PASS 2026-08-16): the manifest belongs with the
+                 thing it BECOMES. Step 04 keeps its count by role; the
+                 full list of plates that will ride sits beside the prompt
+                 they ride in. -->
+            <div class="attached mono" data-f="attached"></div>
             <div class="dispatch-facts mono" data-f="dispatch-facts"></div>` })}
 
         ${step({ n: "06", label: "GENERATE",
@@ -9819,7 +9850,7 @@ async function renderBoardPanels(specId) {
     // the same way to move: drag with momentum. Without this a long strip
     // would be reachable only by wheel.
     const takesRoll = $(".takes-row", card);
-    if (takesRoll) dragScroll(takesRoll);
+    if (takesRoll) dragScroll(takesRoll); stripKeys(takesRoll);
 
     // Takes filmstrip: a click makes that take current AND opens it full
     // size (user 2026-08-15). The frame is a 35mm window with the image

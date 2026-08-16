@@ -695,3 +695,14 @@ body {
 .door-url { padding: 4px 20px 18px; font-size: 11.5px; }
 .door-url a { color: var(--ink-faint); text-decoration: none; }
 .door-url a:hover { color: var(--ink-dim); }
+
+/* E1 (RULE_PASS 2026-08-16): the fleet's worst state in a sentence, above
+   the table. The table stays whole beneath it — collapsing a healthy
+   fleet to one line optimises for the day nothing is wrong, which is the
+   day nobody opens this page. */
+.fleet-headline {
+  margin: 10px 0 14px;
+  font-size: 15px;
+  color: var(--ink, #eceef0);
+}
+.fleet-headline:empty { display: none; }

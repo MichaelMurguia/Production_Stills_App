@@ -1077,7 +1077,11 @@ async def _ask_storage(client, ws) -> dict:
     """One studio's volume, server-to-server. A studio that will not answer
     is UNREACHABLE — never 0 bytes free. A dead studio must not read as a
     critically full one, which is the mistake that would send someone to
-    fix the wrong thing during an incident."""
+    fix the wrong thing during an incident.
+
+    E1 (RULE_PASS 2026-08-16) splits that further: a studio that ANSWERS
+    but returns no figure is up, and calling it UNREACHABLE sends an
+    operator looking for a dead host. It reads CANNOT MEASURE."""
     door = ws["door"]
     row = {"studio": ws["subdomain"] or str(ws["id"]), "state": "UNREACHABLE",
            "free": None, "total": None, "used_pct": None, "top": ""}
@@ -1093,7 +1097,10 @@ async def _ask_storage(client, ws) -> dict:
         return row
     total, free = int(d.get("total") or 0), int(d.get("free") or 0)
     if not total:
-        return row          # the studio itself could not measure its volume
+        # It answered. It is up. It simply could not measure its volume —
+        # a different fact from silence, and a different thing to go and do.
+        row["state"] = "CANNOT MEASURE"
+        return row
     top = (d.get("breakdown") or [{}])[0]
     row.update({
         "free": free, "total": total,
@@ -1136,11 +1143,46 @@ async def admin_storage(request: Request, token: str = ""):
             rows = list(await asyncio.gather(
                 *[_ask_storage(client, w) for w in live]))
     # Worst first: the reason to open this is to find the studio in trouble.
-    order = {"REFUSING": 0, "TIGHT": 1, "UNREACHABLE": 2, "OK": 3}
+    order = {"REFUSING": 0, "TIGHT": 1, "UNREACHABLE": 2,
+             "CANNOT MEASURE": 3, "OK": 4}
     rows.sort(key=lambda r: (order.get(r["state"], 9),
                              r["free"] if r["free"] is not None else 1 << 62))
     _storage_cache["all"] = (time.time(), rows)
-    return {"studios": rows, "cached": False}
+    return {"studios": rows, "cached": False, "headline": _fleet_headline(rows)}
+
+
+def _fleet_headline(rows: list) -> str:
+    """The fleet's worst state, in a sentence, so the page answers the
+    operator's question before the table is read (E1, 2026-08-16). The
+    table stays whole beneath it — collapsing a healthy fleet to one line
+    optimises for the day nothing is wrong, which is the day nobody opens
+    this page."""
+    if not rows:
+        return "No live studios."
+    n = len(rows)
+    def count(state):
+        return sum(1 for r in rows if r["state"] == state)
+    refusing, tight = count("REFUSING"), count("TIGHT")
+    dark, blind = count("UNREACHABLE"), count("CANNOT MEASURE")
+    if refusing:
+        worst = min((r for r in rows if r["state"] == "REFUSING"),
+                    key=lambda r: r["free"] if r["free"] is not None else 0)
+        return (f"{refusing} of {n} studios are REFUSING writes — worst is "
+                f"{worst['studio']} at {_gb(worst['free'])} free.")
+    if tight:
+        worst = min((r for r in rows if r["state"] == "TIGHT"),
+                    key=lambda r: r["free"] if r["free"] is not None else 0)
+        return (f"{tight} of {n} studios are TIGHT — worst is "
+                f"{worst['studio']} at {_gb(worst['free'])} free.")
+    if dark or blind:
+        bits = []
+        if dark:
+            bits.append(f"{dark} not answering")
+        if blind:
+            bits.append(f"{blind} answering but unable to measure")
+        return (f"Every studio that reported is OK, but {' and '.join(bits)}"
+                f" — nothing is known about {dark + blind} of {n}.")
+    return f"All {n} studios OK."
 
 
 @app.get("/admin/railway-capabilities")

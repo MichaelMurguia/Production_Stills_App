@@ -159,7 +159,9 @@
     <p class="license-label">STORAGE <span class="mono" style="color:var(--ink-faint)">EVERY LIVE STUDIO</span></p>
     <div id="fleet-storage"><p class="admin-note mono">READING EVERY STUDIO&hellip;</p></div>
     <p class="admin-note mono">A RENDER IS REFUSED BELOW 350 MB FREE &middot;
-      A STUDIO THAT WILL NOT ANSWER READS UNREACHABLE, NEVER EMPTY</p>
+      A STUDIO THAT WILL NOT ANSWER READS UNREACHABLE, NEVER EMPTY &middot;
+      ONE THAT ANSWERS BUT CANNOT MEASURE READS CANNOT MEASURE</p>
+    <p class="fleet-headline" id="fleet-headline"></p>
   </div>
 
   {# ----------------------------------------------------- operations --- #}
@@ -256,6 +258,10 @@
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
       const rows = d.studios || [];
+      // E1: the fleet's worst state in a sentence, above the table, so the
+      // page answers the question before the table is read.
+      const head = document.getElementById("fleet-headline");
+      if (head) head.textContent = d.headline || "";
       if (!rows.length) {
         host.innerHTML = '<p class="admin-note mono">NO LIVE STUDIOS</p>';
         return;

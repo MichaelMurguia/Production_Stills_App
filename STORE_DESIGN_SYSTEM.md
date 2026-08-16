@@ -217,8 +217,6 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 | Date | What it is | Where | What the designer should rule on |
 |---|---|---|---|
 
-| 2026-08-07 | **Fleet storage table** on the admin page — every live studio's free space, largest consumer, and a state (`OK` / `TIGHT` / `REFUSING` / `UNREACHABLE`), fetched after page load and sorted worst-first. Built from canon: `.license-box`, `.admin-table.mono`, `.admin-note`. Only `REFUSING` carries colour, and it is `--bad`, not one of the four amber roles. | Admin, between trials and operations | Is a table right, or should a healthy fleet collapse to one line and only expand when a studio is in trouble? And is `UNREACHABLE` the right word for a studio that answers but cannot measure itself? |
-| 2026-08-09 | **Responsive marketing imagery** — the hero wall, marquee, and pipeline-demo stills now serve WebP `srcset` derivatives at display-matched widths (build: `scripts/build_images.py`) instead of the raw multi-MB PNGs; the social card (`og:image`/JSON-LD) is a purpose-cropped 1200×630 JPEG and the coming-soon backdrop a 1600px WebP. No visual change — same images, same layout, smaller bytes. Built from mechanics, not a new visual pattern. | Landing (`index.html`), `base.html` head, `coming_soon.html` | Pure infra — review only: are the chosen display widths/sizes hints right for the wall (≈380px) and marquee (≈150px tall), and is a JPEG social card acceptable vs. a bespoke share image? |
 
 ---
 
@@ -432,3 +430,16 @@ here and recorded as a dated `RULED (...)` changelog entry below.
   trait count loosens to four-or-five; the ANY ENGINE — YOUR OWN API KEY
   line now sits in both lists. The editions footnote drops its engine
   clause and states prices are USD.
+
+- **2026-08-16** — **RULED (RULE_PASS_2026-08-16 Part E).** The fleet
+  storage TABLE is right: a fleet is a set and the operator's question is
+  comparative, so collapsing a healthy fleet to one line would optimise for
+  the day nothing is wrong — the day nobody opens the page. It gains one
+  line above it stating the fleet's worst state in a sentence, and the
+  table stays whole beneath. `UNREACHABLE` splits in two: no answer at all
+  stays `UNREACHABLE`; a studio that answers but returns no figure is up
+  and reads `CANNOT MEASURE`. Both stay uncoloured — only `REFUSING`
+  carries `--bad`. Responsive marketing imagery ratified as pure
+  infrastructure; the standing note is that the wall's `sizes` hints and
+  its cell size must move together, and nothing will fail loudly if they
+  do not.

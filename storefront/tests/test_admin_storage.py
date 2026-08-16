@@ -117,15 +117,16 @@ class AStudioThatDoesNot(unittest.TestCase):
         self.assertEqual(row["state"], "UNREACHABLE")
         self.assertEqual(c.asked, [])
 
-    def test_a_studio_that_cannot_measure_itself_is_unreachable(self):
-        """The tenant returns total 0 when disk_usage fails — that is not
-        an empty volume either."""
+    def test_a_studio_that_cannot_measure_itself_is_not_called_unreachable(self):
+        """E1 (RULE_PASS 2026-08-16): it ANSWERED. It is up. Calling it
+        unreachable sends an operator looking for a dead host — a
+        different fact and a different thing to go and do."""
         c = FakeClient({"https://s.example.com":
                         FakeResponse(200, {"total": 0, "free": 0})})
-        self.assertEqual(ask(c, ws())["state"], "UNREACHABLE")
+        row = ask(c, ws())
+        self.assertEqual(row["state"], "CANNOT MEASURE")
+        self.assertIsNone(row["free"], "and still never reads 0 bytes free")
 
-
-class TheOrdering(unittest.TestCase):
     def test_worst_first(self):
         rows = [{"state": "OK", "free": 9 << 30},
                 {"state": "UNREACHABLE", "free": None},
@@ -212,3 +213,58 @@ class TheCapabilityProbe(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheHeadlineAnswersBeforeTheTable(unittest.TestCase):
+    """E1: one line above the table stating the fleet's worst state. The
+    table stays whole beneath it — collapsing a healthy fleet to one line
+    optimises for the day nothing is wrong, which is the day nobody opens
+    this page."""
+
+    def head(self, rows):
+        return m._fleet_headline(rows)
+
+    def test_refusing_leads_and_names_the_worst(self):
+        h = self.head([
+            {"studio": "alpha", "state": "OK", "free": 9 << 30},
+            {"studio": "beta", "state": "REFUSING", "free": 100 << 20},
+        ])
+        self.assertIn("REFUSING", h)
+        self.assertIn("beta", h)
+        self.assertIn("1 of 2", h)
+
+    def test_tight_leads_when_nothing_refuses(self):
+        h = self.head([
+            {"studio": "alpha", "state": "OK", "free": 9 << 30},
+            {"studio": "beta", "state": "TIGHT", "free": 600 << 20},
+        ])
+        self.assertIn("TIGHT", h)
+        self.assertIn("beta", h)
+
+    def test_silence_is_reported_as_not_knowing(self):
+        h = self.head([
+            {"studio": "alpha", "state": "OK", "free": 9 << 30},
+            {"studio": "beta", "state": "UNREACHABLE", "free": None},
+            {"studio": "gamma", "state": "CANNOT MEASURE", "free": None},
+        ])
+        self.assertIn("nothing is known about 2 of 3", h)
+        self.assertIn("not answering", h)
+        self.assertIn("unable to measure", h)
+
+    def test_a_healthy_fleet_says_so_plainly(self):
+        self.assertEqual(
+            self.head([{"studio": "a", "state": "OK", "free": 9 << 30},
+                       {"studio": "b", "state": "OK", "free": 9 << 30}]),
+            "All 2 studios OK.")
+
+    def test_an_empty_fleet_does_not_crash(self):
+        self.assertEqual(self.head([]), "No live studios.")
+
+    def test_cannot_measure_sorts_between_the_dark_and_the_healthy(self):
+        """It is not an emergency and it is not fine."""
+        src = io.open(ROOT / "app" / "main.py", encoding="utf-8").read()             if False else __import__("pathlib").Path(
+                m.__file__).read_text(encoding="utf-8")
+        i = src.index('order = {"REFUSING"')
+        seg = src[i:i + 200]
+        self.assertLess(seg.index("UNREACHABLE"), seg.index("CANNOT MEASURE"))
+        self.assertLess(seg.index("CANNOT MEASURE"), seg.index('"OK"'))
