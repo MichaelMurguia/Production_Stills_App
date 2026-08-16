@@ -8761,7 +8761,16 @@ async function proposeCorrections(specId, candId, onDone) {
 
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
-  host.innerHTML = `<div class="panel mini">Loading…</div>`;
+  // A REDRAW is not a LOAD (user 2026-08-16: "when I click on the frames in
+  // the strip the page jumps to the top"). Staging a take, saving a camera,
+  // withdrawing an approval and saving a prompt all call this — and blanking
+  // the host to "Loading…" collapses the page to nothing, so the browser
+  // clamps the scroll to 0 and the card you were working in leaves the
+  // screen. On a redraw the old DOM stays up until the new one is ready,
+  // and the scroll goes back where it was.
+  const isRedraw = !!host.querySelector(".wb-card");
+  const keepY = window.scrollY;
+  if (!isRedraw) host.innerHTML = `<div class="panel mini">Loading…</div>`;
   const [{ spec, lock_hash: lockHash }, refs, candidates, appSettings, slotMap, boards, camDefaults, carriedFb] = await Promise.all([
     api(`/api/specs/${specId}`),
     api("/api/references"),
@@ -10583,6 +10592,13 @@ async function renderBoardPanels(specId) {
     .find(id => pids.includes(id));
   if (roomSel.panel !== "__derived" && !pids.includes(roomSel.panel))
     roomSel.panel = revisedFirst || pids[0] || "__derived";
+  // A shared /panels/<spec>/<panel> link SELECTS that panel. It used to be
+  // handled at the tail of this function by scrolling a `.panel-card` into
+  // view — a class this host stopped rendering when the workbench became
+  // one card at a time, so the link had been silently landing on whatever
+  // panel was last open (found 2026-08-16 while fixing the scroll jump).
+  // Selecting is also the truer act now: there is nothing to scroll TO.
+  if (_routePanel && pids.includes(_routePanel)) roomSel.panel = _routePanel;
 
   const slotStatus = {};
   (slotMap?.slots || []).forEach(s => { slotStatus[s.panel_id] = s.status; });
@@ -10886,15 +10902,18 @@ async function renderBoardPanels(specId) {
   if (side) room.append(side);
   host.append(room);
 
-  // A shared /panels/<spec>/<panel> link lands ON the panel: scroll its
-  // card into view once, then the address settles back to the spec.
+  // Put the reader back. The new DOM is the same height as the old one in
+  // every redraw case (a staged take swaps an image, it does not add a
+  // card), so this lands on the same pixel rather than approximately.
+  // An explicit route to a panel below wins — it asked to move.
+  if (isRedraw && !_routePanel) window.scrollTo({ top: keepY, behavior: "instant" });
+
+  // The panel itself was selected above, before the room rendered. All
+  // that is left is to put the view at the top of it and let the address
+  // settle back to the spec — the route is one shot.
   if (_routePanel) {
-    const target = $$(".panel-card[data-pid]", host)
-      .find(pc => pc.dataset.pid === _routePanel);
     _routePanel = "";
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    host.scrollIntoView({ behavior: "smooth", block: "start" });
     syncUrl();
   }
 }

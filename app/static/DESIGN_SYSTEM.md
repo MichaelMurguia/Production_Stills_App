@@ -1519,6 +1519,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **A redraw holds the reader's place** (user: "the page jumps
+  to the top"). The panels host blanked itself to `Loading…` on every redraw,
+  not just on load, collapsing the document so the browser clamped the scroll
+  to 0. Old DOM stays up until the new one is ready; scroll restored. Found
+  alongside it: a shared `/panels/<spec>/<panel>` link had been landing on
+  whichever panel was last open, because it looked for a `.panel-card` this
+  host stopped rendering when the workbench became one card at a time. No
+  table row: both are defects against stated behaviour, not new patterns.
+
 - **2026-08-16** — **REVERSED (user): a filmstrip click stages a take and does
   nothing else.** It also opened the lightbox (ruled 2026-08-15, same user) and
   that was wrong in use: staging is the frequent act — you walk the strip
