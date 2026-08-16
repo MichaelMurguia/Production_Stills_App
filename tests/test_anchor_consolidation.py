@@ -983,7 +983,9 @@ class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
 
     def test_photos_are_chosen_here_and_uploaded_on_cast(self):
         b = self.body()
-        self.assertIn("picked = [...fileIn.files]", b)
+        # the picking moved into the shared tray; casting only reads it
+        self.assertIn("const tray = photoTray(thumbs,", b)
+        self.assertIn("const picked = tray.files()", b)
         self.assertIn("they upload when you cast", b)
         i = b.index("ok.onclick")
         self.assertIn("/reference`, { method: \"POST\", body: fd }", b[i:],
@@ -1005,6 +1007,52 @@ class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
         i = b.index("} catch (err) {")
         self.assertIn("say(err.message", b[i:i + 300])
         self.assertIn("card may already exist", b)
+
+
+class OneTrayForBothWaysIn(unittest.TestCase):
+    """"Finish casting modal" (user 2026-08-16). The card they
+    photographed was already CAST — its `+` tile was still a bare file
+    input, so the OS picker arrived over the app the instant it was
+    touched. Casting and an existing card now share one tray."""
+
+    def test_the_plus_on_a_cast_card_is_a_button_not_a_file_input(self):
+        i = JS.index('data-f="add-photos"')
+        seg = JS[i - 200:i + 200]
+        self.assertIn('<button type="button" class="subj-slot"', seg)
+        self.assertNotIn('<input type="file"', seg)
+        self.assertIn('photoTrayModal(s, onChange)', JS)
+
+    def test_the_tray_is_one_function_not_two_copies(self):
+        self.assertEqual(JS.count("function photoTray(host,"), 1)
+        # both callers use it
+        self.assertIn("const tray = photoTray(thumbs,", JS)
+        self.assertIn('const tray = photoTray($("[data-f=thumbs]", ov),', JS)
+
+    def test_nothing_uploads_until_the_act(self):
+        i = JS.index("function photoTray(host,")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertNotIn("api(", seg, "the tray only picks and shows")
+        self.assertIn("URL.createObjectURL", seg, "and shows what was picked")
+
+    def test_attach_is_dead_until_something_is_chosen(self):
+        i = JS.index("async function photoTrayModal")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn('data-f="ok" disabled', seg)
+        self.assertIn("ok.disabled = !fs.length", seg)
+        self.assertIn("Attach ${fs.length} photo", seg, "and counts them")
+
+    def test_it_names_the_role_the_photos_will_take(self):
+        i = JS.index("async function photoTrayModal")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("SUBJECT_ROLE_OF[s.kind]", seg)
+        self.assertIn("grouped under this exact name", seg)
+
+    def test_a_partial_failure_is_stated_in_both_modals(self):
+        for fn in ("function castModal(rec, onDone)", "async function photoTrayModal"):
+            i = JS.index(fn)
+            seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+            j = seg.index("} catch (err) {")
+            self.assertIn('say(err.message, "bad")', seg[j:j + 300], fn)
 
 
 if __name__ == "__main__":

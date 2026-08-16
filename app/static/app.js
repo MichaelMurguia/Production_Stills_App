@@ -5407,7 +5407,7 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
     <div class="subj-identity" data-f="identity" title="Identity text — rides in every prompt this subject appears in. Click to edit.">${
       s.subtitle ? esc(s.subtitle) : `<span class="mini">add identity text — it rides in every prompt</span>`}</div>
     ${(s.traits || []).length ? `<div class="subj-traits mini">${esc(s.traits.join(" "))}</div>` : ""}
-    <div class="subj-imgs" data-f="imgs"><label class="subj-slot" title="Upload reference photos into this card — each becomes an approved ${esc(role)} — ${esc(s.name.toUpperCase())} reference, grouped under this exact name.">+<input type="file" accept="image/*" multiple data-f="up" class="hidden"></label></div>
+    <div class="subj-imgs" data-f="imgs"><button type="button" class="subj-slot" data-f="add-photos" title="Add reference photos to ${esc(s.name.toUpperCase())} — choose them, look at them, then attach. Each becomes an approved ${esc(role)} — ${esc(s.name.toUpperCase())} reference.">+</button></div>
     <div class="subj-facts">${imgs.length} PHOTO${imgs.length === 1 ? "" : "S"} · ${esc(role)} — ${esc(s.name.toUpperCase())}${
       used ? ` · USED IN ${used} RENDER${used === 1 ? "" : "S"}` : ""}${
       opts.viewLink ? ` · <button type="button" class="text-act" data-f="view">VIEW IN REFERENCE</button>` : ""}</div>`;
@@ -5430,17 +5430,11 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
     };
     imgHost.insertBefore(wrap, slot);
   });
-  $("[data-f=up]", card).addEventListener("change", async e => {
-    try {
-      for (const f of e.target.files) {
-        const fd = new FormData();
-        fd.append("file", f);
-        await api(`/api/subjects/${s.id}/reference`, { method: "POST", body: fd });
-      }
-      toast(`${e.target.files.length} reference(s) added to ${s.name}.`);
-      onChange?.();
-    } catch (err) { toast(err.message, true); }
-  });
+  // The + used to BE a file input, so the OS picker arrived over the app
+  // the instant it was touched — the jarring the user photographed
+  // (2026-08-16). It opens the same tray casting uses: choose, look at
+  // what you chose, then attach.
+  $("[data-f=add-photos]", card).onclick = () => photoTrayModal(s, onChange);
   $("[data-f=identity]", card).onclick = async () => {
     const v = await askText(`Identity — ${s.name.toUpperCase()}`, "Identity text",
       { value: s.subtitle || "",
@@ -5521,6 +5515,99 @@ function buildUncastCard(rec, onChange) {
   return card;
 }
 
+// The photo tray, shared by casting and by an existing card (user
+// 2026-08-16: "finish casting modal"). Files are CHOSEN and shown before
+// anything uploads, which is the whole difference from a bare file input:
+// the picker becomes something you reached for rather than something that
+// happened to you, and what it picked is visible before it is written.
+//
+// `onAttach(files, say)` is the only thing the two callers disagree
+// about — casting creates the card first and then attaches; an existing
+// card just attaches.
+function photoTray(host, { onPicked = null } = {}) {
+  host.innerHTML = `<label class="subj-slot" title="Choose photos — nothing uploads yet">+
+      <input type="file" accept="image/*" multiple data-f="files" class="hidden">
+    </label>`;
+  const fileIn = $("[data-f=files]", host);
+  let picked = [];
+  fileIn.onchange = () => {
+    picked = [...fileIn.files];
+    $$(".cast-thumb", host).forEach(t => t.remove());
+    picked.forEach(f => {
+      const img = document.createElement("img");
+      img.className = "cast-thumb";
+      img.src = URL.createObjectURL(f);
+      img.alt = f.name;
+      img.title = f.name;
+      host.prepend(img);
+    });
+    onPicked?.(picked);
+  };
+  return { files: () => picked };
+}
+
+async function photoTrayModal(s, onDone) {
+  const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  ov.innerHTML = `
+    <div class="modal cast-modal" role="dialog" aria-modal="true">
+      <div class="modal-title">Add photos — ${esc(s.name.toUpperCase())}</div>
+      <p class="hint">Each becomes an approved
+        <span class="mono">${esc(role)} — ${esc(s.name.toUpperCase())}</span>
+        reference, grouped under this exact name. Choose them here; nothing
+        uploads until you attach.</p>
+      <div class="cast-thumbs" data-f="thumbs"></div>
+      <div class="busy busy-inline" data-f="state" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="ghost" data-f="cancel">Cancel</button>
+        <button class="primary" data-f="ok" disabled>Attach</button>
+      </div>
+    </div>`;
+  document.body.append(ov);
+  const ok = $("[data-f=ok]", ov), stateEl = $("[data-f=state]", ov);
+  const say = (msg, kind = "") => {
+    stateEl.className = `busy busy-inline${kind ? " " + kind : ""}`;
+    stateEl.innerHTML = kind === "work"
+      ? `<span class="spinner"></span><span class="busy-label">${esc(msg)}</span>`
+      : `<span class="busy-label">${esc(msg)}</span>`;
+  };
+  let busy = false;
+  const close = () => ov.remove();
+  $("[data-f=cancel]", ov).onclick = close;
+  ov.addEventListener("mousedown", e => { if (e.target === ov && !busy) close(); });
+
+  const tray = photoTray($("[data-f=thumbs]", ov), {
+    onPicked: fs => {
+      ok.disabled = !fs.length;
+      ok.textContent = fs.length
+        ? `Attach ${fs.length} photo${fs.length === 1 ? "" : "s"}` : "Attach";
+      say(fs.length ? "" : "");
+    },
+  });
+
+  ok.onclick = async () => {
+    const files = tray.files();
+    if (!files.length || busy) return;
+    busy = true; ok.disabled = true;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        say(`Attaching photo ${i + 1} of ${files.length}…`, "work");
+        const fd = new FormData();
+        fd.append("file", files[i]);
+        await api(`/api/subjects/${s.id}/reference`, { method: "POST", body: fd });
+      }
+      toast(`${files.length} reference${files.length === 1 ? "" : "s"} added to ${s.name}.`);
+      close();
+      onDone?.();
+    } catch (err) {
+      // Some may already be in. Say so rather than implying none are.
+      busy = false; ok.disabled = false;
+      say(err.message, "bad");
+    }
+  };
+}
+
 // Casting opens a MODAL, not a file explorer (user 2026-08-16: "too
 // jarring... instead of adding that to the list, it should open in a
 // modal. Once you save it, the card goes where it is now").
@@ -5562,11 +5649,7 @@ function castModal(rec, onDone) {
 
       <div class="cast-photos">
         <span class="f-label">Reference photos <span class="hint">optional — each becomes an approved reference under this name</span></span>
-        <div class="cast-thumbs" data-f="thumbs">
-          <label class="subj-slot" title="Choose photos — nothing uploads until you cast">+
-            <input type="file" accept="image/*" multiple data-f="files" class="hidden">
-          </label>
-        </div>
+        <div class="cast-thumbs" data-f="thumbs"></div>
       </div>
 
       <div class="busy busy-inline" data-f="state" aria-live="polite"></div>
@@ -5579,8 +5662,7 @@ function castModal(rec, onDone) {
 
   const ok = $("[data-f=ok]", ov), cancel = $("[data-f=cancel]", ov);
   const stateEl = $("[data-f=state]", ov), thumbs = $("[data-f=thumbs]", ov);
-  const fileIn = $("[data-f=files]", ov);
-  let picked = [], busy = false;
+  let busy = false;
   const say = (msg, kind2 = "") => {
     stateEl.className = `busy busy-inline${kind2 ? " " + kind2 : ""}`;
     stateEl.innerHTML = kind2 === "work"
@@ -5591,24 +5673,13 @@ function castModal(rec, onDone) {
   cancel.onclick = close;
   ov.addEventListener("mousedown", e => { if (e.target === ov && !busy) close(); });
 
-  // Chosen, not uploaded. The picker is now something you reached for
-  // rather than something that happened to you, and what it chose is
-  // visible before anything is written.
-  fileIn.onchange = () => {
-    picked = [...fileIn.files];
-    $$(".cast-thumb", thumbs).forEach(t => t.remove());
-    picked.forEach(f => {
-      const img = document.createElement("img");
-      img.className = "cast-thumb";
-      img.src = URL.createObjectURL(f);
-      img.alt = f.name;
-      img.title = f.name;
-      thumbs.prepend(img);
-    });
-    say(picked.length
-      ? `${picked.length} photo${picked.length === 1 ? "" : "s"} ready — they upload when you cast.`
-      : "");
-  };
+  // The same tray an existing card uses — one place where a photo is
+  // chosen and looked at before it is written.
+  const tray = photoTray(thumbs, {
+    onPicked: fs => say(fs.length
+      ? `${fs.length} photo${fs.length === 1 ? "" : "s"} ready — they upload when you cast.`
+      : ""),
+  });
 
   ok.onclick = async () => {
     if (busy) return;
@@ -5622,6 +5693,7 @@ function castModal(rec, onDone) {
         traits: $("[data-f=traits]", ov).value.split(String.fromCharCode(10))
           .map(t => t.trim()).filter(Boolean),
         source: "screenplay analysis" } });
+      const picked = tray.files();
       for (let i = 0; i < picked.length; i++) {
         say(`Attaching photo ${i + 1} of ${picked.length}…`, "work");
         const fd = new FormData();
