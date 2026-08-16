@@ -8573,6 +8573,22 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     };
     actions.append(b);
   } else {
+    // The same withdrawal the workbench offers — the gallery is where a
+    // user lands when they are reviewing what is already approved, so it
+    // is where they realise one should go back into draft.
+    const wd = document.createElement("button");
+    wd.className = "ghost"; wd.textContent = "Withdraw approval";
+    wd.title = "Put this panel back into draft. The take keeps its image; "
+             + "unlike Reject it records no reason and carries nothing into "
+             + "future prompts.";
+    wd.onclick = async () => {
+      try {
+        await post(`/api/specs/${specId}/candidates/${c.candidate_id}/unapprove`);
+        toast(`${c.candidate_id} back to CANDIDATE — the panel is editable again.`);
+        refresh();
+      } catch (err) { toast(err.message, true); }
+    };
+    actions.append(wd);
     if (c.kind !== "assembled_board" && !String(c.kind || "").startsWith("derived")) {
       const ls = document.createElement("button");
       ls.className = "ghost"; ls.textContent = "→ Light study";
@@ -10279,6 +10295,27 @@ async function renderBoardPanels(specId) {
           toast(`${c.candidate_id} approved.`); refresh();
         } catch (err) { toast(err.message, true); }
       }));
+      // Withdrawing is NOT rejecting (user 2026-08-16: "I need to be able
+      // to put an approved panel back into draft without having to reject
+      // it"). The backend and the endpoint have existed since this morning
+      // and nothing ever called them — so the only way back out of an
+      // approval was Reject, whose reason is carried verbatim into every
+      // future prompt for this panel as a DIRECTOR'S CORRECTION. Using it
+      // to unlock an edit poisons the work that follows with a correction
+      // that was never true.
+      if (c.status === "APPROVED") actApprove.append(mk("Withdraw approval",
+        "text-act", async () => {
+          try {
+            const r = await post(
+              `/api/specs/${specId}/candidates/${c.candidate_id}/unapprove`);
+            toast(`${r.candidate_id} back to CANDIDATE — the take is untouched, `
+                  + "nothing rides future prompts, and the panel is editable again.");
+            refresh();
+          } catch (err) { toast(err.message, true); }
+        },
+        { title: "Put this panel back into draft. The take keeps its image and "
+               + "stays in the strip; unlike Reject it records no reason and "
+               + "carries nothing into future prompts." }));
 
       // Re-performance for resolution (never interpolation): the take
       // anchors itself; a locked reproduce-exactly instruction renders it
