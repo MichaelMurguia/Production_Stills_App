@@ -274,7 +274,8 @@ class TheCardIsItsButton(unittest.TestCase):
     def test_every_catalogue_card_shows_its_plate(self):
         i = JS.index("function openStylePicker(")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-        self.assertIn("stylePlate(st.plate)", seg)
+        self.assertIn("stylePlate(st.plate, st.shot)", seg,
+                      "the diagram, or a captured image over it")
         self.assertIn('class="rs-frame"', seg)
 
     def test_a_plate_is_a_diagram_and_says_so(self):
@@ -287,6 +288,52 @@ class TheCardIsItsButton(unittest.TestCase):
         self.assertNotIn("gradient", seg, "canon forbids gradients")
         self.assertGreaterEqual(seg.count("light"), 7)
         self.assertGreaterEqual(seg.count("mark"), 9)
+
+
+class TheProductionsOwnStyleIsCaptured(unittest.TestCase):
+    """User 2026-08-16: "with my existing rendering style, is it still
+    authoritative? We should capture my style and make it the Production
+    Painting style." A production that has been rendering for weeks
+    already HAS a rendering style, and it is not a phrase we wrote."""
+
+    def test_the_authority_is_the_saved_bible_not_a_hardcoded_phrase(self):
+        BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        self.assertIn("def house_style", BIB)
+        i = BIB.index("def house_style")
+        seg = BIB[i:i + 2200]
+        self.assertIn('sections.get("Rendering Language"', seg)
+        self.assertIn('"Required"', seg,
+                      "the Avoid list is not how the panels are drawn")
+
+    def test_the_plate_is_a_panel_the_production_actually_made(self):
+        BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        i = BIB.index("def house_style")
+        seg = BIB[i:i + 2200]
+        self.assertIn('c.get("status") == "APPROVED"', seg)
+        self.assertIn("size=thumb", seg, "a card is not a full 4K render")
+
+    def test_the_first_card_adopts_it_before_the_panel_opens(self):
+        self.assertIn("async function adoptHouseStyle", JS)
+        self.assertIn('key: "house"', JS)
+        i = JS.index("async function adoptHouseStyle")
+        seg = JS[i:i + 900]
+        self.assertIn("/api/bible/house-style", seg)
+        self.assertIn("card._adopted", seg, "captured once, not per open")
+        self.assertIn("if (!h?.has_bible) return", seg,
+                      "a production with nothing drawn keeps the shipped text")
+        self.assertIn("if (styles === RENDER_STYLES) await adoptHouseStyle()", JS)
+
+    def test_a_card_can_carry_a_real_image_over_its_diagram(self):
+        i = JS.index("function stylePlate(")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("shot || (file ?", seg,
+                      "a captured plate outranks the manifest")
+        self.assertIn("rs-shot", seg)
+
+    def test_feeding_the_bible_back_is_deliberate(self):
+        BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        i = BIB.index("def house_style")
+        self.assertIn("instead of drifting off it", BIB[i:i + 2200])
 
 
 if __name__ == "__main__":

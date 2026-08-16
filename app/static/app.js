@@ -5072,13 +5072,16 @@ async function renderWizard() {
       btn.title = v ? `Rides every render as: ${v}` : "";
     };
     sync();
-    btn.onclick = () => openStylePicker({
+    btn.onclick = async () => {
+      if (styles === RENDER_STYLES) await adoptHouseStyle();
+      openStylePicker({
       ...opts, styles, current: field.value.trim(),
       onPick: v => {
         field.value = v; sync();
         saveInterview(); wizardStepBadges(); syncAnchorBadges();
       },
-    });
+      });
+    };
     return sync;
   };
   // Controls that belong to an anchor but are not its style travel into
@@ -7336,7 +7339,10 @@ const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:1
 // render can follow, not as a label. `not` follows the SETS/NOT grammar
 // the style-anchor columns already use.
 const RENDER_STYLES = [
-  { name: "Production Painting", plate: "markPaint",
+  // Replaced at open time by this production's OWN captured style when it
+  // has one (see adoptHouseStyle). The shipped text is the fallback for a
+  // production that has not drawn anything yet.
+  { name: "Production Painting", plate: "markPaint", key: "house",
     value: "painterly production art, visible brushwork, matte finish",
     desc: "Painted concept art with the brush left visible — the medium this production is drawn in.",
     not: "photography · cel animation" },
@@ -7483,13 +7489,14 @@ let PLATE_SHOTS = null;
 const loadPlateShots = () => PLATE_SHOTS ??= fetch("/style-plates/index.json")
   .then(r => r.ok ? r.json() : {}).then(m => (PLATE_SHOTS = m || {}), () => (PLATE_SHOTS = {}));
 
-function stylePlate(key) {
+function stylePlate(key, shot) {
   const body = PLATE[key];
-  if (!body) return "";
+  if (!body && !shot) return "";
   const file = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
-  return `<svg class="rs-plate" viewBox="0 0 68 56" aria-hidden="true"
-    fill="none" stroke-width="1" vector-effect="non-scaling-stroke">${body}</svg>`
-    + (file ? `<img class="rs-shot" src="/style-plates/${esc(file)}" alt="">` : "");
+  const src = shot || (file ? `/style-plates/${file}` : "");
+  return (body ? `<svg class="rs-plate" viewBox="0 0 68 56" aria-hidden="true"
+    fill="none" stroke-width="1" vector-effect="non-scaling-stroke">${body}</svg>` : "")
+    + (src ? `<img class="rs-shot" src="${esc(src)}" alt="">` : "");
 }
 
 // The picker, shared by every anchor whose answer comes from a known
@@ -7499,6 +7506,32 @@ function stylePlate(key) {
 // the one primary action (Use this). Free text survives: these were text
 // boxes, and a catalogue that cannot say "something else" is a smaller
 // field than the one it replaced.
+// A production that has been rendering for weeks already HAS a rendering
+// style, and it is not a phrase we wrote (user 2026-08-16: "we should
+// capture my style and make it the Production Painting style"). Its
+// authority is the saved bible's Rendering Language, which has ridden
+// every prompt, and its truest example is a panel it actually produced.
+// So the first card in the catalogue stops being generic and becomes
+// THIS production's, with a real take as its plate.
+async function adoptHouseStyle() {
+  const card = RENDER_STYLES.find(x => x.key === "house");
+  if (!card || card._adopted) return;
+  let h;
+  try { h = await api("/api/bible/house-style"); } catch { return; }
+  if (!h?.has_bible) return;
+  card._adopted = true;
+  if (h.words) {
+    card.value = h.words;
+    card.desc = "Captured from this production's own Art Direction Bible — "
+      + "the Rendering Language that has ridden every render so far.";
+  }
+  if (h.plate) {
+    card.shot = h.plate;
+    card.desc = (h.words ? card.desc : card.desc)
+      + ` The plate is ${h.plate_from}, one of your approved panels.`;
+  }
+}
+
 function openStylePicker({ title, definition, styles, current, onPick,
                           uploadRole, uploadLabel, extra = "", onOpen, onClose }) {
   const ov = document.createElement("div");
@@ -7510,7 +7543,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
       <p class="rs-def">${definition}</p>
       <div class="rs-cards">${styles.map((st, i) => `
         <button type="button" class="rs-card${st.value === current ? " on" : ""}" data-i="${i}">
-          <span class="rs-frame">${stylePlate(st.plate)}</span>
+          <span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>
           <span class="rs-name">${esc(st.name)}</span>
           <span class="rs-desc">${esc(st.desc)}</span>
           <span class="rs-not mono">NOT ${esc(st.not.toUpperCase())}</span>

@@ -2012,6 +2012,15 @@ async def api_save_style_bible(body: dict) -> dict:
     return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
 
 
+@app.get("/api/bible/house-style")
+def api_house_style() -> dict:
+    """This production's own rendering style, read from what already
+    governs it — the saved bible's Rendering Language and a panel it
+    actually produced (user ruling 2026-08-16)."""
+    from . import bible as _bible
+    return _bible.house_style()
+
+
 @app.get("/api/bible/sections")
 def api_bible_sections() -> dict:
     return bible.sections_catalog()

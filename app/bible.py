@@ -232,3 +232,52 @@ def render_context(haystack: str,
 
 def drift_prevention() -> str:
     return parse_sections(load_text()).get("Drift Prevention Rule", "")
+
+
+# ------------------------------------------------------------- house style
+
+def house_style() -> dict:
+    """This production's OWN rendering style, captured from what already
+    governs it (user 2026-08-16: "we should capture my style and make it
+    the Production Painting style").
+
+    `Production Painting` shipped as a phrase someone wrote. For a
+    production that has been rendering for weeks that is backwards — the
+    authority on how its panels are drawn is the saved bible's Rendering
+    Language section, which has ridden every prompt, and the truest
+    example of it is a panel it actually produced.
+
+    words: the Required bullets, joined into one directive line. Feeding
+      them back is deliberate rather than circular — a re-draft then
+      restates the established look instead of drifting off it.
+    plate: an approved take's image URL, newest first, or "" if none.
+    """
+    from . import generate, paths as _paths, store
+    sections = parse_sections(load_text())
+    body = sections.get("Rendering Language", "")
+    required = parse_sections(body, level=3).get("Required", body)
+    bullets = [re.sub(r"^[-*]\s*", "", ln).strip()
+               for ln in required.splitlines() if ln.strip().startswith(("-", "*"))]
+    words = "; ".join(b.rstrip(".") for b in bullets if b)[:400]
+
+    plate, plate_from = "", ""
+    if _paths.BOARDS_DIR.exists():
+        newest = None
+        for d in sorted(_paths.BOARDS_DIR.iterdir()):
+            if not d.is_dir():
+                continue
+            for c in generate.list_candidates(d.name):
+                if (c.get("status") == "APPROVED"
+                        and str(c.get("candidate_id", "")).startswith("CAND-")):
+                    n = int(re.sub(r"\D", "", c["candidate_id"]) or 0)
+                    if newest is None or n > newest[0]:
+                        newest = (n, d.name, c["candidate_id"])
+        if newest:
+            _, sid, cid = newest
+            plate = f"/api/specs/{sid}/candidates/{cid}/image?size=thumb"
+            plate_from = cid
+    return {"words": words, "plate": plate, "plate_from": plate_from,
+            "has_bible": bool(load_text().strip()),
+            "board_refs": [r["id"] for r in store.list_references()
+                           if store.role_head(r.get("role", "")) == "BOARD_RENDERING_STYLE"
+                           and r.get("status") == "APPROVED"]}
