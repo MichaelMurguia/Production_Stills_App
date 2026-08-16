@@ -1339,6 +1339,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **Real reference frames, and the card stops being a
+  button** (user: "add the thumbnails in the /docs folder to the
+  adventure cine style"). Classical Adventure carries three real frames;
+  the other seven keep dashed empty cells. Landing them exposed invalid
+  markup that had been there since the rich card shipped — a `<button>`
+  card containing the prompt link's `<button>`, which the parser hoists
+  OUT, tearing the card apart on screen. The card is a `div` with
+  `role="button"`, `tabindex` and Enter/Space handling; its own buttons
+  stay buttons. **A card that holds interactive parts cannot itself be a
+  button** — worth remembering the next time a card grows a verb.
 - **2026-08-16** — **Green means approved, and only approved**
   (user-caught: "selecting the new take made it green border without it
   being approved"). Status and selection were sharing one encoding, so a

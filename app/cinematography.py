@@ -130,7 +130,13 @@ def setting() -> dict:
     switch is thrown, and throwing it back stops it, while every take made
     under it keeps saying so."""
     from . import store
-    raw = store.load_app_state().get(SETTING_KEY) or {}
+    # Under paths.SWITCH_LOCK, the same lock next_counter() uses. A render
+    # compiles its prompt while other renders are allocating candidate
+    # ids, and on Windows an unlocked read of app_state while another
+    # thread os.replace()s it raises PermissionError — ten concurrent
+    # renders found this immediately.
+    with paths.SWITCH_LOCK:
+        raw = store.load_app_state().get(SETTING_KEY) or {}
     return {"key": str(raw.get("key", "")),
             "prompt_rides": bool(raw.get("prompt_rides", False))}
 
@@ -142,9 +148,10 @@ def save_setting(key: str = None, prompt_rides: bool = None) -> dict:
         cur["key"] = str(key)
     if prompt_rides is not None:
         cur["prompt_rides"] = bool(prompt_rides)
-    state = store.load_app_state()
-    state[SETTING_KEY] = cur
-    store.save_app_state(state)
+    with paths.SWITCH_LOCK:
+        state = store.load_app_state()
+        state[SETTING_KEY] = cur
+        store.save_app_state(state)
     store.append_approval_log(
         f"CINEMATOGRAPHY: grammar={cur['key'] or 'none'}, "
         f"image-model prompt {'RIDES' if cur['prompt_rides'] else 'does not ride'} "

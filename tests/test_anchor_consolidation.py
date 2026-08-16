@@ -10,6 +10,7 @@ a words half, and the interview keeps only what no anchor can hold: the
 touchstones, the never-list, and notes."""
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unittest
@@ -522,6 +523,66 @@ class TheGrammarsComeFromTheDocument(unittest.TestCase):
 
     def test_the_endpoint_serves_it(self):
         self.assertIn('@app.get("/api/cinematography/styles")', MAIN)
+
+
+class TheFramesAreReal(unittest.TestCase):
+    """User 2026-08-16: "Add the thumbnails in the /docs folder to the
+    adventure cine style." Masters live in docs/Cinematography/; the app
+    serves web-sized derivatives listed in the plate manifest."""
+
+    def test_the_manifest_names_three_frames_for_classical_adventure(self):
+        mf = json.loads((ROOT / "app/static/style-plates/index.json")
+                        .read_text(encoding="utf-8"))
+        got = mf.get("cine-classical-adventure")
+        self.assertIsInstance(got, list, "three frames, not one plate")
+        self.assertEqual(len(got), 3)
+        for f in got:
+            p = ROOT / "app/static/style-plates" / f
+            self.assertTrue(p.exists(), f)
+            self.assertLess(p.stat().st_size, 700_000,
+                            f"{f} is a master, not a web derivative")
+
+    def test_the_key_matches_what_the_document_slugs_to(self):
+        from app import cinematography
+        keys = {s["key"] for s in cinematography.styles()}
+        mf = json.loads((ROOT / "app/static/style-plates/index.json")
+                        .read_text(encoding="utf-8"))
+        for k in mf:
+            if k.startswith("cine-"):
+                self.assertIn(k, keys, f"{k} matches no grammar in the doc")
+
+    def test_a_style_with_no_frames_still_reads(self):
+        i = JS.index("function richCardBody(st)")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("rs-cell-empty", seg)
+        self.assertIn("shots[i]", seg, "only the slots that exist get an img")
+
+
+class ACardHoldsButtonsSoItIsNotOne(unittest.TestCase):
+    """Caught 2026-08-16 the moment real frames landed: the card was a
+    <button> containing the prompt link's <button>, which is invalid — the
+    parser hoists the inner one OUT and the card comes apart on screen.
+    The frames made it visible; it was wrong from the day the rich card
+    shipped."""
+
+    def test_the_card_is_a_div_with_the_keyboard_put_back(self):
+        i = JS.index("function openStylePicker(")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn('<div class="rs-card', seg)
+        self.assertNotIn('<button type="button" class="rs-card', seg)
+        self.assertIn('role="button" tabindex="0"', seg)
+        self.assertIn("c.onkeydown", seg)
+        self.assertIn('e.key === "Enter" || e.key === " "', seg)
+
+    def test_its_own_buttons_are_still_buttons(self):
+        i = JS.index("function richCardBody(st)")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn('<button type="button" class="text-act rs-prompt-link"', seg)
+
+    def test_a_div_gets_back_what_a_button_gave_for_free(self):
+        b = re.search(r"\.rs-card \{([^}]*)\}", CSS)
+        self.assertIn("font: inherit", b.group(1))
+        self.assertIn(".rs-card:focus-visible", CSS)
 
 
 if __name__ == "__main__":

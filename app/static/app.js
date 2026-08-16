@@ -7673,15 +7673,15 @@ function openStylePicker({ title, definition, styles, current, onPick,
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
       <div class="rs-cards${styles.some(x => x.rich) ? " rs-cards-rich" : ""}">${styles.map((st, i) => `
-        <button type="button" class="rs-card${st === hit ? " on" : ""}${
-            st.rich ? " rs-rich" : ""}" data-i="${i}">
+        <div class="rs-card${st === hit ? " on" : ""}${
+            st.rich ? " rs-rich" : ""}" data-i="${i}" role="button" tabindex="0">
           ${st.rich ? richCardBody(st) : `
           <span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>
           <span class="rs-name">${esc(st.name)}</span>
           <span class="rs-desc">${esc(st.desc)}</span>`}
           <span class="rs-not mono">NOT ${esc(String(st.not).toUpperCase())}</span>
           ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>` : ""}
-        </button>`).join("")}
+        </div>`).join("")}
         <div class="rs-card rs-own-card">
           <span class="rs-frame rs-own-frame" data-f="own-thumbs">
             <button type="button" class="rs-plus" data-f="add-img"
@@ -7722,11 +7722,22 @@ function openStylePicker({ title, definition, styles, current, onPick,
     const st = styles.find(x => x.key === b.dataset.prompt);
     if (st) openPromptReader(`${st.name} — image-model prompt`, st.prompt);
   });
-  $$(".rs-card[data-i]", ov).forEach(c => c.onclick = () => {
+  // A card is a DIV, not a button: it holds real buttons of its own (the
+  // frames, the prompt link) and a button inside a button is invalid —
+  // the parser hoists the inner one out and the card comes apart on
+  // screen (caught 2026-08-16 the moment real frames landed). role and
+  // tabindex put the keyboard back.
+  const choose = c => {
     picked = styles[+c.dataset.i].value;
     own.value = "";
     mark();
     ov.querySelector(".rs-own-card").classList.remove("on");
+  };
+  $$(".rs-card[data-i]", ov).forEach(c => {
+    c.onclick = () => choose(c);
+    c.onkeydown = e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(c); }
+    };
   });
   // Typing your own is choosing your own: the cards let go rather than
   // leaving two answers lit at once.

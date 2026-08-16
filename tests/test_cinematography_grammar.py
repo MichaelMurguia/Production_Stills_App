@@ -178,5 +178,35 @@ class TheSwitchReadsAsStateBeforeItIsHit(unittest.TestCase):
         self.assertIn('@app.put("/api/cinematography/setting")', self.MAIN)
 
 
+class ItSurvivesConcurrentRenders(Grammar):
+    """Ten concurrent renders allocate candidate ids while compiling their
+    prompts. Reading app_state unlocked while another thread os.replace()s
+    it raises PermissionError on Windows — the concurrency suite caught it
+    the moment the grammar started reading that file."""
+
+    def test_the_setting_is_read_under_the_counter_lock(self):
+        src = (ROOT / "app/cinematography.py").read_text(encoding="utf-8")
+        i = src.index("def setting()")
+        seg = src[i:src.index("def save_setting", i)]
+        self.assertIn("with paths.SWITCH_LOCK:", seg)
+
+    def test_concurrent_reads_and_writes_do_not_raise(self):
+        import threading
+        errors = []
+
+        def hammer(n):
+            try:
+                for _ in range(25):
+                    cine.setting()
+                    generate.store.next_counter("t_counter", "T")
+            except Exception as e:  # noqa: BLE001
+                errors.append(e)
+
+        ts = [threading.Thread(target=hammer, args=(i,)) for i in range(8)]
+        [t.start() for t in ts]
+        [t.join() for t in ts]
+        self.assertFalse(errors, errors)
+
+
 if __name__ == "__main__":
     unittest.main()
