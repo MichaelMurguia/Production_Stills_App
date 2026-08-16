@@ -5517,17 +5517,129 @@ function buildUncastCard(rec, onChange) {
     <div class="subj-identity">${esc(rec.subtitle
       || "Found by the screenplay read — no card yet. Casting it creates the card and carries its screenplay identity into prompts.")}</div>
     <div><button type="button" class="ghost" data-f="cast">Cast this subject</button></div>`;
-  $("[data-f=cast]", card).onclick = async () => {
-    try {
-      await api("/api/subjects", { method: "POST", json: {
-        name: rec.name, kind: rec.kind || "CHARACTER",
-        subtitle: rec.subtitle || "", traits: rec.traits || [],
-        source: "screenplay analysis" } });
-      toast(`${rec.name} cast — its card is in the library.`);
-      onChange?.();
-    } catch (err) { toast(err.message, true); }
-  };
+  $("[data-f=cast]", card).onclick = () => castModal(rec, onChange);
   return card;
+}
+
+// Casting opens a MODAL, not a file explorer (user 2026-08-16: "too
+// jarring... instead of adding that to the list, it should open in a
+// modal. Once you save it, the card goes where it is now").
+//
+// The old flow did two abrupt things: the button created the card with
+// no chance to look at what the read proposed, and the card's `+` tile
+// was a bare file input, so the OS picker came up over the app with
+// nothing having been confirmed. Both facts belong in one place before
+// anything is written: the identity the screenplay gave this subject,
+// editable, and the photos, attached deliberately.
+//
+// Nothing is created until Cast is pressed, and the photos ride the same
+// endpoint the card's own slot uses — one upload path, not a second.
+function castModal(rec, onDone) {
+  const KINDS = ["CHARACTER", "VEHICLE", "PROP"];
+  const kind = (rec.kind || "CHARACTER").toUpperCase();
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  ov.innerHTML = `
+    <div class="modal cast-modal" role="dialog" aria-modal="true">
+      <div class="modal-title">Cast ${esc(rec.name)}</div>
+      <p class="hint">What the screenplay read proposed. Edit anything —
+        the identity and traits ride in every prompt this subject appears
+        in. Nothing is created until you cast it.</p>
+
+      <label class="modal-field">Kind
+        <select data-f="kind">${KINDS.map(k =>
+          `<option${k === kind ? " selected" : ""}>${k}</option>`).join("")}</select>
+      </label>
+      <label class="modal-field">Identity
+        <input type="text" data-f="subtitle" value="${esc(rec.subtitle || "")}"
+               placeholder="e.g. DRIVER. COWBOY. LOYAL FRIEND.">
+      </label>
+      <label class="modal-field">Traits <span class="hint">one per line</span>
+        <textarea data-f="traits" rows="4"
+          placeholder="20s. Cheerful under pressure.&#10;Scarred since the crash.">${
+          esc((rec.traits || []).join(String.fromCharCode(10)))}</textarea>
+      </label>
+
+      <div class="cast-photos">
+        <span class="f-label">Reference photos <span class="hint">optional — each becomes an approved reference under this name</span></span>
+        <div class="cast-thumbs" data-f="thumbs">
+          <label class="subj-slot" title="Choose photos — nothing uploads until you cast">+
+            <input type="file" accept="image/*" multiple data-f="files" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <div class="busy busy-inline" data-f="state" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="ghost" data-f="cancel">Cancel</button>
+        <button class="primary" data-f="ok">Cast ${esc(rec.name)}</button>
+      </div>
+    </div>`;
+  document.body.append(ov);
+
+  const ok = $("[data-f=ok]", ov), cancel = $("[data-f=cancel]", ov);
+  const stateEl = $("[data-f=state]", ov), thumbs = $("[data-f=thumbs]", ov);
+  const fileIn = $("[data-f=files]", ov);
+  let picked = [], busy = false;
+  const say = (msg, kind2 = "") => {
+    stateEl.className = `busy busy-inline${kind2 ? " " + kind2 : ""}`;
+    stateEl.innerHTML = kind2 === "work"
+      ? `<span class="spinner"></span><span class="busy-label">${esc(msg)}</span>`
+      : `<span class="busy-label">${esc(msg)}</span>`;
+  };
+  const close = () => ov.remove();
+  cancel.onclick = close;
+  ov.addEventListener("mousedown", e => { if (e.target === ov && !busy) close(); });
+
+  // Chosen, not uploaded. The picker is now something you reached for
+  // rather than something that happened to you, and what it chose is
+  // visible before anything is written.
+  fileIn.onchange = () => {
+    picked = [...fileIn.files];
+    $$(".cast-thumb", thumbs).forEach(t => t.remove());
+    picked.forEach(f => {
+      const img = document.createElement("img");
+      img.className = "cast-thumb";
+      img.src = URL.createObjectURL(f);
+      img.alt = f.name;
+      img.title = f.name;
+      thumbs.prepend(img);
+    });
+    say(picked.length
+      ? `${picked.length} photo${picked.length === 1 ? "" : "s"} ready — they upload when you cast.`
+      : "");
+  };
+
+  ok.onclick = async () => {
+    if (busy) return;
+    busy = true; ok.disabled = true;
+    say("Creating the card…", "work");
+    try {
+      const created = await api("/api/subjects", { method: "POST", json: {
+        name: rec.name,
+        kind: $("[data-f=kind]", ov).value,
+        subtitle: $("[data-f=subtitle]", ov).value.trim(),
+        traits: $("[data-f=traits]", ov).value.split(String.fromCharCode(10))
+          .map(t => t.trim()).filter(Boolean),
+        source: "screenplay analysis" } });
+      for (let i = 0; i < picked.length; i++) {
+        say(`Attaching photo ${i + 1} of ${picked.length}…`, "work");
+        const fd = new FormData();
+        fd.append("file", picked[i]);
+        await api(`/api/subjects/${created.id}/reference`, { method: "POST", body: fd });
+      }
+      toast(`${rec.name} cast${picked.length
+        ? ` with ${picked.length} photo${picked.length === 1 ? "" : "s"}` : ""} — its card is in the library.`);
+      close();
+      onDone?.();
+    } catch (err) {
+      // The card may already exist while a photo failed — say which half
+      // got through rather than implying nothing happened.
+      busy = false; ok.disabled = false;
+      say(err.message, "bad");
+    }
+  };
+  $("[data-f=subtitle]", ov).focus();
 }
 
 // Adding to the library is a dialog now (the intake row moved behind the

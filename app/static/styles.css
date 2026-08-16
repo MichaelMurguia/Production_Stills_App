@@ -2931,6 +2931,18 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .cine-ride { flex-wrap: wrap; margin: 14px 0 0; }
 .cine-ride .gate-text { flex: 1 1 340px; }
 .cine-ride b { color: var(--ink); font-weight: 600; }
+/* UNCANONIZED — 2026-08-16 — the cast modal. Casting used to write the
+   card immediately and the card's + tile was a bare file input, so the OS
+   picker arrived over the app with nothing confirmed. Both facts now sit
+   in one place first, and the photos are CHOSEN here and uploaded on
+   cast — visible before anything is written. */
+.cast-modal { width: min(560px, 94vw); }
+.cast-photos { margin: 4px 0 12px; }
+.cast-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
+.cast-thumb {
+  width: 66px; height: 66px; object-fit: cover; display: block;
+  border: 1px solid var(--line-soft); background: var(--field);
+}
 .rs-prompt-modal { width: min(760px, 94vw); max-height: 86vh;
   display: flex; flex-direction: column; }
 .rs-prompt-text { flex: 0 1 auto; overflow: auto; margin: 6px 0 0;

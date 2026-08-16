@@ -948,5 +948,64 @@ class ALockedStageExplainsRatherThanRefuses(unittest.TestCase):
         self.assertIn("cursor: not-allowed", block(".made-gated"))
 
 
+class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
+    """User 2026-08-16: "When you click a character to cast, currently it
+    pops open a file explorer. Too jarring... instead of adding that to
+    the list, it should open in a modal. Once you save it, the card goes
+    where it is now."
+
+    Two abrupt things happened: the button wrote the card with no chance
+    to look at what the read proposed, and the card's `+` tile was a bare
+    file input, so the OS picker arrived over the app with nothing having
+    been confirmed."""
+
+    def body(self):
+        i = JS.index("function castModal(rec, onDone)")
+        return JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+
+    def test_the_cast_button_opens_the_modal(self):
+        self.assertIn('$("[data-f=cast]", card).onclick = () => castModal(rec, onChange)', JS)
+
+    def test_nothing_is_created_until_it_is_cast(self):
+        b = self.body()
+        i = b.index('ok.onclick')
+        self.assertIn('api("/api/subjects", { method: "POST"', b[i:],
+                      "the write lives behind the button, not the open")
+        self.assertNotIn('api("/api/subjects", { method: "POST"', b[:i])
+        self.assertIn("Nothing is created until you cast it", b)
+
+    def test_it_carries_what_the_read_proposed_and_lets_it_be_edited(self):
+        b = self.body()
+        for f in ("[data-f=kind]", "[data-f=subtitle]", "[data-f=traits]"):
+            self.assertIn(f, b, f)
+        self.assertIn("rec.subtitle", b)
+        self.assertIn("rec.traits", b)
+
+    def test_photos_are_chosen_here_and_uploaded_on_cast(self):
+        b = self.body()
+        self.assertIn("picked = [...fileIn.files]", b)
+        self.assertIn("they upload when you cast", b)
+        i = b.index("ok.onclick")
+        self.assertIn("/reference`, { method: \"POST\", body: fd }", b[i:],
+                      "and only then")
+
+    def test_the_upload_path_is_the_cards_own_not_a_second_one(self):
+        b = self.body()
+        self.assertIn("/api/subjects/${created.id}/reference", b)
+
+    def test_it_reports_while_it_writes(self):
+        b = self.body()
+        self.assertIn('say("Creating the card…", "work")', b)
+        self.assertIn("Attaching photo ${i + 1} of ${picked.length}", b)
+        self.assertIn('class="busy busy-inline"', b,
+                      "the one busy vocabulary, per A3")
+
+    def test_a_partial_failure_says_which_half_got_through(self):
+        b = self.body()
+        i = b.index("} catch (err) {")
+        self.assertIn("say(err.message", b[i:i + 300])
+        self.assertIn("card may already exist", b)
+
+
 if __name__ == "__main__":
     unittest.main()
