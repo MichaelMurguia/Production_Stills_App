@@ -730,7 +730,9 @@ class TheLocalLoopExists(unittest.TestCase):
         self.assertIn("free_port(a.port)", seg,
                       "a busy port moves aside instead of refusing")
         bat = (ROOT / "dev.bat").read_text(encoding="utf-8")
-        self.assertIn("Just run this", bat)
+        self.assertIn(r".\dev.bat", bat,
+                      "PowerShell needs the prefix, and the file that "
+                      "documents itself should say so")
         self.assertIn('cd /d "%~dp0"', bat, "double-clickable from anywhere")
 
     def test_the_dev_home_never_enters_git(self):

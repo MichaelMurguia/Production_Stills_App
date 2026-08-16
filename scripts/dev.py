@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 """Local polish loop — boot the app against a throwaway home, auto-reloading.
 
-    python scripts/dev.py              # boot on :8080, seeded demo
-    python scripts/dev.py --restore x.zip   # boot on a real backup
-    python scripts/dev.py --keys       # let the real API keys through
-    python scripts/dev.py --port 8099  # somewhere else
+    .\dev.bat              find an install, copy it in, boot, open a browser
+    .\dev.bat --restore    import the newest backup zip from Downloads
+    .\dev.bat --keys       let the real API keys through (renders spend)
+    .\dev.bat --fresh      wipe the local copy and start over
+
+PowerShell will not run `dev.bat` from the current directory — it needs
+the `.\` prefix, which is a Windows thing and not a mistake on your part.
+Double-clicking it in Explorer works as well.
 
 Why this exists (user 2026-08-16): "we should iterate locally for a bunch
 of these polish items so its fast". A UI change was costing a version
