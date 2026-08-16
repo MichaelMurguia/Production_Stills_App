@@ -20,6 +20,14 @@ used everywhere it pointed nowhere, and the one live action became unfindable.
 Before you add amber, name which of the three things it is. If it isn't one of
 them, use `--ink` or `--ink-dim`.
 
+**Status owns colour; selection owns an outline** (2026-08-16, user-caught).
+`--ok` means APPROVED and `--bad` means REJECTED, on every surface. Which item
+you are currently LOOKING at is a different fact and takes an ink outline
+(`outline: 2px solid var(--ink)`, offset so it draws outside the frame) — never
+a status colour. Sharing one encoding made a merely-selected take read as
+canon, and made an approved take you were viewing unable to say so. Two facts,
+two encodings, both true at once.
+
 **2. Courier carries machine data.** Screenplays are typed in Courier, so the
 app speaks the same hand. Spec IDs, statuses, counts, timestamps, roles, hashes,
 sizes, file names, column headers → `var(--mono)`. Headings, labels, prose,
@@ -1331,6 +1339,15 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **Green means approved, and only approved**
+  (user-caught: "selecting the new take made it green border without it
+  being approved"). Status and selection were sharing one encoding, so a
+  take you had merely clicked read as canon — and an approved take you
+  were looking at lost its `APPROVED` caption to `SHOWN`. Status owns
+  COLOUR; selection owns an ink OUTLINE, drawn outside the frame so it
+  composes with any status instead of replacing it, and the caption
+  states the durable fact. Retires the `PANEL_CARD P7` reading that
+  shown keeps `--ok`. Added as a rule below the two, not a table row.
 - **2026-08-16** — **The grammar's prompt can ride a render, and can be
   taken back** (user). The anchor's words never reached a render
   directly — they feed the bible draft, which writes the sections that
