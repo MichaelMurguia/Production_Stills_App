@@ -4169,16 +4169,12 @@ async function renderWizard() {
           chip.style.cursor = "pointer";
           const n = r.mentions ?? r.prominence;
           chip.innerHTML = `+ ${esc(r.name)}${n ? ` <span class="suffix">·${n}</span>` : ""}`;
-          chip.onclick = async () => {
-            try {
-              const subj = await castOne(r);
-              toast(`${r.name} cast — add its reference photos.`);
-              await refreshAll();
-              // The next action is always adding reference photos — open the
-              // chooser for the new card immediately.
-              $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
-            } catch (err) { toast(err.message, true); }
-          };
+          // The fourth and last door into casting, and the one most likely
+          // to be used: a chip in the uncast row. It wrote the card on
+          // click and then fired the file chooser at you — the jarring the
+          // user reported — through a selector that had since gone stale,
+          // so it silently did nothing instead. One modal, like the rest.
+          chip.onclick = () => castModal(r, refreshAll);
           chips.append(chip);
         }
         if (recs.length > CAP || open) {
@@ -4219,19 +4215,20 @@ async function renderWizard() {
         { viewLink: true }));
   };
 
-  $("#wiz-subj-add").onclick = async () => {
+  // The manual door goes through the same modal (user 2026-08-16). It was
+  // the last path that wrote the card on click and then fired the file
+  // picker at you — and its picker selector had already gone stale, so it
+  // silently did nothing. One way to cast, whichever door you came in by.
+  $("#wiz-subj-add").onclick = () => {
     const name = $("#wiz-subj-name").value.trim();
     if (!name) return toast("Give the subject a name first.", true);
-    try {
-      const subj = await api("/api/subjects", { method: "POST", json: {
-        name, kind: $("#wiz-subj-kind").value, source: "manual" } });
-      $("#wiz-subj-name").value = "";
-      toast(`${name} cast — add its reference photos.`);
-      renderSubjectTags();
-      await renderSubjectGrid();
-      wizardStepBadges();
-      $(`.subj-card[data-sid="${subj.id}"] [data-f=up]`)?.click();
-    } catch (err) { toast(err.message, true); }
+    castModal({ name, kind: $("#wiz-subj-kind").value, subtitle: "", traits: [] },
+      () => {
+        $("#wiz-subj-name").value = "";
+        renderSubjectTags();
+        renderSubjectGrid();
+        wizardStepBadges();
+      });
   };
   renderSubjectTags();
   renderSubjectGrid();
@@ -4505,8 +4502,11 @@ async function renderWizard() {
       const grouped = acts.map(a => {
         const locs = groups.filter(g => g.act === a.n).map(g => g.location);
         locs.forEach(l => placed.add(l));
+        const named = scanned.find(x => Number(x.n) === a.n);
         return {
           key: `act-${a.n}`,
+          act: a.n,
+          turn: a.turn || named?.turn || "",
           label: `ACT ${a.roman}${a.title ? ` — ${a.title.toUpperCase()}` : ""}`,
           locs,
         };
@@ -4536,7 +4536,10 @@ async function renderWizard() {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
           const cut = capList(locs, g.key, { searching: !!needle });
-          return `<div class="loc-group">${esc(g.label)} — ${locs.length}${
+          return `<div class="loc-group"${g.turn ? ` title="${esc("Turns on: " + g.turn)}"` : ""}>${
+            g.act ? `<button type="button" class="text-act loc-act-name" data-act="${g.act}"
+              title="Rename this act — a reading you disagree with is a reading you can change">${esc(g.label)}</button>`
+              : esc(g.label)} — ${locs.length}${
             cut.capped ? ` <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}</div>`
             + cut.shown.map(n => wizLocRow(n, byLoc[n]?.sheet, `
               <select class="loc-reassign" data-loc="${esc(n)}" title="The environment this location inherits its palette, light and atmosphere from — saved to the analysis immediately.">
@@ -4552,6 +4555,26 @@ async function renderWizard() {
           // Naming the acts is its own small call, NOT a re-scan: a
           // re-scan would overwrite curated design languages, environments
           // and subjects to fill one field (user 2026-08-16).
+          // A reading you disagree with is a reading you can change.
+          $$(".loc-act-name", secHost).forEach(b => b.onclick = async e => {
+            e.stopPropagation();
+            const n = Number(b.dataset.act);
+            const a = getAnalysis() || {};
+            const cur = (a.acts || []).find(x => Number(x.n) === n);
+            const v = await askText(`Act ${n}`, "Act name",
+              { value: cur?.title || "",
+                hint: "two or three words, in the screenplay's own vocabulary — "
+                    + "leave it empty to go back to an unnamed act",
+                confirmLabel: "Save" });
+            if (v === null) return;
+            a.acts = [...(a.acts || []).filter(x => Number(x.n) !== n),
+                      { n, title: v.trim().toUpperCase(),
+                        turn: cur?.turn || "" }]
+              .filter(x => x.title)
+              .sort((x, y) => x.n - y.n);
+            saveAnalysis(a);
+            renderWorlds();
+          });
           const nameBtn = $("[data-f=name-acts]", secHost);
           if (nameBtn) nameBtn.onclick = async () => {
             nameBtn.disabled = true;

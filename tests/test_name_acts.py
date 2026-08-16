@@ -144,5 +144,44 @@ class TheAffordanceOnlyAppearsWhenItIsNeeded(unittest.TestCase):
         self.assertIn("STANDARD THREE-ACT SPLIT · UNNAMED", self.JS)
 
 
+class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
+    """Finishing the acts (user 2026-08-16). A reading is a claim, so it
+    has to survive a re-run and it has to be arguable."""
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    def test_a_re_scan_does_not_drop_the_names(self):
+        """merge_analysis starts from the FRESH read, so a run about
+        design languages would have taken the act names with it."""
+        merged = wizard.merge_analysis(
+            {"design_worlds": [{"name": "W"}],
+             "acts": [{"n": 1, "title": "THE FALL", "turn": "the crash"}],
+             "acts_named_by": "test-model"},
+            {"design_worlds": [{"name": "W"}]})
+        self.assertEqual(merged["acts"][0]["title"], "THE FALL")
+        self.assertEqual(merged["acts_named_by"], "test-model")
+
+    def test_a_fresh_reading_still_wins(self):
+        merged = wizard.merge_analysis(
+            {"acts": [{"n": 1, "title": "OLD"}]},
+            {"acts": [{"n": 1, "title": "NEW"}]})
+        self.assertEqual(merged["acts"][0]["title"], "NEW")
+
+    def test_the_heading_can_be_renamed(self):
+        self.assertIn("loc-act-name", self.JS)
+        i = self.JS.index('$$(".loc-act-name", secHost)')
+        seg = self.JS[i:i + 900]
+        self.assertIn("askText(`Act ${n}`", seg)
+        self.assertIn("saveAnalysis(a)", seg)
+        self.assertIn("e.stopPropagation()", seg, "renaming is not expanding")
+        self.assertIn(".filter(x => x.title)", seg,
+                      "clearing a name returns it to an unnamed act")
+
+    def test_the_beat_is_visible_so_the_reading_can_be_checked(self):
+        """The scan is asked for the turn precisely so the name can be
+        argued with. Capturing it and never showing it wastes the point."""
+        self.assertIn('Turns on: ', self.JS)
+
+
 if __name__ == "__main__":
     unittest.main()

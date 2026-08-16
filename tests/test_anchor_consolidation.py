@@ -1153,5 +1153,35 @@ class TheBreakdownDoorAsksThreeThings(unittest.TestCase):
         self.assertIn("btn.disabled = false", seg, "and comes back on failure")
 
 
+class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
+    """Finishing the casting modal. Three doors existed — the proposal
+    card's `Cast`, a cast card's `+`, and the manual `+ Cast` row — and
+    the manual one still wrote the card on click and then fired a file
+    picker whose selector had already gone stale, so it silently did
+    nothing at all."""
+
+    def test_the_manual_row_opens_the_modal(self):
+        i = JS.index('$("#wiz-subj-add").onclick')
+        seg = JS[i:i + 700]
+        self.assertIn("castModal({ name", seg)
+        self.assertNotIn('api("/api/subjects", { method: "POST"', seg,
+                         "it no longer writes on click")
+
+    def test_the_stale_picker_selector_is_gone(self):
+        self.assertNotIn("[data-f=up]", JS,
+                         "the input it reached for no longer exists")
+
+    def test_the_uncast_chip_opens_it_too(self):
+        """The fourth door, and the one most likely to be used."""
+        i = JS.index("chip.onclick")
+        self.assertIn("castModal(r, refreshAll)", JS[i:i + 200])
+
+    def test_all_four_doors_reach_one_component(self):
+        self.assertEqual(JS.count("castModal("), 4,
+                         "one definition, three callers")
+        self.assertEqual(JS.count("photoTrayModal("), 2,
+                         "one definition, one caller")
+
+
 if __name__ == "__main__":
     unittest.main()

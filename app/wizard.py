@@ -103,6 +103,14 @@ def merge_analysis(prior: dict, fresh: dict) -> dict:
     if not prior:
         return fresh
     out = dict(fresh)
+    # Act names survive a re-run. They are a reading of the story, and a
+    # fresh scan that omits the field — or a name the user typed by hand —
+    # must not be silently dropped by a run about design languages
+    # (2026-08-16). A fresh read that DOES name them wins, like every
+    # other field here.
+    for field in ("acts", "acts_named_by"):
+        if not out.get(field) and prior.get(field):
+            out[field] = prior[field]
     for field in ("design_worlds", "environments"):
         if field not in fresh and field not in prior:
             continue
