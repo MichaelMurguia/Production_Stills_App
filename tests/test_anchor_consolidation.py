@@ -662,5 +662,59 @@ class TheLightboxIsTheTopmostSurface(unittest.TestCase):
         self.assertIn("STACKING ORDER, stated once so it stops drifting", CSS)
 
 
+class TheLabelsAnswerWhatTheyDoToARender(unittest.TestCase):
+    """User 2026-08-16: "'Each becomes a bible section' — who cares.
+    Rather: what does it affect in panel generation?" Both labels named
+    their filing destination instead of their effect."""
+
+    def test_the_old_filing_labels_are_gone(self):
+        self.assertNotIn("EACH BECOMES A BIBLE SECTION", JS)
+        self.assertNotIn("THE VISUAL RULES A PLACE INHERITS", JS)
+
+    def test_both_carry_a_help_card(self):
+        for k in ("langs", "envs"):
+            self.assertIn(f'data-help="{k}"', JS)
+            self.assertIn(f"  {k}:", JS)
+
+    def test_the_copy_states_the_effect_on_a_render(self):
+        i = JS.index("const WIZ_HELP = {")
+        seg = JS[i:JS.index(chr(10) + "};", i)]
+        self.assertIn("What it does to a render", seg)
+        self.assertEqual(seg.count("What it does to a render"), 2,
+                         "both answer the question, not one")
+        # and the facts match the code
+        self.assertIn("environments never", seg.lower(),
+                      "generate._style_context: environments never infer")
+        self.assertIn("override", seg, "a panel overrides its sheet")
+
+    def test_the_help_binder_is_shared_rather_than_copied_again(self):
+        self.assertIn("function bindHelpButtons(root, texts)", JS)
+        self.assertIn("bindHelpButtons(host, WIZ_HELP)", JS)
+
+
+class TheLocalLoopExists(unittest.TestCase):
+    """User 2026-08-16: "we should iterate locally for a bunch of these
+    polish items so its fast"."""
+
+    def test_the_script_is_there_and_guards_the_obvious_ways_to_lose_time(self):
+        p = ROOT / "scripts" / "dev.py"
+        self.assertTrue(p.exists())
+        src = p.read_text(encoding="utf-8")
+        self.assertIn('HOME = ROOT / ".devhome"', src)
+        self.assertIn("def port_is_taken", src)
+        self.assertIn("def clone_install", src)
+        for k in ("OPENAI_API_KEY", "GEMINI_API_KEY"):
+            self.assertIn(k, src)
+
+    def test_the_dev_home_never_enters_git(self):
+        ig = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn(".devhome/", ig)
+
+    def test_it_does_not_ship(self):
+        rel = (ROOT / "scripts" / "stage_release.py").read_text(encoding="utf-8")
+        i = rel.index("INCLUDE = [")
+        self.assertNotIn("scripts", rel[i:rel.index("]", i)])
+
+
 if __name__ == "__main__":
     unittest.main()

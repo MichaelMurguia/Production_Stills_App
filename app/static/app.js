@@ -4533,12 +4533,14 @@ async function renderWizard() {
         <div class="read-tiles">${tiles}</div>
       </div>
       <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
-        <span class="uncast-label">DESIGN LANGUAGES — EACH BECOMES A BIBLE SECTION</span>
+        <span class="uncast-label">DESIGN LANGUAGES — WHAT A PANEL IS ALLOWED TO LOOK LIKE
+          <button type="button" class="q-help" data-help="langs" aria-label="What is a design language?">?</button></span>
         <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
         <div id="wiz-worlds"></div>
       </div>
       <div id="wiz-envs-sec" style="margin-top:16px">
-        <div class="uncast-label">ENVIRONMENTS — THE VISUAL RULES A PLACE INHERITS</div>
+        <div class="uncast-label">ENVIRONMENTS — THE LIGHT AND PALETTE OF A PLACE
+          <button type="button" class="q-help" data-help="envs" aria-label="How are environments used?">?</button></div>
         <div id="wiz-envs"></div>
       </div>
       ${(analysis.key_locations || []).length || (analysis.environments || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
@@ -4559,6 +4561,7 @@ async function renderWizard() {
       if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80,
                                 behavior: "smooth" });
     });
+    bindHelpButtons(host, WIZ_HELP);
     const tagHost = $("#wiz-world-tags", host);
     const wHost = $("#wiz-worlds", host);
     if (!worlds.length) tagHost.innerHTML = `<span class="mini">none — every board will use only the global sections of the Bible</span>`;
@@ -5800,6 +5803,71 @@ async function setRefStatus(id, status, reason = "") {
 }
 
 /* ------------------------------------------------------------------ specs */
+
+const WIZ_HELP = {
+  // User 2026-08-16: "'Each becomes a bible section' — who cares. What
+  // does it affect in panel generation?" So both answer that, from what
+  // the code actually does: bible.render_context() selects these
+  // sections and generate._style_context() puts them in the prompt.
+  langs: "<b>A named visual world, and the rules for drawing it.</b> "
+    + "GRM Order, the Resistance, Terra Nova — each one collects the "
+    + "materials, shapes, wear and design intent that belong to it.<br><br>"
+    + "<b>What it does to a render:</b> a breakdown ticks the languages "
+    + "that apply to it, and those sections are pasted into the prompt of "
+    + "every panel on that sheet. A panel can override the sheet and take "
+    + "a different one. Nothing else in the bible rides — an unticked "
+    + "language is invisible to the render.<br><br>"
+    + "That is why they are worth naming carefully: a panel can only look "
+    + "like the languages it was given.",
+  envs: "<b>The palette, light and atmosphere a place carries</b> — and "
+    + "only those. Not its culture, not its props: those are the design "
+    + "language's job.<br><br>"
+    + "<b>What it does to a render:</b> a breakdown names its environment "
+    + "and that entry rides every panel on the sheet, or a panel names its "
+    + "own and overrides it. Unlike design languages, <b>environments never "
+    + "infer</b> — one you do not select is simply not carried, so a "
+    + "breakdown with no environment gets none.<br><br>"
+    + "Locations map to environments: each location inherits its "
+    + "environment's rules, which is how twenty locations stay consistent "
+    + "without twenty descriptions.",
+};
+
+
+// The `?` card, bound wherever a surface renders one. The stage-03 editor
+// has its own copy of this from before there was a second caller; this is
+// the shared one, and a third surface should use it rather than grow a
+// third.
+function bindHelpButtons(root, texts) {
+  const close = () => {
+    $$(".q-card").forEach(c => c.remove());
+    $$(".q-help[aria-expanded=true]").forEach(
+      b => b.setAttribute("aria-expanded", "false"));
+  };
+  $$(".q-help", root).forEach(btn => {
+    if (!texts[btn.dataset.help]) return;
+    btn.setAttribute("aria-expanded", "false");
+    btn.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const open = btn.getAttribute("aria-expanded") === "true";
+      close();
+      if (open) return;
+      const card = document.createElement("div");
+      card.className = "q-card";
+      card.innerHTML = texts[btn.dataset.help];
+      document.body.append(card);
+      const r = btn.getBoundingClientRect();
+      card.style.top = `${r.bottom + window.scrollY + 8}px`;
+      card.style.left = `${Math.min(r.left + window.scrollX,
+        window.innerWidth - card.offsetWidth - 16)}px`;
+      btn.setAttribute("aria-expanded", "true");
+    };
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".q-card") && !e.target.closest(".q-help")) close();
+  });
+  window.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+}
 
 async function renderSpecs(openId = null) {
   useTemplate("tpl-specs");

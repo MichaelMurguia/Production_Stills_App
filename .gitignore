@@ -33,3 +33,6 @@ design_handoff/
 harness/
 fixtures-*.json
 connectors.json
+
+# Local polish loop (scripts/dev.py) — never the real install
+.devhome/
