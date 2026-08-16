@@ -1519,6 +1519,13 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **REVERSED (user): a filmstrip click stages a take and does
+  nothing else.** It also opened the lightbox (ruled 2026-08-15, same user) and
+  that was wrong in use: staging is the frequent act — you walk the strip
+  comparing takes — and a modal on every step is a door to close before the
+  next one. Full size stays one click away on the staged image. No table row:
+  this REMOVES a behaviour rather than adding a pattern.
+
 - **2026-08-16** — **Non-canon: Withdraw approval.** The only way out of an
   approval was Reject, whose reason is carried into every future prompt for
   that panel — so unlocking an edit poisoned the work after it. The verb and

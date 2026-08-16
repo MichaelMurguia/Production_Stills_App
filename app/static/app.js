@@ -9000,7 +9000,7 @@ async function renderBoardPanels(specId) {
             return `
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
-                    title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}">
+                    title="${esc(c.candidate_id)} (${esc(c.status)})${pr ? ` — promoted to ${esc(pr)}` : ""}${c.status_reason ? ` — ${esc(c.status_reason)}` : ""}${isShown ? "" : " — click to show this take"}">
               <!-- The frame is a 35mm window (user 2026-08-15) and the take
                    is FITTED inside it, longest edge first — a strip of
                    identical frames reads as film; a strip that changes
@@ -10212,17 +10212,20 @@ async function renderBoardPanels(specId) {
     const takesRoll = $(".takes-row", card);
     if (takesRoll) dragScroll(takesRoll); stripKeys(takesRoll);
 
-    // Takes filmstrip: a click makes that take current AND opens it full
-    // size (user 2026-08-15). The frame is a 35mm window with the image
-    // fitted inside it, so the strip deliberately shows less than the
-    // take — the way to see the rest must be the obvious one.
+    // Takes filmstrip: a click STAGES that take, and nothing else.
+    //
+    // It used to open the lightbox at the same time (user 2026-08-15) and
+    // the user reversed that on 2026-08-16: "I told you to open the
+    // fullsize image if you click the frame. That was bad." Staging is the
+    // frequent act — you move along the strip comparing takes — and a
+    // modal over every step of that is a door you have to close before you
+    // can take the next one. Full size stays one click away on the big
+    // viewport image below, which is where you already are once a take is
+    // staged.
     $$("[data-take]", card).forEach(btn => {
       btn.onclick = () => {
-        const id = btn.dataset.take;
-        roomSel.staged[p.id] = id;
+        roomSel.staged[p.id] = btn.dataset.take;
         persistRoomSel();
-        const idx = panelCands.findIndex(c => c.candidate_id === id);
-        if (idx >= 0) openLightbox(takeItems, idx);
         renderBoardPanels(specId);
       };
     });

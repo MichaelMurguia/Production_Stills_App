@@ -123,15 +123,28 @@ class TheImageIsTheHero(unittest.TestCase):
         j = JS.index('class="take-frame"')
         self.assertIn("image?size=thumb", JS[j:j + 300])
 
-    def test_a_frame_click_shows_the_take_full_size(self):
-        """The frame deliberately shows LESS than the take (it is a 35mm
-        window with the image fitted in it), so the way to the rest has to
-        be the obvious one: the click that selects it also opens it."""
+    def test_a_frame_click_only_stages_the_take(self):
+        """REVERSED 2026-08-16 by the user: "I told you to open the fullsize
+        image if you click the frame. That was bad."
+
+        Staging is the frequent act — you walk the strip comparing takes —
+        and a modal on every step is a door to close before the next one.
+        Full size stays one click away on the big viewport image, which is
+        where you already are once a take is staged."""
         i = JS.index('$$("[data-take]", card)')
         seg = JS[i:i + 700]
-        self.assertIn("openLightbox(takeItems", seg)
-        self.assertIn("roomSel.staged[p.id] = id", seg,
-                      "and it still makes that take the current one")
+        self.assertIn("roomSel.staged[p.id] = btn.dataset.take", seg)
+        self.assertNotIn("openLightbox", seg,
+                         "the strip must not open a modal on every click")
+
+    def test_full_size_is_still_one_click_away_on_the_hero(self):
+        """Removing it from the strip is only safe because the staged image
+        still opens — otherwise the take's full resolution would have no
+        door at all."""
+        i = JS.index('data-f="shot-img"')
+        self.assertIn("Click to open at full size", JS[max(0, i - 400):i])
+        j = JS.index('$("[data-f=shot-img]", card).onclick')
+        self.assertIn("openLightbox(takeItems", JS[j:j + 200])
 
     def test_the_rail_holds_only_what_has_no_picture(self):
         """§2.15: the takes do NOT go in a side rail (the spec's own §2.5
