@@ -7548,34 +7548,47 @@ async function cineRideSwitch(host) {
   let s;
   try { s = await api("/api/cinematography/setting"); } catch { return; }
   const draw = () => {
+    // The copy the user could not read (2026-08-16, pointing at it: "what
+    // does this mean / do?"). The first version said "shapes the bible
+    // only" and "does not reach a render" — which assumes you already know
+    // there are two paths out of this panel and which one you are on.
+    // Name both, name the grammar, and say what changes.
+    const named = s.key
+      ? (CINEMA_STYLES.find(x => x.key === s.key)?.name || "The chosen grammar")
+      : "A chosen grammar";
     host.innerHTML = `
       <div class="gate-strip lock-strip cine-ride">
-        <span class="gate-label">PROMPT</span>
+        <span class="gate-label">RENDERS</span>
         <span class="gate-text">${s.prompt_rides
-          ? `This grammar's image-model prompt <b>rides every render</b> —
-             about a page of directive, after the camera and subordinate to
-             it on framing. Every take records that it rode.`
-          : `This grammar shapes the bible only. Its image-model prompt —
-             the page the card links to — <b>does not reach a render</b>
-             unless you turn it on.`}</span>
+          ? `<b>On.</b> ${esc(named)}'s full image-model prompt — the page
+             behind <i>Read the image-model prompt</i> — is added to every
+             panel's render prompt, after the camera. Renders made now will
+             differ from ones made with it off, and each take records which.`
+          : `<b>Off.</b> Choosing a grammar writes a short summary of it into
+             your Art Direction Bible, and that is all it does. The grammar's
+             full image-model prompt — the page behind <i>Read the
+             image-model prompt</i> — is reference only; it never reaches a
+             render. Turn this on to add that page to every panel's render
+             prompt.`}</span>
         <button class="block-act" data-f="ride">${
-          s.prompt_rides ? "Stop it riding renders" : "Let it ride every render"}</button>
+          s.prompt_rides ? "Remove it from renders" : "Add it to every render"}</button>
       </div>`;
     $("[data-f=ride]", host).onclick = async () => {
       const next = !s.prompt_rides;
       if (next && !(await askConfirm(
-        "Let the grammar ride every render",
-        ["The chosen grammar's full image-model prompt joins every render "
-         + "prompt from now on — about a page of directive.",
+        "Add the grammar to every render",
+        ["The grammar's full image-model prompt — about a page of "
+         + "directive — is added to every panel's render prompt from now on.",
          "This WILL change what comes out. Takes you have already approved "
          + "are untouched, and every new take records whether the grammar "
          + "rode it, so you can tell them apart.",
          "Reversible at any time: turning it off stops it riding the "
          + "next render."].join(BR + BR),
-        "Let it ride"))) return;
+        "Add it"))) return;
       const r = await saveCineSetting({ prompt_rides: next });
       if (r) { s = r; draw(); toast(next
-        ? "The grammar now rides every render." : "The grammar no longer rides renders."); }
+        ? "Added — the grammar is in every render prompt from now on."
+        : "Removed — renders go back to what they were."); }
     };
   };
   draw();

@@ -152,16 +152,33 @@ class TheSwitchReadsAsStateBeforeItIsHit(unittest.TestCase):
     MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
 
     def test_the_panel_states_which_way_it_is_set(self):
+        """User-caught 2026-08-16, pointing at the strip: "what does this
+        mean / do?" The first copy said "shapes the bible only" and "does
+        not reach a render", which assumes you already know there are two
+        paths out of this panel and which one you are on. Both states now
+        name both paths and say what changes."""
         i = self.JS.index("async function cineRideSwitch")
-        seg = self.JS[i:i + 2600]
-        self.assertIn("rides every render", seg)
-        self.assertIn("does not reach a render", seg)
-        self.assertIn("Stop it riding renders", seg)
+        seg = self.JS[i:i + 3200]
+        self.assertIn("<b>Off.</b>", seg)
+        self.assertIn("<b>On.</b>", seg)
+        self.assertIn("it never reaches a", seg)
+        self.assertIn("reference only", seg)
+        self.assertIn("added to every", seg)
+        self.assertIn("Read the image-model prompt", seg,
+                      "names the page it is talking about")
+        self.assertIn("Remove it from renders", seg)
+        self.assertIn("Add it to every render", seg)
+
+    def test_the_on_state_names_the_grammar(self):
+        i = self.JS.index("async function cineRideSwitch")
+        seg = self.JS[i:i + 3200]
+        self.assertIn("CINEMA_STYLES.find(x => x.key === s.key)?.name", seg)
 
     def test_turning_it_on_states_the_consequence_first(self):
         i = self.JS.index("async function cineRideSwitch")
         seg = self.JS[i:i + 2600]
         self.assertIn("This WILL change what comes out", seg)
+        self.assertIn("about a page of ", seg)
         self.assertIn("Reversible at any time", seg)
         self.assertIn("already approved ", seg)
         self.assertIn("are untouched", seg)
