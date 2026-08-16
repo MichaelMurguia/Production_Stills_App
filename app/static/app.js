@@ -4501,8 +4501,12 @@ async function renderWizard() {
           wizCov?.acts_derived ? "ACTS FROM THE SCREENPLAY"
             : acts.some(a => a.titleFrom === "scan")
               ? "THREE-ACT SPLIT · NAMES FROM THE SCENE SCAN"
-              : "STANDARD THREE-ACT SPLIT"
-        } · FIVE SHOWN PER ACT</span></span></div>`,
+              : "STANDARD THREE-ACT SPLIT · UNNAMED"
+        } · FIVE SHOWN PER ACT</span>${
+          wizCov?.acts_derived || acts.some(a => a.title) ? "" :
+          ` <button type="button" class="text-act" data-f="name-acts"
+              title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">Name the acts</button>`
+        }</span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
         rows: (needle, q) => grouped.map(g => {
@@ -4522,6 +4526,31 @@ async function renderWizard() {
           // Expanding an act redraws the finder in place — the needle and
           // the scroll position stay where the user left them.
           wireCapRows(secHost, redraw);
+          // Naming the acts is its own small call, NOT a re-scan: a
+          // re-scan would overwrite curated design languages, environments
+          // and subjects to fill one field (user 2026-08-16).
+          const nameBtn = $("[data-f=name-acts]", secHost);
+          if (nameBtn) nameBtn.onclick = async () => {
+            nameBtn.disabled = true;
+            nameBtn.textContent = "Reading the screenplay…";
+            try {
+              const r = await api("/api/wizard/acts", { method: "POST",
+                json: { provider: $("#wiz-provider")?.value || "gemini" } });
+              // The server already merged it into the stored analysis;
+              // this keeps the in-memory copy in step without a PUT that
+              // would race it.
+              const a = getAnalysis() || {};
+              a.acts = r.acts;
+              wizAnalysis = a;
+              wizACacheSet(a);
+              toast(`Acts named: ${r.acts.map(x => x.title).join(" · ")}.`);
+              renderWorlds();
+            } catch (err) {
+              toast(err.message, true);
+              nameBtn.disabled = false;
+              nameBtn.textContent = "Name the acts";
+            }
+          };
           $$(".loc-reassign", secHost).forEach(sel => sel.onchange = () => {
             const loc = sel.dataset.loc, to = sel.value;
             const a = getAnalysis();

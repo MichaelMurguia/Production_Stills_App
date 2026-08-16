@@ -2012,6 +2012,20 @@ async def api_save_style_bible(body: dict) -> dict:
     return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
 
 
+@app.post("/api/wizard/acts")
+def api_name_acts(body: dict) -> dict:
+    """Name the three acts, touching nothing else in the analysis. A full
+    re-scan would overwrite curated design languages, environments and
+    subjects to fill one field (user 2026-08-16)."""
+    from . import wizard as _wiz
+    try:
+        return _wiz.name_acts(str(body.get("provider") or "gemini"))
+    except autofill.AutofillError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"naming the acts failed: {e}")
+
+
 @app.get("/api/cinematography/styles")
 def api_cinematography_styles() -> dict:
     """The eight cinematography grammars, parsed from

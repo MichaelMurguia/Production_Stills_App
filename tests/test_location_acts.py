@@ -114,7 +114,7 @@ class TheListIsChronological(unittest.TestCase):
 class FivePerActWithAnExpand(unittest.TestCase):
     def body(self):
         i = JS.index("// Grouped by ACT")
-        return JS[i:i + 5200]
+        return JS[i:i + 6400]
 
     def test_it_groups_on_the_acts_the_server_derived(self):
         b = self.body()

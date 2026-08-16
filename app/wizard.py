@@ -775,3 +775,62 @@ def generate_swatches(provider: str = "gemini",
 
     return {"groups": persist_swatch_proposals(parse_swatch_proposals(text)),
             "model": model}
+
+
+ACTS_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
+{
+  "acts": [
+    {"n": 1, "title": "SHORT UPPERCASE NAME, TWO OR THREE WORDS",
+     "turn": "the scene or beat this act ends on, in the screenplay's own words"}
+  ]
+}
+Name the three acts. A feature screenplay has a three-act shape whether or
+not it prints ACT headings, and most do not print them — read the turns and
+name what each act is ABOUT, in the screenplay's own vocabulary. The name is
+a reading of the story, not a summary of its locations, and not a genre
+label. Give the beat each act turns on so the reading can be checked.
+Return exactly three unless the screenplay itself prints a different number
+of act headings."""
+
+
+def name_acts(provider: str = "gemini") -> dict:
+    """Name the acts and NOTHING else.
+
+    A full re-scan would rewrite design languages, environments and
+    subjects the user has curated — on the draft this was written for,
+    eight worlds, five environments and forty-four subjects. Naming the
+    acts is one small read, so it gets its own call and merges one key
+    into the stored analysis (user 2026-08-16: "No Act Titles", on an
+    analysis that predates the field).
+    """
+    from . import autofill as _af
+    if provider == "mock" and generate.mock_enabled():
+        # the zero-cost path reads nothing — that is the point of it
+        acts = [{"n": i, "title": t, "turn": "mock"} for i, t in
+                enumerate(["THE SETUP", "THE LONG MIDDLE", "THE RECKONING"], 1)]
+        model = "mock"
+    else:
+        doc, mime = _af._screenplay_bytes()
+        raw, model = _af._draft(provider, doc, mime, ACTS_SCHEMA_NOTE)
+        acts = raw.get("acts") if isinstance(raw, dict) else None
+        if not isinstance(acts, list) or not acts:
+            raise autofill.AutofillError(
+                "the model returned no acts — try again, or a different model")
+
+    clean = []
+    for i, a in enumerate(acts, 1):
+        if not isinstance(a, dict):
+            continue
+        title = str(a.get("title", "")).strip().upper()
+        if not title:
+            continue
+        clean.append({"n": int(a.get("n") or i), "title": title,
+                      "turn": str(a.get("turn", "")).strip()})
+    if not clean:
+        raise autofill.AutofillError("the model returned no usable act names")
+
+    analysis = store.load_wizard_analysis() or {}
+    analysis["acts"] = clean
+    analysis["acts_named_by"] = model
+    store.save_wizard_analysis(analysis)
+    return {"acts": clean, "model": model}
