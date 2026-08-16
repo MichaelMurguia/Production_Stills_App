@@ -300,15 +300,17 @@ class TheProductionsOwnStyleIsCaptured(unittest.TestCase):
         BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
         self.assertIn("def house_style", BIB)
         i = BIB.index("def house_style")
-        seg = BIB[i:i + 2200]
+        seg = BIB[i:]
         self.assertIn('sections.get("Rendering Language"', seg)
         self.assertIn('"Required"', seg,
                       "the Avoid list is not how the panels are drawn")
 
     def test_the_plate_is_a_panel_the_production_actually_made(self):
         BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        # bounded by the function, not a character count — this window has
+        # walked off its assertion once already as house_style() grew
         i = BIB.index("def house_style")
-        seg = BIB[i:i + 2200]
+        seg = BIB[i:]
         self.assertIn('c.get("status") == "APPROVED"', seg)
         self.assertIn("size=thumb", seg, "a card is not a full 4K render")
 
@@ -333,7 +335,77 @@ class TheProductionsOwnStyleIsCaptured(unittest.TestCase):
     def test_feeding_the_bible_back_is_deliberate(self):
         BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
         i = BIB.index("def house_style")
-        self.assertIn("instead of drifting off it", BIB[i:i + 2200])
+        self.assertIn("instead of drifting off it", BIB[i:])
+
+
+class TheChoiceIsVisibleWithoutReopening(unittest.TestCase):
+    """User 2026-08-16: "once a Rendering style or Cinematography style is
+    selected — show the card on the main tab in the correct area (under
+    the selection button)." A choice you cannot see is a choice you reopen
+    the panel to check."""
+
+    def test_the_chosen_style_renders_under_its_button(self):
+        i = JS.index('box.className = "rs-chosen"')
+        seg = JS[i - 700:i + 700]
+        self.assertIn("btn.after(box)", seg, "under the button, not above")
+        self.assertIn("stylePlate(hit?.plate, hit?.shot)", seg,
+                      "with its plate")
+        self.assertIn("rs-desc", seg, "and its words")
+
+    def test_it_clears_before_it_redraws(self):
+        i = JS.index('box.className = "rs-chosen"')
+        seg = JS[i - 700:i + 200]
+        self.assertIn('$(".rs-chosen", col)?.remove()', seg)
+        self.assertIn("if (!v) return", seg, "nothing chosen, nothing shown")
+
+    def test_clicking_it_reopens_the_panel(self):
+        """The thing you are looking at is the thing you would change."""
+        i = JS.index('box.className = "rs-chosen"')
+        self.assertIn("box.onclick = () => btn.click()", JS[i:i + 900])
+
+    def test_a_typed_answer_shows_too(self):
+        i = JS.index('box.className = "rs-chosen"')
+        self.assertIn('"In your own words"', JS[i:i + 900])
+
+    def test_its_prose_speaks_archivo_inside_a_courier_label(self):
+        """It sits inside the anchor's label, whose voice is Courier caps
+        for a FIELD NAME. A style description is prose (§1.1)."""
+        b = re.search(r"\.rs-chosen \{([^}]*)\}", CSS)
+        self.assertTrue(b)
+        self.assertIn("var(--sans)", b.group(1))
+        self.assertIn("text-transform: none", b.group(1))
+        c = re.search(r"\.rs-src \{([^}]*)\}", CSS)
+        self.assertIn("var(--mono)", c.group(1), "the provenance stays machine")
+
+
+class TheCapturedCardShowsTheStyle(unittest.TestCase):
+    """User-caught 2026-08-16: "the production painting card does not
+    contain the description of the rendering style. It needs to." The
+    bible's own words ARE the description; where they came from is a
+    footnote, not the copy."""
+
+    def test_the_description_is_the_bibles_text(self):
+        i = JS.index("async function adoptHouseStyle")
+        seg = JS[i:i + 1200]
+        self.assertIn('card.desc = (h.lines || []).join(" · ") || h.words', seg)
+        self.assertNotIn("Captured from this production", seg,
+                         "that sentence described the capture, not the style")
+
+    def test_the_provenance_is_a_footnote(self):
+        i = JS.index("async function adoptHouseStyle")
+        seg = JS[i:i + 1200]
+        self.assertIn("FROM YOUR ART DIRECTION BIBLE", seg)
+        self.assertIn("card.source", seg)
+
+    def test_a_prose_bible_is_still_read(self):
+        """An earlier pass took bullets only and returned nothing at all
+        for a bible written as paragraphs."""
+        BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        i = BIB.index("def house_style")
+        seg = BIB[i:]
+        self.assertIn("if not required.strip():", seg)
+        self.assertIn('for cut in ("### Avoid", "Avoid")', seg,
+                      "and the Avoid list still never gets in")
 
 
 if __name__ == "__main__":

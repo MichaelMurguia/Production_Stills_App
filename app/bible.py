@@ -255,10 +255,27 @@ def house_style() -> dict:
     from . import generate, paths as _paths, store
     sections = parse_sections(load_text())
     body = sections.get("Rendering Language", "")
-    required = parse_sections(body, level=3).get("Required", body)
-    bullets = [re.sub(r"^[-*]\s*", "", ln).strip()
-               for ln in required.splitlines() if ln.strip().startswith(("-", "*"))]
-    words = "; ".join(b.rstrip(".") for b in bullets if b)[:400]
+    # `### Required` when the bible has one; the whole section when it does
+    # not. A bible written as prose is still a bible — an earlier pass read
+    # bullets only and returned nothing at all for those.
+    subs = parse_sections(body, level=3)
+    required = subs.get("Required") or ""
+    if not required.strip():
+        required = chr(10).join(
+            ln for ln in body.splitlines()
+            if not ln.strip().startswith("###")) if body else ""
+        # never let the Avoid list in — it is what a panel must NOT be
+        for cut in ("### Avoid", "Avoid"):
+            if cut in body:
+                required = body.split(cut, 1)[0]
+                break
+    lines = []
+    for ln in required.splitlines():
+        t = re.sub(r"^\s*[-*]\s*", "", ln).strip()
+        if not t or t.startswith("#") or t.lower().startswith("keywords:"):
+            continue
+        lines.append(t.rstrip("."))
+    words = "; ".join(lines)[:400]
 
     plate, plate_from = "", ""
     if _paths.BOARDS_DIR.exists():
@@ -276,7 +293,8 @@ def house_style() -> dict:
             _, sid, cid = newest
             plate = f"/api/specs/{sid}/candidates/{cid}/image?size=thumb"
             plate_from = cid
-    return {"words": words, "plate": plate, "plate_from": plate_from,
+    return {"words": words, "lines": lines, "plate": plate,
+            "plate_from": plate_from,
             "has_bible": bool(load_text().strip()),
             "board_refs": [r["id"] for r in store.list_references()
                            if store.role_head(r.get("role", "")) == "BOARD_RENDERING_STYLE"

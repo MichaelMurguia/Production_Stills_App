@@ -5064,14 +5064,33 @@ async function renderWizard() {
     const btn = $(`#${id}-pick`), field = $(`#${id}`);
     if (!btn || !field) return;
     loadPlateShots();
+    // A choice you cannot see is a choice you re-open the panel to check
+    // (user 2026-08-16: "once a style is selected — show the card on the
+    // main tab, under the selection button"). The chosen style reads on
+    // the card itself: its plate, its name, its words.
     const sync = () => {
       const v = field.value.trim();
       const hit = styles.find(x => x.value === v);
-      btn.textContent = hit ? hit.name : (v || opts.empty);
+      btn.textContent = hit ? hit.name : (v ? "Change" : opts.empty);
       btn.classList.toggle("chosen", !!v);
       btn.title = v ? `Rides every render as: ${v}` : "";
+      const col = $(`.wiz-col[data-role="${opts.uploadRole}"]`);
+      $(".rs-chosen", col)?.remove();
+      if (!v) return;
+      const box = document.createElement("div");
+      box.className = "rs-chosen";
+      box.innerHTML = `
+        <span class="rs-frame">${stylePlate(hit?.plate, hit?.shot)}</span>
+        <span class="rs-chosen-body">
+          <span class="rs-name">${esc(hit ? hit.name : "In your own words")}</span>
+          <span class="rs-desc">${esc(hit ? hit.desc : v)}</span>
+          ${hit?.source ? `<span class="rs-src mono">${esc(hit.source)}</span>` : ""}
+        </span>`;
+      box.onclick = () => btn.click();
+      btn.after(box);
     };
     sync();
+    if (styles === RENDER_STYLES) adoptHouseStyle().then(sync);
     btn.onclick = async () => {
       if (styles === RENDER_STYLES) await adoptHouseStyle();
       openStylePicker({
@@ -7520,16 +7539,17 @@ async function adoptHouseStyle() {
   try { h = await api("/api/bible/house-style"); } catch { return; }
   if (!h?.has_bible) return;
   card._adopted = true;
+  // The card must SHOW the style, not describe the fact that it was
+  // captured (user-caught 2026-08-16: "the production painting card does
+  // not contain the description of the rendering style"). The bible's own
+  // words are the description; where they came from is a footnote.
   if (h.words) {
     card.value = h.words;
-    card.desc = "Captured from this production's own Art Direction Bible — "
-      + "the Rendering Language that has ridden every render so far.";
+    card.desc = (h.lines || []).join(" · ") || h.words;
+    card.source = "FROM YOUR ART DIRECTION BIBLE"
+      + (h.plate_from ? ` · PLATE IS ${h.plate_from}` : "");
   }
-  if (h.plate) {
-    card.shot = h.plate;
-    card.desc = (h.words ? card.desc : card.desc)
-      + ` The plate is ${h.plate_from}, one of your approved panels.`;
-  }
+  if (h.plate) card.shot = h.plate;
 }
 
 function openStylePicker({ title, definition, styles, current, onPick,
@@ -7547,6 +7567,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
           <span class="rs-name">${esc(st.name)}</span>
           <span class="rs-desc">${esc(st.desc)}</span>
           <span class="rs-not mono">NOT ${esc(st.not.toUpperCase())}</span>
+          ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>` : ""}
         </button>`).join("")}
         <div class="rs-card rs-own-card">
           <span class="rs-frame rs-own-frame" data-f="own-thumbs">
