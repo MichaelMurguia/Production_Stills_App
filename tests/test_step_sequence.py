@@ -485,5 +485,45 @@ class TheVocabularyStaysInsideItsSurface(unittest.TestCase):
         self.assertGreaterEqual(JS.count('<div class="steps">'), 2)
 
 
+class GreenMeansApproved(unittest.TestCase):
+    """User-caught 2026-08-16: "selecting the new take made it green border
+    without it being approved. Green should be for approved."
+
+    Two orthogonal facts were sharing one encoding — status and selection
+    — so a take you had merely clicked read as canon. Status owns COLOUR;
+    selection owns an ink OUTLINE, drawn outside the frame so it composes
+    with any status instead of replacing it."""
+
+    def test_selection_is_never_the_approval_colour(self):
+        for sel in (".take.shown", ".take.shown .take-frame"):
+            b = block(sel)
+            self.assertNotIn("--ok", b, f"{sel} still borrows approval green")
+            self.assertIn("outline", b)
+            self.assertIn("var(--ink)", b)
+
+    def test_approval_keeps_it(self):
+        self.assertIn("var(--ok)", block(".take.approved"))
+        self.assertIn("var(--ok)", block(".take.approved .take-frame"))
+
+    def test_the_two_can_be_true_at_once(self):
+        """An approved take you are looking at must read as BOTH — which
+        is exactly what a shared encoding made impossible."""
+        self.assertNotIn(".take.shown.approved", CSS,
+                         "no special case is needed once they differ")
+
+    def test_the_caption_states_the_durable_fact(self):
+        """SHOWN first won the caption outright, so an approved take you
+        were looking at lost its APPROVED word altogether."""
+        i = JS.index("const word = ")
+        seg = JS[i:i + 320]
+        self.assertIn('c.status === "APPROVED" ? "APPROVED"', seg)
+        self.assertLess(seg.index("APPROVED"), seg.index("SHOWN"))
+
+    def test_the_caption_colour_follows_the_same_split(self):
+        self.assertIn(".take.shown .take-cap { color: var(--ink); }", CSS)
+        self.assertIn(".take.approved .take-cap { color: var(--ok); }", CSS)
+        self.assertIn(".filmstrip .take.shown .take-cap { color: var(--ink); }", CSS)
+
+
 if __name__ == "__main__":
     unittest.main()

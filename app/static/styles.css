@@ -1146,13 +1146,19 @@ details.meta pre {
 }
 .take img { width: 100%; height: 70px; object-fit: cover; display: block; }
 .take.rejected img { opacity: .45; }
-.take.shown { border-color: var(--ok); }  /* PANEL_CARD P7: shown keeps --ok */
+/* SELECTED is not APPROVED (user-caught 2026-08-16: "selecting the new
+   take made it green border without it being approved"). Two orthogonal
+   facts were sharing one encoding, so a take you had merely clicked read
+   as canon. Status owns COLOUR — --ok approved, --bad rejected. Selection
+   owns an ink OUTLINE, drawn outside the frame so it composes with any
+   status instead of replacing it. Same rule as the style picker: a
+   selection is state, and state is ink. */
+.take.shown { outline: 2px solid var(--ink); outline-offset: 1px; }
 .take-label {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em;
   color: var(--ink-faint); padding: 4px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .take.approved { border-color: var(--ok); }
-.take.shown.approved { border-color: var(--ok); }
 
 /* Pending take tile + take state tags — canonical (2026-07-30c): in-flight
    work holds its place; state reads at a glance in the strip. */
@@ -1754,7 +1760,7 @@ details.meta pre {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
   color: var(--ink-faint); padding: 4px 6px; white-space: nowrap;
 }
-.take.shown .take-cap { color: var(--ok); }
+.take.shown .take-cap { color: var(--ink); }
 .take.approved .take-cap { color: var(--ok); }
 .take.rejected .take-cap { color: var(--bad); }
 
@@ -3412,15 +3418,15 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   position: relative; overflow: hidden;
 }
 .take-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.take.shown .take-frame,
 .take.approved .take-frame { border-color: var(--ok); }
+.take.shown .take-frame { outline: 2px solid var(--ink); outline-offset: 1px; }
 .take.rejected .take-frame { border-color: var(--bad-line); }
 .take.rejected .take-frame img { opacity: .45; }
 .wb-card .take-cap {
   padding: 6px 0 0; color: var(--ink-faint);
   font-size: 9px; letter-spacing: .08em;
 }
-.filmstrip .take.shown .take-cap { color: var(--ok); }
+.filmstrip .take.shown .take-cap { color: var(--ink); }
 .filmstrip .take.rejected .take-cap { color: var(--bad); }
 
 /* the board strip — the same roll, one frame per panel */

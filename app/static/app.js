@@ -8402,9 +8402,13 @@ async function renderBoardPanels(specId) {
           ${panelCands.map(c => {
             const pr = promotedRefOf(c);
             const isShown = staged && c.candidate_id === staged.candidate_id;
-            const word = isShown ? "SHOWN"
+            // STATUS wins the word; selection is the ink outline (user-caught
+            // 2026-08-16). "SHOWN" first meant an approved take you were
+            // looking at lost its APPROVED caption altogether — the durable
+            // fact reads, and the transient one is drawn.
+            const word = c.status === "APPROVED" ? "APPROVED"
               : c.status === "REJECTED" ? "REJECTED"
-              : c.status === "APPROVED" ? "APPROVED" : "";
+              : isShown ? "SHOWN" : "";
             return `
             <button class="take${isShown ? " shown" : ""}${c.status === "REJECTED" ? " rejected" : ""}${c.status === "APPROVED" ? " approved" : ""}"
                     data-take="${esc(c.candidate_id)}"
