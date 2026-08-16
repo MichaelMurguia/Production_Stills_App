@@ -525,5 +525,39 @@ class GreenMeansApproved(unittest.TestCase):
         self.assertIn(".filmstrip .take.shown .take-cap { color: var(--ink); }", CSS)
 
 
+class SettledIsNotConfirmed(unittest.TestCase):
+    """RULE_PASS_2026-08-16 A8. `✓ CONFIRMED` is the user's word and offers
+    Unconfirm; a frozen step is the WORK's word. Rendering both the same
+    claims an action the user did not take, and the head's count is what
+    makes it matter."""
+
+    def test_a_frozen_step_reads_settled(self):
+        i = JS.index("function seqStep({")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("✓ SETTLED", seg)
+        j = seg.index("frozen && id")
+        self.assertNotIn("✓ CONFIRMED", seg[j:seg.index("</span>", j)])
+
+    def test_the_users_own_tick_still_says_confirmed_and_offers_the_way_back(self):
+        i = JS.index("function seqStep({")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        j = seg.index("done && id && !frozen")
+        self.assertIn("✓ CONFIRMED", seg[j:j + 400])
+        self.assertIn("data-unconfirm", seg[j:j + 400])
+
+    def test_settled_carries_no_verb(self):
+        i = JS.index("function seqStep({")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        j = seg.index("frozen && id")
+        self.assertIn("<span", seg[j:j + 200], "a span, never a button")
+
+    def test_the_head_does_not_report_an_act_nobody_took(self):
+        self.assertIn('approvedTakes.length ? "SETTLED" : "CONFIRMED"', JS)
+        self.assertIn('boardFrozen ? "SETTLED" : "CONFIRMED"', JS)
+
+    def test_settled_offers_its_explanation(self):
+        self.assertIn("cursor: help", block(".step-settled"))
+
+
 if __name__ == "__main__":
     unittest.main()

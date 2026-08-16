@@ -827,9 +827,13 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
         self.assertIn("few seconds", b)
 
     def test_elapsed_seconds_separate_slow_from_hung(self):
+        """A3 ruled the threshold: elapsed appears only AFTER three
+        seconds — before that it is noise, and its whole job is telling a
+        slow call from a hung one."""
         b = self.body()
-        self.assertIn("auth-elapsed", b)
+        self.assertIn('$(".elapsed", stateEl)', b)
         self.assertIn("Date.now() - t0", b)
+        self.assertIn('secs >= 3 ? `${secs}s` : ""', b)
 
     def test_cancel_stays_live_so_the_modal_cannot_lock(self):
         """Disabling it was worse than the silence it replaced: a slow
@@ -853,9 +857,19 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
     def test_an_empty_key_states_it_in_place(self):
         self.assertIn('say("Paste the key first.", "bad")', self.body())
 
-    def test_the_spinner_stops_under_reduced_motion(self):
-        i = CSS.index(".auth-spin {")
-        self.assertIn("prefers-reduced-motion", CSS[i:i + 700])
+    def test_it_adopts_the_one_busy_vocabulary(self):
+        """A3: NOT a second vocabulary. `.busy` gained an inline life and
+        the bespoke `.auth-state` markup is retired — a new class name for
+        the same two facts is how a system grows a second way to say one
+        thing."""
+        b = self.body()
+        self.assertIn('class="busy busy-inline"', b)
+        self.assertIn('class="spinner"', b)
+        self.assertIn('class="busy-label"', b)
+        for gone in ("auth-state", "auth-spin", "auth-elapsed"):
+            self.assertNotIn(gone, JS, gone)
+            self.assertNotIn(gone, CSS, gone)
+        self.assertIn(".busy.busy-inline {", CSS)
 
 
 class ProductionsIsASettingsTab(unittest.TestCase):

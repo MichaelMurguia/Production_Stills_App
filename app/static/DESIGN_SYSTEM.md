@@ -113,6 +113,22 @@ sizes between 9.5px and 15px — nine steps inside five and a half pixels,
 which is not a weak hierarchy but a continuum, and a continuum reads as
 one size with noise. Gradations are not contrast.
 
+**One 24px element per surface, per VOICE** (§1.2, amended by A5,
+2026-08-16). The subject is Archivo 600; a step spine is Courier, and the two
+never compete because §1.3 already makes the family carry the meaning at
+11.5px — it carries it at 24px too. A surface whose job is a sequence may set
+its step numbers at 24px in Courier beside its 24px Archivo subject; it may
+not set two Archivo elements there. A surface with no sequence has no second
+24px element.
+
+**Promote by ink tier and position before size** (§1.2, A6, 2026-08-16). A
+thing that reads too quietly is usually dim, or filed in a row beside a label,
+or both — change those first. The scale gains a step only when a genuinely new
+structural role appears, and three sizes have never yet failed to carry one. A
+fourth size chosen because 15px "did not separate enough" is the first step
+back toward the nine-sizes-in-five-pixels continuum this rule was written to
+kill.
+
 **Fill classifies; border does not** (§1.3). A border cannot classify
 because a tag and a button both carry one. `--accent` fill is the primary
 act (already canon); `--tile` + a `--line` stroke is a set member; no fill
@@ -129,6 +145,14 @@ underline`, `text-decoration-color: var(--ink-dim)`,
 underline to `--ink`. Not each row's own right edge — ONE shared vertical
 line, so the eye finds actions by running down a single column.
 
+**Verb or tool — the test is whether ONE object is visible beside it** (§1.4,
+A7, 2026-08-16). A **verb** sits inline beside the single object it acts on:
+`--ink`, underlined, no box, on the surface's one right edge. A **tool** sits
+in a bar of peer tools acting on the REGION rather than on a row: `--line`
+border, 13.5px/600, no underline. A bar of underlined 11.5px verbs reads as a
+row of footnotes — the measured fault that produced this rule. Facts about a
+picture ride on the picture, never in the bar beside it.
+
 **A surface whose job is a sequence numbers its steps** (§1.6/§1.7), and
 the number — not a label gutter — is the spine. **The vocabulary is scoped
 to `.steps`** — every `.step*` declaration lives under that container and
@@ -138,11 +162,24 @@ gutter) and shares nothing but the word: an unscoped `.step { display:
 flex }` captured every wizard panel and scattered its contents into
 columns (user-caught 2026-08-16). A shared class name is not a shared
 component. Within that scope: a label says what KIND of
-thing a row is, a number says where you are in the work. Two states only,
-`NEEDS YOU` (number `--ink`, its own verb) and `CONFIRMED` (number
-`--ok`, label `--ink-dim`, a stated `✓ CONFIRMED`). A confirmed step dims
-but stays fully legible — it is evidence you already ruled, not clutter to
-be hidden. Do not collapse it.
+thing a row is, a number says where you are in the work. Three states, and
+the third is not a fourth tick (A8, 2026-08-16). `NEEDS YOU` — number
+`--ink`, its own verb. `✓ CONFIRMED` — **you** ruled it; number `--ok`,
+label `--ink-dim`, and it offers `Unconfirm`. `✓ SETTLED` — the **work**
+ruled it: an approved take settled the step and the user never ruled
+anything, so it carries no verb, its title names what settled it
+(`SETTLED BY TAKE 03`) and says withdrawing the approval is the way back.
+Number stays `--ok` in both confirmed states.
+
+**A tick you made and a fact that settled it must not look identical.**
+Rendering both as `✓ CONFIRMED` claims an action the user did not take,
+and the count in the head is what makes it matter: `5 OF 5 STEPS
+CONFIRMED` on a panel nobody confirmed anything on is a false report. The
+head counts them separately or generically — `n OF n STEPS SETTLED` when
+every remaining one is frozen, never `CONFIRMED`.
+
+A confirmed step dims but stays fully legible — it is evidence you already
+ruled, not clutter to be hidden. Do not collapse it.
 
 **A gate states its condition and does not lie** (§2.4). That extends to
 the CURSOR: `not-allowed` may only mark something that genuinely does
@@ -695,6 +732,16 @@ being a design token. The font ban in this file governs chrome.
 
 ## Copy
 
+**A label names its effect on the work, not its destination in the data
+model** (A1, ruled 2026-08-16). `EACH BECOMES A BIBLE SECTION` describes our
+filing; the user is asking what changes in the picture. If a label can be
+answered with "so what?", it is naming a destination. Where a label genuinely
+has no effect on the render, say THAT — `SPEC ID — JUST A NAME` — leading with
+the reassurance. Every Courier caps label in stages 02-05 is audited against
+this: one naming a store, a file, a section, a record or a table is wrong. A
+`?` card alongside is the right home for an asymmetry the label cannot carry
+(design languages fall back to keyword inference; environments never infer).
+
 **A reassurance precedes its consequence** (B3, ruled 2026-08-06). When a
 field is bookkeeping, say so *before* stating what is permanent about it.
 Worked example: the Spec ID help opens `Just a name. Does not affect
@@ -718,6 +765,16 @@ Prose was ~3:1 over interface by area in v1. Rules:
 ---
 
 ## Components
+
+**An act that calls a third party reports on itself where it was fired**
+(A3, ruled 2026-08-16). It names the half it is on, disables so it cannot fire
+twice, and after **three seconds** states elapsed whole seconds in Courier —
+an eight-second call and a hung one are indistinguishable without them. Its
+failure lands in the same place, in `--bad`; a toast may repeat it, never
+replace it. Any control that aborts the act stays live throughout. This is
+`.busy.busy-inline`, not a second vocabulary: `.busy` replaces a region's
+contents, which a modal cannot do to its own form, and that is a difference
+of PLACEMENT, not of voice.
 
 | Need | Use | Not |
 |---|---|---|
@@ -1157,6 +1214,24 @@ padding, or its internal hairline was skipped. Check containment first.
 
 ## Sequence and gates
 
+**A migration has no surface** (A2, ruled 2026-08-16). §2.4's "a gate must be
+readable as state before it is hit" governs **decisions the user still has**.
+Legacy data we should already have migrated is not a decision — a screen
+offering the choice is us asking the user to do our work. A migration runs at
+boot, under three conditions: the change is **recorded** in the production's
+own journal, the prior state is **recoverable** from an on-disk backup, and it
+is **not a preference in disguise** (if two users could reasonably want
+different outcomes, it is a decision and §2.4 applies in full). What §2.4
+forbids is *unrecorded* mutation, not automatic mutation.
+
+**A confirm guards the irreversible direction only** (A4, ruled 2026-08-16). A
+confirm is friction spent on consequence: spend it entering a state that
+changes output or destroys work, and spend nothing leaving one when leaving
+restores what was there before. **An asymmetric confirm is correct, not an
+oversight** — a confirm on the way out is friction on the act that makes an
+experiment safe to run. Governs every toggle whose ON state changes what comes
+out and whose OFF state restores byte-identical prior behaviour.
+
 The product is strictly sequential: screenplay → bible → breakdown → lock →
 panels → board. Gates must be **readable as state before they are hit**, never
 discovered as an error toast. When you add a gated action:
@@ -1320,23 +1395,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
 | 2026-08-16 | **Productions becomes Settings' first tab** (user). The header carried Productions as a tool beside Status, Reference and Settings, while Settings held engines, workflow and FAQ — but both answer "what is true of this install", and one of them was a page while the other was a tab strip. It is now `data-sub="productions"`, first in the strip; the header tools drop to three. **First in ORDER is not the default**: a first visit still opens `AI & engines`, because with no key nothing else in the app can run, and `/productions` still resolves — it opens Settings on that tab | Header nav, Settings | Ruling wanted on (1) a tab strip that mixes a LIBRARY with configuration — Productions is the only tab you act on rather than set; (2) the header dropping to three tools, which changes the top-right balance the brand block was drawn against; (3) whether first-in-order-but-not-default needs stating anywhere on screen, or is correctly invisible |
-| 2026-08-16 | **An act inside a modal reports on itself** (user: "you click the button, long delay, no feedback"). `Test & save` made two calls — a local save, then a LIVE provider test — and changed nothing on screen for either. It now names the half it is on (`Saving…` / `Testing…`), disables so it cannot fire twice, runs a `.auth-state` line under the form with a spinner, a sentence saying the slow half is a real call to the provider, and **elapsed seconds** — because an eight-second call and a hung one look identical without them. Failures land in the modal in `--bad`, not only in a toast. Cancel stays LIVE throughout (disabling it locked the modal on a slow provider) and says the key was saved but not verified; the scrim still refuses to dismiss mid-flight | Settings, the authenticate modal | The app already has `.busy` for long work, and this is deliberately not it: `.busy` replaces a region's contents, which a modal cannot do to its own form. Rule the relationship — is this a second busy vocabulary, or should `.busy` gain an inline variant and this adopt it? |
-| 2026-08-16 | **A label names its effect, not its filing destination** (user: "'Each becomes a bible section' — who cares. Rather: what does it affect in panel generation?"). `DESIGN LANGUAGES — EACH BECOMES A BIBLE SECTION` became `— WHAT A PANEL IS ALLOWED TO LOOK LIKE`; `ENVIRONMENTS — THE VISUAL RULES A PLACE INHERITS` became `— THE LIGHT AND PALETTE OF A PLACE`. Each gains a `?` card whose copy answers the render question from what the code does, including the asymmetry a user would never guess: design languages fall back to keyword inference, **environments never infer** | Stage 02, the read strip | A rule worth ruling on rather than a component: **a label states what a thing DOES to the work, never where it is stored.** If the designer agrees, it is a Copy rule and several other labels want auditing against it |
-| 2026-08-16 | **The logline leads the read** (user: "the logline on the Prod Design panel needs to be more prominent"). It was 12.5px `--ink-dim` in a baseline row beside its own kicker — quieter than the tile labels under it, for the one sentence stating what the read UNDERSTOOD. Now 16.5px `--ink` with the kicker stacked above, so the sentence starts at the left edge and reads as prose rather than as a value in a labelled row; measure capped at 900px per §1.9 | Stage 02, the read strip | Review the size: 16.5px is a step the scale does not currently name, chosen because 15px did not separate it from body prose and 24px is the subject's. Either add it to §1.2 or push this to one of the existing sizes |
-| 2026-08-16 | **A stated, reversible experiment** (user: "the doc provides a prompt — shouldn't we apply the prompt?", then "we need to evaluate the output, so we need to be able to roll this back"). The chosen grammar's full image-model prompt can ride every render, and the switch for it is a lock strip at the foot of the panel that STATES which way it is set — `rides every render` or `does not reach a render` — with one act to change it. OFF by default, so a render is byte-identical to before until it is thrown. Turning it on confirms with the consequence first (`This WILL change what comes out` · what is untouched · that it is reversible); turning it off asks nothing, because a confirm on the way OUT is friction on the act that makes the experiment safe. Every take records whether the grammar rode it and which text | Cinematography panel footer | A new shape: not a gate (nothing is blocked) and not a preference (it changes output). Ruling wanted on (1) an asymmetric confirm — heavy going in, none coming out; (2) whether an experiment switch belongs in the panel that sets the thing, or in a settings surface; (3) the provenance stamp having no UI yet — a take knows it rode but no screen says so |
 | 2026-08-16 | **The cinematography grammar card** (user: "replace our cinematography styles with `docs/CINEMATOGRAPHY_STYLES.md`"). Eight grammars, PARSED from that document rather than copied into the code, so editing the doc updates the picker. A card carries what the document gives it: name, a Courier subtitle, the key question in italic, the description, the operating principle under a Courier label, three reference frames (dashed cells until real ones exist, each opening in the lightbox with arrows between them), the five reference films, and a `Read the image-model prompt` link that opens the full prompt to read and copy. Two across, not three — at three the description wrapped to a column an inch wide | Cinematography anchor panel | The richest card in the app by some distance, and the questions are about that: (1) seven distinct text roles in one card, where canon's cards carry two or three; (2) the italic key question, which is a new voice — canon has no italic; (3) the reference films as a Courier run-on, which reads as machine data but is a list of proper nouns; (4) three empty dashed cells reserving the shape of a missing thing, which canon forbids everywhere except the stated-blocker frame |
 | 2026-08-16 | **The chosen style reads on the card** (user: "once a style is selected — show the card on the main tab, under the selection button", then "picture on top and text underneath"). Picking a style replaces the button label with the style's name and draws a compact version of the card beneath it, in the catalogue card's own reading order: plate full width on top, then name, words, and — for the captured house style — a Courier provenance line. Clicking it reopens the panel, because the thing you are looking at is the thing you would change. A typed answer shows too, headed `In your own words` For a cinematography grammar it draws that style's THREE reference frames as a strip rather than one plate — a grammar's example is three pictures, and one plate cannot stand for three; each frame opens full size without reopening the panel | The three anchor cards | The `.rs-chosen` block sits INSIDE the anchor's `<label>`, whose voice is Courier caps for a field name, so it explicitly resets to Archivo — review whether a label should be able to contain prose at all, or whether the chosen card wants to sit outside it. Also: it is a second, smaller drawing of the catalogue card, and the two will drift |
 | 2026-08-16 | **A production's own style is the first card** (user: "we should capture my style and make it the Production Painting style"). `Production Painting` shipped as a phrase we wrote, which is backwards for a production that has been rendering for weeks. It is now captured from what already governs the look: its words are the saved bible's `Rendering Language → Required` bullets — the text that has ridden every prompt — and its plate is a real approved panel, fetched at thumb tier. A production with no bible yet keeps the shipped fallback | Board Rendering panel, first card | Review (1) a catalogue whose first entry is generated from the user's own data while the other eight are authored — they look identical and are not the same kind of thing; (2) whether the captured card should say so ON the card (it currently explains itself in its description) or wear a mark; (3) whether a real panel beside eight diagrams makes the diagrams read as unfinished |
 | 2026-08-16 | **The card is its button; the panel is the answer** (user: "combine the words and the pictures — only have the button on the main page"). Three anchor cards show a head, their SETS/NOT line and ONE button. Everything else the anchor owns lives in the panel behind it: a grid of style cards each carrying an **example plate**, its name, a plain definition and its own NOT fence; an `Add your own` card with a `+` for an image and a field for words; and — for Cinematography and Board Rendering — the camera axes and the never-list, which TRAVEL into the panel on open and go home on close rather than being re-created (the nodes keep their bindings). World Texture gained a catalogue so the row answers the same way; Color Palette keeps its swatch tools inline, because a palette's picture half is swatches you BUILD, not examples you pick. Plates are SVG diagrams — a lit form and its shadow for light, the mark on the surface for medium — with a manifest slot so real generated images drop in over them | Stage 02, all four anchor cards | The big ones for a designer: (1) a card that is nothing but a button, where the SETS/NOT line now has to carry the whole preview of what is behind it; (2) the plate as a DIAGRAM — honest offline, but it teaches the axis rather than showing the style, and the two are not the same thing; (3) `Add your own` sitting as the last cell of a catalogue grid, which makes an escape hatch look like a peer of the nine curated answers; (4) Color Palette being deliberately unlike its three siblings |
 | 2026-08-16 | **The look interview is gone; the anchor cards are the interview** (user: "we now have duplicative entries", then "I think these are all confusing and not needed. Fight me"). Stage 02 drops from six steps to five and there is ONE place the look is set. Each anchor card carries what it SETS and NOT · `Add images` · `IN WORDS`; Cinematography additionally holds the five camera axes, and Board Rendering additionally holds `NEVER LOOKS LIKE`. Standing notes moved to the Bible step, beside the act they modify. `Visual touchstones` is retired outright and folded into notes at boot | Stage 02, steps 01 and 04 | Ruling wanted on (1) the card as a multi-part object — one anchor now holds a picture set, a phrase, a five-axis control and an exclusion, which is far more than a card carried before; (2) whether `IN WORDS` / `NEVER LOOKS LIKE` / `CAMERA GRAMMAR` reading as three sibling labels inside one card is a hierarchy or a list; (3) the four cards being visibly unequal in height and content now that two carry extra controls |
 | 2026-08-16 | **A field whose answer comes from a known vocabulary is a choice, not a sentence** (`openStylePicker`, user-directed twice — rendering style, then "the same style picker for cinematography"). The trigger is a full-width left-aligned control that reads as the field it replaced, showing the chosen style's NAME rather than the directive it writes. The modal leads with a definition of the axis stated by what it is NOT (`not mood, not light, not cinematography`), then a 3-across grid of cards each carrying a name, a plain-language definition and its own `NOT` fence, then a free-text escape hatch, then a route to upload example images to that anchor instead. Selection is an ink keyline; amber stays with `Use this` | Board Rendering and Cinematography anchor cards | Two catalogues ship (9 rendering styles, 9 cinematography looks) and their CONTENT wants a director's eye more than a designer's. For the designer: (1) cards with no imagery — the honest option offline, but a style picker with no pictures is asking words to sell a look; (2) the definition-by-negation at the top, which is the first place the app teaches an axis rather than assuming it; (3) whether the free-text row belongs in the modal or back on the card |
-| 2026-08-16 | **A migration has no surface** (user, on being shown a strip with a `Consolidate` verb: "we dont need UI to do this type of consolodation. I was asking you to migrate it"). Retiring revisions left users holding two breakdowns for one piece of work; the collapse now runs at boot over every production and there is nothing to find, nothing to click, and no row in the breakdown table. **This is a proposed boundary on a canon rule**, not a component: §2.4 says a gate must be readable as state before it is hit, and the strip was written in obedience to it | Nothing — the pattern is the ABSENCE of one | Rule to ratify or refuse: does "gates are readable as state" cover only decisions the user still has, so legacy data we should already have migrated gets no surface at all? The counter-argument is that silent mutation of a user's work is exactly what stated gates exist to prevent — the compromise shipped is a journal line and an on-disk backup instead of a screen |
 | 2026-08-15 | **The roll goes compact** (user, three corrections in a row): the scrollbar is hidden on both film rolls, the edge marking is retired, and the id headings above and below the strip are gone — a bar drawn across a piece of film is chrome, and the edge print cost two lines of height on a strip whose job is the pictures. Frames load the `thumb` tier and the full image only on click; a board frame now opens its take full size like a take frame does; and a drag swallows exactly one click so ending a swipe never opens the lightbox | Both film rolls (stage 03 board strip, stage 04 takes strip) | Extends the film row above rather than repeating it. Ruling wanted on (1) hiding a scrollbar on a strip whose only other affordance is `cursor: grab` — honest because both drag and the wheel still works, but it is the one place the app removes a standard control; (2) whether the retired edge marking should ever come back once the strip has vertical room, since the rule that put OUR data there rather than a stock name still stands |
 | 2026-08-15 | **A frame can be a way in rather than a way to look** (user): clicking a `NO TAKE YET` frame opens stage 04 with that panel active. A filled frame opens its take full size; an empty one has no picture to open, so its click becomes the act that resolves the consequence it states. On a sheet that is not signed off the frame states the gate instead (`approve & lock this breakdown first`) and refuses, because stage 04 lists locked breakdowns only and the click would otherwise land on whatever sheet it falls back to | Stage 03, the board strip | The stage-03 row above ratified the empty frame as a REPORT; this asks a further question — whether a report may also be a control, and whether two frames sitting side by side in one strip may do materially different things on click (zoom vs navigate) with nothing but their content to tell them apart |
 | 2026-08-05 | **A stale tab says so** (`.update-bar`, extended 2026-08-15 after "It says live but there are no changes live"): when the running build no longer matches the server's `app_sha`, a persistent bar states it and offers the reload. The staleness check originally ran only on navigation, so a tab left open on one view never noticed; it now also polls every 60s and re-checks on `visibilitychange` | App-wide | Never queued — it predates the 2026-08-14 audit but was not among the 18 rows it emptied, so it has never been ruled. Review the bar's insistence (persistent, never dismissable), its placement, and whether a 60s poll is the right cadence for a tool where a stale tab means the user is reading a UI that no longer exists |
-| 2026-08-14 | **A tool in a toolbar is a button** (user ruling, reported as "these tools are gone"): §1.4's ink + underline is right for a verb sitting inline beside the fact it acts on, but at 11.5px/400 a BAR of tools read as a row of footnotes. The act bar's tools carry an edge again — `--line` border, 13.5px/600, no underline, Reject keeping its `--bad` hover, `Approve panel` still the one amber. The run facts left the bar for the image, where canon already puts facts about a picture: in the bar they cost ~400px and folded three real tools behind the `⋯` | Panels workbench act bar | Review where the line sits between a VERB (inline, underlined) and a TOOL (in a bar, bordered) — the distinction is new and the rest of the app has both |
 | 2026-08-15 | **The takes strip is film** (user-directed): one 35mm window per take (`aspect-ratio: 3/2`), the image FITTED inside it longest-edge first rather than cropped, perforated bands above and below drawn as a repeating hard-stop pattern, and an edge marking in the margin carrying the panel id, take count and sheet id. A frame click makes that take current AND opens it full size, because the window deliberately shows less than the take | Panels workbench, takes strip | Ruling wanted on: (1) the perforations as a PATTERN (hard stops, like the existing hatch) versus canon's no-gradients rule; (2) the edge marking stating our own data rather than a stock name — a real one would be set dressing claiming something untrue about the render; (3) whether the fitted (letterboxed) frame is right when every take shares the panel's ratio anyway, since the bars are then always the same |
-| 2026-08-16 | **A step is settled by a fact, not only by a tick** (user): an approved take freezes its panel, so all of that panel's steps read `✓ CONFIRMED` and the head counts them — they are not pending ticks the user never had to make. A frozen step offers no `Confirm` and no way to unconfirm; its title names the takes that settled it and says withdrawing is the way back. Same on stage 03 for the board-level steps, which freeze on the first approval. **And the step number now carries 24px** — the largest size in the scale | Both step surfaces | Ruling wanted on the 24px spine: §1.2 reserves the largest size for ONE element per surface, and this is a second use of it beside the subject. The argument for it: on a surface whose job IS a sequence, the sequence is as much the subject as its title. Also review whether a frozen step should read `CONFIRMED` at all or wants its own word (`SETTLED`, `LOCKED`) — a tick and a fact currently look identical |
 | 2026-08-15 | **A palette is one reference; a group's plates are chosen by looking at them** (two user rulings). (1) A palette's swatches composite into ONE labelled plate server-side (`app/palette_plate.py`) — hero band first, light to dark, a pair split top/bottom, each colour captioned with its name and hex — and that plate is what attaches, so a palette costs one of the fourteen however many colours it holds. (2) `Choose plates` on any reference row opens the group's photos with a `USE` tick per plate; unpicked plates read as set aside (dimmed, greyscale) rather than deleted, and the row states `3 OF 5`. Step 04 counts by role (`SUBJECT + PALETTE + STYLE`) and ends with a manifest naming every plate that will ride | Panels workbench, step 04 + the reference viewer | Review (a) the composite plate's design — it is a rendered artifact a model reads, so it follows the sheet-render/chrome split rather than app canon; (b) whether the manifest belongs at the end of step 04 or in step 05 beside the prompt it feeds |
 | 2026-08-14 | **Stage 03 in the same vocabulary** (STEP_SEQUENCE_SPEC Part 3, mock hier-5a — the transfer that proves the vocabulary is a vocabulary): one shared `seqStep()` renders both surfaces. Seven steps — `01 IDENTITY` (mode, board type, canvas AND the slugline fields, which a guessed six-step reading would have deleted) · `02 DIRECTION` · `03 OPEN QUESTIONS` stating its consequence · `04 SCOPE` · `05 PANELS` · `06 EVIDENCE` · `07 APPROVE & LOCK` whose gate says `n QUESTIONS OPEN AND n STEPS UNCONFIRMED — YOU CAN STILL APPROVE` rather than greying the act. Above step 01, **what this board has made**: each panel at its own ratio — an approved take, or an empty frame stating the blocker that keeps it empty | Breakdown editor (`/breakdowns/<spec>`) | Built from the spec + the user's four rulings, so review is ratification; the open items are (1) the empty frame as the sanctioned exception to *never reserve the shape of the missing thing* — it is the only place a blocker reads as a consequence rather than a red tag — and (2) the hybrid ledger below |
 | 2026-08-14 | **The evidence ledger is a hybrid** (user ruling, declining §3.35's always-a-table reading): the selects the user directed on 2026-08-13 stay while a sheet is DRAFTING; once step 06 is confirmed — or the sheet locks — every control drops its affordance and the ledger reads as the provenance record it is, editing behind the step's own Unconfirm. Extends R10's locked read-as-document one state earlier | Breakdown editor, evidence ledger | Review whether "confirmed" is the right trigger, or whether only the lock should switch it |
@@ -1352,6 +1420,21 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **RULED (RULE_PASS_2026-08-16 Part A):** seven rows
+  emptied, eight rules folded into canon. A label names its effect, not
+  its filing destination (§Copy). A migration has no surface, under three
+  conditions — recorded, recoverable, not a preference in disguise (§2.4).
+  An act that calls a third party reports on itself where it was fired, as
+  `.busy.busy-inline` and NOT a second vocabulary; elapsed appears after
+  three seconds (§Components). An asymmetric confirm is correct — guard
+  the irreversible direction only (§gates). **Refused:** 16.5px for the
+  logline; promote by ink tier and position before size, so it ships at
+  15px/400 `--ink` capped at 720px. **Refused:** `✓ CONFIRMED` on a frozen
+  step — a tick you made and a fact that settled it must not look
+  identical, so the work's word is `✓ SETTLED`, it carries no verb, and
+  the head counts `n OF n STEPS SETTLED`. **Ratified:** the 24px Courier
+  spine (one 24px element per surface PER VOICE) and the verb/tool
+  boundary (the test is whether ONE object is visible beside it).
 - **2026-08-16** — **A locked stage offers `help`, not `not-allowed`**
   (user-caught on the condensed band). Clicking one opens the popover
   naming its blocker, so `not-allowed` claimed the one thing that is not

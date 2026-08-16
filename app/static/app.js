@@ -479,8 +479,8 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
         <span class="step-label mono">${label}</span>
         ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
         <span class="step-acts">
-          ${frozen && id ? `<span class="step-confirmed mono" title="${esc(frozenWhy
-             || "Settled by an approved take — withdraw the approval to change it")}">✓ CONFIRMED</span>` : ""}
+          ${frozen && id ? `<span class="step-confirmed step-settled mono" title="${esc(frozenWhy
+             || "Settled by an approved take — withdraw the approval to change it")}">✓ SETTLED</span>` : ""}
           ${done && id && !frozen ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
              title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
           ${verbs}
@@ -636,7 +636,7 @@ function authModal(key) {
         </label>
         ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
         <p class="cred-form-foot" style="margin:0 0 14px">SAVES TO THIS STUDIO ONLY · ${P.test ? "TESTED BEFORE IT COUNTS · " : ""}THE PAGE UPDATES IN PLACE — NO RELOAD</p>
-        <div class="auth-state" data-mf="state" aria-live="polite"></div>
+        <div class="busy busy-inline" data-mf="state" aria-live="polite"></div>
         <div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
@@ -658,12 +658,17 @@ function authModal(key) {
     const stateEl = $("[data-mf=state]", ov);
     const okLabel = ok.innerHTML;
     let busy = false;
+    // A3: `.busy` inline — same spinner, same phase-as-a-sentence, same
+    // Courier progress as the block form, rendered under the act that
+    // fired it. Elapsed appears only AFTER three seconds: before that it
+    // is noise, and the whole reason it exists is telling a slow call
+    // from a hung one.
     const say = (msg, kind = "") => {
-      stateEl.className = `auth-state${kind ? " " + kind : ""}`;
+      stateEl.className = `busy busy-inline${kind ? " " + kind : ""}`;
       stateEl.innerHTML = kind === "work"
-        ? `<span class="auth-spin"></span><span>${esc(msg)}</span>`
-          + `<span class="auth-elapsed mono">0s</span>`
-        : esc(msg);
+        ? `<span class="spinner"></span><span class="busy-label">${esc(msg)}</span>`
+          + `<span class="elapsed"></span>`
+        : `<span class="busy-label">${esc(msg)}</span>`;
     };
     // Elapsed seconds, because a provider call that takes eight seconds
     // and one that has hung look identical without them.
@@ -680,8 +685,9 @@ function authModal(key) {
       if (!on) { tick = null; return; }
       t0 = Date.now();
       tick = setInterval(() => {
-        const el = $(".auth-elapsed", stateEl);
-        if (el) el.textContent = `${Math.round((Date.now() - t0) / 1000)}s`;
+        const el = $(".elapsed", stateEl);
+        const secs = Math.round((Date.now() - t0) / 1000);
+        if (el) el.textContent = secs >= 3 ? `${secs}s` : "";
       }, 1000);
     };
     // The scrim will not dismiss mid-flight — an accidental click should
@@ -6485,7 +6491,8 @@ async function openSpecEditor(specId) {
       <h2 class="seq-subject">${esc(spec.subject || spec.specification_id)}</h2>
       <span class="seq-progress mono">${[
         esc(spec.status), locked ? "LOCKED" : "", `R${spec.revision || 1}`,
-      ].filter(Boolean).join("  ·  ")}  ·  ${confCountSpec} OF ${SPEC_STEPS.length} CONFIRMED</span>
+      ].filter(Boolean).join("  ·  ")}  ·  ${confCountSpec} OF ${SPEC_STEPS.length} ${
+        boardFrozen ? "SETTLED" : "CONFIRMED"}</span>
     </div>
     ${spec.autofilled ? '<div class="step-note mono seq-autofill">AUTO-FILLED — REVIEW BEFORE APPROVING</div>' : ""}
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
@@ -8719,7 +8726,8 @@ async function renderBoardPanels(specId) {
         <h2 class="seq-subject">${esc(p.title || p.purpose)}</h2>
         <span class="wb-facts mono">${[alloc ? `${alloc}%` : "", role,
           String(aspectLabel).toUpperCase()].filter(Boolean).join("  ·  ")}</span>
-        <span class="wb-progress mono">${confCount} OF 5 STEPS CONFIRMED  ·  ${takesWord}</span>
+        <span class="wb-progress mono">${confCount} OF 5 STEPS ${
+          approvedTakes.length ? "SETTLED" : "CONFIRMED"}  ·  ${takesWord}</span>
       </div>
       ${stagedHtml}
       ${takesHtml}
