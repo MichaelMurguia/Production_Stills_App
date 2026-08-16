@@ -160,10 +160,20 @@ mode: both suites stay green on every commit, and every UI-touching change
 still logs its design-system row. Batching is about deploys, not about
 lowering the bar.
 
-Local mode does NOT apply to a fix for something reported on the live
-tenant, a boot migration, anything touching `storefront/` or billing, or a
-data-loss or security fix — a local copy cannot prove those. Ship them
-immediately and say why the batch broke.
+**In local mode, NOTHING is pushed until the user says push** (ruled
+2026-08-16, replacing an earlier carve-out). There is no category of
+change that ships on Claude's own judgement — not a live-tenant fix, not
+a migration, not a security fix. The earlier rule listed exceptions and
+the exceptions got stretched: a fix the user reported while working
+online was shipped, and a *feature* rode along in the same commit under
+the same justification. Judging which changes are urgent enough to
+deploy is not Claude's call to make.
+
+Some changes genuinely cannot be proven locally — a boot migration, a
+live-tenant fix, anything touching `storefront/` or billing. Those get
+**built, tested, committed and named to the user as unproven**, at the
+top of the pending list, with one line on what a deploy would settle.
+The user decides when. If a push feels urgent, say so and wait.
 
 ## Testing — you own this
 
