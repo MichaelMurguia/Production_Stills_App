@@ -9815,26 +9815,57 @@ async function renderBoardPanels(specId) {
         const sayState = () => {
           const text = promptBox.value.trim();
           const isSaved = !!saved && text === saved.trim();
-          const dirty = text !== (saved || r.compiled).trim();
-          editState.textContent = isSaved
-            ? "SAVED PROMPT · EVERY TAKE OF THIS PANEL RENDERS FROM THIS"
+          // A stale server (or an older build behind a proxy) answers this
+          // endpoint without `compiled`, and `.trim()` on undefined would
+          // throw out of the whole handler — killing Save, Clear and Revert
+          // together while the editor still looked fine.
+          const base = (saved || r.compiled || r.prompt || "").trim();
+          const dirty = text !== base;
+          editState.textContent = r.frozen
+            // The gate FIRST: a state line that says "save this" beside a
+            // Save that cannot be pressed is worse than saying nothing
+            // (user-caught 2026-08-16: "I cant save prompt to panel once I
+            // open and edit" — the refusal lived only in a hover tooltip).
+            ? "AN APPROVED TAKE FREEZES THIS PANEL · NO PROMPT CAN BE SAVED TO IT"
+            : isSaved
+              ? "SAVED PROMPT · EVERY TAKE OF THIS PANEL RENDERS FROM THIS"
+              : saved
+                ? "UNSAVED CHANGES OVER THE SAVED PROMPT · SAVE OR THEY RIDE ONE TAKE"
+                : dirty
+                  ? "EDITED · UNSAVED · THIS TAKE ONLY"
+                  : "UNEDITED · STEPS 01–04 COMPILE THIS";
+          // Amber is the live signal — the text a render is about to use.
+          // A frozen panel is a SETTLED fact, and canon already paints
+          // settled steps with --ok (.step-confirmed), so this borrows that
+          // rather than spending the accent on a refusal.
+          editState.classList.toggle("settled", !!r.frozen);
+          editState.classList.toggle("edited",
+            !r.frozen && (isSaved || dirty || !!saved));
+          editHelp.innerHTML = r.frozen
+            // State the unmet condition beside the disabled control, and
+            // say where it is resolved — the approval is withdrawn on the
+            // TAKE, not here. And say what still works: the one-take path
+            // is open, so an experiment is not blocked, only a save is.
+            ? `${approvedTakes.length
+                 ? `<b>Settled by ${esc(approvedTakes.join(", "))}.</b>`
+                 : "<b>Settled by an approved take.</b>"}
+               An approval freezes exactly what it was approved against, and
+               this panel's prompt is part of that. Withdraw the approval on
+               that take in the strip above to change it.
+               <b>You can still test:</b> <i>Generate from this prompt</i>
+               renders one take from your edits without saving anything.`
             : saved
-              ? "UNSAVED CHANGES OVER THE SAVED PROMPT · SAVE OR THEY RIDE ONE TAKE"
-              : dirty
-                ? "EDITED · UNSAVED · THIS TAKE ONLY"
-                : "UNEDITED · STEPS 01–04 COMPILE THIS";
-          editState.classList.toggle("edited", isSaved || dirty || !!saved);
-          editHelp.innerHTML = saved
-            ? `<b>Steps 01–04 no longer compile this panel.</b> Camera, required
-               objects and references below still attach their images, but the
-               written prompt is the text above — change it here, or
-               <i>Clear saved prompt</i> to go back to the compile.`
-            : `Unsaved edits ride ONE take and are archived with it under
-               <i>Edited render prompt</i>. <b>Save prompt to this panel</b> to make
-               them stick — every later take of this panel then renders from them.`;
-          clearBtn.classList.toggle("hidden", !saved);
-          saveBtn.textContent = saved ? "Save changes to this panel"
-                                      : "Save prompt to this panel";
+              ? `<b>Steps 01–04 no longer compile this panel.</b> Camera, required
+                 objects and references below still attach their images, but the
+                 written prompt is the text above — change it here, or
+                 <i>Clear saved prompt</i> to go back to the compile.`
+              : `Unsaved edits ride ONE take and are archived with it under
+                 <i>Edited render prompt</i>. <b>Save prompt to this panel</b> to make
+                 them stick — every later take of this panel then renders from them.`;
+          clearBtn.classList.toggle("hidden", !saved || r.frozen);
+          saveBtn.textContent = r.frozen ? "Save prompt — frozen by an approval"
+                                : saved ? "Save changes to this panel"
+                                        : "Save prompt to this panel";
           saveBtn.disabled = r.frozen || (!!saved && isSaved) || (!saved && !dirty);
         };
         promptBox.addEventListener("input", sayState);

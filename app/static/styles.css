@@ -509,6 +509,10 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
    panel below is no longer what gets sent. It returns to dim ink the
    moment the text matches the compile again. */
 .report [data-f="edit-state"].edited { color: var(--accent); }
+/* A frozen panel is settled, not live — the same --ok the sequence already
+   uses for a settled step (.step-confirmed), so the accent stays spent on
+   what a render is about to do. */
+.report [data-f="edit-state"].settled { color: var(--ok); }
 /* The same amber, in the two places a step has to admit it is inert: a
    saved prompt means steps 01–04 no longer write this panel's text, and
    that has to be legible where the step is read, not only in the editor. */

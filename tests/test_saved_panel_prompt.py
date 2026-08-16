@@ -63,6 +63,53 @@ class TheEditorCanSave(unittest.TestCase):
         self.assertIn("${r.frozen ?", b)
         self.assertIn('"frozen": bool(store.approved_takes_by_panel', MAIN)
 
+    def test_the_refusal_is_on_screen_not_only_in_a_tooltip(self):
+        """User-caught 2026-08-16: "I cant save prompt to panel once I open
+        and edit". The panel had an approved take, Save was greyed, and the
+        ONLY statement of why was a hover title — while the help text below
+        told them to press it. A disabled control has to state its unmet
+        condition beside it and say where it is resolved."""
+        b = preview_block()
+        self.assertIn("AN APPROVED TAKE FREEZES THIS PANEL · NO PROMPT CAN BE SAVED TO IT", b)
+        self.assertIn("Withdraw the approval on", b)
+        self.assertIn("Settled by ${esc(approvedTakes.join", b,
+                      "name the take that did it, not just the fact")
+
+    def test_the_frozen_help_does_not_advertise_the_dead_button(self):
+        """The unfrozen copy says "Save prompt to this panel to make them
+        stick". Showing that beside a Save that cannot be pressed is worse
+        than showing nothing."""
+        b = preview_block()
+        i = b.index("editHelp.innerHTML = r.frozen")
+        frozen_arm = b[i:b.index(": saved", i)]
+        self.assertNotIn("Save prompt to this panel</b> to make", frozen_arm)
+
+    def test_the_one_take_path_stays_open_and_says_so(self):
+        """An approval freezes the SAVE, not the render — a panel with an
+        approved take is exactly where you iterate. Blocking the experiment
+        too would be a gate nobody asked for."""
+        b = preview_block()
+        self.assertIn("You can still test:", b)
+        self.assertIn('data-f="generate-edited"', b)
+        i = b.index('data-f="generate-edited"')
+        self.assertNotIn("r.frozen", b[i:i + 200],
+                         "Generate is never disabled by the freeze")
+
+    def test_frozen_is_settled_green_not_amber(self):
+        """Amber is the live signal — the text a render is about to use.
+        Canon already paints a settled step with --ok (.step-confirmed);
+        spending the accent on a refusal would dilute it."""
+        b = preview_block()
+        self.assertIn('editState.classList.toggle("settled", !!r.frozen)', b)
+        self.assertIn('.report [data-f="edit-state"].settled { color: var(--ok); }', CSS)
+
+    def test_a_missing_compiled_field_cannot_kill_the_editor(self):
+        """`(saved || r.compiled).trim()` threw on a server that answered
+        without `compiled`, and the throw took Save, Clear and Revert with
+        it while the editor still looked usable."""
+        self.assertIn('const base = (saved || r.compiled || r.prompt || "").trim();',
+                      preview_block())
+
 
 class TheOverrideIsReadableAsState(unittest.TestCase):
     def test_the_step_head_says_the_panel_is_off_the_compile(self):
