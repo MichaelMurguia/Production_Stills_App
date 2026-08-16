@@ -38,6 +38,10 @@ ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
      "locations": ["entries copied VERBATIM from the LOCATION LIST"]}
   ],
   "key_locations": ["recurring locations that boards will likely depict"],
+  "acts": [
+    {"n": 1, "title": "SHORT UPPERCASE NAME FOR THIS ACT",
+     "turn": "the scene or beat this act ends on, in the screenplay's own words"}
+  ],
   "unresolved": ["visual questions the screenplay leaves open"]
 }
 Identify 2-5 design languages ("design_worlds" in the JSON) — distinct visual
@@ -53,7 +57,14 @@ List every subject the art department needs visual reference for: main
 and supporting characters, hero vehicles, key props. Subtitles and traits are
 clipped production-note prose drawn ONLY from what the screenplay states or
 directly implies — no invented biography. Only what the screenplay supports;
-do not invent."""
+do not invent.
+Name the three acts ("acts"). A feature screenplay has a three-act shape
+whether or not it prints ACT headings, and most do not print them — read the
+turns and name what each act is ABOUT, in two or three words, uppercase, in
+the screenplay's own vocabulary (THE FALL, THE LONG ROAD, TERRA NOVA). The
+name is a reading of the story, not a summary of its locations. Give the beat
+each act turns on so the reading can be checked. Return exactly three unless
+the screenplay itself prints a different number of act headings."""
 
 
 def analyze_screenplay(provider: str = "gemini") -> dict:

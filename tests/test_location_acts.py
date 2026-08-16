@@ -114,7 +114,7 @@ class TheListIsChronological(unittest.TestCase):
 class FivePerActWithAnExpand(unittest.TestCase):
     def body(self):
         i = JS.index("// Grouped by ACT")
-        return JS[i:i + 4200]
+        return JS[i:i + 5200]
 
     def test_it_groups_on_the_acts_the_server_derived(self):
         b = self.body()
@@ -149,6 +149,40 @@ class FivePerActWithAnExpand(unittest.TestCase):
         b = self.body()
         self.assertIn("loc-reassign", b)
         self.assertIn("saveAnalysis(a)", b)
+
+
+class NamesComeFromTheReadingWhenTheScriptPrintsNone(unittest.TestCase):
+    """User 2026-08-16: "my screenplay is very traditionally formatted, I
+    would expect you to be able to come up with Act Names." Their draft
+    prints no ACT headings at all — checked — so a name cannot be parsed.
+    Naming an act is a READING of the story, which is the scene scan's
+    job; the parse keeps the DIVISIONS, because those are arithmetic and
+    must not drift between runs."""
+
+    def test_the_scan_is_asked_for_them(self):
+        wiz = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        self.assertIn('"acts": [', wiz)
+        self.assertIn("Name the three acts", wiz)
+        self.assertIn("whether or not it prints ACT headings", wiz)
+        self.assertIn('"turn"', wiz, "the beat, so the reading can be checked")
+
+    def test_the_name_is_a_reading_not_a_list_of_places(self):
+        wiz = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        i = wiz.index("Name the three acts")
+        self.assertIn("not a summary of its locations", wiz[i:i + 600])
+
+    def test_the_list_takes_names_from_the_scan_only_where_none_were_parsed(self):
+        i = JS.index("const scanned = getAnalysis()?.acts")
+        seg = JS[i:i + 600]
+        self.assertIn("!a.title && named?.title", seg,
+                      "a printed heading always wins over an inferred name")
+        self.assertIn('titleFrom: "scan"', seg)
+
+    def test_the_head_says_which_half_came_from_where(self):
+        i = JS.index("ACTS FROM THE SCREENPLAY")
+        seg = JS[i:i + 400]
+        self.assertIn("NAMES FROM THE SCENE SCAN", seg)
+        self.assertIn("STANDARD THREE-ACT SPLIT", seg)
 
 
 if __name__ == "__main__":

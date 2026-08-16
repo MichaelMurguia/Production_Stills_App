@@ -21,6 +21,11 @@ EVIDENCE_CLASSES = {
 }
 
 
+NL = chr(10)
+NLNL = NL + NL
+TAB = chr(9)
+
+
 class AutofillError(Exception):
     pass
 
@@ -410,7 +415,21 @@ def _draft_openai(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
 
 def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
-                  provider: str = "gemini", board_type: str = "") -> dict:
+                  provider: str = "gemini", board_type: str = "",
+                  source_text: str = "", panels_hint: str = "") -> dict:
+    """Draft a breakdown from the screenplay, or from a pasted section.
+
+    Two sources, and the caller chooses (user 2026-08-16). Empty
+    `source_text` reads the whole screenplay and finds the material from
+    `subject_prompt` — the original behaviour. A non-empty `source_text`
+    IS the material: the pasted section replaces the document and the
+    screenplay is not consulted, so a production can break down a scene
+    that is not in the uploaded draft yet.
+
+    `panels_hint` names the panels the board must contain, in order.
+    Empty means the model decides what the content needs, which is what
+    `Auto-generate` sends.
+    """
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise AutofillError(f"invalid mode: {mode}")
     board_type = str(board_type or "").strip().upper()
@@ -425,10 +444,18 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
         raise AutofillError("spec ID may only contain letters, numbers, dot, dash, underscore")
     if store.get_spec(spec_id) is not None:
         raise AutofillError(f"specification already exists: {spec_id}")
-    if not subject_prompt.strip():
-        raise AutofillError("describe what the board is about — a location and which of its scenes")
+    if not subject_prompt.strip() and not source_text.strip():
+        raise AutofillError(
+            "say what the board should show, or paste the screenplay section "
+            "it comes from")
 
-    doc, mime = _screenplay_bytes()
+    if source_text.strip():
+        # The pasted section IS the source. Reading the whole screenplay
+        # beside it would let the model wander off the thing the user
+        # deliberately narrowed to.
+        doc, mime = source_text.strip().encode("utf-8"), "text/plain"
+    else:
+        doc, mime = _screenplay_bytes()
     prohibited = []
     if paths.PROJECT_STATE.exists():
         prohibited = json.loads(paths.PROJECT_STATE.read_text(encoding="utf-8")) \
@@ -443,6 +470,21 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
     else:
         instructions = _instructions(subject_prompt.strip(), mode, prohibited,
                                      board_type)
+        if source_text.strip():
+            instructions += (
+                NLNL + "THE ATTACHED TEXT IS THE SOURCE. It is a section the "
+                "user pasted, not the whole screenplay. Break down what is IN "
+                "it; do not reach for material outside it, and do not assume "
+                "scenes before or after it exist.")
+        if panels_hint.strip():
+            wanted = [ln.strip(" -*" + TAB) for ln in panels_hint.splitlines()
+                      if ln.strip(" -*" + TAB)]
+            if wanted:
+                instructions += (
+                    NLNL + "THE PANELS ARE GIVEN. Build exactly these, in this "
+                    "order, one panel each — do not add, drop or reorder "
+                    "them:" + NL
+                    + NL.join("- " + w for w in wanted))
         # Deterministic scene anchor (user-hit 2026-08-06): when the
         # subject names a slugline location, the actual scene text is
         # quoted into the instructions — the model reads the scene, it
@@ -455,6 +497,9 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
 
     spec = _coerce(draft, spec_id, mode, board_type)
     spec["autofill"] = {"prompt": subject_prompt.strip(), "model": model,
-                        "provider": provider, "created_at": store.utcnow()}
+                        "provider": provider, "created_at": store.utcnow(),
+                        "source": ("pasted section" if source_text.strip()
+                                   else "screenplay"),
+                        "panels_given": bool(panels_hint.strip())}
     store.create_spec_from_dict(spec)
     return spec

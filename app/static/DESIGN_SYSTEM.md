@@ -1421,6 +1421,14 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **Act names come from the reading, divisions from the
+  parse** (user: their screenplay is traditionally formatted and prints
+  no ACT headings — checked, zero). Naming an act is interpretation, so
+  the scene scan is asked for it and returns the name plus the beat the
+  act turns on, so the reading can be checked. The slugline parse keeps
+  the divisions, because those are arithmetic and must not drift between
+  runs. A printed heading always beats an inferred name, and the head
+  states which half came from where.
 - **2026-08-16** — **Locations read in acts, chronologically** (user),
   five per act behind the existing Expand. Acts come from the screenplay
   when it marks them, titles and all; otherwise the standard split,

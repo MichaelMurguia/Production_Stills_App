@@ -4464,7 +4464,20 @@ async function renderWizard() {
       const assignedTo = {};
       envs.forEach(e => (e.locations || []).forEach(l => { assignedTo[l] = e.name; }));
       const envNames = envs.map(e => e.name);
-      const acts = wizCov?.acts || [];
+      // Names are a READING of the story, so they come from the scan (a
+      // model pass over the screenplay), not from the slugline parse.
+      // The parse owns the DIVISIONS — where each act starts and ends —
+      // because that is arithmetic and must not drift per run. A
+      // screenplay that prints its own ACT headings supplies both and
+      // neither is inferred (user 2026-08-16: "it is very traditionally
+      // formatted, I would expect you to be able to come up with Act
+      // Names" — their draft prints none, so the scan names them).
+      const scanned = getAnalysis()?.acts || [];
+      const acts = (wizCov?.acts || []).map(a => {
+        const named = scanned.find(x => Number(x.n) === a.n);
+        return (!a.title && named?.title)
+          ? { ...a, title: String(named.title), titleFrom: "scan" } : a;
+      });
       const placed = new Set();
       const grouped = acts.map(a => {
         const locs = groups.filter(g => g.act === a.n).map(g => g.location);
@@ -4485,7 +4498,10 @@ async function renderWizard() {
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       buildLocFinder(secHost, {
         head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">${
-          wizCov?.acts_derived ? "ACTS FROM THE SCREENPLAY" : "STANDARD THREE-ACT SPLIT"
+          wizCov?.acts_derived ? "ACTS FROM THE SCREENPLAY"
+            : acts.some(a => a.titleFrom === "scan")
+              ? "THREE-ACT SPLIT · NAMES FROM THE SCENE SCAN"
+              : "STANDARD THREE-ACT SPLIT"
         } · FIVE SHOWN PER ACT</span></span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
