@@ -281,11 +281,28 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         for s in ('["AERIAL", "Aerial"]', '["MACRO", "Macro"]', '["MICRO", "Micro"]'):
             self.assertIn(s, JS)
 
-    def test_camera_card_leads_the_look_interview(self):
-        i = HTML.index('data-step="1"')
+    def test_camera_sits_on_the_anchor_it_can_contradict(self):
+        """User ruling 2026-08-16, dissolving the look interview. The
+        CAMERA block is emitted high in the prompt and stated to override
+        the references' own framing, so a lens set a step away from the
+        cinematography anchor could silently beat it. Two inputs that can
+        contradict each other belong where you can see them together."""
+        i = HTML.index('data-role="CINEMATOGRAPHY_STYLE"')
         j = HTML.index('id="cam-default"')
-        self.assertGreater(j, i, "the camera card must sit inside step 1")
-        self.assertLess(j, HTML.index('class="grid-form"', i), "and lead it, above the fields")
+        self.assertGreater(j, i, "the camera card sits inside the anchor card")
+        nxt = HTML.index('data-role="BOARD_RENDERING_STYLE"')
+        self.assertLess(j, nxt, "and does not fall through to the next card")
+
+    def test_the_look_never_dictates_the_lens(self):
+        """User 2026-08-16: "a cinematographer will pick any lens to get
+        the shot." The catalogue is light behaviour only, and the picker
+        writes one field — its own."""
+        i = JS.index("const CINEMA_STYLES = [")
+        seg = JS[i:JS.index(chr(10) + "];", i)]
+        for lensy in ("mm", "anamorphic", "long-lens", "telephoto"):
+            self.assertNotIn(lensy, seg.lower(), f"a lens crept in: {lensy}")
+        j = JS.index('title: "Cinematography"')
+        self.assertIn("not the lens", JS[j:j + 600])
 
     def test_bible_default_card_loads_and_saves(self):
         self.assertIn('id="cam-default-row"', HTML)

@@ -3741,10 +3741,12 @@ async function renderWizard() {
   // D2 (PRODUCTION_DESIGN_V3) — the six-step rail: numbered chips in the
   // header strip; done numbers go --ok (same truth as the step badges),
   // the current chip is bordered; clicking scrolls with the band offset.
-  // Interview leads (user 2026-08-07) — the director states the look
-  // before the machine reads anything; it has no dependency on the scan.
-  const RAIL = [[1, "Interview"], [2, "Anchors"], [3, "Scan"],
-                [4, "Cast"], [5, "Bible"], [6, "Bake-off"]];
+  // Anchors lead (user 2026-08-16, dissolving the interview): the
+  // director states the look before the machine reads anything, and the
+  // anchor cards ARE that statement now — a picture, words, or both. The
+  // separate interview asked the same four questions a second time.
+  const RAIL = [[1, "Anchors"], [2, "Scan"], [3, "Cast"],
+                [4, "Bible"], [5, "Bake-off"]];
   const rail = $("#wiz-rail");
   rail.innerHTML = RAIL.map(([n, l]) =>
     `<button class="rail-chip" data-goto-step="${n}"><span class="rail-num">${n}</span> ${esc(l)}</button>`).join("");
@@ -4072,7 +4074,7 @@ async function renderWizard() {
       const fresh = uncastRecommendations(existing);
       // Scoped to the cast step — the step-2 section labels share the
       // class now (D3), and a global query grabbed the wrong one.
-      const label = $('.panel.step[data-step="4"] .uncast-label');
+      const label = $('.panel.step[data-step="3"] .uncast-label');
       if (label) label.textContent = fresh.length
         ? `FOUND IN THE SCREENPLAY — ${fresh.length} UNCAST`
         : "FOUND IN THE SCREENPLAY — UNCAST";
@@ -4550,7 +4552,7 @@ async function renderWizard() {
       // Cast the film, not the interview — this pointed at step 3 from
       // before LOCKED_STAGE_PLAN L3 swapped the two, so the SUBJECTS tile
       // has been scrolling to the wrong panel since (found 2026-08-07).
-      subjects: () => $('.panel.step[data-step="4"]'),
+      subjects: () => $('.panel.step[data-step="3"]'),
     };
     $$(".read-tile", host).forEach(a => a.onclick = () => {
       const el = GOTO[a.dataset.goto]?.();
@@ -4878,7 +4880,6 @@ async function renderWizard() {
       const answers = {
         worlds: chosenWorlds,
         environments: chosenEnvs,
-        touchstones: $("#wiz-touchstones").value.trim(),
         // The words half of each anchor — collected from the anchor cards
         // themselves since 2026-08-16, not from a second list beside them.
         texture: $("#wiz-texture").value.trim(),
@@ -4980,34 +4981,28 @@ async function renderWizard() {
       const set = roles.filter(role =>
         refs.some(r => r.status === "APPROVED" && roleHead(r.role) === role)
         || $(ANCHOR_WORDS[role])?.value.trim()).length;
-      setB(2, set === roles.length ? "APPROVED" : "PROVISIONAL",
+      setB(1, set === roles.length ? "APPROVED" : "PROVISIONAL",
         `${set} OF ${roles.length} SET`);
       // The scan step reflects review debt: proposed languages AND environments
       // hold the badge at PROVISIONAL until confirmed or dropped (plan P9).
       const proposedN =
         (wizAnalysis?.design_worlds || []).filter(w => w.status === "PROPOSED").length +
         (wizAnalysis?.environments || []).filter(e => e.status === "PROPOSED").length;
-      setB(3, !wizAnalysis ? "LOCKED" : proposedN ? "PROVISIONAL" : "APPROVED",
+      setB(2, !wizAnalysis ? "LOCKED" : proposedN ? "PROVISIONAL" : "APPROVED",
         !wizAnalysis ? "NOT RUN"
           : `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES`
             + (proposedN ? ` · ${proposedN} PROPOSED` : " FOUND"));
       // Step 1 counts the interview itself (mock 2a) — answered = non-blank.
-      // Step 1 counts ONLY what it still asks: the per-axis answers moved
-      // onto their anchor cards, and step 2's badge counts them there.
-      const ivFields = ["#wiz-touchstones", "#wiz-never", "#wiz-notes"];
-      const ivDone = ivFields.filter(id => $(id)?.value.trim()).length;
-      setB(1, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
-        `${ivDone} OF ${ivFields.length} ANSWERED`);
       // Cast the film: --hold border while anything stays uncast, --ok when
       // the whole read is cast (plan D4; existing badge classes carry it).
       const uncastN = uncastRecommendations(subjects).length;
-      setB(4, !subjects.length && !uncastN ? "LOCKED"
+      setB(3, !subjects.length && !uncastN ? "LOCKED"
         : uncastN ? "PROVISIONAL" : "APPROVED",
         !subjects.length && !uncastN ? "NONE YET"
         : `${subjects.length} CAST · ${uncastN} UNCAST`);
-      setB(5, bible.is_default ? "LOCKED" : "APPROVED",
+      setB(4, bible.is_default ? "LOCKED" : "APPROVED",
         bible.is_default ? "NOT DRAFTED" : `SAVED · REV ${bible.rev || 0}`);
-      setB(6, samples.length ? "APPROVED" : "LOCKED",
+      setB(5, samples.length ? "APPROVED" : "LOCKED",
         samples.length ? `${samples.length} SAMPLE${samples.length > 1 ? "S" : ""}`
                        : "NEEDS A SAVED BIBLE");
     } catch { /* badges are commentary — never block the wizard */ }
@@ -5021,10 +5016,9 @@ async function renderWizard() {
   // 2026-08-16 — "we now have duplicative entries"). The per-axis fields
   // live ON their anchor card now; the selectors are unchanged so every
   // reader below still finds them by id.
-  const IV = { "#wiz-touchstones": "touchstones", "#wiz-texture": "texture",
-               "#wiz-palette": "palette", "#wiz-light": "light",
-               "#wiz-medium": "medium", "#wiz-never": "never",
-               "#wiz-notes": "notes" };
+  const IV = { "#wiz-texture": "texture", "#wiz-palette": "palette",
+               "#wiz-light": "light", "#wiz-medium": "medium",
+               "#wiz-never": "never", "#wiz-notes": "notes" };
   try {
     const saved = await api("/api/wizard/interview");
     for (const [sel, key] of Object.entries(IV))
@@ -5098,10 +5092,11 @@ async function renderWizard() {
   bindPicker("wiz-light", CINEMA_STYLES, {
     empty: "Choose a cinematography look",
     title: "Cinematography",
-    definition: `A cinematography look is <b>how the film is photographed</b> —
-      light behaviour, lens and framing. It is not the palette and not a
-      single panel's hour: the Color Palette anchor owns colour, and a panel
-      states its own time of day.`,
+    definition: `A cinematography look is <b>how light behaves</b> — its
+      source, direction, contrast and falloff. It is not the palette, not a
+      panel's hour, and <b>not the lens</b>: a cinematographer picks whatever
+      lens gets the shot, so the camera below is a starting point every panel
+      can override, never something this look dictates.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
   });
 
@@ -7360,42 +7355,35 @@ const RENDER_STYLES = [
 // the individual panel — the same fence the card already draws.
 const CINEMA_STYLES = [
   { name: "Naturalistic",
-    value: "naturalistic photography, motivated available light, unshowy framing",
-    desc: "Light that comes from where the scene says it comes from, and a frame that does not announce itself.",
-    not: "stylised contrast · showy lenses" },
-  { name: "Hard Low Sun",
-    value: "hard low-angle sunlight, long raking shadows, deep contrast",
-    desc: "A low hard source raking across everything. Shadows run long and the contrast is deep.",
-    not: "a fixed hour per panel" },
+    value: "naturalistic lighting, motivated available sources, unforced contrast",
+    desc: "Light comes from where the scene says it comes from, and nothing is pushed.",
+    not: "stylised contrast" },
+  { name: "Hard & Directional",
+    value: "hard directional key light, defined shadow edges, strong falloff",
+    desc: "A hard source with a clear direction. Shadows have edges and fall off fast.",
+    not: "a fixed hour" },
   { name: "Chiaroscuro",
     value: "low-key chiaroscuro, single hard source, crushed shadow, high contrast",
-    desc: "One hard source, everything else falling into black. Shape is carved out of shadow.",
-    not: "fill light · flat exposure" },
+    desc: "One source, everything else falling into black. Shape carved out of shadow.",
+    not: "fill · flat exposure" },
   { name: "Soft High Key",
     value: "high-key soft light, broad diffuse sources, shallow contrast, few shadows",
     desc: "Broad diffuse light and very little shadow. Nothing hides.",
-    not: "hard sources · deep shadow" },
-  { name: "Anamorphic Wide",
-    value: "anamorphic wide-lens photography, oval flares, wide held frames, shallow focus falloff",
-    desc: "Wide anamorphic glass — distortion at the edges, oval flares, frames held wide.",
-    not: "long-lens compression" },
-  { name: "Long Lens Compression",
-    value: "long-lens photography, compressed depth, isolated subject against soft background",
-    desc: "Telephoto. Depth flattens, the background dissolves, the subject is picked out of it.",
-    not: "wide establishing frames" },
-  { name: "Handheld Vérité",
-    value: "handheld camera, loose reactive framing, close to the subject",
-    desc: "The camera is a person in the room — loose, close, reacting rather than composing.",
-    not: "locked-off symmetry" },
-  { name: "Formal Symmetry",
-    value: "locked-off camera, centred symmetrical composition, wide static frames",
-    desc: "Locked off and centred. The frame is designed and it stays still.",
-    not: "handheld · reactive framing" },
-  { name: "Practical-Lit Dark",
-    value: "available-darkness photography, practical sources visible in frame carrying the light",
-    desc: "The lamps you can see are the lamps doing the work. Dark, and lit from inside the scene.",
+    not: "hard sources" },
+  { name: "Overcast Flat",
+    value: "flat overcast light, no dominant source, shadowless and even",
+    desc: "No sun, no key, no direction. Even light on everything.",
+    not: "contrast · direction" },
+  { name: "Practical-Lit",
+    value: "practical sources visible in frame carrying the light, available darkness elsewhere",
+    desc: "The lamps you can see are the lamps doing the work.",
     not: "unmotivated key light" },
+  { name: "Backlit & Silhouetted",
+    value: "strong backlight, subjects rim-defined against the source, faces in shadow",
+    desc: "The source is behind the subject. Shape reads before detail does.",
+    not: "frontal key" },
 ];
+
 
 // The picker, shared by every anchor whose answer comes from a known
 // vocabulary (rendering style 2026-08-16; cinematography the same day,

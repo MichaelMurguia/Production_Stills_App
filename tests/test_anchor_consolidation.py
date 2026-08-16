@@ -38,46 +38,68 @@ def card(role: str) -> str:
                 if f'<div class="wiz-col"' in HTML[i + 10:] else len(HTML)]
 
 
-class TheDuplicationIsGone(unittest.TestCase):
+class TheInterviewIsGone(unittest.TestCase):
+    """The interview asked the same four questions the anchors ask, in
+    prose. Everything in it now lives where it acts: the per-axis words on
+    their anchor card, the camera on Cinematography, the never-list on
+    Board Rendering, the standing notes beside the Draft button — and
+    `touchstones`, the one input no anchor fenced, is retired."""
+
     def test_every_anchor_carries_its_own_words(self):
         for role, fid in ANCHORS.items():
             seg = card(role)
             self.assertIn('class="wiz-words"', seg, f"{role} has no words half")
             self.assertIn(f'id="{fid}"', seg, f"{role} lost {fid}")
 
-    def test_the_interview_no_longer_asks_them_a_second_time(self):
-        grid = HTML[HTML.index('<div class="grid-form">'):
-                    HTML.index('id="wiz-iv-state"')]
-        for fid in ANCHORS.values():
-            self.assertNotIn(f'id="{fid}"', grid,
-                             f"{fid} is asked in two places again")
+    def test_the_step_is_gone_rather_than_emptied(self):
+        self.assertNotIn('<div class="grid-form">', HTML,
+                         "the interview's form is not left standing empty")
+        self.assertNotIn("wiz-touchstones", HTML)
+        self.assertIn("FIVE STEPS", HTML)
+        i = JS.index("const RAIL = [")
+        seg = JS[i:i + 200]
+        self.assertIn('[1, "Anchors"]', seg)
+        self.assertNotIn("Interview", seg)
 
-    def test_the_interview_keeps_only_what_no_anchor_can_hold(self):
-        grid = HTML[HTML.index('<div class="grid-form">'):
-                    HTML.index('id="wiz-iv-state"')]
-        for fid in ("wiz-touchstones", "wiz-never", "wiz-notes"):
-            self.assertIn(f'id="{fid}"', grid)
-        i = JS.index("const ivFields =")
-        self.assertEqual(
-            re.search(r"const ivFields = \[(.*?)\]", JS[i:i + 300], re.S)
-              .group(1).count("#wiz-"), 3,
-            "step 01 counts three questions, not five")
+    def test_the_camera_sits_with_the_anchor_it_can_override(self):
+        seg = card("CINEMATOGRAPHY_STYLE")
+        self.assertIn('id="cam-default"', seg)
+        self.assertIn('id="cam-default-row"', seg)
 
-    def test_a_negative_is_why_the_never_list_stays(self):
-        """No anchor can hold it: you cannot photograph "never anime"."""
-        self.assertIn("wiz-never", HTML)
-        seg = HTML[HTML.index('<div class="grid-form">'):
-                   HTML.index('id="wiz-iv-state"')]
-        self.assertIn("never look like", seg)
+    def test_the_never_list_sits_on_the_section_it_feeds(self):
+        """wizard.py routes it to Rendering Language -> Avoid, which is
+        Board Rendering's section — it was a step away from it."""
+        self.assertIn('id="wiz-never"', card("BOARD_RENDERING_STYLE"))
+        self.assertIn("Avoid list", WIZ)
+
+    def test_the_standing_notes_sit_beside_the_act_they_modify(self):
+        i = HTML.index('id="wiz-notes"')
+        step = HTML.rindex('<div class="panel step"', 0, i)
+        self.assertIn('data-step="4"', HTML[step:step + 60],
+                      "notes live with the bible draft, not upstream of it")
+        self.assertIn('id="wiz-draft"', HTML[step:HTML.index("</div>", i)])
+
+    def test_notes_is_kept_because_it_is_load_bearing(self):
+        """User 2026-08-16: "if it is load bearing, why dont we keep it?"
+        Right — step 03's answered questions ride the same key, and a
+        standing rule with no box goes into an anchor field where it
+        corrupts that anchor's scope."""
+        i = JS.index("notes: [")
+        self.assertIn("qaLines", JS[i:i + 120])
 
 
 class TheValueStillReachesTheBible(unittest.TestCase):
     def test_the_server_persists_one_key_per_anchor(self):
         i = MAIN.index("_INTERVIEW_FIELDS = (")
-        seg = MAIN[i:i + 400]
-        for k in ("touchstones", "texture", "palette", "light", "medium",
-                  "never", "notes"):
+        seg = MAIN[i:i + 200]
+        for k in ("texture", "palette", "light", "medium", "never", "notes"):
             self.assertIn(f'"{k}"', seg)
+        self.assertNotIn('"touchstones"', seg, "retired, and folded forward")
+
+    def test_the_retired_answer_is_migrated_not_dropped(self):
+        self.assertIn("def _fold_touchstones", MAIN)
+        self.assertIn("_fold_touchstones_everywhere()", MAIN,
+                      "a migration runs at boot; it is not offered")
 
     def test_the_two_new_answers_are_not_dropped_on_the_floor(self):
         """A key the drafting prompt never reads is a field that does
@@ -151,8 +173,11 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
         i = JS.index('title: "Rendering style"')
         self.assertIn("not mood, not light, not cinematography", JS[i:i + 500])
         j = JS.index('title: "Cinematography"')
-        self.assertIn("not the palette", JS[j:j + 500])
-        self.assertIn("single panel's hour", JS[j:j + 500])
+        seg = JS[j:j + 700]
+        self.assertIn("not the palette", seg)
+        self.assertIn("panel's hour", seg)
+        self.assertIn("not the lens", seg,
+                      "a cinematographer picks any lens to get the shot")
 
     def test_free_text_survived_the_catalogue(self):
         """These were text boxes. A catalogue that cannot say "something

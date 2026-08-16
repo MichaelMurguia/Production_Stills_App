@@ -675,6 +675,7 @@ def _collapse_legacy_revisions() -> None:
     for r in done:
         print(f"[migrate] {r['base']}: collapsed {', '.join(r['collapsed'])} "
               f"({r['files_moved']} take file(s) folded)", flush=True)
+    _fold_touchstones_everywhere()
 
 
 @app.on_event("startup")
@@ -2145,8 +2146,49 @@ async def api_wizard_analyze(body: dict) -> dict:
 # `palette` predates the split and holds legacy "palette and light" text
 # from before it — it lands on the Color Palette card, which is where the
 # larger half of it always belonged.
-_INTERVIEW_FIELDS = ("touchstones", "texture", "palette", "light", "medium",
-                     "never", "notes")
+_INTERVIEW_FIELDS = ("texture", "palette", "light", "medium", "never",
+                     "notes")
+
+
+def _fold_touchstones() -> None:
+    """`touchstones` is retired (user ruling 2026-08-16). It was the one
+    input with no fence — "Blade Runner 2049" sets texture, palette, light
+    and medium at once, by the weakest of the three routes to a render, so
+    it could not reliably deliver the look but could reliably muddy the
+    four answers given deliberately. What a production already typed is
+    not thrown away: it folds into the standing notes, where an unfenced
+    sentence is at least labelled as one."""
+    p = _interview_path()
+    if not p.exists():
+        return
+    try:
+        saved = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if "touchstones" not in saved:
+        return
+    old = str(saved.pop("touchstones", "")).strip()
+    if old:
+        note = f"Visual touchstones (from the retired interview): {old}"
+        saved["notes"] = chr(10).join(
+            x for x in (str(saved.get("notes", "")).strip(), note) if x)
+    store._atomic_write_json(p, saved)
+
+
+def _fold_touchstones_everywhere() -> None:
+    """Every production, once, at boot — a migration runs, it is not
+    offered (ruled 2026-08-16)."""
+    with paths.SWITCH_LOCK:
+        prev = paths.ACTIVE_PROJECT
+        try:
+            for proj in paths.list_projects():
+                paths.set_project(proj["slug"])
+                try:
+                    _fold_touchstones()
+                except Exception:  # noqa: BLE001 — boot must survive
+                    pass
+        finally:
+            paths.set_project(prev)
 
 
 def _interview_path():

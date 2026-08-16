@@ -3,6 +3,7 @@ auth gate, the projects lifecycle, and healthz — all against a throwaway
 home so the real install is never touched."""
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -204,18 +205,22 @@ class ApiTests(unittest.TestCase):
 
     def test_interview_persists_per_production(self):
         # User ruling 2026-08-01: a refresh must never lose the interview.
+        # The keys are one-per-anchor since 2026-08-16; `touchstones` was
+        # retired with them (the one input no anchor fenced).
         r = self.client.get("/api/wizard/interview").json()
-        self.assertEqual(r["touchstones"], "")
+        self.assertEqual(r["palette"], "")
+        self.assertNotIn("touchstones", r)
         put = self.client.put("/api/wizard/interview", json={
-            "touchstones": "McQuarrie production paintings",
-            "palette": "warm dusk", "never": "glossy key art"})
+            "texture": "patched, dust-worn", "palette": "warm dusk",
+            "light": "hard directional key", "never": "glossy key art"})
         self.assertEqual(put.status_code, 200)
         r = self.client.get("/api/wizard/interview").json()
-        self.assertEqual(r["touchstones"], "McQuarrie production paintings")
+        self.assertEqual(r["texture"], "patched, dust-worn")
+        self.assertEqual(r["light"], "hard directional key")
         self.assertEqual(r["medium"], "")
         # The gate chain sees it as real state.
         pd = self.client.get("/api/state").json()["stage_summary"]["production_design"]
-        self.assertEqual(pd["interview_answered"], 3)
+        self.assertEqual(pd["interview_answered"], 4)
         # And it survives inside a backup (it lives in data/).
         zip_r = self.client.get("/api/projects/backup?slug=")
         self.assertEqual(zip_r.status_code, 200)
@@ -223,6 +228,31 @@ class ApiTests(unittest.TestCase):
         import zipfile as _zf
         names = _zf.ZipFile(_io.BytesIO(zip_r.content)).namelist()
         self.assertIn("data/interview.json", names)
+
+    def test_a_retired_touchstone_folds_into_the_notes(self):
+        """Nothing a production already typed is thrown away — it lands
+        where an unfenced sentence is at least labelled as one."""
+        p = appmain._interview_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"touchstones": "Blade Runner 2049",
+                                 "notes": "1974, but nobody smokes"}),
+                     encoding="utf-8")
+        appmain._fold_touchstones()
+        r = self.client.get("/api/wizard/interview").json()
+        self.assertNotIn("touchstones", r)
+        self.assertIn("1974, but nobody smokes", r["notes"])
+        self.assertIn("Blade Runner 2049", r["notes"])
+
+    def test_the_fold_is_a_no_op_once_it_has_run(self):
+        p = appmain._interview_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"notes": "already folded"}), encoding="utf-8")
+        appmain._fold_touchstones()
+        appmain._fold_touchstones()
+        self.assertEqual(
+            self.client.get("/api/wizard/interview").json()["notes"],
+            "already folded")
+
 
     def test_no_template_art_direction(self):
         # Director's ruling 2026-08-01: with no bible, the app never

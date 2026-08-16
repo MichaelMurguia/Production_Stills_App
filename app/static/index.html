@@ -156,7 +156,7 @@
          movie, never what it is. The header strip carries the page's one
          sentence, the screenplay fact, and the six-step rail. -->
     <div class="panel wiz-head">
-      <span class="wiz-head-label">SIX STEPS &rarr; ART DIRECTION BIBLE</span>
+      <span class="wiz-head-label">FIVE STEPS &rarr; ART DIRECTION BIBLE</span>
       <div id="wiz-screenplay" class="wiz-head-file"></div>
       <div class="step-rail" id="wiz-rail"></div>
     </div>
@@ -167,21 +167,6 @@
          nothing gates it. Steps 3 and 4 remain swapped from
          LOCKED_STAGE_PLAN L3: the interview precedes casting. -->
     <div class="panel step" data-step="1">
-      <h2>Look interview <span class="step-cond">WHAT NO ANCHOR CAN HOLD &middot; BLANKS COME BACK MARKED PROPOSED</span></h2>
-      <div class="fgroup cam-default" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
-        <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
-        <div id="cam-default-row"></div>
-        <span id="cam-default-status" class="mini"></span>
-      </div>
-      <div class="grid-form">
-        <label title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="films, artists, or eras this should feel like…"></label>
-        <label title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
-        <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
-      </div>
-      <div class="mini" id="wiz-iv-state" aria-live="polite"></div>
-    </div>
-
-    <div class="panel step" data-step="2">
       <h2>Style anchors</h2>
       <div class="wiz-cols wiz-cols-anchors">
         <p class="wiz-group-label wiz-span3">THE MOVIE</p>
@@ -224,13 +209,18 @@
             <span class="f-label" title="How the film is photographed — stills whose light behaviour and framing you want. If a still's grade is loud, use it in black and white; palette belongs to the Color Palette anchor.">Cinematography</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">SETS light behaviour, lens, framing<br>NOT palette &middot; a panel's hour</p>
+          <p class="hint">SETS light behaviour, contrast, source<br>NOT palette &middot; lens &middot; a panel's hour</p>
           <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
           <label class="wiz-words" title="Light behaviour, lens and framing — becomes the Lighting Language and Composition Rules sections.">In words
             <input type="text" data-f="words" id="wiz-light" hidden>
             <button type="button" class="ghost pick-btn" id="wiz-light-pick">Choose a cinematography look</button>
           </label>
+          <div class="fgroup cam-default" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
+        <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
+        <div id="cam-default-row"></div>
+        <span id="cam-default-status" class="mini"></span>
+      </div>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
@@ -245,12 +235,15 @@
             <input type="text" data-f="words" id="wiz-medium" hidden>
             <button type="button" class="ghost pick-btn" id="wiz-medium-pick">Choose a rendering style</button>
           </label>
+          <label class="wiz-words" title="Hard exclusions — translated item for item into the Rendering Language Avoid list.">Never looks like
+            <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage">
+          </label>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
       </div>
     </div>
 
-    <div class="panel step" data-step="3">
+    <div class="panel step" data-step="2">
       <h2>Script scene scan</h2>
       <div class="row">
         <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
@@ -267,7 +260,7 @@
     </div>
 
     <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf. -->
-    <div class="panel step" data-step="4">
+    <div class="panel step" data-step="3">
       <h2>Cast the film <span class="step-cond">CASTING MAKES A CARD IN REFERENCE / SUBJECTS &middot; ITS SCREENPLAY IDENTITY RIDES EVERY PROMPT</span></h2>
       <div class="uncast-block">
         <div class="uncast-label">FOUND IN THE SCREENPLAY — UNCAST</div>
@@ -283,12 +276,15 @@
       <div id="wiz-subj-grid" class="subj-grid"></div>
     </div>
 
-    <div class="panel step" data-step="5">
+    <div class="panel step" data-step="4">
       <h2>Art Direction Bible <span class="step-cond">context/01_ART_DIRECTION_BIBLE.md &middot; EDITS REACH EVERY FUTURE PROMPT</span></h2>
       <div class="row" style="margin-top:0">
         <button id="wiz-draft" class="primary">Draft Art Direction Bible</button>
-        <span class="step-cond">FROM STEPS 1&ndash;4 &mdash; THE DRAFT APPEARS BELOW FOR REVIEW</span>
+        <span class="step-cond">FROM THE ANCHORS, THE SCAN AND THE CAST &mdash; THE DRAFT APPEARS BELOW FOR REVIEW</span>
       </div>
+      <label class="wiz-notes" title="Standing instructions for the drafter — anything true of the production that is not texture, palette, light or medium.">Standing notes
+        <textarea id="wiz-notes" placeholder="anything else the bible must honor — e.g. &quot;1974, but nobody smokes&quot;"></textarea>
+      </label>
       <div id="wiz-draft-busy"></div>
       <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
       <div class="row">
@@ -306,7 +302,7 @@
       <div class="swatch-gen" id="swatch-gen"></div>
     </div>
 
-    <div class="panel step" data-step="6">
+    <div class="panel step" data-step="5">
       <h2>Model bake-off <span class="step-cond">SAME LOCATION &middot; SAME BIBLE &middot; SAME ANCHORS &mdash; THE CONDITIONS REAL PANELS RUN UNDER</span></h2>
       <div class="row" style="margin-top:0">
         <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 Script Scene Scan; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>

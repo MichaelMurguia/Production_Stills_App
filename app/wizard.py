@@ -211,7 +211,6 @@ the Overall Visual Identity, Rendering Language and Lighting sections
 AROUND them, carry their concrete vocabulary into the bible verbatim, and
 translate the never-list item for item into the Avoid list. Where an
 answer conflicts with your own instinct, the answer wins.
-- Visual touchstones (films/artists/eras it should feel like): {answers.get('touchstones') or 'not specified — propose from the screenplay, mark PROPOSED'}
 - WORLD_TEXTURE in words (wear, patina, entropy): {answers.get('texture') or 'not specified — propose, mark PROPOSED'}
 - COLOR_PALETTE in words (hue, value key, saturation): {answers.get('palette') or 'not specified — propose, mark PROPOSED'}
 - CINEMATOGRAPHY_STYLE in words (light behaviour, lens, framing): {answers.get('light') or 'not specified — propose, mark PROPOSED'}
@@ -242,7 +241,7 @@ OUTPUT FORMAT — return ONLY markdown in EXACTLY this section structure
 (one line: authoritative visual context; agents must not reinterpret without user instruction)
 
 ## Overall Visual Identity
-(bulleted feel/influences from the touchstones + screenplay; end with one line on what the world must feel designed for)
+(bulleted feel/influences from the anchors + screenplay; end with one line on what the world must feel designed for)
 
 ## Rendering Language
 ### Required
