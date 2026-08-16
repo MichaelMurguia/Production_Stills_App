@@ -1194,7 +1194,8 @@ function initLightbox() {
 const views = { status: renderStatus, screenplay: renderScreenplay, wizard: renderWizard,
                 references: renderReferences, specs: renderSpecs, boards: renderBoards,
                 assembly: renderAssembly,
-                projects: renderProjectsView, settings: renderSettings };
+                projects: () => renderSettings("productions"),
+                settings: renderSettings };
 const STAGE_ORDER = ["screenplay", "wizard", "specs", "boards", "assembly"];
 let activeView = "status";
 
@@ -2390,8 +2391,10 @@ async function renderLocations(state = null, langs = 0) {
 // of the content hierarchy, so it gets its own view — Settings keeps only
 // install-level configuration. Switching reloads so every view re-reads
 // the newly active production. '' is the legacy root layout.
+// Productions is a TAB of Settings now (user 2026-08-16), not a view of
+// its own: both are "this install", and one of them was in the header
+// while the other was a page. This fills the tab; renderSettings calls it.
 async function renderProjectsView() {
-  useTemplate("tpl-projects");
 
   // Care line escalation (PRODUCTIONS_PLAN A4): faint under 14 days,
   // --hold to 29, --bad at 30+ — and never a blocker anywhere.
@@ -2676,11 +2679,17 @@ async function renderStorage() {
     to reclaim its space.</p>`;
 }
 
-async function renderSettings() {
+async function renderSettings(openTab = "") {
   useTemplate("tpl-settings");
   renderStorage();
+  renderProjectsView();
 
-  const rememberedTab0 = uiGet("settingsTab", "");
+  // FTUE stays put (user 2026-08-16): Productions reads FIRST in the tab
+  // strip because it is the widest thing on the page — which production
+  // am I in — but a first visit still lands on AI & engines, because with
+  // no key nothing else in the app can run. Order and default are two
+  // different decisions and this is the one place they meet.
+  const rememberedTab0 = openTab || uiGet("settingsTab", "");
   const rememberedTab = rememberedTab0 === "debug" && !_debugTools
     ? "" : rememberedTab0;
   if (rememberedTab) {

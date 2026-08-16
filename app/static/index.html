@@ -27,8 +27,7 @@
     <nav class="tools" id="tools-nav">
       <button data-view="status" class="active" title="Where the project stands: the next action, everything blocking, and recent activity">Status</button>
       <button data-view="references" title="The one reference library: style anchors, cast &amp; subjects, scene anchors — everything a render can anchor to">Reference</button>
-      <button data-view="projects" title="The Screenboard Library — every production on this install: create, open, back up, restore">Productions</button>
-      <button data-view="settings" title="Engines, API keys, workflow reference, FAQ">Settings</button>
+      <button data-view="settings" title="Productions, engines, API keys, workflow reference, FAQ">Settings</button>
     </nav>
   </div>
 </header>
@@ -475,45 +474,44 @@
   </section>
 </template>
 
-<template id="tpl-projects">
-  <section class="view">
-    <div class="lib-head">
-      <div>
-        <div class="fact-head">PRODUCTIONS &mdash; THIS INSTALL</div>
-        <h1 class="lib-title">Screenboard Library</h1>
-        <p class="lib-intro">Each production keeps its own screenplay, art
-        direction bible, reference library, breakdowns and boards. Nothing
-        crosses between them. Opening one reloads the studio around it.</p>
-      </div>
-      <span class="lib-count mono" id="prod-count"></span>
-    </div>
-    <div class="prod-grid" id="prod-cards"></div>
-    <div class="panel prod-start" id="prod-start">
-      <div class="fact-head">START SOMETHING</div>
-      <p class="hint">A new production starts empty &mdash; name it, then
-      upload its screenplay.</p>
-      <form id="proj-new" class="row">
-        <input type="text" id="proj-name" placeholder="production name…" style="flex:1;max-width:420px">
-        <button class="primary">Create</button>
-      </form>
-      <div class="fact-head" style="margin-top:16px">OR RESTORE FROM A BACKUP ZIP</div>
-      <form id="proj-restore" class="row">
-        <input type="file" id="proj-zip" accept=".zip" style="max-width:320px" title="A production backup zip — restores as a NEW production; nothing existing is touched.">
-        <button class="ghost">Restore backup</button>
-      </form>
-      <p class="mini prod-start-note">RESTORING ALWAYS CREATES A NEW PRODUCTION &mdash; IT NEVER OVERWRITES ONE. API KEYS ARE NOT IN BACKUPS.</p>
-    </div>
-  </section>
-</template>
-
 <template id="tpl-settings">
   <section class="view">
     <nav class="subnav" id="settings-subnav">
+      <button data-sub="productions">Productions</button>
       <button data-sub="api" class="active">AI &amp; engines</button>
       <button data-sub="workflow">Workflow &amp; Instructions</button>
       <button data-sub="faq">FAQ</button>
       <button data-sub="debug">Debug tools</button>
     </nav>
+
+    <div data-subview="productions" class="hidden">
+      <div class="lib-head">
+            <div>
+              <div class="fact-head">PRODUCTIONS &mdash; THIS INSTALL</div>
+              <h1 class="lib-title">Screenboard Library</h1>
+              <p class="lib-intro">Each production keeps its own screenplay, art
+              direction bible, reference library, breakdowns and boards. Nothing
+              crosses between them. Opening one reloads the studio around it.</p>
+            </div>
+            <span class="lib-count mono" id="prod-count"></span>
+          </div>
+          <div class="prod-grid" id="prod-cards"></div>
+          <div class="panel prod-start" id="prod-start">
+            <div class="fact-head">START SOMETHING</div>
+            <p class="hint">A new production starts empty &mdash; name it, then
+            upload its screenplay.</p>
+            <form id="proj-new" class="row">
+              <input type="text" id="proj-name" placeholder="production name…" style="flex:1;max-width:420px">
+              <button class="primary">Create</button>
+            </form>
+            <div class="fact-head" style="margin-top:16px">OR RESTORE FROM A BACKUP ZIP</div>
+            <form id="proj-restore" class="row">
+              <input type="file" id="proj-zip" accept=".zip" style="max-width:320px" title="A production backup zip — restores as a NEW production; nothing existing is touched.">
+              <button class="ghost">Restore backup</button>
+            </form>
+            <p class="mini prod-start-note">RESTORING ALWAYS CREATES A NEW PRODUCTION &mdash; IT NEVER OVERWRITES ONE. API KEYS ARE NOT IN BACKUPS.</p>
+          </div>
+    </div>
 
     <div data-subview="api">
       <!-- F1/F2 (SETTINGS_FIRST_RUN_PLAN) — the page has two lives: before

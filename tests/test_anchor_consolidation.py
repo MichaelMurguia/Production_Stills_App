@@ -852,5 +852,56 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", CSS[i:i + 700])
 
 
+class ProductionsIsASettingsTab(unittest.TestCase):
+    """User 2026-08-16: "Move Productions into settings. Make it the first
+    tab. Adjust the FTUE if needed to still go to AI Models on first visit
+    even though we are making that the second tab." Both are "this
+    install" — one was a header tool and the other a page."""
+
+    def test_it_left_the_header(self):
+        self.assertNotIn('data-view="projects"', HTML)
+        self.assertIn('data-view="settings"', HTML)
+
+    def test_it_is_the_first_tab(self):
+        i = HTML.index('id="settings-subnav"')
+        seg = HTML[i:HTML.index("</nav>", i)]
+        subs = re.findall(r'data-sub="(\w+)"', seg)
+        self.assertEqual(subs[0], "productions")
+        self.assertEqual(subs[1], "api")
+
+    def test_but_a_first_visit_still_lands_on_ai_and_engines(self):
+        """Order and default are two different decisions. With no key,
+        nothing else in the app can run."""
+        i = HTML.index('id="settings-subnav"')
+        seg = HTML[i:HTML.index("</nav>", i)]
+        j = seg.index('data-sub="api"')
+        self.assertIn('class="active"', seg[j:j + 60])
+        self.assertNotIn('class="active"', seg[:j],
+                         "Productions is first, not default")
+
+    def test_the_tab_carries_the_whole_library(self):
+        i = HTML.index('data-subview="productions"')
+        seg = HTML[i:HTML.index('data-subview="api"')]
+        for probe in ('id="prod-cards"', 'id="proj-new"', 'id="proj-restore"',
+                      'id="prod-count"'):
+            self.assertIn(probe, seg, probe)
+
+    def test_its_own_template_is_gone_rather_than_orphaned(self):
+        self.assertNotIn("tpl-projects", HTML)
+        self.assertNotIn('useTemplate("tpl-projects")', JS)
+
+    def test_settings_fills_the_tab(self):
+        i = JS.index("async function renderSettings(")
+        self.assertIn("renderProjectsView()", JS[i:i + 400])
+
+    def test_the_old_path_still_opens_the_tab(self):
+        """/productions is a link people have. It opens Settings on
+        Productions rather than 404ing or landing on engines."""
+        self.assertIn('projects: "productions"', JS)
+        self.assertIn('projects: () => renderSettings("productions")', JS)
+        i = JS.index("async function renderSettings(")
+        self.assertIn("openTab || uiGet(", JS[i:i + 900])
+
+
 if __name__ == "__main__":
     unittest.main()
