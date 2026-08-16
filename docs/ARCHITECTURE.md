@@ -162,3 +162,29 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
 - **New image display site**: request the tier the slot needs —
   `?size=thumb` (≤256px), `?size=md` (mid pane), or full (zoom/pixel edit).
   See `docs/IMAGE_SERVING.md`.
+
+## The screenplay is stored twice, and only one copy costs money
+
+Every production keeps both:
+
+- `data/screenplay/_extracted.txt` — **the only copy a model ever sees.**
+  Every scan, autofill and redraft reads it through
+  `store.screenplay_text_cached()`.
+- `data/screenplay/<original>` — the raw upload (usually a PDF), served to
+  the USER at `/api/screenplay/file` so they can read their own script.
+  **Never sent to a model.**
+
+The reason is token cost, and it is not marginal: a PDF bills per page on
+every call, the calls repeat across scans, drafts and redrafts, and text
+prompt-caches between them while a PDF does not. On the draft this rule
+was written against, 131 KB of text against 339 KB of PDF.
+
+`autofill._screenplay_bytes()` is the single model-facing reader. When the
+extraction is empty it **refuses and names the fix** rather than falling
+back to the original — that fallback existed, and it silently switched
+every future call to the expensive format with nothing on screen to say
+so. If a new feature needs the screenplay, read the cached text; do not
+open `SCREENPLAY_DIR / rec["file"]` outside the user-facing route.
+
+Both copies ride in a backup: a restore that lost the PDF would leave the
+user unable to read their own screenplay even though the pipeline still ran.

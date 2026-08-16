@@ -66,12 +66,17 @@ def _screenplay_bytes() -> tuple[bytes, str]:
     text = store.screenplay_text_cached()
     if text.strip():
         return text.encode("utf-8"), "text/plain"
-    p = paths.SCREENPLAY_DIR / rec["file"]
-    if not p.exists():
-        raise AutofillError(f"Screenplay file missing on disk: {rec['file']}")
-    suffix = p.suffix.lower()
-    mime = "application/pdf" if suffix == ".pdf" else "text/plain"
-    return p.read_bytes(), mime
+    # The raw upload NEVER reaches a model (user rule 2026-08-16). It is
+    # kept so the user can open and read it, and that is its whole job.
+    # Sending it instead was a silent fallback that billed a PDF per page
+    # on every scan, draft and redraft — the exact cost the extracted
+    # text exists to avoid, and invisible at the moment it happened.
+    # Refusing names the fix instead.
+    raise AutofillError(
+        f"No text could be extracted from {rec['file']} — it looks like an "
+        "image-only PDF. The original is never sent to a model (it would "
+        "cost a page at a time on every run), so re-export the screenplay "
+        "with selectable text, or upload a .txt or .fountain, and try again.")
 
 
 def _anchor_block(anchor: dict, board_type: str = "") -> str:
