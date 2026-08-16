@@ -539,8 +539,9 @@ class TheFramesAreReal(unittest.TestCase):
         for f in got:
             p = ROOT / "app/static/style-plates" / f
             self.assertTrue(p.exists(), f)
-            self.assertLess(p.stat().st_size, 700_000,
+            self.assertLess(p.stat().st_size, 250_000,
                             f"{f} is a master, not a web derivative")
+            self.assertTrue(f.endswith(".webp"), f"{f} is not WebP")
 
     def test_the_key_matches_what_the_document_slugs_to(self):
         from app import cinematography
@@ -583,6 +584,26 @@ class ACardHoldsButtonsSoItIsNotOne(unittest.TestCase):
         b = re.search(r"\.rs-card \{([^}]*)\}", CSS)
         self.assertIn("font: inherit", b.group(1))
         self.assertIn(".rs-card:focus-visible", CSS)
+
+
+class NoMastersInTheRepo(unittest.TestCase):
+    """User 2026-08-16: "Nah webp these. make them small." Three 2.5 MB
+    PNGs cost 8 MB for pictures nothing displays above 1280px — and they
+    ship inside the release zip."""
+
+    def test_the_reference_folder_holds_no_masters(self):
+        d = ROOT / "docs" / "Cinematography"
+        if not d.exists():
+            return
+        for f in d.iterdir():
+            if f.is_file():
+                self.assertEqual(f.suffix.lower(), ".webp", f.name)
+                self.assertLess(f.stat().st_size, 250_000, f.name)
+
+    def test_the_recipe_states_the_size(self):
+        r = (ROOT / "app/static/style-plates/README.md").read_text(encoding="utf-8")
+        self.assertIn("1280px on the long edge", r)
+        self.assertIn("Masters do not belong in the repo", r)
 
 
 if __name__ == "__main__":

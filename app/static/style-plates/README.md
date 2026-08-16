@@ -10,8 +10,18 @@ sample would be one engine's opinion of the style rather than the style.
 
 To add a real one:
 
-1. Put the file here, e.g. `lightChiaro.webp` (any web format; ~340×280
-   renders 1:1 in the card, and the frame is `68/56` so match that ratio).
+1. Put the file here as **WebP, 1280px on the long edge, quality ~78**
+   (`ruled 2026-08-16`). That lands around 100-180 KB, serves both the
+   ~110px card cell and the lightbox from one file, and ships inside the
+   release zip — three 2.5 MB PNGs cost 8 MB for pictures nothing displays
+   above 1280px. Masters do not belong in the repo.
+
+   ```python
+   im = Image.open(src).convert("RGB")
+   if im.width > 1280:
+       im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
+   im.save(dst, "WEBP", quality=78, method=6)
+   ```
 2. Add it to `index.json`, keyed by the `plate:` value in the catalogue:
 
    ```json
