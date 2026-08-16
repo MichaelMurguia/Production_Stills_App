@@ -356,28 +356,30 @@ class TheChoiceIsVisibleWithoutReopening(unittest.TestCase):
         f = re.search(r"\.rs-chosen \.rs-frame \{([^}]*)\}", CSS)
         self.assertIn("width: 100%", f.group(1), "the plate is not a stamp")
 
+    def chosen(self):
+        # bindPicker's sync(), not the first sync() in the file
+        b = JS.index("const bindPicker =")
+        i = JS.index("const sync = () => {", b)
+        return JS[i:JS.index(chr(10) + "    };", i)]
+
     def test_the_chosen_style_renders_under_its_button(self):
-        i = JS.index('box.className = "rs-chosen"')
-        seg = JS[i - 700:i + 700]
+        seg = self.chosen()
         self.assertIn("btn.after(box)", seg, "under the button, not above")
         self.assertIn("stylePlate(hit?.plate, hit?.shot)", seg,
                       "with its plate")
         self.assertIn("rs-desc", seg, "and its words")
 
     def test_it_clears_before_it_redraws(self):
-        i = JS.index('box.className = "rs-chosen"')
-        seg = JS[i - 700:i + 200]
+        seg = self.chosen()
         self.assertIn('$(".rs-chosen", col)?.remove()', seg)
         self.assertIn("if (!v) return", seg, "nothing chosen, nothing shown")
 
     def test_clicking_it_reopens_the_panel(self):
         """The thing you are looking at is the thing you would change."""
-        i = JS.index('box.className = "rs-chosen"')
-        self.assertIn("box.onclick = () => btn.click()", JS[i:i + 900])
+        self.assertIn("box.onclick = () => btn.click()", self.chosen())
 
     def test_a_typed_answer_shows_too(self):
-        i = JS.index('box.className = "rs-chosen"')
-        self.assertIn('"In your own words"', JS[i:i + 900])
+        self.assertIn('"In your own words"', self.chosen())
 
     def test_its_prose_speaks_archivo_inside_a_courier_label(self):
         """It sits inside the anchor's label, whose voice is Courier caps
@@ -604,6 +606,60 @@ class NoMastersInTheRepo(unittest.TestCase):
         r = (ROOT / "app/static/style-plates/README.md").read_text(encoding="utf-8")
         self.assertIn("1280px on the long edge", r)
         self.assertIn("Masters do not belong in the repo", r)
+
+
+class TheStripReadsOnThePage(unittest.TestCase):
+    """User 2026-08-16: "In the main Production Design page, under
+    Cinematography, it should show a 3 panel strip." A grammar has three
+    reference frames; one plate cannot stand for three."""
+
+    def chosen(self):
+        # bindPicker's sync(), not the first sync() in the file
+        b = JS.index("const bindPicker =")
+        i = JS.index("const sync = () => {", b)
+        return JS[i:JS.index(chr(10) + "    };", i)]
+
+    def test_the_chosen_grammar_shows_its_three_frames(self):
+        seg = self.chosen()
+        self.assertIn("hit?.rich ? plateShots(hit.key)", seg)
+        self.assertIn("length: 3", seg)
+        self.assertIn("rs-cell-empty", seg, "a missing frame is a dashed cell")
+        self.assertIn("rs-frame\">${stylePlate(", seg,
+                      "a plain style still shows its single plate")
+
+    def test_a_frame_opens_full_size_instead_of_reopening_the_panel(self):
+        seg = self.chosen()
+        self.assertIn("box.onclick = () => btn.click()", seg)
+        j = seg.index('$$("[data-lb]", box)')
+        self.assertIn("e.stopPropagation()", seg[j:j + 300])
+        self.assertIn("openLightbox(", seg[j:j + 400])
+
+    def test_the_strip_is_three_across(self):
+        b = re.search(r"\.rs-chosen \.rs-frames \{([^}]*)\}", CSS)
+        self.assertTrue(b)
+        self.assertIn("repeat(3, 1fr)", b.group(1))
+
+
+class TheLightboxIsTheTopmostSurface(unittest.TestCase):
+    """User-caught 2026-08-16: "when you click the thumbs to full sized
+    shows behind the modal". The lightbox was z-index 100 and every modal
+    is 400 — it had ALWAYS opened behind them; the reference viewer has
+    the same bug, and real frames were just the first time anyone looked."""
+
+    def test_it_outranks_a_modal(self):
+        lb = re.search(r"\.lightbox \{([^}]*)\}", CSS).group(1)
+        sc = re.search(r"\.modal-scrim \{([^}]*)\}", CSS, re.S).group(1)
+        z = lambda b: int(re.search(r"z-index:\s*(\d+)", b).group(1))
+        self.assertGreater(z(lb), z(sc))
+
+    def test_the_cropper_does_too(self):
+        cr = re.search(r"\.cropper \{([^}]*)\}", CSS).group(1)
+        sc = re.search(r"\.modal-scrim \{([^}]*)\}", CSS, re.S).group(1)
+        z = lambda b: int(re.search(r"z-index:\s*(\d+)", b).group(1))
+        self.assertGreater(z(cr), z(sc))
+
+    def test_the_order_is_written_down(self):
+        self.assertIn("STACKING ORDER, stated once so it stops drifting", CSS)
 
 
 if __name__ == "__main__":

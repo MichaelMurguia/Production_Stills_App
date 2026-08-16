@@ -536,7 +536,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 }
 
 /* =============================================================== lightbox */
-.lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(8, 9, 10, .96); display: flex; flex-direction: column; }
+/* STACKING ORDER, stated once so it stops drifting (user-caught
+   2026-08-16: "when you click the thumbs to full sized shows behind the
+   modal"). A viewer opened FROM a modal must sit above it, and both the
+   reference viewer and the style panel open the lightbox from inside a
+   .modal-scrim. Page chrome < 100 · modal-scrim 400 · cropper 480 ·
+   lightbox 500. The lightbox is the topmost surface in the app: nothing
+   opens on top of a picture at full size. */
+.lightbox { position: fixed; inset: 0; z-index: 500; background: rgba(8, 9, 10, .96); display: flex; flex-direction: column; }
 .lb-stage { flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
 .lb-stage.zoomed { cursor: grab; align-items: flex-start; justify-content: flex-start; }
 .lb-stage.zoomed.panning { cursor: grabbing; }
@@ -653,7 +660,7 @@ label.check {
 }
 
 /* ==================================================== crop-to-reference */
-.cropper { position: fixed; inset: 0; z-index: 120; background: rgba(8, 9, 10, .96); display: flex; flex-direction: column; }
+.cropper { position: fixed; inset: 0; z-index: 480; background: rgba(8, 9, 10, .96); display: flex; flex-direction: column; }
 .crop-head {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   padding: 12px 18px; background: var(--bg2); border-bottom: 1px solid var(--line);
@@ -1974,12 +1981,18 @@ details.meta pre {
 .read-num.attn { color: var(--accent); }
 .read-lab { font-family: var(--mono); font-size: 9.5px;
   letter-spacing: .08em; color: var(--ink-faint); }
+/* The logline leads (user 2026-08-16: "needs to be more prominent"). It
+   is the one sentence saying what the read understood, and it was set at
+   12.5px --ink-dim — quieter than the tile labels beneath it. The kicker
+   stacks above so the sentence starts at the left edge and reads as prose
+   rather than as a value in a labelled row. Measure capped per §1.9. */
 .read-logline { border-left: 2px solid var(--accent);
-  background: var(--panel); padding: 12px 16px;
-  display: flex; align-items: baseline; gap: 12px; }
-.read-log-kicker { flex: none; font-family: var(--mono); font-size: 9px;
+  background: var(--panel); padding: 14px 18px 16px;
+  display: flex; flex-direction: column; gap: 7px; }
+.read-log-kicker { font-family: var(--mono); font-size: 9px;
   letter-spacing: .1em; color: var(--accent); }
-.read-logline p { font-size: 12.5px; color: var(--ink-dim); line-height: 1.55; }
+.read-logline p { font-size: 16.5px; color: var(--ink); line-height: 1.5;
+  max-width: 900px; }
 @media (max-width: 980px) {
   .read-tiles { grid-template-columns: repeat(2, 1fr); }
 }
@@ -2906,6 +2919,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* Picture on top, words underneath (user 2026-08-16) — the same
    reading order as the catalogue card it is a copy of. */
 .rs-chosen .rs-frame { flex: none; width: 100%; }
+/* A grammar's chosen block carries its three frames, same strip as the
+   panel card — one plate cannot stand for three reference images. */
+.rs-chosen .rs-frames { display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 4px; }
+.rs-chosen .rs-cell { aspect-ratio: 16 / 9; }
 .rs-chosen-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .rs-chosen .rs-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .rs-chosen .rs-desc { font-size: 11.5px; line-height: 1.45; }

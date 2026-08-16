@@ -5086,14 +5086,31 @@ async function renderWizard() {
       if (!v) return;
       const box = document.createElement("div");
       box.className = "rs-chosen";
+      // A grammar has three reference frames, not one plate — the chosen
+      // block shows the same strip the panel card does (user 2026-08-16:
+      // "under Cinematography it should show a 3 panel strip").
+      const shots = hit?.rich ? plateShots(hit.key).slice(0, 3) : [];
+      const strip = hit?.rich
+        ? `<span class="rs-frames">${Array.from({ length: 3 }, (_, i) => shots[i]
+            ? `<span class="rs-cell"><img class="rs-thumb" src="${esc(shots[i])}"
+                 alt="${esc(hit.name)} reference frame ${i + 1}" data-lb="${esc(shots[i])}"></span>`
+            : `<span class="rs-cell rs-cell-empty"></span>`).join("")}</span>`
+        : `<span class="rs-frame">${stylePlate(hit?.plate, hit?.shot)}</span>`;
       box.innerHTML = `
-        <span class="rs-frame">${stylePlate(hit?.plate, hit?.shot)}</span>
+        ${strip}
         <span class="rs-chosen-body">
           <span class="rs-name">${esc(hit ? hit.name : "In your own words")}</span>
           <span class="rs-desc">${esc(hit ? hit.desc : v)}</span>
           ${hit?.source ? `<span class="rs-src mono">${esc(hit.source)}</span>` : ""}
         </span>`;
       box.onclick = () => btn.click();
+      // A frame opens full size rather than reopening the panel.
+      $$("[data-lb]", box).forEach(img => img.onclick = e => {
+        e.stopPropagation();
+        const set = $$("[data-lb]", box);
+        openLightbox(set.map(x => ({ src: x.dataset.lb, caption: x.alt })),
+                     set.indexOf(img));
+      });
       btn.after(box);
     };
     sync();
