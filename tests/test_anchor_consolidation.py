@@ -702,9 +702,28 @@ class TheLocalLoopExists(unittest.TestCase):
         src = p.read_text(encoding="utf-8")
         self.assertIn('HOME = ROOT / ".devhome"', src)
         self.assertIn("def port_is_taken", src)
+        self.assertIn("def free_port", src)
+        self.assertIn("def find_install", src)
+        self.assertIn("webbrowser.open(url)", src)
         self.assertIn("def clone_install", src)
         for k in ("OPENAI_API_KEY", "GEMINI_API_KEY"):
             self.assertIn(k, src)
+
+
+    def test_no_arguments_is_the_whole_interface(self):
+        """User 2026-08-16: "make the local loop EASY — batch file and we
+        are in local mode." Finding an install, choosing a port and
+        opening a browser are the program's job, not the user's."""
+        src = (ROOT / "scripts" / "dev.py").read_text(encoding="utf-8")
+        i = src.index("def main() -> int:")
+        seg = src[i:]
+        self.assertIn("if not a.from_install and not a.restore", seg,
+                      "a bare run still finds real content")
+        self.assertIn("free_port(a.port)", seg,
+                      "a busy port moves aside instead of refusing")
+        bat = (ROOT / "dev.bat").read_text(encoding="utf-8")
+        self.assertIn("no arguments needed", bat)
+        self.assertIn('cd /d "%~dp0"', bat, "double-clickable from anywhere")
 
     def test_the_dev_home_never_enters_git(self):
         ig = (ROOT / ".gitignore").read_text(encoding="utf-8")

@@ -45,6 +45,45 @@ def port_is_taken(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+def free_port(start: int) -> int:
+    """Walk up to a port nothing is listening on. Refusing was the old
+    behaviour and it was right about the danger — a leaked server serves a
+    stale build and you "verify" the wrong thing — but moving to a fresh
+    port avoids the same danger without making the user do anything."""
+    for p in range(start, start + 40):
+        if not port_is_taken(p):
+            return p
+    return start
+
+
+def find_install() -> Path | None:
+    """Look for an installed Screenboard so `dev.bat` with no arguments
+    lands on real content (user 2026-08-16: "make the local loop EASY —
+    batch file and we are in local mode"). An install is a folder holding
+    both run.bat and app/main.py; anything else is a coincidence."""
+    home = Path.home()
+    roots = [home / "Downloads", home / "Desktop", home / "Documents",
+             Path("C:/"), home]
+    seen = set()
+    for root in roots:
+        if not root.exists() or root in seen:
+            continue
+        seen.add(root)
+        try:
+            entries = list(root.iterdir())
+        except OSError:
+            continue
+        for d in entries:
+            try:
+                if (d.is_dir() and d.resolve() != ROOT
+                        and (d / "run.bat").exists()
+                        and (d / "app" / "main.py").exists()):
+                    return d
+            except OSError:
+                continue
+    return None
+
+
 def restore(zip_path: Path, slug: str) -> None:
     """Unpack a backup zip as a project. Backups hold data/ and
     project_state/ at the root, which is exactly a project directory."""
@@ -81,6 +120,8 @@ def clone_install(src: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8080)
+    ap.add_argument("--no-open", action="store_true",
+                    help="do not open a browser")
     ap.add_argument("--restore", metavar="ZIP",
                     help="a backup zip downloaded from Productions -> Back up")
     ap.add_argument("--from-install", metavar="DIR",
@@ -94,12 +135,24 @@ def main() -> int:
     ap.add_argument("--fresh", action="store_true",
                     help="delete .devhome first")
     a = ap.parse_args()
+    a.port_given = any(x.startswith("--port") for x in sys.argv[1:])
 
     if a.fresh and HOME.exists():
         import shutil
         shutil.rmtree(HOME, ignore_errors=True)
         print("cleared .devhome/")
     HOME.mkdir(parents=True, exist_ok=True)
+
+    # No flags at all: find an install, clone it once, and go. The point
+    # of a polish loop is that starting it costs nothing.
+    if not a.from_install and not a.restore and not (HOME / "projects").exists():
+        found = find_install()
+        if found:
+            print(f"found an install at {found}")
+            clone_install(found)
+        else:
+            print("no installed Screenboard found — starting empty "
+                  "(pass --from-install DIR if it lives somewhere unusual)")
 
     if a.from_install:
         src = Path(a.from_install)
@@ -116,11 +169,13 @@ def main() -> int:
             return 2
         restore(z, a.slug)
 
-    if port_is_taken(a.port):
-        print(f"port {a.port} is already listening — stop that server first, "
-              f"or pass --port. Serving you a leaked build is worse than "
-              f"refusing.", file=sys.stderr)
+    port = a.port if a.port_given else free_port(a.port)
+    if a.port_given and port_is_taken(port):
+        print(f"port {port} is already listening — stop that server or drop "
+              f"--port and one will be chosen.", file=sys.stderr)
         return 1
+    if port != a.port:
+        print(f"port {a.port} was busy — using {port}")
 
     env = dict(os.environ)
     env["SCREENBOARD_HOME"] = str(HOME)
@@ -129,14 +184,21 @@ def main() -> int:
                   "OPENROUTER_API_KEY", "REPLICATE_API_TOKEN"):
             env[k] = ""
 
-    print(f"\n  http://127.0.0.1:{a.port}\n")
+    url = f"http://127.0.0.1:{port}"
+    if not a.no_open:
+        import threading
+        import webbrowser
+        threading.Timer(2.0, lambda: webbrowser.open(url)).start()
+    print("")
+    print(f"  {url}")
+    print("")
     print(f"  home    .devhome/{'  (restored: ' + a.slug + ')' if a.restore else ''}")
     print(f"  keys    {'LIVE — renders will spend' if a.keys else 'blanked'}")
     print("  reload  app/**.py automatically; app/static/* on a hard refresh"
           " (Ctrl-Shift-R)\n")
     return subprocess.call(
         [sys.executable, "-m", "uvicorn", "app.main:app",
-         "--port", str(a.port), "--reload", "--reload-dir", str(ROOT / "app")],
+         "--port", str(port), "--reload", "--reload-dir", str(ROOT / "app")],
         cwd=ROOT, env=env)
 
 
