@@ -105,7 +105,7 @@ class CameraBlockTests(unittest.TestCase):
         self.assertIn("HIGH ANGLE", block)
 
     def test_the_ui_migrates_legacy_scale_words(self):
-        # The sheet editor showed "— from bible —" for a stored FULL_BODY;
+        # The sheet editor showed the inherit option for a stored FULL_BODY;
         # the select now shows (and a save persists) the migrated value.
         self.assertIn("_LEGACY_SCALE", JS)
         self.assertIn('FULL_BODY: "WIDE"', JS)
@@ -324,11 +324,35 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         block = JS[i:i + 3200]
         self.assertIn("cam-stated", block)
         self.assertIn("Change camera", block)
-        self.assertIn("FROM BIBLE", block)
+        self.assertIn("PRODUCTION DEFAULT", block)
         self.assertIn("THIS PANEL", block)
         self.assertIn("Frozen by an approved take", block)
         self.assertIn('NEVER "CUSTOM"', block)
         self.assertIn("Save camera", block)
+
+
+class TheInheritLabelNamesTheRightPlace(unittest.TestCase):
+    """User-caught 2026-08-16: "what does 'from Bible' mean on per panel
+    camera settings?" It meant nothing — the default is the production's
+    camera grammar in data/camera_defaults.json, set on the Cinematography
+    anchor in Production Design. The Art Direction Bible has never held
+    it, so the label sent anyone who read it to the wrong document."""
+
+    def test_the_blank_option_names_what_it_inherits(self):
+        # only the comment explaining the rename may still say it
+        self.assertEqual(JS.lower().count("from bible"), 2)
+        self.assertNotIn('"— from bible —"', JS)
+        self.assertIn('"— production default —"', JS)
+
+    def test_the_step_meta_says_it_too(self):
+        self.assertIn('"— PRODUCTION DEFAULT"', JS)
+        self.assertIn("VIEW NOT FIXED — PRODUCTION DEFAULT", JS)
+
+    def test_the_default_really_does_live_there(self):
+        st = (ROOT / "app/store.py").read_text(encoding="utf-8")
+        i = st.index("def camera_defaults()")
+        self.assertIn("CAMERA_DEFAULTS", st[i:i + 500])
+        self.assertNotIn("BIBLE", st[i:i + 500])
 
 
 if __name__ == "__main__":

@@ -7204,7 +7204,7 @@ async function openSpecEditor(specId) {
       </div>
       <div class="fgroup" title="Camera and composition for this panel. Each axis falls back to the production's Art Direction Bible camera default when blank, and overrides it when set. The app writes the professional directive into the render prompt.">
         <span class="f-label">Camera <span class="hint">(blank = the bible default)</span></span>
-        ${cameraRow("pcam", p, "— from bible —", ro)}
+        ${cameraRow("pcam", p, "— production default —", ro)}
       </div>
       <div class="two-col">
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
@@ -8356,7 +8356,7 @@ const CAMERA_AXES = [
 const _LEGACY_LENS = { WIDE: "24MM", NORMAL: "50MM", TELEPHOTO: "135MM" };
 const lensValue = v => _LEGACY_LENS[String(v || "").toUpperCase()] || String(v || "").toUpperCase();
 // Pre-enum autofill shot words map onto the canon scale so drafted panels
-// show their real value instead of "— from bible —" (a save persists the
+// show their real value instead of "— production default —" (a save persists the
 // migrated form). Mirrors store.LEGACY_SCALE.
 const _LEGACY_SCALE = { FULL_BODY: "WIDE", DETAIL: "EXTREME_CLOSE" };
 const scaleValue = v => _LEGACY_SCALE[String(v || "").toUpperCase()] || String(v || "").toUpperCase();
@@ -9134,7 +9134,12 @@ async function renderBoardPanels(specId) {
               [...ownForbid, ...boardForbid].map(f => esc(String(f).toUpperCase())).join("  ·  ")}</div>` : ""}` })}
 
         ${step({ n: "03", id: "camera", label: "CAMERA",
-          meta: camOwn ? "— THIS PANEL" : "— FROM BIBLE",
+          // The blank option used to read "from bible", which named the
+          // wrong document entirely (user-caught 2026-08-16: "what does
+          // 'from Bible' mean?"). The default is the production's camera
+          // grammar, set on the Cinematography anchor in Production
+          // Design — nothing to do with the Art Direction Bible.
+          meta: camOwn ? "— THIS PANEL" : "— PRODUCTION DEFAULT",
           verbs: `<button type="button" class="verb" data-f="cam-open"
             ${frozen ? `disabled title="Frozen by an approved take — it was composed at this camera; the setting unfreezes if the take is rejected"` : ""}>Change camera</button>`,
           body: `
@@ -9144,14 +9149,14 @@ async function renderBoardPanels(specId) {
               </div>
               ${(() => {
                 const notes = [
-                  camOrient ? "" : "VIEW NOT FIXED — FROM BIBLE",
+                  camOrient ? "" : "VIEW NOT FIXED — PRODUCTION DEFAULT",
                   scopeBits.length ? `SETTING ${esc(scopeBits.slice(-2).join(" "))} OVERRIDES THE HOUR AND HUE OF ANY ATTACHED STYLE IMAGE` : "",
                 ].filter(Boolean);
                 return notes.length ? `<div class="step-note mono">${notes.join("  ·  ")}</div>` : "";
               })()}
               <div class="cam-editor hidden" data-f="cam-editor">
                 <span class="mono cam-open-k">CAMERA OPENED · NEXT TAKE PAINTS FROM THESE</span>
-                ${cameraRow("cam", p, "— from bible —", false)}
+                ${cameraRow("cam", p, "— production default —", false)}
                 <div class="cam-editor-acts">
                   <button type="button" class="primary" data-f="cam-save">Save camera</button>
                   <button type="button" class="verb" data-f="cam-cancel">Cancel</button>

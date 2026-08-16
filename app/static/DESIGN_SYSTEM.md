@@ -474,10 +474,14 @@ it is inherited — with the verb beside the line. A summary always states
 the value, never the word "Custom". Worked example: the camera axes —
 full `.cam-row` on the Look Interview and the breakdown editor (authoring
 surfaces); on the panels workbench one line, `EYE LEVEL · 24MM · LEVEL ·
-WIDE — FROM BIBLE` / `Change camera`, opening the four selects on ask
+WIDE — PRODUCTION DEFAULT` / `Change camera`, opening the four selects on ask
 with `Save camera` / `Cancel`; an approved take freezes the act in place
-with the condition in its `title`. Provenance suffixes `— FROM BIBLE` /
-`— THIS PANEL` answer "why does this say 24mm" without a sentence.
+with the condition in its `title`. Provenance suffixes `— PRODUCTION
+DEFAULT` / `— THIS PANEL` answer "why does this say 24mm" without a
+sentence. The first read `— FROM BIBLE` until 2026-08-16 and named the
+wrong document: the default lives in `data/camera_defaults.json`, set on
+the Cinematography anchor, and the Art Direction Bible has never held it.
+A provenance label that points at the wrong place is worse than none.
 
 **Geometry is computed once and declared** (canon pass R2). When one
 component draws and another must aim at what was drawn, the drawer emits
