@@ -705,6 +705,14 @@ class TheLocalLoopExists(unittest.TestCase):
         self.assertIn("def free_port", src)
         self.assertIn("def find_install", src)
         self.assertIn("webbrowser.open(url)", src)
+        self.assertIn("def newest_download", src)
+        self.assertIn("from app import backup", src)
+        self.assertIn("backup.restore_backup", src,
+                      "the app's own validated restore, not a bare "
+                      "extractall — traversal guard, real project name, "
+                      "no slug collision, staged rename")
+        self.assertIn("sys.path.insert(0, str(ROOT))", src,
+                      "scripts/ cannot import app without it")
         self.assertIn("def clone_install", src)
         for k in ("OPENAI_API_KEY", "GEMINI_API_KEY"):
             self.assertIn(k, src)
@@ -722,7 +730,7 @@ class TheLocalLoopExists(unittest.TestCase):
         self.assertIn("free_port(a.port)", seg,
                       "a busy port moves aside instead of refusing")
         bat = (ROOT / "dev.bat").read_text(encoding="utf-8")
-        self.assertIn("no arguments needed", bat)
+        self.assertIn("Just run this", bat)
         self.assertIn('cd /d "%~dp0"', bat, "double-clickable from anywhere")
 
     def test_the_dev_home_never_enters_git(self):

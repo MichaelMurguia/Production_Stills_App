@@ -28,6 +28,7 @@ Three things it refuses to do by default, each for a reason:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import socket
 import subprocess
@@ -84,14 +85,33 @@ def find_install() -> Path | None:
     return None
 
 
-def restore(zip_path: Path, slug: str) -> None:
-    """Unpack a backup zip as a project. Backups hold data/ and
-    project_state/ at the root, which is exactly a project directory."""
-    dest = HOME / "projects" / slug
-    dest.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path) as z:
-        z.extractall(dest)
-    print(f"restored {zip_path.name} -> .devhome/projects/{slug}/")
+def newest_download() -> Path | None:
+    """The backup you just downloaded. Naming it should not be homework."""
+    d = Path.home() / "Downloads"
+    zips = sorted((p for p in d.glob("*.zip") if p.is_file()),
+                  key=lambda p: p.stat().st_mtime, reverse=True) if d.exists() else []
+    return zips[0] if zips else None
+
+
+def restore(zip_path: Path) -> None:
+    """Import a backup through the app's OWN restore, not a bare
+    extractall: it validates every member against traversal, reads the
+    project's real name out of the archive, avoids colliding with an
+    existing slug, and stages into a hidden directory renamed into place
+    so a half-written tree never appears on the shelf. Rewriting any of
+    that here would be a worse copy of it.
+
+    SCREENBOARD_HOME is already set, so `app.paths` resolves to .devhome
+    the moment it is imported. The repo root goes on sys.path first —
+    this script lives in scripts/, so `app` is not importable from here
+    by default."""
+    sys.path.insert(0, str(ROOT))
+    from app import backup
+    r = backup.restore_backup(zip_path.read_bytes())
+    (HOME / "active_project.json").write_text(
+        json.dumps({"slug": r["slug"]}), encoding="utf-8")
+    print(f"restored \"{r['name']}\" from {zip_path.name} "
+          f"-> .devhome/projects/{r['slug']}/  (opened by default)")
 
 
 def clone_install(src: Path) -> None:
@@ -122,14 +142,13 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--no-open", action="store_true",
                     help="do not open a browser")
-    ap.add_argument("--restore", metavar="ZIP",
-                    help="a backup zip downloaded from Productions -> Back up")
+    ap.add_argument("--restore", metavar="ZIP", nargs="?", const="newest",
+                    help="a backup zip from Productions -> Back up; with no "
+                         "path, the newest zip in your Downloads")
     ap.add_argument("--from-install", metavar="DIR",
                     help="copy productions out of an installed Screenboard "
                          "(the folder holding run.bat) — real content, "
                          "copied once, never written back")
-    ap.add_argument("--slug", default="dev",
-                    help="project folder name for --restore (default: dev)")
     ap.add_argument("--keys", action="store_true",
                     help="pass the real API keys through (renders cost money)")
     ap.add_argument("--fresh", action="store_true",
@@ -163,11 +182,21 @@ def main() -> int:
         clone_install(src)
 
     if a.restore:
-        z = Path(a.restore)
+        z = newest_download() if a.restore == "newest" else Path(a.restore)
+        if z is None:
+            print("no zip found in Downloads — pass the path: "
+                  r'dev.bat --restore "C:\\path\\to\\backup.zip"',
+                  file=sys.stderr)
+            return 2
         if not z.exists():
             print(f"no such zip: {z}", file=sys.stderr)
             return 2
-        restore(z, a.slug)
+        os.environ["SCREENBOARD_HOME"] = str(HOME)
+        try:
+            restore(z)
+        except Exception as e:  # noqa: BLE001 — a bad zip is a message, not a stack
+            print(f"could not restore {z.name}: {e}", file=sys.stderr)
+            return 2
 
     port = a.port if a.port_given else free_port(a.port)
     if a.port_given and port_is_taken(port):
@@ -192,7 +221,7 @@ def main() -> int:
     print("")
     print(f"  {url}")
     print("")
-    print(f"  home    .devhome/{'  (restored: ' + a.slug + ')' if a.restore else ''}")
+    print("  home    .devhome/")
     print(f"  keys    {'LIVE — renders will spend' if a.keys else 'blanked'}")
     print("  reload  app/**.py automatically; app/static/* on a hard refresh"
           " (Ctrl-Shift-R)\n")
