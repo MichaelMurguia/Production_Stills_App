@@ -1775,6 +1775,10 @@ details.meta pre {
 /* Corrected mock 14a: identity rides the TOP right, opposite the
    state tag — the image's bottom edge stays clean for the artwork. */
 .shot-tag-id { right: 10px; top: 10px; color: var(--ink-dim); }
+/* B10 (RULE_PASS 2026-08-16): facts about an image ride ON it. Absent
+   entirely on a take the grammar did not ride — a fact that is sometimes
+   true is only readable if its absence is also a fact. */
+.shot-tag-grammar { right: 10px; bottom: 34px; color: var(--ink-dim); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
@@ -2897,58 +2901,55 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-plate { width: 100%; height: 100%; display: block; }
 .rs-card.on .rs-frame { border-color: var(--ink-faint); }
 .rs-thumb { width: 100%; height: 100%; object-fit: cover; min-width: 0; }
-.rs-own-card { cursor: default; }
-.rs-own-frame { flex-direction: row; }
-.rs-plus { flex: none; width: 30px; height: 30px; padding: 0;
-  background: var(--field); border: 1px solid var(--line);
-  color: var(--ink-dim); font-family: var(--mono); font-size: 17px;
-  line-height: 1; cursor: pointer; }
-.rs-plus:hover { border-color: var(--ink-faint); color: var(--ink); }
 .rs-own-in { margin-top: 2px; }
-/* UNCANONIZED — 2026-08-16 — cinematography grammar card. The document
-   gives each style a subtitle, a key question, a description and an
-   operating principle; the card shows all four, then three reference
-   frames, then a link to the prompt. Two across, because at three the
-   description wraps to a column an inch wide. */
+/* RULE_PASS_2026-08-16 Part B — ONE card, two lives. The catalogue cell
+   and the chosen card render from one function at two scales, in one
+   reading order: picture first and largest, then name, then words. Four
+   text roles, never seven (B4). No italic anywhere (B5). */
 .rs-cards.rs-cards-rich { grid-template-columns: repeat(2, 1fr); }
-.rs-rich { gap: 7px; padding: 13px 14px; }
-/* §1.3 — the subtitle is a LABEL, not a signal. Eight amber subtitles on
-   one surface is eight of nothing; amber stays with `Use this`. */
-.rs-sub { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--ink-dim); }
-.rs-card.on .rs-sub { color: var(--ink); }
-.rs-q { font-size: 12.5px; font-style: italic; color: var(--ink); }
-.rs-principle { font-size: 12px; color: var(--ink-dim); line-height: 1.5; }
-.rs-principle b { display: block; font-family: var(--mono); font-size: 9.5px;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
-  font-weight: 700; margin-bottom: 2px; }
-.rs-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
-  margin-top: 2px; }
-.rs-cell { display: block; aspect-ratio: 3 / 2; background: var(--bg2);
+.rs-rich { gap: 8px; padding: 13px 14px; }
+.rs-placeholder { margin: -6px 0 12px; font-size: 10px; letter-spacing: .08em;
+  color: var(--ink-faint); }
+/* B6 — provenance leads, and a hairline separates what this production
+   made from what we authored. */
+.rs-src { font-family: var(--mono); text-transform: uppercase;
+  font-size: 9px; letter-spacing: .07em; color: var(--ok); }
+.rs-seam { display: block; height: 1px; background: var(--line-soft);
+  margin: 2px 0 4px; }
+/* B5 — the films are proper nouns a human wrote, so Archivo, not Courier. */
+.rs-films { font-size: 11.5px; color: var(--ink-dim); line-height: 1.5; }
+/* B3 — no cell area at all when there are no frames, and one line saying so. */
+.rs-nof { display: block; font-size: 10px; letter-spacing: .08em;
+  color: var(--ink-faint); }
+.rs-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.rs-cell { display: block; aspect-ratio: 16 / 9; background: var(--bg2);
   border: 1px solid var(--line-soft); overflow: hidden; }
 .rs-cell img { width: 100%; height: 100%; object-fit: cover; display: block;
   cursor: zoom-in; }
-.rs-cell-empty { border-style: dashed; }
-.rs-films { font-size: 9.5px; letter-spacing: .05em; color: var(--ink-faint);
-  line-height: 1.5; }
 .rs-prompt-link { align-self: start; font-size: 11.5px; }
-/* The switch sits at the foot of the panel, in the lock-strip vocabulary
-   — a statement of state with the one act that changes it. */
-.cine-ride { flex-wrap: wrap; margin: 14px 0 0; }
-.cine-ride .gate-text { flex: 1 1 340px; }
-.cine-ride b { color: var(--ink); font-weight: 600; }
-/* UNCANONIZED — 2026-08-16 — the cast modal. Casting used to write the
-   card immediately and the card's + tile was a bare file input, so the OS
-   picker arrived over the app with nothing confirmed. Both facts now sit
-   in one place first, and the photos are CHOSEN here and uploaded on
-   cast — visible before anything is written. */
-.cast-modal { width: min(560px, 94vw); }
-.cast-photos { margin: 4px 0 12px; }
-.cast-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
-.cast-thumb {
-  width: 66px; height: 66px; object-fit: cover; display: block;
-  border: 1px solid var(--line-soft); background: var(--field);
-}
+/* the reading view behind the link (B4) */
+.rs-sub { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-dim); margin: 0 0 10px; }
+.rs-q { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 10px;
+  max-width: 720px; }
+.rs-principle { font-size: 15px; color: var(--ink-dim); line-height: 1.55;
+  max-width: 720px; margin: 0 0 14px; }
+.rs-principle b { display: block; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
+  font-weight: 700; margin-bottom: 3px; }
+.rs-read-k { font-size: 9.5px; letter-spacing: .1em; color: var(--ink-faint);
+  margin: 0 0 5px; }
+/* B7 — one escape hatch, below the grid, after a hairline, full width. Not
+   a cell: a set-member tile classifies by fill (§1.3), and an escape hatch
+   is not a member of the set it escapes. */
+.rs-own-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.rs-own-lab { flex: none; font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint); }
+.rs-own-in { flex: 1 1 260px; min-width: 0; }
+.rs-own-row.on .rs-own-in { border-color: var(--ink); }
+.rs-own-thumbs { display: flex; gap: 5px; }
+.rs-own-thumbs .rs-thumb { width: 34px; height: 34px; object-fit: cover; }
 .rs-prompt-modal { width: min(760px, 94vw); max-height: 86vh;
   display: flex; flex-direction: column; }
 .rs-prompt-text { flex: 0 1 auto; overflow: auto; margin: 6px 0 0;

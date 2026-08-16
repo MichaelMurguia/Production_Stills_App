@@ -735,6 +735,17 @@ being a design token. The font ban in this file governs chrome.
 
 ## Copy
 
+**A name a human wrote is Archivo, even in a list shaped like data** (B5,
+2026-08-16). Courier is machine data — ids, counts, hashes, states. Film
+titles, people's names and place names are proper nouns somebody chose,
+and setting them in Courier claims they were emitted by something.
+
+**An axis the app has never taught is stated by what it is NOT, before its
+options appear** (B8, 2026-08-16). `not mood, not light, not
+cinematography` does more work than a paragraph of definition. A field
+whose answer comes from a known vocabulary shows what was CHOSEN — the
+name — not the directive that choice writes.
+
 **A label names its effect on the work, not its destination in the data
 model** (A1, ruled 2026-08-16). `EACH BECOMES A BIBLE SECTION` describes our
 filing; the user is asking what changes in the picture. If a label can be
@@ -768,6 +779,49 @@ Prose was ~3:1 over interface by area in v1. Rules:
 ---
 
 ## Components
+
+**A card has an empty life and a filled life, and they are ONE component**
+(B1, 2026-08-16). Empty: the head, its SETS/NOT line, one button — nothing
+reserved, no dashed well, an honest empty state rather than the filled
+layout minus its content. Filled: **the picture is the largest element, at
+its own ratio, first** — then the name, then the words, then a Courier
+provenance line where one exists — and clicking anywhere on it reopens
+whatever sets it, because the thing you are looking at is the thing you
+would change. Both lives and the catalogue cell render from **one
+function** at two scales: if the catalogue gains a field, the card gains
+it or deliberately drops it in one place. Two drawings of one thing always
+drift.
+
+**Never pad to three** (B3, 2026-08-16). Where a set has fewer members
+than its layout expects, show the members that exist and state the absence
+in one Courier line — `REFERENCE FRAMES — NOT YET IN THE LIBRARY`. Empty
+cells are reserving the shape of the missing thing, and the sanctioned
+exception earns itself by naming the blocker; a dashed cell names nothing.
+
+**Four text roles on a card, not seven** (B4, 2026-08-16). Canon's cards
+carry two or three. Seven is a document rendered as a cell — it is what
+makes a description wrap to a column an inch wide. Anything that rewards
+reading goes behind one door, in a reading view with `Copy`, because
+nobody reads an essay inside a grid.
+
+**A placeholder says it is one, once per surface** (B2, 2026-08-16). A
+diagram teaches an axis; a picker has to sell a look; those are different
+jobs. A stand-in is allowed while the real thing is missing, disclosed in
+**one line at the head of the panel** — never a mark on every card, which
+is nine statements where one is honest. Where real imagery already exists,
+the placeholder is not permitted at all.
+
+**A generated entry and an authored one must not look identical** (B6,
+2026-08-16). Where the app captures something from the user's own work and
+places it beside things we wrote, the captured entry leads with a Courier
+provenance line and a hairline under it. Position alone does not disclose.
+
+**An escape hatch is not a member of the set it escapes** (B7,
+2026-08-16). It sits below the set, after a hairline, full width, as a
+labelled row — never as the last cell of the grid, because a set-member
+tile classifies by fill (§1.3) and an escape hatch is not a member. And it
+appears **once**: the same control drawn in two places is the fault
+`one-control-two-presentations` already names.
 
 **A confirmation never changes what a control can do** (C3, 2026-08-16).
 Confirmations are advisory (§2.4), so a control that loses its affordance
@@ -1247,6 +1301,12 @@ padding, or its internal hairline was skipped. Check containment first.
 
 ## Sequence and gates
 
+**Facts about an image ride ON it** (B10, 2026-08-16). An experiment that
+changes output must be legible in its output: a take that rendered under a
+cinematography grammar carries `GRAMMAR — <NAME>` in Courier on the hero
+and in the lightbox, and a take that did not carries nothing. A fact that
+is sometimes true is only readable if its absence is also a fact.
+
 **A manifest belongs with the thing it becomes** (C6, 2026-08-16). What
 is attached is counted where it is chosen — by role, `SUBJECT + PALETTE +
 STYLE` — and listed in full beside the prompt it rides in, not beside the
@@ -1363,6 +1423,10 @@ for the manifest's maskable purpose.
 
 ## Do not
 
+- **No italic.** The system has two voices and they are families, not
+  slants; adding italic for emphasis is how a third voice starts. Emphasis
+  is ink tier, weight, or position (B5, 2026-08-16).
+
 - Add a CSS framework, or Inter/Roboto.
 - Add gradients, rounded cards, drop shadows for decoration, or emoji.
 - Introduce a new accent color, or use a status color decoratively.
@@ -1433,14 +1497,8 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-08-16 | **Casting opens a modal, not a file explorer** (user: "too jarring… instead of adding that to the list, it should open in a modal. Once you save it, the card goes where it is now"). `Cast this subject` used to write the card immediately, and the card's `+` tile was a bare file input, so the OS picker arrived over the app with nothing having been confirmed. One modal now carries what the read PROPOSED — kind, identity, traits, all editable — and a photo tray where files are CHOSEN and shown as thumbnails; nothing is written until `Cast` is pressed, and the photos then ride the card's own upload endpoint. Reports through `.busy.busy-inline` per A3, and a partial failure says which half got through | Reference, the uncast subject card | Review (1) an intake modal that both EDITS a proposal and STAGES an upload — canon has dialogs that do one or the other; (2) whether the photo tray belongs here at all, or whether casting should be identity-only and photos stay the card's job |
-| 2026-08-16 | **The location list reads in acts** (user): grouped into three acts, chronological by first appearance rather than by scene count — count answered "which location is biggest", a different question from the one a location list is asked. A screenplay that MARKS its acts supplies its own divisions and titles; one that does not gets the standard 25/50/25 split, **unnamed**, because `ACT I` with no title is honest and a title we invented is a claim about the script we cannot support. The head says which it got. Five per act, then the app's one `Expand — n more`. A location the slugline parse never saw has no act and says so rather than being filed into one; environment inheritance moved from the grouping to a per-row selector | Stage 02, the read strip | Review (1) acts as the primary grouping where environment used to be — the list now answers "where does the story go" and the row answers "what does this place inherit"; (2) an untitled `ACT II` heading, which is the first place the app shows a structure it inferred rather than read |
-| 2026-08-16 | **The cinematography grammar card** (user: "replace our cinematography styles with `docs/CINEMATOGRAPHY_STYLES.md`"). Eight grammars, PARSED from that document rather than copied into the code, so editing the doc updates the picker. A card carries what the document gives it: name, a Courier subtitle, the key question in italic, the description, the operating principle under a Courier label, three reference frames (dashed cells until real ones exist, each opening in the lightbox with arrows between them), the five reference films, and a `Read the image-model prompt` link that opens the full prompt to read and copy. Two across, not three — at three the description wrapped to a column an inch wide | Cinematography anchor panel | The richest card in the app by some distance, and the questions are about that: (1) seven distinct text roles in one card, where canon's cards carry two or three; (2) the italic key question, which is a new voice — canon has no italic; (3) the reference films as a Courier run-on, which reads as machine data but is a list of proper nouns; (4) three empty dashed cells reserving the shape of a missing thing, which canon forbids everywhere except the stated-blocker frame |
-| 2026-08-16 | **The chosen style reads on the card** (user: "once a style is selected — show the card on the main tab, under the selection button", then "picture on top and text underneath"). Picking a style replaces the button label with the style's name and draws a compact version of the card beneath it, in the catalogue card's own reading order: plate full width on top, then name, words, and — for the captured house style — a Courier provenance line. Clicking it reopens the panel, because the thing you are looking at is the thing you would change. A typed answer shows too, headed `In your own words` For a cinematography grammar it draws that style's THREE reference frames as a strip rather than one plate — a grammar's example is three pictures, and one plate cannot stand for three; each frame opens full size without reopening the panel | The three anchor cards | The `.rs-chosen` block sits INSIDE the anchor's `<label>`, whose voice is Courier caps for a field name, so it explicitly resets to Archivo — review whether a label should be able to contain prose at all, or whether the chosen card wants to sit outside it. Also: it is a second, smaller drawing of the catalogue card, and the two will drift |
-| 2026-08-16 | **A production's own style is the first card** (user: "we should capture my style and make it the Production Painting style"). `Production Painting` shipped as a phrase we wrote, which is backwards for a production that has been rendering for weeks. It is now captured from what already governs the look: its words are the saved bible's `Rendering Language → Required` bullets — the text that has ridden every prompt — and its plate is a real approved panel, fetched at thumb tier. A production with no bible yet keeps the shipped fallback | Board Rendering panel, first card | Review (1) a catalogue whose first entry is generated from the user's own data while the other eight are authored — they look identical and are not the same kind of thing; (2) whether the captured card should say so ON the card (it currently explains itself in its description) or wear a mark; (3) whether a real panel beside eight diagrams makes the diagrams read as unfinished |
-| 2026-08-16 | **The card is its button; the panel is the answer** (user: "combine the words and the pictures — only have the button on the main page"). Three anchor cards show a head, their SETS/NOT line and ONE button. Everything else the anchor owns lives in the panel behind it: a grid of style cards each carrying an **example plate**, its name, a plain definition and its own NOT fence; an `Add your own` card with a `+` for an image and a field for words; and — for Cinematography and Board Rendering — the camera axes and the never-list, which TRAVEL into the panel on open and go home on close rather than being re-created (the nodes keep their bindings). World Texture gained a catalogue so the row answers the same way; Color Palette keeps its swatch tools inline, because a palette's picture half is swatches you BUILD, not examples you pick. Plates are SVG diagrams — a lit form and its shadow for light, the mark on the surface for medium — with a manifest slot so real generated images drop in over them | Stage 02, all four anchor cards | The big ones for a designer: (1) a card that is nothing but a button, where the SETS/NOT line now has to carry the whole preview of what is behind it; (2) the plate as a DIAGRAM — honest offline, but it teaches the axis rather than showing the style, and the two are not the same thing; (3) `Add your own` sitting as the last cell of a catalogue grid, which makes an escape hatch look like a peer of the nine curated answers; (4) Color Palette being deliberately unlike its three siblings |
-| 2026-08-16 | **The look interview is gone; the anchor cards are the interview** (user: "we now have duplicative entries", then "I think these are all confusing and not needed. Fight me"). Stage 02 drops from six steps to five and there is ONE place the look is set. Each anchor card carries what it SETS and NOT · `Add images` · `IN WORDS`; Cinematography additionally holds the five camera axes, and Board Rendering additionally holds `NEVER LOOKS LIKE`. Standing notes moved to the Bible step, beside the act they modify. `Visual touchstones` is retired outright and folded into notes at boot | Stage 02, steps 01 and 04 | Ruling wanted on (1) the card as a multi-part object — one anchor now holds a picture set, a phrase, a five-axis control and an exclusion, which is far more than a card carried before; (2) whether `IN WORDS` / `NEVER LOOKS LIKE` / `CAMERA GRAMMAR` reading as three sibling labels inside one card is a hierarchy or a list; (3) the four cards being visibly unequal in height and content now that two carry extra controls |
-| 2026-08-16 | **A field whose answer comes from a known vocabulary is a choice, not a sentence** (`openStylePicker`, user-directed twice — rendering style, then "the same style picker for cinematography"). The trigger is a full-width left-aligned control that reads as the field it replaced, showing the chosen style's NAME rather than the directive it writes. The modal leads with a definition of the axis stated by what it is NOT (`not mood, not light, not cinematography`), then a 3-across grid of cards each carrying a name, a plain-language definition and its own `NOT` fence, then a free-text escape hatch, then a route to upload example images to that anchor instead. Selection is an ink keyline; amber stays with `Use this` | Board Rendering and Cinematography anchor cards | Two catalogues ship (9 rendering styles, 9 cinematography looks) and their CONTENT wants a director's eye more than a designer's. For the designer: (1) cards with no imagery — the honest option offline, but a style picker with no pictures is asking words to sell a look; (2) the definition-by-negation at the top, which is the first place the app teaches an axis rather than assuming it; (3) whether the free-text row belongs in the modal or back on the card |
+| 2026-08-16 | **The location list reads in acts** (user, AFTER the rule pass was written — unreviewed): grouped into three acts, chronological by first appearance rather than by scene count. A screenplay that MARKS its acts supplies its own divisions and titles; one that does not gets the standard 25/50/25 split and its NAMES from the scene scan, which is a reading of the story rather than a parse. The head states which half came from where. Five per act behind the app's one `Expand`; a location the slugline parse never saw has no act and says so | Stage 02, the read strip | Review (1) acts as the primary grouping where environment used to be; (2) an act heading the app INFERRED — the first place it shows a structure it read rather than parsed — and whether `Name the acts` belongs in the strip or with the scan |
+| 2026-08-16 | **Casting opens a modal** (user, AFTER the rule pass — unreviewed): `Cast` used to write the card immediately, and a cast card's `+` tile was a bare file input, so the OS picker arrived over the app with nothing confirmed. One modal carries what the read proposed — kind, identity, traits, editable — and a tray where photos are CHOSEN and shown as thumbnails; nothing is written until `Cast`. One `photoTray()` serves both casting and an existing card | Reference, subject cards | Review (1) an intake modal that both EDITS a proposal and STAGES an upload, where canon's dialogs do one or the other; (2) whether casting should be identity-only and photos stay the card's job |
 | 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry)  **DEFERRED by HARNESS_AUDIT R2 (2026-08-14)** — the room was not in the recorded bundle and the designer will not rule it from a description; top item of the next recording walk. Already ruled: square chips stand (canon forbids rounding) and the amended R2 reading (client owns arrangement STRUCTURE, server owns GEOMETRY). Remaining: chip sizes, ghost-scrim strength, snap values, claim arrows |
 | 2026-08-13 | **Board looks** (`.arr-style-*`, user-directed): a `Style…` verb in the arrange room opens a picker whose cards are REAL small-scale renders of this board (INK — none, Art Board, Tech Design), with per-look option checkboxes; the chosen look dresses previews/export/assembly only — the room always works in INK. Renderer-side: two new sheet ink styles (`ART_BOARD` parchment/serif/hand-annotations, `TECH_DESIGN` near-black/mono/keylines+ticks), a `dress` element channel (swatch strip, material chips, spec table, atmosphere strip, profile prose) derived from canon at render time, and bundled OFL render faces incl. a new `hand` voice (Caveat) | Arrange room (stage 05) + board export/assembly | Open questions for the ruling: (1) the `dress` channel as a parallel grammar beside the closed twelve block types; (2) md-tier sources feeding preview-scale renders (scoped exception to "display tiers never feed a render"); (3) which palette languages a board's strip draws (ships: all live); (4) Art Board per-panel taglines vs. atmosphere-strip-only; (5) Tech Design comparison block, ortho-tick styling, and both styles' exact ink values; (6) hand-annotation collision rules, Caveat minimum size, and a ruling distinguishing sheet-render typography from app chrome (canon forbids new fonts in chrome); (7) whether the room's advisory SHORT readouts should read dressed geometry (the gate already does)  **PARTLY RULED by HARNESS_AUDIT R4 (2026-08-14)** — shipped: dress is a selector over the closed block set (PALETTE / MATERIAL / STRIP / SPEC / PRINCIPLES); md-tier feeds previews only, enforced in sheet_render; the chrome/artifact typography split is Layout canon. Still open, needing a rendered sheet: (3) which palette languages a strip draws, (4) Art Board taglines, (5) exact ink values + Tech Design comparison block, (6a) hand-annotation collision + Caveat minimum size, (7) dressed geometry in advisory readouts |
 | 2026-08-14 | **Add reference in place + View** (user-directed): a required object without a matching reference offers `+ REF` right in the workbench card (the work-order TABLE that carried the long-form `Add reference` was replaced by step 02's tile grid, 2026-08-14) — opens the existing add-reference dialog prefilled with the object; the reference enters the library APPROVED (supplying it deliberately is the review; Reject in Reference remains the recourse) and the card re-renders so the group attaches immediately. An object WITH a reference is marked `REF` on its tile, and that marker opens — a modal reference widget (library card anatomy: badge · id · role · CONTROLS/NOT · notes per matching plate), a Courier fact line "N PLATES MATCH · ALL ATTACH · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", a stated thin-anchor warning at one plate, thumbs opening the lightbox, and `Add another plate` prefilled to the same group | Panels workbench card | Built from canon (roleDialog, ref-card anatomy, lightbox, act-where-condition-is-met) — review the auto-approve rule, the `+ REF` chip density, and the thin-anchor warning copy |
@@ -1452,6 +1510,21 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **RULED (RULE_PASS_2026-08-16 Part B):** stage 02's
+  anchor cards. **The direction is ratified in full** — one place to set
+  the look, each card a door onto a catalogue, the catalogue teaching its
+  axis before offering options. Six corrections inside it. The card is ONE
+  component with an empty life and a filled life, rendered by one function
+  shared with the catalogue cell — the two drawings were already drifting.
+  Diagrams are a stated placeholder, disclosed once per panel, and
+  forbidden where real frames exist. Nothing pads to three. Seven text
+  roles cut to four, with the key question, the operating principle and the
+  prompt behind `Read the grammar`. No italic anywhere; film titles leave
+  Courier. The captured card leads with its provenance and a hairline. The
+  escape hatch leaves the grid and stops being drawn twice. And B10's
+  defect is closed: a take that rode the grammar says `GRAMMAR — <NAME>` on
+  the hero and in the lightbox, which is what made the experiment
+  evaluable at all.
 - **2026-08-16** — **RULED (RULE_PASS_2026-08-16 Parts C, D, E):** the
   sequence surfaces, the film rolls, the ledger, Settings, and the store.
   **Ratified as built:** stage 04's six steps including all four reported

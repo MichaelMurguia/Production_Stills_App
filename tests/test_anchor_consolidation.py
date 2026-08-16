@@ -259,13 +259,22 @@ class TheCardIsItsButton(unittest.TestCase):
         self.assertIn("onClose", seg, "and go home on the way out")
         self.assertIn("dataset.home", JS)
 
-    def test_the_panel_carries_add_your_own_with_a_plus(self):
+    def test_the_escape_hatch_is_one_control_below_the_grid(self):
+        """B7: it was drawn TWICE — a grid cell and a field inside the
+        modal — which `one-control-two-presentations` already forbids. A
+        set-member tile classifies by fill (§1.3), and an escape hatch is
+        not a member of the set it escapes."""
         i = JS.index("function openStylePicker(")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-        self.assertIn("rs-own-card", seg)
-        self.assertIn("Add your own", seg)
-        self.assertIn('data-f="add-img"', seg)
-        self.assertIn('id="rs-own"', seg, "an image AND text")
+        self.assertNotIn("rs-own-card", seg, "no longer a cell")
+        self.assertIn("rs-own-row", seg)
+        self.assertIn('id="rs-own"', seg)
+        self.assertIn('data-f="add-img"', seg, "the image and the words together")
+        self.assertIn("OR IN YOUR OWN WORDS", seg)
+        # it sits AFTER the grid closes
+        self.assertLess(seg.index("</div>"), seg.index("rs-own-row"))
+        b = re.search(r"\.rs-own-row \{([^}]*)\}", CSS).group(1)
+        self.assertIn("border-top", b, "after a hairline")
 
     def test_the_plus_reaches_the_one_library(self):
         """Not a second uploader — the card's own input, clicked from
@@ -279,12 +288,23 @@ class TheCardIsItsButton(unittest.TestCase):
         self.assertIn('[data-f=list] img', seg)
         self.assertIn("rs-thumb", seg)
 
-    def test_every_catalogue_card_shows_its_plate(self):
+    def test_one_renderer_draws_the_cell_and_the_card(self):
+        """B1: they were two drawings of one thing and were drifting. The
+        fix is not to reconcile them but to stop having two."""
+        self.assertEqual(JS.count("function styleCard(st,"), 1)
         i = JS.index("function openStylePicker(")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-        self.assertIn("stylePlate(st.plate, st.shot)", seg,
-                      "the diagram, or a captured image over it")
-        self.assertIn('class="rs-frame"', seg)
+        self.assertIn("${styleCard(st)}", seg)
+        self.assertIn("styleCard(hit, { chosen: true })", JS)
+        body = JS[JS.index("function styleCard(st,"):]
+        self.assertIn("stylePlate(st.plate, st.shot)", body)
+
+    def test_the_picture_leads_at_both_scales(self):
+        j = JS.index("function styleCard(st,")
+        body = JS[j:JS.index(chr(10) + "}" + chr(10), j)]
+        i_pic = body.index("${picture}")
+        self.assertLess(i_pic, body.index("rs-name"))
+        self.assertLess(body.index("rs-name"), body.index("rs-desc"))
 
     def test_a_plate_is_a_diagram_and_says_so(self):
         """We cannot ship stock imagery and a generated sample would be
@@ -370,10 +390,8 @@ class TheChoiceIsVisibleWithoutReopening(unittest.TestCase):
 
     def test_the_chosen_style_renders_under_its_button(self):
         seg = self.chosen()
+        self.assertIn("styleCard(hit,", seg, "the same component, B1")
         self.assertIn("btn.after(box)", seg, "under the button, not above")
-        self.assertIn("stylePlate(hit?.plate, hit?.shot)", seg,
-                      "with its plate")
-        self.assertIn("rs-desc", seg, "and its words")
 
     def test_it_clears_before_it_redraws(self):
         seg = self.chosen()
@@ -411,11 +429,19 @@ class TheCapturedCardShowsTheStyle(unittest.TestCase):
         self.assertNotIn("Captured from this production", seg,
                          "that sentence described the capture, not the style")
 
-    def test_the_provenance_is_a_footnote(self):
+    def test_the_provenance_leads_and_is_separated(self):
+        """B6 (RULE_PASS 2026-08-16): a generated entry and an authored one
+        must not look identical. Provenance is the FIRST line with a
+        hairline under it — position alone does not disclose."""
         i = JS.index("async function adoptHouseStyle")
         seg = JS[i:i + 1200]
-        self.assertIn("FROM YOUR ART DIRECTION BIBLE", seg)
+        self.assertIn("FROM THIS PRODUCTION", seg)
         self.assertIn("card.source", seg)
+        j = JS.index("function styleCard(st,")
+        body = JS[j:JS.index(chr(10) + "}" + chr(10), j)]
+        k = body.index("st.source ?")
+        self.assertLess(k, body.index("rs-name"), "first, not buried")
+        self.assertIn("rs-seam", body, "and a hairline after it")
 
     def test_a_prose_bible_is_still_read(self):
         """An earlier pass took bullets only and returned nothing at all
@@ -498,12 +524,18 @@ class TheGrammarsComeFromTheDocument(unittest.TestCase):
             self.assertNotIn(gone, JS, f"{gone} outlived the replacement")
 
     def test_the_card_shows_what_the_user_asked_for(self):
-        i = JS.index("function richCardBody(st)")
+        """B4 cut it from seven roles to four; the key question and the
+        operating principle moved behind `Read the grammar`, and the card
+        keeps the picture, the name, the words and the films."""
+        i = JS.index("function styleCard(st,")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-        for probe in ("rs-sub", "rs-q", "rs-desc", "rs-principle",
-                      "rs-frames", "rs-films", "rs-prompt-link"):
+        for probe in ("rs-frames", "rs-name", "rs-desc", "rs-films",
+                      "rs-prompt-link"):
             self.assertIn(probe, seg, f"the card is missing {probe}")
-        self.assertIn("length: 3", seg, "three film frames")
+        r = JS.index("function openGrammarReader(st) {")
+        rd = JS[r:JS.index(chr(10) + "}" + chr(10), r)]
+        for probe in ("rs-sub", "rs-q", "rs-principle"):
+            self.assertIn(probe, rd, f"the reading view is missing {probe}")
 
     def test_a_frame_opens_in_the_lightbox_without_choosing_the_style(self):
         # inside the picker — another modal binds the same attribute
@@ -517,11 +549,11 @@ class TheGrammarsComeFromTheDocument(unittest.TestCase):
     def test_the_prompt_opens_to_read_rather_than_riding_the_render(self):
         """It runs to a page. The directive is the principle and the
         mechanics; the prompt is reference."""
-        self.assertIn("function openPromptReader", JS)
+        self.assertIn("function openGrammarReader(st) {", JS)
         i = JS.index('$$(".rs-prompt-link", ov)')
         self.assertIn("e.stopPropagation()", JS[i:i + 400])
         self.assertGreater(i, JS.index("function openStylePicker("))
-        self.assertIn("openPromptReader(", JS[i:i + 400])
+        self.assertIn("openGrammarReader(st)", JS[i:i + 400])
 
     def test_the_subtitle_is_a_label_not_a_signal(self):
         """Eight amber subtitles on one surface is eight of nothing."""
@@ -560,11 +592,11 @@ class TheFramesAreReal(unittest.TestCase):
             if k.startswith("cine-"):
                 self.assertIn(k, keys, f"{k} matches no grammar in the doc")
 
-    def test_a_style_with_no_frames_still_reads(self):
-        i = JS.index("function richCardBody(st)")
+    def test_a_style_with_no_frames_states_it_and_shows_no_cells(self):
+        i = JS.index("function styleCard(st,")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-        self.assertIn("rs-cell-empty", seg)
-        self.assertIn("shots[i]", seg, "only the slots that exist get an img")
+        self.assertIn("REFERENCE FRAMES — NOT YET IN THE LIBRARY", seg)
+        self.assertNotIn("rs-cell-empty", seg)
 
 
 class ACardHoldsButtonsSoItIsNotOne(unittest.TestCase):
@@ -584,7 +616,7 @@ class ACardHoldsButtonsSoItIsNotOne(unittest.TestCase):
         self.assertIn('e.key === "Enter" || e.key === " "', seg)
 
     def test_its_own_buttons_are_still_buttons(self):
-        i = JS.index("function richCardBody(st)")
+        i = JS.index("function styleCard(st,")
         seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
         self.assertIn('<button type="button" class="text-act rs-prompt-link"', seg)
 
@@ -625,13 +657,17 @@ class TheStripReadsOnThePage(unittest.TestCase):
         i = JS.index("const sync = () => {", b)
         return JS[i:JS.index(chr(10) + "    };", i)]
 
-    def test_the_chosen_grammar_shows_its_three_frames(self):
-        seg = self.chosen()
-        self.assertIn("hit?.rich ? plateShots(hit.key)", seg)
-        self.assertIn("length: 3", seg)
-        self.assertIn("rs-cell-empty", seg, "a missing frame is a dashed cell")
-        self.assertIn("rs-frame\">${stylePlate(", seg,
-                      "a plain style still shows its single plate")
+    def test_a_grammar_never_pads_to_three(self):
+        """B3 REFUSED the dashed cells. Canon forbids reserving the shape
+        of the missing thing; the one exception earns it by stating the
+        blocker, and a dashed cell states nothing."""
+        j = JS.index("function styleCard(st,")
+        body = JS[j:JS.index(chr(10) + "}" + chr(10), j)]
+        self.assertNotIn("rs-cell-empty", body)
+        self.assertNotIn("length: 3", body, "no padding")
+        self.assertIn("shots.length", body, "only the frames that exist")
+        self.assertIn("REFERENCE FRAMES — NOT YET IN THE LIBRARY", body)
+        self.assertNotIn("rs-cell-empty", CSS)
 
     def test_a_frame_opens_full_size_instead_of_reopening_the_panel(self):
         seg = self.chosen()

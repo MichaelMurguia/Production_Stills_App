@@ -1112,7 +1112,10 @@ function lbShow() {
   img.style.transform = "";
   img.onload = null;
   img.src = lbSize(item.src, "md");
-  $("#lb-caption").textContent = `${item.caption}  ·  ${lb.index + 1}/${lb.items.length}`;
+  // B10: the same fact travels with the picture into the lightbox.
+  $("#lb-caption").textContent = `${item.caption}${
+    item.grammar ? `  ·  GRAMMAR — ${item.grammar}` : ""}  ·  ${
+    lb.index + 1}/${lb.items.length}`;
   const setZoomLabel = () => {
     $("#lb-zoom").textContent = img.naturalWidth
       ? `${img.naturalWidth}×${img.naturalHeight} — fit (click for 100%)`
@@ -5202,24 +5205,14 @@ async function renderWizard() {
       $(".rs-chosen", col)?.remove();
       if (!v) return;
       const box = document.createElement("div");
-      box.className = "rs-chosen";
-      // A grammar has three reference frames, not one plate — the chosen
-      // block shows the same strip the panel card does (user 2026-08-16:
-      // "under Cinematography it should show a 3 panel strip").
-      const shots = hit?.rich ? plateShots(hit.key).slice(0, 3) : [];
-      const strip = hit?.rich
-        ? `<span class="rs-frames">${Array.from({ length: 3 }, (_, i) => shots[i]
-            ? `<span class="rs-cell"><img class="rs-thumb" src="${esc(shots[i])}"
-                 alt="${esc(hit.name)} reference frame ${i + 1}" data-lb="${esc(shots[i])}"></span>`
-            : `<span class="rs-cell rs-cell-empty"></span>`).join("")}</span>`
-        : `<span class="rs-frame">${stylePlate(hit?.plate, hit?.shot)}</span>`;
-      box.innerHTML = `
-        ${strip}
-        <span class="rs-chosen-body">
-          <span class="rs-name">${esc(hit ? hit.name : "In your own words")}</span>
-          <span class="rs-desc">${esc(hit ? hit.desc : v)}</span>
-          ${hit?.source ? `<span class="rs-src mono">${esc(hit.source)}</span>` : ""}
-        </span>`;
+      box.className = "rs-chosen rs-card" + (hit?.rich ? " rs-rich" : "");
+      // B1: the SAME renderer as the catalogue cell, at card scale. If the
+      // catalogue gains a field this gains it, or drops it deliberately,
+      // in one place.
+      box.innerHTML = hit
+        ? styleCard(hit, { chosen: true })
+        : `<span class="rs-name">In your own words</span>
+           <span class="rs-desc">${esc(v)}</span>`;
       box.onclick = () => btn.click();
       // A frame opens full size rather than reopening the panel.
       $$("[data-lb]", box).forEach(img => img.onclick = e => {
@@ -5268,6 +5261,7 @@ async function renderWizard() {
       new</b> — wear, patina, entropy. It is not the palette and not the
       light: those are the anchors either side of it.`,
     uploadRole: "WORLD_TEXTURE", uploadLabel: "World Texture",
+    ownPlaceholder: "Describe how worn the world is",
   });
   bindPicker("wiz-medium", RENDER_STYLES, {
     empty: "Choose a rendering style",
@@ -5277,6 +5271,7 @@ async function renderWizard() {
       those are set by the other anchors, and choosing a style here never
       touches them.`,
     uploadRole: "BOARD_RENDERING_STYLE", uploadLabel: "Board Rendering",
+    ownPlaceholder: "Describe the medium and finish",
     ...travels("#wiz-never-row"),
   });
   bindPicker("wiz-light", CINEMA_STYLES, {
@@ -5289,6 +5284,7 @@ async function renderWizard() {
       camera default below is a starting point every panel can override —
       a cinematographer picks whatever lens gets the shot.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
+    ownPlaceholder: "Describe how the camera should see",
     ...travels("#cam-default"),
     onPicked: st => saveCineSetting({ key: st?.key || "" }),
     footer: cineRideSwitch,
@@ -6890,6 +6886,8 @@ async function openSpecEditor(specId) {
     const items = shots.map(({ pn, c }) => ({
       src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
       caption: `${c.candidate_id} — ${pn.id} (${c.status}) ${c.width}×${c.height}`,
+      grammar: c.cinematography?.rides
+        ? String(c.cinematography.name || "").toUpperCase() : "",
     }));
     // Selecting a panel on the workbench is roomSel.panel — the route's
     // one-shot scroll target only finds a card that is already rendered,
@@ -8001,29 +7999,31 @@ async function adoptHouseStyle() {
   if (h.words) {
     card.value = h.words;
     card.desc = (h.lines || []).join(" · ") || h.words;
-    card.source = "FROM YOUR ART DIRECTION BIBLE"
-      + (h.plate_from ? ` · PLATE IS ${h.plate_from}` : "");
+    // B6: first line, with a hairline under it. "Position alone does not
+    // disclose" — so it names what kind of thing this card is.
+    card.source = "FROM THIS PRODUCTION — ITS BIBLE AND ITS APPROVED PANELS";
   }
   if (h.plate) card.shot = h.plate;
 }
 
-// A cinematography grammar carries more than a name and a line — the
-// document gives each one a subtitle, a key question, a description and
-// an operating principle, and the user asked for all four on the card
-// (2026-08-16), plus three film frames and a way to read the prompt.
-// The frames are the plate slot: three thumbs, empty until we make them,
-// each opening full size.
-// The image-model prompt runs to a page — a link opens it to READ, with
-// the copy act beside it, rather than burying it in a card.
-function openPromptReader(title, text) {
+// B4 (RULE_PASS 2026-08-16): three things that reward reading, behind one
+// door. Seven text roles is a document rendered as a cell, and nobody
+// reads an essay inside a grid. The key question leads — it keeps its
+// emphasis by being FIRST, not by being italic (B5 refuses italic
+// outright: the system has two voices and they are families, not slants).
+function openGrammarReader(st) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   ov.innerHTML = `
     <div class="modal rs-prompt-modal" role="dialog" aria-modal="true">
-      <div class="modal-title">${esc(title)}</div>
-      <pre class="rs-prompt-text mono">${esc(text)}</pre>
+      <div class="modal-title">${esc(st.name)}</div>
+      <p class="rs-sub mono">${esc(st.subtitle || "")}</p>
+      <p class="rs-q">${esc(st.question || "")}</p>
+      <p class="rs-principle"><b>Operating principle</b> ${esc(st.principle || "")}</p>
+      <p class="rs-read-k mono">IMAGE-MODEL PROMPT</p>
+      <pre class="rs-prompt-text mono">${esc(st.prompt || "")}</pre>
       <div class="modal-actions">
-        <button class="ghost" data-f="copy">Copy</button>
+        <button class="ghost" data-f="copy">Copy the prompt</button>
         <button class="ghost" data-f="close">Close</button>
       </div>
     </div>`;
@@ -8032,26 +8032,49 @@ function openPromptReader(title, text) {
   $("[data-f=close]", ov).onclick = close;
   ov.addEventListener("click", e => { if (e.target === ov) close(); });
   $("[data-f=copy]", ov).onclick = async () => {
-    try { await navigator.clipboard.writeText(text); toast("Prompt copied."); }
+    try { await navigator.clipboard.writeText(st.prompt || ""); toast("Prompt copied."); }
     catch { toast("Could not copy — select the text instead.", true); }
   };
 }
 
-function richCardBody(st) {
-  const shots = plateShots(st.key).slice(0, 3);
-  const frames = Array.from({ length: 3 }, (_, i) => shots[i]
-    ? `<span class="rs-cell"><img class="rs-thumb" src="${esc(shots[i])}"
-         alt="${esc(st.name)} reference frame ${i + 1}" data-lb="${esc(shots[i])}"></span>`
-    : `<span class="rs-cell rs-cell-empty"></span>`).join("");
+// B1 (RULE_PASS 2026-08-16): ONE card, two lives, one function. The
+// catalogue cell and the chosen card were two drawings of the same thing
+// and were already drifting — the fix is not to reconcile them but to
+// stop having two. Same reading order at both scales: PICTURE first and
+// largest, at its own ratio, then the name, then the words.
+//
+// B4: four text roles, not seven. Canon's cards carry two or three; seven
+// is a document rendered as a cell, which is why the description wrapped
+// to a column an inch wide. The key question, the operating principle and
+// the full prompt reward reading, and nobody reads inside a grid cell —
+// they move behind `Read the grammar`.
+//
+// B6: a generated entry and an authored one must not look identical.
+// Provenance is the FIRST line with a hairline under it; position alone
+// does not disclose.
+function styleCard(st, { chosen = false } = {}) {
+  const shots = st.rich ? plateShots(st.key).slice(0, 3) : [];
+  // B3: never pad to three. A reserved shape is forbidden unless it states
+  // the blocker that keeps it empty, and a dashed cell states nothing.
+  const picture = st.rich
+    ? (shots.length
+        ? `<span class="rs-frames">${shots.map((src, i) =>
+            `<span class="rs-cell"><img class="rs-thumb" src="${esc(src)}"
+               alt="${esc(st.name)} reference frame ${i + 1}"
+               data-lb="${esc(src)}"></span>`).join("")}</span>`
+        : `<span class="rs-nof mono">REFERENCE FRAMES — NOT YET IN THE LIBRARY</span>`)
+    : `<span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>`;
   return `
+    ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>
+                   <span class="rs-seam"></span>` : ""}
+    ${picture}
     <span class="rs-name">${esc(st.name)}</span>
-    <span class="rs-sub">${esc(st.subtitle)}</span>
-    <span class="rs-q">${esc(st.question)}</span>
-    <span class="rs-desc">${esc(st.description)}</span>
-    <span class="rs-principle"><b>Operating principle</b> ${esc(st.principle)}</span>
-    <span class="rs-frames">${frames}</span>
-    <span class="rs-films mono">${esc((st.films || []).slice(0, 5).join(" · "))}</span>
-    <button type="button" class="text-act rs-prompt-link" data-prompt="${esc(st.key)}">Read the image-model prompt</button>`;
+    <span class="rs-desc">${esc(st.rich ? st.description : st.desc)}</span>
+    ${st.rich && (st.films || []).length
+      ? `<span class="rs-films">${esc(st.films.slice(0, 5).join(", "))}</span>` : ""}
+    ${st.rich
+      ? `<button type="button" class="text-act rs-prompt-link" data-prompt="${esc(st.key)}">Read the grammar</button>`
+      : `<span class="rs-not mono">NOT ${esc(String(st.not).toUpperCase())}</span>`}`;
 }
 
 // The manifest may name one picture for a key or several — a style plate
@@ -8064,7 +8087,8 @@ function plateShots(key) {
 
 function openStylePicker({ title, definition, styles, current, onPick,
                           uploadRole, uploadLabel, extra = "", onOpen, onClose,
-                          onPicked, footer }) {
+                          onPicked, footer,
+                          ownPlaceholder = "describe it in your own words" }) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   const head = t => String(t).slice(0, 110);
@@ -8075,28 +8099,24 @@ function openStylePicker({ title, definition, styles, current, onPick,
     <div class="modal rs-modal" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
+      ${styles.some(x => x.plate) ? `<p class="rs-placeholder mono">PLATES ARE DIAGRAMS UNTIL THE REFERENCE LIBRARY LANDS</p>` : ""}
       <div class="rs-cards${styles.some(x => x.rich) ? " rs-cards-rich" : ""}">${styles.map((st, i) => `
         <div class="rs-card${st === hit ? " on" : ""}${
             st.rich ? " rs-rich" : ""}" data-i="${i}" role="button" tabindex="0">
-          ${st.rich ? richCardBody(st) : `
-          <span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>
-          <span class="rs-name">${esc(st.name)}</span>
-          <span class="rs-desc">${esc(st.desc)}</span>`}
-          <span class="rs-not mono">NOT ${esc(String(st.not).toUpperCase())}</span>
-          ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>` : ""}
+          ${styleCard(st)}
         </div>`).join("")}
-        <div class="rs-card rs-own-card">
-          <span class="rs-frame rs-own-frame" data-f="own-thumbs">
-            <button type="button" class="rs-plus" data-f="add-img"
-              title="Attach an example image to this anchor">+</button>
-          </span>
-          <span class="rs-name">Add your own</span>
-          <span class="rs-desc">A picture carries more than a phrase can. Attach
-            examples, describe them, or both.</span>
-          <input type="text" id="rs-own" class="rs-own-in"
-                 placeholder="describe it in your own words"
-                 value="${esc(hit || !current ? "" : current)}">
-        </div>
+      </div>
+      <!-- B7: an escape hatch is not a member of the set it escapes, and
+           it was drawn twice — a grid cell AND a field inside the modal.
+           One control, below the grid, after a hairline, full width. -->
+      <div class="rs-own-row">
+        <span class="rs-own-lab mono">OR IN YOUR OWN WORDS</span>
+        <input type="text" id="rs-own" class="rs-own-in"
+               placeholder="${esc(ownPlaceholder)}"
+               value="${esc(hit || !current ? "" : current)}">
+        <span class="rs-own-thumbs" data-f="own-thumbs"></span>
+        <button type="button" class="ghost" data-f="add-img"
+          title="Attach an example image to this anchor">+ Add an image</button>
       </div>
       ${extra}
       <div data-f="footer"></div>
@@ -8123,7 +8143,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
   $$(".rs-prompt-link", ov).forEach(b => b.onclick = e => {
     e.stopPropagation();
     const st = styles.find(x => x.key === b.dataset.prompt);
-    if (st) openPromptReader(`${st.name} — image-model prompt`, st.prompt);
+    if (st) openGrammarReader(st);
   });
   // A card is a DIV, not a button: it holds real buttons of its own (the
   // frames, the prompt link) and a button inside a button is invalid —
@@ -8134,7 +8154,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
     picked = styles[+c.dataset.i].value;
     own.value = "";
     mark();
-    ov.querySelector(".rs-own-card").classList.remove("on");
+    ov.querySelector(".rs-own-row").classList.remove("on");
   };
   $$(".rs-card[data-i]", ov).forEach(c => {
     c.onclick = () => choose(c);
@@ -8146,10 +8166,10 @@ function openStylePicker({ title, definition, styles, current, onPick,
   // leaving two answers lit at once.
   own.addEventListener("input", () => {
     if (own.value.trim()) { picked = ""; mark(); }
-    ov.querySelector(".rs-own-card").classList.toggle("on", !!own.value.trim());
+    ov.querySelector(".rs-own-row").classList.toggle("on", !!own.value.trim());
   });
   own.onclick = e => e.stopPropagation();
-  if (own.value.trim()) ov.querySelector(".rs-own-card").classList.add("on");
+  if (own.value.trim()) ov.querySelector(".rs-own-row").classList.add("on");
   // Controls that were MOVED into the panel go home on the way out,
   // bindings intact — re-creating them would mean re-binding them.
   const close = () => { onClose?.(ov); ov.remove(); };
@@ -8735,6 +8755,9 @@ async function renderBoardPanels(specId) {
     const takeItems = panelCands.map(c => ({
       src: `/api/specs/${specId}/candidates/${c.candidate_id}/image`,
       caption: `${c.candidate_id} — ${p.id} (${c.status}) ${c.width}×${c.height}`,
+      // B10: the fact travels with the picture.
+      grammar: c.cinematography?.rides
+        ? String(c.cinematography.name || "").toUpperCase() : "",
     }));
 
     // A promoted take carries its reference id — back-linked on promote,
@@ -8766,6 +8789,15 @@ async function renderBoardPanels(specId) {
           esc(staged.model || ""),
           staged.spec_hash ? `HASH ${esc(String(staged.spec_hash).slice(0, 8))}` : "",
         ].filter(Boolean).join("  ·  ")}</span>
+        <!-- B10 (RULE_PASS 2026-08-16): facts about an image ride ON it.
+             A take recorded whether the cinematography grammar rode it and
+             no screen said so, which made the experiment unevaluable — the
+             whole reason the switch exists. Absent entirely on a take that
+             did not ride. -->
+        ${staged.cinematography?.rides
+          ? `<span class="shot-tag shot-tag-grammar">GRAMMAR — ${
+              esc(String(staged.cinematography.name || "").toUpperCase())}</span>`
+          : ""}
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
            amber verdict, six text acts in two LABELLED groups, Reject

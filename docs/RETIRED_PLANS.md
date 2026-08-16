@@ -72,3 +72,12 @@ delta as new instructions.
 - **RULE_PASS_2026-08-16_E_STORE.md** — implemented 2026-08-16. Both store
   rows cleared. The fleet table stays whole and gains a headline;
   UNREACHABLE splits from CANNOT MEASURE. Responsive imagery ratified.
+- **RULE_PASS_2026-08-16_B_STAGE02.md** + **README_2026-08-16.md** —
+  implemented 2026-08-16. Stage 02's direction ratified in full; six
+  corrections shipped: one card with two lives from one renderer, diagrams
+  disclosed once per panel and forbidden where real frames exist, never
+  padding to three, four text roles with the essay behind one door, no
+  italic and films out of Courier, provenance leading the captured card,
+  and the escape hatch leaving the grid and stopping being drawn twice.
+  B10's defect closed — a take that rode the grammar says so on the hero
+  and in the lightbox.
