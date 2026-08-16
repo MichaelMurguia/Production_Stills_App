@@ -798,5 +798,59 @@ class TheModeIsOnDiskNotInMemory(unittest.TestCase):
         self.assertIn("Read it before any change to code", md)
 
 
+class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
+    """User-caught 2026-08-16: "the test and save process on the settings
+    page in the small modal is not good. You click the button, long
+    delay, no feedback." It made two network calls — a save, then a LIVE
+    provider test — and changed nothing on screen for either, while
+    staying clickable so a second press fired the pair again."""
+
+    def body(self):
+        i = JS.index("function authModal(key)")
+        return JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+
+    def test_the_button_states_which_half_is_running(self):
+        b = self.body()
+        self.assertIn('setBusy(true, "Saving…")', b)
+        self.assertIn('setBusy(true, "Testing…")', b)
+        self.assertIn("ok.disabled = on", b, "and cannot be pressed twice")
+
+    def test_the_slow_half_says_it_is_a_live_call(self):
+        b = self.body()
+        self.assertIn("live", b)
+        self.assertIn("few seconds", b)
+
+    def test_elapsed_seconds_separate_slow_from_hung(self):
+        b = self.body()
+        self.assertIn("auth-elapsed", b)
+        self.assertIn("Date.now() - t0", b)
+
+    def test_cancel_stays_live_so_the_modal_cannot_lock(self):
+        """Disabling it was worse than the silence it replaced: a slow
+        provider left no way out. The key is saved before the test runs,
+        so leaving mid-test costs only the verification — and says so."""
+        b = self.body()
+        self.assertNotIn("cancel.disabled = on", b)
+        self.assertIn("Stopped waiting — the key was saved, but not verified.", b)
+
+    def test_the_scrim_still_holds_mid_flight(self):
+        b = self.body()
+        self.assertIn("if (e.target === ov && !busy) done(null)", b)
+
+    def test_a_failure_lands_in_the_modal_not_only_a_toast(self):
+        b = self.body()
+        i = b.index("} catch (err) {")
+        seg = b[i:i + 240]
+        self.assertIn("setBusy(false)", seg)
+        self.assertIn('say(err.message, "bad")', seg)
+
+    def test_an_empty_key_states_it_in_place(self):
+        self.assertIn('say("Paste the key first.", "bad")', self.body())
+
+    def test_the_spinner_stops_under_reduced_motion(self):
+        i = CSS.index(".auth-spin {")
+        self.assertIn("prefers-reduced-motion", CSS[i:i + 700])
+
+
 if __name__ == "__main__":
     unittest.main()

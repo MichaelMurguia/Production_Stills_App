@@ -636,6 +636,7 @@ function authModal(key) {
         </label>
         ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
         <p class="cred-form-foot" style="margin:0 0 14px">SAVES TO THIS STUDIO ONLY · ${P.test ? "TESTED BEFORE IT COUNTS · " : ""}THE PAGE UPDATES IN PLACE — NO RELOAD</p>
+        <div class="auth-state" data-mf="state" aria-live="polite"></div>
         <div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
           <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
@@ -643,34 +644,96 @@ function authModal(key) {
       </div>`;
     document.body.append(ov);
     const done = v => { ov.remove(); resolve(v); };
-    $("[data-mf=cancel]", ov).onclick = () => done(null);
     // User-initiated only — the modal keeps focus until YOU reach for
     // the console.
     $("[data-mf=console]", ov).onclick = () =>
       window.open(P.link, "_blank", "noopener");
     ov.addEventListener("mousedown", e => { if (e.target === ov) done(null); });
+    // The act takes seconds — it saves, then calls the provider for real
+    // — and it used to give nothing back: no disabled state, no label
+    // change, no line of text (user-caught 2026-08-16: "you click the
+    // button, long delay, no feedback"). It also stayed clickable, so a
+    // second click fired the whole pair again.
+    const ok = $("[data-mf=ok]", ov), cancel = $("[data-mf=cancel]", ov);
+    const stateEl = $("[data-mf=state]", ov);
+    const okLabel = ok.innerHTML;
+    let busy = false;
+    const say = (msg, kind = "") => {
+      stateEl.className = `auth-state${kind ? " " + kind : ""}`;
+      stateEl.innerHTML = kind === "work"
+        ? `<span class="auth-spin"></span><span>${esc(msg)}</span>`
+          + `<span class="auth-elapsed mono">0s</span>`
+        : esc(msg);
+    };
+    // Elapsed seconds, because a provider call that takes eight seconds
+    // and one that has hung look identical without them.
+    let tick = null, t0 = 0;
+    const setBusy = (on, label) => {
+      busy = on;
+      ok.disabled = on;
+      // Cancel stays LIVE. Disabling it locked the modal whenever the
+      // provider was slow — worse than the silence it replaced. The key
+      // is already saved by the time the test runs, so leaving mid-test
+      // costs nothing but the verification.
+      ok.innerHTML = on ? esc(label) : okLabel;
+      clearInterval(tick);
+      if (!on) { tick = null; return; }
+      t0 = Date.now();
+      tick = setInterval(() => {
+        const el = $(".auth-elapsed", stateEl);
+        if (el) el.textContent = `${Math.round((Date.now() - t0) / 1000)}s`;
+      }, 1000);
+    };
+    // The scrim will not dismiss mid-flight — an accidental click should
+    // not end an act you are waiting on. Cancel still will, deliberately.
+    ov.addEventListener("mousedown", e => {
+      if (e.target === ov && !busy) done(null);
+    }, true);
+    cancel.onclick = () => {
+      if (busy) toast("Stopped waiting — the key was saved, but not verified.");
+      clearInterval(tick);
+      done(null);
+    };
     $("[data-mf=ok]", ov).onclick = async () => {
-      const k = $("[data-mf=key]", ov).value.trim();
-      if (!k) return toast("Paste the key first.", true);
+      if (busy) return;
+      const k = $("[data-mf=key]", ov).value.trim();      if (!k) { say("Paste the key first.", "bad"); return; }
       try {
         if (P.connector) {
+          setBusy(true, "Syncing…");
+          say(`Sending the key to ${P.name} and syncing its models…`, "work");
           const pub = await api(`/api/connectors/${P.connector}/key`, { method: "POST", json: { key: k } });
-          toast(pub.status === "SYNCED"
-            ? `${pub.label}: ${pub.model_count} models synced.`
-            : `${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`,
-            pub.status !== "SYNCED");
+          if (pub.status !== "SYNCED") {
+            setBusy(false);
+            say(`${pub.label}: ${pub.status} — ${pub.last_error?.detail || "see the row"}`, "bad");
+            return;
+          }
+          toast(`${pub.label}: ${pub.model_count} models synced.`);
         } else {
+          setBusy(true, "Saving…");
+          say("Saving the key to this studio…", "work");
           await api("/api/settings", { method: "POST", json: { [P.field]: k } });
           if (P.test) {
+            // The slow half, and the one worth naming: it is a real call
+            // to the provider, not a local write.
+            setBusy(true, "Testing…");
+            say(`Asking ${P.name} whether the key works — this is a live `
+                + "call and can take a few seconds.", "work");
             await api("/api/settings/test", { method: "POST", json: { provider: P.test } });
             toast(`${P.name} key saved and tested.`);
           } else {
             toast(`${P.name} key stored.`);
           }
         }
+        say("Done.", "ok");
+        clearInterval(tick);
         done(true);
         renderSettings();
-      } catch (err) { toast(err.message, true); }
+      } catch (err) {
+        // In the modal, not only a toast: the toast can be missed and the
+        // user is looking here.
+        setBusy(false);
+        say(err.message, "bad");
+      }
     };
     $("[data-mf=key]", ov).focus();
   });

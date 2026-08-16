@@ -2184,6 +2184,29 @@ details.meta pre {
 #settings-firstrun .role-card .role-tag { float: none; margin-left: 10px; }
 .auth-modal .auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 
+/* UNCANONIZED — 2026-08-16 — the authenticate modal's state line. The act
+   saves a key AND makes a live call to the provider, which takes seconds;
+   it gave nothing back at all. A line under the form says which half is
+   running, the button states it and disables, and a failure lands HERE
+   rather than only in a toast the user may not be looking at. */
+.auth-state:empty { display: none; }
+.auth-state {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 12px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
+  line-height: 1.5; color: var(--ink-dim);
+}
+.auth-elapsed { margin-left: auto; color: var(--ink-faint); }
+.auth-state.bad { color: var(--bad); }
+.auth-state.ok { color: var(--ok); }
+.auth-spin {
+  flex: none; width: 11px; height: 11px; border: 1px solid var(--line);
+  border-top-color: var(--accent); animation: auth-spin .8s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .auth-spin { animation: none; border-top-color: var(--ink-dim); }
+}
+
 /* Reference implementation delivered 2026-08-04 (PROVIDER_MARQUEE
    SNIPPET, tokenized): the CHANNEL is the dark ground (--field) with a
    full --line-soft border; TILES are raised --bg2 with --line-soft
