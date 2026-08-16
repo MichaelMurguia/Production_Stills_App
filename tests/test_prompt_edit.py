@@ -26,8 +26,12 @@ CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 
 
 def preview_block() -> str:
+    """The whole preview handler, bounded by the next handler rather than by
+    a character count — a fixed window silently stops covering the code it
+    was written to pin as the block grows."""
     i = JS.index('$("[data-f=preview]", card).onclick')
-    return JS[i:i + 7200]
+    j = JS.index("// Composition check (2026-08-13)", i)
+    return JS[i:j]
 
 
 class TheCompiledPromptIsEditable(unittest.TestCase):
@@ -48,7 +52,8 @@ class TheCompiledPromptIsEditable(unittest.TestCase):
         verbatim and the take is filed `edited`. Passing the untouched
         compile through it would claim a hand edit that never happened."""
         b = preview_block()
-        self.assertIn('text === r.prompt.trim() ? "" : text', b)
+        self.assertIn("const inForce = (saved || r.compiled).trim();", b)
+        self.assertIn('text === inForce ? "" : text', b)
 
     def test_reverting_is_offered(self):
         self.assertIn('data-f="revert"', preview_block())
@@ -58,7 +63,8 @@ class TheCompiledPromptIsEditable(unittest.TestCase):
         that is a file that lies about the take it names."""
         b = preview_block()
         self.assertIn('copyText(promptBox.value', b)
-        self.assertIn("const shown = promptBox.value", b)
+        self.assertIn("const shown = promptBox.value", JS,
+                      "the download handler sits past the editor block")
         self.assertNotIn('copyText(r.prompt', b)
 
 
@@ -66,11 +72,12 @@ class TheStateIsReadableBeforeItIsHit(unittest.TestCase):
     def test_the_line_states_which_text_will_be_sent(self):
         b = preview_block()
         self.assertIn("UNEDITED · STEPS 01–04 COMPILE THIS", b)
-        self.assertIn("EDITED · THIS TEXT IS SENT VERBATIM · THIS TAKE ONLY", b)
+        self.assertIn("EDITED · UNSAVED · THIS TAKE ONLY", b)
 
     def test_it_updates_while_you_type(self):
         b = preview_block()
         self.assertIn('promptBox.addEventListener("input", sayState)', b)
+        self.assertIn("        sayState();", b, "and once on open, before any typing")
 
     def test_the_edited_state_is_amber_and_is_a_stage_not_a_decoration(self):
         """§ amber is a signal: while this reads EDITED, the compiled panel
@@ -79,7 +86,7 @@ class TheStateIsReadableBeforeItIsHit(unittest.TestCase):
                       CSS)
 
     def test_the_one_take_scope_is_stated_not_discovered(self):
-        self.assertIn("Edits here ride ONE take", preview_block())
+        self.assertIn("Unsaved edits ride ONE take", preview_block())
 
 
 class TheOverridePathIsUnchanged(unittest.TestCase):

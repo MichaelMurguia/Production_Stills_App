@@ -1549,7 +1549,31 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
         raise _err(e)
     except generate.GenerationError as e:
         raise HTTPException(422, str(e))
-    return {"prompt": generate.compile_panel_prompt(spec, panel, ref_records)}
+    compiled = generate.compile_panel_prompt(spec, panel, ref_records)
+    saved = str(panel.get("prompt_override", "")).strip()
+    # `prompt` is what a render would actually send — the workbench must not
+    # have to work that out for itself. `compiled` rides alongside so the
+    # editor can offer Revert without a second round trip, and so the state
+    # line can tell an unsaved edit from a saved one.
+    return {"prompt": saved or compiled,
+            "compiled": compiled,
+            "saved": bool(saved),
+            "saved_at": panel.get("prompt_override_at", ""),
+            "frozen": bool(store.approved_takes_by_panel(spec_id).get(panel_id))}
+
+
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/prompt")
+def api_save_panel_prompt(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Save a hand-written prompt onto the panel, or clear it with an empty
+    string. While one is saved, steps 01–04 no longer compile this panel's
+    render. See store.amend_panel_prompt."""
+    try:
+        return store.amend_panel_prompt(
+            spec_id, panel_id, str(body.get("prompt", "")))
+    except (KeyError, PermissionError) as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/specs/{spec_id}/panels")

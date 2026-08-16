@@ -305,8 +305,25 @@ async function cropToReference(source, imgUrl) {
       const ref = await api("/api/references/crop", {
         method: "POST", json: { source, rect, role: r.role } });
       toast(`${ref.id} created from crop — approved as ${ref.role}.`);
+      // The crop lands in the library, but the view that asked for it is
+      // holding the reference list IT fetched, so the new plate could not
+      // be ticked until you navigated away and back (user-caught
+      // 2026-08-16: "I saved a crop reference of Sal's cryochamber. It did
+      // not appear in the references section for me to select"). A thing
+      // made to be used has to be usable where it was made.
+      refreshAfterReferenceChange();
     } catch (err) { toast(err.message, true); }
   });
+}
+
+// One redraw for "the reference library changed underneath this view".
+// Crop is not the only door — anything that mints a reference while a
+// working view is open leaves that view's own copy of the list stale.
+function refreshAfterReferenceChange() {
+  if ($("#board-panels") && $("#board-spec")?.value) {
+    renderBoardPanels($("#board-spec").value);
+  }
+  if ($("#ref-counts")) renderReferences();
 }
 
 function esc(s) {
@@ -9268,7 +9285,13 @@ async function renderBoardPanels(specId) {
             })() : ""}` })}
 
         ${step({ n: "05", id: "prompt", label: "PROMPT",
-          meta: `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`,
+          // A saved prompt makes steps 01–04 inert for this panel's TEXT.
+          // Discovering that by editing the camera and seeing no change is
+          // exactly the failure the gate rules forbid, so the step says it
+          // where the step is read (user 2026-08-16).
+          meta: p.prompt_override
+            ? `<span class="step-meta-alert">SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL</span>`
+            : `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`,
           verbs: `
             <button type="button" class="verb" data-f="preview"
               title="Show the exact compiled prompt this panel would send — free, no generation">Read &amp; edit</button>
@@ -9298,6 +9321,9 @@ async function renderBoardPanels(specId) {
                 : "Render the next take with the model, size, aspect and references confirmed above"}">${
               workOrder ? "Generate first take" : "Generate candidate"}</button>`,
           body: `
+            ${p.prompt_override ? `<div class="step-note mono"><span
+              class="step-meta-alert">THIS TAKE RENDERS FROM THE SAVED PROMPT</span>
+              · STEP 05 HOLDS THE TEXT · CAMERA AND OBJECTS BELOW DO NOT WRITE IT</div>` : ""}
             <div class="gen-stated mono">
               <span><i>MODEL</i> <b data-f="say-model">—</b></span>
               <span><i>SIZE</i> <b data-f="say-size">—</b></span>
@@ -9755,43 +9781,130 @@ async function renderBoardPanels(specId) {
           <textarea data-f="prompt-edit" spellcheck="false"
             style="width:100%;min-height:300px;font-family:Consolas,monospace;font-size:12px"></textarea>
           <div class="row" style="margin-top:8px;align-items:baseline;gap:16px">
+            <button class="ghost" data-f="save-prompt" ${r.frozen ? "disabled" : ""}
+              title="${r.frozen
+                ? "This panel has an approved take, which freezes what it was approved against. Withdraw that approval to change the prompt."
+                : "Keep this text on the panel. Every take of this panel renders from it until you clear it, and steps 01–04 stop compiling this panel."}">Save prompt to this panel</button>
             <button class="ghost gen-go" data-f="generate-edited"
               ${prefKeyFailed ? "disabled" : ""} ${prefKeyFailed ? `title="${genGateTitle}"` : ""}
-              title="Render a take from the text exactly as it stands above">Generate from this prompt</button>
+              title="Render one take from the text exactly as it stands above, without saving it">Generate from this prompt</button>
             <button class="verb" data-f="revert"
-              title="Throw away your edits and recompile from steps 01–04">Revert to compiled</button>
-            <span class="mini mono" data-f="edit-state">UNEDITED · STEPS 01–04 COMPILE THIS</span>
+              title="Put the compiled text back in the box. Does not touch a saved prompt.">Revert to compiled</button>
+            <button class="verb ${r.saved ? "" : "hidden"}" data-f="clear-saved"
+              title="Delete the saved prompt so this panel compiles from steps 01–04 again">Clear saved prompt</button>
+            <span class="mini mono" data-f="edit-state"></span>
           </div>
-          <p class="mini">Edits here ride ONE take. They are archived with it and
-          read back under <i>Edited render prompt</i>; steps 01–04 are untouched, so the
-          next take compiles from the panel again. To make a change stick, put it in the
-          panel.</p></div>`;
+          <p class="mini" data-f="edit-help"></p></div>`;
         $("[data-f=close-report]", report).onclick = () => { report.innerHTML = ""; };
         const promptBox = $("[data-f=prompt-edit]", report);
         const editState = $("[data-f=edit-state]", report);
+        const editHelp = $("[data-f=edit-help]", report);
+        const saveBtn = $("[data-f=save-prompt]", report);
+        const clearBtn = $("[data-f=clear-saved]", report);
+        // `r.prompt` is what a render WOULD send — the saved text when there
+        // is one. `r.compiled` is what steps 01–04 make of the panel. The
+        // editor has to keep both: which one is in the box is the whole
+        // state, and Revert would otherwise need a second round trip.
+        let saved = r.saved ? r.prompt : "";
         promptBox.value = r.prompt;
-        // The gate is readable as state before it is hit: the line says
-        // which of the two things will be sent, and says it while you type.
+        // The gate is readable as state before it is hit, not discovered
+        // after. A saved prompt is the sharpest override in the app: while
+        // one exists, editing the camera or the objects below changes
+        // nothing about the render, and the only honest way to run that is
+        // to say so on every surface that shows a step.
         const sayState = () => {
-          const dirty = promptBox.value !== r.prompt;
-          editState.textContent = dirty
-            ? "EDITED · THIS TEXT IS SENT VERBATIM · THIS TAKE ONLY"
-            : "UNEDITED · STEPS 01–04 COMPILE THIS";
-          editState.classList.toggle("edited", dirty);
+          const text = promptBox.value.trim();
+          const isSaved = !!saved && text === saved.trim();
+          const dirty = text !== (saved || r.compiled).trim();
+          editState.textContent = isSaved
+            ? "SAVED PROMPT · EVERY TAKE OF THIS PANEL RENDERS FROM THIS"
+            : saved
+              ? "UNSAVED CHANGES OVER THE SAVED PROMPT · SAVE OR THEY RIDE ONE TAKE"
+              : dirty
+                ? "EDITED · UNSAVED · THIS TAKE ONLY"
+                : "UNEDITED · STEPS 01–04 COMPILE THIS";
+          editState.classList.toggle("edited", isSaved || dirty || !!saved);
+          editHelp.innerHTML = saved
+            ? `<b>Steps 01–04 no longer compile this panel.</b> Camera, required
+               objects and references below still attach their images, but the
+               written prompt is the text above — change it here, or
+               <i>Clear saved prompt</i> to go back to the compile.`
+            : `Unsaved edits ride ONE take and are archived with it under
+               <i>Edited render prompt</i>. <b>Save prompt to this panel</b> to make
+               them stick — every later take of this panel then renders from them.`;
+          clearBtn.classList.toggle("hidden", !saved);
+          saveBtn.textContent = saved ? "Save changes to this panel"
+                                      : "Save prompt to this panel";
+          saveBtn.disabled = r.frozen || (!!saved && isSaved) || (!saved && !dirty);
         };
         promptBox.addEventListener("input", sayState);
+        sayState();
         $("[data-f=revert]", report).onclick = () => {
-          promptBox.value = r.prompt;
+          // The compile, not the save — reverting is how you SEE what steps
+          // 01–04 would make of this panel while a saved prompt is on it.
+          promptBox.value = r.compiled;
           sayState();
-          toast("Reverted to the compiled prompt.");
+          toast(saved
+            ? "Compiled text restored in the box. The saved prompt is untouched — Save to replace it, or Clear to remove it."
+            : "Reverted to the compiled prompt.");
+        };
+        const putPrompt = async (text, msg) => {
+          const res = await api(`/api/specs/${specId}/panels/${p.id}/prompt`, {
+            method: "POST", json: { prompt: text },
+          });
+          saved = text;
+          p.prompt_override = text;   // the card's own copy, for later redraws
+          sayState();
+          toast(msg);
+          // The card's step 05 head and step 06 note are the standing
+          // warning that 01–04 are inert, so they have to move with the
+          // save — but redrawing the whole card CLOSES the editor you just
+          // saved from, which is its own small betrayal. Patch the two
+          // surfaces in place instead.
+          const meta = $("[data-step=prompt] .step-meta", card);
+          if (meta) {
+            meta.innerHTML = text
+              ? `<span class="step-meta-alert">SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL</span>`
+              : `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`;
+          }
+          const genStep = $("[data-step='06'] .step-content", card)
+                       || $("[data-step=generate] .step-content", card);
+          const note = genStep && $(".step-note", genStep);
+          if (text && genStep && !note) {
+            genStep.insertAdjacentHTML("afterbegin",
+              `<div class="step-note mono"><span class="step-meta-alert">THIS TAKE
+               RENDERS FROM THE SAVED PROMPT</span> · STEP 05 HOLDS THE TEXT ·
+               CAMERA AND OBJECTS BELOW DO NOT WRITE IT</div>`);
+          } else if (!text && note) {
+            note.remove();
+          }
+          return res;
+        };
+        saveBtn.onclick = async () => {
+          saveBtn.disabled = true;
+          try {
+            await putPrompt(promptBox.value.trim(),
+              "Saved. Every take of this panel renders from this text until you clear it.");
+          } catch (err) { toast(err.message, true); saveBtn.disabled = false; }
+        };
+        clearBtn.onclick = async () => {
+          clearBtn.disabled = true;
+          try {
+            await putPrompt("", "Cleared — this panel compiles from steps 01–04 again.");
+            promptBox.value = r.compiled;
+            sayState();
+          } catch (err) { toast(err.message, true); }
+          clearBtn.disabled = false;
         };
         $("[data-f=generate-edited]", report).onclick = (e2) => {
           const text = promptBox.value.trim();
-          // Unedited text is not an override — sending it as one would file
-          // the take as `edited` and freeze a copy of a prompt the panel
-          // still generates. Same button, the honest path underneath.
+          // What is already in force is not an override. Sending the saved
+          // text back as a per-call one would file the take as a one-off
+          // test when it is in fact reproducible from the panel; sending an
+          // untouched compile would claim a hand edit that never happened.
+          const inForce = (saved || r.compiled).trim();
           runGenerate(e2.target, "Generate from this prompt",
-                      text === r.prompt.trim() ? "" : text);
+                      text === inForce ? "" : text);
         };
         $("[data-f=copy]", report).onclick = () => copyText(promptBox.value, "Compiled prompt");
         // The header carries what the prompt text itself does not: the

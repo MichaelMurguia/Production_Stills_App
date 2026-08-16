@@ -509,6 +509,10 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
    panel below is no longer what gets sent. It returns to dim ink the
    moment the text matches the compile again. */
 .report [data-f="edit-state"].edited { color: var(--accent); }
+/* The same amber, in the two places a step has to admit it is inert: a
+   saved prompt means steps 01–04 no longer write this panel's text, and
+   that has to be legible where the step is read, not only in the editor. */
+.step-meta-alert { color: var(--accent); }
 
 /* ================================================================== subnav */
 .subnav { display: flex; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }

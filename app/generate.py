@@ -713,6 +713,62 @@ def _camera_block(panel: dict) -> list[str]:
             + [f"- {d}" for d in directives] + [""])
 
 
+def _name_words(name: str) -> list[str]:
+    return [w for w in re.split(r"[^a-z0-9]+", str(name).casefold()) if len(w) >= 3]
+
+
+def _word_in(needle: str, hay: str) -> bool:
+    return bool(needle) and re.search(
+        rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", hay) is not None
+
+
+def subjects_for_object(obj: str, subjects: list[dict]) -> list[dict]:
+    """Which cast/subject cards a required object names — the way the SCRIPT
+    writes it, not the way the card is filed.
+
+    The same defect the workbench had (fixed 2026-08-16) lived here too, and
+    this copy is the more damaging one: the workbench's version decides
+    whether a REF marker appears, but THIS one decides whether the canon
+    SUBJECT IDENTITIES block rides the prompt at all. It asked whether the
+    phrase contained the card's WHOLE name, so `Sal inside the cryochamber`
+    matched nothing — and a render with no identity text and no attached
+    plate invents the person from scratch, which is how a dark-haired man in
+    his forties comes back white-haired and bearded.
+
+    Two rules differ from the workbench's deliberately, because the question
+    is different. The workbench asks "which ONE card do I offer a photo
+    from"; this asks "whose canon identity does this phrase invoke", and a
+    phrase invokes as many as it names — `Sal inside the cryochamber` is
+    about both of them, and sending neither is the worst of the three
+    answers. Photos are also not required: identity text is worth sending on
+    its own.
+
+    Ambiguity is handled by DISTINCTIVENESS rather than by refusing outright.
+    A name-word shared by two cards (`McGuire`) identifies neither and is
+    ignored; a word belonging to exactly one card identifies it. So `McGuire
+    steps forward` names nobody while `Kyra` names Kyra, without the whole
+    phrase having to be unambiguous."""
+    o = str(obj).casefold()
+    # A word that belongs to more than one card cannot pick between them.
+    counts: dict[str, int] = {}
+    for s in subjects:
+        for w in set(_name_words(s.get("name", ""))):
+            counts[w] = counts.get(w, 0) + 1
+
+    out = []
+    for s in subjects:
+        if not (s.get("traits") or s.get("subtitle")):
+            continue        # nothing to say about it; an empty line says nothing
+        n = str(s.get("name", "")).casefold()
+        if _word_in(n, o) or n in o or (o and o in n):
+            out.append(s)   # the whole name is the strongest signal
+            continue
+        if any(counts.get(w, 0) == 1 and _word_in(w, o)
+               for w in _name_words(n)):
+            out.append(s)
+    return out
+
+
 def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     """Mechanical translation of one approved panel into render instructions.
     Mirrors scripts/compile_prompt.py but scoped to a single panel, with
@@ -808,13 +864,12 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     seen_subj = set()
     subjects = store.list_subjects()  # one read, not one per object
     for obj in panel.get("required_objects", []):
-        o = str(obj).casefold()
-        for s in subjects:
-            n = s["name"].casefold()
-            if s["id"] not in seen_subj and (n in o or o in n) and (s.get("traits") or s.get("subtitle")):
-                seen_subj.add(s["id"])
-                idents.append(f"- {s['name']} ({s['kind']}): "
-                              + " ".join([s.get("subtitle", "")] + s.get("traits", [])).strip())
+        for s in subjects_for_object(str(obj), subjects):
+            if s["id"] in seen_subj:
+                continue
+            seen_subj.add(s["id"])
+            idents.append(f"- {s['name']} ({s['kind']}): "
+                          + " ".join([s.get("subtitle", "")] + s.get("traits", [])).strip())
     if idents:
         lines += ["", "SUBJECT IDENTITIES — required content above includes these canon "
                   "subjects. Render each as EXACTLY what it is named to be — never a "
@@ -2024,7 +2079,12 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     spec, panel, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
     prompt = compile_panel_prompt(spec, panel, refs)
     ref_paths = _reference_image_paths(refs)
-    override = (render_prompt or "").strip()
+    # A prompt saved onto the panel is the panel's prompt: it rides EVERY
+    # take, not just the one made from the editor (user 2026-08-16). A
+    # per-call override still wins — that is the one-take test path, and a
+    # test has to be able to try something other than what is saved.
+    override = (render_prompt or "").strip() or str(
+        panel.get("prompt_override", "")).strip()
 
     cand_id = store.next_counter("cand_counter", "CAND")
 
@@ -2084,6 +2144,14 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # The compiled spec prompt above stays the canonical governance record;
         # this is the exact text the image model was actually given.
         record["render_prompt"] = override
+        # WHICH kind of override, kept beside prompt_source rather than
+        # inside it: the take card's existing read tests for "edited" and a
+        # third value there would silently relabel these takes. A take made
+        # from the panel's saved prompt is reproducible from the panel; a
+        # one-take test is not, and telling them apart later matters.
+        record["prompt_override_scope"] = (
+            "panel" if override == str(panel.get("prompt_override", "")).strip()
+            else "take")
     (d / f"{cand_id}.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return record

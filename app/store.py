@@ -1020,6 +1020,78 @@ def _refuse_carried(spec: dict, panel_id: str) -> None:
             "to change it.")
 
 
+def amend_panel_prompt(spec_id: str, panel_id: str, text: str) -> dict:
+    """Save a hand-written prompt onto one panel, or clear it (empty text).
+
+    The workbench could edit the compiled prompt for a single take but not
+    keep it (user 2026-08-16: "I need to be able to Save the prompt once I
+    edit it — explicit button"). A test run is one take; a correction the
+    compile cannot express is a standing fact about the panel.
+
+    This is the sharpest override in the app and it is deliberately loud:
+    while a panel carries one, steps 01–04 STOP FEEDING ITS RENDER. Editing
+    the camera or the required objects then changes nothing visible, which
+    is exactly the silent trap the gate rules exist to prevent — so the
+    saved text is stamped with the compile it replaced, and every surface
+    that shows a step says the panel is off the compile.
+
+    Same lock discipline as amend_panel_purpose: journaled, lock re-stamped,
+    refused only where an APPROVED take already froze this panel."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
+    refuse_if_panel_approved(spec_id, panel_id, "prompt")
+
+    body = str(text or "").strip()
+    had = bool(str(panel.get("prompt_override", "")).strip())
+    if body:
+        # A prompt short enough to be an accident is not a prompt. The
+        # compile runs to ~11k characters; a stray paste of one line would
+        # silently strip the panel of its canon rules.
+        if len(body) < 200:
+            raise ValueError(
+                "a saved prompt replaces the whole compiled prompt — canon "
+                "rules, camera, references and all. This one is "
+                f"{len(body)} characters, which is too short to be that. "
+                "Edit the compiled text rather than replacing it.")
+        panel["prompt_override"] = body
+        panel["prompt_override_at"] = utcnow()
+    else:
+        panel.pop("prompt_override", None)
+        panel.pop("prompt_override_at", None)
+
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash  # scripts/common.py via paths sys.path hook
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+    append_approval_log(
+        f"SPECIFICATION {spec_id} panel {panel_id} "
+        + (f"prompt SAVED by hand ({len(body)} characters) — steps 01–04 no "
+           "longer compile this panel's render."
+           if body else
+           "saved prompt CLEARED — the panel compiles from steps 01–04 again.")
+        + " Existing takes keep the prompt and hash they were generated against.")
+    return {"panel_id": panel_id, "saved": bool(body),
+            "was_saved": had, "chars": len(body)}
+
+
+def panel_prompt_override(spec_id: str, panel_id: str) -> str:
+    """The panel's saved prompt, or '' — one reader so the preview, the
+    render and the state line can never disagree about what will be sent."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        return ""
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    return str((panel or {}).get("prompt_override", "")).strip()
+
+
 def amend_panel_purpose(spec_id: str, panel_id: str, purpose: str) -> dict:
     """Amend one panel's purpose — the brief that rides into its prompt —
     without unlocking the sheet (user 2026-08-08: a purpose that says
