@@ -155,19 +155,21 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
         self.assertEqual(JS.count("function openStylePicker("), 1)
         self.assertNotIn("function openRenderStyleModal", JS)
         self.assertEqual(JS.count("const bindPicker ="), 1)
-        self.assertEqual(JS.count("bindPicker(\""), 2,
-                         "one helper, bound twice")
+        self.assertEqual(JS.count("bindPicker(\""), 3,
+                         "one helper: texture, cinematography, rendering")
 
-    def test_both_catalogues_state_what_they_are_not(self):
-        for cat in ("RENDER_STYLES", "CINEMA_STYLES"):
+    def test_every_catalogue_states_what_it_is_not_and_shows_it(self):
+        for cat in ("RENDER_STYLES", "CINEMA_STYLES", "TEXTURE_STYLES"):
             i = JS.index(f"const {cat} = [")
             seg = JS[i:JS.index("\n];", i)]
-            self.assertGreaterEqual(seg.count("name:"), 6,
+            self.assertGreaterEqual(seg.count("name:"), 5,
                                     f"{cat} is thin")
             self.assertEqual(seg.count("name:"), seg.count("not:"),
                              f"every {cat} card states its fence")
             self.assertEqual(seg.count("name:"), seg.count("value:"),
                              f"every {cat} card writes a directive")
+            self.assertEqual(seg.count("name:"), seg.count("plate:"),
+                             f"every {cat} card carries its example plate")
 
     def test_the_definition_leads_and_names_what_it_is_not(self):
         i = JS.index('title: "Rendering style"')
@@ -215,6 +217,76 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
         self.assertIn("text-align: left", b.group(1))
         self.assertIn("var(--sans)", b.group(1),
                       "a style NAME is hierarchy, not machine data")
+
+
+class TheCardIsItsButton(unittest.TestCase):
+    """User 2026-08-16: "Only have the button on the main page. Click it
+    and you get the words with an associated example image of the style.
+    In that panel will be Add your own and a plus button for adding an
+    image and text." """
+
+    def test_each_carded_anchor_shows_only_its_button(self):
+        for role in ("WORLD_TEXTURE", "CINEMATOGRAPHY_STYLE",
+                     "BOARD_RENDERING_STYLE"):
+            seg = card(role)
+            self.assertIn("pick-btn", seg, f"{role} has no button")
+            for offpage in ('data-f="addbtn"', 'data-f="list"'):
+                i = seg.index(offpage)
+                self.assertIn("wiz-offpage", seg[max(0, i - 160):i],
+                              f"{role}: {offpage} is still on the page")
+
+    def test_what_is_hidden_stays_in_the_dom(self):
+        """It is hidden, not deleted — the panel borrows these nodes with
+        their bindings intact rather than re-creating and re-binding."""
+        b = re.search(r"\.wiz-offpage \{([^}]*)\}", CSS)
+        self.assertTrue(b and "display: none" in b.group(1))
+        self.assertIn(".rs-extra > .wiz-offpage", CSS)
+
+    def test_the_camera_and_the_never_list_travel_into_their_panel(self):
+        self.assertIn("const travels = (sel)", JS)
+        self.assertIn('travels("#cam-default")', JS)
+        self.assertIn('travels("#wiz-never-row")', JS)
+        i = JS.index("const travels = (sel)")
+        seg = JS[i:i + 500]
+        self.assertIn("onClose", seg, "and go home on the way out")
+        self.assertIn("dataset.home", JS)
+
+    def test_the_panel_carries_add_your_own_with_a_plus(self):
+        i = JS.index("function openStylePicker(")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("rs-own-card", seg)
+        self.assertIn("Add your own", seg)
+        self.assertIn('data-f="add-img"', seg)
+        self.assertIn('id="rs-own"', seg, "an image AND text")
+
+    def test_the_plus_reaches_the_one_library(self):
+        """Not a second uploader — the card's own input, clicked from
+        where the user is."""
+        i = JS.index('$("[data-f=add-img]", ov).onclick')
+        self.assertIn('$("[data-f=addbtn]", col)?.click()', JS[i:i + 160])
+
+    def test_attached_pictures_show_in_the_panel(self):
+        i = JS.index("const showAttached =")
+        seg = JS[i:i + 420]
+        self.assertIn('[data-f=list] img', seg)
+        self.assertIn("rs-thumb", seg)
+
+    def test_every_catalogue_card_shows_its_plate(self):
+        i = JS.index("function openStylePicker(")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn("stylePlate(st.plate)", seg)
+        self.assertIn('class="rs-frame"', seg)
+
+    def test_a_plate_is_a_diagram_and_says_so(self):
+        """We cannot ship stock imagery and a generated sample would be
+        one engine's opinion of the style rather than the style."""
+        self.assertIn("These are DIAGRAMS, not photographs", JS)
+        i = JS.index("const PLATE = {")
+        seg = JS[i:JS.index(chr(10) + "};", i)]
+        self.assertNotIn("Gradient", seg)
+        self.assertNotIn("gradient", seg, "canon forbids gradients")
+        self.assertGreaterEqual(seg.count("light"), 7)
+        self.assertGreaterEqual(seg.count("mark"), 9)
 
 
 if __name__ == "__main__":

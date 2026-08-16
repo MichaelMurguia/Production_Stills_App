@@ -2813,7 +2813,45 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   font-size: 13px; letter-spacing: 0; text-transform: none;
   color: var(--ink-faint); padding: 8px 10px; }
 .pick-btn.chosen { color: var(--ink); }
-.rs-modal { width: min(920px, 94vw); }
+/* Nine cards run past the fold, and an act you have to scroll to find is
+   an act you do not know you have. The GRID scrolls; the definition stays
+   at the top and `Use this` stays at the bottom. */
+.rs-modal { width: min(1000px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column; }
+.rs-cards { overflow-y: auto; flex: 0 1 auto; min-height: 0;
+  align-content: start; padding-right: 2px; }
+/* The card on the page is its BUTTON (user 2026-08-16). Everything else an
+   anchor owns — its uploads, its attached plates, its camera, its
+   exclusions — is reached THROUGH the button, so it stays in the DOM
+   (bindings intact) and off the page until the panel borrows it. */
+.wiz-offpage, button.wiz-offpage { display: none; }
+.rs-extra > .wiz-offpage { display: flex; }
+.rs-extra { margin-top: 14px; }
+.rs-extra .cam-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* The plate is a DIAGRAM of the axis, not a photograph of a film: for
+   light, a lit form and where its shadow falls; for medium, the mark on
+   the surface. Hard stops only — canon forbids gradients, and a plate
+   needing one would be describing a photo rather than a behaviour. */
+.rs-frame { position: relative; display: flex; align-items: center; justify-content: center;
+  gap: 4px; width: 100%; aspect-ratio: 68 / 56; background: var(--bg2);
+  border: 1px solid var(--line-soft); overflow: hidden; }
+.rs-plate { width: 100%; height: 100%; display: block; }
+.rs-card.on .rs-frame { border-color: var(--ink-faint); }
+.rs-thumb { width: 100%; height: 100%; object-fit: cover; min-width: 0; }
+.rs-own-card { cursor: default; }
+.rs-own-frame { flex-direction: row; }
+.rs-plus { flex: none; width: 30px; height: 30px; padding: 0;
+  background: var(--field); border: 1px solid var(--line);
+  color: var(--ink-dim); font-family: var(--mono); font-size: 17px;
+  line-height: 1; cursor: pointer; }
+.rs-plus:hover { border-color: var(--ink-faint); color: var(--ink); }
+.rs-own-in { margin-top: 2px; }
+/* The plate slot takes a REAL example image the moment one exists (user
+   2026-08-16: "you and i will generate images for this UI"). Until then
+   the diagram underneath is what shows — the manifest lists only the keys
+   that have a picture, so a missing one is never a broken image. */
+.rs-shot { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block; }
 .rs-def { font-size: 13px; color: var(--ink-dim); max-width: 720px;
   margin: 2px 0 14px; }
 .rs-def b { color: var(--ink); font-weight: 600; }

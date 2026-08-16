@@ -5063,6 +5063,7 @@ async function renderWizard() {
   const bindPicker = (id, styles, opts) => {
     const btn = $(`#${id}-pick`), field = $(`#${id}`);
     if (!btn || !field) return;
+    loadPlateShots();
     const sync = () => {
       const v = field.value.trim();
       const hit = styles.find(x => x.value === v);
@@ -5080,6 +5081,29 @@ async function renderWizard() {
     });
     return sync;
   };
+  // Controls that belong to an anchor but are not its style travel into
+  // its panel when it opens and go home when it closes (user 2026-08-16:
+  // "only have the button on the main page").
+  const travels = (sel) => ({
+    extra: '<div class="rs-extra" data-f="extra"></div>',
+    onOpen: (ov) => $("[data-f=extra]", ov)?.append($(sel)),
+    onClose: () => {
+      const host = $(sel);
+      if (host) $(`.wiz-col[data-role="${host.dataset.home}"]`)?.append(host);
+    },
+  });
+  for (const [sel, role] of [["#cam-default", "CINEMATOGRAPHY_STYLE"],
+                             ["#wiz-never-row", "BOARD_RENDERING_STYLE"]])
+    if ($(sel)) $(sel).dataset.home = role;
+
+  bindPicker("wiz-texture", TEXTURE_STYLES, {
+    empty: "Choose a world texture",
+    title: "World texture",
+    definition: `World texture is <b>how far the world has travelled from
+      new</b> — wear, patina, entropy. It is not the palette and not the
+      light: those are the anchors either side of it.`,
+    uploadRole: "WORLD_TEXTURE", uploadLabel: "World Texture",
+  });
   bindPicker("wiz-medium", RENDER_STYLES, {
     empty: "Choose a rendering style",
     title: "Rendering style",
@@ -5088,6 +5112,7 @@ async function renderWizard() {
       those are set by the other anchors, and choosing a style here never
       touches them.`,
     uploadRole: "BOARD_RENDERING_STYLE", uploadLabel: "Board Rendering",
+    ...travels("#wiz-never-row"),
   });
   bindPicker("wiz-light", CINEMA_STYLES, {
     empty: "Choose a cinematography look",
@@ -5098,6 +5123,7 @@ async function renderWizard() {
       lens gets the shot, so the camera below is a starting point every panel
       can override, never something this look dictates.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
+    ...travels("#cam-default"),
   });
 
   await loadBibleEditor();
@@ -7310,42 +7336,68 @@ const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:1
 // render can follow, not as a label. `not` follows the SETS/NOT grammar
 // the style-anchor columns already use.
 const RENDER_STYLES = [
-  { name: "Production Painting",
+  { name: "Production Painting", plate: "markPaint",
     value: "painterly production art, visible brushwork, matte finish",
     desc: "Painted concept art with the brush left visible — the medium this production is drawn in.",
     not: "photography · cel animation" },
-  { name: "Hand-Drawn Cartoon",
+  { name: "Hand-Drawn Cartoon", plate: "markCartoon",
     value: "hand-drawn cartoon, inked linework, flat cel color",
     desc: "Drawn line with flat fills. The mark stays human and the shapes stay simple.",
     not: "rendered volume · texture" },
-  { name: "Black & White Sketch",
+  { name: "Black & White Sketch", plate: "markSketch",
     value: "black and white graphite sketch, hatched shading, no color",
     desc: "Graphite on paper. Tone comes from hatching; there is no color at all.",
     not: "color · painted surfaces" },
-  { name: "3D Rendered Cartoon",
+  { name: "3D Rendered Cartoon", plate: "markRender3d",
     value: "stylised 3D render, smooth shaded surfaces, clean edges",
     desc: "Modelled and lit in three dimensions, but stylised — smooth surfaces, clean silhouettes.",
     not: "photoreal detail · brushwork" },
-  { name: "Photo Real",
+  { name: "Photo Real", plate: "markPhoto",
     value: "photographic realism, lens-accurate detail, no visible brushwork",
     desc: "Reads as a photograph. Detail is lens-accurate and no mark of the hand survives.",
     not: "illustration · stylisation" },
-  { name: "Industrial Design",
+  { name: "Industrial Design", plate: "markIndustrial",
     value: "industrial design illustration, clean keylines, controlled shading on a neutral ground",
     desc: "The presentation drawing of a designed object: keylines, controlled shading, neutral ground.",
     not: "environment · atmosphere" },
-  { name: "Ink & Wash",
+  { name: "Ink & Wash", plate: "markInkWash",
     value: "ink linework with wash tone, graphic-novel finish",
     desc: "Pen line carrying the drawing, wash carrying the tone. A graphic-novel page.",
     not: "full color rendering" },
-  { name: "Gouache & Watercolor",
+  { name: "Gouache & Watercolor", plate: "markGouache",
     value: "gouache and watercolor on paper, visible pigment edges and paper grain",
     desc: "Pigment on paper — edges pool, the grain shows through.",
     not: "digital smoothness" },
-  { name: "Technical Blueprint",
+  { name: "Technical Blueprint", plate: "markBlueprint",
     value: "orthographic technical drawing, keylines and dimension ticks, unrendered",
     desc: "An orthographic drawing, dimensioned and unrendered. Information, not picture.",
     not: "perspective · lighting" },
+];
+
+// World texture (user-directed 2026-08-16, completing the set). The
+// anchor SETS wear, patina and entropy — how far the world has travelled
+// from new — so the catalogue is a scale of exactly that and nothing else.
+const TEXTURE_STYLES = [
+  { name: "Pristine", plate: "texPristine",
+    value: "pristine surfaces, no wear, factory-new finishes",
+    desc: "Nothing has aged. Pristine is a texture philosophy, not the absence of one.",
+    not: "palette · light" },
+  { name: "Lived-In", plate: "texLivedIn",
+    value: "lived-in surfaces, light wear at contact points, everything in use",
+    desc: "Used and maintained. Wear collects where hands and feet actually go.",
+    not: "decay · ruin" },
+  { name: "Weathered", plate: "texWeathered",
+    value: "weathered surfaces, patina, sun-bleach and oxidation, repairs visible",
+    desc: "Exposure has done its work, and someone has patched it since.",
+    not: "abandonment" },
+  { name: "Decayed", plate: "texDecayed",
+    value: "decayed surfaces, structural failure, reclaimed by growth and rust",
+    desc: "Past maintenance. What is left is what has not collapsed yet.",
+    not: "occupancy" },
+  { name: "Industrial Grime", plate: "texIndustrial",
+    value: "industrial grime, oil and carbon deposit on hard-wearing surfaces",
+    desc: "Heavy use, not age. Working surfaces carrying what the work leaves.",
+    not: "organic decay" },
 ];
 
 // Cinematography looks (user-directed 2026-08-16). The anchor SETS light
@@ -7354,36 +7406,91 @@ const RENDER_STYLES = [
 // panel's hour, because those belong to the Color Palette anchor and to
 // the individual panel — the same fence the card already draws.
 const CINEMA_STYLES = [
-  { name: "Naturalistic",
+  { name: "Naturalistic", plate: "lightNatural",
     value: "naturalistic lighting, motivated available sources, unforced contrast",
     desc: "Light comes from where the scene says it comes from, and nothing is pushed.",
     not: "stylised contrast" },
-  { name: "Hard & Directional",
+  { name: "Hard & Directional", plate: "lightHard",
     value: "hard directional key light, defined shadow edges, strong falloff",
     desc: "A hard source with a clear direction. Shadows have edges and fall off fast.",
     not: "a fixed hour" },
-  { name: "Chiaroscuro",
+  { name: "Chiaroscuro", plate: "lightChiaro",
     value: "low-key chiaroscuro, single hard source, crushed shadow, high contrast",
     desc: "One source, everything else falling into black. Shape carved out of shadow.",
     not: "fill · flat exposure" },
-  { name: "Soft High Key",
+  { name: "Soft High Key", plate: "lightHighKey",
     value: "high-key soft light, broad diffuse sources, shallow contrast, few shadows",
     desc: "Broad diffuse light and very little shadow. Nothing hides.",
     not: "hard sources" },
-  { name: "Overcast Flat",
+  { name: "Overcast Flat", plate: "lightOvercast",
     value: "flat overcast light, no dominant source, shadowless and even",
     desc: "No sun, no key, no direction. Even light on everything.",
     not: "contrast · direction" },
-  { name: "Practical-Lit",
+  { name: "Practical-Lit", plate: "lightPractical",
     value: "practical sources visible in frame carrying the light, available darkness elsewhere",
     desc: "The lamps you can see are the lamps doing the work.",
     not: "unmotivated key light" },
-  { name: "Backlit & Silhouetted",
+  { name: "Backlit & Silhouetted", plate: "lightBacklit",
     value: "strong backlight, subjects rim-defined against the source, faces in shadow",
     desc: "The source is behind the subject. Shape reads before detail does.",
     not: "frontal key" },
 ];
 
+
+// UNCANONIZED — 2026-08-16 — style plates (user-directed: "you get the
+// words with an associated example image of the style").
+//
+// These are DIAGRAMS, not photographs. We cannot ship stock imagery, and
+// a generated sample would be one engine's opinion of the style rather
+// than the style — so each plate draws the one thing its axis is about:
+// for light, a lit form and where its shadow falls; for medium, the MARK
+// on the surface. Hard stops only, tokens only — canon forbids gradients,
+// and a lighting diagram that needed one would be describing a photo
+// rather than a behaviour. `Add your own` is how a real picture gets in.
+const PLATE = {
+  // ---- light behaviour: one form, one ground, the source moved around it
+  lightNatural: `<circle cx="34" cy="30" r="15" fill="#2b3037"/><path d="M34 15a15 15 0 0 1 0 30z" fill="#6b7278"/><ellipse cx="42" cy="47" rx="12" ry="3" fill="#23272c"/>`,
+  lightHard: `<circle cx="34" cy="30" r="15" fill="#15181b"/><path d="M34 15a15 15 0 0 1 0 30z" fill="#eceef0"/><path d="M40 47h22l-6 4H36z" fill="#15181b"/>`,
+  lightChiaro: `<circle cx="34" cy="30" r="15" fill="#0f1114"/><path d="M45 20a15 15 0 0 1 2 12l-6-2z" fill="#eceef0"/><ellipse cx="38" cy="47" rx="14" ry="3" fill="#0f1114"/>`,
+  lightHighKey: `<circle cx="34" cy="30" r="15" fill="#e0e2e4"/><path d="M25 20a15 15 0 0 0-4 12l7-2z" fill="#9aa1a8"/><ellipse cx="35" cy="47" rx="9" ry="2" fill="#23272c"/>`,
+  lightOvercast: `<circle cx="34" cy="30" r="15" fill="#9aa1a8"/><ellipse cx="34" cy="47" rx="6" ry="2" fill="#2b3037"/>`,
+  lightPractical: `<circle cx="34" cy="30" r="15" fill="#23272c"/><path d="M34 15a15 15 0 0 1 11 5l-11 10z" fill="#9aa1a8"/><circle cx="52" cy="16" r="4" fill="#eceef0"/><circle cx="52" cy="16" r="8" fill="none" stroke="#6b7278"/>`,
+  lightBacklit: `<circle cx="34" cy="30" r="15" fill="#0f1114" stroke="#eceef0" stroke-width="2"/><path d="M8 12h52v3H8z" fill="#6b7278"/><ellipse cx="34" cy="47" rx="15" ry="3" fill="#0f1114"/>`,
+  // ---- medium: the mark left on the surface
+  markPaint: `<path d="M10 18h20l-4 6H8zM32 18h26l-5 6H28zM8 28h24l-5 6H6zM34 28h22l-4 6H30zM12 38h22l-5 6H10zM36 38h20l-4 6H32z" fill="#6b7278"/>`,
+  markCartoon: `<rect x="10" y="14" width="22" height="16" fill="#6b7278" stroke="#eceef0" stroke-width="2"/><circle cx="46" cy="36" r="11" fill="#2b3037" stroke="#eceef0" stroke-width="2"/>`,
+  markSketch: `<g stroke="#9aa1a8"><path d="M10 44L28 14M16 44L34 14M22 44L40 14M28 44L46 14"/><path d="M34 44L52 14M40 44L58 14"/></g><g stroke="#6b7278"><path d="M10 30h48"/></g>`,
+  markRender3d: `<circle cx="34" cy="29" r="16" fill="#2b3037"/><path d="M34 13a16 16 0 0 1 14 8l-14 8z" fill="#9aa1a8"/><path d="M48 21a16 16 0 0 1 1 12l-15-4z" fill="#6b7278"/><ellipse cx="34" cy="48" rx="14" ry="3" fill="#23272c"/>`,
+  markPhoto: `<g fill="#6b7278"><rect x="8" y="12" width="52" height="34"/></g><g fill="#0f1114"><rect x="8" y="12" width="52" height="2"/><rect x="8" y="20" width="52" height="1"/><rect x="8" y="30" width="52" height="1"/><rect x="8" y="41" width="52" height="5"/></g><rect x="20" y="22" width="14" height="14" fill="#eceef0"/>`,
+  markIndustrial: `<rect x="12" y="16" width="32" height="22" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M44 16l10-6v22l-10 6z" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M12 44h32" stroke="#6b7278"/><path d="M12 41v6M44 41v6" stroke="#6b7278"/>`,
+  markInkWash: `<rect x="10" y="16" width="26" height="20" fill="#2b3037"/><g stroke="#eceef0" stroke-width="1.5" fill="none"><rect x="10" y="16" width="26" height="20"/><path d="M40 14v32M40 14h18M40 46h18"/></g>`,
+  markGouache: `<path d="M10 15h18l3 9-4 8H9l-2-9z" fill="#6b7278"/><path d="M32 20h16l4 10-3 9H30l-1-10z" fill="#9aa1a8"/><path d="M14 36h14l2 8H12z" fill="#2b3037"/>`,
+  markBlueprint: `<g stroke="#2b3037"><path d="M8 14h52M8 22h52M8 30h52M8 38h52M8 46h52M14 10v40M26 10v40M38 10v40M50 10v40"/></g><rect x="20" y="18" width="24" height="16" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M20 42h24M20 39v6M44 39v6" stroke="#eceef0"/>`,
+  // ---- world texture
+  texPristine: `<rect x="10" y="14" width="48" height="32" fill="#6b7278"/>`,
+  texLivedIn: `<rect x="10" y="14" width="48" height="32" fill="#6b7278"/><g fill="#2b3037"><rect x="16" y="20" width="10" height="3"/><rect x="34" y="30" width="14" height="2"/><rect x="22" y="38" width="8" height="2"/></g>`,
+  texWeathered: `<rect x="10" y="14" width="48" height="32" fill="#2b3037"/><g fill="#6b7278"><rect x="10" y="14" width="18" height="12"/><rect x="34" y="22" width="16" height="10"/><rect x="14" y="34" width="12" height="8"/><rect x="44" y="36" width="10" height="6"/></g>`,
+  texDecayed: `<rect x="10" y="14" width="48" height="32" fill="#15181b"/><g fill="#6b7278"><path d="M10 14h14l-3 10-8 2z"/><path d="M40 18h18v9l-12 3z"/><path d="M16 34h10l4 8H14z"/></g><g stroke="#2b3037"><path d="M24 14l6 32M42 14l-4 32"/></g>`,
+  texIndustrial: `<rect x="10" y="14" width="48" height="32" fill="#2b3037"/><g fill="#6b7278"><rect x="10" y="14" width="48" height="4"/><rect x="10" y="42" width="48" height="4"/></g><g stroke="#15181b"><path d="M22 18v24M34 18v24M46 18v24"/></g>`,
+};
+
+// Real example images drop in over the diagram as they are made (user
+// 2026-08-16: "you and i will generate images for this UI"). The manifest
+// lists only the keys that HAVE a picture, so the page never asks for one
+// that does not exist — and a key with no picture yet still shows its
+// diagram rather than a hole.
+let PLATE_SHOTS = null;
+const loadPlateShots = () => PLATE_SHOTS ??= fetch("/style-plates/index.json")
+  .then(r => r.ok ? r.json() : {}).then(m => (PLATE_SHOTS = m || {}), () => (PLATE_SHOTS = {}));
+
+function stylePlate(key) {
+  const body = PLATE[key];
+  if (!body) return "";
+  const file = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
+  return `<svg class="rs-plate" viewBox="0 0 68 56" aria-hidden="true"
+    fill="none" stroke-width="1" vector-effect="non-scaling-stroke">${body}</svg>`
+    + (file ? `<img class="rs-shot" src="/style-plates/${esc(file)}" alt="">` : "");
+}
 
 // The picker, shared by every anchor whose answer comes from a known
 // vocabulary (rendering style 2026-08-16; cinematography the same day,
@@ -7393,7 +7500,7 @@ const CINEMA_STYLES = [
 // boxes, and a catalogue that cannot say "something else" is a smaller
 // field than the one it replaced.
 function openStylePicker({ title, definition, styles, current, onPick,
-                          uploadRole, uploadLabel }) {
+                          uploadRole, uploadLabel, extra = "", onOpen, onClose }) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   const hit = styles.find(x => x.value === current);
@@ -7403,17 +7510,25 @@ function openStylePicker({ title, definition, styles, current, onPick,
       <p class="rs-def">${definition}</p>
       <div class="rs-cards">${styles.map((st, i) => `
         <button type="button" class="rs-card${st.value === current ? " on" : ""}" data-i="${i}">
+          <span class="rs-frame">${stylePlate(st.plate)}</span>
           <span class="rs-name">${esc(st.name)}</span>
           <span class="rs-desc">${esc(st.desc)}</span>
           <span class="rs-not mono">NOT ${esc(st.not.toUpperCase())}</span>
-        </button>`).join("")}</div>
-      <label class="rs-own">Something else — describe the medium and finish
-        <input type="text" id="rs-own" placeholder="e.g. cut-paper collage, hard shadows"
-               value="${esc(hit || !current ? "" : current)}">
-      </label>
-      <p class="hint">Have pictures instead of words? An anchor image carries
-        more than a phrase can — <button type="button" class="text-act" data-f="upload">upload
-        examples to ${esc(uploadLabel)}</button>.</p>
+        </button>`).join("")}
+        <div class="rs-card rs-own-card">
+          <span class="rs-frame rs-own-frame" data-f="own-thumbs">
+            <button type="button" class="rs-plus" data-f="add-img"
+              title="Attach an example image to this anchor">+</button>
+          </span>
+          <span class="rs-name">Add your own</span>
+          <span class="rs-desc">A picture carries more than a phrase can. Attach
+            examples, describe them, or both.</span>
+          <input type="text" id="rs-own" class="rs-own-in"
+                 placeholder="describe it in your own words"
+                 value="${esc(hit || !current ? "" : current)}">
+        </div>
+      </div>
+      ${extra}
       <div class="modal-actions">
         <button class="ghost" data-f="cancel">Cancel</button>
         <button class="primary" data-f="ok">Use this</button>
@@ -7422,32 +7537,49 @@ function openStylePicker({ title, definition, styles, current, onPick,
   document.body.append(ov);
   let picked = current || "";
   const own = $("#rs-own", ov);
-  const mark = () => $$(".rs-card", ov).forEach(c =>
+  const mark = () => $$(".rs-card[data-i]", ov).forEach(c =>
     c.classList.toggle("on", styles[+c.dataset.i].value === picked));
-  $$(".rs-card", ov).forEach(c => c.onclick = () => {
+  $$(".rs-card[data-i]", ov).forEach(c => c.onclick = () => {
     picked = styles[+c.dataset.i].value;
     own.value = "";
     mark();
+    ov.querySelector(".rs-own-card").classList.remove("on");
   });
   // Typing your own is choosing your own: the cards let go rather than
   // leaving two answers lit at once.
   own.addEventListener("input", () => {
     if (own.value.trim()) { picked = ""; mark(); }
+    ov.querySelector(".rs-own-card").classList.toggle("on", !!own.value.trim());
   });
-  const close = () => ov.remove();
+  own.onclick = e => e.stopPropagation();
+  if (own.value.trim()) ov.querySelector(".rs-own-card").classList.add("on");
+  // Controls that were MOVED into the panel go home on the way out,
+  // bindings intact — re-creating them would mean re-binding them.
+  const close = () => { onClose?.(ov); ov.remove(); };
   $("[data-f=cancel]", ov).onclick = close;
   ov.addEventListener("click", e => { if (e.target === ov) close(); });
   window.addEventListener("keydown", function esc2(e) {
     if (e.key === "Escape") { close(); window.removeEventListener("keydown", esc2); }
   });
-  // Pictures beat a phrase, and the library for them already exists —
-  // this opens THAT one rather than growing a second.
-  $("[data-f=upload]", ov).onclick = () => {
-    close();
-    const col = $(`.wiz-col[data-role="${uploadRole}"]`);
-    col?.scrollIntoView({ behavior: "smooth", block: "center" });
-    $("[data-f=addbtn]", col)?.click();
+  // The plus adds a real picture to THIS anchor, through the same upload
+  // the card used to carry — one library, reached from where you are
+  // rather than from a second control on the page (user 2026-08-16).
+  const col = $(`.wiz-col[data-role="${uploadRole}"]`);
+  $("[data-f=add-img]", ov).onclick = () => $("[data-f=addbtn]", col)?.click();
+  // What is already attached lives here now, not on the card.
+  const thumbs = $("[data-f=own-thumbs]", ov);
+  const showAttached = () => {
+    $$(".rs-thumb", thumbs).forEach(t => t.remove());
+    for (const img of $$("[data-f=list] img", col).slice(0, 4)) {
+      const c = document.createElement("img");
+      c.className = "rs-thumb";
+      c.src = img.src;
+      c.alt = "";
+      thumbs.append(c);
+    }
   };
+  showAttached();
+  onOpen?.(ov, showAttached);
   $("[data-f=ok]", ov).onclick = () => {
     onPick((own.value.trim() || picked).trim());
     close();
