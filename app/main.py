@@ -2012,6 +2012,16 @@ async def api_save_style_bible(body: dict) -> dict:
     return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
 
 
+@app.get("/api/cinematography/styles")
+def api_cinematography_styles() -> dict:
+    """The eight cinematography grammars, parsed from
+    docs/CINEMATOGRAPHY_STYLES.md (user ruling 2026-08-16). Read, never
+    copied: the document is the source of truth, so editing it updates the
+    picker and there is never a second list to keep in step."""
+    from . import cinematography
+    return {"styles": cinematography.styles()}
+
+
 @app.get("/api/bible/house-style")
 def api_house_style() -> dict:
     """This production's own rendering style, read from what already

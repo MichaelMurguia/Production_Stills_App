@@ -159,7 +159,7 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
                          "one helper: texture, cinematography, rendering")
 
     def test_every_catalogue_states_what_it_is_not_and_shows_it(self):
-        for cat in ("RENDER_STYLES", "CINEMA_STYLES", "TEXTURE_STYLES"):
+        for cat in ("RENDER_STYLES", "TEXTURE_STYLES"):
             i = JS.index(f"const {cat} = [")
             seg = JS[i:JS.index("\n];", i)]
             self.assertGreaterEqual(seg.count("name:"), 5,
@@ -175,10 +175,11 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
         i = JS.index('title: "Rendering style"')
         self.assertIn("not mood, not light, not cinematography", JS[i:i + 500])
         j = JS.index('title: "Cinematography"')
-        seg = JS[j:j + 700]
+        seg = JS[j:j + 800]
         self.assertIn("not the palette", seg)
-        self.assertIn("panel's hour", seg)
-        self.assertIn("not the lens", seg,
+        self.assertIn("own hour", seg)
+        self.assertIn("not genre", seg, "the document's own framing")
+        self.assertIn("whatever lens gets the shot", seg,
                       "a cinematographer picks any lens to get the shot")
 
     def test_free_text_survived_the_catalogue(self):
@@ -448,6 +449,79 @@ class TheAnswerIsStillRecognisedTomorrow(unittest.TestCase):
         self.assertNotIn('joined[:400]', seg)
         self.assertIn("Cap on a boundary, never mid-word", seg)
         self.assertIn("for ln in lines:", seg)
+
+
+class TheGrammarsComeFromTheDocument(unittest.TestCase):
+    """User 2026-08-16: "Find CINEMATOGRAPHY_STYLES.md in docs. We should
+    replace our cinematography styles with this." Read, not copied — the
+    document is the source of truth the user maintains, so editing it
+    updates the picker and there is never a second list to keep in step."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT))
+        from app import cinematography
+        self.cine = cinematography
+
+    def test_all_eight_parse_with_every_field_the_card_shows(self):
+        got = self.cine.styles()
+        self.assertEqual(len(got), 8)
+        for st in got:
+            for f in ("name", "subtitle", "question", "description",
+                      "principle", "prompt", "value"):
+                self.assertTrue(st[f].strip(), f"{st['name']} has no {f}")
+            self.assertEqual(len(st["films"]), 5,
+                             f"{st['name']}: the section rule is not a film")
+            self.assertTrue(st["avoid"], f"{st['name']} states no fence")
+
+    def test_the_directive_carries_mechanics_not_film_titles(self):
+        """The document's own Usage Note: reference films stay human-facing
+        context; generation relies on mechanics and operating principle."""
+        for st in self.cine.styles():
+            for film in st["films"]:
+                self.assertNotIn(film, st["value"], st["name"])
+            self.assertIn(st["principle"].rstrip(".")[:40], st["value"])
+
+    def test_nothing_is_hardcoded_in_the_front_end(self):
+        self.assertIn("const CINEMA_STYLES = [];", JS)
+        self.assertIn("async function loadCinemaStyles", JS)
+        self.assertIn("/api/cinematography/styles", JS)
+        for gone in ("Hard & Directional", "Overcast Flat", "Practical-Lit"):
+            self.assertNotIn(gone, JS, f"{gone} outlived the replacement")
+
+    def test_the_card_shows_what_the_user_asked_for(self):
+        i = JS.index("function richCardBody(st)")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        for probe in ("rs-sub", "rs-q", "rs-desc", "rs-principle",
+                      "rs-frames", "rs-films", "rs-prompt-link"):
+            self.assertIn(probe, seg, f"the card is missing {probe}")
+        self.assertIn("length: 3", seg, "three film frames")
+
+    def test_a_frame_opens_in_the_lightbox_without_choosing_the_style(self):
+        # inside the picker — another modal binds the same attribute
+        k = JS.index("function openStylePicker(")
+        i = JS.index('$$("[data-lb]", ov)', k)
+        seg = JS[i:i + 600]
+        self.assertIn("e.stopPropagation()", seg)
+        self.assertIn("openLightbox(", seg)
+        self.assertIn("set.indexOf(img)", seg, "arrows step between frames")
+
+    def test_the_prompt_opens_to_read_rather_than_riding_the_render(self):
+        """It runs to a page. The directive is the principle and the
+        mechanics; the prompt is reference."""
+        self.assertIn("function openPromptReader", JS)
+        i = JS.index('$$(".rs-prompt-link", ov)')
+        self.assertIn("e.stopPropagation()", JS[i:i + 400])
+        self.assertGreater(i, JS.index("function openStylePicker("))
+        self.assertIn("openPromptReader(", JS[i:i + 400])
+
+    def test_the_subtitle_is_a_label_not_a_signal(self):
+        """Eight amber subtitles on one surface is eight of nothing."""
+        b = re.search(r"\.rs-sub \{([^}]*)\}", CSS)
+        self.assertTrue(b)
+        self.assertNotIn("--accent", b.group(1))
+
+    def test_the_endpoint_serves_it(self):
+        self.assertIn('@app.get("/api/cinematography/styles")', MAIN)
 
 
 if __name__ == "__main__":

@@ -5098,8 +5098,10 @@ async function renderWizard() {
     };
     sync();
     if (styles === RENDER_STYLES) adoptHouseStyle().then(sync);
+    if (styles === CINEMA_STYLES) loadCinemaStyles().then(sync);
     btn.onclick = async () => {
       if (styles === RENDER_STYLES) await adoptHouseStyle();
+      if (styles === CINEMA_STYLES) await loadCinemaStyles();
       openStylePicker({
       ...opts, styles, current: field.value.trim(),
       onPick: v => {
@@ -5146,11 +5148,12 @@ async function renderWizard() {
   bindPicker("wiz-light", CINEMA_STYLES, {
     empty: "Choose a cinematography look",
     title: "Cinematography",
-    definition: `A cinematography look is <b>how light behaves</b> — its
-      source, direction, contrast and falloff. It is not the palette, not a
-      panel's hour, and <b>not the lens</b>: a cinematographer picks whatever
-      lens gets the shot, so the camera below is a starting point every panel
-      can override, never something this look dictates.`,
+    definition: `A cinematography grammar is <b>how the camera tells the
+      story</b> — camera behaviour, lighting, composition, depth and
+      movement. It is not genre, and it is not the palette: the Color
+      Palette anchor owns colour, a panel states its own hour, and the
+      camera default below is a starting point every panel can override —
+      a cinematographer picks whatever lens gets the shot.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
     ...travels("#cam-default"),
   });
@@ -7432,41 +7435,29 @@ const TEXTURE_STYLES = [
     not: "organic decay" },
 ];
 
-// Cinematography looks (user-directed 2026-08-16). The anchor SETS light
-// behaviour, lens and framing, so the catalogue covers all three rather
-// than nine variations on contrast. It states NOT palette and NOT a
-// panel's hour, because those belong to the Color Palette anchor and to
-// the individual panel — the same fence the card already draws.
-const CINEMA_STYLES = [
-  { name: "Naturalistic", plate: "lightNatural",
-    value: "naturalistic lighting, motivated available sources, unforced contrast",
-    desc: "Light comes from where the scene says it comes from, and nothing is pushed.",
-    not: "stylised contrast" },
-  { name: "Hard & Directional", plate: "lightHard",
-    value: "hard directional key light, defined shadow edges, strong falloff",
-    desc: "A hard source with a clear direction. Shadows have edges and fall off fast.",
-    not: "a fixed hour" },
-  { name: "Chiaroscuro", plate: "lightChiaro",
-    value: "low-key chiaroscuro, single hard source, crushed shadow, high contrast",
-    desc: "One source, everything else falling into black. Shape carved out of shadow.",
-    not: "fill · flat exposure" },
-  { name: "Soft High Key", plate: "lightHighKey",
-    value: "high-key soft light, broad diffuse sources, shallow contrast, few shadows",
-    desc: "Broad diffuse light and very little shadow. Nothing hides.",
-    not: "hard sources" },
-  { name: "Overcast Flat", plate: "lightOvercast",
-    value: "flat overcast light, no dominant source, shadowless and even",
-    desc: "No sun, no key, no direction. Even light on everything.",
-    not: "contrast · direction" },
-  { name: "Practical-Lit", plate: "lightPractical",
-    value: "practical sources visible in frame carrying the light, available darkness elsewhere",
-    desc: "The lamps you can see are the lamps doing the work.",
-    not: "unmotivated key light" },
-  { name: "Backlit & Silhouetted", plate: "lightBacklit",
-    value: "strong backlight, subjects rim-defined against the source, faces in shadow",
-    desc: "The source is behind the subject. Shape reads before detail does.",
-    not: "frontal key" },
-];
+// The eight cinematography grammars live in docs/CINEMATOGRAPHY_STYLES.md
+// and are READ from it (user ruling 2026-08-16), never copied — the
+// document is the source of truth the user maintains, so editing it
+// updates the picker and there is never a second list to keep in step.
+// Populated by loadCinemaStyles(); empty until it resolves.
+const CINEMA_STYLES = [];
+
+async function loadCinemaStyles() {
+  if (CINEMA_STYLES.length) return CINEMA_STYLES;
+  let d;
+  try { d = await api("/api/cinematography/styles"); } catch { return CINEMA_STYLES; }
+  for (const st of d.styles || []) {
+    CINEMA_STYLES.push({
+      ...st,
+      // the shared picker's vocabulary, mapped onto the document's
+      desc: st.description,
+      not: (st.avoid || []).slice(0, 3).join(" · "),
+      rich: true,
+    });
+  }
+  return CINEMA_STYLES;
+}
+
 
 
 // UNCANONIZED — 2026-08-16 — style plates (user-directed: "you get the
@@ -7559,6 +7550,61 @@ async function adoptHouseStyle() {
   if (h.plate) card.shot = h.plate;
 }
 
+// A cinematography grammar carries more than a name and a line — the
+// document gives each one a subtitle, a key question, a description and
+// an operating principle, and the user asked for all four on the card
+// (2026-08-16), plus three film frames and a way to read the prompt.
+// The frames are the plate slot: three thumbs, empty until we make them,
+// each opening full size.
+// The image-model prompt runs to a page — a link opens it to READ, with
+// the copy act beside it, rather than burying it in a card.
+function openPromptReader(title, text) {
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  ov.innerHTML = `
+    <div class="modal rs-prompt-modal" role="dialog" aria-modal="true">
+      <div class="modal-title">${esc(title)}</div>
+      <pre class="rs-prompt-text mono">${esc(text)}</pre>
+      <div class="modal-actions">
+        <button class="ghost" data-f="copy">Copy</button>
+        <button class="ghost" data-f="close">Close</button>
+      </div>
+    </div>`;
+  document.body.append(ov);
+  const close = () => ov.remove();
+  $("[data-f=close]", ov).onclick = close;
+  ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  $("[data-f=copy]", ov).onclick = async () => {
+    try { await navigator.clipboard.writeText(text); toast("Prompt copied."); }
+    catch { toast("Could not copy — select the text instead.", true); }
+  };
+}
+
+function richCardBody(st) {
+  const shots = plateShots(st.key).slice(0, 3);
+  const frames = Array.from({ length: 3 }, (_, i) => shots[i]
+    ? `<span class="rs-cell"><img class="rs-thumb" src="${esc(shots[i])}"
+         alt="${esc(st.name)} reference frame ${i + 1}" data-lb="${esc(shots[i])}"></span>`
+    : `<span class="rs-cell rs-cell-empty"></span>`).join("");
+  return `
+    <span class="rs-name">${esc(st.name)}</span>
+    <span class="rs-sub">${esc(st.subtitle)}</span>
+    <span class="rs-q">${esc(st.question)}</span>
+    <span class="rs-desc">${esc(st.description)}</span>
+    <span class="rs-principle"><b>Operating principle</b> ${esc(st.principle)}</span>
+    <span class="rs-frames">${frames}</span>
+    <span class="rs-films mono">${esc((st.films || []).slice(0, 5).join(" · "))}</span>
+    <button type="button" class="text-act rs-prompt-link" data-prompt="${esc(st.key)}">Read the image-model prompt</button>`;
+}
+
+// The manifest may name one picture for a key or several — a style plate
+// is one image, a cinematography grammar is three frames.
+function plateShots(key) {
+  const m = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
+  if (!m) return [];
+  return (Array.isArray(m) ? m : [m]).map(f => `/style-plates/${f}`);
+}
+
 function openStylePicker({ title, definition, styles, current, onPick,
                           uploadRole, uploadLabel, extra = "", onOpen, onClose }) {
   const ov = document.createElement("div");
@@ -7571,12 +7617,14 @@ function openStylePicker({ title, definition, styles, current, onPick,
     <div class="modal rs-modal" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
-      <div class="rs-cards">${styles.map((st, i) => `
-        <button type="button" class="rs-card${st === hit ? " on" : ""}" data-i="${i}">
+      <div class="rs-cards${styles.some(x => x.rich) ? " rs-cards-rich" : ""}">${styles.map((st, i) => `
+        <button type="button" class="rs-card${st === hit ? " on" : ""}${
+            st.rich ? " rs-rich" : ""}" data-i="${i}">
+          ${st.rich ? richCardBody(st) : `
           <span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>
           <span class="rs-name">${esc(st.name)}</span>
-          <span class="rs-desc">${esc(st.desc)}</span>
-          <span class="rs-not mono">NOT ${esc(st.not.toUpperCase())}</span>
+          <span class="rs-desc">${esc(st.desc)}</span>`}
+          <span class="rs-not mono">NOT ${esc(String(st.not).toUpperCase())}</span>
           ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>` : ""}
         </button>`).join("")}
         <div class="rs-card rs-own-card">
@@ -7603,6 +7651,21 @@ function openStylePicker({ title, definition, styles, current, onPick,
   const own = $("#rs-own", ov);
   const mark = () => $$(".rs-card[data-i]", ov).forEach(c =>
     c.classList.toggle("on", styles[+c.dataset.i].value === picked));
+  // A frame opens full size; the prompt opens as a document. Neither is
+  // "choose this style", so both stop the card's own click.
+  $$("[data-lb]", ov).forEach(img => img.onclick = e => {
+    e.stopPropagation();
+    // The whole style's frames, opened at the one clicked — arrows then
+    // step between them instead of dead-ending on a single picture.
+    const set = $$("[data-lb]", img.closest(".rs-card"));
+    openLightbox(set.map(x => ({ src: x.dataset.lb, caption: x.alt })),
+                 set.indexOf(img));
+  });
+  $$(".rs-prompt-link", ov).forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const st = styles.find(x => x.key === b.dataset.prompt);
+    if (st) openPromptReader(`${st.name} — image-model prompt`, st.prompt);
+  });
   $$(".rs-card[data-i]", ov).forEach(c => c.onclick = () => {
     picked = styles[+c.dataset.i].value;
     own.value = "";

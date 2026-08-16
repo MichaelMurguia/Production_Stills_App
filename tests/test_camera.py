@@ -297,12 +297,14 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         """User 2026-08-16: "a cinematographer will pick any lens to get
         the shot." The catalogue is light behaviour only, and the picker
         writes one field — its own."""
-        i = JS.index("const CINEMA_STYLES = [")
-        seg = JS[i:JS.index(chr(10) + "];", i)]
-        for lensy in ("mm", "anamorphic", "long-lens", "telephoto"):
-            self.assertNotIn(lensy, seg.lower(), f"a lens crept in: {lensy}")
         j = JS.index('title: "Cinematography"')
-        self.assertIn("not the lens", JS[j:j + 600])
+        seg = JS[j:j + 800]
+        self.assertIn("whatever lens gets the shot", seg)
+        self.assertIn("every panel can override", seg)
+        # and the picker writes ONE field — its own
+        i = JS.index("const bindPicker =")
+        self.assertNotIn("cam-", JS[i:i + 1500].replace("cam-default", ""),
+                         "the look never reaches into the camera row")
 
     def test_bible_default_card_loads_and_saves(self):
         self.assertIn('id="cam-default-row"', HTML)
