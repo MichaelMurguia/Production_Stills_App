@@ -144,7 +144,10 @@ thing a row is, a number says where you are in the work. Two states only,
 but stays fully legible — it is evidence you already ruled, not clutter to
 be hidden. Do not collapse it.
 
-**A gate states its condition and does not lie** (§2.4). If unconfirmed
+**A gate states its condition and does not lie** (§2.4). That extends to
+the CURSOR: `not-allowed` may only mark something that genuinely does
+nothing. A control that explains itself on click takes `help`; one that
+navigates takes `pointer` (2026-08-16). If unconfirmed
 steps do not block the act, say so — `3 STEPS UNCONFIRMED — YOU CAN STILL
 RENDER` — rather than disabling the button. A render is the end of a
 sequence, not a reward for finishing one.
@@ -1349,6 +1352,12 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **A locked stage offers `help`, not `not-allowed`**
+  (user-caught on the condensed band). Clicking one opens the popover
+  naming its blocker, so `not-allowed` claimed the one thing that is not
+  true of it. It is still not a destination — `aria-disabled` stays and
+  the click never navigates — but it IS an explanation. Genuinely inert
+  things (`.made-gated`) keep the no-entry cursor.
 - **2026-08-16** — **Productions moves into Settings as its first tab**
   (user). The header drops to three tools. Order and default are
   separated: first in the strip, but a first visit still lands on `AI &

@@ -33,6 +33,12 @@ ANCHORS = {
 }
 
 
+def block(sel: str) -> str:
+    bodies = re.findall(re.escape(sel) + r"\s*{([^}]*)}", CSS)
+    assert bodies, f"missing rule: {sel}"
+    return chr(10).join(bodies)
+
+
 def card(role: str) -> str:
     i = HTML.index(f'<div class="wiz-col" data-role="{role}">')
     return HTML[i:HTML.index('<div class="wiz-col"', i + 10)
@@ -901,6 +907,31 @@ class ProductionsIsASettingsTab(unittest.TestCase):
         self.assertIn('projects: () => renderSettings("productions")', JS)
         i = JS.index("async function renderSettings(")
         self.assertIn("openTab || uiGet(", JS[i:i + 900])
+
+
+class ALockedStageExplainsRatherThanRefuses(unittest.TestCase):
+    """User-caught 2026-08-16: "I moused over the collapsed header bar, I
+    got the 'no' symbol. That's wrong." Clicking a locked stage opens a
+    popover naming its blocker — the handler even refreshes the band
+    first so a stale lock cannot refuse wrongly. `not-allowed` claimed the
+    one thing that is not true of it."""
+
+    def test_the_cursor_offers_the_explanation(self):
+        b = re.search(r"#nav button\.s-locked \{([^}]*)\}", CSS).group(1)
+        self.assertIn("cursor: help", b)
+        self.assertNotIn("not-allowed", b)
+
+    def test_it_is_still_not_a_destination(self):
+        """`help` is not permission — the cell remains aria-disabled and
+        the click yields a popover, never navigation."""
+        self.assertIn('btn.setAttribute("aria-disabled", isLocked ? "true" : "false")', JS)
+        i = JS.index("if (lockedStages.has(view)) {")
+        self.assertIn("lockPopover(view)", JS[i:i + 400])
+
+    def test_the_genuinely_inert_things_keep_the_no_symbol(self):
+        """A frame that states a gate and does nothing on click is a
+        different case, and keeps not-allowed."""
+        self.assertIn("cursor: not-allowed", block(".made-gated"))
 
 
 if __name__ == "__main__":

@@ -1530,7 +1530,14 @@ details.meta pre {
    is inert — a condition, not a destination. #17191c is the sanctioned
    below---bg2 ground from mock 12b; labels stay --ink-faint (the band is
    the product's map — names must stay readable). */
-#nav button.s-locked { background: #17191c; cursor: not-allowed; }
+/* `help`, not `not-allowed` (user-caught 2026-08-16: "I moused over the
+   collapsed header bar, I got the 'no' symbol — that's wrong"). Clicking
+   a locked stage opens the popover naming what is blocking it, and the
+   handler even refreshes the band first so a stale lock can never refuse
+   wrongly. `not-allowed` said "this does nothing", which is the one thing
+   that is not true of it. It is not a DESTINATION — aria-disabled stays —
+   but it is an EXPLANATION, and that is what `help` means. */
+#nav button.s-locked { background: #17191c; cursor: help; }
 #nav button.s-locked:hover { background: #17191c; }
 .lock-chip {
   display: none; font-family: var(--mono); font-size: 8.5px;
