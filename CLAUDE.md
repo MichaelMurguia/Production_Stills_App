@@ -146,6 +146,25 @@ condition beside it, and link to where it gets resolved.
 Renders are never upscaled. If a panel is smaller than its slot, flag it and
 require regeneration.
 
+## Two speeds — read the mode before you ship
+
+`.claude/iteration.json` says whether we are iterating **locally** (fast,
+nothing deploys, changes batch until told) or **online** (every change
+runs the release chain). **Read it before any change to code** — context
+gets compacted, that file does not. No file means online, which is the
+safe default.
+
+The `/iterate` skill (`.claude/skills/iterate/`) owns the switch, the
+batching and the one-shot release chain. Two things never bend in either
+mode: both suites stay green on every commit, and every UI-touching change
+still logs its design-system row. Batching is about deploys, not about
+lowering the bar.
+
+Local mode does NOT apply to a fix for something reported on the live
+tenant, a boot migration, anything touching `storefront/` or billing, or a
+data-loss or security fix — a local copy cannot prove those. Ship them
+immediately and say why the batch broke.
+
 ## Testing — you own this
 
 Two suites, both green before any push:

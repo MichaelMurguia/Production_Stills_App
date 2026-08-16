@@ -128,6 +128,16 @@ Copying these settings will not remove every interruption.
   reaches outside the project.
 - **Hooks.** If a repo defines hooks, they still intercept tool calls and
   their output still comes back as feedback.
+- **Writes to `.claude/` itself.** Creating or editing files under the
+  project's `.claude/` directory — skills, hooks, settings — prompted for
+  approval in the audited session **despite `bypassPermissions` being set
+  at both levels**. That is the harness protecting agent configuration
+  from agent self-modification, and it is the right call: a skill file
+  changes how the agent behaves on every future turn, so "the agent may
+  freely edit its own instructions" is a materially different grant from
+  "the agent may freely edit the project". Expect a prompt when an agent
+  adds a skill or a hook, and read it rather than clicking through — it
+  is one of the few prompts left, and it is the one worth reading.
 - **Interactive commands.** `git rebase -i`, `Read-Host`, `Get-Credential`
   and friends hang or fail regardless of permissions. Unrelated to this
   config; just don't run them.

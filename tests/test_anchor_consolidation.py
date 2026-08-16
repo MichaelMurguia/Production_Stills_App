@@ -745,5 +745,58 @@ class TheLocalLoopExists(unittest.TestCase):
         self.assertNotIn("scripts", rel[i:rel.index("]", i)])
 
 
+class TheModeIsOnDiskNotInMemory(unittest.TestCase):
+    """User 2026-08-16: "understand the diff mode between local and online
+    iteration — also collect changes and push when stated". Context gets
+    compacted; a file does not."""
+
+    SKILL = ROOT / ".claude/skills/iterate/SKILL.md"
+
+    def test_the_skill_exists_and_is_invocable(self):
+        self.assertTrue(self.SKILL.exists())
+        head = self.SKILL.read_text(encoding="utf-8")[:400]
+        self.assertIn("name: iterate", head)
+        self.assertIn("description:", head)
+
+    def test_absent_state_means_online(self):
+        """A fresh clone, a cron run or another agent must behave exactly
+        as before this skill existed."""
+        src = self.SKILL.read_text(encoding="utf-8")
+        self.assertIn("Absent file ⇒ **online**", src)
+
+    def test_the_two_things_that_never_bend_are_named(self):
+        src = self.SKILL.read_text(encoding="utf-8")
+        self.assertIn("Tests stay green every commit", src)
+        self.assertIn("logs its row", src)
+        self.assertIn("batching is about deploys", src.lower())
+
+    def test_the_ship_chain_keeps_its_order(self):
+        """stage_release archives HEAD — running it before the commit
+        ships stale content, which has happened twice."""
+        src = self.SKILL.read_text(encoding="utf-8")
+        i = src.index("## `/iterate ship`")
+        seg = src[i:src.index("## `/iterate online`")]
+        for step in ("Both suites green", "Bump VERSION", "Commit the bump",
+                     "stage_release.py", "Commit the zips", "Poll"):
+            self.assertIn(step, seg)
+        self.assertLess(seg.index("Commit the bump"), seg.index("stage_release.py"))
+        self.assertIn("A push is not a deploy", seg)
+
+    def test_what_must_ship_anyway_is_listed(self):
+        src = self.SKILL.read_text(encoding="utf-8")
+        for must in ("live tenant", "boot migration", "storefront",
+                     "security fix"):
+            self.assertIn(must, src)
+
+    def test_the_state_file_never_enters_git(self):
+        ig = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn(".claude/iteration.json", ig)
+
+    def test_claude_md_points_at_it(self):
+        md = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        self.assertIn(".claude/iteration.json", md)
+        self.assertIn("Read it before any change to code", md)
+
+
 if __name__ == "__main__":
     unittest.main()

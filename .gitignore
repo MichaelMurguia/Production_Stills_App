@@ -36,3 +36,6 @@ connectors.json
 
 # Local polish loop (scripts/dev.py) — never the real install
 .devhome/
+
+# Iteration mode (.claude/skills/iterate) — per-machine, never shipped
+.claude/iteration.json
