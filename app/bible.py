@@ -275,7 +275,18 @@ def house_style() -> dict:
         if not t or t.startswith("#") or t.lower().startswith("keywords:"):
             continue
         lines.append(t.rstrip("."))
-    words = "; ".join(lines)[:400]
+    # Cap on a boundary, never mid-word — a directive that ends "Board
+    # layo" is what the user saw. The cap exists so one long section
+    # cannot swamp the prompt, not to trim a sentence in half.
+    words, joined = "", "; ".join(lines)
+    if len(joined) <= 480:
+        words = joined
+    else:
+        for ln in lines:
+            if len(words) + len(ln) + 2 > 480:
+                break
+            words = f"{words}; {ln}" if words else ln
+        words = words or joined[:480].rsplit(" ", 1)[0]
 
     plate, plate_from = "", ""
     if _paths.BOARDS_DIR.exists():

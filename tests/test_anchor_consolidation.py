@@ -344,6 +344,16 @@ class TheChoiceIsVisibleWithoutReopening(unittest.TestCase):
     the selection button)." A choice you cannot see is a choice you reopen
     the panel to check."""
 
+    def test_the_picture_sits_above_the_words(self):
+        """User 2026-08-16: "This needs to have picture on top and text
+        underneath" — the same reading order as the catalogue card it is
+        a copy of."""
+        b = re.search(r"\.rs-chosen \{([^}]*)\}", CSS)
+        self.assertTrue(b)
+        self.assertIn("flex-direction: column", b.group(1))
+        f = re.search(r"\.rs-chosen \.rs-frame \{([^}]*)\}", CSS)
+        self.assertIn("width: 100%", f.group(1), "the plate is not a stamp")
+
     def test_the_chosen_style_renders_under_its_button(self):
         i = JS.index('box.className = "rs-chosen"')
         seg = JS[i - 700:i + 700]
@@ -406,6 +416,38 @@ class TheCapturedCardShowsTheStyle(unittest.TestCase):
         self.assertIn("if not required.strip():", seg)
         self.assertIn('for cut in ("### Avoid", "Avoid")', seg,
                       "and the Avoid list still never gets in")
+
+
+class TheAnswerIsStillRecognisedTomorrow(unittest.TestCase):
+    """User-caught 2026-08-16: a saved house-style answer came back as
+    "In your own words" with an empty plate. Its value is re-derived from
+    the bible on every open, so a bible that gained a line stopped
+    matching what the field held — and the card lost its own answer."""
+
+    def test_the_house_card_matches_on_its_head_not_the_whole_string(self):
+        for i in (JS.index("const head = t =>"),
+                  JS.index("const head = t =>", JS.index("const head = t =>") + 5)):
+            seg = JS[i:i + 420]
+            self.assertIn('x.key === "house"', seg)
+            self.assertIn("startsWith(head(", seg)
+
+    def test_the_panel_lights_the_card_it_matched(self):
+        i = JS.index("function openStylePicker(")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn('st === hit ? " on" : ""', seg,
+                      "not an exact-value compare that the head match "
+                      "already knows is wrong")
+        self.assertIn("let picked = hit ? hit.value", seg,
+                      "and Use this keeps the matched card, not stale text")
+
+    def test_the_capture_never_cuts_a_word_in_half(self):
+        """The user saw a directive end "Board layo"."""
+        BIB = (ROOT / "app/bible.py").read_text(encoding="utf-8")
+        i = BIB.index("def house_style")
+        seg = BIB[i:]
+        self.assertNotIn('joined[:400]', seg)
+        self.assertIn("Cap on a boundary, never mid-word", seg)
+        self.assertIn("for ln in lines:", seg)
 
 
 if __name__ == "__main__":

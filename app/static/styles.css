@@ -2851,7 +2851,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* The chosen style, on the card, under its button — the plate small enough
    that the anchor row stays a row. Clicking it reopens the panel, because
    the thing you are looking at is the thing you would change. */
-.rs-chosen { display: flex; gap: 10px; margin-top: 8px; padding: 8px;
+.rs-chosen { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding: 8px;
   background: var(--field); border: 1px solid var(--line-soft);
   cursor: pointer;
   /* It sits inside the anchor's label, whose voice is Courier caps for a
@@ -2859,7 +2859,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   font-family: var(--sans); text-transform: none; letter-spacing: 0;
   font-weight: 400; }
 .rs-chosen:hover { border-color: var(--ink-faint); }
-.rs-chosen .rs-frame { flex: 0 0 74px; width: 74px; }
+/* Picture on top, words underneath (user 2026-08-16) — the same
+   reading order as the catalogue card it is a copy of. */
+.rs-chosen .rs-frame { flex: none; width: 100%; }
 .rs-chosen-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .rs-chosen .rs-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .rs-chosen .rs-desc { font-size: 11.5px; line-height: 1.45; }

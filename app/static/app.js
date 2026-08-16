@@ -5070,7 +5070,14 @@ async function renderWizard() {
     // the card itself: its plate, its name, its words.
     const sync = () => {
       const v = field.value.trim();
-      const hit = styles.find(x => x.value === v);
+      // Exact match first; then the captured house card by prefix, because
+      // its value is re-derived from the bible on every open and a bible
+      // that gained a line would otherwise stop recognising its own answer
+      // and report it as "In your own words" (user-caught 2026-08-16).
+      const head = t => String(t).slice(0, 110);
+      const hit = styles.find(x => x.value === v)
+        || styles.find(x => x.key === "house" && x.value && v
+             && (v.startsWith(head(x.value)) || x.value.startsWith(head(v))));
       btn.textContent = hit ? hit.name : (v ? "Change" : opts.empty);
       btn.classList.toggle("chosen", !!v);
       btn.title = v ? `Rides every render as: ${v}` : "";
@@ -7556,13 +7563,16 @@ function openStylePicker({ title, definition, styles, current, onPick,
                           uploadRole, uploadLabel, extra = "", onOpen, onClose }) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
-  const hit = styles.find(x => x.value === current);
+  const head = t => String(t).slice(0, 110);
+  const hit = styles.find(x => x.value === current)
+    || styles.find(x => x.key === "house" && x.value && current
+         && (current.startsWith(head(x.value)) || x.value.startsWith(head(current))));
   ov.innerHTML = `
     <div class="modal rs-modal" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
       <div class="rs-cards">${styles.map((st, i) => `
-        <button type="button" class="rs-card${st.value === current ? " on" : ""}" data-i="${i}">
+        <button type="button" class="rs-card${st === hit ? " on" : ""}" data-i="${i}">
           <span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>
           <span class="rs-name">${esc(st.name)}</span>
           <span class="rs-desc">${esc(st.desc)}</span>
@@ -7589,7 +7599,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
       </div>
     </div>`;
   document.body.append(ov);
-  let picked = current || "";
+  let picked = hit ? hit.value : (current || "");
   const own = $("#rs-own", ov);
   const mark = () => $$(".rs-card[data-i]", ov).forEach(c =>
     c.classList.toggle("on", styles[+c.dataset.i].value === picked));
