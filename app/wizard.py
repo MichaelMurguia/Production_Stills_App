@@ -212,10 +212,18 @@ AROUND them, carry their concrete vocabulary into the bible verbatim, and
 translate the never-list item for item into the Avoid list. Where an
 answer conflicts with your own instinct, the answer wins.
 - Visual touchstones (films/artists/eras it should feel like): {answers.get('touchstones') or 'not specified — propose from the screenplay, mark PROPOSED'}
-- Medium and finish: {answers.get('medium') or 'not specified — propose, mark PROPOSED'}
-- Palette and light bias: {answers.get('palette') or 'not specified — propose, mark PROPOSED'}
+- WORLD_TEXTURE in words (wear, patina, entropy): {answers.get('texture') or 'not specified — propose, mark PROPOSED'}
+- COLOR_PALETTE in words (hue, value key, saturation): {answers.get('palette') or 'not specified — propose, mark PROPOSED'}
+- CINEMATOGRAPHY_STYLE in words (light behaviour, lens, framing): {answers.get('light') or 'not specified — propose, mark PROPOSED'}
+- BOARD_RENDERING_STYLE in words (medium and finish): {answers.get('medium') or 'not specified — propose, mark PROPOSED'}
 - It must NEVER look like: {answers.get('never') or 'not specified'}
 - Additional notes: {answers.get('notes') or 'none'}
+
+Each of those four answers is the WORDS half of the anchor it names, and
+carries exactly that anchor's scope — the same fence its attached photos
+carry. An answer feeds only its anchor's sections. Where an anchor has
+both words and photos, they describe one thing: read them together, and
+if they genuinely conflict the director's words win.
 
 DESIGN LANGUAGES (one ## section each, in this order — first is the default world):
 {world_lines or '- derive 2-4 from the screenplay'}

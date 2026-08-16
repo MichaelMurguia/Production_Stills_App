@@ -167,7 +167,7 @@
          nothing gates it. Steps 3 and 4 remain swapped from
          LOCKED_STAGE_PLAN L3: the interview precedes casting. -->
     <div class="panel step" data-step="1">
-      <h2>Look interview <span class="step-cond">BLANKS COME BACK MARKED PROPOSED &middot; STEP 3 ANSWERS ALREADY INCLUDED</span></h2>
+      <h2>Look interview <span class="step-cond">WHAT NO ANCHOR CAN HOLD &middot; BLANKS COME BACK MARKED PROPOSED</span></h2>
       <div class="fgroup cam-default" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
         <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
         <div id="cam-default-row"></div>
@@ -175,8 +175,6 @@
       </div>
       <div class="grid-form">
         <label title="Films, artists, or eras this should feel like — the strongest single lever on the look.">Visual touchstones <input type="text" id="wiz-touchstones" placeholder="films, artists, or eras this should feel like…"></label>
-        <label title="The rendering medium and finish — becomes the Rendering Language section.">Medium &amp; finish <input type="text" id="wiz-medium" placeholder="e.g. painterly concept art, visible brushwork"></label>
-        <label title="Color palette and light bias — becomes the Lighting Language section.">Palette &amp; light <input type="text" id="wiz-palette" placeholder="palette and light bias…"></label>
         <label title="Hard exclusions — seeds the Rendering Language Avoid list.">It must never look like <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage"></label>
         <label class="wide" title="Anything else the bible should honor.">Notes <textarea id="wiz-notes" placeholder="optional"></textarea></label>
       </div>
@@ -196,6 +194,9 @@
           <p class="hint">SETS wear, patina, entropy<br>NOT subjects &middot; palette &middot; light</p>
           <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
+          <label class="wiz-words" title="The world&rsquo;s condition in words — wear, patina, entropy.">In words
+            <input type="text" data-f="words" id="wiz-texture" placeholder="e.g. patched, dust-worn, nothing factory-fresh">
+          </label>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="COLOR_PALETTE">
@@ -212,6 +213,9 @@
             <input type="text" data-f="sw-name" class="sw-name-in" placeholder="name — e.g. oxide rust" maxlength="48">
             <button class="ghost" data-f="sw-add">Add swatch</button>
           </div>
+          <label class="wiz-words" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words
+            <input type="text" data-f="words" id="wiz-palette" placeholder="e.g. oxide and bone, low key, saturation held back">
+          </label>
           <div class="wiz-thumbs" data-f="list"></div>
           <div id="swatch-strip"></div>
         </div>
@@ -223,6 +227,10 @@
           <p class="hint">SETS light behaviour, lens, framing<br>NOT palette &middot; a panel's hour</p>
           <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
+          <label class="wiz-words" title="Light behaviour, lens and framing — becomes the Lighting Language and Composition Rules sections.">In words
+            <input type="text" data-f="words" id="wiz-light" hidden>
+            <button type="button" class="ghost pick-btn" id="wiz-light-pick">Choose a cinematography look</button>
+          </label>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
@@ -233,6 +241,10 @@
           <p class="hint">SETS medium, brushwork, finish<br>NOT content &middot; palette &middot; the world</p>
           <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
+          <label class="wiz-words" title="The rendering medium and finish — becomes the Rendering Language section.">In words
+            <input type="text" data-f="words" id="wiz-medium" hidden>
+            <button type="button" class="ghost pick-btn" id="wiz-medium-pick">Choose a rendering style</button>
+          </label>
           <div class="wiz-thumbs" data-f="list"></div>
         </div>
       </div>

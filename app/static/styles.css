@@ -2784,6 +2784,41 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    and hatch belong to problems, not to health. */
 .slot.clean .slot-img { opacity: .85; }
 
+/* UNCANONIZED — 2026-08-16 — rendering style picker (user-directed).
+   A field whose answer comes from a known vocabulary is a choice, not a
+   sentence: "medium & finish" as a free text box was collecting mood,
+   light and cinematography too. The trigger reads as a field-shaped
+   control (full width of its cell, left-aligned like the input it
+   replaced) rather than a verb, because it sits in a form row. Selection
+   inside the modal is an ink keyline, never amber — a chosen style is
+   STATE; amber stays with `Use this style`. */
+/* The words half of an anchor card. Same label voice as the form labels
+   it was folded out of, so the question reads the same wherever it sits. */
+.wiz-words { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 8px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+.pick-btn { width: 100%; text-align: left; font-family: var(--sans);
+  font-size: 13px; letter-spacing: 0; text-transform: none;
+  color: var(--ink-faint); padding: 8px 10px; }
+.pick-btn.chosen { color: var(--ink); }
+.rs-modal { width: min(920px, 94vw); }
+.rs-def { font-size: 13px; color: var(--ink-dim); max-width: 720px;
+  margin: 2px 0 14px; }
+.rs-def b { color: var(--ink); font-weight: 600; }
+.rs-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rs-card { display: flex; flex-direction: column; gap: 6px; text-align: left;
+  padding: 11px 12px; background: var(--field);
+  border: 1px solid var(--line-soft); cursor: pointer; }
+.rs-card:hover { border-color: var(--ink-faint); }
+.rs-card.on { border-color: var(--ink); }
+.rs-name { font-size: 13.5px; font-weight: 600; color: var(--ink-dim); }
+.rs-card.on .rs-name { color: var(--ink); }
+.rs-desc { font-size: 12.5px; color: var(--ink-dim); }
+.rs-not { font-size: 9.5px; letter-spacing: .08em; color: var(--ink-faint); }
+.rs-own { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 2px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim); }
+
 /* UNCANONIZED — 2026-08-13 — board look picker (arrange room Style…).
    Cards are real renders of the sheet; selection is an ink keyline, not
    amber — a chosen style is state, and amber stays with the primary

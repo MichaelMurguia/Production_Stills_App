@@ -2137,7 +2137,16 @@ async def api_wizard_analyze(body: dict) -> dict:
     return analysis
 
 
-_INTERVIEW_FIELDS = ("touchstones", "medium", "palette", "never", "notes")
+# One question per anchor, plus the three no anchor can hold (user ruling
+# 2026-08-16 — "we now have duplicative entries"). `texture` and `light`
+# are new: the interview and the style anchors were the same four
+# questions asked in two media, and folding the words INTO the anchor
+# cards left World Texture and Cinematography without a words half.
+# `palette` predates the split and holds legacy "palette and light" text
+# from before it — it lands on the Color Palette card, which is where the
+# larger half of it always belonged.
+_INTERVIEW_FIELDS = ("touchstones", "texture", "palette", "light", "medium",
+                     "never", "notes")
 
 
 def _interview_path():

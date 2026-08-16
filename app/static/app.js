@@ -3986,8 +3986,14 @@ async function renderWizard() {
       const role = col.dataset.role;
       const mine = refs.filter(r => roleHead(r.role) === role);
       const badge = $("[data-f=state]", col);
-      badge.className = `badge ${mine.length ? "APPROVED" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
-      badge.textContent = mine.length ? `${mine.length}` : "NONE";
+      // An anchor is answered by a picture OR by words (user 2026-08-16).
+      // A card reading NONE with its own answer sitting an inch below it
+      // is the badge calling the user a liar — pictures still carry the
+      // count, and words say so in their own right.
+      const inWords = !!$("[data-f=words]", col)?.value.trim();
+      badge.className = `badge ${mine.length || inWords ? "APPROVED" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
+      badge.textContent = mine.length ? `${mine.length}`
+        : inWords ? "IN WORDS" : "NONE";
       const list = $("[data-f=list]", col);
       list.innerHTML = "";
       // PALETTE_GROUPS_PLAN §3 — the same rule above the review strip: a
@@ -4873,8 +4879,12 @@ async function renderWizard() {
         worlds: chosenWorlds,
         environments: chosenEnvs,
         touchstones: $("#wiz-touchstones").value.trim(),
-        medium: $("#wiz-medium").value.trim(),
+        // The words half of each anchor — collected from the anchor cards
+        // themselves since 2026-08-16, not from a second list beside them.
+        texture: $("#wiz-texture").value.trim(),
         palette: $("#wiz-palette").value.trim(),
+        light: $("#wiz-light").value.trim(),
+        medium: $("#wiz-medium").value.trim(),
         never: $("#wiz-never").value.trim(),
         notes: [$("#wiz-notes").value.trim(), ...qaLines].filter(Boolean).join("\n"),
         ref_ids: wizAnchorIds,
@@ -4959,9 +4969,17 @@ async function renderWizard() {
         api("/api/references"), api("/api/subjects"),
         api("/api/wizard/samples").catch(() => []), api("/api/style-bible"),
       ]);
+      // An anchor is SET by a picture OR by words (user 2026-08-16): the
+      // interview asked the same four questions in prose, so folding it in
+      // means an anchor answered in words is answered.
       const roles = AUTO_ATTACH_HEADS;  // the four-anchor shelf
-      const set = roles.filter(role => refs.some(r =>
-        r.status === "APPROVED" && roleHead(r.role) === role)).length;
+      const ANCHOR_WORDS = { WORLD_TEXTURE: "#wiz-texture",
+                             COLOR_PALETTE: "#wiz-palette",
+                             CINEMATOGRAPHY_STYLE: "#wiz-light",
+                             BOARD_RENDERING_STYLE: "#wiz-medium" };
+      const set = roles.filter(role =>
+        refs.some(r => r.status === "APPROVED" && roleHead(r.role) === role)
+        || $(ANCHOR_WORDS[role])?.value.trim()).length;
       setB(2, set === roles.length ? "APPROVED" : "PROVISIONAL",
         `${set} OF ${roles.length} SET`);
       // The scan step reflects review debt: proposed languages AND environments
@@ -4974,7 +4992,9 @@ async function renderWizard() {
           : `${(wizAnalysis.design_worlds || []).length} DESIGN LANGUAGES`
             + (proposedN ? ` · ${proposedN} PROPOSED` : " FOUND"));
       // Step 1 counts the interview itself (mock 2a) — answered = non-blank.
-      const ivFields = ["#wiz-touchstones", "#wiz-medium", "#wiz-palette", "#wiz-never", "#wiz-notes"];
+      // Step 1 counts ONLY what it still asks: the per-axis answers moved
+      // onto their anchor cards, and step 2's badge counts them there.
+      const ivFields = ["#wiz-touchstones", "#wiz-never", "#wiz-notes"];
       const ivDone = ivFields.filter(id => $(id)?.value.trim()).length;
       setB(1, ivDone === ivFields.length ? "APPROVED" : "PROVISIONAL",
         `${ivDone} OF ${ivFields.length} ANSWERED`);
@@ -4997,8 +5017,13 @@ async function renderWizard() {
   // The look interview persists per production (user ruling 2026-08-01:
   // a refresh must never lose it): fields load from the server and every
   // change saves back — its answers then bind every bible draft.
-  const IV = { "#wiz-touchstones": "touchstones", "#wiz-medium": "medium",
-               "#wiz-palette": "palette", "#wiz-never": "never",
+  // One question per anchor, plus the three no anchor can hold (user
+  // 2026-08-16 — "we now have duplicative entries"). The per-axis fields
+  // live ON their anchor card now; the selectors are unchanged so every
+  // reader below still finds them by id.
+  const IV = { "#wiz-touchstones": "touchstones", "#wiz-texture": "texture",
+               "#wiz-palette": "palette", "#wiz-light": "light",
+               "#wiz-medium": "medium", "#wiz-never": "never",
                "#wiz-notes": "notes" };
   try {
     const saved = await api("/api/wizard/interview");
@@ -5017,8 +5042,68 @@ async function renderWizard() {
       $("#wiz-iv-state").textContent = `NOT SAVED — ${err.message}`;
     }
   };
+  // The words arrive after the anchor cards render, so the badge that
+  // reads them has to be told. Only the NONE <-> IN WORDS half moves —
+  // a card with pictures shows its count whatever the words say.
+  const syncAnchorBadges = () => {
+    for (const col of $$(".wiz-col[data-role]")) {
+      const badge = $("[data-f=state]", col);
+      if (!badge || /^\d+$/.test(badge.textContent.trim())) continue;
+      const inWords = !!$("[data-f=words]", col)?.value.trim();
+      badge.className = `badge ${inWords ? "APPROVED" : "LOCKED"}`;
+      badge.textContent = inWords ? "IN WORDS" : "NONE";
+    }
+  };
+  syncAnchorBadges();
+
   for (const id of Object.keys(IV))
-    $(id)?.addEventListener("change", () => { saveInterview(); wizardStepBadges(); });
+    $(id)?.addEventListener("change", () => {
+      saveInterview(); wizardStepBadges(); syncAnchorBadges();
+    });
+
+  // Two anchors answer from a known vocabulary rather than a sentence
+  // (user-directed 2026-08-16). The input still holds the value — it is
+  // hidden, and the button states what it holds. A catalogue NAME reads
+  // better on the button than the directive it writes, so the button
+  // shows the name on a match and the phrase itself otherwise.
+  const bindPicker = (id, styles, opts) => {
+    const btn = $(`#${id}-pick`), field = $(`#${id}`);
+    if (!btn || !field) return;
+    const sync = () => {
+      const v = field.value.trim();
+      const hit = styles.find(x => x.value === v);
+      btn.textContent = hit ? hit.name : (v || opts.empty);
+      btn.classList.toggle("chosen", !!v);
+      btn.title = v ? `Rides every render as: ${v}` : "";
+    };
+    sync();
+    btn.onclick = () => openStylePicker({
+      ...opts, styles, current: field.value.trim(),
+      onPick: v => {
+        field.value = v; sync();
+        saveInterview(); wizardStepBadges(); syncAnchorBadges();
+      },
+    });
+    return sync;
+  };
+  bindPicker("wiz-medium", RENDER_STYLES, {
+    empty: "Choose a rendering style",
+    title: "Rendering style",
+    definition: `A rendering style is <b>how a panel is drawn</b> — the medium,
+      the mark, the finish. It is not mood, not light, not cinematography:
+      those are set by the other anchors, and choosing a style here never
+      touches them.`,
+    uploadRole: "BOARD_RENDERING_STYLE", uploadLabel: "Board Rendering",
+  });
+  bindPicker("wiz-light", CINEMA_STYLES, {
+    empty: "Choose a cinematography look",
+    title: "Cinematography",
+    definition: `A cinematography look is <b>how the film is photographed</b> —
+      light behaviour, lens and framing. It is not the palette and not a
+      single panel's hour: the Color Palette anchor owns colour, and a panel
+      states its own time of day.`,
+    uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
+  });
 
   await loadBibleEditor();
   await loadCameraDefault();
@@ -7219,6 +7304,168 @@ const IMAGE_SIZES = ["1K", "2K", "4K"];
 // support); this is only the offline fallback if the payload is missing.
 const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"]
   .map(id => ({ id, label: id, value: (([w, h]) => w / h)(id.split(":").map(Number)), engines: [] }));
+// UNCANONIZED — 2026-08-16 — rendering style catalogue (user-directed).
+// A rendering style is HOW a panel is drawn: medium, mark, finish. It is
+// NOT mood, light or cinematography — those are set elsewhere, and the
+// modal says so at the top, because "medium & finish" as a free-text box
+// was collecting all four.
+//
+// `value` is the phrase written into #wiz-medium and therefore into the
+// bible's Rendering Language section, so each one reads as a directive a
+// render can follow, not as a label. `not` follows the SETS/NOT grammar
+// the style-anchor columns already use.
+const RENDER_STYLES = [
+  { name: "Production Painting",
+    value: "painterly production art, visible brushwork, matte finish",
+    desc: "Painted concept art with the brush left visible — the medium this production is drawn in.",
+    not: "photography · cel animation" },
+  { name: "Hand-Drawn Cartoon",
+    value: "hand-drawn cartoon, inked linework, flat cel color",
+    desc: "Drawn line with flat fills. The mark stays human and the shapes stay simple.",
+    not: "rendered volume · texture" },
+  { name: "Black & White Sketch",
+    value: "black and white graphite sketch, hatched shading, no color",
+    desc: "Graphite on paper. Tone comes from hatching; there is no color at all.",
+    not: "color · painted surfaces" },
+  { name: "3D Rendered Cartoon",
+    value: "stylised 3D render, smooth shaded surfaces, clean edges",
+    desc: "Modelled and lit in three dimensions, but stylised — smooth surfaces, clean silhouettes.",
+    not: "photoreal detail · brushwork" },
+  { name: "Photo Real",
+    value: "photographic realism, lens-accurate detail, no visible brushwork",
+    desc: "Reads as a photograph. Detail is lens-accurate and no mark of the hand survives.",
+    not: "illustration · stylisation" },
+  { name: "Industrial Design",
+    value: "industrial design illustration, clean keylines, controlled shading on a neutral ground",
+    desc: "The presentation drawing of a designed object: keylines, controlled shading, neutral ground.",
+    not: "environment · atmosphere" },
+  { name: "Ink & Wash",
+    value: "ink linework with wash tone, graphic-novel finish",
+    desc: "Pen line carrying the drawing, wash carrying the tone. A graphic-novel page.",
+    not: "full color rendering" },
+  { name: "Gouache & Watercolor",
+    value: "gouache and watercolor on paper, visible pigment edges and paper grain",
+    desc: "Pigment on paper — edges pool, the grain shows through.",
+    not: "digital smoothness" },
+  { name: "Technical Blueprint",
+    value: "orthographic technical drawing, keylines and dimension ticks, unrendered",
+    desc: "An orthographic drawing, dimensioned and unrendered. Information, not picture.",
+    not: "perspective · lighting" },
+];
+
+// Cinematography looks (user-directed 2026-08-16). The anchor SETS light
+// behaviour, lens and framing, so the catalogue covers all three rather
+// than nine variations on contrast. It states NOT palette and NOT a
+// panel's hour, because those belong to the Color Palette anchor and to
+// the individual panel — the same fence the card already draws.
+const CINEMA_STYLES = [
+  { name: "Naturalistic",
+    value: "naturalistic photography, motivated available light, unshowy framing",
+    desc: "Light that comes from where the scene says it comes from, and a frame that does not announce itself.",
+    not: "stylised contrast · showy lenses" },
+  { name: "Hard Low Sun",
+    value: "hard low-angle sunlight, long raking shadows, deep contrast",
+    desc: "A low hard source raking across everything. Shadows run long and the contrast is deep.",
+    not: "a fixed hour per panel" },
+  { name: "Chiaroscuro",
+    value: "low-key chiaroscuro, single hard source, crushed shadow, high contrast",
+    desc: "One hard source, everything else falling into black. Shape is carved out of shadow.",
+    not: "fill light · flat exposure" },
+  { name: "Soft High Key",
+    value: "high-key soft light, broad diffuse sources, shallow contrast, few shadows",
+    desc: "Broad diffuse light and very little shadow. Nothing hides.",
+    not: "hard sources · deep shadow" },
+  { name: "Anamorphic Wide",
+    value: "anamorphic wide-lens photography, oval flares, wide held frames, shallow focus falloff",
+    desc: "Wide anamorphic glass — distortion at the edges, oval flares, frames held wide.",
+    not: "long-lens compression" },
+  { name: "Long Lens Compression",
+    value: "long-lens photography, compressed depth, isolated subject against soft background",
+    desc: "Telephoto. Depth flattens, the background dissolves, the subject is picked out of it.",
+    not: "wide establishing frames" },
+  { name: "Handheld Vérité",
+    value: "handheld camera, loose reactive framing, close to the subject",
+    desc: "The camera is a person in the room — loose, close, reacting rather than composing.",
+    not: "locked-off symmetry" },
+  { name: "Formal Symmetry",
+    value: "locked-off camera, centred symmetrical composition, wide static frames",
+    desc: "Locked off and centred. The frame is designed and it stays still.",
+    not: "handheld · reactive framing" },
+  { name: "Practical-Lit Dark",
+    value: "available-darkness photography, practical sources visible in frame carrying the light",
+    desc: "The lamps you can see are the lamps doing the work. Dark, and lit from inside the scene.",
+    not: "unmotivated key light" },
+];
+
+// The picker, shared by every anchor whose answer comes from a known
+// vocabulary (rendering style 2026-08-16; cinematography the same day,
+// user: "We need the same style picker for cinematography"). Selection is
+// an ink keyline, never amber — a chosen look is STATE; amber stays with
+// the one primary action (Use this). Free text survives: these were text
+// boxes, and a catalogue that cannot say "something else" is a smaller
+// field than the one it replaced.
+function openStylePicker({ title, definition, styles, current, onPick,
+                          uploadRole, uploadLabel }) {
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  const hit = styles.find(x => x.value === current);
+  ov.innerHTML = `
+    <div class="modal rs-modal" role="dialog" aria-modal="true">
+      <div class="modal-title">${esc(title)}</div>
+      <p class="rs-def">${definition}</p>
+      <div class="rs-cards">${styles.map((st, i) => `
+        <button type="button" class="rs-card${st.value === current ? " on" : ""}" data-i="${i}">
+          <span class="rs-name">${esc(st.name)}</span>
+          <span class="rs-desc">${esc(st.desc)}</span>
+          <span class="rs-not mono">NOT ${esc(st.not.toUpperCase())}</span>
+        </button>`).join("")}</div>
+      <label class="rs-own">Something else — describe the medium and finish
+        <input type="text" id="rs-own" placeholder="e.g. cut-paper collage, hard shadows"
+               value="${esc(hit || !current ? "" : current)}">
+      </label>
+      <p class="hint">Have pictures instead of words? An anchor image carries
+        more than a phrase can — <button type="button" class="text-act" data-f="upload">upload
+        examples to ${esc(uploadLabel)}</button>.</p>
+      <div class="modal-actions">
+        <button class="ghost" data-f="cancel">Cancel</button>
+        <button class="primary" data-f="ok">Use this</button>
+      </div>
+    </div>`;
+  document.body.append(ov);
+  let picked = current || "";
+  const own = $("#rs-own", ov);
+  const mark = () => $$(".rs-card", ov).forEach(c =>
+    c.classList.toggle("on", styles[+c.dataset.i].value === picked));
+  $$(".rs-card", ov).forEach(c => c.onclick = () => {
+    picked = styles[+c.dataset.i].value;
+    own.value = "";
+    mark();
+  });
+  // Typing your own is choosing your own: the cards let go rather than
+  // leaving two answers lit at once.
+  own.addEventListener("input", () => {
+    if (own.value.trim()) { picked = ""; mark(); }
+  });
+  const close = () => ov.remove();
+  $("[data-f=cancel]", ov).onclick = close;
+  ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  window.addEventListener("keydown", function esc2(e) {
+    if (e.key === "Escape") { close(); window.removeEventListener("keydown", esc2); }
+  });
+  // Pictures beat a phrase, and the library for them already exists —
+  // this opens THAT one rather than growing a second.
+  $("[data-f=upload]", ov).onclick = () => {
+    close();
+    const col = $(`.wiz-col[data-role="${uploadRole}"]`);
+    col?.scrollIntoView({ behavior: "smooth", block: "center" });
+    $("[data-f=addbtn]", col)?.click();
+  };
+  $("[data-f=ok]", ov).onclick = () => {
+    onPick((own.value.trim() || picked).trim());
+    close();
+  };
+}
+
 const BOARD_TYPES = [
   { value: "SCENE", label: "SCENE — one screenplay scene, slugline-bound" },
   { value: "LOCATION", label: "LOCATION — a place across times" },
