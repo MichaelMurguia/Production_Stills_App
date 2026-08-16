@@ -113,3 +113,84 @@ def styles() -> list[dict]:
             "value": value[:600],
         })
     return sorted(out, key=lambda s: s["n"])
+
+
+# ----------------------------------------------- the grammar that rides
+
+SETTING_KEY = "cinematography"
+
+
+def setting() -> dict:
+    """Which grammar this production has chosen, and whether its
+    image-model prompt rides every render.
+
+    OFF by default, and stored per production (user 2026-08-16: "we need
+    to evaluate the output — so we need to be able to roll this back").
+    Rollback is therefore the absence of an act: nothing changes until the
+    switch is thrown, and throwing it back stops it, while every take made
+    under it keeps saying so."""
+    from . import store
+    raw = store.load_app_state().get(SETTING_KEY) or {}
+    return {"key": str(raw.get("key", "")),
+            "prompt_rides": bool(raw.get("prompt_rides", False))}
+
+
+def save_setting(key: str = None, prompt_rides: bool = None) -> dict:
+    from . import store
+    cur = setting()
+    if key is not None:
+        cur["key"] = str(key)
+    if prompt_rides is not None:
+        cur["prompt_rides"] = bool(prompt_rides)
+    state = store.load_app_state()
+    state[SETTING_KEY] = cur
+    store.save_app_state(state)
+    store.append_approval_log(
+        f"CINEMATOGRAPHY: grammar={cur['key'] or 'none'}, "
+        f"image-model prompt {'RIDES' if cur['prompt_rides'] else 'does not ride'} "
+        "every render.")
+    return cur
+
+
+def by_key(key: str) -> dict | None:
+    for st in styles():
+        if st["key"] == key:
+            return st
+    return None
+
+
+def active() -> dict | None:
+    """The grammar whose prompt should ride RIGHT NOW, or None."""
+    s = setting()
+    if not s["prompt_rides"] or not s["key"]:
+        return None
+    return by_key(s["key"])
+
+
+def prompt_block() -> list[str]:
+    """The document's own image-model prompt, verbatim, as a render block.
+
+    Placed AFTER the camera block and explicitly subordinate to it on
+    framing: the grammar says "favour moderate wide-angle" and a panel may
+    say 85mm, and the panel's camera is the one the user set on purpose.
+    Same precedence the CAMERA block already claims over references."""
+    st = active()
+    if not st:
+        return []
+    return [f"CINEMATOGRAPHY GRAMMAR — {st['name'].upper()} ({st['subtitle']}). "
+            "This is the production's visual grammar and applies to every "
+            "panel. Where it suggests a framing, lens or angle that the "
+            "CAMERA block above states explicitly, the CAMERA block wins — "
+            "this grammar governs approach, not the shot.",
+            "", st["prompt"], ""]
+
+
+def stamp() -> dict:
+    """What a take records about the grammar it was rendered under, so a
+    take made with it can be told from one made without."""
+    from common import stable_hash
+    st = active()
+    if not st:
+        return {"rides": False}
+    return {"rides": True, "key": st["key"], "name": st["name"],
+            "prompt_sha": stable_hash(st["prompt"])[:16]}

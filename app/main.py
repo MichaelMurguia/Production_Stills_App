@@ -2022,6 +2022,22 @@ def api_cinematography_styles() -> dict:
     return {"styles": cinematography.styles()}
 
 
+@app.get("/api/cinematography/setting")
+def api_get_cine_setting() -> dict:
+    from . import cinematography
+    return cinematography.setting()
+
+
+@app.put("/api/cinematography/setting")
+def api_save_cine_setting(body: dict) -> dict:
+    """The switch. OFF by default and reversible at any moment: turning it
+    off stops the grammar riding the next render, and every take already
+    made under it keeps its own record of having done so."""
+    from . import cinematography
+    return cinematography.save_setting(
+        key=body.get("key"), prompt_rides=body.get("prompt_rides"))
+
+
 @app.get("/api/bible/house-style")
 def api_house_style() -> dict:
     """This production's own rendering style, read from what already

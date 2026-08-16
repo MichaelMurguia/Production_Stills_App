@@ -5156,6 +5156,8 @@ async function renderWizard() {
       a cinematographer picks whatever lens gets the shot.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
     ...travels("#cam-default"),
+    onPicked: st => saveCineSetting({ key: st?.key || "" }),
+    footer: cineRideSwitch,
   });
 
   await loadBibleEditor();
@@ -7442,6 +7444,58 @@ const TEXTURE_STYLES = [
 // Populated by loadCinemaStyles(); empty until it resolves.
 const CINEMA_STYLES = [];
 
+// The switch (user 2026-08-16: "we need to evaluate the output — so we
+// need to be able to roll this back"). OFF by default, so a render is
+// byte-identical to before until it is thrown; throwing it back stops the
+// grammar riding the next render, and every take already made under it
+// keeps its own record of having done so. The consequence is stated here
+// rather than discovered in the output.
+async function saveCineSetting(patch) {
+  try { return await api("/api/cinematography/setting",
+                         { method: "PUT", json: patch }); }
+  catch (err) { toast(err.message, true); }
+}
+
+const BR = String.fromCharCode(10);
+
+async function cineRideSwitch(host) {
+  if (!host) return;
+  let s;
+  try { s = await api("/api/cinematography/setting"); } catch { return; }
+  const draw = () => {
+    host.innerHTML = `
+      <div class="gate-strip lock-strip cine-ride">
+        <span class="gate-label">PROMPT</span>
+        <span class="gate-text">${s.prompt_rides
+          ? `This grammar's image-model prompt <b>rides every render</b> —
+             about a page of directive, after the camera and subordinate to
+             it on framing. Every take records that it rode.`
+          : `This grammar shapes the bible only. Its image-model prompt —
+             the page the card links to — <b>does not reach a render</b>
+             unless you turn it on.`}</span>
+        <button class="block-act" data-f="ride">${
+          s.prompt_rides ? "Stop it riding renders" : "Let it ride every render"}</button>
+      </div>`;
+    $("[data-f=ride]", host).onclick = async () => {
+      const next = !s.prompt_rides;
+      if (next && !(await askConfirm(
+        "Let the grammar ride every render",
+        ["The chosen grammar's full image-model prompt joins every render "
+         + "prompt from now on — about a page of directive.",
+         "This WILL change what comes out. Takes you have already approved "
+         + "are untouched, and every new take records whether the grammar "
+         + "rode it, so you can tell them apart.",
+         "Reversible at any time: turning it off stops it riding the "
+         + "next render."].join(BR + BR),
+        "Let it ride"))) return;
+      const r = await saveCineSetting({ prompt_rides: next });
+      if (r) { s = r; draw(); toast(next
+        ? "The grammar now rides every render." : "The grammar no longer rides renders."); }
+    };
+  };
+  draw();
+}
+
 async function loadCinemaStyles() {
   if (CINEMA_STYLES.length) return CINEMA_STYLES;
   let d;
@@ -7606,7 +7660,8 @@ function plateShots(key) {
 }
 
 function openStylePicker({ title, definition, styles, current, onPick,
-                          uploadRole, uploadLabel, extra = "", onOpen, onClose }) {
+                          uploadRole, uploadLabel, extra = "", onOpen, onClose,
+                          onPicked, footer }) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   const head = t => String(t).slice(0, 110);
@@ -7641,6 +7696,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
         </div>
       </div>
       ${extra}
+      <div data-f="footer"></div>
       <div class="modal-actions">
         <button class="ghost" data-f="cancel">Cancel</button>
         <button class="primary" data-f="ok">Use this</button>
@@ -7706,9 +7762,11 @@ function openStylePicker({ title, definition, styles, current, onPick,
     }
   };
   showAttached();
+  footer?.($("[data-f=footer]", ov));
   onOpen?.(ov, showAttached);
   $("[data-f=ok]", ov).onclick = () => {
     onPick((own.value.trim() || picked).trim());
+    onPicked?.(styles.find(x => x.value === picked) || null);
     close();
   };
 }
