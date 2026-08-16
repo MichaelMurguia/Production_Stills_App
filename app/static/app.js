@@ -604,6 +604,13 @@ const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false)
 // Revision identity (one board per unit, 2026-08-13) — mirrors
 // app/revisions.py. Prefer server-sent revision fields when present;
 // the regex is the client's fallback.
+// Whole-word containment: "shop" must not match "workshop". One copy —
+// the locations table and the required-object matcher both need it, and
+// two copies of a matching rule is how two surfaces start disagreeing
+// about what counts as a match.
+const wordIn = (needle, hay) => !!needle && new RegExp(
+  `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
+
 const baseOf = id => String(id).replace(/_R\d+$/, "");
 const revOf = s => Number(s?.revision || 1);
 
@@ -4307,8 +4314,6 @@ async function renderWizard() {
   let wizCov;
   const normLoc = s => String(s).replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
     .replace(/[—–−]/g, "-").replace(/\s+/g, " ").toLowerCase().trim();
-  const wordIn = (needle, hay) => !!needle && new RegExp(
-    `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
   // D4 (PRODUCTION_DESIGN_V3) — labelled columns, fixed tracks; the gate
   // is a withheld verb (NEEDS THE BIBLE), never a button; once the Bible
   // exists the cell is the real verb.
@@ -6557,10 +6562,42 @@ async function openSpecEditor(specId) {
   // An object "has reference material" when it matches a cast/subject card
   // with linked images, or an approved reference's role suffix.
   const approvedRefs = allRefs.filter(r => r.status === "APPROVED");
+  // A required object names a subject the way the SCRIPT does, not the way
+  // the cast card is filed (user-caught 2026-08-16: "the script
+  // specifically mentions Sal — why would the required objects not pick up
+  // Sal Craft? I had to add manually").
+  //
+  // The old test asked whether the phrase contained the card's WHOLE name.
+  // "Sal inside the cryochamber" contains "Sal" and not "Sal Craft", so it
+  // failed — and so did every other multi-word character in the
+  // production: Kyra McGuire, Tom McGuire, Charlie Stanner. Only a card
+  // named with a single token, like GT40, ever matched. The failure was
+  // silent: no REF marker, and nothing saying why.
+  //
+  // A card's name now matches on any of its own words, whole-word, and
+  // AMBIGUITY REFUSES rather than guesses — "McGuire" alone belongs to two
+  // characters, and picking one would attach the wrong face to a panel.
+  const nameWords = n => String(n).toLowerCase()
+    .split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+
+  const subjectFor = (o) => {
+    const withRefs = subjects.filter(s => (s.ref_ids || []).length);
+    // The whole name is still the strongest signal and wins outright.
+    const exact = withRefs.find(s => wordIn(s.name.toLowerCase(), o)
+                                  || s.name.toLowerCase().includes(o));
+    if (exact) return exact;
+    // Ambiguity is judged over the WHOLE cast, not just the cards that
+    // happen to have photos: "McGuire" belongs to two characters whether
+    // or not both have been photographed, and which one is meant is the
+    // question. Attaching the wrong face is worse than no marker.
+    const named = subjects.filter(s => nameWords(s.name).some(w => wordIn(w, o)));
+    if (named.length !== 1) return null;
+    return (named[0].ref_ids || []).length ? named[0] : null;
+  };
+
   const refInfoFor = (obj) => {
     const o = String(obj).toLowerCase();
-    const subj = subjects.find(s => (s.ref_ids || []).length &&
-      (o.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(o)));
+    const subj = subjectFor(o);
     if (subj) return `${subj.name}: ${subj.ref_ids.length} image(s) in the cast & subjects collection`;
     const ref = approvedRefs.find(r => {
       const suffix = String(r.role).split("—")[1]?.trim().toLowerCase();
