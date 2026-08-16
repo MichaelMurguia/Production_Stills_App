@@ -6208,7 +6208,9 @@ async function renderSpecs(openId = null) {
   persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt",
                                  "spec-auto-mode", "spec-auto-btype",
                                  "spec-auto-provider"]);
-  persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject", "spec-new-mode", "spec-new-btype"]);
+  persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject",
+                                "spec-new-source", "spec-new-panels",
+                                "spec-new-mode", "spec-new-btype"]);
 
   await fillNarrativeSelect($("#spec-auto-provider"));
 
@@ -6401,22 +6403,69 @@ async function renderSpecs(openId = null) {
     }
   });
 
+  // Three fields, three ways to fill them (user 2026-08-16). A brief means
+  // "read the screenplay for it"; a pasted section means "this IS the
+  // material, do not go looking"; typed panels pin the panels, and an
+  // empty panels box means the model decides what the content needs.
+  // Nothing typed at all still makes a genuinely blank sheet, which is
+  // what this door used to be and is still worth having.
+  $("#spec-new-open-screenplay").onclick = () =>
+    window.open("/api/screenplay/file", "_blank", "noopener");
+  $("#spec-new-autopanels").onclick = () => {
+    const box = $("#spec-new-panels");
+    box.value = "";
+    box.placeholder = "I will read the content and build the panels it needs";
+    box.focus();
+    toast("Panels left to the model — it builds what the content needs.");
+  };
+
   $("#spec-new-form").addEventListener("submit", async e => {
     e.preventDefault();
+    const btn = $("#spec-new-go");
+    const brief = $("#spec-new-subject").value.trim();
+    const source = $("#spec-new-source").value.trim();
+    const panels = $("#spec-new-panels").value.trim();
+    const body = {
+      specification_id: slugSpecId($("#spec-new-id").value),
+      mode: $("#spec-new-mode").value,
+      board_type: $("#spec-new-btype")?.value || "LOCATION",
+    };
+    // Neither source given: the old blank sheet, unchanged.
+    if (!brief && !source) {
+      try {
+        const spec = await api("/api/specs", { method: "POST",
+          json: { ...body, subject: brief || body.specification_id } });
+        toast(`${spec.specification_id} created — an empty sheet to fill.`);
+        localStorage.removeItem("blankSpecDraft");
+        renderSpecs(spec.specification_id);
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
+    btn.disabled = true;
+    const status = $("#spec-new-status") || $("#spec-auto-status");
+    const busy = status && startBusy(status,
+      source ? "Breaking down the section you pasted…"
+             : "Reading the screenplay and drafting the breakdown…",
+      panels ? "building the panels you named" : "deciding the panels it needs");
     try {
-      const spec = await api("/api/specs", {
-        method: "POST",
-        json: {
-          specification_id: slugSpecId($("#spec-new-id").value),
-          subject: $("#spec-new-subject").value,
-          mode: $("#spec-new-mode").value,
-          board_type: $("#spec-new-btype")?.value || "LOCATION",
-        },
-      });
-      toast(`${spec.specification_id} created.`);
+      const spec = await api("/api/specs/autofill", { method: "POST", json: {
+        ...body,
+        prompt: brief,
+        source_text: source,
+        panels,
+        provider: $("#spec-auto-provider")?.value || "gemini",
+      } });
+      busy?.done();
+      toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
+            + `${spec.evidence_ledger.length} evidence rows`
+            + (source ? " — from the section you pasted." : "."));
       localStorage.removeItem("blankSpecDraft");
       renderSpecs(spec.specification_id);
-    } catch (err) { toast(err.message, true); }
+    } catch (err) {
+      busy?.done();
+      toast(err.message, true);
+      btn.disabled = false;
+    }
   });
 
   const specs = await api("/api/specs");

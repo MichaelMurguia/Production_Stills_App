@@ -2950,6 +2950,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-own-row.on .rs-own-in { border-color: var(--ink); }
 .rs-own-thumbs { display: flex; gap: 5px; }
 .rs-own-thumbs .rs-thumb { width: 34px; height: 34px; object-fit: cover; }
+/* UNCANONIZED — 2026-08-16 — the breakdown door's stated notes. Each
+   field says what it DOES to the work rather than what it is filed as
+   (A1): the brief reads the screenplay, a pasted section wins over it,
+   and the Spec ID leads with the reassurance because it changes nothing
+   about the render. */
+.f-note { display: block; margin-top: 4px; font-size: 9.5px;
+  letter-spacing: .07em; color: var(--ink-faint); }
 .rs-prompt-modal { width: min(760px, 94vw); max-height: 86vh;
   display: flex; flex-direction: column; }
 .rs-prompt-text { flex: 0 1 auto; overflow: auto; margin: 6px 0 0;

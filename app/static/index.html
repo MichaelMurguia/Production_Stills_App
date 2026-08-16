@@ -388,18 +388,37 @@
         </div>
 
         <div class="door door-blank">
-          <p class="door-head">Blank sheet
-            <span class="door-nature mono">YOU FILL EVERYTHING</span></p>
+          <p class="door-head">Build one breakdown
+            <span class="door-nature mono">YOU SAY WHAT · I FETCH THE REST</span></p>
           <form id="spec-new-form">
-            <label class="f-wide">Subject
-              <input type="text" id="spec-new-subject" placeholder="what this breakdown covers…" required title="What this board is about — a short human-readable name for the location, scene, prop, or character."></label>
+            <!-- User 2026-08-16: two ways in, and the panels either typed
+                 or generated. Empty subject + empty section still creates
+                 a genuinely blank sheet, which is what this door used to
+                 be and is still worth having. -->
+            <label class="f-wide" title="Say what the board should show. The screenplay is read for it automatically — you do not have to find the scene.">What should I get?
+              <input type="text" id="spec-new-subject" placeholder="e.g. Tom McGuire and Sal Craft's final confrontation">
+              <span class="f-note mono">I READ THE SCREENPLAY FOR IT</span></label>
+
+            <label class="f-wide" title="Paste the scene itself and the breakdown comes from THIS text — the screenplay is not consulted, so a scene that is not in the uploaded draft yet still works.">
+              <span class="f-lab">Or paste a screenplay section
+                <button type="button" class="text-act" id="spec-new-open-screenplay"
+                  title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
+              <textarea id="spec-new-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
+              <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
+
+            <label class="f-wide" title="Name the panels this board should contain, one per line, in order. Leave it empty and the panels are generated from the content.">
+              <span class="f-lab">What panels should it include?
+                <button type="button" class="text-act" id="spec-new-autopanels"
+                  title="Leave the panels to the model — it reads the content and builds the ones it needs">Auto-generate</button></span>
+              <textarea id="spec-new-panels" rows="4" placeholder="one per line — or leave empty and I will decide"></textarea></label>
             <!-- Spec ID takes its own row: CANON_EXTRACTION and
                  LIGHTING_STUDY need ~300px together, which no honest
                  split of a shared row affords at this column width.
                  Deviation from mock 13a's row grouping, so that nothing
                  truncates. -->
             <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-              <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required></label>
+              <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required>
+              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
             <div class="door-pair">
               <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
                 <select id="spec-new-mode">
@@ -412,7 +431,8 @@
               </label>
             </div>
             <div class="door-run door-run-end">
-              <button type="submit" class="ghost">Create blank sheet</button>
+              <button type="submit" class="ghost" id="spec-new-go">Create breakdown</button>
+              <span id="spec-new-status" class="mini"></span>
             </div>
           </form>
         </div>

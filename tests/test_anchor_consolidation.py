@@ -1091,5 +1091,67 @@ class OneTrayForBothWaysIn(unittest.TestCase):
             self.assertIn('say(err.message, "bad")', seg[j:j + 300], fn)
 
 
+class TheBreakdownDoorAsksThreeThings(unittest.TestCase):
+    """User 2026-08-16: two ways in and the panels either typed or
+    generated. The old door asked for a Subject and gave you an empty
+    sheet; the model could already read the screenplay, it just was not
+    offered here."""
+
+    def form(self):
+        i = HTML.index('<form id="spec-new-form">')
+        return HTML[i:HTML.index("</form>", i)]
+
+    def test_the_three_fields_are_there(self):
+        f = self.form()
+        for probe in ("What should I get?", "Or paste a screenplay section",
+                      "What panels should it include?"):
+            self.assertIn(probe, f, probe)
+
+    def test_each_states_what_it_does_to_the_work(self):
+        """A1: a label names its effect, not its filing destination."""
+        f = self.form()
+        self.assertIn("I READ THE SCREENPLAY FOR IT", f)
+        self.assertIn("PASTED TEXT WINS — THE SCREENPLAY IS NOT READ", f)
+        self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", f)
+
+    def test_the_section_carries_a_way_to_read_the_screenplay(self):
+        self.assertIn('id="spec-new-open-screenplay"', self.form())
+        self.assertIn('window.open("/api/screenplay/file"', JS)
+
+    def test_auto_generate_means_empty_not_a_flag(self):
+        """An empty panels box already means "you decide" server-side, so
+        the button says so rather than inventing a second way to say it."""
+        i = JS.index('$("#spec-new-autopanels").onclick')
+        seg = JS[i:i + 400]
+        self.assertIn('box.value = ""', seg)
+        self.assertIn("build the panels it needs", seg)
+
+    def test_a_pasted_section_beats_the_screenplay(self):
+        af = (ROOT / "app/autofill.py").read_text(encoding="utf-8")
+        self.assertIn("if source_text.strip():", af)
+        self.assertIn("THE ATTACHED TEXT IS THE SOURCE", af)
+        self.assertIn("do not assume", af)
+
+    def test_typed_panels_are_pinned_in_order(self):
+        af = (ROOT / "app/autofill.py").read_text(encoding="utf-8")
+        self.assertIn("THE PANELS ARE GIVEN", af)
+        self.assertIn("do not add, drop or reorder", af)
+
+    def test_an_empty_door_still_makes_an_empty_sheet(self):
+        """The thing this door used to be, and still worth having."""
+        i = JS.index('$("#spec-new-form").addEventListener')
+        seg = JS[i:i + 1400]
+        self.assertIn("if (!brief && !source)", seg)
+        self.assertIn('api("/api/specs", { method: "POST"', seg)
+
+    def test_it_reports_while_it_drafts(self):
+        i = JS.index('$("#spec-new-form").addEventListener')
+        seg = JS[i:i + 2000]
+        self.assertIn("startBusy(status", seg)
+        self.assertIn("Breaking down the section you pasted", seg)
+        self.assertIn("btn.disabled = true", seg)
+        self.assertIn("btn.disabled = false", seg, "and comes back on failure")
+
+
 if __name__ == "__main__":
     unittest.main()
