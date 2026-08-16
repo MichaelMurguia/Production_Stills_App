@@ -541,6 +541,73 @@ def scene_anchor(subject: str, max_chars: int = 7000) -> dict:
             "text": quoted}
 
 
+# --------------------------------------------------------------------- acts
+
+_ACT_RE = re.compile(
+    r"^\s*ACT\s+(ONE|TWO|THREE|FOUR|FIVE|IV|V|I{1,3}|[1-5])\b"
+    r"[\s.:\-‐‑‒–—―]*(.*?)\s*$", re.I)
+_ACT_WORD = {"ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5,
+             "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
+             "1": 1, "2": 2, "3": 3, "4": 4, "5": 5}
+_ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V"}
+
+
+def _acts(lines: list[str], scenes: list[dict]) -> dict:
+    """Three acts over the screenplay, chronologically.
+
+    A screenplay that MARKS its acts gets its own divisions and its own
+    titles — that is the author's structure and we do not second-guess it.
+    Most features do not mark them, so the fallback is the standard
+    three-act split by scene position (25/50/25), unnamed: `ACT I` with no
+    title is honest, while a title we invented would be a claim about the
+    script we cannot support.
+
+    Returns {acts: [...], derived: bool}; each act carries the scene index
+    range it owns, so a location is placed by the act its FIRST scene sits
+    in — where it enters the story.
+    """
+    marks = []
+    for i, raw in enumerate(lines):
+        t = raw.strip()
+        if not t or len(t) > 60:
+            continue
+        m = _ACT_RE.match(t)
+        if not m:
+            continue
+        n = _ACT_WORD.get(m.group(1).upper())
+        if not n or any(x["n"] == n for x in marks):
+            continue
+        title = re.sub(r"[\s.:\-–—]+$", "", m.group(2) or "").strip()
+        # a marker in dialogue or action is not a division; act headings
+        # sit alone in caps
+        if t != t.upper():
+            continue
+        marks.append({"n": n, "line": i, "title": title})
+    marks.sort(key=lambda x: x["line"])
+
+    total = len(scenes)
+    if len(marks) >= 2 and total:
+        acts = []
+        for k, mk in enumerate(marks):
+            end_line = marks[k + 1]["line"] if k + 1 < len(marks) else len(lines)
+            first = next((idx for idx, sc in enumerate(scenes)
+                          if sc["line"] >= mk["line"]), total)
+            last = next((idx for idx, sc in enumerate(scenes)
+                         if sc["line"] >= end_line), total)
+            acts.append({"n": mk["n"], "roman": _ROMAN.get(mk["n"], str(mk["n"])),
+                         "title": mk["title"], "start": first, "end": last})
+        if any(a["end"] > a["start"] for a in acts):
+            return {"acts": acts, "derived": True}
+
+    # The standard shape, unnamed.
+    cut1, cut2 = round(total * 0.25), round(total * 0.75)
+    return {"derived": False, "acts": [
+        {"n": 1, "roman": "I", "title": "", "start": 0, "end": cut1},
+        {"n": 2, "roman": "II", "title": "", "start": cut1, "end": cut2},
+        {"n": 3, "roman": "III", "title": "", "start": cut2, "end": total},
+    ]}
+
+
 def locations() -> dict:
     """Slugline coverage map: every location the screenplay names, scene
     count, and a stated detail heuristic (non-empty lines inside its scenes —
@@ -582,6 +649,10 @@ def locations() -> dict:
         g["scenes"] += 1
         g["body_lines"] += sc["body"]
         g["scene_list"].append({"heading": sc["heading"], "line": sc["line"]})
+        # chronological identity: a location belongs to the act it ENTERS
+        # the story in, which is the act of its first scene.
+        g.setdefault("first_line", sc["line"])
+        g.setdefault("first_index", None)
 
     # Sheet match: a spec covers a location when either name contains the
     # other (apostrophes/dashes folded — PDFs and specs disagree on curly
@@ -601,8 +672,21 @@ def locations() -> dict:
         return bool(needle) and bool(
             re.search(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", hay))
 
+    act_info = _acts(lines, scenes)
+    index_of = {sc["line"]: i for i, sc in enumerate(scenes)}
+
+    def act_of(first_line: int) -> int:
+        i = index_of.get(first_line, 0)
+        for a in act_info["acts"]:
+            if a["start"] <= i < a["end"]:
+                return a["n"]
+        return act_info["acts"][-1]["n"]
+
     out = []
-    for g in sorted(groups.values(), key=lambda x: -x["scenes"]):
+    # Chronological (user 2026-08-16). Scene COUNT was the old order and it
+    # answered "which location is biggest" — a different question from the
+    # one a location list is asked, which is where the story goes.
+    for g in sorted(groups.values(), key=lambda x: x["first_line"]):
         lc = _norm(g["location"])
         match = next((s for s in sheets if s["loc"] and
                       (word_in(s["loc"], lc) or word_in(lc, s["loc"]))), None)
@@ -618,10 +702,13 @@ def locations() -> dict:
             "body_lines": g["body_lines"],
             "detail": detail,
             "scene_list": g["scene_list"],
+            "first_line": g["first_line"],
+            "act": act_of(g["first_line"]),
             "sheet": ({"spec_id": match["spec_id"], "locked": match["locked"],
                        "status": match["status"]} if match else None),
         })
     return {"available": True, "locations": out,
+            "acts": act_info["acts"], "acts_derived": act_info["derived"],
             "scene_count": len(scenes)}
 
 

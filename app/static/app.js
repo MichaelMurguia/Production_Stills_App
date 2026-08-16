@@ -3253,55 +3253,6 @@ async function renderSettings(openTab = "") {
   }
 }
 
-async function renderLessons() {
-  const host = $("#lessons-list");
-  if (!host) return;
-  const lessons = await api("/api/lessons");
-  host.innerHTML = "";
-
-  const addRow = document.createElement("div");
-  addRow.className = "row";
-  addRow.innerHTML = `
-    <input type="text" id="lesson-new" placeholder="new project-wide rule…" style="flex:1"
-      title="A standing rule injected into every future prompt (all boards, all panels). Name unwanted content to exclude it, or state a directive to follow.">
-    <button class="ghost" id="lesson-add">+ Add rule</button>`;
-  host.append(addRow);
-  const doAdd = async () => {
-    const reason = $("#lesson-new").value.trim();
-    if (!reason) return;
-    try {
-      await api("/api/lessons", { method: "POST", json: { reason } });
-      toast("Rule added — every future prompt includes it.");
-      renderLessons();
-    } catch (err) { toast(err.message, true); }
-  };
-  $("#lesson-add", addRow).onclick = doAdd;
-  $("#lesson-new", addRow).addEventListener("keydown", e => {
-    if (e.key === "Enter") { e.preventDefault(); doAdd(); }
-  });
-
-  if (!lessons.length) {
-    host.append(Object.assign(document.createElement("p"), {
-      className: "mini",
-      textContent: "No standing rules yet. Add one above — rejection reasons now feed the panel's own REJECTION FEEDBACK automatically instead of landing here.",
-    }));
-  }
-  for (const l of lessons) {
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `
-      <span style="flex:1">✕ ${esc(l.reason)} <span class="mini">(${esc(l.source)}, ${esc(l.added_at)})</span></span>
-      <button class="ghost">Remove</button>`;
-    $("button", row).onclick = async () => {
-      try {
-        await api("/api/lessons/remove", { method: "POST", json: { reason: l.reason } });
-        toast("Lesson removed.");
-        renderLessons();
-      } catch (err) { toast(err.message, true); }
-    };
-    host.append(row);
-  }
-}
 
 /* ----------------------------------------------------------- setup wizard */
 
@@ -4502,37 +4453,57 @@ async function renderWizard() {
     const groups = wizCov?.available ? wizCov.locations : [];
 
     if (envs.length) {
-      // Grouped (plan P7): rows are the slugline locations, grouped by the
-      // read's verbatim assignments — zero fuzzy matching. Anything the
-      // read didn't place lands under UNASSIGNED; every row can reassign
-      // through the analysis save path.
+      // Grouped by ACT (user 2026-08-16), chronologically. Environment was
+      // the old grouping and it answered "what does this place inherit" —
+      // a question the per-row selector still answers. The list itself is
+      // asked something else: where does the story GO. Acts come from the
+      // screenplay when it marks them, with its own titles; otherwise the
+      // standard three-act split, unnamed, because `ACT I` with no title is
+      // honest and a title we invented is a claim we cannot support.
       const byLoc = Object.fromEntries(groups.map(g => [g.location, g]));
       const assignedTo = {};
       envs.forEach(e => (e.locations || []).forEach(l => { assignedTo[l] = e.name; }));
-      const grouped = envs.map(e => ({ name: e.name, locs: e.locations || [] }));
-      const unassigned = groups.map(g => g.location).filter(l => !assignedTo[l]);
-      if (unassigned.length) grouped.push({ name: "UNASSIGNED", locs: unassigned });
-      const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       const envNames = envs.map(e => e.name);
+      const acts = wizCov?.acts || [];
+      const placed = new Set();
+      const grouped = acts.map(a => {
+        const locs = groups.filter(g => g.act === a.n).map(g => g.location);
+        locs.forEach(l => placed.add(l));
+        return {
+          key: `act-${a.n}`,
+          label: `ACT ${a.roman}${a.title ? ` — ${a.title.toUpperCase()}` : ""}`,
+          locs,
+        };
+      });
+      // Anything the read named that the slugline parse never saw has no
+      // scene, so it has no act — said outright rather than filed into one.
+      const actless = (getAnalysis()?.key_locations || [])
+        .filter(n => !placed.has(n) && !byLoc[n]);
+      if (actless.length) grouped.push({
+        key: "no-act", label: "NOT IN A SLUGLINE — NO SCENE TO PLACE IT IN",
+        locs: actless });
+      const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       buildLocFinder(secHost, {
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">FIVE SHOWN PER ENVIRONMENT</span></span></div>`,
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">${
+          wizCov?.acts_derived ? "ACTS FROM THE SCREENPLAY" : "STANDARD THREE-ACT SPLIT"
+        } · FIVE SHOWN PER ACT</span></span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
         rows: (needle, q) => grouped.map(g => {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
-          const cut = capList(locs, g.name, { searching: !!needle });
-          return `<div class="loc-group">${esc(g.name.toUpperCase())} — ${locs.length}${
+          const cut = capList(locs, g.key, { searching: !!needle });
+          return `<div class="loc-group">${esc(g.label)} — ${locs.length}${
             cut.capped ? ` <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}</div>`
             + cut.shown.map(n => wizLocRow(n, byLoc[n]?.sheet, `
-              <select class="loc-reassign" data-loc="${esc(n)}" title="Move this location to another environment — saved to the analysis immediately.">
+              <select class="loc-reassign" data-loc="${esc(n)}" title="The environment this location inherits its palette, light and atmosphere from — saved to the analysis immediately.">
                 ${["UNASSIGNED", ...envNames].map(en =>
                   `<option${(assignedTo[n] || "UNASSIGNED") === en ? " selected" : ""}>${esc(en)}</option>`).join("")}
               </select>`)).join("")
-            + capRow(g.name, cut.hidden, g.name.toUpperCase());
+            + capRow(g.key, cut.hidden, g.label);
         }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
         onDraw: (redraw) => {
-          // Expanding a group redraws the finder in place — the needle and
+          // Expanding an act redraws the finder in place — the needle and
           // the scroll position stay where the user left them.
           wireCapRows(secHost, redraw);
           $$(".loc-reassign", secHost).forEach(sel => sel.onchange = () => {
@@ -5271,7 +5242,6 @@ async function renderWizard() {
       toast(`Art Direction Bible saved — Breakdowns are open.`);
     } catch (err) { toast(err.message, true); }
   };
-  renderLessons();
 }
 
 /* ------------------------------------------------------------- references */
