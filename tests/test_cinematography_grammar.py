@@ -225,5 +225,34 @@ class ItSurvivesConcurrentRenders(Grammar):
         self.assertFalse(errors, errors)
 
 
+class NothingForcesThePanelWider(unittest.TestCase):
+    """A regression shipped 2026-08-16: replacing a neighbouring CSS block
+    deleted `.cine-ride`, so the strip fell back to `.lock-strip`'s
+    `flex-direction: row` and `gate-text { flex: none }` — right for one
+    short fact, and it blew a paragraph out to twice the panel's width.
+    The symptom was a horizontal scrollbar on the whole modal."""
+
+    CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+
+    def test_the_strip_wraps_and_its_text_can_shrink(self):
+        import re
+        b = re.search(r"\.cine-ride \{([^}]*)\}", self.CSS)
+        self.assertTrue(b, ".cine-ride was deleted again")
+        self.assertIn("flex-wrap: wrap", b.group(1))
+        t = re.search(r"\.cine-ride \.gate-text \{([^}]*)\}", self.CSS)
+        self.assertTrue(t)
+        self.assertIn("flex: 1 1", t.group(1))
+        self.assertIn("min-width: 0", t.group(1))
+
+    def test_the_panel_refuses_to_be_widened_by_its_contents(self):
+        """The backstop, so the next deleted block is a layout nit rather
+        than a scrollbar across the whole surface."""
+        import re
+        b = re.search(r"\.rs-modal > \* \{([^}]*)\}", self.CSS)
+        self.assertTrue(b)
+        self.assertIn("min-width: 0", b.group(1))
+        self.assertIn("max-width: 100%", b.group(1))
+
+
 if __name__ == "__main__":
     unittest.main()

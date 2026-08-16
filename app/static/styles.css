@@ -2957,6 +2957,17 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    about the render. */
 .f-note { display: block; margin-top: 4px; font-size: 9.5px;
   letter-spacing: .07em; color: var(--ink-faint); }
+/* The switch at the foot of the panel, in the lock-strip vocabulary. It
+   MUST override .lock-strip's `flex-direction: row` and `gate-text {
+   flex: none }` — that pair is right for one short fact and blows a
+   paragraph out to twice the panel's width. (Deleted by accident once,
+   2026-08-16, when a neighbouring block was replaced; the symptom was a
+   horizontal scrollbar on the whole modal.) */
+.cine-ride { flex-wrap: wrap; margin: 14px 0 0; }
+.cine-ride .gate-text { flex: 1 1 340px; min-width: 0; }
+.cine-ride b { color: var(--ink); font-weight: 600; }
+/* Nothing in this panel may force it wider than its own max-width. */
+.rs-modal > * { min-width: 0; max-width: 100%; }
 .rs-prompt-modal { width: min(760px, 94vw); max-height: 86vh;
   display: flex; flex-direction: column; }
 .rs-prompt-text { flex: 0 1 auto; overflow: auto; margin: 6px 0 0;
