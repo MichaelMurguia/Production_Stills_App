@@ -130,8 +130,11 @@ class AddReferenceInPlacePins(unittest.TestCase):
                          "a dismissal is not the view's primary action")
 
     def test_the_widget_is_the_existing_dialog_approved_and_refreshing(self):
-        self.assertIn("addReferenceDialog({ head: \"PROP_REFERENCE\", title: b.dataset.addref }",
-                      JS)
+        """Upload is now the SECOND door — `+ REF` first asks whether the
+        library already holds the plate (user 2026-08-16) — but when the
+        answer is "new" it must still be this same dialog, approved, and
+        refreshing the caller."""
+        self.assertIn('addReferenceDialog({ head: "PROP_REFERENCE", title: obj }', JS)
         self.assertIn("{ approve: true, onDone: () => renderBoardPanels(specId) }",
                       JS)
         self.assertIn('confirmLabel: approve ? "Add & approve" : "Add to library"',

@@ -628,6 +628,54 @@ const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false)
 const wordIn = (needle, hay) => !!needle && new RegExp(
   `(?<![a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`).test(hay);
 
+// Words that name nothing. A group really is called "P02 SHACK IN THE
+// MEADOW", and "the" clears three letters — without this, every object
+// containing the word "the" matches it.
+const NAME_STOPWORDS = new Set([
+  "the", "and", "for", "with", "from", "into", "its", "his", "her", "their",
+  "that", "this", "over", "under", "onto", "off",
+]);
+
+// The words of a name worth matching on. Under three letters matches half
+// the script. Module scope for the same reason wordIn is: FOUR surfaces
+// were asking "does this phrase name that thing" with four different
+// rules, and they disagreed (2026-08-16).
+// Both sides of a name comparison get the same normalisation, or the
+// difference between how a breakdown writes a thing and how its plate is
+// filed becomes a missed match. Two real ones from the user's own board:
+// "Sal's eyes" vs the card SAL CRAFT (possessive), and "closing
+// cryochamber" vs the group SAL'S CRYO-CHAMBER (hyphen).
+const normName = s => String(s).toLowerCase()
+  .replace(/['’]s\b/g, "")     // possessive: sal's -> sal
+  .replace(/['’]/g, "")        // any other apostrophe closes up
+  .replace(/-/g, "");          // cryo-chamber -> cryochamber
+
+const nameWords = n => normName(n)
+  .split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !NAME_STOPWORDS.has(w));
+
+// Does this phrase name that thing? The whole name wins outright; failing
+// that, any of the name's own words appearing whole-word in the phrase.
+//
+// Deliberately NOT the stricter distinctive-word rule used for SUBJECT
+// IDENTITIES in generate.py. There, a shared word must refuse: putting
+// one McGuire's traits on the other writes a wrong fact into the prompt.
+// Here the answer only decides which plates are OFFERED and pre-ticked,
+// where the two failures are not symmetric — an extra plate is visible in
+// step 04 and one click to untick, a missing one is invisible and renders
+// a stranger's face. "Sal's eyes" matched nothing because "sal" is shared
+// by SAL CRAFT and SAL'S CRYO-CHAMBER, which are a person and his prop,
+// not two people (user-caught 2026-08-16).
+const namesPhrase = (obj, name) => {
+  const o = normName(obj), n = normName(name);
+  if (!o || !n) return false;
+  // Word-bounded BOTH ways. A bare substring test let the group "SOD"
+  // match the object "sodium vapour lamp" — the same failure wordIn was
+  // written for ("shop" must not match "workshop"), reintroduced by the
+  // whole-name shortcut sitting in front of it.
+  if (wordIn(n, o) || wordIn(o, n)) return true;
+  return nameWords(n).some(w => wordIn(w, o));
+};
+
 const baseOf = id => String(id).replace(/_R\d+$/, "");
 const revOf = s => Number(s?.revision || 1);
 
@@ -5775,6 +5823,54 @@ function castModal(rec, onDone) {
   $("[data-f=subtitle]", ov).focus();
 }
 
+// An object with no matching reference has two answers, not one (user
+// 2026-08-16: "in this dialogue I need to be able to select existing
+// ref"). Uploading was the only door, so a plate the library already held
+// had to be photographed again whenever the object's wording did not
+// resemble its role. Resolves to a reference record, the string "new", or
+// null if the user backed out.
+//
+// The plates lead, because choosing a reference is a thing you do by
+// LOOKING — the same reason the plate viewer shows photographs rather
+// than a list of ids.
+function pickReferenceSource(obj, refs) {
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    const cards = refs.map(r => `
+      <button type="button" class="ref-pick" data-pick="${esc(r.id)}"
+              title="${esc(r.role)}">
+        <img src="/api/references/${esc(r.id)}/image?size=thumb" alt="" loading="lazy">
+        <span class="ref-pick-id mono">${esc(r.id)}</span>
+        <span class="ref-pick-role mono">${esc(String(r.role).toUpperCase())}</span>
+      </button>`).join("");
+    ov.innerHTML = `
+      <div class="modal ref-pick-modal" role="dialog" aria-modal="true">
+        <div class="modal-title">A reference for “${esc(obj)}”</div>
+        <p class="modal-body">Nothing in the library is named closely enough to
+        attach itself. Point this object at a plate you already have, or supply a
+        new one.</p>
+        <p class="mini mono">${refs.length} APPROVED PLATE${refs.length === 1 ? "" : "S"}
+        · CHOOSING ONE TICKS ITS GROUP FOR THIS PANEL ONLY</p>
+        <div class="ref-pick-grid">${cards
+          || '<span class="mini">the library has no approved plates yet</span>'}</div>
+        <div class="modal-actions">
+          <button class="ghost" data-f="new">Upload a new image instead</button>
+          <button class="ghost" data-f="cancel">Cancel</button>
+        </div>
+      </div>`;
+    document.body.append(ov);
+    const done = v => { ov.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
+    const onKey = e => { if (e.key === "Escape") done(null); };
+    document.addEventListener("keydown", onKey);
+    ov.addEventListener("click", e => { if (e.target === ov) done(null); });
+    $("[data-f=cancel]", ov).onclick = () => done(null);
+    $("[data-f=new]", ov).onclick = () => done("new");
+    $$("[data-pick]", ov).forEach(b => b.onclick = () =>
+      done(refs.find(r => r.id === b.dataset.pick)));
+  });
+}
+
 // Adding to the library is a dialog now (the intake row moved behind the
 // button per ONE_LIBRARY_PLAN D2) — the vocabulary picker plus a file field.
 // Callable from anywhere (user 2026-08-14: supply a reference right on the
@@ -6591,12 +6687,12 @@ async function openSpecEditor(specId) {
   // named with a single token, like GT40, ever matched. The failure was
   // silent: no REF marker, and nothing saying why.
   //
-  // A card's name now matches on any of its own words, whole-word, and
+  // A card's name matches on any of its own words, whole-word, and
   // AMBIGUITY REFUSES rather than guesses — "McGuire" alone belongs to two
   // characters, and picking one would attach the wrong face to a panel.
-  const nameWords = n => String(n).toLowerCase()
-    .split(/[^a-z0-9]+/).filter(w => w.length >= 3);
-
+  // (`nameWords` is the module-scope one; this had its own copy without
+  // the possessive/hyphen normalisation or the stoplist, so this surface
+  // and the REF marker answered the same question differently.)
   const subjectFor = (o) => {
     const withRefs = subjects.filter(s => (s.ref_ids || []).length);
     // The whole name is still the strongest signal and wins outright.
@@ -8827,10 +8923,16 @@ async function renderBoardPanels(specId) {
       (refGroups[key] ??= { name: suffix || r.role, head: roleHead(r.role), ids: [] }).ids.push(r.id);
     }
     const groupList = Object.values(refGroups);
-    const matches = (obj, name) => {
-      const o = String(obj).toLowerCase(), n = String(name).toLowerCase();
-      return o.includes(n) || n.includes(o);
-    };
+    // The fourth copy of "does this phrase name that thing" (user-caught
+    // 2026-08-16: this panel has "Sal's eyes" with no REF — "it should
+    // find that ref because I have Sal Ref"). It asked whether either
+    // string CONTAINED the other, so the group "SAL CRAFT" did not match
+    // the object "Sal's eyes" and the plates never even offered
+    // themselves. The same defect as the workbench's subjectFor and
+    // generate.py's identity block, in the copy that drives the visible
+    // green REF marker AND the first-take tick default — so a Sal panel
+    // rendered with no Sal plate and nothing said why.
+    const matches = (obj, name) => namesPhrase(obj, name);
     const objHasRef = obj => groupList.some(g => matches(obj, g.name));
     const reqObjs = p.required_objects || [];
     const withRef = reqObjs.filter(objHasRef).length;
@@ -9515,9 +9617,38 @@ async function renderBoardPanels(specId) {
     // prefilled with the required object; approved on save (supplying it
     // deliberately IS the review) and the card re-renders so the new
     // group appears in the attach list immediately.
-    $$("[data-addref]", card).forEach(b => b.onclick = () =>
-      addReferenceDialog({ head: "PROP_REFERENCE", title: b.dataset.addref },
-        { approve: true, onDone: () => renderBoardPanels(specId) }));
+    // Two ways to give an object a reference (user 2026-08-16: "in this
+    // dialogue I need to be able to select existing ref"). Uploading was
+    // the only one, which meant re-photographing something the library
+    // already held whenever the name did not match. Choosing an existing
+    // plate ticks its group for this panel, which is the same mechanism
+    // an auto-matched group uses — nothing special-cased downstream.
+    $$("[data-addref]", card).forEach(b => b.onclick = async () => {
+      const obj = b.dataset.addref;
+      // Near-misses first. The library runs to dozens of plates and an
+      // unordered wall of thumbnails is not a choice — anything sharing a
+      // word with the object leads, then the rest in id order.
+      const near = r => namesPhrase(obj, String(r.role).split("—")[1]?.trim() || r.role);
+      const ordered = [...approvedRefs].sort((a, b2) => (near(b2) ? 1 : 0) - (near(a) ? 1 : 0));
+      const how = await pickReferenceSource(obj, ordered);
+      if (how === null) return;
+      if (how === "new") {
+        addReferenceDialog({ head: "PROP_REFERENCE", title: obj },
+          { approve: true, onDone: () => renderBoardPanels(specId) });
+        return;
+      }
+      // `how` is a chosen reference record: tick its group so it rides.
+      const g = groupList.find(x => x.ids.includes(how.id));
+      if (!g) { toast("That reference is not in a selectable group.", true); return; }
+      const box = $$(".ref-groups input", card).find(
+        x => JSON.parse(x.dataset.ids || "[]").includes(how.id));
+      if (!box) { toast("That group is not on this panel's shelf.", true); return; }
+      box.checked = true;
+      updateRefCount();
+      box.closest(".ref-row")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast(`${how.id} (${g.name}) will ride this panel's next take — `
+            + "ticked in step 04, untick it there to change your mind.");
+    });
 
     // View (user 2026-08-14, corrected same day): not a bare lightbox —
     // the full reference widget for the object, showing every matching

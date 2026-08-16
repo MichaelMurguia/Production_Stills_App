@@ -513,6 +513,30 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
    uses for a settled step (.step-confirmed), so the accent stays spent on
    what a render is about to do. */
 .report [data-f="edit-state"].settled { color: var(--ok); }
+
+/* UNCANONIZED — 2026-08-16 — choose an existing plate for a required object.
+   The library card's own anatomy at picker scale: picture first and
+   largest, then the machine facts in Courier. Amber is focus only, which
+   is one of its three sanctioned jobs — nothing here is a pipeline stage
+   and nothing is the primary action. */
+.ref-pick-modal { width: min(860px, 94vw); max-height: 86vh; overflow: auto; }
+.ref-pick-grid {
+  display: grid; gap: 10px; margin: 12px 0 4px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+.ref-pick {
+  background: var(--panel); border: 1px solid var(--line-soft);
+  border-radius: var(--radius); overflow: hidden; padding: 0;
+  display: flex; flex-direction: column; text-align: left; cursor: pointer;
+}
+.ref-pick img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.ref-pick-id { padding: 6px 8px 0; font-size: 11px; color: var(--ink); }
+.ref-pick-role {
+  padding: 0 8px 7px; font-size: 10px; color: var(--ink-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ref-pick:hover { border-color: var(--line); }
+.ref-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* The same amber, in the two places a step has to admit it is inert: a
    saved prompt means steps 01–04 no longer write this panel's text, and
    that has to be legible where the step is read, not only in the editor. */
