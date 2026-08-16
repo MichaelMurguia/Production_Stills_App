@@ -503,6 +503,12 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 .report li { margin: 3px 0; }
 .report-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .report-head button { font-size: 12px; padding: 5px 12px; }
+/* UNCANONIZED — 2026-08-16 — the compiled prompt is editable.
+   Amber marks a state the render will actually be made under, which is
+   the "current stage" role, not decoration: while this reads EDITED the
+   panel below is no longer what gets sent. It returns to dim ink the
+   moment the text matches the compile again. */
+.report [data-f="edit-state"].edited { color: var(--accent); }
 
 /* ================================================================== subnav */
 .subnav { display: flex; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }

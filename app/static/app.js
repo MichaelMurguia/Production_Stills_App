@@ -9738,6 +9738,13 @@ async function renderBoardPanels(specId) {
         // The prompt's own acts travel WITH the prompt (they used to sit on
         // the rail block that step 05 replaced): a 16k-character prompt is a
         // file, not a clipboard payload (user 2026-08-06).
+        // The verb said "Read & edit" and the body was a `<pre>`
+        // (user-caught 2026-08-16: "there is a Read and Edit button on the
+        // prompt, but I cannot edit and save it"). The override has always
+        // existed end-to-end — generate_panel takes `render_prompt` and
+        // records `prompt_source: "edited"` — but only Draft prose ever
+        // fed it, so the compiled prompt was the one thing you could not
+        // correct. It is now a textarea over the same path.
         report.innerHTML = `<div class="report">
           <div class="report-head"><b>Compiled prompt — ${esc(p.id)}</b>
             <span style="display:inline-flex;gap:16px;align-items:baseline">
@@ -9745,9 +9752,48 @@ async function renderBoardPanels(specId) {
               <button class="verb" data-f="dl" title="Download this prompt as a .md file — the exact text this take was rendered from, with its conditions in the header">Download</button>
               <button class="ghost" data-f="close-report">Close</button>
             </span></div>
-          <pre style="white-space:pre-wrap;margin:0">${esc(r.prompt)}</pre></div>`;
+          <textarea data-f="prompt-edit" spellcheck="false"
+            style="width:100%;min-height:300px;font-family:Consolas,monospace;font-size:12px"></textarea>
+          <div class="row" style="margin-top:8px;align-items:baseline;gap:16px">
+            <button class="ghost gen-go" data-f="generate-edited"
+              ${prefKeyFailed ? "disabled" : ""} ${prefKeyFailed ? `title="${genGateTitle}"` : ""}
+              title="Render a take from the text exactly as it stands above">Generate from this prompt</button>
+            <button class="verb" data-f="revert"
+              title="Throw away your edits and recompile from steps 01–04">Revert to compiled</button>
+            <span class="mini mono" data-f="edit-state">UNEDITED · STEPS 01–04 COMPILE THIS</span>
+          </div>
+          <p class="mini">Edits here ride ONE take. They are archived with it and
+          read back under <i>Edited render prompt</i>; steps 01–04 are untouched, so the
+          next take compiles from the panel again. To make a change stick, put it in the
+          panel.</p></div>`;
         $("[data-f=close-report]", report).onclick = () => { report.innerHTML = ""; };
-        $("[data-f=copy]", report).onclick = () => copyText(r.prompt, "Compiled prompt");
+        const promptBox = $("[data-f=prompt-edit]", report);
+        const editState = $("[data-f=edit-state]", report);
+        promptBox.value = r.prompt;
+        // The gate is readable as state before it is hit: the line says
+        // which of the two things will be sent, and says it while you type.
+        const sayState = () => {
+          const dirty = promptBox.value !== r.prompt;
+          editState.textContent = dirty
+            ? "EDITED · THIS TEXT IS SENT VERBATIM · THIS TAKE ONLY"
+            : "UNEDITED · STEPS 01–04 COMPILE THIS";
+          editState.classList.toggle("edited", dirty);
+        };
+        promptBox.addEventListener("input", sayState);
+        $("[data-f=revert]", report).onclick = () => {
+          promptBox.value = r.prompt;
+          sayState();
+          toast("Reverted to the compiled prompt.");
+        };
+        $("[data-f=generate-edited]", report).onclick = (e2) => {
+          const text = promptBox.value.trim();
+          // Unedited text is not an override — sending it as one would file
+          // the take as `edited` and freeze a copy of a prompt the panel
+          // still generates. Same button, the honest path underneath.
+          runGenerate(e2.target, "Generate from this prompt",
+                      text === r.prompt.trim() ? "" : text);
+        };
+        $("[data-f=copy]", report).onclick = () => copyText(promptBox.value, "Compiled prompt");
         // The header carries what the prompt text itself does not: the
         // engine, the size, and WHICH references were actually attached —
         // the first thing to check when a render appears to ignore one.
@@ -9775,7 +9821,15 @@ async function renderBoardPanels(specId) {
                        "This take rendered from the written spec and the style",
                        "anchors alone. No subject reference was attached.");
           }
-          lines.push("", "---", "", "```text", r.prompt, "```", "");
+          // Download what is on screen, not what was compiled — the two
+          // can differ now, and a download that silently drops your edits
+          // is a file that lies about the take it names.
+          const shown = promptBox.value;
+          if (shown !== r.prompt) {
+            lines.splice(lines.length - 1, 0,
+              "- **Prompt** — EDITED BY HAND, not the steps 01–04 compile");
+          }
+          lines.push("", "---", "", "```text", shown, "```", "");
           const blob = new Blob([lines.join("\n")],
                                 { type: "text/markdown;charset=utf-8" });
           const a = document.createElement("a");
