@@ -22,7 +22,14 @@ from . import connectors, paths
 ANTHROPIC_API = "https://api.anthropic.com/v1"
 ANTHROPIC_MODEL = "claude-sonnet-5"      # narrative default; settings can override
 OPENROUTER_NARRATIVE_MODEL = "openai/gpt-5.6"  # the first-run notice's promise
-MAX_OUTPUT_TOKENS = 8192
+# The breakdown draft is a full spec plus an evidence ledger with one cited
+# row per object — the app's largest structured output. At 8192 the reply
+# was truncated, the whole ~33k-token input was paid for, nothing was
+# returned, and the re-run re-sent the screenplay on the one provider where
+# that input was uncached (adversarial review F20). Under-spending output
+# tokens to save pennies costs a full input pass; the Gemini and OpenAI
+# paths set no ceiling at all.
+MAX_OUTPUT_TOKENS = 32000
 
 
 class NarrativeError(Exception):
@@ -98,6 +105,22 @@ def anthropic_complete(doc: bytes, mime: str, instructions: str,
         content.append({"type": "image", "source": {
             "type": "base64", "media_type": _mime_of(p),
             "data": base64.b64encode(p.read_bytes()).decode()}})
+    # PROMPT CACHING. INTENT.md claims caching is "engaged by keeping the
+    # screenplay as the stable prompt prefix" — true for OpenAI and Gemini,
+    # whose caching is automatic, and false here until now (adversarial
+    # review F17). Anthropic's is opt-in per block: without a breakpoint
+    # nothing is cached and every pass bills the whole screenplay at full
+    # input rate. The reference draft is ~131 KB, roughly 33k tokens, and
+    # it is re-sent on every scene scan, breakdown draft, re-draft and
+    # bible draft.
+    #
+    # The ordering was already right — screenplay first, instructions last
+    # — so one field turns the existing structure into a cache hit. The
+    # breakpoint goes on the LAST stable block, which is the screenplay
+    # plus any reference images: everything up to and including it is
+    # cached, and the instructions after it vary per call.
+    if content:
+        content[-1].setdefault("cache_control", {"type": "ephemeral"})
     content.append({"type": "text", "text": instructions})
     out = http(f"{ANTHROPIC_API}/messages", method="POST", headers={
         "x-api-key": key, "anthropic-version": "2023-06-01",
@@ -107,7 +130,21 @@ def anthropic_complete(doc: bytes, mime: str, instructions: str,
     text = "".join(b.get("text", "") for b in out.get("content", [])
                    if b.get("type") == "text").strip()
     if not text:
+        # A cut-off reply is the expensive failure, and it used to surface
+        # as a JSON parser message (F11/F20). Name it, and name the cost of
+        # the retry, because a retry re-sends the whole screenplay.
+        if str(out.get("stop_reason", "")) == "max_tokens":
+            raise NarrativeError(
+                f"Anthropic/{model} hit its {MAX_OUTPUT_TOKENS}-token output "
+                "limit before finishing. The reply is unusable and a re-run "
+                "re-sends the whole screenplay — raise the limit rather than "
+                "retrying into the same ceiling.")
         raise NarrativeError(f"Anthropic/{model} returned no text.")
+    if str(out.get("stop_reason", "")) == "max_tokens":
+        raise NarrativeError(
+            f"Anthropic/{model} was cut off at its {MAX_OUTPUT_TOKENS}-token "
+            "output limit, so the JSON is incomplete. A re-run re-sends the "
+            "whole screenplay — raise the limit instead.")
     return text, model
 
 

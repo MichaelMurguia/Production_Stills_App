@@ -114,10 +114,26 @@ install-level).
 
 Customers bring their own keys, so the app's token habits are their bill:
 the screenplay converts to plain text at import and every model call reads
-that (PDF-per-page billing avoided; prompt-caching engaged by keeping the
-screenplay as the stable prompt prefix); failed generations are surfaced
-with their provider reason; engines without a working key are not
-selectable anywhere.
+that (PDF-per-page billing avoided); failed generations are surfaced with
+their provider reason; engines without a working key are not selectable
+anywhere.
+
+**Prompt caching, by provider.** The screenplay is always the stable prompt
+prefix and the instructions always come last, which is what makes caching
+possible at all. Whether it is *engaged* differs, and this document used to
+claim it uniformly when it was not (adversarial review 2026-08-17):
+
+| provider | caching |
+|---|---|
+| OpenAI, Gemini | automatic on a repeated prefix — nothing to declare |
+| Anthropic | opt-in per block; a `cache_control` breakpoint sits on the screenplay block, so the prefix is cached and only the instructions are billed fresh |
+| OpenRouter, fal | pass-through — governed by the upstream model, not declared here |
+
+The narrative output ceiling is deliberately generous. The breakdown draft
+is the app's largest structured output, and a reply cut off mid-JSON wastes
+the entire input pass — under-spending output tokens costs far more than it
+saves, so the app states the failure and names the retry's cost rather than
+quietly retrying into the same ceiling.
 
 ## What the app will not do
 

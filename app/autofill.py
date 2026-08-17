@@ -424,8 +424,34 @@ def _parse_json(raw: str) -> dict:
     except json.JSONDecodeError:
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         if not m:
+            # No closing brace at all is the commonest shape of a cut-off
+            # reply, and "did not return valid JSON" told the user nothing
+            # about which failure they had paid for (F11).
+            if raw.count("{") > raw.count("}"):
+                raise AutofillError(
+                    "The model's reply was cut off before its JSON closed, so "
+                    "the draft is unusable. This is an output-length limit, "
+                    "not a content problem — a re-run re-sends the whole "
+                    "screenplay and will stop at the same place. Raise the "
+                    "narrative model's output ceiling, or draft a smaller "
+                    "section.")
             raise AutofillError("The model did not return valid JSON.")
-        obj = json.loads(m.group(0))
+        try:
+            obj = json.loads(m.group(0))
+        except json.JSONDecodeError as e:
+            # The most expensive failure in the app had the least usable
+            # error (adversarial review F11): this second parse was outside
+            # any try, so a reply cut off mid-JSON surfaced as
+            # "auto-fill failed: Expecting ',' delimiter: line 1 column 91"
+            # after the user had just paid for a full-screenplay pass, with
+            # nothing to act on and no hint that a retry hits the same
+            # ceiling.
+            raise AutofillError(
+                "The model's reply was cut off before its JSON closed, so the "
+                "draft is unusable. This is an output-length limit, not a "
+                "content problem — a re-run re-sends the whole screenplay and "
+                "will stop at the same place. Raise the narrative model's "
+                f"output ceiling, or draft a smaller section. ({e})") from e
     if not isinstance(obj, dict):
         # Callers index into this immediately — a top-level list or string
         # must be a stated 422, not a TypeError-turned-502.
