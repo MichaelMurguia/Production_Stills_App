@@ -5843,11 +5843,9 @@ function scanScreenplayDialog({ specId, panelId, has, accept, acceptBrief = null
   ov.innerHTML = `
     <div class="modal scan-modal" role="dialog" aria-modal="true">
       <div class="modal-title">Tell me about ${esc(panelId)}</div>
-      <p class="modal-body">Say anything. A question, a correction, how it should
-      feel, a passage pasted from somewhere else, or a half-formed note. The
-      screenplay scene behind this panel is read again against what you said, and
-      what comes back is a proposal — the brief, and what the panel must show.
-      Nothing changes until you accept it.</p>
+      <p class="modal-body">Any info provided will be considered during script
+      rescan. What comes back is a proposal — the brief, and what the panel must
+      show. Nothing changes until you accept it.</p>
       <label class="modal-field">In your own words
         <textarea data-f="ask" rows="5" placeholder="e.g. this should feel like the last moment before a door closes forever — Sal is still talking, the chamber is open, and Tom has just come out of the dark"></textarea>
       </label>

@@ -204,14 +204,19 @@ class TheUiOffersIt(unittest.TestCase):
         j = JS.index('<span class="f-label" style="display:flex;align-items:center;gap:10px">Purpose')
         self.assertIn('data-f="scan-scene"', JS[j:j + 400])
 
-    def test_the_modal_invites_anything(self):
+    def test_the_modal_says_what_actually_happens(self):
+        """Copy set by the user 2026-08-17: "Any info provided will be
+        considered during script rescan, because that is what is
+        happening." The earlier draft listed the KINDS of thing you could
+        say, which sold the idea rather than describing the mechanism."""
         i = JS.index("function scanScreenplayDialog")
-        seg = JS[i:i + 2200]
-        self.assertIn("Say anything.", seg)
-        self.assertIn("how it should", seg)
+        seg = " ".join(JS[i:i + 2200].split())
+        self.assertIn("Any info provided will be considered during script rescan", seg)
         self.assertIn("In your own words", seg)
+        self.assertIn("Nothing changes until you accept it", seg)
         self.assertNotIn("Ask one question", seg,
-                         "the old framing asked for a query")
+                         "the original framing asked for a query")
+        self.assertNotIn("Say anything.", seg)
 
     def test_the_modal_opens_the_screenplay_in_a_new_tab(self):
         i = JS.index("function scanScreenplayDialog")
