@@ -81,3 +81,11 @@ delta as new instructions.
   and the escape hatch leaving the grid and stopping being drawn twice.
   B10's defect closed — a take that rode the grammar says so on the hero
   and in the lightbox.
+
+- **`docs/BUGFIX_PLAN_2026-08-12.md`** — retired 2026-08-17 (adversarial
+  review F15). A `*_PLAN.md` left in the tree for five days against this
+  project's own 2026-08-12 ruling that an implemented plan is deleted in
+  the same commit and ledgered here. It was the three-agent review of
+  releases .14–.21; its items shipped across that week's commits. Moved to
+  `docs/history/` rather than deleted so the review's reasoning survives —
+  it is not binding and must not be implemented again.

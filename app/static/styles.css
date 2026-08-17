@@ -27,6 +27,16 @@
   --panel:     #1a1d21;
   --panel2:    #21252a;
   --field:     #0f1114;
+  /* The film roll's own materials (2026-08-15/16), tokenised 2026-08-17
+     after an audit found them as bare literals — three surfaces darker
+     than --field with no name, which reads as "a fourth grey" until you
+     know what they are. They are not chrome greys competing with the
+     panel scale: they are the strip's BODY, the sprocket line between
+     frames, and the gate a frame is projected against. Naming them says
+     that, and stops the next dark surface borrowing one by eye. */
+  --roll-body:  #0d0e10;
+  --roll-perf:  #14171b;
+  --roll-gate:  #050607;
   --line:      #2b3037;
   --line-soft: #23272c;
   /* step-sequence surfaces (STEP_SEQUENCE_SPEC §1.5, 2026-08-14). They
@@ -1402,7 +1412,7 @@ details.meta pre {
    black — the app's hatch is how it says "nothing here" everywhere else,
    at the fine gauge because the swatch is under 60px. */
 .mf-color.is-unset input[type=color]::-webkit-color-swatch {
-  background-image: repeating-linear-gradient(135deg, #21252a 0 5px, #1c1f23 5px 10px); }
+  background-image: repeating-linear-gradient(135deg, var(--panel2) 0 5px, #1c1f23 5px 10px); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
 /* Vocabulary picker — canonical (design review 2026-07-30b): suggestion
    chips fill the field and never stay lit; multi-select facets are .set,
@@ -1444,8 +1454,8 @@ details.meta pre {
    belongs here and isn't here" — never on populated surfaces, never behind
    body text. Applied by class; rules MUST stay last in the component
    cascade (background: shorthand resets). */
-.hatch { background: repeating-linear-gradient(135deg, #21252a 0 7px, #1c1f23 7px 14px); }       /* standard blocks ≥60px */
-.hatch-fine { background: repeating-linear-gradient(135deg, #21252a 0 5px, #1c1f23 5px 10px); }  /* thumbs < 60px */
+.hatch { background: repeating-linear-gradient(135deg, var(--panel2) 0 7px, #1c1f23 7px 14px); }       /* standard blocks ≥60px */
+.hatch-fine { background: repeating-linear-gradient(135deg, var(--panel2) 0 5px, #1c1f23 5px 10px); }  /* thumbs < 60px */
 .hatch-bad { background: repeating-linear-gradient(135deg, #211b1b 0 7px, #1b1717 7px 14px); }   /* TOO-SMALL / error surfaces */
 
 /* =============================================================== scrollbars
@@ -3574,8 +3584,8 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   background:
     var(--perf) left 7px / 22px 13px repeat-x,
     var(--perf) left bottom 7px / 22px 13px repeat-x,
-    #0d0e10;
-  border: 1px solid #2b3037;
+    var(--roll-body);
+  border: 1px solid var(--line);
   /* just enough margin to carry the perforations — the edge marking was
      costing two lines of height on a strip whose job is the pictures
      (user 2026-08-15) */
@@ -3591,12 +3601,12 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .filmstrip .takes-row { gap: 0; }
 .wb-card .take {
   width: 176px; background: none; padding: 0 9px;
-  border: none; border-right: 1px solid #14171b;
+  border: none; border-right: 1px solid var(--roll-perf);
 }
 .wb-card .take:last-of-type { border-right: none; }
 .take-frame {
   display: block; width: 100%; aspect-ratio: 3 / 2;
-  background: #050607; border: 1px solid #23272c;
+  background: var(--roll-gate); border: 1px solid var(--line-soft);
   position: relative; overflow: hidden;
 }
 .take-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -3614,6 +3624,6 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 /* the board strip — the same roll, one frame per panel */
 .made-grid.filmroll { gap: 0; }
 .made-grid.filmroll .made-item {
-  flex: 0 0 300px; padding: 0 9px; border-right: 1px solid #14171b;
+  flex: 0 0 300px; padding: 0 9px; border-right: 1px solid var(--roll-perf);
 }
 .made-grid.filmroll .made-item:last-child { border-right: none; }

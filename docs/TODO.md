@@ -22,3 +22,70 @@ So the approved-state row reads `Crop · Reject · Edit` — no bare
 When a render is in progress for a panel, that panel's thumbnail in the
 PANELS rail must show a spinning indicator. Today there is no visible
 sign in the rail that a render is underway.
+
+---
+
+## Merged from TODO_2026-08-16.md (2026-08-17)
+
+# Open work — 2026-08-16
+
+Everything asked for and not yet shipped. Kept on disk because context
+gets compacted and this does not. Tick a line only when it is committed
+and tested; delete the file when it is empty.
+
+Local mode is on (`.claude/iteration.json`) — items land as local commits
+and go out together on "ship it".
+
+## User feedback, in the order asked
+
+- [x] Settings `Test & save` — no feedback during a long call
+- [x] Productions moved into Settings as its first tab, FTUE unchanged
+- [x] Locked stage cell showed the "no" cursor
+- [x] Locations divided into acts, chronological, five per act + Expand
+- [x] Lessons learned removed from Production Design
+- [x] Act names when the screenplay prints no ACT headings
+- [x] `Name the acts` without a destructive re-scan
+- [x] Two screenplay copies — raw upload never reaches a model
+- [x] **Casting modal** — clicking `Cast` opens a modal carrying the
+      screenplay identity and the photo attach; on save the card lands
+      where it does now.
+- [x] **Blank Sheet, three fields** — server half is DONE (a pasted
+      section can be the source; a panels hint pins the panels). Still to
+      build: the form itself.
+      1. *What should I get?* — fetched from the screenplay automatically
+      2. *Paste a screenplay section* — the breakdown derives from it;
+         carries an Open Screenplay link
+      3. *What panels should it include?* — typed, or `Auto-generate`
+
+## RULE_PASS_2026-08-16 — the design review
+
+- [x] **Part A** — 8 rules folded, 7 rows cleared, 2 refusals shipped
+- [x] **Part C** — stages 03/04/05, film rolls, ledger, stale-tab bar
+      (10 rows; mostly ratification, small diffs — do this next)
+- [x] **Part B** — the anchor cards (9 rows; the real work: one component
+      with two lives, shared render, `Add your own` currently ships in two
+      places and must collapse to one). Mocks: `rp-4a`, `rp-4b`
+- [x] **Part D** — Productions as a tab; the self-reporting act (2 rows)
+- [x] **Part E** — store queue, against `STORE_DESIGN_SYSTEM.md` (2 rows)
+- [x] **B10 blocker** — a take records whether the cinematography grammar
+      rode it and no screen says so. Ship the Courier fact line
+      `GRAMMAR — <NAME>` on the hero and in the lightbox, absent on takes
+      that did not ride. That row does not clear until it does.
+
+Standing, from the bundle README:
+
+- Arrange room stays deferred — never recorded, first item of the next
+  harness walk. Do not ask about it.
+- C1 reverses the 2026-08-13 direction on brief/camera ghost boxes
+  deliberately. If they are wanted back they return as tools in a bar.
+- A8 and C3 change shipped behaviour (`SETTLED`; the ledger freezing on
+  the LOCK rather than on step 06) — A8 is done, C3 is in Part C.
+
+## Housekeeping
+
+- [x] `STEP_SEQUENCE_SPEC_2026-08-14.md` deleted + ledgered (superseded)
+- [x] Delete each `RULE_PASS_*` file as its part lands, ledger it in
+      `docs/RETIRED_PLANS.md`
+- [x] Clear `design_handoff/` of everything already applied — user asked
+      2026-08-16, AFTER the bundle is implemented, not before
+- [ ] Re-run `/design-verify` on the UI-touching parts before shipping

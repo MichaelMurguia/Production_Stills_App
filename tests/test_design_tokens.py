@@ -551,5 +551,81 @@ class HarnessAuditTests(unittest.TestCase):
                       "the forced 3-column break below ~1000px")
 
 
+class NoUndocumentedHex(unittest.TestCase):
+    """A hex outside `:root` must be sanctioned by a named ruling.
+
+    `DESIGN_SYSTEM.md` says "use variables; never hardcode a hex in new
+    CSS", and until 2026-08-17 nothing enforced it — so the newest CSS in
+    the file broke it three times by re-typing a token's own value
+    (`--line`, `--line-soft`, `--panel2`) and three more by inventing greys
+    darker than `--field` (adversarial review F4).
+
+    The exception list below IS the documentation: every literal names why
+    it is allowed. Two shapes are legitimate —
+
+      ARTIFACT INK. A rendered sheet or board is a PICTURE the app makes,
+      not app chrome. Its paper and ink are subject matter (R4.6b), and
+      binding them to chrome tokens would mean a chrome change repainting
+      a customer's board.
+
+      A NAMED RULING. A specific value settled by a plan or a user call,
+      where the value itself is the decision.
+
+    Anything else is drift, and the next `--line` change leaves a copy of
+    the old one behind.
+    """
+
+    SANCTIONED = {
+        # artifact ink — sheet render styles, R4.6b
+        "#efe9dd": "GALLERY paper", "#e4ddd0": "GALLERY inset",
+        "#1f1d19": "GALLERY ink", "#17181a": "CONTACT paper",
+        "#e8e5dd": "CONTACT ink / board-frame title",
+        "#d9d4c8": "NEWSPRINT paper", "#1a1814": "NEWSPRINT ink",
+        "#1c4f7c": "BLUEPRINT paper", "#eef3f8": "BLUEPRINT ink",
+        "#fbfbf9": "PLATE paper", "#1e1e1c": "PLATE ink",
+        "#131418": "INK paper", "#e2ddd0": "INK inset",
+        # artifact ink — the board preview frame is a picture of a board
+        "#2a2723": "board-frame ground", "#232019": "board-frame slot",
+        "#9a978f": "board-frame subtitle",
+        # named rulings
+        "#4a4d52": "disabled ink, ruled",
+        "#17191c": "locked cell, sanctioned in the plan",
+        "#3a4048": "popover border, sanctioned in the plan",
+        "#1c1f23": "popover ground, sanctioned in the plan",
+        "#211b1b": "hatch-bad band A", "#1b1717": "hatch-bad band B",
+        "#000": "the colour picker's empty state — no colour, not a colour",
+    }
+
+    def test_every_hex_outside_root_is_sanctioned(self):
+        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        rest = body[body.index("}", body.index(":root")):]
+        found = {h.lower() for h in re.findall(r"#[0-9a-fA-F]{3,8}", rest)}
+        unsanctioned = sorted(found - {k.lower() for k in self.SANCTIONED})
+        self.assertEqual(unsanctioned, [],
+                         "hex outside :root with no named ruling — use a token, "
+                         "or add it to SANCTIONED with the ruling that allows it")
+
+    def test_no_literal_duplicates_a_token(self):
+        """The sharpest half: three literals WERE an existing token, so the
+        next time that token moves, a copy of the old value stays behind."""
+        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        root = body[body.index(":root"):body.index("}", body.index(":root"))]
+        toks = {v.lower(): k for k, v in
+                re.findall(r"(--[\w-]+):\s*(#[0-9a-fA-F]{3,8})", root)}
+        rest = body[body.index("}", body.index(":root")):]
+        dupes = sorted({h.lower() for h in re.findall(r"#[0-9a-fA-F]{3,8}", rest)}
+                       & set(toks))
+        self.assertEqual(dupes, [],
+                         f"literal copies of a token: "
+                         f"{[(d, toks[d]) for d in dupes]}")
+
+    def test_the_sanctioned_list_is_not_a_dumping_ground(self):
+        """Every entry must still appear. A stale one hides a real drift."""
+        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        rest = body[body.index("}", body.index(":root")):].lower()
+        for h in self.SANCTIONED:
+            self.assertIn(h.lower(), rest, f"sanctioned hex no longer used: {h}")
+
+
 if __name__ == "__main__":
     unittest.main()

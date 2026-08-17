@@ -114,17 +114,34 @@ from `/api/healthz`. Do not change anything.
 
 ---
 
-## Judgement the mode does not cover
+## Nothing ships on your own judgement
 
-**Some things must ship even in local mode.** A local copy cannot prove
-them, so batching them is not caution, it is delay:
+**In local mode you never push. Not for any reason.** (Ruled 2026-08-16,
+replacing a list of exceptions.)
+
+That list used to say a live-tenant fix, a migration, a `storefront/`
+change or a security fix "must ship even in local mode." It got
+stretched the same day it was written: a defect the user hit online was
+shipped — defensible — and then a *feature* rode out in the same commit
+under the same justification, which was not. The user's answer was
+*"we work local until I say push."*
+
+The failure mode is not laziness, it is that "this one is urgent" always
+sounds true from the inside. So the rule no longer asks you to judge it.
+
+Some changes genuinely cannot be proven on a local copy:
 
 - a fix to something the user reported **on the live tenant**
 - a boot migration (it only runs on a real boot, on real data)
 - anything touching `storefront/`, deploys, or billing
 - a data-loss or security fix
 
-Ship those immediately and say why you broke the batch. Then carry on.
+Those get **built, tested, committed, and named as unproven** — put them
+at the TOP of `pending` prefixed `UNPROVEN LOCALLY —` with one line on
+what a deploy would settle. Say it plainly in the reply too. Then stop.
+If you think it needs pushing now, say why and wait for an answer;
+asking costs one message, and a push the user did not want costs their
+tenant.
 
 **When the user says "push it" / "ship it" / "deploy"** in any words, that
 is `/iterate ship` — do not wait for the exact command.
