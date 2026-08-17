@@ -7250,7 +7250,7 @@ async function openSpecEditor(specId) {
           body: `      <div class="grid-form">
       <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${boardFrozen ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
       <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${boardFrozen ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
-      <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects and the project lessons-learned into every render prompt.">Forbidden elements <span class="hint">(one per line — seeded from the rejection history on the dashboard)</span>
+      <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects into every render prompt on this board.">Forbidden elements <span class="hint">(one per line)</span>
         <textarea id="sp-forbidden" ${boardFrozen ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
       <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${boardFrozen ? "disabled" : ""}></label>
@@ -7606,7 +7606,7 @@ async function openSpecEditor(specId) {
           <span class="f-label">Required objects</span>
           <div class="chips" data-f="chips"></div>
         </div>
-        <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements and project lessons in the prompt.">
+        <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements, and with any project-wide prohibited inventions, in the prompt.">
           <span class="f-label">Forbidden objects</span>
           <input type="text" data-f="forbidden" placeholder="comma-separated…" value="${esc((p.forbidden_objects || []).join(", "))}" ${ro ? "disabled" : ""}>
         </div>
@@ -9079,7 +9079,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     b.title = "Permanently remove this rejected image and its record from disk";
     b.onclick = async () => {
       if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
-        "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
+        "The image file is removed from disk and cannot be recovered. Its rejection reason keeps riding this panel's future prompts as a director's correction, and stays in the rejection history.",
         "Delete forever", true))) return;
       try {
         await api(`/api/specs/${specId}/candidates/${c.candidate_id}`, { method: "DELETE" });
@@ -9433,7 +9433,7 @@ async function renderBoardPanels(specId) {
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
           <span class="hint">rejected takes stay as a record</span>
           ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
-          ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — rejection reasons stay in the lessons list and rejection history">Delete ${sheetRejected} rejected forever</button>` : ""}
+          ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — each rejection reason keeps riding its own panel's future prompts as a director's correction">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
         <div class="takes-row filmroll">
           ${pending.map(pendingTileHtml).join("")}
@@ -10801,7 +10801,7 @@ async function renderBoardPanels(specId) {
     const purgeBtn = $("[data-f=purge]", card);
     if (purgeBtn) purgeBtn.onclick = async () => {
       if (!(await askConfirm(`Delete ${sheetRejected} rejected take(s) forever`,
-        `Every rejected candidate image for ${specId} is removed from disk. Rejection reasons stay in the lessons list and rejection history. This cannot be undone.`,
+        `Every rejected candidate image for ${specId} is removed from disk. Each rejection reason keeps riding its own panel's future prompts as a director's correction, and stays in the rejection history. This cannot be undone.`,
         "Delete forever", true))) return;
       try {
         const r = await api(`/api/specs/${specId}/candidates/purge-rejected`, { method: "POST" });
@@ -11052,7 +11052,7 @@ async function renderBoardPanels(specId) {
 
       if (c.status === "REJECTED") actDanger.append(mk("Delete forever", "danger", async () => {
         if (!(await askConfirm(`Delete ${c.candidate_id} forever`,
-          "The image file is removed from disk and cannot be recovered. Its rejection reason stays in the lessons list and rejection history.",
+          "The image file is removed from disk and cannot be recovered. Its rejection reason keeps riding this panel's future prompts as a director's correction, and stays in the rejection history.",
           "Delete forever", true))) return;
         try {
           await api(`/api/specs/${specId}/candidates/${c.candidate_id}`, { method: "DELETE" });

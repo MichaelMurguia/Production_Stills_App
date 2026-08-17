@@ -284,14 +284,15 @@ class RejectionReasonsArePrimaryRules(_IsolatedStyleContext):
     def test_a_correction_still_suppresses_its_matching_lesson(self):
         """The dedupe against project negatives survives the move: the
         correction rides the head and the tail echo, but never the
-        PROJECT LESSONS LEARNED section."""
+        PROJECT RULES section. (Renamed 2026-08-17 — the block carried the
+        name of a mechanism that never wrote to it; see review F2.)"""
         from unittest import mock
         with mock.patch.object(generate, "rejection_feedback",
                                return_value=["never photoreal"]), \
              mock.patch.object(generate, "project_negatives",
                                return_value=["never photoreal", "no anime"]):
             out = generate.compile_panel_prompt(self.spec(), self.panel(), [])
-        lessons = out[out.index("PROJECT LESSONS LEARNED"):
+        lessons = out[out.index("PROJECT RULES"):
                       out.index("FINAL INSTRUCTION")]
         self.assertNotIn("never photoreal", lessons)
         self.assertEqual(out.count("never photoreal"), 2,

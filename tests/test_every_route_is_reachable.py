@@ -52,8 +52,6 @@ SERVER_TO_SERVER = {
 # Routes whose mechanism is being removed. The value is the finding that
 # retired it; delete the route and delete the row.
 RETIRED = {
-    "/api/lessons": "F2 — the project-lessons mechanism is never written to",
-    "/api/lessons/remove": "F2",
     "/api/specs/{spec_id}/revisions": "F1 — revisions are retired",
     "/api/specs/{spec_id}/consolidation": "F1 — the migration runs at boot",
     "/api/specs/{spec_id}/consolidate": "F1 — the migration runs at boot",
@@ -105,7 +103,7 @@ class EveryRouteIsReachable(unittest.TestCase):
     def test_the_retired_list_only_shrinks(self):
         """A guard on the guard: this list is a to-do, not a category. If it
         grows, something was retired without being removed."""
-        self.assertLessEqual(len(RETIRED), 7,
+        self.assertLessEqual(len(RETIRED), 5,
                              "new entries belong in the code's deletion, not here")
 
 

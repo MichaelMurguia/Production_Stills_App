@@ -239,7 +239,6 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
             "interview_answered": _interview_answered(),
             "style_anchors": anchors,
             "subjects": len(store.list_subjects()),
-            "lessons": len(generate.load_lessons()),
         },
         "breakdowns": {
             "locked": len(locked),

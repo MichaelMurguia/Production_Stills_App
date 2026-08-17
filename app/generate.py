@@ -223,48 +223,36 @@ def save_style_bible(text: str) -> None:
     bible.save_text(text)
 
 
-# ---------------------------------------------------------- rejection lessons
-
-def _lessons_path():
-    return paths.DATA / "rejection_lessons.json"
-
-
-def load_lessons() -> list[dict]:
-    p = _lessons_path()
-    if not p.exists():
-        return []
-    return json.loads(p.read_text(encoding="utf-8"))
-
-
-def add_lesson(reason: str, source: str) -> None:
-    reason = reason.strip()
-    if not reason:
-        return
-    lessons = load_lessons()
-    if any(l["reason"].casefold() == reason.casefold() for l in lessons):
-        return
-    lessons.append({"reason": reason, "source": source, "added_at": store.utcnow()})
-    paths.ensure_dirs()
-    store._atomic_write_json(_lessons_path(), lessons)
-
-
-def remove_lesson(reason: str) -> bool:
-    lessons = load_lessons()
-    kept = [l for l in lessons if l["reason"].casefold() != reason.strip().casefold()]
-    if len(kept) == len(lessons):
-        return False
-    store._atomic_write_json(_lessons_path(), kept)
-    return True
-
+# ------------------------------------------------------ project negatives
+#
+# `rejection_lessons.json` and its add/remove/load trio were deleted on
+# 2026-08-17 (adversarial review F2). They were read by the prompt
+# compiler, the breakdown instructions, the dashboard and the stage
+# summary — and nothing in the app ever wrote them. The only writers were
+# two routes with no caller, so the file was never created, the PROJECT
+# LESSONS LEARNED block never appeared in a prompt, and the stage summary
+# reported a count that was structurally always zero.
+#
+# Rejection reasons were never lost: archive_feedback / carried_feedback /
+# rejection_feedback are real, per-panel, and ride every future prompt for
+# that panel as DIRECTOR'S CORRECTIONS. That mechanism does this job
+# honestly, which is why the empty scaffolding beside it could go.
 
 def project_negatives() -> list[str]:
-    """Project-wide negative constraints: recorded prohibited inventions plus
-    every lesson learned from rejected candidates."""
+    """Project-wide negative constraints — the prohibited inventions
+    recorded in `project_state.json`.
+
+    Written by `scripts/state_manager.py`, an operator CLI, and by nothing
+    in the app. That is deliberate rather than an omission: a project-wide
+    never-include is a standing production rule, so it is set once by
+    whoever owns the canon, not accumulated from individual rejections.
+    Per-panel corrections are a separate mechanism (rejection_feedback) and
+    they are the one that grows by itself.
+    """
     out: list[str] = []
     if paths.PROJECT_STATE.exists():
         state = json.loads(paths.PROJECT_STATE.read_text(encoding="utf-8"))
         out.extend(str(x) for x in state.get("prohibited_inventions", []))
-    out.extend(l["reason"] for l in load_lessons())
     seen: set[str] = set()
     return [x for x in out if not (x.casefold() in seen or seen.add(x.casefold()))]
 
@@ -925,9 +913,15 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     feedback_keys = {f.casefold() for f in feedback}
     negatives = [n for n in project_negatives() if n.casefold() not in feedback_keys]
     if negatives:
-        lines += ["", "PROJECT LESSONS LEARNED — standing corrections from previously "
-                  "rejected work. Each item is a rule: if it names unwanted content, "
-                  "exclude that content; if it states a directive, follow it:"]
+        # Renamed 2026-08-17: this block carried the name of a mechanism
+        # that never wrote to it. What it actually carries is the
+        # production's standing never-include list, set deliberately by
+        # whoever owns the canon — not corrections accumulated from
+        # rejections, which are per-panel and lead this prompt already.
+        lines += ["", "PROJECT RULES — standing never-include list for this "
+                  "production, set deliberately. Each item is a rule: if it "
+                  "names unwanted content, exclude that content; if it states "
+                  "a directive, follow it:"]
         lines += [f"- {x}" for x in negatives]
     # (the corrections themselves lead the prompt; nothing repeats here)
 
@@ -1471,7 +1465,7 @@ Hard rules for your rewrite:
   angle, and tilt into the prose explicitly — the description must be FROM
   that camera, whatever the attached references show.
 - Every item under REQUIRED CONTENT must appear, described concretely.
-- Nothing under FORBIDDEN CONTENT or PROJECT LESSONS LEARNED may appear, and do
+- Nothing under FORBIDDEN CONTENT or PROJECT RULES may appear, and do
   not invent ANY object, character, creature, symbol, text, or worldbuilding
   the specification does not list. Sparse and specific beats full and generic.
 - The VISUAL STYLE section is non-negotiable art direction — bake it into the

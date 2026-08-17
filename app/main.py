@@ -2385,29 +2385,6 @@ async def api_wizard_draft_bible(body: dict) -> dict:
         raise HTTPException(502, f"bible draft failed: {e}")
 
 
-@app.get("/api/lessons")
-def api_get_lessons() -> list[dict]:
-    return generate.load_lessons()
-
-
-@app.post("/api/lessons")
-async def api_add_lesson(body: dict) -> dict:
-    reason = str(body.get("reason", "")).strip()
-    if not reason:
-        raise HTTPException(422, "reason is required")
-    generate.add_lesson(reason, source="manual")
-    return {"ok": True}
-
-
-@app.post("/api/lessons/remove")
-async def api_remove_lesson(body: dict) -> dict:
-    if not generate.remove_lesson(str(body.get("reason", ""))):
-        raise HTTPException(404, "no such lesson")
-    return {"ok": True}
-
-
-# ------------------------------------------------------------------ autofill
-
 @app.post("/api/specs/autofill")
 async def api_autofill_spec(body: dict) -> dict:
     _require_production_design()
