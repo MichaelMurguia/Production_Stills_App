@@ -35,6 +35,18 @@ CAST = [
      "subtitle": "", "traits": ["Calm, edged with steel."]},
     {"id": "S4", "name": "GT40", "kind": "VEHICLE", "subtitle": "", "traits": ["Blue."]},
     {"id": "S5", "name": "CRYOCHAMBER", "kind": "PROP", "subtitle": "", "traits": []},
+    # THE card that makes the case a case. The fixture carried the
+    # un-possessed, un-hyphenated "CRYOCHAMBER" instead, so `sal` was never
+    # a shared word and the suite stayed green over a bug the user had
+    # caught in the field (adversarial review, round 2). A fixture for a
+    # cross-language fix carries the reporting user's real data, never a
+    # paraphrase of it.
+    {"id": "S6", "name": "SAL'S CRYO-CHAMBER", "kind": "PROP",
+     "subtitle": "Curved glass, frost-rimed.", "traits": []},
+    # A group whose name is mostly stopwords — without the stoplist every
+    # object containing "the" matched it.
+    {"id": "S7", "name": "The Beacon", "kind": "PROP", "subtitle": "",
+     "traits": ["brass, cracked lens"]},
 ]
 
 
@@ -55,7 +67,7 @@ class TheScriptsWordingReachesTheIdentity(unittest.TestCase):
                   "restraints across Sal's chest, arms, and legs",
                   "frost-covered Sal",
                   "sweat beads on Sal's face"):
-            self.assertEqual(name_of(o), "SAL CRAFT", o)
+            self.assertIn("SAL CRAFT", names_of(o), o)
 
     def test_the_old_rule_would_have_found_none_of_them(self):
         """The regression this pins: the identity block was empty for every
@@ -68,11 +80,14 @@ class TheScriptsWordingReachesTheIdentity(unittest.TestCase):
         objs = ["Sal inside the cryochamber", "Tom stepping from shadow",
                 "Kyra in the exoskeleton"]
         self.assertEqual([old(o) for o in objs], [None, None, None])
-        self.assertEqual([name_of(o) for o in objs],
-                         ["SAL CRAFT", "TOM McGUIRE", "KYRA McGUIRE"])
+        for o, who in zip(objs, ["SAL CRAFT", "TOM McGUIRE", "KYRA McGUIRE"]):
+            self.assertIn(who, names_of(o), o)
 
     def test_the_whole_name_still_wins(self):
-        self.assertEqual(name_of("SAL CRAFT"), "SAL CRAFT")
+        """The full name is the strongest signal. Sal's prop rides along
+        because the phrase names him and it is his — see
+        test_a_person_and_their_prop_are_not_an_ambiguity."""
+        self.assertIn("SAL CRAFT", names_of("SAL CRAFT"))
         self.assertEqual(name_of("gt40 cockpit"), "GT40")
 
     def test_a_shared_surname_refuses_rather_than_guessing(self):
@@ -83,19 +98,18 @@ class TheScriptsWordingReachesTheIdentity(unittest.TestCase):
     def test_a_card_with_no_identity_text_contributes_nothing(self):
         """CRYOCHAMBER is a real subject with no traits and no subtitle —
         there is nothing to say about it, so it must not produce an empty
-        identity line."""
-        self.assertEqual(names_of("the whole cryochamber"), [])
+        identity line. SAL'S CRYO-CHAMBER, which DOES carry identity text,
+        legitimately matches the same phrase."""
+        self.assertNotIn("CRYOCHAMBER", names_of("the whole cryochamber"))
 
     def test_a_phrase_naming_two_subjects_carries_both(self):
         """A required object is a phrase, not a token: "Sal inside the
         cryochamber" is about both, and the workbench's pick-exactly-one
         rule would drop Sal for being ambiguous. Sending neither identity is
         the worst of the three answers."""
-        CAST2 = CAST + [{"id": "S6", "name": "CRYOCHAMBER", "kind": "PROP",
-                         "subtitle": "Curved glass. Frost-rimed.", "traits": []}]
-        got = [s["name"] for s in subjects_for_object(
-            "Sal inside the cryochamber", CAST2)]
-        self.assertEqual(sorted(got), ["CRYOCHAMBER", "SAL CRAFT"])
+        got = names_of("Sal inside the cryochamber")
+        self.assertIn("SAL CRAFT", got)
+        self.assertIn("SAL'S CRYO-CHAMBER", got)
 
     def test_an_unrelated_object_matches_nothing(self):
         for o in ("curved glass door", "freezing gas", "airlock hatch"):
@@ -106,7 +120,50 @@ class TheScriptsWordingReachesTheIdentity(unittest.TestCase):
         self.assertIsNone(name_of("a to b"))
 
 
+class TheFieldReportedCases(unittest.TestCase):
+    """Every one of these was caught by the user or the reviewer, against
+    this exact cast."""
+
+    def test_a_possessive_still_finds_the_person(self):
+        """"Sal's eyes" returned NOTHING while `sal` was treated as shared
+        between the man and his cryo-chamber. A missing identity renders a
+        stranger's face, which is the failure this block exists to prevent."""
+        self.assertIn("SAL CRAFT", names_of("Sal's eyes"))
+
+    def test_a_person_and_their_prop_are_not_an_ambiguity(self):
+        """They are two things in the scene, so naming both is right. Two
+        CHARACTERS sharing a surname genuinely is a question."""
+        got = sorted(names_of("Sal's eyes"))
+        self.assertEqual(got, ["SAL CRAFT", "SAL'S CRYO-CHAMBER"])
+
+    def test_two_characters_sharing_a_surname_still_refuse(self):
+        self.assertEqual(names_of("McGuire steps forward"), [])
+
+    def test_a_hyphenated_group_matches_the_closed_compound(self):
+        self.assertIn("SAL'S CRYO-CHAMBER", names_of("closing cryochamber"))
+
+    def test_a_stopword_in_a_name_matches_nothing(self):
+        for o in ("the drill rig", "a mug of coffee on the table"):
+            self.assertNotIn("The Beacon", names_of(o), o)
+
+    def test_a_real_word_of_that_name_still_matches(self):
+        self.assertIn("The Beacon", names_of("the beacon on the ridge"))
+
+
 class TheIdentityBlockUsesIt(unittest.TestCase):
+    def test_the_primitives_are_shared_with_the_client(self):
+        """One stoplist and one normalisation, in app/validation.py, which
+        both sides import — the client had them and the server did not."""
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        self.assertIn("from .validation import name_words as _name_words", gen)
+        self.assertIn("from .validation import norm_name as _norm_name", gen)
+        val = (ROOT / "app/validation.py").read_text(encoding="utf-8")
+        self.assertIn("NAME_STOPWORDS = frozenset", val)
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertIn("function adoptNameStopwords(settings)", js)
+        main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn('"name_stopwords": sorted(validation.NAME_STOPWORDS)', main)
+
     def test_compile_goes_through_the_shared_matcher(self):
         src = (ROOT / "app/generate.py").read_text(encoding="utf-8")
         i = src.index('lines += ["", "SUBJECT IDENTITIES')

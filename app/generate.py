@@ -740,13 +740,13 @@ def _camera_block(panel: dict) -> list[str]:
             + [f"- {d}" for d in directives] + [""])
 
 
-def _name_words(name: str) -> list[str]:
-    return [w for w in re.split(r"[^a-z0-9]+", str(name).casefold()) if len(w) >= 3]
-
-
-def _word_in(needle: str, hay: str) -> bool:
-    return bool(needle) and re.search(
-        rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", hay) is not None
+# The naming primitives live in app/validation.py — one stoplist, one
+# normalisation, shared with the client through /api/state (adversarial
+# review F10). This module's own POLICY on top of them is unchanged and
+# deliberately stricter than the plate matcher's: see subjects_for_object.
+from .validation import name_words as _name_words          # noqa: F401
+from .validation import norm_name as _norm_name            # noqa: F401
+from .validation import word_in as _word_in                # noqa: F401
 
 
 def subjects_for_object(obj: str, subjects: list[dict]) -> list[dict]:
@@ -771,26 +771,41 @@ def subjects_for_object(obj: str, subjects: list[dict]) -> list[dict]:
     its own.
 
     Ambiguity is handled by DISTINCTIVENESS rather than by refusing outright.
-    A name-word shared by two cards (`McGuire`) identifies neither and is
-    ignored; a word belonging to exactly one card identifies it. So `McGuire
-    steps forward` names nobody while `Kyra` names Kyra, without the whole
-    phrase having to be unambiguous."""
-    o = str(obj).casefold()
-    # A word that belongs to more than one card cannot pick between them.
-    counts: dict[str, int] = {}
+    A name-word shared by two cards of the SAME KIND identifies neither and
+    is ignored; anything else identifies its card. So `McGuire steps forward`
+    names nobody, while `Kyra` names Kyra.
+
+    Kind matters (adversarial review F10, refined). "Sal" is shared by SAL
+    CRAFT and SAL'S CRYO-CHAMBER, and counting that as ambiguity dropped
+    Sal's identity from every panel that mentioned him — the exact miss that
+    rendered a stranger's face. A man and his prop are not two candidates
+    for one slot; they are two things in the scene, and naming both is
+    right. Two CHARACTERS sharing a surname genuinely is a question, and
+    guessing there writes one person's traits onto another."""
+    o = _norm_name(obj)
+    # A word shared by two cards OF THE SAME KIND cannot pick between them.
+    # Only cards that HAVE identity text count: ambiguity is about which
+    # identity to assert, and a card with nothing to say was never a
+    # candidate for the slot. Counting it dropped real matches — two props
+    # sharing a word, one of them empty, refused both.
+    counts: dict[tuple[str, str], int] = {}
     for s in subjects:
+        if not (s.get("traits") or s.get("subtitle")):
+            continue
+        kind = str(s.get("kind", "")).upper()
         for w in set(_name_words(s.get("name", ""))):
-            counts[w] = counts.get(w, 0) + 1
+            counts[(w, kind)] = counts.get((w, kind), 0) + 1
 
     out = []
     for s in subjects:
         if not (s.get("traits") or s.get("subtitle")):
             continue        # nothing to say about it; an empty line says nothing
-        n = str(s.get("name", "")).casefold()
+        n = _norm_name(s.get("name", ""))
         if _word_in(n, o) or n in o or (o and o in n):
             out.append(s)   # the whole name is the strongest signal
             continue
-        if any(counts.get(w, 0) == 1 and _word_in(w, o)
+        kind = str(s.get("kind", "")).upper()
+        if any(counts.get((w, kind), 0) == 1 and _word_in(w, o)
                for w in _name_words(n)):
             out.append(s)
     return out
@@ -2624,10 +2639,11 @@ def approval_snapshot(spec: dict, panel_id: str) -> dict:
     """The exact specification that produced a take, as of now."""
     panel = next((p for p in spec.get("panels", [])
                   if p.get("id") == panel_id), None) or {}
-    objects = {str(o).lower() for o in (panel.get("required_objects") or [])}
-    rows = [r for r in (spec.get("evidence_ledger") or [])
-            if str(r.get("panel_id", "")).upper() == str(panel_id).upper()
-            or str(r.get("object", "")).lower() in objects]
+    # The SAME predicate the gate uses (store.evidence_rows_for_panel).
+    # These were typed twice and agreed by coincidence; the comment below
+    # already claimed they were one list, which is what made it worth
+    # fixing — the next reader would trust it and change one side.
+    rows = store.evidence_rows_for_panel(spec, panel_id)
     return {
         "taken_at": store.utcnow(),
         "specification_id": spec.get("specification_id", ""),

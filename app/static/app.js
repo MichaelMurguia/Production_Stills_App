@@ -631,10 +631,21 @@ const wordIn = (needle, hay) => !!needle && new RegExp(
 // Words that name nothing. A group really is called "P02 SHACK IN THE
 // MEADOW", and "the" clears three letters — without this, every object
 // containing the word "the" matches it.
-const NAME_STOPWORDS = new Set([
+// The server owns this list (app/validation.py) and ships it in
+// /api/settings as `name_stopwords` — one stoplist, not two (adversarial
+// review F10: the client had a copy and the server had none, and a
+// divergence is a panel silently matching or missing a reference). The
+// literal below is the boot fallback for the moments before settings land;
+// `adoptNameStopwords` replaces it with the server's.
+let NAME_STOPWORDS = new Set([
   "the", "and", "for", "with", "from", "into", "its", "his", "her", "their",
   "that", "this", "over", "under", "onto", "off",
 ]);
+
+function adoptNameStopwords(settings) {
+  const list = settings && settings.name_stopwords;
+  if (Array.isArray(list) && list.length) NAME_STOPWORDS = new Set(list);
+}
 
 // The words of a name worth matching on. Under three letters matches half
 // the script. Module scope for the same reason wordIn is: FOUR surfaces
@@ -2004,6 +2015,7 @@ async function updateBand() {
 
   $("#brand-project").textContent = (state.project || "").toUpperCase();
 
+  adoptNameStopwords(settings);
   _debugTools = !!settings.debug_tools;
   updateTextEditChip();
 

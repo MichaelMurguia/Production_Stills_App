@@ -786,6 +786,27 @@ def resolve_spec_current(spec_id: str) -> dict | None:
     return get_spec(current or spec_id)
 
 
+def evidence_rows_for_panel(spec: dict, panel_id: str) -> list[dict]:
+    """Which evidence rows justify a panel's required objects.
+
+    ONE list, read by the approval SNAPSHOT and by the GATE that protects
+    it. A comment above the snapshot copy already claimed they shared it —
+    "what an approval freezes and what a locked breakdown refuses must be
+    the same set, or the app promises one thing and guards another" — and
+    what was actually shared was the board-field list, not this predicate.
+    The two agreed by coincidence of having been typed twice (adversarial
+    review F13). A comment asserting a sharing that does not exist is worse
+    than no comment: the next reader trusts it and changes one side.
+    """
+    objs = {str(o).lower()
+            for o in next((p.get("required_objects") or []
+                           for p in (spec.get("panels") or [])
+                           if p.get("id") == panel_id), [])}
+    return [r for r in (spec.get("evidence_ledger") or [])
+            if str(r.get("panel_id", "")).upper() == str(panel_id).upper()
+            or str(r.get("object", "")).lower() in objs]
+
+
 def _refuse_frozen_edits(spec_id: str, current: dict, incoming: dict) -> None:
     """What a locked breakdown will not accept (user rulings 2026-08-16).
 
@@ -814,15 +835,7 @@ def _refuse_frozen_edits(spec_id: str, current: dict, incoming: dict) -> None:
 
     # Evidence rows are frozen for an approved panel's objects — they are
     # the justification for what actually got rendered (user ruling).
-    def rows_for(spec, pid):
-        objs = {str(o).lower()
-                for o in ((spec.get("panels") or [{}]) and
-                          next((p.get("required_objects") or []
-                                for p in (spec.get("panels") or [])
-                                if p.get("id") == pid), []))}
-        return [r for r in (spec.get("evidence_ledger") or [])
-                if str(r.get("panel_id", "")).upper() == str(pid).upper()
-                or str(r.get("object", "")).lower() in objs]
+    rows_for = evidence_rows_for_panel
 
     for pid in approved:
         if rows_for(incoming, pid) != rows_for(current, pid):

@@ -14,6 +14,7 @@ from . import (activity, assemble, autofill, backup, bible, composition,
                scan,
                connectors, generate, insights, looks, paths, sheet,
                sheet_render, store, wizard)
+from . import validation
 from .validation import check_spec, full_validate
 
 app = FastAPI(title="Screenboard Studio", version="0.2.0")
@@ -1198,6 +1199,10 @@ def api_get_settings() -> dict:
             "custom_engines": customs,
             "debug_tools": generate.debug_tools_enabled(),
             "default_provider": generate.DEFAULT_PROVIDER,
+            # One stoplist, not two (adversarial review F10). The client had
+            # its own copy and the server had none; a divergence here is a
+            # panel silently matching or missing a reference.
+            "name_stopwords": sorted(validation.NAME_STOPWORDS),
             "preferred_provider": generate.preferred_provider(),
             "narrative_provider": (s.get("narrative_provider") or "openai"),
             "anthropic_model": narrative.anthropic_model(),
