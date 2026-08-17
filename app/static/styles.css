@@ -1203,8 +1203,13 @@ details.meta pre {
    as canon. Status owns COLOUR — --ok approved, --bad rejected. Selection
    owns an ink OUTLINE, drawn outside the frame so it composes with any
    status instead of replacing it. Same rule as the style picker: a
-   selection is state, and state is ink. */
-.take.shown { outline: 2px solid var(--ink); outline-offset: 1px; }
+   selection is state, and state is ink.
+
+   ONE outer stroke, 1px (user 2026-08-16: "this highlight state is
+   aweful ... on outer strok 1 px"). At 2px with a 1px offset it read as a
+   double frame around an already-framed tile — three concentric lines for
+   one bit of state. */
+.take.shown { outline: 1px solid var(--ink); outline-offset: 1px; }
 .take-label {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em;
   color: var(--ink-faint); padding: 4px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
@@ -2263,8 +2268,6 @@ details.meta pre {
 }
 .busy.busy-inline.bad { color: var(--bad); }
 .busy.busy-inline.ok { color: var(--ok); }
-
-}
 
 /* Reference implementation delivered 2026-08-04 (PROVIDER_MARQUEE
    SNIPPET, tokenized): the CHANNEL is the dark ground (--field) with a
@@ -3555,7 +3558,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .take-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .take.approved .take-frame { border-color: var(--ok); }
-.take.shown .take-frame { outline: 2px solid var(--ink); outline-offset: 1px; }
+.take.shown .take-frame { outline: 1px solid var(--ink); outline-offset: 1px; }
 .take.rejected .take-frame { border-color: var(--bad-line); }
 .take.rejected .take-frame img { opacity: .45; }
 .wb-card .take-cap {

@@ -1522,6 +1522,16 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-16** — **The take selection stroke is ONE 1px outer line** (user:
+  "this highlight state is aweful ... on outer strok 1 px"). It was 2px at a 1px
+  offset around an already-framed tile — three concentric lines for one bit of
+  state. Status still owns colour, selection still owns the outline; only the
+  weight changed. **Also: the stylesheet now has a parse guard.** A comment
+  fault while making this change dropped the parsed sheet from 1519 rules to
+  482 with no error anywhere — the file read fine, the server returned 200, and
+  every test passed, because they all read the TEXT rather than what a parser
+  makes of it. A stray `}` from an earlier edit was found and removed too.
+
 - **2026-08-16** — **Non-canon: an object can say a plate is not its reference.**
   The looser matcher shipped earlier the same day made "airlock hatch behind
   Sal" green against SAL CRAFT — the phrase names Sal because Sal is in it,

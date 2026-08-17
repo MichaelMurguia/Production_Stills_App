@@ -514,6 +514,14 @@ class GreenMeansApproved(unittest.TestCase):
             self.assertIn("outline", b)
             self.assertIn("var(--ink)", b)
 
+    def test_the_selection_stroke_is_one_hairline(self):
+        """User 2026-08-16: "this highlight state is aweful ... on outer
+        strok 1 px". At 2px outside an already-bordered tile it read as a
+        double frame — three concentric lines for one bit of state."""
+        for sel in (".take.shown", ".take.shown .take-frame"):
+            self.assertIn("outline: 1px solid var(--ink)", block(sel), sel)
+            self.assertNotIn("outline: 2px", block(sel), sel)
+
     def test_approval_keeps_it(self):
         self.assertIn("var(--ok)", block(".take.approved"))
         self.assertIn("var(--ok)", block(".take.approved .take-frame"))
