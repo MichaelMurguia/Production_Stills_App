@@ -8538,6 +8538,18 @@ const providerUsable = (settings, v) => {
   const e = settings.engines?.[v];
   return !!e?.configured && e.last_test?.ok !== false;
 };
+// Does this engine hand the reference IMAGES to the image model, or only
+// words about them? Server-declared (generate.sends_plates) so the two can
+// never drift; a missing flag means yes, which is true of every engine
+// that speaks the OpenAI Images API.
+const sendsPlates = (settings, provider) => {
+  const m = (settings.provider_meta || {})[provider];
+  if (!m) return true;
+  if ("plates" in m) return !!m.plates;
+  if ("refs" in m) return !!m.refs;
+  return true;
+};
+
 const providerOptions = (settings, selected) => {
   const entries = Object.entries(settings.providers || {})
     .filter(([v]) => v !== "mock");  // R16: quarantined to the debug tail
@@ -8555,8 +8567,14 @@ const providerOptions = (settings, selected) => {
   }
   const sel = (selected === "mock" && settings.engines?.mock?.configured) ? "mock"
     : usable.some(([v]) => v === selected) ? selected : usable[0][0];
+  // Whether an engine puts the reference PLATES in front of the image
+  // model is the single most consequential thing about it in this app, and
+  // the list used to read as three interchangeable names (user-caught
+  // 2026-08-16: a likeness plate and a render of a different man). It is a
+  // fact about the engine, so it rides in Courier on the option itself.
   return usable.map(([v, label]) =>
-    `<option value="${esc(v)}" ${v === sel ? "selected" : ""}>${esc(label)}</option>`).join("")
+    `<option value="${esc(v)}" ${v === sel ? "selected" : ""}>${esc(label)}${
+      sendsPlates(settings, v) ? "" : "  ·  NO REFERENCE IMAGES"}</option>`).join("")
     + failed.map(([v, label]) =>
       `<option value="${esc(v)}" disabled>${esc(label)} — KEY FAILED ITS TEST</option>`).join("")
     + (settings.engines?.mock?.configured
@@ -9473,6 +9491,7 @@ async function renderBoardPanels(specId) {
               </div>
             </div>
             <div class="gen-warn mono hidden" data-f="aspect-warn"></div>
+            <div class="gen-warn mono hidden" data-f="plates-warn"></div>
             <div class="gen-gate mono" data-f="gen-gate"></div>` })}
       </div>
       <div data-f="busy"></div>
@@ -9880,6 +9899,7 @@ async function renderBoardPanels(specId) {
     const saySize = $("[data-f=say-size]", card);
     const sayAspect = $("[data-f=say-aspect]", card);
     const aspectWarn = $("[data-f=aspect-warn]", card);
+    const platesWarn = $("[data-f=plates-warn]", card);
     const genGate = $("[data-f=gen-gate]", card);
     const syncStated = () => {
       sayModel.textContent = modelSel.options[modelSel.selectedIndex]?.text || "—";
@@ -9897,6 +9917,21 @@ async function renderBoardPanels(specId) {
         aspectWarn.textContent =
           `ASPECT DOES NOT MATCH THE PANEL — ${p.id} IS ${String(aspectLabel).toUpperCase()}`
           + ` AND THE LAST TAKE RENDERED ${lastTake.width} × ${lastTake.height}`;
+      }
+      // The plates gate. Ticking six references and choosing an engine that
+      // cannot receive them is the most expensive silent mismatch in the
+      // app — it produced a render of a completely different man from a
+      // likeness plate, with nothing anywhere saying why (user-caught
+      // 2026-08-16). Stated where the spend happens, and only when there is
+      // actually something to lose.
+      const nPlates = checkedRefs().length + styleAnchors.length;
+      const blind = nPlates > 0 && !sendsPlates(appSettings, modelSel.value);
+      platesWarn.classList.toggle("hidden", !blind);
+      if (blind) {
+        platesWarn.textContent =
+          `THIS ENGINE NEVER SEES YOUR ${nPlates} REFERENCE PLATE${nPlates === 1 ? "" : "S"}`
+          + " — IT RENDERS FROM A WRITTEN DESCRIPTION OF THEM."
+          + " A LIKENESS WILL BE APPROXIMATE. PICK GEMINI OR GPT IMAGE 2 TO SEND THE IMAGES.";
       }
       // §2.4 the gate is honest: unconfirmed steps do NOT block a render,
       // so the surface says so rather than grey out the button. A render is

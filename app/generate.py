@@ -14,11 +14,38 @@ OPENAI_CHAT_MODEL = "gpt-5.6"  # mainline model that rewrites the prompt, as Cha
 OPENAI_CHAT_IMAGE_MODEL = "chatgpt-image-latest"  # whatever image model ChatGPT itself uses
 
 PROVIDERS = {
-    "gemini": {"model": MODEL, "label": "Gemini (Nano Banana Pro)"},
-    "openai": {"model": OPENAI_MODEL, "label": "OpenAI (GPT Image 2, direct)"},
+    # `plates` is the fact this whole product rests on: does the IMAGE model
+    # receive the attached reference images, or only words about them?
+    # (user-caught 2026-08-16, holding a likeness plate beside a render of a
+    # different man entirely: "we need to use a model that uses image
+    # reference — this application depends on it".)
+    #
+    # gemini and openai hand the files to the image model itself. The
+    # ChatGPT pipeline cannot: GPT-5.6 sees the photographs and calls an
+    # image tool that takes text only, so a likeness survives exactly as
+    # well as the rewriter's prose describes it — and it used to write "the
+    # same recognizable man established by the approved likeness reference",
+    # which instructs the tool to match nothing at all.
+    "gemini": {"model": MODEL, "label": "Gemini (Nano Banana Pro)",
+               "plates": True},
+    "openai": {"model": OPENAI_MODEL, "label": "OpenAI (GPT Image 2, direct)",
+               "plates": True},
     "openai-chat": {"model": f"{OPENAI_CHAT_IMAGE_MODEL} via {OPENAI_CHAT_MODEL}",
-                    "label": "OpenAI (ChatGPT pipeline)"},
+                    "label": "OpenAI (ChatGPT pipeline)",
+                    "plates": False},
 }
+
+
+def sends_plates(provider: str) -> bool:
+    """Does this engine put the reference IMAGES in front of the image
+    model? Connector models declare it as `refs`; a custom engine speaks the
+    OpenAI Images API, which means images.edit, which means yes."""
+    p = all_providers().get(provider) or {}
+    if "plates" in p:
+        return bool(p["plates"])
+    if "refs" in p:
+        return bool(p["refs"])
+    return True
 DEFAULT_PROVIDER = "gemini"
 
 
@@ -1401,6 +1428,25 @@ Hard rules for your rewrite:
 - The VISUAL STYLE section is non-negotiable art direction — bake it into the
   description rather than quoting it.
 - Respect the reference-image roles exactly as scoped.
+- YOU ARE THE ONLY THING THAT SEES THE ATTACHED REFERENCE IMAGES. The image
+  generation tool receives your text and nothing else — never the
+  photographs. So "the same recognizable man established by the approved
+  likeness reference" instructs it to match NOTHING: it will invent a face
+  from whatever adjectives happen to sit near the name. For every attached
+  reference, DESCRIBE WHAT YOU ACTUALLY SEE in concrete, drawable terms,
+  staying inside that reference's role scope:
+  * CHARACTER_LIKENESS — apparent age, build, face shape, skin, hair COLOUR
+    and LENGTH and how it is worn, facial hair, eye colour, brow, nose, jaw,
+    mouth, and any distinguishing mark. Write the description into the prose
+    as fact about the person. Naming him and pointing at an attachment is not
+    a description.
+  * PROP / VEHICLE / LOCATION / GEOMETRY — form, proportion, construction,
+    materials, finish, wear, and colour.
+  * STYLE / PALETTE / CINEMATOGRAPHY — medium, brushwork, finish, value range
+    and hues, as you see them.
+  Describe only what each role controls, and say nothing about what it does
+  not — a likeness reference tells you the face, never the costume, the
+  lighting, or the camera.
 """
 
 def _rewriter_rules() -> str:
