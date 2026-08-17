@@ -34,7 +34,11 @@ class ReviseModalPins(unittest.TestCase):
 
 class CarriedRowPins(unittest.TestCase):
     def test_the_row_flag_exists(self):
-        self.assertIn("const ro = locked || carriedSet.has(pid)", JS)
+        """A carried row is read-only whatever else is true. The other half
+        of this flag changed on 2026-08-16: a locked SHEET no longer freezes
+        every row, only a panel with an approved take freezes its own — the
+        rule save_spec/_refuse_frozen_edits has always enforced."""
+        self.assertIn("const ro = panelFrozen(pid) || carriedSet.has(pid)", JS)
 
     def test_the_chip_and_the_upgrade_act(self):
         # R8 (HARNESS_AUDIT): a chip is a label, not a sentence — the row

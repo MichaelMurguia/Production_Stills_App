@@ -28,8 +28,12 @@ class TheTransfer(unittest.TestCase):
         start disagreeing — stage 03 binds the same seqStep()."""
         self.assertIn("function seqStep({", JS)
         self.assertEqual(JS.count("function seqStep({"), 1)
+        # Bounded by the function, not by a character count — a fixed
+        # window stops covering the code it was written to pin as soon as
+        # anything above it grows (it did, 2026-08-16).
         i = JS.index("async function openSpecEditor")
-        self.assertIn("seqStep({", JS[i:i + 12000])
+        j = JS.index("\nasync function ", i + 10)
+        self.assertIn("seqStep({", JS[i:j])
 
     def test_the_vocabulary_class_is_not_the_workbenchs(self):
         self.assertIn('panel.className = "panel spec-editor seq"', JS)

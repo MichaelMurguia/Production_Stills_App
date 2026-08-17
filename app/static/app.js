@@ -5926,6 +5926,9 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
   const lbItems = recs.map(r => ({ src: `/api/references/${r.id}/image`,
                                    caption: `${r.id} — ${r.role}` }));
   const chosen = new Set(pick || recs.map(r => r.id));
+  // What the selection was when the modal opened — Save has to know
+  // whether there is anything to save (user 2026-08-16).
+  const opened = [...chosen].sort().join(",");
   // Default to showing ONLY what the render works from (user 2026-08-15:
   // clicking an object's REF should show the plates selected for it, not
   // the whole library group). The rest stay one verb away — a set you
@@ -5977,20 +5980,39 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
           ? `Show all ${recs.length}`
           : `Show only the ${chosen.size} that ride`;
       };
+      const closeBtn = $("[data-f=vr-close]", ov);
+      let dirty = false;
       if (onPick) {
         const countEl = $("[data-f=vr-count]", ov);
+        // The change SHOWS immediately — the count moves and the unpicked
+        // card dims, so the choice is visibly working. But it COMMITS on
+        // Save (user 2026-08-16: "if I unselect reference in a ref panel
+        // ... the close button should turn to Save and saving closes the
+        // modal"). Committing on every tick meant the panel behind kept
+        // redrawing under an open modal, and there was no moment that felt
+        // like a decision.
+        const sayDirty = () => {
+          dirty = [...chosen].sort().join(",") !== opened;
+          closeBtn.textContent = dirty ? "Save" : "Close";
+          closeBtn.classList.toggle("primary", dirty);
+          closeBtn.classList.toggle("ghost", !dirty);
+          closeBtn.title = dirty
+            ? "Keep this selection — only the ticked plates ride the next render"
+            : "";
+        };
         $$("[data-use]", ov).forEach(box => box.onchange = () => {
           box.checked ? chosen.add(box.dataset.use) : chosen.delete(box.dataset.use);
           $(`[data-card="${box.dataset.use}"]`, ov)
             ?.classList.toggle("vr-off", !box.checked);
           if (countEl) countEl.textContent =
             `${chosen.size} OF ${recs.length} RIDE THE NEXT RENDER`;
-          // Report every change as it happens: a choice that only lands on
-          // Close is a choice you cannot see working.
-          onPick([...chosen]);
+          sayDirty();
         });
       }
-      $("[data-f=vr-close]", ov).onclick = () => done(null);
+      closeBtn.onclick = () => {
+        if (dirty && onPick) onPick([...chosen]);
+        done(null);
+      };
       $("[data-f=vr-add]", ov).onclick = () => {
         done(null);
         addReferenceDialog(addPrefill, { approve: true, onDone: onChanged });
@@ -6784,6 +6806,21 @@ async function openSpecEditor(specId) {
   const approvedCands = (Array.isArray(specCands) ? specCands : [])
     .filter(c => c.status === "APPROVED");
   const boardFrozen = approvedCands.length > 0;
+  // A LOCK is not a FREEZE (user 2026-08-16: "if I have not generated a
+  // panel, and I edit a breakdown, I need to be able to edit that panel...
+  // If it has an approved panel rendered then I should be blocked and
+  // informed why, but NOT if there is no approved panel").
+  //
+  // The server has always worked this way — save_spec on a locked sheet
+  // calls _refuse_frozen_edits, which refuses a panel's own fields only
+  // when THAT panel has an approved take, and the board-level fields only
+  // when some panel does. The UI disabled everything the moment the sheet
+  // locked, so a locked sheet with nothing approved was read-only for no
+  // reason the server would have enforced.
+  const approvedPanelIds = new Set(approvedCands.map(c => c.panel_id));
+  const panelFrozen = pid => approvedPanelIds.has(String(pid).toUpperCase());
+  const allFrozen = boardFrozen
+    && (spec.panels || []).every(p => panelFrozen(p.id));
   const BOARD_STEPS = ["identity", "direction", "scope"];
   const frozenWhyBoard = boardFrozen
     ? `Board-level and settled by ${approvedCands.map(c => c.candidate_id).join(", ")}`
@@ -6824,12 +6861,23 @@ async function openSpecEditor(specId) {
     // (user-caught 2026-08-15). The slot map knows the real verdict.
     const slotBy = {};
     for (const s of (slotMap?.slots || [])) slotBy[s.panel_id] = s;
+    // A SLOT verdict is a board problem, not a breakdown problem (user
+    // 2026-08-16: "I dont like seeing the red on the approved panel in the
+    // breakdown page. Save the error messages for the board tab"). Here,
+    // an approved take IS the work finished — the panel did what this page
+    // asked of it. Whether the resulting pixels fill a particular slot in a
+    // particular layout is a question the board asks, and stage 05 already
+    // answers it in three places: the rail mark, the readiness list, and
+    // the hatched slot on the map. Two surfaces reporting one fault only
+    // made the finished thing look broken.
+    //
+    // UNAPPROVED stays: it is not a slot verdict, it is this page's own
+    // work still outstanding, and it names where to go and do it.
     const VERDICT_LINE = {
-      TOO_SMALL: s => `SIZE — ${s.candidate_width}×${s.candidate_height} INTO A ${
-        s.slot_width}×${s.slot_height} SLOT · NEVER UPSCALED`,
+      TOO_SMALL: () => "",
       UNAPPROVED: () => "NO APPROVED TAKE — APPROVE ONE ON THE WORKBENCH",
       NO_CANDIDATE: () => "",
-      STALE_APPROVAL: s => `REVISED SINCE — APPROVED AGAINST R${s.offered_from_revision}`,
+      STALE_APPROVAL: () => "",
     };
     const verdictOf = pid => {
       const s = slotBy[pid];
@@ -6945,7 +6993,18 @@ async function openSpecEditor(specId) {
     ${locked ? `
     <div class="gate-strip lock-strip">
       <span class="gate-label" style="color:var(--ink-dim)">LOCKED</span>
-      <span class="gate-text">Approved and read-only — objects, panels, and the ledger cannot change here. To edit:</span>
+      <span class="gate-text">${allFrozen
+        ? `Every panel has an approved take, so this breakdown is settled — objects,
+           panels and the ledger are what those renders were approved against.`
+        : boardFrozen
+          ? `${approvedPanelIds.size} of ${(spec.panels || []).length} panels have an
+             approved take. <b>Those panels are frozen</b>; the rest, and any panel you
+             add, stay editable. Board-level fields are settled because a take was
+             approved against them.`
+          : `Locked, but nothing has been rendered from it yet — <b>everything here is
+             still editable</b> and saving re-stamps the lock. A panel freezes when one
+             of its takes is approved.`}
+        ${allFrozen ? "To edit:" : "To change a frozen part:"}</span>
       <button class="block-act" data-f="lock-revise">Create revision</button>
       <button class="block-act" data-f="lock-unlock">Unlock &amp; edit</button>
     </div>` : ""}
@@ -6959,29 +7018,29 @@ async function openSpecEditor(specId) {
           done: confIs("identity"),
           frozen: isFrozenStep("identity"), frozenWhy: frozenWhyBoard,
           body: `      <div class="grid-form">
-      <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${locked ? "disabled" : ""}></label>
+      <label title="What this board is about — a short human-readable name for the location, scene, prop, or character. It appears in prompts and the spec list.">Subject <input type="text" id="sp-subject" value="${esc(spec.subject)}" ${boardFrozen ? "disabled" : ""}></label>
       <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
-        <select id="sp-mode" ${locked ? "disabled" : ""}>
+        <select id="sp-mode" ${boardFrozen ? "disabled" : ""}>
           <option ${spec.mode === "CANON_EXTRACTION" ? "selected" : ""}>CANON_EXTRACTION</option>
           <option ${spec.mode === "DESIGN_EXPLORATION" ? "selected" : ""}>DESIGN_EXPLORATION</option>
         </select>
       </label>
       <label title="What kind of board this is — it governs slugline behavior. SCENE: one screenplay scene, one time of day for all panels. LOCATION: a place across times — time of day is chosen per panel. ASSET: neutral subject presentation, no slugline. LIGHTING STUDY: derived from an approved panel, geometry locked. MASTER: presentation grammar.">Board type
-        <select id="sp-btype" ${locked ? "disabled" : ""}>
+        <select id="sp-btype" ${boardFrozen ? "disabled" : ""}>
           ${BOARD_TYPES.map(t => `<option value="${t.value}" ${(spec.board_type || "LOCATION") === t.value ? "selected" : ""}>${t.label}</option>`).join("")}
         </select>
       </label>
-      <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${locked ? "disabled" : ""}></label>
+      <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${boardFrozen ? "disabled" : ""}></label>
       </div>
       <div class="grid-form">
       <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the slugline; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
-        <select id="sp-intext" ${locked ? "disabled" : ""}>
+        <select id="sp-intext" ${boardFrozen ? "disabled" : ""}>
           ${["", "INT", "EXT", "INT/EXT"].map(v => `<option value="${v}" ${(spec.setting?.int_ext || "") === v ? "selected" : ""}>${v || "—"}</option>`).join("")}
         </select>
       </label>
-      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${locked ? "disabled" : ""}></label>
+      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${boardFrozen ? "disabled" : ""}></label>
       <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
-        <select id="sp-tod" ${locked ? "disabled" : ""}>
+        <select id="sp-tod" ${boardFrozen ? "disabled" : ""}>
           ${[...new Set(["", ...TIMES_OF_DAY, "MAGIC HOUR",
                          ...(bible_catalog?.atmospheres || []),
                          ...(spec.setting?.time_of_day ? [spec.setting.time_of_day] : [])])]
@@ -6989,7 +7048,7 @@ async function openSpecEditor(specId) {
               (spec.setting?.time_of_day || "") === t ? " selected" : ""}>${esc(t) || "—"}</option>`).join("")}
         </select>
       </label>
-      <label class="setf" data-setf="atmo" title="Optional weather / light character layered on the hour — one of the Bible's approved atmosphere studies (or your own words). DUSK is the hour; 'dusk and lanterns' is the atmosphere.">Atmosphere <input type="text" id="sp-atmo" list="atmo-list" placeholder="e.g. dusk and lanterns, storm approach…" value="${esc(spec.setting?.atmosphere || "")}" ${locked ? "disabled" : ""}>
+      <label class="setf" data-setf="atmo" title="Optional weather / light character layered on the hour — one of the Bible's approved atmosphere studies (or your own words). DUSK is the hour; 'dusk and lanterns' is the atmosphere.">Atmosphere <input type="text" id="sp-atmo" list="atmo-list" placeholder="e.g. dusk and lanterns, storm approach…" value="${esc(spec.setting?.atmosphere || "")}" ${boardFrozen ? "disabled" : ""}>
         <datalist id="atmo-list">${(bible_catalog?.atmospheres || []).map(t => `<option value="${esc(t)}">`).join("")}</datalist>
       </label>
       </div>` })}
@@ -7000,12 +7059,12 @@ async function openSpecEditor(specId) {
           done: confIs("direction"),
           frozen: isFrozenStep("direction"), frozenWhy: frozenWhyBoard,
           body: `      <div class="grid-form">
-      <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${locked ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
-      <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${locked ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
+      <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${boardFrozen ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
+      <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${boardFrozen ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
       <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects and the project lessons-learned into every render prompt.">Forbidden elements <span class="hint">(one per line — seeded from the rejection history on the dashboard)</span>
-        <textarea id="sp-forbidden" ${locked ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
+        <textarea id="sp-forbidden" ${boardFrozen ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
-      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${locked ? "disabled" : ""}></label>
+      <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${boardFrozen ? "disabled" : ""}></label>
       </div>` })}
 
         ${qStepHtml}
@@ -7019,12 +7078,12 @@ async function openSpecEditor(specId) {
           <span class="f-label">Design languages</span>
           <div id="sp-design">${bible_catalog.design_languages.map(n => {
             const sel = spec.design_languages ?? bible_inferred.design_languages;
-            return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${locked ? "disabled" : ""}> ${esc(n)}</label>`;
+            return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${boardFrozen ? "disabled" : ""}> ${esc(n)}</label>`;
           }).join("") || '<span class="mini">none defined in the Bible</span>'}</div>
         </div>
         <div class="fgroup" title="The physical world this board lives in. Its Bible entry (palette, light, atmosphere) is injected between the design languages and the scene lessons.">
           <span class="f-label">Environment</span>
-          <select id="sp-environment" ${locked ? "disabled" : ""}>
+          <select id="sp-environment" ${boardFrozen ? "disabled" : ""}>
             <option value="">— none —</option>
             ${envOptions.map(n => `<option value="${esc(n)}"${envCurrent && envCurrent.toLowerCase() === n.toLowerCase() ? " selected" : ""}>${esc(n)}${envNotes[n] ? ` — ${esc(envNotes[n].slice(0, 44))}` : ""}${(bible_catalog.environments || []).includes(n) ? "" : " (not in Bible yet)"}</option>`).join("")}
           </select>
@@ -7035,7 +7094,7 @@ async function openSpecEditor(specId) {
           <span class="f-label">Scene lessons</span>
           <div id="sp-lessons">${bible_catalog.scene_lessons.map(n => {
             const sel = spec.scene_lessons ?? bible_inferred.scene_lessons;
-            return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${locked ? "disabled" : ""}> ${esc(n)}</label>`;
+            return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${boardFrozen ? "disabled" : ""}> ${esc(n)}</label>`;
           }).join("") || '<span class="mini">none recorded yet</span>'}</div>
         </div>
       </div>
@@ -7048,7 +7107,7 @@ async function openSpecEditor(specId) {
           done: confIs("panels"),
           frozen: isFrozenStep("panels"), frozenWhy: frozenWhyBoard,
           body: `      <div id="sp-panels"></div>
-      ${locked ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}` })}
+      ${allFrozen ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}` })}
 
         ${seqStep({ n: "06", id: "evidence", label: "EVIDENCE",
           meta: `${(spec.evidence_ledger || []).length} ROWS · EVERY REQUIRED OBJECT HAS A PASS ROW`,
@@ -7064,14 +7123,14 @@ async function openSpecEditor(specId) {
         <span></span>
       </div>
       <div id="sp-ledger"></div>
-      ${locked ? "" : '<button class="ghost" id="sp-add-ledger">+ Add evidence row</button>'}` })}
+      ${allFrozen ? "" : '<button class="ghost" id="sp-add-ledger">+ Add evidence row</button>'}` })}
 
         ${seqStep({ n: "07", label: "APPROVE & LOCK",
           meta: "APPROVING LOCKS THE OBJECTS, PANELS AND LEDGER · ONLY THEN CAN STAGE 04 GENERATE",
-          verbs: `${locked ? "" : `
+          verbs: `${allFrozen ? "" : `
         <button class="primary" id="sp-save">Save</button>
-        <button class="ghost" id="sp-validate">Validate</button>
-        <button class="ghost" id="sp-approve">Approve &amp; lock</button>`}
+        <button class="ghost" id="sp-validate">Validate</button>`}
+      ${locked ? "" : `<button class="ghost" id="sp-approve">Approve &amp; lock</button>`}
       ${locked ? `
         <button class="ghost" id="sp-revise">Create revision</button>
         <button class="danger" id="sp-unlock" title="Void the approval and edit this spec in place — refused if approved candidates or boards depend on it">Unlock &amp; edit</button>
@@ -7081,6 +7140,17 @@ async function openSpecEditor(specId) {
 
     <div id="sp-report"></div>`;
   host.append(panel);
+
+  // The editor renders BELOW the breakdown list, so opening one left its
+  // head ~1500px down the page and the lock strip — the only place that
+  // offers Unlock & edit — off-screen (user 2026-08-16: "'Unlock and Edit'
+  // needs to appear at the top"). Opening a breakdown should put you at
+  // the top of it. A re-render from a step confirmation must NOT scroll,
+  // or every tick throws the reader back up.
+  if (openSpecEditor._last !== specId) {
+    openSpecEditor._last = specId;
+    requestAnimationFrame(() => panel.scrollIntoView({ block: "start" }));
+  }
 
   // Step confirmations — same two-state model as stage 04, same advisory
   // rule: repainting is what re-reads the state, so the head count, the
@@ -7285,7 +7355,8 @@ async function openSpecEditor(specId) {
     // Per-row editability (2026-08-13): a carried panel of a scoped
     // draft revision is read-only exactly like a locked sheet's row —
     // the sheet-wide flag stays `locked`; this row's is `ro`.
-    const ro = locked || carriedSet.has(pid);
+    // Per PANEL, not per sheet: only an approved take freezes its own row.
+    const ro = panelFrozen(pid) || carriedSet.has(pid);
     const row = document.createElement("div");
     row.className = "panel-card";
     row.dataset.pid = pid;
