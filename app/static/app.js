@@ -5823,6 +5823,117 @@ function castModal(rec, onDone) {
   $("[data-f=subtitle]", ov).focus();
 }
 
+// Ask the screenplay something about ONE panel (user 2026-08-16: "a Scan
+// Screenplay button that will rescan for information. A modal will pop up
+// asking for information to scan for which the AI will use to get better
+// info. In that modal, an Open Screenplay button will open the screenplay
+// in a new tab").
+//
+// The ask leads, because a narrow question is the whole point — a second
+// full re-draft is what the breakdown already had. Findings come back as a
+// proposal: each carries the VERBATIM line it came from, so accepting one
+// is reading evidence rather than trusting a model, and nothing changes
+// until you accept. Every quote was checked against the text server-side;
+// anything the screenplay did not literally say was dropped before it got
+// here, and the count of drops is stated rather than hidden.
+function scanScreenplayDialog({ specId, panelId, has, accept }) {
+  const ov = document.createElement("div");
+  ov.className = "modal-scrim";
+  ov.innerHTML = `
+    <div class="modal scan-modal" role="dialog" aria-modal="true">
+      <div class="modal-title">Scan the screenplay — ${esc(panelId)}</div>
+      <p class="modal-body">Ask one question about what this panel has to
+      show. The screenplay scene behind the panel is read again and answered
+      from its own words — no render, and nothing changes until you accept
+      a find.</p>
+      <label class="modal-field">What should I look for?
+        <textarea data-f="ask" rows="3" placeholder="e.g. how does the airlock open, and what is behind Sal?"></textarea>
+        <span class="hint">Physical, drawable things answer best — what is present,
+        where it sits, what state it is in, what it is made of.</span>
+      </label>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="ghost" data-f="open-sp"
+          title="Open the screenplay in a new tab to read it yourself">Open screenplay ↗</button>
+        <span style="flex:1"></span>
+        <button class="ghost" data-f="cancel">Cancel</button>
+        <button class="primary" data-f="go">Scan</button>
+      </div>
+      <div data-f="busy"></div>
+      <div data-f="out"></div>
+    </div>`;
+  document.body.append(ov);
+  const close = () => { document.removeEventListener("keydown", onKey); ov.remove(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  $("[data-f=cancel]", ov).onclick = close;
+  $("[data-f=open-sp]", ov).onclick = () =>
+    window.open("/api/screenplay/file", "_blank", "noopener");
+  const ask = $("[data-f=ask]", ov);
+  ask.focus();
+
+  const out = $("[data-f=out]", ov);
+  const go = $("[data-f=go]", ov);
+  go.onclick = async () => {
+    go.disabled = true;
+    out.innerHTML = "";
+    const busy = startBusy($("[data-f=busy]", ov),
+      `Reading the screenplay for ${panelId}…`,
+      "one text call — no image is generated");
+    try {
+      const r = await api(`/api/specs/${specId}/panels/${panelId}/scan`, {
+        method: "POST", json: { ask: ask.value },
+      });
+      busy.done();
+      const src = r.anchor?.matched
+        ? `THE SCREENPLAY SCENE${r.anchor.location
+            ? ` · ${esc(String(r.anchor.location).toUpperCase())}` : ""}`
+        : "THE SHEET&rsquo;S OWN SCENE PROSE — THE SCREENPLAY SCENE WAS NOT LOCATED";
+      if (!r.finds.length) {
+        out.innerHTML = `<div class="report">
+          <b>Nothing found</b>
+          <p class="mini">${esc(r.note || "The text does not answer that.")}</p>
+          <div class="mini mono">READ ${src} · ${esc(r.model || "")}</div></div>`;
+        go.disabled = false;
+        return;
+      }
+      out.innerHTML = `<div class="report">
+        <div class="mini mono">${r.finds.length} FIND${r.finds.length === 1 ? "" : "S"}
+          · READ ${src} · ${esc(r.model || "")}${r.unverified_dropped
+            ? ` · ${r.unverified_dropped} DROPPED — NOT LITERALLY IN THE TEXT` : ""}</div>
+        <div class="scan-finds">${r.finds.map((f, i) => `
+          <div class="scan-find" data-i="${i}">
+            <div class="scan-detail">${esc(f.detail)}</div>
+            <blockquote class="scan-quote">${esc(f.quote)}</blockquote>
+            ${f.object ? `<button type="button" class="ghost" data-add="${esc(f.object)}"
+              >+ ${esc(f.object)}</button>`
+              : `<span class="mini mono">CONTEXT — NOTHING TO ADD</span>`}
+          </div>`).join("")}</div>
+        ${r.note ? `<p class="mini">${esc(r.note)}</p>` : ""}</div>`;
+      $$("[data-add]", out).forEach(b => b.onclick = () => {
+        const added = accept(b.dataset.add);
+        b.disabled = true;
+        b.textContent = added ? `✓ ${b.dataset.add}` : "already required";
+      });
+      // Anything already on the panel is worth marking BEFORE it is
+      // clicked — an offer you cannot use is noise.
+      const already = has().map(x => String(x).toLowerCase());
+      $$("[data-add]", out).forEach(b => {
+        if (already.includes(b.dataset.add.toLowerCase())) {
+          b.disabled = true;
+          b.textContent = `already required · ${b.dataset.add}`;
+        }
+      });
+      go.disabled = false;
+      go.textContent = "Scan again";
+    } catch (err) {
+      busy.done();
+      out.innerHTML = `<div class="report fail">${esc(err.message)}</div>`;
+      go.disabled = false;
+    }
+  };
+}
+
 // An object with no matching reference has two answers, not one (user
 // 2026-08-16: "in this dialogue I need to be able to select existing
 // ref"). Uploading was the only door, so a plate the library already held
@@ -7399,7 +7510,9 @@ async function openSpecEditor(specId) {
       </div>
       <div class="two-col">
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
-          <span class="f-label">Required objects</span>
+          <span class="f-label" style="display:flex;align-items:center;gap:10px">Required objects
+            ${ro ? "" : `<button type="button" class="text-act" data-f="scan-scene"
+              title="Read the screenplay again for this panel and ask it something specific. Text only, no render, and nothing is changed until you accept a find.">Scan screenplay</button>`}</span>
           <div class="chips" data-f="chips"></div>
         </div>
         <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements and project lessons in the prompt.">
@@ -7519,6 +7632,25 @@ async function openSpecEditor(specId) {
         syncSuggest();
       });
       $("[data-f=del-panel]", row).onclick = () => row.remove();
+
+      // Scan the screenplay again, for something the user names (2026-08-16).
+      // A breakdown is drafted once from a brief, and the draft summarises:
+      // it captured "airlock hatch behind Sal" and lost that the hatch
+      // irises. Nothing in the app could go back and ask. Findings arrive as
+      // a PROPOSAL — accepting one adds the chip, which the existing chip
+      // path then journals as USER_DIRECTED like any hand-typed object.
+      const scanBtn = $("[data-f=scan-scene]", row);
+      if (scanBtn) scanBtn.onclick = () => scanScreenplayDialog({
+        specId, panelId: pid,
+        has: () => $$(".chip", chips).map(c => c.dataset.obj),
+        accept: obj => {
+          if ($$(".chip", chips).some(c => c.dataset.obj.toLowerCase() === obj.toLowerCase()))
+            return false;
+          addChip(obj, true);
+          syncSuggest();
+          return true;
+        },
+      });
 
       // Suggestion chips (plan D5, mock 5c) — the vocabulary-picker grammar:
       // stateless, never amber. Solid border = in the library, the exact

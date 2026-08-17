@@ -11,6 +11,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
 from fastapi.staticfiles import StaticFiles
 
 from . import (activity, assemble, autofill, backup, bible, composition,
+               scan,
                connectors, generate, insights, looks, paths, sheet,
                sheet_render, store, wizard)
 from .validation import check_spec, full_validate
@@ -1672,6 +1673,21 @@ async def api_draft_prose(spec_id: str, panel_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"prose draft failed: {e}")
+
+
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/scan")
+async def api_scan_panel(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Re-read the screenplay for ONE panel, answering what the user asks.
+    Text-only, no image spend, nothing persisted — the finds come back as a
+    PROPOSAL the caller chooses from. See app/scan.py."""
+    try:
+        return await run_in_threadpool(
+            scan.scan_panel, spec_id, panel_id,
+            str(body.get("ask", "")), str(body.get("provider") or ""))
+    except KeyError as e:
+        raise _err(e)
+    except autofill.AutofillError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/composition-check")

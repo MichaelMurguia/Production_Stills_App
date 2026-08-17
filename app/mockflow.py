@@ -243,6 +243,22 @@ def autofill_draft(subject_prompt: str, mode: str) -> dict:
     }
 
 
+def scan_panel(spec: dict, panel: dict, ask: str, source: str) -> dict:
+    """A screenplay scan at zero cost. Honesty-stamped MOCK, and every
+    quote is taken LITERALLY from the source so the caller's verbatim
+    check exercises its real path rather than being bypassed."""
+    lines = [ln.strip() for ln in str(source).splitlines() if len(ln.strip()) > 30]
+    finds = []
+    for ln in lines[:3]:
+        head = " ".join(ln.split()[:4]).rstrip(".,;:")
+        finds.append({"object": head.lower(),
+                      "detail": f"MOCK FIND — the scene mentions {head.lower()}.",
+                      "quote": ln})
+    return {"finds": finds,
+            "note": f"MOCK SCAN for {ask.strip() or 'no specific ask'} — "
+                    "no model was called."}
+
+
 def composition_check(spec: dict, panel: dict, prompt: str,
                       anchor: dict) -> dict:
     """A composition verdict at zero cost, honesty-stamped: every note

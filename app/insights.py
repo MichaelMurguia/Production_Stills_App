@@ -510,21 +510,45 @@ def scene_anchor(subject: str, max_chars: int = 7000) -> dict:
         return {"matched": False}
     subj_words = set(subj.split())
 
-    best = None
-    for sc in scenes:
-        loc = norm(sc["location"])
-        if loc and (f" {loc} " in f" {subj} " or f" {subj} " in f" {loc} "):
-            best = sc["location"]
-            break
-    if best is None:
+    # The MOST SPECIFIC match, not the first one found (user-hit
+    # 2026-08-16). A board set in "TERRA NOVA SECURE BAY" anchored to
+    # "TERRA NOVA" — a real but different slugline that happens to be a
+    # prefix — and every downstream reader got the wrong scene: the
+    # composition check judged framing against an exterior space battle,
+    # and a screenplay scan reported, honestly and uselessly, that the
+    # text did not mention the airlock. Both matched, so nothing looked
+    # broken. Longest location wins; ties go to the earliest scene.
+    # Direction matters, not just length. A location CONTAINED IN the
+    # subject is the subject naming a place, and the longest such is the
+    # most specific reading of it ("terra nova secure bay" over "terra
+    # nova"). A location that CONTAINS the subject is the subject being
+    # vaguer than the screenplay, and there the shortest is the least
+    # invented — asking for "terra nova" must not land on "terra nova
+    # hangar 02", which was the first fix's own overshoot.
+    inside = [sc for sc in scenes
+              if norm(sc["location"])
+              and f" {norm(sc['location'])} " in f" {subj} "]
+    if inside:
+        best = max(inside, key=lambda sc: (len(norm(sc["location"]).split()),
+                                           -sc["line"]))["location"]
+        hits = [sc for sc in scenes if sc["location"] == best]
+    else:
+        hits = [sc for sc in scenes
+                if norm(sc["location"])
+                and f" {subj} " in f" {norm(sc['location'])} "]
+        if hits:
+            best = min(hits, key=lambda sc: (len(norm(sc["location"]).split()),
+                                             sc["line"]))["location"]
+            hits = [sc for sc in scenes if sc["location"] == best]
+    if not hits:
         # every substantial location token present in the subject
-        for sc in scenes:
-            toks = [t for t in norm(sc["location"]).split() if len(t) >= 3]
-            if toks and all(t in subj_words for t in toks):
-                best = sc["location"]
-                break
-    if best is None:
-        return {"matched": False}
+        loose = [sc for sc in scenes
+                 if (lambda toks: toks and all(t in subj_words for t in toks))(
+                     [t for t in norm(sc["location"]).split() if len(t) >= 3])]
+        if not loose:
+            return {"matched": False}
+        best = max(loose, key=lambda sc: (len(norm(sc["location"]).split()),
+                                          -sc["line"]))["location"]
 
     chunks = []
     picked = 0

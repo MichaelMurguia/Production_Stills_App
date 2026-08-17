@@ -514,6 +514,25 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
    what a render is about to do. */
 .report [data-f="edit-state"].settled { color: var(--ok); }
 
+/* UNCANONIZED — 2026-08-16 — scan the screenplay for one panel.
+   A find is EVIDENCE, so it is laid out as evidence: the reading first,
+   then the screenplay's own words set apart by a rule and Courier, then
+   the one act it offers. The quote is the load-bearing part — it is what
+   makes accepting a find reading rather than trusting. */
+.scan-modal { width: min(720px, 94vw); max-height: 86vh; overflow: auto; }
+.scan-finds { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.scan-find {
+  border-top: 1px solid var(--line-soft); padding-top: 10px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+}
+.scan-detail { font-size: 13.5px; color: var(--ink); }
+.scan-quote {
+  margin: 0; padding: 0 0 0 11px; border-left: 2px solid var(--line);
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.5;
+  color: var(--ink-dim); white-space: pre-wrap;
+}
+.scan-find button[disabled] { opacity: .55; }
+
 /* UNCANONIZED — 2026-08-16 — choose an existing plate for a required object.
    The library card's own anatomy at picker scale: picture first and
    largest, then the machine facts in Courier. Amber is focus only, which
