@@ -2290,10 +2290,17 @@ async function renderScreenplay() {
       <div class="fact"><span>UPLOADED</span><b>${esc(up)}</b></div>
       <div class="fact" data-f="read"><span>READ</span><b>—</b></div>
       <div class="row" style="margin-top:10px">
-        <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — the app itself works from the extracted text">Read the screenplay</button>
+        <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — yours to read, never sent to a model">Read the screenplay</button>
+        <button class="ghost" data-f="read-extract" title="Open the extracted text — this is the copy every model reads, and the only one they are ever sent. Two copies exist deliberately: sending the raw upload would cost tokens on every pass.">Read what the models read</button>
       </div>`;
     $("[data-f=read-script]").onclick = () =>
       window.open("/api/screenplay/file", "_blank");
+    // The two-copies rule is the app's biggest standing token saving, and
+    // until now the copy it saves on had no reader in the product — the
+    // endpoint existed and nothing called it (adversarial review F9). A
+    // rule the user cannot see is a rule they cannot trust.
+    $("[data-f=read-extract]").onclick = () =>
+      window.open("/api/screenplay/text", "_blank", "noopener");
   } else {
     $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
   }
@@ -2549,6 +2556,7 @@ async function renderProjectsView() {
           <span class="prod-care mono ${care.cls}">${esc(care.text)}</span>
           <span class="prod-actions">
             <button class="ghost ${stale ? "urgent" : ""}" data-backup="${esc(p.slug)}" title="Download this production as one zip — screenplay, bible, references, sheets, boards, approvals. API keys are never included.">${stale ? "Back up now" : "Back up"}</button>
+            <button class="ghost" data-safety="${esc(p.slug)}" title="Download the safety copy taken automatically before this production's last import. There is one only if an import has happened; it is how you undo one.">Pre-import copy</button>
             ${p.active ? "" : `<button class="ghost" data-slug="${esc(p.slug)}" title="Open this production — the current one keeps everything and stays on the shelf.">Open</button>`}
             <button class="ghost" data-rename="${esc(p.slug)}" title="Renames in place — Enter commits, Esc reverts.">Rename</button>
             <button class="ghost" data-more="${esc(p.slug)}" title="Duplicate or delete this production">&hellip;</button>
@@ -2568,6 +2576,36 @@ async function renderProjectsView() {
     // one the wait is real — it used to be a bare location.href with nothing
     // on screen (user 2026-08-06). Streaming it through fetch lets the wait
     // state itself in the canon .busy vocabulary and counts the bytes.
+    // The safety copy taken before an import was written to the volume and
+    // was unreachable — the endpoint's own docstring says so, because it
+    // was added to fix exactly that and the UI half was never built
+    // (adversarial review F9). Insurance you cannot collect is not
+    // insurance. Simple download: it is one file that already exists, so
+    // there is nothing to pack and nothing to stream.
+    $$("#prod-cards [data-safety]").forEach(b => b.onclick = async () => {
+      const slug = b.dataset.safety;
+      b.disabled = true;
+      try {
+        const res = await fetch(
+          `/api/projects/safety-zip?slug=${encodeURIComponent(slug)}`);
+        if (res.status === 404) {
+          toast("No safety copy — one is written automatically before each "
+                + "import, and this production has not been imported into.");
+          return;
+        }
+        if (!res.ok) throw new Error((await res.text()) || `failed (${res.status})`);
+        const fname = /filename="([^"]+)"/.exec(
+          res.headers.get("Content-Disposition") || "")?.[1] || "pre-import.zip";
+        const url = URL.createObjectURL(await res.blob());
+        const a = document.createElement("a");
+        a.href = url; a.download = fname;
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast(`${fname} downloaded — the production as it was before its last import.`);
+      } catch (err) { toast(err.message, true); }
+      finally { b.disabled = false; }
+    });
+
     $$("#prod-cards [data-backup]").forEach(b => b.onclick = async () => {
       const slug = b.dataset.backup;
       const card = b.closest(".prod-card");
