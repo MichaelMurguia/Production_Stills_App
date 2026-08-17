@@ -143,6 +143,23 @@ def blocking() -> list[dict]:
                         f"{rep.get('screenplay', 'the current screenplay')}",
             })
 
+    # A consolidation that did not happen (adversarial review F23). It is
+    # advisory rather than blocking — nothing is broken — but it is the one
+    # state in which the retired revision machinery still matters, so it
+    # must be visible instead of only logged.
+    try:
+        from . import revisions as _rev
+        for sk in _rev.skipped_migrations():
+            out.append({
+                "kind": "CARE", "action": "specs", "spec_id": sk.get("base", ""),
+                "text": f"{sk.get('base', '')} did not consolidate at boot — "
+                        f"{sk.get('reason', 'reason not recorded')}. Its revision "
+                        "chain is still split, so its board picks takes by the "
+                        "old rules.",
+            })
+    except Exception:  # noqa: BLE001 — an advisory row must never break the list
+        pass
+
     # Backup reminder — advisory, always last so it never outranks real
     # blockers. Only projects with content deserve the nag.
     if app_state.get("screenplay") or specs:

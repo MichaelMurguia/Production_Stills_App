@@ -416,6 +416,20 @@ def consolidate(base: str) -> dict:
             "locked": was_locked, "backup": str(bak)}
 
 
+# A skip is the ONE case where deleting the revision machinery would change
+# which takes a board uses, so it has to be reachable rather than only
+# written to a log nothing reads (adversarial review F23: a boot with three
+# collapses and one skip printed three lines and looked clean). Process-
+# lived — boot fills it, the boot print and insights.blocking() read it. No
+# skip has ever been recorded in the field; this is insurance against the
+# take-id collision the docstring below names.
+_SKIPPED: list[dict] = []
+
+
+def skipped_migrations() -> list[dict]:
+    return list(_SKIPPED)
+
+
 def migrate_all_projects() -> list[dict]:
     """Collapse every legacy revision chain in every production, at boot.
 
@@ -430,6 +444,7 @@ def migrate_all_projects() -> list[dict]:
     across revisions) must not take the boot down with it, and must not
     stop the next project migrating."""
     from . import store
+    _SKIPPED.clear()          # this boot's skips, not the last one's
     out = []
     with paths.SWITCH_LOCK:
         prev = paths.ACTIVE_PROJECT
@@ -449,6 +464,8 @@ def migrate_all_projects() -> list[dict]:
                         r["project"] = proj["slug"]
                         out.append(r)
                     except Exception as e:  # noqa: BLE001 — boot must survive
+                        _SKIPPED.append({"project": proj["slug"], "base": b,
+                                         "reason": str(e)[:200]})
                         store.append_approval_log(
                             f"BOARD {b}: CONSOLIDATION SKIPPED — {e} "
                             "(the chain stays split; nothing was moved).")

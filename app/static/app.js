@@ -7249,7 +7249,20 @@ async function openSpecEditor(specId) {
       ${allFrozen ? "" : '<button class="ghost" id="sp-add-panel">+ Add panel</button>'}` })}
 
         ${seqStep({ n: "06", id: "evidence", label: "EVIDENCE",
-          meta: `${(spec.evidence_ledger || []).length} ROWS · EVERY REQUIRED OBJECT HAS A PASS ROW`,
+          // A citation the screenplay does not contain is demoted at the
+          // write (adversarial review F21), which means a draft can arrive
+          // with rows at HOLD the user did not put there. The count is the
+          // fact they need BEFORE reading the ledger: how much of what the
+          // model claimed as the screenplay's word actually was. Amber,
+          // because it is the state the reviewer has to act on.
+          meta: `${(spec.evidence_ledger || []).length} ROWS · ${
+            spec.citations?.demoted
+              ? `<span class="step-meta-alert">${spec.citations.demoted} OF ${
+                  spec.citations.claimed} CITATIONS NOT FOUND IN THE SCREENPLAY —
+                 THOSE ROWS ARE HELD</span>`
+              : spec.citations?.claimed
+                ? `ALL ${spec.citations.claimed} CITATIONS FOUND IN THE SCREENPLAY`
+                : "EVERY REQUIRED OBJECT HAS A PASS ROW"}`,
           verbs: "",
           done: confIs("evidence"),
           frozen: isFrozenStep("evidence"), frozenWhy: frozenWhyBoard,

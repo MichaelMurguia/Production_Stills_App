@@ -676,6 +676,14 @@ def _collapse_legacy_revisions() -> None:
     for r in done:
         print(f"[migrate] {r['base']}: collapsed {', '.join(r['collapsed'])} "
               f"({r['files_moved']} take file(s) folded)", flush=True)
+    # A SKIPPED chain used to reach a log nothing read, so a boot with three
+    # collapses and one skip printed three lines and looked clean
+    # (adversarial review F23). A chain that did not collapse is the one
+    # case where deleting the revision machinery would change which takes a
+    # board uses, so it is stated here and raised in insights.blocking().
+    for r in revisions.skipped_migrations():
+        print(f"[migrate] SKIPPED {r['base']}: {r['reason']} "
+              "— the chain stays split; nothing was moved", flush=True)
     _fold_touchstones_everywhere()
 
 
