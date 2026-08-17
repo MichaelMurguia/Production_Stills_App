@@ -5962,7 +5962,7 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
       <div class="modal-actions" style="margin:12px 14px">
         <button class="ghost" data-f="vr-add" title="Opens the add-reference widget prefilled with this group's role and title, so the new plate joins the same group and attaches with it">Add another plate</button>
         ${onDetach ? `<button class="ghost" data-f="vr-detach"
-          title="Rule that these plates are not this object's reference. The object goes back to + REF so you can point it somewhere else; the plates themselves are untouched and stay in the library.">Not this object's reference</button>` : ""}
+          title="Removes the reference FROM THIS OBJECT only. The object goes back to + REF so you can point it somewhere else; the plates themselves are untouched, stay in the library, and stay attached to every other object that names them.">Remove reference</button>` : ""}
         <span style="flex:1"></span>
         <button class="ghost" data-f="vr-close">Close</button>
       </div>`,

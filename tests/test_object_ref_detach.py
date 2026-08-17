@@ -96,15 +96,19 @@ class TheUiOffersIt(unittest.TestCase):
 
     def test_the_plate_viewer_carries_the_verb(self):
         self.assertIn('data-f="vr-detach"', JS)
-        self.assertIn("Not this object&#39;s reference", JS.replace("'", "&#39;"))
+        self.assertIn(">Remove reference</button>", JS)
 
     def test_the_copy_says_the_plates_are_not_deleted(self):
-        """The single most important thing about this control: it unpairs,
-        it does not destroy. A user who reads it as Delete will not use it."""
+        """The verb is "Remove reference" (user-chosen 2026-08-16), which
+        reads like a library deletion — so the tooltip carries the whole
+        weight of saying it is not one. It unpairs THIS object; the plates
+        survive and stay attached to every other object that names them."""
         i = JS.index('data-f="vr-detach"')
-        seg = JS[i:i + 500]
+        seg = JS[i:i + 600]
+        self.assertIn("FROM THIS OBJECT only", seg)
         self.assertIn("plates themselves are untouched", seg)
         self.assertIn("stay in the library", seg)
+        self.assertIn("every other object that names them", seg)
 
     def test_it_posts_the_exclusion(self):
         self.assertIn("/object-refs`", JS)
