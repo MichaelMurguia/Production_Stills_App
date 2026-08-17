@@ -1020,6 +1020,66 @@ def _refuse_carried(spec: dict, panel_id: str) -> None:
             "to change it.")
 
 
+def amend_object_refs(spec_id: str, panel_id: str, obj: str,
+                      exclude: list[str] | None = None,
+                      include: list[str] | None = None) -> dict:
+    """Say that a required object is NOT covered by a reference group, or
+    take that back (user 2026-08-16: "I have reference for 'airlock hatch
+    behind Sal' and it's green but the reference is wrong so I want to
+    delete it").
+
+    The app decides which plates cover an object by matching the object's
+    wording against the group's name, and that match cannot read grammar:
+    "airlock hatch behind Sal" names Sal because Sal is IN the phrase, even
+    though the object is an airlock and Sal is only where it sits. Guessing
+    harder is the wrong answer — a possessive, a preposition and a subject
+    all look alike to a matcher. The right answer is that the production
+    can overrule it, per object, and the overrule is remembered.
+
+    Kept on the PANEL rather than in UI state: "this object is not about
+    that plate" is a fact about the breakdown, it travels with the project,
+    and it should survive a different browser."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
+    refuse_if_panel_approved(spec_id, panel_id, "object references")
+
+    key = str(obj).strip()
+    if not key:
+        raise ValueError("which required object?")
+    table = dict(panel.get("ref_exclusions") or {})
+    now = {str(x) for x in (table.get(key) or [])}
+    now |= {str(x) for x in (exclude or [])}
+    now -= {str(x) for x in (include or [])}
+    if now:
+        table[key] = sorted(now)
+    else:
+        table.pop(key, None)
+    if table:
+        panel["ref_exclusions"] = table
+    else:
+        panel.pop("ref_exclusions", None)
+
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+    append_approval_log(
+        f"SPECIFICATION {spec_id} panel {panel_id} object \"{key[:80]}\": "
+        + (f"reference groups {', '.join(sorted(now))} ruled NOT its reference."
+           if now else "reference match restored.")
+        + " Affects which plates the panel offers and pre-ticks, never a take "
+          "already rendered.")
+    return {"panel_id": panel_id, "object": key, "excluded": sorted(now)}
+
+
 def amend_panel_prompt(spec_id: str, panel_id: str, text: str) -> dict:
     """Save a hand-written prompt onto one panel, or clear it (empty text).
 

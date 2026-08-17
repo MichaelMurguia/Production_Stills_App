@@ -137,7 +137,10 @@ class TheSourceKeepsOneCopy(unittest.TestCase):
             self.assertIn("\n" + decl, JS, f"{decl} must be at module scope")
 
     def test_the_workbench_matcher_delegates(self):
-        self.assertIn("const matches = (obj, name) => namesPhrase(obj, name);", JS)
+        """One shared rule, plus the production's own per-object overrule —
+        the matcher cannot read grammar, so it has to be correctable."""
+        self.assertIn("const matches = (obj, name) =>\n"
+                      "      !excluded(obj).includes(name) && namesPhrase(obj, name);", JS)
         self.assertNotIn("return o.includes(n) || n.includes(o);", JS,
                          "the narrow rule this replaced")
 

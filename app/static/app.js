@@ -5922,7 +5922,7 @@ async function addReferenceDialog(prefill = {}, { approve = false, onDone = null
 // of them the render works from. `pick` is the current subset and
 // `onPick` receives the new one; without them the viewer stays read-only.
 function viewObjectReferences(obj, recs, addPrefill, onChanged,
-                              { pick = null, onPick = null } = {}) {
+                              { pick = null, onPick = null, onDetach = null } = {}) {
   const lbItems = recs.map(r => ({ src: `/api/references/${r.id}/image`,
                                    caption: `${r.id} — ${r.role}` }));
   const chosen = new Set(pick || recs.map(r => r.id));
@@ -5961,6 +5961,8 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
         other angles under the same title so they group and all attach.</p>` : ""}
       <div class="modal-actions" style="margin:12px 14px">
         <button class="ghost" data-f="vr-add" title="Opens the add-reference widget prefilled with this group's role and title, so the new plate joins the same group and attaches with it">Add another plate</button>
+        ${onDetach ? `<button class="ghost" data-f="vr-detach"
+          title="Rule that these plates are not this object's reference. The object goes back to + REF so you can point it somewhere else; the plates themselves are untouched and stay in the library.">Not this object's reference</button>` : ""}
         <span style="flex:1"></span>
         <button class="ghost" data-f="vr-close">Close</button>
       </div>`,
@@ -5993,6 +5995,11 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
         done(null);
         addReferenceDialog(addPrefill, { approve: true, onDone: onChanged });
       };
+      // The match is a guess about wording and the production overrules it.
+      // Nothing is deleted: the plates stay in the library and stay
+      // attached to every other object that really does name them.
+      const detach = $("[data-f=vr-detach]", ov);
+      if (detach) detach.onclick = () => { done(null); onDetach(); };
     },
   });
 }
@@ -8950,7 +8957,14 @@ async function renderBoardPanels(specId) {
     // generate.py's identity block, in the copy that drives the visible
     // green REF marker AND the first-take tick default — so a Sal panel
     // rendered with no Sal plate and nothing said why.
-    const matches = (obj, name) => namesPhrase(obj, name);
+    // ...and the production can overrule it per object. The matcher cannot
+    // read grammar — "airlock hatch behind Sal" names Sal because Sal is in
+    // the phrase, though the object is an airlock and Sal is only where it
+    // sits (user-caught 2026-08-16). Guessing harder is the wrong answer;
+    // being correctable is the right one.
+    const excluded = obj => (p.ref_exclusions || {})[String(obj)] || [];
+    const matches = (obj, name) =>
+      !excluded(obj).includes(name) && namesPhrase(obj, name);
     const objHasRef = obj => groupList.some(g => matches(obj, g.name));
     const reqObjs = p.required_objects || [];
     const withRef = reqObjs.filter(objHasRef).length;
@@ -9659,6 +9673,16 @@ async function renderBoardPanels(specId) {
       // `how` is a chosen reference record: tick its group so it rides.
       const g = groupList.find(x => x.ids.includes(how.id));
       if (!g) { toast("That reference is not in a selectable group.", true); return; }
+      // Choosing a group deliberately overrules an earlier "not this
+      // object's reference" about the same group — otherwise the tile would
+      // stay + REF while its plate rides, which is the two halves
+      // disagreeing again.
+      if (excluded(obj).includes(g.name)) {
+        try {
+          await api(`/api/specs/${specId}/panels/${p.id}/object-refs`, {
+            method: "POST", json: { object: obj, include: [g.name] } });
+        } catch { /* the tick below still stands; the marker catches up on reload */ }
+      }
       const box = $$(".ref-groups input", card).find(
         x => JSON.parse(x.dataset.ids || "[]").includes(how.id));
       if (!box) { toast("That group is not on this panel's shelf.", true); return; }
@@ -9692,6 +9716,18 @@ async function renderBoardPanels(specId) {
           onPick: ids => {
             for (const g of gs) setPick(g, g.ids.filter(id => ids.includes(id)));
             renderBoardPanels(specId);
+          },
+          onDetach: async () => {
+            try {
+              await api(`/api/specs/${specId}/panels/${p.id}/object-refs`, {
+                method: "POST",
+                json: { object: obj, exclude: gs.map(g => g.name) },
+              });
+              toast(`"${obj}" is no longer matched to ${
+                gs.map(g => g.name).join(", ")}. The plates stay in the library `
+                + "— use + REF to point it somewhere else.");
+              renderBoardPanels(specId);
+            } catch (err) { toast(err.message, true); }
           } });
     });
 

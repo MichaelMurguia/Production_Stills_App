@@ -1562,6 +1562,21 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
             "frozen": bool(store.approved_takes_by_panel(spec_id).get(panel_id))}
 
 
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/object-refs")
+def api_amend_object_refs(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Rule that a required object is NOT covered by named reference groups
+    (`exclude`), or take that back (`include`). See store.amend_object_refs."""
+    try:
+        return store.amend_object_refs(
+            spec_id, panel_id, str(body.get("object", "")),
+            exclude=list(body.get("exclude") or []),
+            include=list(body.get("include") or []))
+    except (KeyError, PermissionError) as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/prompt")
 def api_save_panel_prompt(spec_id: str, panel_id: str, body: dict) -> dict:
     """Save a hand-written prompt onto the panel, or clear it with an empty
