@@ -380,10 +380,17 @@ class ReferencesStateTheirReason(unittest.TestCase):
         self.assertIn("idSpan(ids)", JS[i:i + 120])
 
     def test_counts_never_mix_an_image_against_a_group_denominator(self):
-        i = JS.index("refCount.textContent")
-        b = JS[i:i + 260]
-        self.assertIn("SUBJECT +", b)
-        self.assertIn("OF 14 ATTACHED", b)
+        """Still images over images — but the numerator, denominator and the
+        whole manifest now come from the server's resolution rather than the
+        client's arithmetic (adversarial review F5/F8). The cap is no longer
+        a JS literal: it arrives as `m.max`, so it cannot drift from
+        generate.MAX_REFERENCE_IMAGES."""
+        i = JS.index("refCount.textContent =\n            `${picked.length}")
+        b = JS[i:i + 320]
+        self.assertIn("PICKED + ${auto.length} ALWAYS-ON", b)
+        self.assertIn("= ${m.count} OF ${m.max} ATTACHED", b)
+        self.assertNotIn("OF 14 ATTACHED", JS,
+                         "the cap must not be a client-side literal")
 
 
 class ThePalettePicker(unittest.TestCase):

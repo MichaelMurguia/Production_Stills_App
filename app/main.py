@@ -1699,6 +1699,20 @@ async def api_draft_prose(spec_id: str, panel_id: str, body: dict) -> dict:
         raise HTTPException(502, f"prose draft failed: {e}")
 
 
+@app.get("/api/specs/{spec_id}/panels/{panel_id}/attachments")
+def api_panel_attachments(spec_id: str, panel_id: str, refs: str = "") -> dict:
+    """Exactly what a render would attach — resolved by the render's own
+    code, so the workbench states a manifest it cannot get wrong. See
+    generate.resolved_attachments (adversarial review F5/F8)."""
+    ref_ids = [r for r in refs.split(",") if r]
+    try:
+        return generate.resolved_attachments(spec_id, panel_id, ref_ids)
+    except KeyError as e:
+        raise _err(e)
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/scan")
 async def api_scan_panel(spec_id: str, panel_id: str, body: dict) -> dict:
     """Re-read the screenplay for ONE panel, answering what the user asks.

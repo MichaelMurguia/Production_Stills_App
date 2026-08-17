@@ -9160,8 +9160,13 @@ async function renderBoardPanels(specId) {
   const genGateTitle = prefKeyFailed
     ? "The default engine's key failed its last test — retest it in Settings or pick another default in the bake-off."
     : "";
-  const isAutoStyle = r => ["BOARD_RENDERING_STYLE", "CINEMATOGRAPHY_STYLE"]
-    .includes(roleHead(r.role));
+  // `isAutoStyle` used to live here with two of the four auto-attach roles
+  // and no per-role cap (adversarial review F8). AUTO_ATTACH_HEADS has held
+  // the correct four since 2026-08-03 — in this same file, used two screens
+  // away — so the manifest was reading a second, wrong list. The manifest
+  // now comes from the server; these two derivations only decide which
+  // groups are OFFERED as tickable, and they use the correct list.
+  const isAutoStyle = r => AUTO_ATTACH_HEADS.includes(roleHead(r.role));
   // Panels this revision declared unchanged (scope survives the lock):
   // locked on this workbench, takes flow to the board from elsewhere.
   const carriedRail = new Set(spec.revision_scope?.carried || []);
@@ -9788,55 +9793,73 @@ async function renderBoardPanels(specId) {
     // palette attaches whole, its swatches are a real share of the 14 and
     // have to be named as such.
     const attachedHost = $("[data-f=attached]", card);
+    // The manifest and the count come from the SERVER, resolved by the code
+    // a render actually uses (adversarial review F5/F8). The client's own
+    // arithmetic knew two of the four auto-attach roles, had no per-role
+    // cap, and hardcoded the cap of 14 as a JS literal — so it named plates
+    // that did not ride, omitted plates that did, and printed a count the
+    // screen could not prove. On the screen where money is spent.
+    //
+    // Debounced because it fires on every tick, and it is one local call
+    // that touches no disk: _resolve_generation_inputs is pure resolution.
+    let refCountSeq = 0;
     const updateRefCount = () => {
-      const subject = $$(".ref-groups input:checked", card)
-        .flatMap(x => JSON.parse(x.dataset.ids));
-      // A palette rides as ONE composite plate however many colours it
-      // holds (user ruling 2026-08-15) — so it costs one of the fourteen,
-      // and the count says so. With no explicit pick the shelf still tops
-      // the role up server-side, and that collapses to one plate too.
-      const palPicked = checkedSwatches();
-      const palSwatches = palPicked.length || Math.min(2, swatchRefs.length);
-      const palCount = palSwatches ? 1 : 0;
-      const total = subject.length + palCount + styleAnchors.length;
-      const over = total > 14;
-      refCount.textContent =
-        `${subject.length} SUBJECT + ${palCount} PALETTE + ${styleAnchors.length} STYLE`
-        + ` = ${total} OF 14 ATTACHED`
-        + (over ? " — OVER LIMIT, UNTICK A GROUP OR NARROW THE PALETTE" : "");
-      refCount.style.color = over ? "var(--bad)" : "";
+      const ids = checkedRefs();
+      const seq = ++refCountSeq;
+      refCount.textContent = "RESOLVING WHAT WILL ATTACH…";
+      refCount.style.color = "";
+      api(`/api/specs/${specId}/panels/${p.id}/attachments?refs=${ids.join(",")}`)
+        .then(m => {
+          if (seq !== refCountSeq) return;   // a later tick already won
+          const auto = m.attachments.filter(a => a.auto);
+          const picked = m.attachments.filter(a => !a.auto);
+          refCount.textContent =
+            `${picked.length} PICKED + ${auto.length} ALWAYS-ON`
+            + ` = ${m.count} OF ${m.max} ATTACHED`
+            + (m.over ? " — OVER LIMIT, UNTICK A GROUP OR NARROW THE PALETTE" : "");
+          refCount.style.color = m.over ? "var(--bad)" : "";
 
-      // "How can I see every one?" — every plate that will ride, named,
-      // without a click. Consecutive ids collapse to their ends so the
-      // manifest stays a few facts rather than a wall.
-      const parts = [];
-      $$(".ref-groups input:checked", card).forEach(x => {
-        const row = x.closest(".ref-row");
-        const name = ($(".ref-name", row)?.textContent || "").trim();
-        parts.push(`${esc(name)} ${idSpan(JSON.parse(x.dataset.ids))}`);
-      });
-      const menu = $("[data-f=swatch-menu]", card);
-      const picked = menu ? $$("input[data-ids]:checked", menu) : [];
-      if (picked.length) {
-        const names = picked.map(x =>
-          ($(".lang", x.parentElement)?.textContent || "PALETTE").trim());
-        parts.push(`${esc(names.join(" + "))} — ${palSwatches} SWATCHES ON ONE PLATE`);
-      } else if (swatchRefs.length) {
-        parts.push(`PALETTE AUTO · ${palSwatches} NEWEST ON ONE PLATE`);
-      }
-      const byHead = {};
-      for (const r of styleAnchors) (byHead[roleHead(r.role)] ??= []).push(r.id);
-      for (const [h, ids] of Object.entries(byHead))
-        parts.push(`${esc(h)} ${idSpan(ids)}`);
-      attachedHost.innerHTML =
-        `<span class="attached-k">ATTACHED · ${total}</span>`
-        + (parts.length ? parts.join("&ensp;·&ensp;") : "NOTHING ATTACHED");
-      attachedHost.classList.toggle("over", over);
+          // Every plate that will ride, named, grouped by role. Consecutive
+          // ids collapse to their ends so the manifest stays a few facts.
+          const byRole = {};
+          for (const a of m.attachments)
+            (byRole[a.role || a.head || "REFERENCE"] ??= []).push(a.id);
+          const parts = Object.entries(byRole)
+            .map(([role, rids]) => `${esc(String(role).toUpperCase())} ${idSpan(rids)}`);
+          attachedHost.innerHTML =
+            `<span class="attached-k">ATTACHED · ${m.count}</span>`
+            + (parts.length ? parts.join("&ensp;·&ensp;") : "NOTHING ATTACHED");
+          attachedHost.classList.toggle("over", m.over);
 
-      // P6: what is about to be sent, legible at the moment of sending.
-      dispatchFacts.innerHTML =
-        `${styleAnchors.length} STYLE · ${palCount} PALETTE · ${subject.length} SUBJECT · ${total} IMAGE${total === 1 ? "" : "S"} ATTACHED<br>`
-        + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}NATIVE RENDER, NEVER UPSCALED`;
+          // P6: what is about to be sent, legible at the moment of sending.
+          // Same resolution as the manifest above — it used to recompute
+          // the tally from the client's own style/palette/subject split,
+          // which is the split that was wrong (F8).
+          const byHead = {};
+          for (const a of m.attachments)
+            byHead[a.head] = (byHead[a.head] || 0) + 1;
+          const tally = Object.entries(byHead)
+            .map(([h, n]) => `${n} ${esc(String(h).replaceAll("_", " "))}`)
+            .join(" · ");
+          dispatchFacts.innerHTML =
+            `${tally || "NOTHING"} · ${m.count} IMAGE${m.count === 1 ? "" : "S"} ATTACHED<br>`
+            + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}`
+            + "NATIVE RENDER, NEVER UPSCALED";
+        })
+        .catch(err => {
+          if (seq !== refCountSeq) return;
+          // Say it cannot be resolved rather than guessing — a guessed
+          // manifest is what this replaced.
+          refCount.textContent = "COULD NOT RESOLVE THE ATTACHMENTS — " +
+            String(err.message || "").toUpperCase();
+          refCount.style.color = "var(--bad)";
+          attachedHost.innerHTML =
+            `<span class="attached-k">ATTACHED · ?</span>NOT RESOLVED`;
+          dispatchFacts.innerHTML = "ATTACHMENTS NOT RESOLVED<br>"
+            + `${lockHash ? `SPEC ${esc(lockHash.slice(0, 8).toUpperCase())} · ` : ""}`
+            + "NATIVE RENDER, NEVER UPSCALED";
+        });
+
     };
     // A tick has to LAND: the row brightens and states what it now is, so
     // attaching a group is visibly an act rather than a glyph flip
@@ -12317,9 +12340,8 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         img.style.top = (fh / 2 - (win.y + win.h / 2) * t.h * scale) + "px";
         img.style.transform = `rotate(${(crop && crop.rotate) || 0}deg)`;
       }
-      const availW = win ? Math.round(t.w * win.w) : 0;
-      const availH = win ? Math.round(t.h * win.h) : 0;
-      const short = t && t.w && (pw > availW + 1 || ph > availH + 1);
+      // Same verdict the HUD shows — one function, no second rule.
+      const { availW, availH, short } = shortFor(pid, r);
       el.classList.toggle("short", !!short);
       el.querySelector(".arr-dim").textContent = `${pw} × ${ph}`;
       el.querySelector(".arr-verdict").textContent =
@@ -12377,17 +12399,35 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   };
   const paint = () => { layout(arr); paintChrome(); };
 
+  // ONE geometry verdict, read by the tile and by the drag HUD
+  // (adversarial review F22). They computed it twice with different rules:
+  // the tile against the CROPPED window, the HUD against the full take. The
+  // HUD was never pessimistic and the tile was never wrong, so the failure
+  // was one-directional — drag a cropped panel, read OK, let go, watch it
+  // flip to SHORT. DESIGN_SYSTEM R2 already forbids exactly this: "geometry
+  // is computed once and declared… two implementations of one geometry is a
+  // drift bug with a permanent maintenance cost."
+  const shortFor = (pid, r) => {
+    const t = factsFor(pid);
+    const pw = Math.round(r.w * CW), ph = Math.round(r.h * CH);
+    if (!t || !t.w) return { t, pw, ph, availW: 0, availH: 0, short: false };
+    const win = winFor(cropFor(pid), pw / ph, t.w, t.h);
+    const availW = win ? Math.round(t.w * win.w) : 0;
+    const availH = win ? Math.round(t.h * win.h) : 0;
+    return { t, pw, ph, availW, availH,
+             short: pw > availW + 1 || ph > availH + 1 };
+  };
+
   const hudFor = (pid, live = false) => {
     const r = rectsOf(arr)[pid];
-    const t = factsFor(pid);
     if (!r) return;
-    const pw = Math.round(r.w * CW), ph = Math.round(r.h * CH);
-    const short = t && t.w && (pw > t.w || ph > t.h);
+    const { t, pw, ph, availW, availH, short } = shortFor(pid, r);
     hud.innerHTML = `<b>${esc(pid)}</b> · slot ${pw} × ${ph} px `
       + `(${(pw / ph).toFixed(2)}:1)`
       + (t ? ` · take ${t.w} × ${t.h} · ` : " · no approved take · ")
       + (short
-        ? `<span class="arr-bad">SHORT — regenerate larger or shrink the frame</span>`
+        ? `<span class="arr-bad">SHORT — PLATE SHOWS ${availW} × ${availH} — `
+          + `regenerate larger or shrink the frame</span>`
         : `<span class="arr-ok">OK</span>`)
       + (live ? " · dragging" : "");
   };

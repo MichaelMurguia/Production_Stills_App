@@ -1133,6 +1133,40 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     return spec, panel, refs
 
 
+def resolved_attachments(spec_id: str, panel_id: str,
+                         ref_ids: list[str]) -> dict:
+    """Exactly what a render would attach, resolved by the code that does it.
+
+    The workbench used to compute this itself and got it wrong in both
+    directions (adversarial review F5/F8): its `isAutoStyle` knew two of the
+    four auto-attach roles and had no per-role cap, so WORLD_TEXTURE plates
+    rode unnamed while others were named and did not ride — and the same
+    arithmetic printed `N OF 14`, a count the screen could not prove, with
+    the cap written as a JS literal in two places. The lighting-study
+    geometry anchor is inserted here, after the client had already counted,
+    so a board at the cap was refused by a limit the screen said was clear.
+
+    `_resolve_generation_inputs` is pure resolution — the disk work lives in
+    `_reference_image_paths` — so this can answer the question without
+    touching a file or spending anything.
+    """
+    _, _, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
+    return {
+        "panel_id": panel_id,
+        "max": MAX_REFERENCE_IMAGES,
+        "count": len(refs),
+        "over": len(refs) > MAX_REFERENCE_IMAGES,
+        "attachments": [
+            {"id": r.get("id", ""), "role": r.get("role", ""),
+             "head": store.role_head(r.get("role", "")),
+             # Why it rides: the user ticked it, or the shelf attaches it to
+             # every render. The distinction the client kept getting wrong.
+             "auto": r.get("id", "") not in set(ref_ids)}
+            for r in refs
+        ],
+    }
+
+
 def list_candidates(spec_id: str) -> list[dict]:
     d = paths.BOARDS_DIR / paths.safe_id(spec_id)
     if not d.exists():
