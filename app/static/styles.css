@@ -484,7 +484,18 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 }
 #sp-ledger { margin-bottom: 9px; }
 
-.mini { font-size: 12px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans); }
+/* Prose inside a form group is PROSE (user-caught 2026-08-17: "the
+   description font is a strange choice"). `.grid-form label, .fgroup` puts
+   LABEL typography on the container — Courier, uppercase, 700, .13em —
+   because it expects a label and a control inside, and controls reset it.
+   `.mini` reset only the family, so helper prose inherited the caps, the
+   weight and the tracking and came out as Archivo wearing Courier's
+   clothes: §2 says Courier carries machine data and Archivo carries
+   prose, and §Copy says sentence case in prose, uppercase only for
+   Courier labels and badges. This is the full reset that makes .mini
+   prose again wherever it sits. */
+.mini { font-size: 12px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans);
+        text-transform: none; letter-spacing: normal; font-weight: 400; }
 /* .mini defaults to sans (it carries short prose), but markup that ALSO
    says .mono means it — .mini alone won the order battle and silently
    rendered machine data proportional (found 2026-08-13, intake rail). */
@@ -532,6 +543,19 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
   color: var(--ink-dim); white-space: pre-wrap;
 }
 .scan-find button[disabled] { opacity: .55; }
+/* Whose fact this is, stated in Courier because provenance IS machine
+   data. The screenplay's own voice reads --ok (it is settled, like an
+   approval); the designer's own direction reads dim ink — authority, but
+   not a citation. Neither is amber: nothing here is a pipeline stage. */
+.scan-from {
+  font-size: 10px; letter-spacing: .13em; font-weight: 700;
+}
+.scan-from.sp { color: var(--ok); }
+.scan-from.dir { color: var(--ink-dim); }
+.scan-brief {
+  border-top: 1px solid var(--line-soft); margin-top: 10px; padding-top: 10px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+}
 
 /* UNCANONIZED — 2026-08-16 — choose an existing plate for a required object.
    The library card's own anatomy at picker scale: picture first and

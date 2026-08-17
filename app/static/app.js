@@ -5836,27 +5836,27 @@ function castModal(rec, onDone) {
 // until you accept. Every quote was checked against the text server-side;
 // anything the screenplay did not literally say was dropped before it got
 // here, and the count of drops is stated rather than hidden.
-function scanScreenplayDialog({ specId, panelId, has, accept }) {
+function scanScreenplayDialog({ specId, panelId, has, accept, acceptBrief = null,
+                                brief = "" }) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   ov.innerHTML = `
     <div class="modal scan-modal" role="dialog" aria-modal="true">
-      <div class="modal-title">Scan the screenplay — ${esc(panelId)}</div>
-      <p class="modal-body">Ask one question about what this panel has to
-      show. The screenplay scene behind the panel is read again and answered
-      from its own words — no render, and nothing changes until you accept
-      a find.</p>
-      <label class="modal-field">What should I look for?
-        <textarea data-f="ask" rows="3" placeholder="e.g. how does the airlock open, and what is behind Sal?"></textarea>
-        <span class="hint">Physical, drawable things answer best — what is present,
-        where it sits, what state it is in, what it is made of.</span>
+      <div class="modal-title">Tell me about ${esc(panelId)}</div>
+      <p class="modal-body">Say anything. A question, a correction, how it should
+      feel, a passage pasted from somewhere else, or a half-formed note. The
+      screenplay scene behind this panel is read again against what you said, and
+      what comes back is a proposal — the brief, and what the panel must show.
+      Nothing changes until you accept it.</p>
+      <label class="modal-field">In your own words
+        <textarea data-f="ask" rows="5" placeholder="e.g. this should feel like the last moment before a door closes forever — Sal is still talking, the chamber is open, and Tom has just come out of the dark"></textarea>
       </label>
       <div class="modal-actions" style="margin-top:10px">
         <button class="ghost" data-f="open-sp"
-          title="Open the screenplay in a new tab to read it yourself">Open screenplay ↗</button>
+          title="Open the screenplay in a new tab to read or copy from it">Open screenplay ↗</button>
         <span style="flex:1"></span>
         <button class="ghost" data-f="cancel">Cancel</button>
-        <button class="primary" data-f="go">Scan</button>
+        <button class="primary" data-f="go">Consider this</button>
       </div>
       <div data-f="busy"></div>
       <div data-f="out"></div>
@@ -5878,7 +5878,7 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
     go.disabled = true;
     out.innerHTML = "";
     const busy = startBusy($("[data-f=busy]", ov),
-      `Reading the screenplay for ${panelId}…`,
+      `Re-reading the screenplay for ${panelId}…`,
       "one text call — no image is generated");
     try {
       const r = await api(`/api/specs/${specId}/panels/${panelId}/scan`, {
@@ -5889,33 +5889,55 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
         ? `THE SCREENPLAY SCENE${r.anchor.location
             ? ` · ${esc(String(r.anchor.location).toUpperCase())}` : ""}`
         : "THE SHEET&rsquo;S OWN SCENE PROSE — THE SCREENPLAY SCENE WAS NOT LOCATED";
-      if (!r.finds.length) {
-        out.innerHTML = `<div class="report">
-          <b>Nothing found</b>
-          <p class="mini">${esc(r.note || "The text does not answer that.")}</p>
-          <div class="mini mono">READ ${src} · ${esc(r.model || "")}</div></div>`;
+      const head = `<div class="mini mono">READ ${src} · ${esc(r.model || "")}${
+        r.unverified_dropped
+          ? ` · ${r.unverified_dropped} CLAIMED THE SCRIPT AND COULD NOT SHOW IT` : ""}</div>`;
+      // Provenance is the whole trust model, so it is drawn, not implied:
+      // a screenplay proposal shows the line it came from, a direction
+      // proposal says plainly that it came from you.
+      const findHtml = (f, i) => `
+        <div class="scan-find" data-i="${i}">
+          <span class="scan-from mono ${f.from === "screenplay" ? "sp" : "dir"}">${
+            f.from === "screenplay" ? "THE SCREENPLAY SAYS" : "FROM WHAT YOU SAID"}</span>
+          <div class="scan-detail">${esc(f.detail)}</div>
+          ${f.quote ? `<blockquote class="scan-quote">${esc(f.quote)}</blockquote>` : ""}
+          ${f.object ? `<button type="button" class="ghost" data-add="${esc(f.object)}"
+            data-quote="${esc(f.quote)}">+ ${esc(f.object)}</button>`
+            : `<span class="mini mono">CONTEXT — NOTHING TO ADD</span>`}
+        </div>`;
+      const briefHtml = (r.brief && acceptBrief && r.brief.trim() !== String(brief).trim())
+        ? `<div class="scan-brief">
+             <span class="scan-from mono dir">PROPOSED BRIEF</span>
+             <div class="scan-detail">${esc(r.brief)}</div>
+             ${r.brief_reason ? `<p class="mini">${esc(r.brief_reason)}</p>` : ""}
+             <button type="button" class="ghost" data-f="use-brief">Use this brief</button>
+           </div>` : "";
+      if (!briefHtml && !r.finds.length) {
+        out.innerHTML = `<div class="report"><b>Nothing to propose</b>
+          <p class="mini">${esc(r.note || "The scene and what you said did not add anything this panel is missing.")}</p>
+          ${head}</div>`;
         go.disabled = false;
         return;
       }
-      out.innerHTML = `<div class="report">
-        <div class="mini mono">${r.finds.length} FIND${r.finds.length === 1 ? "" : "S"}
-          · READ ${src} · ${esc(r.model || "")}${r.unverified_dropped
-            ? ` · ${r.unverified_dropped} DROPPED — NOT LITERALLY IN THE TEXT` : ""}</div>
-        <div class="scan-finds">${r.finds.map((f, i) => `
-          <div class="scan-find" data-i="${i}">
-            <div class="scan-detail">${esc(f.detail)}</div>
-            <blockquote class="scan-quote">${esc(f.quote)}</blockquote>
-            ${f.object ? `<button type="button" class="ghost" data-add="${esc(f.object)}"
-              data-quote="${esc(f.quote)}">+ ${esc(f.object)}</button>`
-              : `<span class="mini mono">CONTEXT — NOTHING TO ADD</span>`}
-          </div>`).join("")}</div>
+      out.innerHTML = `<div class="report">${head}
+        ${briefHtml}
+        <div class="scan-finds">${r.finds.map(findHtml).join("")}</div>
         ${r.note ? `<p class="mini">${esc(r.note)}</p>` : ""}</div>`;
+
+      const useBrief = $("[data-f=use-brief]", out);
+      if (useBrief) useBrief.onclick = async () => {
+        useBrief.disabled = true;
+        try { await acceptBrief(r.brief); useBrief.textContent = "✓ brief updated"; }
+        catch (err) { useBrief.disabled = false; toast(err.message, true); }
+      };
+
       $$("[data-add]", out).forEach(b => b.onclick = async () => {
         b.disabled = true;
         const prev = b.textContent;
         try {
-          // The quote travels WITH the object: a scan-sourced object is
-          // SCRIPT_EXPLICIT evidence against that line, not USER_DIRECTED.
+          // The quote travels WITH the object: a screenplay-sourced object
+          // is SCRIPT_EXPLICIT evidence against that line, a directed one
+          // is USER_DIRECTED. Which it is was decided server-side.
           const added = await accept(b.dataset.add, b.dataset.quote || "");
           b.textContent = added ? `✓ ${b.dataset.add}` : "already required";
         } catch (err) {
@@ -5924,8 +5946,6 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
           toast(err.message, true);
         }
       });
-      // Anything already on the panel is worth marking BEFORE it is
-      // clicked — an offer you cannot use is noise.
       const already = has().map(x => String(x).toLowerCase());
       $$("[data-add]", out).forEach(b => {
         if (already.includes(b.dataset.add.toLowerCase())) {
@@ -5934,7 +5954,7 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
         }
       });
       go.disabled = false;
-      go.textContent = "Scan again";
+      go.textContent = "Consider again";
     } catch (err) {
       busy.done();
       out.innerHTML = `<div class="report fail">${esc(err.message)}</div>`;
@@ -5942,6 +5962,7 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
     }
   };
 }
+
 
 // An object with no matching reference has two answers, not one (user
 // 2026-08-16: "in this dialogue I need to be able to select existing
@@ -7510,7 +7531,9 @@ async function openSpecEditor(specId) {
         ${ro ? "" : '<button class="danger" data-f="del-panel" title="Remove panel">×</button>'}
       </div>
       <div class="fgroup" title="The production question this panel answers. Becomes PANEL PURPOSE in the render prompt — the model's main steer for what the image is about. If no required objects are added, the model composes the panel from this alone (within canon).">
-        <span class="f-label">Purpose</span>
+        <span class="f-label" style="display:flex;align-items:center;gap:10px">Purpose
+          ${ro ? "" : `<button type="button" class="text-act" data-f="scan-scene"
+            title="Say anything about this panel — a question, a correction, a feeling, a paste from elsewhere — and the screenplay scene behind it is read again against what you said. One text call, no render; nothing changes until you accept a proposal.">Tell me about this panel</button>`}</span>
         <input type="text" data-f="purpose" placeholder="The production question this panel answers" value="${esc(p.purpose || "")}" ${ro ? "disabled" : ""}>
       </div>
       <div class="fgroup" title="Camera and composition for this panel. Each axis falls back to the production's Art Direction Bible camera default when blank, and overrides it when set. The app writes the professional directive into the render prompt.">
@@ -7519,9 +7542,7 @@ async function openSpecEditor(specId) {
       </div>
       <div class="two-col">
         <div class="fgroup" title="Objects that MUST appear. Each added object automatically gets a USER_DIRECTED / PASS evidence-ledger row. Optional — leave empty to let the model compose from the purpose.">
-          <span class="f-label" style="display:flex;align-items:center;gap:10px">Required objects
-            ${ro ? "" : `<button type="button" class="text-act" data-f="scan-scene"
-              title="Read the screenplay again for this panel and ask it something specific. Text only, no render, and nothing is changed until you accept a find.">Scan screenplay</button>`}</span>
+          <span class="f-label">Required objects</span>
           <div class="chips" data-f="chips"></div>
         </div>
         <div class="fgroup" title="Objects that must NOT appear in this panel, comma-separated. Merged with the board-wide forbidden elements and project lessons in the prompt.">
@@ -7651,6 +7672,11 @@ async function openSpecEditor(specId) {
       const scanBtn = $("[data-f=scan-scene]", row);
       if (scanBtn) scanBtn.onclick = () => scanScreenplayDialog({
         specId, panelId: pid,
+        brief: $("[data-f=purpose]", row).value,
+        // On the breakdown nothing is saved until the sheet is saved, so an
+        // accepted brief fills the field and rides that Save — the same
+        // path a typed brief takes.
+        acceptBrief: text => { $("[data-f=purpose]", row).value = text; },
         has: () => $$(".chip", chips).map(c => c.dataset.obj),
         accept: (obj) => {
           if ($$(".chip", chips).some(c => c.dataset.obj.toLowerCase() === obj.toLowerCase()))
@@ -9491,10 +9517,15 @@ async function renderBoardPanels(specId) {
       ${takesHtml}
       <div class="steps">
         ${step({ n: "01", id: "brief", label: "BRIEF",
-          verbs: `<button type="button" class="verb" data-f="brief-edit"
-            ${frozen ? "disabled" : ""} title="${frozen
-              ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
-              : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>`,
+          verbs: `
+            <button type="button" class="verb" data-f="scan-scene"
+              ${frozen ? "disabled" : ""} title="${frozen
+                ? "An approved take was painted from this panel. Withdraw it first to change what the panel says."
+                : "Say anything about this panel — a question, a correction, a feeling, a paste from elsewhere — and the screenplay scene behind it is read again against what you said. One text call, no render; nothing changes until you accept a proposal."}">Tell me about this panel</button>
+            <button type="button" class="verb" data-f="brief-edit"
+              ${frozen ? "disabled" : ""} title="${frozen
+                ? "An approved take was painted from this brief. Reject it first to change what the panel asks for."
+                : "Rewrite what this panel asks for — the next take is painted from the new brief"}">Edit brief</button>`,
           body: `
             <div class="brief-row" data-f="brief-row">
               <p class="step-prose" data-f="brief-text">${esc(p.purpose)}</p>
@@ -9510,11 +9541,8 @@ async function renderBoardPanels(specId) {
 
         ${step({ n: "02", id: "objects", label: "REQUIRED",
           meta: `${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE`,
-          verbs: `
-            <button type="button" class="verb" data-f="scan-scene"
-              title="Read this panel's screenplay scene again and ask it something specific. One text call, no render — findings arrive quoted, and nothing is added until you accept it.">Scan screenplay</button>
-            <button type="button" class="verb" data-f="to-breakdown"
-              title="Required objects are authored on the breakdown — opens 03 Breakdowns for this sheet">Edit objects</button>`,
+          verbs: `<button type="button" class="verb" data-f="to-breakdown"
+            title="Required objects are authored on the breakdown — opens 03 Breakdowns for this sheet">Edit objects</button>`,
           body: `
             <div class="obj-grid">${reqObjs.map(o => `
               <span class="obj-tile">${esc(o)}${objHasRef(o)
@@ -9850,7 +9878,7 @@ async function renderBoardPanels(specId) {
     // were the missing third.
     const scanHere = $("[data-f=scan-scene]", card);
     if (scanHere) scanHere.onclick = () => scanScreenplayDialog({
-      specId, panelId: p.id,
+      specId, panelId: p.id, brief: p.purpose || "",
       has: () => reqObjs,
       accept: async (obj, quote) => {
         const r = await api(`/api/specs/${specId}/panels/${p.id}/objects`, {
@@ -9859,6 +9887,14 @@ async function renderBoardPanels(specId) {
         if (!r.added.length) return false;
         renderBoardPanels(specId);
         return true;
+      },
+      // The brief goes through the SAME endpoint the workbench's own Edit
+      // brief uses — journaled, lock re-stamped, refused on an approved
+      // take. A proposal accepted is an amendment like any other.
+      acceptBrief: async text => {
+        await api(`/api/specs/${specId}/panels/${p.id}/purpose`, {
+          method: "POST", json: { purpose: text } });
+        renderBoardPanels(specId);
       },
     });
 
