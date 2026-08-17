@@ -5906,14 +5906,23 @@ function scanScreenplayDialog({ specId, panelId, has, accept }) {
             <div class="scan-detail">${esc(f.detail)}</div>
             <blockquote class="scan-quote">${esc(f.quote)}</blockquote>
             ${f.object ? `<button type="button" class="ghost" data-add="${esc(f.object)}"
-              >+ ${esc(f.object)}</button>`
+              data-quote="${esc(f.quote)}">+ ${esc(f.object)}</button>`
               : `<span class="mini mono">CONTEXT — NOTHING TO ADD</span>`}
           </div>`).join("")}</div>
         ${r.note ? `<p class="mini">${esc(r.note)}</p>` : ""}</div>`;
-      $$("[data-add]", out).forEach(b => b.onclick = () => {
-        const added = accept(b.dataset.add);
+      $$("[data-add]", out).forEach(b => b.onclick = async () => {
         b.disabled = true;
-        b.textContent = added ? `✓ ${b.dataset.add}` : "already required";
+        const prev = b.textContent;
+        try {
+          // The quote travels WITH the object: a scan-sourced object is
+          // SCRIPT_EXPLICIT evidence against that line, not USER_DIRECTED.
+          const added = await accept(b.dataset.add, b.dataset.quote || "");
+          b.textContent = added ? `✓ ${b.dataset.add}` : "already required";
+        } catch (err) {
+          b.textContent = prev;
+          b.disabled = false;
+          toast(err.message, true);
+        }
       });
       // Anything already on the panel is worth marking BEFORE it is
       // clicked — an offer you cannot use is noise.
@@ -7643,9 +7652,12 @@ async function openSpecEditor(specId) {
       if (scanBtn) scanBtn.onclick = () => scanScreenplayDialog({
         specId, panelId: pid,
         has: () => $$(".chip", chips).map(c => c.dataset.obj),
-        accept: obj => {
+        accept: (obj) => {
           if ($$(".chip", chips).some(c => c.dataset.obj.toLowerCase() === obj.toLowerCase()))
             return false;
+          // On the breakdown the object is not saved yet — it becomes a
+          // chip and rides the sheet's own Save, which writes its ledger
+          // row exactly as a hand-typed object does.
           addChip(obj, true);
           syncSuggest();
           return true;
@@ -9498,8 +9510,11 @@ async function renderBoardPanels(specId) {
 
         ${step({ n: "02", id: "objects", label: "REQUIRED",
           meta: `${reqObjs.length} OBJECT${reqObjs.length === 1 ? "" : "S"} · ${withRef} WITH A REFERENCE`,
-          verbs: `<button type="button" class="verb" data-f="to-breakdown"
-            title="Required objects are authored on the breakdown — opens 03 Breakdowns for this sheet">Edit objects</button>`,
+          verbs: `
+            <button type="button" class="verb" data-f="scan-scene"
+              title="Read this panel's screenplay scene again and ask it something specific. One text call, no render — findings arrive quoted, and nothing is added until you accept it.">Scan screenplay</button>
+            <button type="button" class="verb" data-f="to-breakdown"
+              title="Required objects are authored on the breakdown — opens 03 Breakdowns for this sheet">Edit objects</button>`,
           body: `
             <div class="obj-grid">${reqObjs.map(o => `
               <span class="obj-tile">${esc(o)}${objHasRef(o)
@@ -9826,6 +9841,26 @@ async function renderBoardPanels(specId) {
       uiSet("openSpec", specId);
       showView("specs");
     };
+
+    // Scanning belongs where you are LOOKING at what the panel produced
+    // (user-caught 2026-08-17: it shipped only on the breakdown editor,
+    // three screens down, and "Dont see it"). Accepting a find writes the
+    // object AND its evidence row server-side — the workbench has amended
+    // the brief and the camera between takes since 2026-08-08; objects
+    // were the missing third.
+    const scanHere = $("[data-f=scan-scene]", card);
+    if (scanHere) scanHere.onclick = () => scanScreenplayDialog({
+      specId, panelId: p.id,
+      has: () => reqObjs,
+      accept: async (obj, quote) => {
+        const r = await api(`/api/specs/${specId}/panels/${p.id}/objects`, {
+          method: "POST", json: { add: [{ object: obj, quote: quote || "" }] },
+        });
+        if (!r.added.length) return false;
+        renderBoardPanels(specId);
+        return true;
+      },
+    });
 
     // §2.15/§2.1 step 05 shows the real compiled prompt, but that is a
     // server round-trip PER PANEL — so it loads when the step first scrolls

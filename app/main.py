@@ -1563,6 +1563,22 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
             "frozen": bool(store.approved_takes_by_panel(spec_id).get(panel_id))}
 
 
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/objects")
+def api_amend_panel_objects(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Add or drop a panel's required objects between takes. An added
+    object may carry the verbatim screenplay `quote` that produced it, and
+    is then filed SCRIPT_EXPLICIT against it. See store.amend_panel_objects."""
+    try:
+        return store.amend_panel_objects(
+            spec_id, panel_id,
+            add=list(body.get("add") or []),
+            remove=list(body.get("remove") or []))
+    except (KeyError, PermissionError) as e:
+        raise _err(e)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/object-refs")
 def api_amend_object_refs(spec_id: str, panel_id: str, body: dict) -> dict:
     """Rule that a required object is NOT covered by named reference groups

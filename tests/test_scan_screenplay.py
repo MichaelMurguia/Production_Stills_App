@@ -150,9 +150,32 @@ class TheUiOffersIt(unittest.TestCase):
 
     def test_nothing_changes_until_a_find_is_accepted(self):
         i = JS.index("function scanScreenplayDialog")
-        seg = JS[i:i + 5200]
-        self.assertIn("const added = accept(b.dataset.add);", seg)
+        seg = JS[i:i + 6200]
+        self.assertIn("const added = await accept(b.dataset.add, b.dataset.quote", seg)
         self.assertIn("nothing changes until you accept", seg)
+
+    def test_the_quote_travels_with_the_object(self):
+        """A scan-sourced object is SCRIPT_EXPLICIT evidence against that
+        line, not USER_DIRECTED — the app HAS the citation, so filing it as
+        user direction would throw away the best evidence it will ever
+        have for that object."""
+        self.assertIn('data-quote="${esc(f.quote)}"', JS)
+        self.assertIn('json: { add: [{ object: obj, quote: quote || "" }] }', JS)
+        st = (ROOT / "app/store.py").read_text(encoding="utf-8")
+        self.assertIn('"evidence_class": "SCRIPT_EXPLICIT" if quote else "USER_DIRECTED"', st)
+
+    def test_the_workbench_offers_it_too(self):
+        """It shipped only on the breakdown editor, three screens down.
+        The user was on the Panels page: "Dont see it"."""
+        i = JS.index('${step({ n: "02", id: "objects", label: "REQUIRED"')
+        self.assertIn('data-f="scan-scene"', JS[i:i + 700])
+        self.assertIn('const scanHere = $("[data-f=scan-scene]", card);', JS)
+
+    def test_an_accept_failure_does_not_look_like_a_success(self):
+        i = JS.index("function scanScreenplayDialog")
+        seg = JS[i:i + 6200]
+        self.assertIn("b.textContent = prev;", seg)
+        self.assertIn("b.disabled = false;", seg)
 
     def test_dropped_finds_are_reported_not_hidden(self):
         self.assertIn("DROPPED — NOT LITERALLY IN THE TEXT", JS)

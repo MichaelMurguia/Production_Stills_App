@@ -1020,6 +1020,80 @@ def _refuse_carried(spec: dict, panel_id: str) -> None:
             "to change it.")
 
 
+def amend_panel_objects(spec_id: str, panel_id: str, add: list[dict] | None = None,
+                        remove: list[str] | None = None) -> dict:
+    """Add or drop required objects between takes, from the workbench.
+
+    The brief and the camera have been amendable here since 2026-08-08;
+    the objects were not, so a screenplay scan run from the Panels page
+    had nowhere to put what it found (user 2026-08-17). Same lock
+    discipline as the others: journaled, lock re-stamped, refused only
+    where an APPROVED take already froze this panel.
+
+    Each added object carries its own evidence. A scan-sourced object
+    arrives with the VERBATIM screenplay line that produced it, so it is
+    filed SCRIPT_EXPLICIT against that quote rather than USER_DIRECTED —
+    which is the truth, and is what validation wants to see. Without a
+    PASS row the object would block approval, so writing the row is not
+    a nicety, it is the other half of adding the object."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    _refuse_carried(spec, panel_id)
+    refuse_if_panel_approved(spec_id, panel_id, "required objects")
+
+    objs = [str(o) for o in (panel.get("required_objects") or [])]
+    have = {o.casefold() for o in objs}
+    ledger = list(spec.get("evidence_ledger") or [])
+    added: list[str] = []
+    for item in (add or []):
+        obj = str(item.get("object", "")).strip()
+        if not obj or obj.casefold() in have:
+            continue
+        quote = str(item.get("quote", "")).strip()
+        objs.append(obj)
+        have.add(obj.casefold())
+        added.append(obj)
+        ledger.append({
+            "panel_id": panel_id, "object": obj,
+            "evidence_class": "SCRIPT_EXPLICIT" if quote else "USER_DIRECTED",
+            "source": quote or "User direction",
+            "status": "PASS",
+        })
+
+    drop = {str(o).casefold() for o in (remove or [])}
+    dropped = [o for o in objs if o.casefold() in drop]
+    if dropped:
+        objs = [o for o in objs if o.casefold() not in drop]
+        ledger = [r for r in ledger
+                  if not (str(r.get("panel_id", "")).upper() == panel_id.upper()
+                          and str(r.get("object", "")).casefold() in drop)]
+
+    if not added and not dropped:
+        return {"panel_id": panel_id, "added": [], "removed": [],
+                "required_objects": objs}
+
+    panel["required_objects"] = objs
+    spec["evidence_ledger"] = ledger
+    _atomic_write_json(_spec_path(spec_id), spec)
+    if spec_locked(spec_id):
+        from common import stable_hash
+        locks = _load_locks()
+        prev = locks.get(spec_id, {})
+        locks[spec_id] = {**prev, "hash": stable_hash(spec), "amended_at": utcnow()}
+        _atomic_write_json(paths.SPEC_LOCKS, locks)
+    append_approval_log(
+        f"SPECIFICATION {spec_id} panel {panel_id} required objects amended"
+        + (f" — added {', '.join(added)}" if added else "")
+        + (f" — removed {', '.join(dropped)}" if dropped else "")
+        + ". Existing takes keep the hash they were generated against.")
+    return {"panel_id": panel_id, "added": added, "removed": dropped,
+            "required_objects": objs}
+
+
 def amend_object_refs(spec_id: str, panel_id: str, obj: str,
                       exclude: list[str] | None = None,
                       include: list[str] | None = None) -> dict:
