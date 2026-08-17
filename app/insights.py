@@ -755,6 +755,46 @@ def _squash(s: str) -> str:
 _QUOTE_RE = re.compile(r'["“]([^"“”]{12,300})["”]')
 
 
+# ------------------------------------------------- the one citation predicate
+
+def screenplay_haystack() -> tuple[str, str]:
+    """The screenplay in both comparison forms, once. Callers that check
+    many quotes in a loop should hold this rather than re-normalise a
+    130 KB document per row."""
+    text = _norm(screenplay_text())
+    return text, _squash(text)
+
+
+def quote_is_in_screenplay(quote: str, hay: tuple[str, str] | None = None) -> bool:
+    """Does the screenplay actually contain this citation?
+
+    ONE predicate, four callers (F21/F6/F7, adversarial review 2026-08-17):
+    `autofill._coerce` when the narrative model classifies a row,
+    `scan._coerce` when a scan proposes one, `store.amend_panel_objects`
+    when one is written by hand, and `citation_check` when they are
+    re-verified later. Before this existed the app verified the class it
+    could NOT check — a WEAK_INFERENCE cannot self-promote — and skipped
+    the only falsifiable one: SCRIPT_EXPLICIT asserts that a verbatim line
+    exists in a document the server is holding, and nothing opened it.
+
+    Tolerant in the same two steps citation_check has always used, because
+    PDF extraction mangles spacing and dashes: normalised containment
+    first, bare letters-and-digits second. A citation only counts as absent
+    when even its letters are gone.
+
+    An empty screenplay returns False for everything — no screenplay means
+    nothing can be sourced to it, which is the honest answer rather than a
+    free pass.
+    """
+    q = str(quote or "").strip()
+    if len(q) < 12:          # too short to be a citation, same floor as _QUOTE_RE
+        return False
+    text, squashed = hay if hay is not None else screenplay_haystack()
+    if not text:
+        return False
+    return _norm(q) in text or _squash(q) in squashed
+
+
 def citation_check() -> dict:
     """Re-search every quoted evidence citation in the current screenplay
     text. Rows whose quotes vanish are REPORTED, never auto-mutated — locked
@@ -778,9 +818,19 @@ def citation_check() -> dict:
         if spec is None:
             continue
         for row in spec.get("evidence_ledger", []):
-            for quote in _QUOTE_RE.findall(str(row.get("source", ""))):
+            # A row's citation is its `quote` field. `_QUOTE_RE` over
+            # `source` stays as the LEGACY reader for rows written before
+            # that field existed — and it is why this check used to be
+            # blind to the newest rows: it only ever inspected text inside
+            # literal quote marks, and a row whose source was the bare
+            # sentence never incremented `checked` at all (F7).
+            quotes = [str(row.get("quote", "")).strip()] if row.get("quote") \
+                else _QUOTE_RE.findall(str(row.get("source", "")))
+            for quote in quotes:
+                if not quote:
+                    continue
                 checked += 1
-                if _norm(quote) not in text and _squash(quote) not in squashed:
+                if not quote_is_in_screenplay(quote, (text, squashed)):
                     missing.append({
                         "spec_id": sid,
                         "object_id": row.get("object_id", ""),
@@ -789,6 +839,19 @@ def citation_check() -> dict:
                         "quote": quote,
                         "locked": meta["locked"],
                     })
+            # A row claiming the screenplay with nothing to show is itself
+            # a finding, not an absence of one (review F7).
+            if str(row.get("evidence_class", "")) == "SCRIPT_EXPLICIT" and not quotes:
+                checked += 1
+                missing.append({
+                    "spec_id": sid,
+                    "object_id": row.get("object_id", ""),
+                    "panel_id": row.get("panel_id", ""),
+                    "object": row.get("object", ""),
+                    "quote": "",
+                    "no_citation": True,
+                    "locked": meta["locked"],
+                })
     report = {"checked_at": store.utcnow(), "screenplay": rec.get("file", ""),
               "available": True, "quotes_checked": checked, "missing": missing}
     _save_citation_report(report)

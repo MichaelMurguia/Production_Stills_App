@@ -221,6 +221,16 @@ panel_id and object text. Allocation percentages must total 100."""
 BOARD_TYPES = {"SCENE", "LOCATION", "ASSET", "LIGHTING_STUDY", "MASTER"}
 
 
+def _cited_quote(source: str) -> str:
+    """The citation inside a model-written `source` string. Models write
+    either a bare sentence or a quoted one, so take the quoted span when
+    there is one and the whole string otherwise — the same tolerance
+    insights._QUOTE_RE gives legacy rows, without requiring the quotes."""
+    from .insights import _QUOTE_RE
+    m = _QUOTE_RE.findall(str(source or ""))
+    return (m[0] if m else str(source or "")).strip()[:300]
+
+
 def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
     """Coerce model output into a valid spec structure; never trust it blindly."""
     panels_in = draft.get("panels") or []
@@ -271,6 +281,12 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
 
     panel_ids = {p["id"] for p in panels}
     ledger = []
+    # The screenplay, normalised once, for the citation check below. A
+    # breakdown can carry dozens of rows and the document is ~130 KB.
+    from . import insights as _ins
+    hay = _ins.screenplay_haystack()
+    demoted = 0
+
     for i, row in enumerate(draft.get("evidence_ledger") or [], 1):
         ec = str(row.get("evidence_class", "")).strip().upper()
         status = str(row.get("status", "HOLD")).strip().upper()
@@ -287,20 +303,55 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
             confidence = min(max(float(row.get("confidence", 0.5)), 0.0), 1.0)
         except (TypeError, ValueError):
             confidence = 0.5
+
+        # SCRIPT_EXPLICIT is the only class that makes a FALSIFIABLE claim:
+        # it asserts a verbatim line exists in a document the server is
+        # holding. Until 2026-08-17 nothing opened it (adversarial review
+        # F21) — so the app guarded the class it could not check and waved
+        # through the one it could, and the incentive ran backwards:
+        # classifying strongly was the route to a row needing no human.
+        #
+        # DEMOTE, never drop. The row is the only record that this object
+        # was proposed at all, and silently shrinking the ledger the user is
+        # about to review would hide the model's reach rather than show it.
+        # WEAK_INFERENCE rather than STRONG (user ruling 2026-08-17): a row
+        # whose cited line is not in the screenplay is not a strong
+        # inference FROM the screenplay, it is not an inference from it at
+        # all — and WEAK spends the CANON_EXTRACTION budget of 2, so a draft
+        # whose citations mostly cannot be found hits the cap and stops
+        # instead of relabelling itself and sailing through.
+        source = str(row.get("source", ""))[:500]
+        rationale = str(row.get("rationale", ""))[:500]
+        quote = _cited_quote(source)
+        if ec == "SCRIPT_EXPLICIT" and not _ins.quote_is_in_screenplay(quote, hay):
+            demoted += 1
+            was = f"Model cited this as SCRIPT_EXPLICIT: {source}" if source else                 "Model cited this as SCRIPT_EXPLICIT with no quote."
+            rationale = (was + (" — " + rationale if rationale else ""))[:500]
+            ec, status, quote = "WEAK_INFERENCE", "HOLD", ""
+            source = "Citation not found in the screenplay"
+
         ledger.append({
             "object_id": f"OBJ-{i:03d}",
             "panel_id": pid,
             "object": str(row.get("object", ""))[:200],
             "evidence_class": ec,
-            "source": str(row.get("source", ""))[:500],
+            "source": source,
+            "quote": quote,
             "confidence": confidence,
             "status": status,
-            "rationale": str(row.get("rationale", ""))[:500],
+            "rationale": rationale,
         })
     if not ledger:
         raise AutofillError("The model returned no usable evidence rows.")
+    claimed = sum(1 for r in (draft.get("evidence_ledger") or [])
+                  if str(r.get("evidence_class", "")).strip().upper() == "SCRIPT_EXPLICIT")
 
     return {
+        # Surfaced, not swallowed: the numbers that tell the user whether
+        # this draft is worth reviewing, and whether the narrative model is
+        # worth its price. Stored on the spec so the breakdown can state it
+        # long after the draft call returned.
+        "citations": {"claimed": claimed, "demoted": demoted},
         "specification_id": spec_id,
         "project": store.project_name(),
         "subject": str(draft.get("subject", ""))[:200] or spec_id,

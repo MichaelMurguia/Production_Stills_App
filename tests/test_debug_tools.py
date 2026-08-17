@@ -140,8 +140,17 @@ class MockEngineTests(DebugToolsBase):
         self.assertEqual(r.status_code, 200, r.text)
         spec = r.json()
         self.assertIn("MOCK", spec["subject"])
-        self.assertTrue(all("MOCK" in row["source"]
+        # The mock cites the real slugline, so every row SURVIVES the
+        # citation verification added 2026-08-17 (review F21) rather than
+        # demoting to WEAK_INFERENCE/HOLD and blocking the lock. The honesty
+        # stamp lives in rationale; source is evidence, not a disclaimer.
+        self.assertTrue(all("MOCK" in row["rationale"]
                             for row in spec["evidence_ledger"]))
+        self.assertTrue(all(row["evidence_class"] == "SCRIPT_EXPLICIT"
+                            and row["status"] == "PASS"
+                            for row in spec["evidence_ledger"]),
+                        "the mock must cite lines the screenplay really has")
+        self.assertEqual(spec["citations"]["demoted"], 0)
         r = self.client.post("/api/specs/MOCKFLOW_V001/approve")
         self.assertEqual(r.status_code, 200, r.text)
 

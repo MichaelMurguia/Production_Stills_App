@@ -1049,11 +1049,28 @@ def amend_panel_objects(spec_id: str, panel_id: str, add: list[dict] | None = No
     have = {o.casefold() for o in objs}
     ledger = list(spec.get("evidence_ledger") or [])
     added: list[str] = []
+    unverified: list[str] = []
     for item in (add or []):
         obj = str(item.get("object", "")).strip()
         if not obj or obj.casefold() in have:
             continue
         quote = str(item.get("quote", "")).strip()
+        # A citation is only a citation if the screenplay contains it
+        # (adversarial review F6). This filed SCRIPT_EXPLICIT/PASS on the
+        # mere PRESENCE of a quote string, so a hand-crafted request — or a
+        # scan that fell back to the sheet's model-written scene prose —
+        # could put a fabricated line into the ledger as the screenplay's
+        # word, and satisfy the lock gate with it.
+        #
+        # An unverifiable quote does not demote to WEAK_INFERENCE here, as
+        # it does in autofill: the USER asked for this object, so the honest
+        # class is USER_DIRECTED. Their direction is authority; the citation
+        # is the only part that was false.
+        # Imported here, not at module scope: insights imports store.
+        from . import insights
+        if quote and not insights.quote_is_in_screenplay(quote):
+            unverified.append(obj)
+            quote = ""
         objs.append(obj)
         have.add(obj.casefold())
         added.append(obj)
@@ -1061,6 +1078,7 @@ def amend_panel_objects(spec_id: str, panel_id: str, add: list[dict] | None = No
             "panel_id": panel_id, "object": obj,
             "evidence_class": "SCRIPT_EXPLICIT" if quote else "USER_DIRECTED",
             "source": quote or "User direction",
+            "quote": quote,
             "status": "PASS",
         })
 
@@ -1074,7 +1092,7 @@ def amend_panel_objects(spec_id: str, panel_id: str, add: list[dict] | None = No
 
     if not added and not dropped:
         return {"panel_id": panel_id, "added": [], "removed": [],
-                "required_objects": objs}
+                "unverified_citations": unverified, "required_objects": objs}
 
     panel["required_objects"] = objs
     spec["evidence_ledger"] = ledger
@@ -1091,6 +1109,9 @@ def amend_panel_objects(spec_id: str, panel_id: str, add: list[dict] | None = No
         + (f" — removed {', '.join(dropped)}" if dropped else "")
         + ". Existing takes keep the hash they were generated against.")
     return {"panel_id": panel_id, "added": added, "removed": dropped,
+            # Stated, so the UI can say the citation did not hold rather
+            # than quietly filing a weaker class.
+            "unverified_citations": unverified,
             "required_objects": objs}
 
 

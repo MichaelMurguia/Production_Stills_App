@@ -204,9 +204,21 @@ def autofill_draft(subject_prompt: str, mode: str) -> dict:
                   or any(w in want for w in l["location"].casefold().split())),
                  locs[0] if locs else None)
     place = match["location"] if match else "the location"
-    cite = (f"MOCK CITATION — slugline '{place}' "
-            f"({match.get('scenes', 1)} scene(s))" if match
-            else "MOCK CITATION — no slugline parse available")
+    # A citation the screenplay actually contains. The docstring has always
+    # claimed "citations point at real sluglines" and the string it built
+    # was synthetic — which mattered from 2026-08-17, when SCRIPT_EXPLICIT
+    # began being verified against the screenplay (review F21): a mock row
+    # citing prose no document holds demotes to WEAK_INFERENCE/HOLD and the
+    # zero-cost flow can no longer lock. Quoting the real heading keeps the
+    # flow test exercising the verification instead of tripping over it.
+    # The MOCK stamp lives in `rationale`, which is where an honesty stamp
+    # belongs — `source` is the evidence, not the disclaimer.
+    # The slugline reconstructed from the parse — "EXT. DEEP SPACE" — which
+    # is literally a line in the screenplay and so survives verification.
+    slug = ". ".join(x for x in [str((match or {}).get("int_ext", "")).strip(),
+                                 place] if x).strip(". ")
+    cite = slug if match else (
+        f"MOCK CITATION — no slugline parse available for {place}")
     panels = [
         {"id": "P01", "title": f"{place.title()} — establishing",
          "purpose": "MOCK: establish the place, its light and its scale.",

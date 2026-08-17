@@ -110,7 +110,7 @@ Return JSON only:
 }}"""
 
 
-def _coerce(draft: dict, source_text: str) -> dict:
+def _coerce(draft: dict, source_text: str, from_screenplay: bool = True) -> dict:
     """Trust nothing about PROVENANCE. A find claiming the screenplay must
     prove it with a line literally in the text we sent; a find from the
     designer's own direction needs no proof and gets none invented."""
@@ -125,6 +125,11 @@ def _coerce(draft: dict, source_text: str) -> dict:
         src = ("screenplay"
                if str(f.get("from", "")).strip().lower() == "screenplay"
                else "direction")
+        # The screenplay was not read, so nothing can be sourced to it —
+        # whatever the model claimed (review F6). Not a drop: the reading
+        # may still be useful, it just is not a citation.
+        if not from_screenplay:
+            src = "direction"
         quote = str(f.get("quote", "")).strip()
         if src == "screenplay":
             needle = " ".join(quote.split()).casefold()
@@ -168,6 +173,13 @@ def scan_panel(spec_id: str, panel_id: str, ask: str = "",
             anchor = insights.scene_anchor(loc)
 
     matched = bool(anchor.get("matched"))
+    # On an anchor MISS the fallback is the sheet's own `scene` field, which
+    # a narrative model wrote (autofill._scene_field). Verifying a model's
+    # citation against a model's earlier prose and filing the result as the
+    # screenplay's word is how a fabrication became canon (adversarial
+    # review F6). The text is still worth reading — it is what the board
+    # says about itself — but nothing read from it can be sourced to the
+    # screenplay, and `_coerce` is told so below.
     source = (anchor["text"] if matched
               else str(spec.get("scene", "")).strip())
     if not source:
@@ -192,7 +204,14 @@ def scan_panel(spec_id: str, panel_id: str, ask: str = "",
         draft, model = _draft(provider, source.encode("utf-8"), "text/plain",
                               _instructions(spec, panel, ask, matched))
 
-    out = _coerce(draft, source)
+    out = _coerce(draft, source, from_screenplay=matched)
+    if not matched:
+        note = out.get("note", "")
+        out["note"] = (
+            "The screenplay scene for this board could not be located, so "
+            "this read the breakdown's own scene prose. Nothing here is "
+            "sourced to the screenplay."
+            + (" " + note if note else ""))[:MAX_TEXT]
     out.update({
         "provider": provider, "model": model,
         "panel_id": panel_id, "ask": ask.strip(),
