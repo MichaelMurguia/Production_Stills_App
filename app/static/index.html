@@ -19,7 +19,9 @@
 <body>
 <header>
   <div class="brand">
-    <span class="brand-title">SCREENBOARD</span>
+    <a class="brand-title" id="brand-home" href="https://www.screenboardstudio.com"
+      target="_blank" rel="noopener"
+      title="screenboardstudio.com — opens in a new tab, so your studio stays where it is">SCREENBOARD</a>
     <span class="brand-sub" id="brand-project"></span><button class="brand-rename" id="brand-rename" title="Rename this production"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg></button>
   </div>
   <div class="head-right">
@@ -338,105 +340,60 @@
 
 <template id="tpl-specs">
   <section class="view">
-    <!-- B1 (BREAKDOWN_INTAKE) — two doors, one section. Auto breakdown
-         and blank sheet are the same act: make a sheet. Amber sits only
-         on the recommended door. Every id here is unchanged; this is a
-         markup move, not a rewiring. -->
+    <!-- C1 (RULE_PASS_2 C, ruled 2026-08-18) — ONE door. The two doors
+         called the same endpoint with the same brief field; the second was
+         a strict superset of the first, and amber sat on the superseded
+         one — the app recommended the weaker door in its scarcest signal.
+         At 1440 the grid stacked, so the better door was below the fold of
+         the worse. `#spec-auto-*` retired; the door-foot survives because
+         it is true of every path through this one. -->
     <div class="panel panel-lead intake">
       <h2>New breakdown</h2>
-      <div class="intake-doors">
-        <div class="door door-auto">
-          <p class="door-head">Auto breakdown
-            <span class="door-nature mono">READS THE WHOLE SCREENPLAY</span></p>
-          <form id="spec-auto-form">
-            <!-- The board's SHAPE is stated, not inferred from the brief
-                 (user-hit 2026-08-07); it stands ABOVE the brief (canon
-                 pass R10, 2026-08-10) — a control that qualifies a field
-                 belongs before it, not after the user has written the
-                 thing it changes the meaning of. -->
-            <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
-              <select id="spec-auto-btype"></select>
-            </label>
-            <!-- B2: the brief leads the writing — it is the input that does the work. -->
-            <label class="f-wide" title="Plain-language description of the board you want — a location and which of its scenes. The research pass reads the whole screenplay with this as its brief and drafts panels, objects, and cited evidence.">What is this board about?
-              <textarea id="spec-auto-prompt" placeholder="describe the board…" required></textarea>
-            </label>
-            <div class="door-pair">
-              <label><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-                <input type="text" id="spec-auto-id" placeholder="MAIN_LOCATION_V001" required></label>
-              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
-                <select id="spec-auto-mode">
-                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
-                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
-                </select>
-              </label>
-            </div>
-            <div class="door-run">
-              <label title="Which model reads the screenplay and drafts the specification. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review.">Model
-                <select id="spec-auto-provider">
-                  <option value="gemini">Gemini (research pass)</option>
-                  <option value="openai">OpenAI GPT-5.6</option>
-                </select>
-              </label>
-              <button type="submit" class="primary" id="spec-auto-go">Run breakdown</button>
-            </div>
-            <p class="door-foot mono">EVERY CLAIM CITED &middot; UNKNOWNS LEFT HONEST &middot; YOU REVIEW BEFORE ANYTHING LOCKS</p>
-            <span id="spec-auto-status" class="mini"></span>
-            <!-- The example still drives the textarea's placeholder. -->
-            <i id="spec-auto-example" hidden>"the film's lead location — the scenes the script sets there"</i>
-          </form>
+      <form id="spec-new-form">
+        <label class="f-wide">What should I get?
+          <input type="text" id="spec-new-subject" placeholder="e.g. the film's lead location — the scenes the script sets there">
+          <span class="f-note mono">THE SCREENPLAY IS READ FOR IT</span></label>
+
+        <label class="f-wide">
+          <span class="f-lab">Or paste a screenplay section
+            <button type="button" class="text-act" id="spec-new-open-screenplay"
+              title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
+          <textarea id="spec-new-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
+          <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
+
+        <label class="f-wide">
+          <span class="f-lab">What panels should it include?</span>
+          <textarea id="spec-new-panels" rows="4" placeholder="one per line — or leave empty and the content decides"></textarea>
+          <span class="f-note mono">EMPTY — THE PANELS COME FROM THE CONTENT</span></label>
+
+        <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
+          <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required>
+          <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
+        <div class="door-pair">
+          <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+            <select id="spec-new-mode">
+              <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+              <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+            </select>
+          </label>
+          <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
+            <select id="spec-new-btype"></select>
+          </label>
         </div>
-
-        <div class="door door-blank">
-          <p class="door-head">Build one breakdown
-            <span class="door-nature mono">YOU SAY WHAT · I FETCH THE REST</span></p>
-          <form id="spec-new-form">
-            <!-- User 2026-08-16: two ways in, and the panels either typed
-                 or generated. Empty subject + empty section still creates
-                 a genuinely blank sheet, which is what this door used to
-                 be and is still worth having. -->
-            <label class="f-wide" title="Say what the board should show. The screenplay is read for it automatically — you do not have to find the scene.">What should I get?
-              <input type="text" id="spec-new-subject" placeholder="e.g. Tom McGuire and Sal Craft's final confrontation">
-              <span class="f-note mono">I READ THE SCREENPLAY FOR IT</span></label>
-
-            <label class="f-wide" title="Paste the scene itself and the breakdown comes from THIS text — the screenplay is not consulted, so a scene that is not in the uploaded draft yet still works.">
-              <span class="f-lab">Or paste a screenplay section
-                <button type="button" class="text-act" id="spec-new-open-screenplay"
-                  title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
-              <textarea id="spec-new-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
-              <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
-
-            <label class="f-wide" title="Name the panels this board should contain, one per line, in order. Leave it empty and the panels are generated from the content.">
-              <span class="f-lab">What panels should it include?
-                <button type="button" class="text-act" id="spec-new-autopanels"
-                  title="Leave the panels to the model — it reads the content and builds the ones it needs">Auto-generate</button></span>
-              <textarea id="spec-new-panels" rows="4" placeholder="one per line — or leave empty and I will decide"></textarea></label>
-            <!-- Spec ID takes its own row: CANON_EXTRACTION and
-                 LIGHTING_STUDY need ~300px together, which no honest
-                 split of a shared row affords at this column width.
-                 Deviation from mock 13a's row grouping, so that nothing
-                 truncates. -->
-            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-              <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required>
-              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
-            <div class="door-pair">
-              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
-                <select id="spec-new-mode">
-                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
-                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
-                </select>
-              </label>
-              <label title="The board type seeds the sheet with its board grammar — panel count and allocations only (hero + supports), never content. Change it later and an untouched sheet re-templates on request.">Board type
-                <select id="spec-new-btype"></select>
-              </label>
-            </div>
-            <div class="door-run door-run-end">
-              <button type="submit" class="ghost" id="spec-new-go">Create breakdown</button>
-              <span id="spec-new-status" class="mini"></span>
-            </div>
-          </form>
+        <div class="door-run">
+          <label title="Which model reads the screenplay and drafts the specification. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review.">Model
+            <select id="spec-new-provider">
+              <option value="gemini">Gemini (research pass)</option>
+              <option value="openai">OpenAI GPT-5.6</option>
+            </select>
+          </label>
+          <!-- C2: one submit, three genuinely different acts. The label
+               states which, recomputed on every keystroke. -->
+          <button type="submit" class="primary" id="spec-new-go">Create an empty sheet</button>
+          <span id="spec-new-status" class="mini"></span>
         </div>
-      </div>
+        <p class="door-foot mono">EVERY CLAIM CITED &middot; UNKNOWNS LEFT HONEST &middot; YOU REVIEW BEFORE ANYTHING LOCKS</p>
+      </form>
     </div>
 
     <!-- B4: the table holds data. The create form no longer masquerades
@@ -498,6 +455,7 @@
       <button data-sub="api" class="active">AI &amp; engines</button>
       <button data-sub="workflow">Workflow &amp; Instructions</button>
       <button data-sub="faq">FAQ</button>
+      <button data-sub="tutorials">Tutorials</button>
       <button data-sub="debug">Debug tools</button>
     </nav>
 
@@ -676,6 +634,14 @@
       </div>
     </div>
 
+    <!-- The tutorial CMS. Owner installs only (removed outright below the
+         same gate as Debug tools); the runtime that CONSUMES tutorials
+         ships to everyone. Rendered by tutorial-admin.js, fetched lazily
+         the first time this tab is opened. -->
+    <div data-subview="tutorials" class="hidden">
+      <div id="tut-admin"><p class="mini">loading the tutorial editor…</p></div>
+    </div>
+
     <div data-subview="debug" class="hidden">
       <div class="panel">
         <h2>Mock engine <span class="hint">(dry-run the whole pipeline at zero cost)</span></h2>
@@ -718,5 +684,9 @@
   }
 </script>
 <script src="/app.js"></script>
+<!-- Authored onboarding (app/tutorials.py). Loaded after app.js because it
+     drives the app's own router and reads its api()/showView globals; the
+     CMS half is fetched lazily and only on owner installs. -->
+<script src="/tutorial.js"></script>
 </body>
 </html>

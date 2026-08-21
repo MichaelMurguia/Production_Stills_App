@@ -70,6 +70,14 @@ async function api(path, opts = {}) {
     err.gateway = !(data && data.detail);
     throw err;
   }
+  // The one chokepoint every call passes through, so the tutorial engine
+  // can know the user actually did the thing a step asked for without a
+  // hook at fifty call sites (tutorial.js). Successful calls only — a
+  // step waits for the act to land, not for it to be attempted.
+  document.dispatchEvent(new CustomEvent("sb:api", { detail: {
+    method: String(opts.method || "GET").toUpperCase(),
+    path: String(path).split("?")[0],
+  } }));
   return data;
 }
 
@@ -718,6 +726,9 @@ function authModal(key) {
   // real steps and the user opens the key page when ready. Save/Test
   // re-render in place — no page reload, ever.
   return new Promise(resolve => {
+    // User 2026-08-20: "Test & save" was one button doing two things and
+    // it read as a single confusing act. Two acts now — Test answers and
+    // stays open, Save closes.
     const ov = document.createElement("div");
     ov.className = "modal-scrim";
     ov.innerHTML = `
@@ -738,11 +749,12 @@ function authModal(key) {
           <input type="password" data-mf="key" placeholder="paste the key">
         </label>
         ${P.note ? `<p class="wv-tag" style="margin:0 0 12px">${esc(P.note)}</p>` : ""}
-        <p class="cred-form-foot" style="margin:0 0 14px">SAVES TO THIS STUDIO ONLY · ${P.test ? "TESTED BEFORE IT COUNTS · " : ""}THE PAGE UPDATES IN PLACE — NO RELOAD</p>
+        <p class="cred-form-foot" style="margin:0 0 14px">SAVES TO THIS STUDIO ONLY${P.test ? ` · TEST CALLS ${esc(P.name.toUpperCase())} AND STORES NOTHING` : ""} · THE PAGE UPDATES IN PLACE — NO RELOAD</p>
         <div class="busy busy-inline" data-mf="state" aria-live="polite"></div>
         <div class="modal-actions">
           <button class="ghost" data-mf="cancel">Cancel</button>
-          <button class="primary" data-mf="ok">${P.test ? "Test &amp; save" : "Save"}</button>
+          ${P.test ? `<button class="ghost" data-mf="test">Test</button>` : ""}
+          <button class="primary" data-mf="ok">${P.connector ? "Connect" : "Save"}</button>
         </div>
       </div>`;
     document.body.append(ov);
@@ -776,14 +788,19 @@ function authModal(key) {
     // Elapsed seconds, because a provider call that takes eight seconds
     // and one that has hung look identical without them.
     let tick = null, t0 = 0;
-    const setBusy = (on, label) => {
+    // `which` is the button actually doing the work — without it a Test
+    // relabelled SAVE to "Testing…", which is the wrong button entirely
+    // (found in use, 2026-08-20).
+    const setBusy = (on, label, which = null) => {
+      const btn = which || ok;
       busy = on;
       ok.disabled = on;
       // Cancel stays LIVE. Disabling it locked the modal whenever the
       // provider was slow — worse than the silence it replaced. The key
       // is already saved by the time the test runs, so leaving mid-test
       // costs nothing but the verification.
-      ok.innerHTML = on ? esc(label) : okLabel;
+      if (which) btn.disabled = on;
+      btn.innerHTML = on ? esc(label) : (which ? "Test" : okLabel);
       clearInterval(tick);
       if (!on) { tick = null; return; }
       t0 = Date.now();
@@ -799,10 +816,40 @@ function authModal(key) {
       if (e.target === ov && !busy) done(null);
     }, true);
     cancel.onclick = () => {
-      if (busy) toast("Stopped waiting — the key was saved, but not verified.");
+      if (busy) toast("Stopped waiting — nothing was saved.");
       clearInterval(tick);
       done(null);
     };
+    // Test needs the key stored to call with it, so it saves first and
+    // the foot line says so. It never closes: the whole point is to read
+    // the answer and then decide.
+    const testBtn = $("[data-mf=test]", ov);
+    if (testBtn) testBtn.onclick = async () => {
+      if (busy) return;
+      const k = $("[data-mf=key]", ov).value.trim();
+      if (!k) { say("Paste the key first.", "bad"); return; }
+      const label = testBtn.innerHTML;
+      testBtn.disabled = true;
+      try {
+        setBusy(true, "Testing…", testBtn);
+        say(`A live call to ${P.name} — a few seconds.`, "work");
+        // Nothing is stored. Testing used to save first, which made a
+        // credential EXIST before the user agreed to keep it: the
+        // first-run walkthrough advanced on Test, and Cancel left the key
+        // behind (user 2026-08-20).
+        await api("/api/settings/test", {
+          method: "POST", json: { provider: P.test, key: k } });
+        setBusy(false, "", testBtn);
+        say(`${P.name} answered — the key works. Save to close.`, "ok");
+      } catch (err) {
+        setBusy(false, "", testBtn);
+        say(`${P.name} refused it: ${err.message}`, "bad");
+      } finally {
+        testBtn.disabled = false;
+        clearInterval(tick);
+      }
+    };
+
     $("[data-mf=ok]", ov).onclick = async () => {
       if (busy) return;
       const k = $("[data-mf=key]", ov).value.trim();      if (!k) { say("Paste the key first.", "bad"); return; }
@@ -818,20 +865,12 @@ function authModal(key) {
           }
           toast(`${pub.label}: ${pub.model_count} models synced.`);
         } else {
+          // Save is a local write and nothing else — it is fast, and it
+          // closes. Testing is the other button, by choice.
           setBusy(true, "Saving…");
           say("Saving the key to this studio…", "work");
           await api("/api/settings", { method: "POST", json: { [P.field]: k } });
-          if (P.test) {
-            // The slow half, and the one worth naming: it is a real call
-            // to the provider, not a local write.
-            setBusy(true, "Testing…");
-            say(`Asking ${P.name} whether the key works — this is a live `
-                + "call and can take a few seconds.", "work");
-            await api("/api/settings/test", { method: "POST", json: { provider: P.test } });
-            toast(`${P.name} key saved and tested.`);
-          } else {
-            toast(`${P.name} key stored.`);
-          }
+          toast(`${P.name} key saved.`);
         }
         say("Done.", "ok");
         clearInterval(tick);
@@ -1466,6 +1505,14 @@ function gateChain(state) {
   const ss = state.stage_summary || {};
   const pd = ss.production_design || {};
   return [
+    // User ruling 2026-08-18: nothing runs without a model, so it is the
+    // first link — not a separate mechanism bolted on beside the chain.
+    // Settings stays reachable (it is the remedy) and so does Status (it
+    // states the blocker); every stage waits.
+    { label: "CONNECT AN AI MODEL", verb: "Connect a model",
+      done: !!(state.capability && state.capability.any_credential),
+      stage: "settings",
+      sub: "Every stage runs on a model you connect — your key, your bill" },
     { label: "UPLOAD THE SCREENPLAY", verb: "Upload the screenplay", done: !!ss.screenplay, stage: "screenplay",
       sub: "The read starts here — everything downstream derives from the draft" },
     { label: "RUN THE SCRIPT SCAN", verb: "Run the script scan", done: !!pd.scan_done, stage: "wizard",
@@ -1487,10 +1534,12 @@ function gateChain(state) {
 
 const STAGE_NUM = { screenplay: "01", wizard: "02", specs: "03", boards: "04", assembly: "05" };
 // How much of the chain each stage's gate requires.
-const UNLOCK_NEED = { specs: 5, boards: 6, assembly: 7 };
+const UNLOCK_NEED = { specs: 6, boards: 7, assembly: 8 };
 const UNLOCK_LINE = { specs: "THE MOMENT THE BIBLE IS SAVED",
                      boards: "THE MOMENT A SHEET LOCKS",
                      assembly: "THE MOMENT A PANEL IS APPROVED" };
+const NO_MODEL_SENTENCE = "Every stage runs on an AI model, and none is "
+  + "connected yet.";
 const NEED_SENTENCE = { specs: "Breakdowns need the Art Direction Bible.",
                        boards: "Panels need a locked breakdown.",
                        assembly: "Boards need approved panels." };
@@ -1519,7 +1568,9 @@ function lockPopover(stage) {
       <span class="bp-chip mono">${STAGE_NUM[stage]} IS LOCKED</span>
       <button class="bp-x" title="Dismiss (Esc)">×</button>
     </div>
-    <p class="bp-sent">${esc(NEED_SENTENCE[stage] || "This stage's gate is upstream.")}
+    <p class="bp-sent">${esc(
+      required[0]?.stage === "settings" ? NO_MODEL_SENTENCE
+        : NEED_SENTENCE[stage] || "This stage's gate is upstream.")}
       <b>${COUNT_WORDS[n] || n} step${n === 1 ? "" : "s"} first.</b></p>
     <div class="bp-steps mono">
       ${remaining.map(s => `
@@ -1959,6 +2010,11 @@ async function showView(name, { push = true } = {}) {
   updateBand();  // fire and forget — the band must never block the view
   try { await views[name](); }
   catch (err) { toast(err.message, true); }
+  // Navigation is the other half of the tutorial engine's event surface
+  // (tutorial.js): a step can wait for the user to reach a view, and a
+  // trigger can fire on arrival. Emitted after the render, so anything
+  // the step anchors to already exists.
+  document.dispatchEvent(new CustomEvent("sb:view", { detail: { view: name } }));
 }
 
 /* The band is the pipeline's state, refreshed on every navigation:
@@ -2080,7 +2136,17 @@ async function updateBand() {
                         specs: "specs", boards: "boards" };
   const blocked = new Set((state.blocking || [])
     .filter(b => b.kind !== "CARE")  // advisories never mark a stage blocked
-    .map(b => b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs"));
+    // A row may NAME the stage it blocks (server `stage`). Needed since
+    // the KEY row: its action is "settings", which no stage maps to, and
+    // the `|| "specs"` fallback would have painted stage 03 red for a
+    // missing credential.
+    .flatMap(b => b.stages?.length ? b.stages
+      : [b.stage
+        || (b.kind === "CITE" ? "screenplay" : BLOCK_STAGE[b.action] || "specs")]));
+  // TRIAGE §2 Q3: the same two words in both cells, because it is the same
+  // missing thing — that repetition is the point.
+  const noEngine = new Set((state.blocking || [])
+    .filter(b => b.kind === "KEY").flatMap(b => b.stages || []));
   const frontier = STAGE_ORDER.find(s => !complete[s]) || "assembly";
 
   // Everything past the frontier has an unmet gate and is inert (L1) —
@@ -2088,6 +2154,13 @@ async function updateBand() {
   _bandState = state;
   const frontierIdx = STAGE_ORDER.indexOf(frontier);
   lockedStages = new Set(STAGE_ORDER.filter((s, i) => i > frontierIdx));
+  // User ruling 2026-08-18: with no model connected the whole pipeline
+  // waits. This is the APP's gate, not the walkthrough's — someone who
+  // skips the tour meets exactly the same wall, and the lock popover
+  // already explains itself and points at the remedy.
+  if (state.capability && !state.capability.any_credential) {
+    STAGE_ORDER.forEach(s2 => lockedStages.add(s2));
+  }
 
   for (const stage of STAGE_ORDER) {
     const btn = $(`#nav button[data-view="${stage}"]`);
@@ -2101,6 +2174,18 @@ async function updateBand() {
     btn.classList.toggle("s-bad", !isCurrent && blocked.has(stage));
     btn.classList.toggle("s-ok", !isCurrent && !blocked.has(stage) && complete[stage]);
     btn.classList.toggle("s-locked", isLocked);
+    // TRIAGE §2 Q3 (2026-08-18): a red cell with no reason is exactly the
+    // defect gate-readable-as-state exists to prevent. Two words in the
+    // chip slot that already exists — no new colour.
+    let why = $(".no-engine-chip", btn);
+    if (noEngine.has(stage)) {
+      if (!why) {
+        why = document.createElement("span");
+        why.className = "no-engine-chip mono";
+        why.textContent = "NO ENGINE";
+        $(".stage-top", btn)?.append(why);
+      }
+    } else why?.remove();
     // Focusable stays true — keyboard users get the same explanation.
     btn.setAttribute("aria-disabled", isLocked ? "true" : "false");
   }
@@ -2108,12 +2193,14 @@ async function updateBand() {
 
 /* -------------------------------------------------------------- dashboard */
 
-const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", SIZE: "Regenerate", CITE: "Review", CARE: "Backup" };
+const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", KEY: "Connect",
+                      SIZE: "Regenerate", CITE: "Review", CARE: "Backup" };
 const BLOCK_SUPPORT = {
   HOLD: "Held rows on required objects block the lock — read each cited source, then pass or cut the row.",
   GAP: "A missing input upstream stops generation downstream.",
   SIZE: "Nothing is ever blown up — regenerate the panel at a larger size.",
   CITE: "The current draft no longer contains quotes this breakdown cites — review the flagged rows.",
+  KEY: "The app calls models on your own key — without one, the roles that need it cannot run at all.",
 };
 
 // Gate stated before it is hit (user ruling 2026-08-01): a breakdown draws
@@ -2158,7 +2245,13 @@ async function renderStatus() {
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
-  if (!state.screenplay) {
+  // The verb IS the form — but only where the form can be used. Since the
+  // user's 2026-08-18 ruling the upload is locked until a model is
+  // connected, so a lead reading "Upload the screenplay" above a disabled
+  // control would be naming an act the studio refuses. With no engine the
+  // lead falls through to the promoted blocker, which is the credential.
+  const canUpload = state.capability ? !!state.capability.any_credential : true;
+  if (!state.screenplay && canUpload) {
     // The verb IS the form (user ruling 2026-08-01): never a button whose
     // only job is to reach another button. The upload happens right here;
     // the side column and the blocking list stay untouched.
@@ -2173,7 +2266,7 @@ async function renderStatus() {
         <button type="submit" class="primary">Upload &amp; start the read</button>
       </form>
       <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
-    bindScreenplayUpload($("#status-screenplay-form"));
+    bindScreenplayUpload($("#status-screenplay-form"), state.capability);
   } else {
     lead.innerHTML = `
       <div class="next-label">DO THIS NEXT</div>
@@ -2198,14 +2291,31 @@ async function renderStatus() {
       return `
         <div class="block-row">
           <span class="block-kind ${esc(b.kind)}">${esc(b.kind)}</span>
-          <span class="block-text" title="${esc(b.detail || "")}">${monoIds(esc(b.text))}</span>
+          <span class="block-text" title="${esc(b.detail || "")}">${monoIds(esc(b.text))}${
+            b.sub ? `<span class="block-sub mono">${esc(b.sub)}</span>` : ""}</span>
           <button class="block-act" data-block="${i}">${esc(BLOCK_VERBS[b.kind] || "Open")}</button>
         </div>`;
+    };
+    // TRIAGE §2 Q1 (2026-08-18): one row survives a production switch, and
+    // a reader who fixes it once must never see it filed as this
+    // production's fault. One scope needs no label, so a normal install's
+    // list is unchanged — the production head is drawn only when an
+    // install row is present.
+    const scoped = rows => {
+      const inst = rows.filter(b => b.scope === "install");
+      const prod = rows.filter(b => b.scope !== "install");
+      if (!inst.length) return prod.map(row).join("");
+      return `<div class="block-scope mono">THIS STUDIO — TRUE IN EVERY PRODUCTION</div>`
+        + inst.map(row).join("")
+        + (prod.length
+          ? `<div class="block-scope mono">${esc((state.project || "THIS PRODUCTION").toUpperCase())}</div>`
+            + prod.map(row).join("")
+          : "");
     };
     blocking.innerHTML =
       (rest.length
         ? `<h2>Blocking — ${rest.length} more <span class="hint">beyond the one stated above</span></h2>`
-          + rest.map(row).join("")
+          + scoped(rest)
         : `<h2>Advisory <span class="hint">${first
             ? "care of existing work — the one blocker is stated above"
             : "care of existing work — nothing blocks the next render"}</span></h2>`)
@@ -2276,7 +2386,7 @@ async function renderScreenplay() {
         <button type="submit" class="primary">Upload &amp; start the read</button>
       </form>
       <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
-    bindScreenplayUpload($("#screenplay-form-main"));
+    bindScreenplayUpload($("#screenplay-form-main"), state.capability);
     $("#screenplay-form").closest(".panel").classList.add("hidden");
   }
 
@@ -2339,20 +2449,69 @@ async function renderScreenplay() {
     $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
   }
 
-  bindScreenplayUpload($("#screenplay-form"));
+  bindScreenplayUpload($("#screenplay-form"), state.capability);
 }
 
 // One upload path for every screenplay form (Status lead, the stage's
 // empty state, and Replace). Success lands on the Screenplay stage to
 // show what the read found.
-function bindScreenplayUpload(form) {
+/* The button says "Upload & start the read" and, until 2026-08-20, only
+   uploaded (user-caught). The read IS the Scene Scan — the pass that
+   finds design languages, environments, locations and cast — so the verb
+   now performs it.
+
+   Two guards, both deliberate:
+
+   - **Only a FIRST read.** A production that already has an analysis is
+     not re-scanned, because a re-run overwrites curated design languages,
+     environments and subjects — the same reason `Name the acts` is not a
+     re-scan. Replacing a draft therefore uploads and stops, which is what
+     `Upload a new draft` says it does.
+   - **Only with an engine.** The read is a model call; with none it is
+     not attempted, and the upload is gated on a credential anyway. */
+async function startTheRead() {
+  try {
+    const have = await api("/api/wizard/analysis").catch(() => ({}));
+    if (have && (have.design_worlds || have.subjects || have.analyzed_at)) return;
+    const s = await api("/api/settings");
+    if (!s.capability?.narrative?.usable) return;
+    toast("Reading the screenplay — design languages, locations and cast. "
+          + "This takes a minute or two; you can keep working.");
+    const a = await api("/api/wizard/analyze", { method: "POST", json: {} });
+    toast(`The read found ${(a.design_worlds || []).length} design language(s) `
+          + `and ${(a.subjects || []).length} subject(s) — review them on `
+          + "Prod. Design.");
+    if (activeView === "wizard") renderWizard();
+    updateBand();
+  } catch (err) {
+    toast(`The read did not finish: ${err.message} — run the Scene Scan on `
+          + "Prod. Design when you are ready.", true);
+  }
+}
+
+function bindScreenplayUpload(form, cap = null) {
   // Gate readable as state: the verb stays disabled, with the condition
-  // stated, until a file is actually chosen.
+  // stated, until a file is actually chosen — and, since the user's
+  // 2026-08-18 ruling, until an AI model is connected. The read starts
+  // the moment the draft lands and the read needs an engine, so taking
+  // the file first would be accepting work the studio cannot begin.
   const input = $('input[type="file"]', form);
   const submit = $('button[type="submit"]', form);
+  const noEngine = cap ? !cap.any_credential : false;
+  if (noEngine) {
+    input.disabled = true;
+    form.insertAdjacentHTML("afterend",
+      `<p class="up-gate mono">NO AI MODEL CONNECTED — THE SCREENPLAY IS READ
+       THE MOMENT IT LANDS, AND THAT READ NEEDS AN ENGINE
+       <button type="button" class="text-act" data-f="up-gate-go">Connect one ↗</button></p>`);
+    form.parentElement.querySelector("[data-f=up-gate-go]").onclick =
+      () => showView("settings");
+  }
   const sync = () => {
-    submit.disabled = !input.files.length;
-    submit.title = input.files.length ? "" : "Choose a screenplay file first";
+    submit.disabled = noEngine || !input.files.length;
+    submit.title = noEngine
+      ? "Connect an AI model first — Settings → AI & engines"
+      : input.files.length ? "" : "Choose a screenplay file first";
   };
   input.addEventListener("change", sync);
   sync();
@@ -2369,6 +2528,7 @@ function bindScreenplayUpload(form) {
         ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
         : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
       showView("screenplay");
+      startTheRead();
     } catch (err) { toast(err.message, true); }
   });
 }
@@ -2434,7 +2594,7 @@ async function renderLocations(state = null, langs = 0) {
   const pdReady = !!state?.stage_summary?.production_design?.bible_saved;
   const sheetCell = l => {
     if (!l.sheet) return pdReady
-      ? `<button class="block-act loc-draft" data-loc="${esc(l.location)}">Create breakdown</button>`
+      ? `<button class="text-act loc-draft" data-loc="${esc(l.location)}">Create breakdown</button>`
       : PD_LOCK_TAG;
     const held = heldBySpec[l.sheet.spec_id];
     return `<span class="loc-sheet">
@@ -2465,7 +2625,7 @@ async function renderLocations(state = null, langs = 0) {
           .map(s => `
             <div class="scene-row">
               <span class="loc-slug" style="color:var(--ink-dim)">${esc(s.heading)}</span>
-              ${pdReady ? `<button class="block-act loc-draft" data-loc="${esc(s.heading)}">Create breakdown</button>` : PD_LOCK_TAG}
+              ${pdReady ? `<button class="text-act loc-draft" data-loc="${esc(s.heading)}">Create breakdown</button>` : PD_LOCK_TAG}
             </div>`).join("") : "";
         return `
           <div class="loc-row" data-exp="${esc(l.location)}" style="cursor:pointer" title="click to ${open ? "collapse" : "list"} this location's scenes">
@@ -2819,8 +2979,16 @@ async function renderStorage() {
   // R6 (canon pass 2026-08-10): the coverage meter is the project's only
   // meter — a capacity is a Courier number line whose colour carries its
   // state. The number a user would read aloud is the thing on screen.
+  // DENSITY rule 5 (ruled 2026-08-18): a status word becomes a compound
+  // fact where the reader's next question is obvious. Nobody reads
+  // "14.2 / 40 GB" and stops there — they are asking how many more takes
+  // fit. A 4K take is 20–40 MB; the headroom is stated at the pessimistic
+  // end so the number is never a promise the disk cannot keep.
+  const takes = Math.floor(s.free / (40 * 1024 * 1024));
   host.innerHTML = `
-    <p class="stor-line mono ${state}">FREE ${mb(s.free)} OF ${mb(s.total)} · ${pct}% USED</p>
+    <p class="stor-line mono ${state}">FREE ${mb(s.free)} OF ${mb(s.total)} · ${pct}% USED${
+      takes > 0 ? ` · ROOM FOR ~${takes} MORE 4K TAKE${takes === 1 ? "" : "S"}`
+        : " · NOT ENOUGH FOR ANOTHER 4K TAKE"}</p>
     <div class="stor-rows">${(s.breakdown || []).map(r => `
       <div class="stor-row"><span>${esc(r.kind)}</span>
         <span class="mono">${mb(r.bytes)}</span></div>`).join("")
@@ -2828,6 +2996,29 @@ async function renderStorage() {
     <p class="mini">Takes are never upscaled, so a 4K take is 20–40 MB and every
     one is kept until it is rejected and deleted. Reject a take, then Delete,
     to reclaim its space.</p>`;
+}
+
+/* The tutorial CMS (tutorial-admin.js) is fetched the first time its tab
+   is opened and never on a customer's studio — the tab does not exist
+   there. The runtime half (tutorial.js) ships to everyone. */
+let _tutAdminLoad = null;
+function openTutorialAdmin() {
+  const host = $("#tut-admin");
+  if (!host) return;
+  const v = encodeURIComponent(window.SB_BOOT_VERSION || "dev");
+  _tutAdminLoad ||= new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = `/tutorial-admin.js?v=${v}`;
+    s.onload = resolve;
+    s.onerror = () => {
+      _tutAdminLoad = null;
+      reject(new Error("The tutorial editor could not be loaded."));
+    };
+    document.head.append(s);
+  });
+  _tutAdminLoad
+    .then(() => window.TutorialAdmin.render(host))
+    .catch(err => { host.innerHTML = `<p class="mini">${esc(err.message)}</p>`; });
 }
 
 async function renderSettings(openTab = "") {
@@ -2841,7 +3032,7 @@ async function renderSettings(openTab = "") {
   // no key nothing else in the app can run. Order and default are two
   // different decisions and this is the one place they meet.
   const rememberedTab0 = openTab || uiGet("settingsTab", "");
-  const rememberedTab = rememberedTab0 === "debug" && !_debugTools
+  const rememberedTab = ["debug", "tutorials"].includes(rememberedTab0) && !_debugTools
     ? "" : rememberedTab0;
   if (rememberedTab) {
     const btn = $(`#settings-subnav button[data-sub="${CSS.escape(rememberedTab)}"]`);
@@ -2858,15 +3049,21 @@ async function renderSettings(openTab = "") {
     $$("#settings-subnav button").forEach(b => b.classList.toggle("active", b === btn));
     $$("[data-subview]").forEach(v =>
       v.classList.toggle("hidden", v.dataset.subview !== btn.dataset.sub));
+    if (btn.dataset.sub === "tutorials") openTutorialAdmin();
   });
+  if (rememberedTab === "tutorials") openTutorialAdmin();
 
   const settings = await api("/api/settings");
   _debugTools = !!settings.debug_tools;
   if (!_debugTools) {
-    // Debug tools exist only on the owner's installs — the tab and its
-    // subview are removed outright, never merely hidden.
-    $('#settings-subnav button[data-sub="debug"]')?.remove();
-    $('[data-subview="debug"]')?.remove();
+    // Debug tools and the tutorial CMS exist only on the owner's installs
+    // — the tabs and their subviews are removed outright, never merely
+    // hidden. (The tutorial RUNTIME ships to everyone; only authoring is
+    // gated.)
+    for (const sub of ["debug", "tutorials"]) {
+      $(`#settings-subnav button[data-sub="${sub}"]`)?.remove();
+      $(`[data-subview="${sub}"]`)?.remove();
+    }
   }
 
   // User-added engines render inside the §02 credential list (C2).
@@ -2887,9 +3084,11 @@ async function renderSettings(openTab = "") {
   // F1 (SETTINGS_FIRST_RUN_PLAN) — the two lives. Before a credential
   // exists the page is a setup form; after one exists it is a control
   // panel. A dropdown is never an error message.
-  const anyCred = !!(engAll.openai?.configured || engAll.gemini?.configured
-    || customs.length || settings.anthropic_api_key_set
-    || cxRows.some(r => r.status !== "NOT_CONNECTED"));
+  // Server-declared (generate.capability, 2026-08-18). This was a fourth
+  // copy of "does this install have a credential", and a copy of that
+  // question is how a keyless studio showed a control panel here and a
+  // setup form elsewhere.
+  const anyCred = !!settings.capability?.any_credential;
   $("#settings-firstrun").classList.toggle("hidden", anyCred);
   $("#settings-steady").classList.toggle("hidden", !anyCred);
   if (!anyCred) renderFirstRun();
@@ -4440,7 +4639,7 @@ async function renderWizard() {
       ${sheet
         ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open breakdown</button>`
         : state.stage_summary?.production_design?.bible_saved
-          ? `<button class="block-act loc-draft" data-loc="${esc(name)}">Create breakdown</button>`
+          ? `<button class="text-act loc-draft" data-loc="${esc(name)}">Create breakdown</button>`
           : `<span class="wv-tag loc-gate">NEEDS THE BIBLE</span>`}
     </div>`;
   const WIZ_LOC_THEAD = `
@@ -4626,6 +4825,7 @@ async function renderWizard() {
         return {
           key: `act-${a.n}`,
           act: a.n,
+          titleFrom: a.titleFrom || (named?.title ? "scan" : ""),
           turn: a.turn || named?.turn || "",
           label: `ACT ${a.roman}${a.title ? ` — ${a.title.toUpperCase()}` : ""}`,
           locs,
@@ -4635,20 +4835,26 @@ async function renderWizard() {
       // scene, so it has no act — said outright rather than filed into one.
       const actless = (getAnalysis()?.key_locations || [])
         .filter(n => !placed.has(n) && !byLoc[n]);
-      if (actless.length) grouped.push({
-        key: "no-act", label: "NOT IN A SLUGLINE — NO SCENE TO PLACE IT IN",
-        locs: actless });
+      // D4 (RULE_PASS_2 D, ruled 2026-08-18): these rows have no scene to
+      // break down, so a fourth "act" under a head reading EACH BECOMES ONE
+      // BREAKDOWN made the count and the claim disagree. It leaves the act
+      // list and becomes a register below it, with its own honest label.
+      const register = actless.length
+        ? { key: "no-act", register: true,
+            label: "NAMED IN THE READ · NOT IN ANY SLUGLINE", locs: actless }
+        : null;
+      // The head counts only what it claims: placeable locations.
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
+      if (register) grouped.push(register);
       buildLocFinder(secHost, {
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">${
-          wizCov?.acts_derived ? "ACTS FROM THE SCREENPLAY"
-            : acts.some(a => a.titleFrom === "scan")
-              ? "THREE-ACT SPLIT · NAMES FROM THE SCENE SCAN"
-              : "STANDARD THREE-ACT SPLIT · UNNAMED"
-        } · FIVE SHOWN PER ACT</span>${
+        // D1: the provenance moved to the headings it applies to — a
+        // string three groups above the thing it describes discloses less
+        // than position, and position alone does not disclose.
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">FIVE SHOWN PER ACT</span>${
           wizCov?.acts_derived || acts.some(a => a.title) ? "" :
           ` <button type="button" class="text-act" data-f="name-acts"
-              title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">Name the acts</button>`
+              title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
+                acts.some(a => a.title) ? "Rename the acts" : "Name the acts"}</button>`
         }</span></div>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
@@ -4656,11 +4862,20 @@ async function renderWizard() {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
           const cut = capList(locs, g.key, { searching: !!needle });
-          return `<div class="loc-group"${g.turn ? ` title="${esc("Turns on: " + g.turn)}"` : ""}>${
-            g.act ? `<button type="button" class="text-act loc-act-name" data-act="${g.act}"
-              title="Rename this act — a reading you disagree with is a reading you can change">${esc(g.label)}</button>`
-              : esc(g.label)} — ${locs.length}${
-            cut.capped ? ` <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}</div>`
+          // D1: three states, three drawings — printed, READ, unnamed.
+          // D2: the beat the act turns on is the evidence that makes an
+          // inferred name checkable; it was a bare title on the group.
+          // D3: the heading is a heading, and Rename is a visible control.
+          const read = g.titleFrom === "scan"
+            ? ` <span class="loc-read mono">READ</span>` : "";
+          return `<div class="loc-group${g.register ? " loc-register" : ""}">`
+            + `<span class="loc-act-head">${esc(g.label)}${read}</span>`
+            + ` — ${locs.length}${
+              cut.capped ? ` · <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}${
+              g.act ? ` <button type="button" class="text-act loc-act-name" data-act="${g.act}"
+                title="Rename this act — a reading you disagree with is a reading you can change">Rename</button>` : ""}`
+            + (g.turn ? `<span class="loc-turn mono">TURNS ON — ${esc(String(g.turn).toUpperCase())}</span>` : "")
+            + `</div>`
             + cut.shown.map(n => wizLocRow(n, byLoc[n]?.sheet, `
               <select class="loc-reassign" data-loc="${esc(n)}" title="The environment this location inherits its palette, light and atmosphere from — saved to the analysis immediately.">
                 ${["UNASSIGNED", ...envNames].map(en =>
@@ -5459,6 +5674,25 @@ const bucketOfRef = r => STYLE_HEADS.includes(roleHead(r.role)) ? "STYLE"
   : SCENE_HEADS.includes(roleHead(r.role)) ? "SCENE" : "SUBJECT";
 
 // One ref-card, used by every shelf (anatomy per mock 4c).
+/* E0 (RULE_PASS_2 E, ruled 2026-08-18): both rows drew with an em-dash
+   and nothing else on every style anchor — two of six text rows saying
+   nothing, drawn as structure. Never pad to three: a row with no
+   jurisdiction is not drawn, and a plate with neither states it once. */
+/* E2: `APPROVED ON SUPPLY` is a different fact from `APPROVED` — a
+   captured entry and an authored one must not look identical (B6). */
+const statusWord = r => r.status === "APPROVED" && r.status_reason === "ON SUPPLY"
+  ? "APPROVED ON SUPPLY" : r.status;
+
+function jurisRows(controls, notControls) {
+  const on = (controls || []).filter(Boolean);
+  const off = (notControls || []).filter(Boolean);
+  if (!on.length && !off.length) {
+    return `<div class="juris-none">NO JURISDICTION SET</div>`;
+  }
+  return (on.length ? `<div class="juris ok">CONTROLS ${esc(on.join(" · "))}</div>` : "")
+    + (off.length ? `<div class="juris bad">NOT ${esc(off.join(" · "))}</div>` : "");
+}
+
 function buildRefCard(r, lbItems, i) {
   const isAutoAttach = AUTO_ATTACH_HEADS.includes(roleHead(r.role));
   const card = document.createElement("div");
@@ -5472,10 +5706,9 @@ function buildRefCard(r, lbItems, i) {
   card.innerHTML = `
     <img src="/api/references/${r.id}/image?size=thumb" alt="${esc(r.id)}" loading="lazy">
     <div class="body">
-      <div><span class="badge ${r.status}">${r.status}</span> <b>${esc(r.id)}</b></div>
+      <div><span class="badge ${r.status}">${statusWord(r)}</span> <b>${esc(r.id)}</b></div>
       <div class="role">${esc(r.role)}</div>
-      <div class="juris ok">CONTROLS ${esc(r.controls.join(" · ") || "—")}</div>
-      <div class="juris bad">NOT ${esc(r.does_not_control.join(" · ") || "—")}</div>
+      ${jurisRows(r.controls, r.does_not_control)}
       ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
       ${usage}
     </div>
@@ -5710,7 +5943,7 @@ async function photoTrayModal(s, onDone) {
   const ov = document.createElement("div");
   ov.className = "modal-scrim";
   ov.innerHTML = `
-    <div class="modal cast-modal" role="dialog" aria-modal="true">
+    <div class="modal photos-modal" role="dialog" aria-modal="true">
       <div class="modal-title">Add photos — ${esc(s.name.toUpperCase())}</div>
       <p class="hint">Each becomes an approved
         <span class="mono">${esc(role)} — ${esc(s.name.toUpperCase())}</span>
@@ -5741,7 +5974,6 @@ async function photoTrayModal(s, onDone) {
       ok.disabled = !fs.length;
       ok.textContent = fs.length
         ? `Attach ${fs.length} photo${fs.length === 1 ? "" : "s"}` : "Attach";
-      say(fs.length ? "" : "");
     },
   });
 
@@ -5780,6 +6012,13 @@ async function photoTrayModal(s, onDone) {
 //
 // Nothing is created until Cast is pressed, and the photos ride the same
 // endpoint the card's own slot uses — one upload path, not a second.
+/* E5 (RULE_PASS_2 E, ruled 2026-08-18): once the fields are populated,
+   nothing distinguished a proposal from the user's own words — so someone
+   who edits Identity, comes back and finds Traits untouched cannot tell
+   whether they approved them or never looked. The same --ink-faint
+   Courier marker Part D gives a read act name, cleared on first edit. */
+const READ_MARK = ` <span class="read-mark mono">READ</span>`;
+
 function castModal(rec, onDone) {
   const KINDS = ["CHARACTER", "VEHICLE", "PROP"];
   const kind = (rec.kind || "CHARACTER").toUpperCase();
@@ -5788,28 +6027,37 @@ function castModal(rec, onDone) {
   ov.innerHTML = `
     <div class="modal cast-modal" role="dialog" aria-modal="true">
       <div class="modal-title">Cast ${esc(rec.name)}</div>
-      <p class="hint">What the screenplay read proposed. Edit anything —
-        the identity and traits ride in every prompt this subject appears
-        in. Nothing is created until you cast it.</p>
-
-      <label class="modal-field">Kind
+      <!-- E4 (RULE_PASS_2 E, ruled 2026-08-18): casting is deciding what
+           someone LOOKS LIKE. The photos are the decision and the traits
+           qualify it, so the tray leads and Kind — which came from the
+           read and is rarely wrong — states itself rather than opening
+           the modal with a dropdown. -->
+      <div class="cast-kind mono" data-f="kind-line">${esc(kind)} · PROPOSED BY THE READ
+        <button type="button" class="text-act" data-f="kind-change">Change</button></div>
+      <label class="modal-field hidden" data-f="kind-wrap">Kind
         <select data-f="kind">${KINDS.map(k =>
           `<option${k === kind ? " selected" : ""}>${k}</option>`).join("")}</select>
       </label>
-      <label class="modal-field">Identity
-        <input type="text" data-f="subtitle" value="${esc(rec.subtitle || "")}"
-               placeholder="e.g. DRIVER. COWBOY. LOYAL FRIEND.">
-      </label>
-      <label class="modal-field">Traits <span class="hint">one per line</span>
-        <textarea data-f="traits" rows="4"
-          placeholder="20s. Cheerful under pressure.&#10;Scarred since the crash.">${
-          esc((rec.traits || []).join(String.fromCharCode(10)))}</textarea>
-      </label>
+
+      <p class="hint">What the screenplay read proposed. Edit anything —
+        the identity and traits ride in every prompt this subject appears
+        in. Nothing is created until you cast it.</p>
 
       <div class="cast-photos">
         <span class="f-label">Reference photos <span class="hint">optional — each becomes an approved reference under this name</span></span>
         <div class="cast-thumbs" data-f="thumbs"></div>
       </div>
+
+      <label class="modal-field">Identity${rec.subtitle ? READ_MARK : ""}
+        <input type="text" data-f="subtitle" value="${esc(rec.subtitle || "")}"
+               placeholder="e.g. DRIVER. COWBOY. LOYAL FRIEND.">
+      </label>
+      <label class="modal-field">Traits <span class="hint">one per line</span>${
+        (rec.traits || []).length ? READ_MARK : ""}
+        <textarea data-f="traits" rows="4"
+          placeholder="20s. Cheerful under pressure.&#10;Scarred since the crash.">${
+          esc((rec.traits || []).join(String.fromCharCode(10)))}</textarea>
+      </label>
 
       <div class="busy busy-inline" data-f="state" aria-live="polite"></div>
       <div class="modal-actions">
@@ -5821,6 +6069,15 @@ function castModal(rec, onDone) {
 
   const ok = $("[data-f=ok]", ov), cancel = $("[data-f=cancel]", ov);
   const stateEl = $("[data-f=state]", ov), thumbs = $("[data-f=thumbs]", ov);
+  // The marker is a claim about THIS value; editing it makes it yours.
+  for (const f of ["subtitle", "traits"]) {
+    $(`[data-f=${f}]`, ov)?.addEventListener("input", e =>
+      e.target.closest("label")?.querySelector(".read-mark")?.remove());
+  }
+  $("[data-f=kind-change]", ov).onclick = () => {
+    $("[data-f=kind-line]", ov).classList.add("hidden");
+    $("[data-f=kind-wrap]", ov).classList.remove("hidden");
+  };
   let busy = false;
   const say = (msg, kind2 = "") => {
     stateEl.className = `busy busy-inline${kind2 ? " " + kind2 : ""}`;
@@ -6040,7 +6297,7 @@ function pickReferenceSource(obj, refs) {
         attach itself. Point this object at a plate you already have, or supply a
         new one.</p>
         <p class="mini mono">${refs.length} APPROVED PLATE${refs.length === 1 ? "" : "S"}
-        · CHOOSING ONE TICKS ITS GROUP FOR THIS PANEL ONLY</p>
+        · THE TICK RIDES THE NEXT TAKE — IT IS NOT A LASTING LINK</p>
         <div class="ref-pick-grid">${cards
           || '<span class="mini">the library has no approved plates yet</span>'}</div>
         <div class="modal-actions">
@@ -6126,35 +6383,36 @@ function viewObjectReferences(obj, recs, addPrefill, onChanged,
   return modal({
     custom: `
       <div class="modal-title">Reference — ${esc(obj)}</div>
-      <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT · ${onPick
+      <p class="modal-body mini mono">${recs.length} PLATE${recs.length === 1 ? " MATCHES" : "S MATCH"} THIS OBJECT${
+        recs.length === 1 ? " · THIN ANCHOR — ONE ANGLE STEERS EVERY RENDER" : ""} · ${onPick
         ? `<span data-f="vr-count">${chosen.size} OF ${recs.length} RIDE THE NEXT RENDER</span> · UNTICK ONE TO SPEND FEWER OF THE FOURTEEN`
-        : "ALL ATTACH WHEN ITS GROUP IS CHECKED"} · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW
-        ${narrowed ? `<button type="button" class="verb" data-f="vr-all"
-          style="margin-left:12px">Show all ${recs.length}</button>` : ""}</p>
-      <div class="ref-grid${narrowed ? " vr-only" : ""}" data-f="vr-grid"
-           style="max-height:60vh;overflow-y:auto;margin:0 14px;align-content:start">
+        : "ALL ATTACH WHEN ITS GROUP IS CHECKED"}</p>
+      <!-- E1 (RULE_PASS_2 E, ruled 2026-08-18): the modal exists to answer
+           "do these plates cover the angles?" — a COMPARISON, which is why
+           the lightbox does not solve it. The plates are the surface: one
+           row at full width, own ratios, md tier. USE is a tick ON the
+           plate, because what rides the render is a property of the
+           picture. Two Courier roles under each, and notes go behind the
+           plate's own click, where the lightbox caption already lives. -->
+      <div class="vr-strip${narrowed ? " vr-only" : ""}" data-f="vr-grid">
         ${recs.map((r, i) => `
-          <div class="ref-card ${esc(r.status)}${onPick && !chosen.has(r.id) ? " vr-off" : ""}" data-card="${esc(r.id)}">
-            <img src="/api/references/${esc(r.id)}/image?size=thumb" data-lb="${i}" alt="${esc(r.id)}" loading="lazy">
-            <div class="body">
-              <div>${onPick ? `<label class="vr-use" title="Attach this plate to the next render">
-                <input type="checkbox" data-use="${esc(r.id)}" ${chosen.has(r.id) ? "checked" : ""}>
-                <span class="mono">USE</span></label> ` : ""}<span class="badge ${esc(r.status)}">${esc(r.status)}</span> <b>${esc(r.id)}</b></div>
-              <div class="role">${esc(r.role)}</div>
-              <div class="juris ok">CONTROLS ${esc((r.controls || []).join(" · ") || "—")}</div>
-              <div class="juris bad">NOT ${esc((r.does_not_control || []).join(" · ") || "—")}</div>
-              ${r.notes ? `<div class="meta">${esc(r.notes)}</div>` : ""}
-            </div>
-          </div>`).join("")}
+          <figure class="vr-plate ${esc(r.status)}${onPick && !chosen.has(r.id) ? " vr-off" : ""}" data-card="${esc(r.id)}">
+            <span class="vr-frame">
+              <img src="/api/references/${esc(r.id)}/image?size=md" data-lb="${i}" alt="${esc(r.id)}" loading="lazy">
+              ${onPick ? `<label class="vr-use" title="Attach this plate to the next render">
+                <input type="checkbox" data-use="${esc(r.id)}" ${chosen.has(r.id) ? "checked" : ""}></label>` : ""}
+            </span>
+            <figcaption>
+              <div class="vr-id mono">${esc(r.id)} · ${esc(r.role)} · ${esc(r.status)}</div>
+              ${jurisRows(r.controls, r.does_not_control)}
+            </figcaption>
+          </figure>`).join("")}
       </div>
-      ${recs.length === 1 ? `
-        <p class="modal-body" style="color:var(--ink-dim)">One plate is a thin
-        anchor — a single angle steers every render toward that angle. Add the
-        other angles under the same title so they group and all attach.</p>` : ""}
       <div class="modal-actions" style="margin:12px 14px">
         <button class="ghost" data-f="vr-add" title="Opens the add-reference widget prefilled with this group's role and title, so the new plate joins the same group and attaches with it">Add another plate</button>
+        ${narrowed ? `<button type="button" class="ghost" data-f="vr-all">Show all ${recs.length}</button>` : ""}
         ${onDetach ? `<button class="ghost" data-f="vr-detach"
-          title="Removes the reference FROM THIS OBJECT only. The object goes back to + REF so you can point it somewhere else; the plates themselves are untouched, stay in the library, and stay attached to every other object that names them.">Remove reference</button>` : ""}
+          title="Removes the reference FROM THIS OBJECT only. The object goes back to + REF so you can point it somewhere else; the plates themselves are untouched, stay in the library, and stay attached to every other object that names them.">Not this object's reference</button>` : ""}
         <span style="flex:1"></span>
         <button class="ghost" data-f="vr-close">Close</button>
       </div>`,
@@ -6561,17 +6819,15 @@ async function renderSpecs(openId = null) {
   };
   // The board's shape is a STATED input, from the same vocabulary the
   // blank-sheet form offers (user-hit 2026-08-07).
-  const autoBtype = $("#spec-auto-btype");
-  if (autoBtype) autoBtype.innerHTML = BOARD_TYPES.map(t =>
-    `<option value="${t.value}">${esc(t.label)}</option>`).join("");
-  persistForm("breakdownDraft", ["spec-auto-id", "spec-auto-prompt",
-                                 "spec-auto-mode", "spec-auto-btype",
-                                 "spec-auto-provider"]);
+  // C1 (RULE_PASS_2 C): one door. The board's shape is a STATED input
+  // (user-hit 2026-08-07).
+  const autoBtype = $("#spec-new-btype");
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject",
                                 "spec-new-source", "spec-new-panels",
-                                "spec-new-mode", "spec-new-btype"]);
+                                "spec-new-mode", "spec-new-btype",
+                                "spec-new-provider"]);
 
-  await fillNarrativeSelect($("#spec-auto-provider"));
+  await fillNarrativeSelect($("#spec-new-provider"));
 
   // The instruction example speaks this production's screenplay, never a
   // hardcoded film's (user ruling 2026-08-01); the same fetch powers the
@@ -6586,9 +6842,7 @@ async function renderSpecs(openId = null) {
         const t = titleCase(top);
         // B2: the example IS the placeholder — a trailing italic
         // sentence is prose the field can carry itself.
-        const ex = $("#spec-auto-example");
-        if (ex) ex.textContent = `"${t} — the scenes the script sets there"`;
-        const ta0 = $("#spec-auto-prompt");
+        const ta0 = $("#spec-new-subject");
         if (ta0 && !ta0.value) ta0.placeholder = `${t} — the scenes the script sets there`;
       }
       if (!locHint) return;
@@ -6601,7 +6855,7 @@ async function renderSpecs(openId = null) {
           if (hit) { rec = l; scene = hit; break; }
         }
       }
-      const idEl = $("#spec-auto-id");
+      const idEl = $("#spec-new-id");
       if (idEl && !idEl.value.trim()) {
         const base = slugSpecId(rec?.location || locHint)
           .replace(/^_+|_+$/g, "").slice(0, 40) || "BOARD";
@@ -6615,7 +6869,7 @@ async function renderSpecs(openId = null) {
       if (autoBtype && !autoBtype.dataset.touched) {
         autoBtype.value = scene ? "SCENE" : "LOCATION";
       }
-      const promptEl = $("#spec-auto-prompt");
+      const promptEl = $("#spec-new-subject");
       if (!promptEl || promptEl.value.trim()) return;
       if (scene) {
         promptEl.value = `${scene.heading} — a scene board for this single scene at `
@@ -6638,7 +6892,7 @@ async function renderSpecs(openId = null) {
 
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
   // underscores.
-  for (const idSel of ["#spec-auto-id", "#spec-new-id"]) {
+  for (const idSel of ["#spec-new-id"]) {
     const el = $(idSel);
     if (el) el.addEventListener("input", () => {
       const pos = el.selectionStart;
@@ -6721,46 +6975,10 @@ async function renderSpecs(openId = null) {
     el.setSelectionRange(caret, caret);
   });
   // Once the user has chosen, the hint never overwrites them.
-  $("#spec-auto-btype")?.addEventListener("change", e => {
+  $("#spec-new-btype")?.addEventListener("change", e => {
     e.target.dataset.touched = "1";
   });
-  bindSpecIdField($("#spec-auto-id"));
   bindSpecIdField($("#spec-new-id"));
-
-  $("#spec-auto-form").addEventListener("submit", async e => {
-    e.preventDefault();
-    const btn = $("#spec-auto-go"), status = $("#spec-auto-status");
-    btn.disabled = true;
-    const providerSel = $("#spec-auto-provider");
-    const busy = startBusy(status,
-      `Reading the screenplay and drafting the breakdown with ${providerSel.options[providerSel.selectedIndex].text}…`,
-      "this can take a minute or two");
-    try {
-      const spec = await api("/api/specs/autofill", {
-        method: "POST",
-        json: {
-          specification_id: slugSpecId($("#spec-auto-id").value),
-          prompt: $("#spec-auto-prompt").value,
-          mode: $("#spec-auto-mode").value,
-          board_type: $("#spec-auto-btype")?.value || "",
-          provider: $("#spec-auto-provider").value,
-        },
-      });
-      const holds = spec.evidence_ledger.filter(r => r.status === "HOLD").length;
-      const qs = (spec.unresolved_questions || []).length;
-      toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, ` +
-            `${spec.evidence_ledger.length} evidence rows` +
-            (holds ? `, ${holds} on HOLD for your review` : "") +
-            (qs ? `, ${qs} unresolved questions` : "") + ".");
-      localStorage.removeItem("breakdownDraft");
-      renderSpecs(spec.specification_id);
-    } catch (err) {
-      busy.done();
-      status.innerHTML = `<span class="badge REJECTED">FAIL</span> ${esc(err.message)}`;
-      toast(err.message, true);
-      btn.disabled = false;
-    }
-  });
 
   // Three fields, three ways to fill them (user 2026-08-16). A brief means
   // "read the screenplay for it"; a pasted section means "this IS the
@@ -6770,13 +6988,26 @@ async function renderSpecs(openId = null) {
   // what this door used to be and is still worth having.
   $("#spec-new-open-screenplay").onclick = () =>
     window.open("/api/screenplay/file", "_blank", "noopener");
-  $("#spec-new-autopanels").onclick = () => {
-    const box = $("#spec-new-panels");
-    box.value = "";
-    box.placeholder = "I will read the content and build the panels it needs";
-    box.focus();
-    toast("Panels left to the model — it builds what the content needs.");
+
+  // C2 (RULE_PASS_2 C): one submit, three genuinely different acts,
+  // chosen by which boxes are empty. A branch the user cannot see before
+  // committing is a branch they discover by undoing — so the label states
+  // it, recomputed as you type.
+  const submitVerb = () => {
+    const brief = $("#spec-new-subject")?.value.trim();
+    const source = $("#spec-new-source")?.value.trim();
+    return source ? "Break down the pasted section"
+      : brief ? "Read the screenplay for it"
+      : "Create an empty sheet";
   };
+  const syncVerb = () => {
+    const b = $("#spec-new-go");
+    if (b) b.textContent = submitVerb();
+  };
+  for (const sel of ["#spec-new-subject", "#spec-new-source"]) {
+    $(sel)?.addEventListener("input", syncVerb);
+  }
+  syncVerb();
 
   $("#spec-new-form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -6801,7 +7032,7 @@ async function renderSpecs(openId = null) {
       return;
     }
     btn.disabled = true;
-    const status = $("#spec-new-status") || $("#spec-auto-status");
+    const status = $("#spec-new-status");
     const busy = status && startBusy(status,
       source ? "Breaking down the section you pasted…"
              : "Reading the screenplay and drafting the breakdown…",
@@ -6812,7 +7043,7 @@ async function renderSpecs(openId = null) {
         prompt: brief,
         source_text: source,
         panels,
-        provider: $("#spec-auto-provider")?.value || "gemini",
+        provider: $("#spec-new-provider")?.value || "gemini",
       } });
       busy?.done();
       toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
@@ -8736,12 +8967,16 @@ function openStylePicker({ title, definition, styles, current, onPick,
   };
 }
 
+// C7 (RULE_PASS_2 C, 2026-08-18): the options truncated mid-definition
+// (`SCENE — one screenplay scene, slugli⌄`). The 260px cap is canon R10,
+// deliberately set, so the option text is what gives — the definitions are
+// already in the control's own title. An option reads as its value.
 const BOARD_TYPES = [
-  { value: "SCENE", label: "SCENE — one screenplay scene, slugline-bound" },
-  { value: "LOCATION", label: "LOCATION — a place across times" },
-  { value: "ASSET", label: "ASSET — prop / vehicle / character" },
-  { value: "LIGHTING_STUDY", label: "LIGHTING STUDY — derived, geometry-locked" },
-  { value: "MASTER", label: "MASTER — presentation grammar" },
+  { value: "SCENE", label: "SCENE" },
+  { value: "LOCATION", label: "LOCATION" },
+  { value: "ASSET", label: "ASSET" },
+  { value: "LIGHTING_STUDY", label: "LIGHTING STUDY" },
+  { value: "MASTER", label: "MASTER" },
 ];
 const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"];
 
@@ -10020,7 +10255,13 @@ async function renderBoardPanels(specId) {
       // unordered wall of thumbnails is not a choice — anything sharing a
       // word with the object leads, then the rest in id order.
       const near = r => namesPhrase(obj, String(r.role).split("—")[1]?.trim() || r.role);
-      const ordered = [...approvedRefs].sort((a, b2) => (near(b2) ? 1 : 0) - (near(a) ? 1 : 0));
+      // TRIAGE §1 (ruled 2026-08-18): style and palette anchors are
+      // excluded — a look anchor is never the answer for a prop, and
+      // offering one is a defect rather than a choice.
+      const pickable = approvedRefs.filter(r =>
+        !AUTO_ATTACH_HEADS.includes(roleHead(r.role))
+        && roleHead(r.role) !== "BOARD_LAYOUT_STYLE");
+      const ordered = [...pickable].sort((a, b2) => (near(b2) ? 1 : 0) - (near(a) ? 1 : 0));
       const how = await pickReferenceSource(obj, ordered);
       if (how === null) return;
       if (how === "new") {
@@ -11567,6 +11808,7 @@ async function renderAssembly() {
     host.innerHTML = "";
     const p = document.createElement("div");
     p.className = "panel";
+    p.dataset.f = "made-boards";   // A7: arrange mode hides it
     p.innerHTML = `
       <h2>Completed boards <span class="hint">(every assembled wall, newest first — click one to view and judge it; pick a sheet above to assemble more)</span></h2>
       <div class="ref-grid" data-f="grid" style="margin-top:10px"></div>`;
@@ -11789,7 +12031,7 @@ async function renderAssemblyFor(specId) {
     </div>
     <div data-f="slot-wrap">${sm ? slotHtml(sm) : ""}</div>
     <div id="asm-arrange-host" style="margin-top:14px"></div>
-    <div class="row">
+    <div class="row" data-f="canvas-row">
       <label class="mini" title="Pixel dimensions of the final assembled board. Panels are composed at native resolution — never upscaled — so every panel needs enough source resolution for its allocation.">Canvas <select id="asm-size">
         <option value="3840x2160" selected>3840 × 2160 (4K UHD)</option>
         <option value="4096x2304">4096 × 2304 (DCI-flavor wide)</option>
@@ -11848,6 +12090,19 @@ async function renderAssemblyFor(specId) {
   const setArrangeMode = open => {
     slotCap?.classList.toggle("hidden", open);
     slotWrap?.classList.toggle("hidden", open);
+    // A7 (RULE_PASS_2 A): the hand-over was half-done. Scrolling past the
+    // room you were still looking at this spec's earlier boards, each with
+    // a live Approve and a live Delete forever — two copies of the board
+    // PLUS the destructive verbs of a different task. A mode hands over
+    // the whole surface: canvas select and the completed-boards grid go
+    // with the map. One board on screen at a time.
+    $("[data-f=canvas-row]", asm)?.classList.toggle("hidden", open);
+    asm.parentElement?.querySelector("[data-f=made-boards]")
+      ?.classList.toggle("hidden", open);
+    // A6: three ways out of one surface, stacked. The parent's primary is
+    // the one control that toggles (R7), so the room does not draw a
+    // second — and you cannot assemble while arranging.
+    $("#asm-go", asm)?.classList.toggle("hidden", open);
     const b = $("#asm-arrange", asm);
     if (b) {
       b.textContent = open ? "Done arranging" : "Arrange this board";
@@ -12302,9 +12557,8 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       <button class="${ok ? "primary" : "ghost"}" data-f="export" ${ok ? "" : `disabled title="Export is blocked — the gate below states by what"`}>Export PNG</button>`;
   root.innerHTML = `
     <div class="lb-head">
-      <button class="text-act" data-f="back">Close arrange</button>
       <span class="lb-title mono">${esc((sh.masthead?.title || "BOARD").toUpperCase())} — ARRANGED BOARD</span>
-      <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">● EVERY CHANGE SAVED</span>
+      <span class="lb-saved mono" title="There is no save button — every change writes rev ${sh.rev}">EVERY CHANGE SAVED</span>
       <button class="ghost" data-f="style" title="Choose a presentation style for this board — the room stays neutral; the style shows in previews and export">Style…</button>
       <span data-f="export-slot">${exportBtns(ready.ready)}</span>
     </div>
@@ -12313,13 +12567,14 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     <div class="arr-ctls mono">
       <label>GUTTER <input type="range" data-f="gutter" min="0" max="120" step="6" value="${gutter}">
         <span data-f="gutter-val">${gutter} PX</span></label>
-      <button class="vchip on" data-f="readouts" title="Per-frame pixel readouts">READOUTS</button>
+      <button class="vchip set" data-f="readouts" title="Per-frame pixel readouts">READOUTS</button>
+      <button class="arr-corner-add hidden" data-f="corner-add" title="Dock a benched panel back onto the board as a bottom row">
+        <svg viewBox="0 0 12 12" fill="none"><path d="M6 1.5 V10.5 M1.5 6 H10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span data-f="bench-n"></span></button>
     </div>
     <div class="arr-board" data-f="board">
       <div class="arr-ghost" data-f="ghost"><span class="arr-ghost-k mono" data-f="ghost-k"></span></div>
       <div class="arr-arrows" data-f="arrows"></div>
-      <button class="arr-corner-add" data-f="corner-add" title="Add a benched panel back as a bottom row">
-        <svg viewBox="0 0 12 12" fill="none"><path d="M6 1.5 V10.5 M1.5 6 H10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       <div class="arr-menu" data-f="menu"></div>
       <div class="arr-chip mono" data-f="chip"></div>
     </div>
@@ -12436,10 +12691,14 @@ async function renderArrangeRoom(sheetId, host, onClose) {
         ? `Style · ${sh.look.key.replace(/_/g, " ")}` : "Style…";
       stBtn.classList.toggle("on", !!sh.look?.key);
     }
-    cornerAdd.disabled = !arr.bench.length;
-    cornerAdd.title = arr.bench.length
-      ? `Add a benched panel back — on the bench: ${arr.bench.join(", ")}`
-      : "Every panel is on the board";
+    // A2 (RULE_PASS_2 A): a control for returning benched panels has no
+    // business being visible on a board with an empty bench. It carries
+    // the count, so the bench is readable without opening anything.
+    cornerAdd.classList.toggle("hidden", !arr.bench.length);
+    $("[data-f=bench-n]", cornerAdd).textContent =
+      `${arr.bench.length} BENCHED`;
+    cornerAdd.title =
+      `Dock a benched panel back onto the board — on the bench: ${arr.bench.join(", ")}`;
     for (const el of root.querySelectorAll(".arr-plus")) {
       el.classList.toggle("empty", !arr.bench.length);
       el.title = arr.bench.length
@@ -12468,12 +12727,29 @@ async function renderArrangeRoom(sheetId, host, onClose) {
              short: pw > availW + 1 || ph > availH + 1 };
   };
 
+  // A1 (RULE_PASS_2 A): the four film ratios are discoverable only from
+  // use — a legend listing them would be a fifth instruction on a surface
+  // that already carries four — so when a snap is in force the HUD names
+  // it beside the aspect it produced.
+  const RATIO_SNAPS = [[2.39, "2.39:1"], [16 / 9, "16:9"],
+                       [4 / 3, "4:3"], [1, "1:1"]];
+  const snapNameFor = ar => {
+    const hit = RATIO_SNAPS.find(([v]) => Math.abs(ar - v) <= 0.02);
+    return hit ? hit[1] : "";
+  };
+
   const hudFor = (pid, live = false) => {
     const r = rectsOf(arr)[pid];
     if (!r) return;
     const { t, pw, ph, availW, availH, short } = shortFor(pid, r);
+    const snapped = snapNameFor(pw / ph);
+    // B6: with a look in force these numbers are the DRESSED field's, so
+    // the room and the gate stop disagreeing — the HUD names which.
+    const dressedFor = sh.look?.key
+      ? ` · DRESSED FOR ${sh.look.key.replace(/_/g, " ")}` : "";
     hud.innerHTML = `<b>${esc(pid)}</b> · slot ${pw} × ${ph} px `
-      + `(${(pw / ph).toFixed(2)}:1)`
+      + `(${(pw / ph).toFixed(2)}:1${snapped ? ` — SNAPPED ${snapped}` : ""})`
+      + dressedFor
       + (t ? ` · take ${t.w} × ${t.h} · ` : " · no approved take · ")
       + (short
         ? `<span class="arr-bad">SHORT — PLATE SHOWS ${availW} × ${availH} — `
@@ -12512,7 +12788,11 @@ async function renderArrangeRoom(sheetId, host, onClose) {
     b.className = "arr-arrow";
     b.innerHTML = `<svg viewBox="0 0 12 12" fill="none" style="transform: rotate(${ARROW_ROT[dir]}deg)">
       <path d="M1.5 6 H10.5 M6.8 2.2 L10.5 6 L6.8 9.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    b.title = "Claim to the canvas edge — displaced panels re-home into their nearest neighbor";
+    // A4 (RULE_PASS_2 A): claimedTo() takes ONE step by design (ruling
+    // 2026-08-13, in the comment above it) — the old copy promised the
+    // canvas edge and the code delivered the next panel.
+    b.title = "Claim through the next panel — it re-homes into its nearest "
+      + "neighbour. Click again to take the next one.";
     b.addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); });
     b.addEventListener("mouseenter", () => {
       clearTimeout(hideTimer);

@@ -1,0 +1,23 @@
+{
+  "id": "example-release-note",
+  "rev": 1,
+  "kind": "announcement",
+  "title": "EXAMPLE — how a release announcement is written",
+  "note": "Ships DISABLED on purpose: it is a template to duplicate, not a message for the fleet. To announce a real feature — duplicate this, write it, point its anchor at the new control, enable it, raise rev, commit, push. Studios that already saw the previous rev see it again.",
+  "enabled": false,
+  "priority": 50,
+  "replayable": false,
+  "trigger": { "version_at_least": "2026.08.05.83" },
+  "steps": [
+    {
+      "id": "note",
+      "surface": "spotlight",
+      "anchor": "header.settings",
+      "side": "bottom",
+      "align": "end",
+      "title": "What changed in this release",
+      "body": "One paragraph, in the app's own voice: what it does, what it replaces, and where it lives.\n\nAnnouncements point at the control they are about — a release note nobody can act on is a changelog entry in the wrong place.",
+      "act": { "label": "Take me there", "goto": "/settings" }
+    }
+  ]
+}

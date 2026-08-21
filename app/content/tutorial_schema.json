@@ -1,0 +1,225 @@
+{
+  "_comment": [
+    "The tutorial system's whole vocabulary, declared ONCE. Python validates",
+    "authored content against this file; the editor builds its dropdowns from",
+    "it; the JS engine evaluates exactly the predicate kinds listed here (a",
+    "test asserts the two agree). Adding a predicate or an anchor is an edit",
+    "to this file plus, for predicates only, a case in tutorial.js.",
+    "",
+    "ANCHORS are why the CMS survives a redesign: authored content names an",
+    "anchor, never a selector. When markup moves, one line here changes and",
+    "every tutorial still lands on the right thing."
+  ],
+
+  "kinds": {
+    "flow": "A guided sequence — one or more steps, navigation under the tutorial's control. The FTUE shape.",
+    "announcement": "A release note shown once per revision. Same machinery, different chrome; usually one step."
+  },
+
+  "surfaces": {
+    "modal": "Centred over a scrim. No anchor. For openings, closings, and anything that is about the product rather than about one control.",
+    "spotlight": "The anchored form: the target is cut out of the scrim and a popover sits beside it. Requires an anchor.",
+    "page": "Docked in a corner with NO scrim and NO cutout — the whole page stays usable. For a step where there is more than one right control to press, so pointing at one of them would be wrong. Takes no anchor."
+  },
+
+  "sides": ["top", "right", "bottom", "left"],
+  "aligns": ["start", "center", "end"],
+
+  "predicates": {
+    "always": {
+      "arg": "none",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "Always true",
+      "hint": "A trigger that fires whenever the tutorial has not been seen."
+    },
+    "first_run": {
+      "arg": "none",
+      "use": ["trigger", "skip_if"],
+      "label": "First run — no production exists yet",
+      "hint": "True while the install has never created a production."
+    },
+    "version_changed": {
+      "arg": "none",
+      "use": ["trigger"],
+      "label": "The studio updated since this was last seen",
+      "hint": "Announcement trigger. True when the running version differs from the version recorded the last time this tutorial was shown."
+    },
+    "version_at_least": {
+      "arg": "string",
+      "use": ["trigger", "skip_if"],
+      "label": "Running version is at or past…",
+      "hint": "A VERSION string, e.g. 2026.08.05.83. Compared segment by segment."
+    },
+    "state": {
+      "arg": "path",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "Product state is true at…",
+      "hint": "A dotted path into GET /api/state, e.g. stage_summary.screenplay. Truthy passes."
+    },
+    "state_equals": {
+      "arg": "path_value",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "Product state equals…",
+      "hint": "{ \"path\": \"stage_summary.specs.locked\", \"value\": true }"
+    },
+    "view": {
+      "arg": "view",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "The user is on this view",
+      "hint": "As a trigger and as an advance condition: true once that view is open."
+    },
+    "api": {
+      "arg": "api",
+      "use": ["advance"],
+      "label": "The user completed a call",
+      "hint": "{ \"method\": \"POST\", \"path\": \"^/api/screenplay\" } — matched against successful calls only. This is how a step waits for the user to actually do the thing."
+    },
+    "click": {
+      "arg": "anchor",
+      "use": ["advance"],
+      "label": "The user clicked this anchor",
+      "hint": "Advances when the named anchor (or anything inside it) is clicked."
+    },
+    "seen": {
+      "arg": "tutorial",
+      "use": ["trigger", "skip_if"],
+      "label": "Another tutorial was completed",
+      "hint": "Chains tutorials: this one waits until that one is done."
+    },
+    "not_seen": {
+      "arg": "tutorial",
+      "use": ["trigger", "skip_if"],
+      "label": "Another tutorial has NOT been completed",
+      "hint": "Keeps two tutorials from competing for the same moment."
+    },
+    "all": {
+      "arg": "list",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "All of…",
+      "hint": "A list of predicates; every one must pass."
+    },
+    "any": {
+      "arg": "list",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "Any of…",
+      "hint": "A list of predicates; one passing is enough."
+    },
+    "not": {
+      "arg": "predicate",
+      "use": ["trigger", "skip_if", "advance"],
+      "label": "Not…",
+      "hint": "Inverts one predicate."
+    }
+  },
+
+  "views": ["status", "screenplay", "wizard", "specs", "boards", "assembly",
+            "references", "settings"],
+
+  "_view_note": "Internal view names (what body[data-view] carries) do NOT match the URLs — the band was renamed after the router was written. The editor shows both so an author never guesses.",
+  "view_labels": {
+    "status": "Status — the landing tool",
+    "screenplay": "Stage 01 — Screenplay",
+    "wizard": "Stage 02 — Prod. Design",
+    "specs": "Stage 03 — Breakdowns",
+    "boards": "Stage 04 — Panels (the workbench)",
+    "assembly": "Stage 05 — Boards (assembly)",
+    "references": "Reference — the library",
+    "settings": "Settings"
+  },
+  "paths": {
+    "/status": "Status",
+    "/screenplay": "Stage 01 — Screenplay",
+    "/production-design": "Stage 02 — Prod. Design",
+    "/breakdowns": "Stage 03 — Breakdowns",
+    "/panels": "Stage 04 — Panels",
+    "/boards": "Stage 05 — Boards",
+    "/reference": "Reference library",
+    "/productions": "Productions library",
+    "/settings": "Settings"
+  },
+
+  "anchors": [
+    { "name": "band", "selector": "#nav",
+      "label": "The pipeline band (all five stages)" },
+    { "name": "stage.screenplay", "selector": "#nav button[data-view=screenplay]",
+      "label": "Band — stage 01 Screenplay" },
+    { "name": "stage.wizard", "selector": "#nav button[data-view=wizard]",
+      "label": "Band — stage 02 Prod. Design" },
+    { "name": "stage.specs", "selector": "#nav button[data-view=specs]",
+      "label": "Band — stage 03 Breakdowns" },
+    { "name": "stage.boards", "selector": "#nav button[data-view=boards]",
+      "label": "Band — stage 04 Panels" },
+    { "name": "stage.assembly", "selector": "#nav button[data-view=assembly]",
+      "label": "Band — stage 05 Boards" },
+
+    { "name": "header.brand", "selector": ".brand",
+      "label": "Header — production name" },
+    { "name": "header.engines", "selector": "#engine-dots",
+      "label": "Header — engine credential dots" },
+    { "name": "header.status", "selector": "#tools-nav button[data-view=status]",
+      "label": "Header — Status" },
+    { "name": "header.references", "selector": "#tools-nav button[data-view=references]",
+      "label": "Header — Reference" },
+    { "name": "header.settings", "selector": "#tools-nav button[data-view=settings]",
+      "label": "Header — Settings" },
+
+    { "name": "status.next", "selector": "#dash-next",
+      "label": "Status — the next action panel" },
+    { "name": "status.blocking", "selector": "#dash-missing",
+      "label": "Status — what is blocking" },
+    { "name": "status.recent", "selector": "#dash-recent",
+      "label": "Status — recent activity" },
+
+    { "name": "screenplay.upload", "selector": "#screenplay-form",
+      "label": "Stage 01 — the REPLACE-draft form (hidden until a draft exists; for a first upload point at status.next)" },
+    { "name": "screenplay.coverage", "selector": "#dash-locations",
+      "label": "Stage 01 — what the script gave us" },
+
+    { "name": "wizard.rail", "selector": "#wiz-rail",
+      "label": "Stage 02 — the step rail" },
+    { "name": "wizard.scan", "selector": "#wiz-analyze",
+      "label": "Stage 02 — Run the Scene Scan" },
+    { "name": "wizard.cast", "selector": "#wiz-subj-grid",
+      "label": "Stage 02 — cast & subjects" },
+    { "name": "wizard.draft", "selector": "#wiz-draft",
+      "label": "Stage 02 — Draft Art Direction Bible" },
+
+    { "name": "specs.autoform", "selector": "#spec-new-form",
+      "label": "Stage 03 — the breakdown door" },
+    { "name": "specs.table", "selector": "#spec-table",
+      "label": "Stage 03 — the breakdown list" },
+
+    { "name": "boards.picker", "selector": "#board-spec",
+      "label": "Stage 04 — breakdown picker" },
+    { "name": "boards.panels", "selector": "#board-panels",
+      "label": "Stage 04 — the panels workbench" },
+
+    { "name": "assembly.picker", "selector": "#asm-spec",
+      "label": "Stage 05 — breakdown picker" },
+    { "name": "assembly.host", "selector": "#assembly-host",
+      "label": "Stage 05 — slot map and boards" },
+
+    { "name": "references.add", "selector": "#ref-add-btn",
+      "label": "Reference — + Add reference" },
+    { "name": "references.shelves", "selector": "#ref-shelves",
+      "label": "Reference — the shelves" },
+
+    { "name": "settings.subnav", "selector": "#settings-subnav",
+      "label": "Settings — the tab strip" },
+    { "name": "settings.engines", "selector": "#settings-subnav button[data-sub=api]",
+      "label": "Settings — AI & engines tab" },
+    { "name": "settings.productions", "selector": "#settings-subnav button[data-sub=productions]",
+      "label": "Settings — Productions tab" },
+    { "name": "settings.connect", "selector": "#fr-connect",
+      "label": "Settings — Connect OpenRouter" },
+    { "name": "settings.credentials", "selector": "#cred-list",
+      "label": "Settings — saved credentials" },
+    { "name": "settings.storage", "selector": "#storage-panel",
+      "label": "Settings — storage" },
+
+    { "name": "productions.new", "selector": "#proj-new",
+      "label": "Productions — start something" },
+    { "name": "productions.cards", "selector": "#prod-cards",
+      "label": "Productions — the library grid" }
+  ]
+}

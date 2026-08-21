@@ -1,0 +1,73 @@
+{
+  "id": "first-board",
+  "title": "First run — from a screenplay to a board",
+  "note": "The FTUE. Starts on Settings with the page LEFT USABLE (user 2026-08-18: any model will do, so pointing at one of them would be wrong). Held until a model is connected; every stage in the band is locked by the app until then, so the tour explains the gate rather than being it.",
+  "kind": "flow",
+  "priority": 100,
+  "rev": 1,
+  "enabled": true,
+  "replayable": true,
+  "trigger": {
+    "all": [
+      {
+        "not": {
+          "first_run": true
+        }
+      },
+      {
+        "not": {
+          "state": "stage_summary.screenplay"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "connect",
+      "surface": "page",
+      "title": "Start by Connecting a Model",
+      "body": "Screenboard Studio requires an AI Model\n\nWe built this with GPT 5.6 for Narrative, and GPT Image 2 for image generation. That's our recommendation. If you add more than one, you can select different models at generation time.\n\nOpenRouter is an option to connect many in one click.",
+      "goto": "/settings",
+      "wait": "CONNECT A MODEL",
+      "skip_if": {
+        "state": "capability.any_credential"
+      },
+      "advance": {
+        "state": "capability.any_credential"
+      }
+    },
+    {
+      "id": "band",
+      "surface": "spotlight",
+      "title": "The Top Band is the Pipeline",
+      "body": "The five stages in the top bar step you through movie production workflow in sequential order. Stages are locked until they have enough information.\n\nThe subline under each stage is a live summary of your production status.",
+      "anchor": "band",
+      "side": "bottom",
+      "align": "start"
+    },
+    {
+      "id": "upload",
+      "surface": "spotlight",
+      "title": "Stage 01 — Upload the Draft",
+      "body": "It all starts with a story. It can be a brief, short story, or full screenplay. Upload a PDF, Final Draft, Fountain or plain text.",
+      "anchor": "status.next",
+      "side": "right",
+      "align": "start",
+      "goto": "/status",
+      "wait": "UPLOAD THE SCREENPLAY",
+      "advance": {
+        "api": {
+          "method": "POST",
+          "path": "^/api/screenplay"
+        }
+      }
+    },
+    {
+      "id": "done",
+      "surface": "modal",
+      "title": "Screenboard Production Process",
+      "body": "Stage 02 will draft your Art Direction Bible. Stage 03 creates Breakdowns with validated evidence from your story. Stage 04 renders panels to make your story come to life. Stage 05 assembles wallboards and look books.\n\nThe **Status** tool always names the next action. When something is blocked it says what is blocking it and where to fix it."
+    }
+  ],
+  "updated": "2026-08-21T04:07:39+00:00"
+}

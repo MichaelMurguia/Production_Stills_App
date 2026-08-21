@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import (activity, assemble, autofill, backup, bible, composition,
                scan,
                connectors, generate, insights, looks, paths, sheet,
-               sheet_render, store, wizard)
+               sheet_render, store, tutorials, wizard)
 from . import validation
 from .validation import check_spec, full_validate
 
@@ -745,6 +745,10 @@ def api_state() -> dict:
         "prohibited_inventions": project_state.get("prohibited_inventions", []),
         "missing_dependencies": missing,
         "blocking": blockers,
+        # What this install can actually run (generate.capability). The
+        # upload gate reads it, the tour's held step advances on it, and
+        # the KEY blocker is built from it — one answer, three readers.
+        "capability": generate.capability(),
         "stage_summary": summary,
         "next": insights.next_verb(summary, blockers),
         "suggested_roles": store.SUGGESTED_ROLES,
@@ -761,6 +765,17 @@ def api_activity(limit: int = 10) -> list[dict]:
 
 @app.post("/api/screenplay")
 async def api_upload_screenplay(file: UploadFile = File(...)) -> dict:
+    # User ruling 2026-08-18: the screenplay is locked until an AI model is
+    # connected. The read is the first thing the app does with the draft
+    # and it cannot happen without an engine, so accepting the file would
+    # be taking work the studio cannot start. 423 is the app's gate status
+    # (the same one the production-design gate uses), and the UI states
+    # this as state before anyone reaches it.
+    if not generate.capability()["any_credential"]:
+        raise HTTPException(423, "Connect an AI model first — Settings → AI "
+                                 "& engines. The screenplay is read the "
+                                 "moment it lands, and that read needs an "
+                                 "engine.")
     content = await file.read()
     if not content:
         raise HTTPException(422, "empty file")
@@ -1146,42 +1161,19 @@ def api_get_settings() -> dict:
     okey = s.get("openai_api_key", "")
     genv = os.environ.get("GEMINI_API_KEY", "").strip()
     oenv = os.environ.get("OPENAI_API_KEY", "").strip()
-    tests = s.get("engine_tests", {})
-    # Honest status only: "configured" states where a key came from;
-    # "last_test" is the persisted outcome of the user's own Test click —
-    # never a fake CONNECTED.
-    gemini_src = "settings" if gkey else ("env" if genv else None)
-    openai_src = "settings" if okey else ("env" if oenv else None)
-    engines = {
-        "gemini": {"configured": bool(gemini_src), "source": gemini_src,
-                   "last_test": tests.get("gemini")},
-        "openai": {"configured": bool(openai_src), "source": openai_src,
-                   "last_test": tests.get("openai")},
-        "openai-chat": {"configured": bool(openai_src), "source": openai_src,
-                        "last_test": tests.get("openai-chat")},
-    }
-    if generate.mock_enabled():  # implies debug_tools_enabled()
-        # The debug dry-run engine: always "configured" while the toggle is
-        # on — it has no key and no test because it never calls anything.
-        engines["mock"] = {"configured": True, "source": "debug",
-                           "last_test": None}
-    customs = []
-    for e in generate.custom_engines():
-        pid = f"custom:{e['id']}"
-        engines[pid] = {"configured": True, "source": "settings",
-                        "last_test": tests.get(pid)}
-        customs.append({"id": e["id"], "label": e.get("label") or e["id"],
-                        "model": e["model"], "base_url": e.get("base_url", ""),
-                        "key_hint": f"…{e['api_key'][-4:]}"})
+    # Which engines hold a credential is ONE question with one answer
+    # (generate.engine_credentials, 2026-08-18) — it used to be computed
+    # here, again for the header dots, and a fourth time in the client.
+    engines = generate.engine_credentials()
+    customs = [{"id": e["id"], "label": e.get("label") or e["id"],
+                "model": e["model"], "base_url": e.get("base_url", ""),
+                "key_hint": f"…{e['api_key'][-4:]}"}
+               for e in generate.custom_engines()]
     akey = s.get("anthropic_api_key", "")
-    if akey:
-        # Narrative credential (F6 backend now live): same honest-status
-        # grammar as the image engines.
-        engines["anthropic"] = {"configured": True, "source": "settings",
-                                "last_test": tests.get("anthropic")}
     from . import narrative
     provider_meta = generate.all_providers()
-    return {"openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
+    return {"capability": generate.capability(),
+            "openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "anthropic_api_key_set": bool(akey),
             "anthropic_api_key_hint": f"…{akey[-4:]}" if akey else None,
             "gemini_api_key_set": bool(gkey),
@@ -1488,6 +1480,90 @@ def api_clear_text_overrides() -> dict:
     return {"overrides": {}}
 
 
+# ------------------------------------------------------------- tutorials
+# Authored onboarding (see app/tutorials.py). The READ route is open —
+# a customer's studio must be able to run the FTUE. Everything that
+# writes CONTENT is owner-only, on the same gate as Debug tools; writing
+# STATE is not, because that is the studio recording what it has seen.
+
+
+@app.get("/api/tutorials")
+def api_tutorials() -> dict:
+    """What the runtime needs: live content, this install's seen-state,
+    and the running version."""
+    return tutorials.export_bundle()
+
+
+@app.post("/api/tutorials/state")
+def api_tutorial_state(body: dict) -> dict:
+    """The studio records where it got to. Called on start, on every step,
+    and on finish or dismiss — so a walkthrough abandoned halfway resumes
+    instead of restarting."""
+    tid = str(body.get("id", ""))
+    try:
+        st = tutorials.record(tid, str(body.get("status", "seen")),
+                              int(body.get("step", 0) or 0),
+                              int(body.get("rev", 1) or 1))
+    except KeyError:
+        raise HTTPException(404, "no such tutorial")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    return {"state": st["tutorials"]}
+
+
+@app.post("/api/tutorials/state/reset")
+def api_tutorial_state_reset(body: dict) -> dict:
+    """Forget a tutorial so it runs again. Not owner-gated: a user who
+    wants to see the walkthrough again is entitled to, and the Tutorials
+    tab is only where the act is *offered*."""
+    tid = body.get("id")
+    try:
+        st = tutorials.reset(str(tid) if tid else None)
+    except KeyError:
+        raise HTTPException(404, "no such tutorial")
+    return {"state": st["tutorials"]}
+
+
+@app.get("/api/tutorials/admin")
+def api_tutorials_admin() -> dict:
+    """The CMS list: every document including disabled and invalid ones,
+    each carrying where it came from, what is wrong with it, and what this
+    install has seen. Broken content is a row with errors, never a silent
+    absence."""
+    _require_debug_tools()
+    state = tutorials.load_state()["tutorials"]
+    rows = []
+    for doc in tutorials.resolved():
+        rows.append({**doc, "errors": tutorials.validate(doc),
+                     "state": state.get(doc["id"])})
+    return {"tutorials": rows, "schema": tutorials.schema(),
+            "can_ship": tutorials.can_ship(),
+            "target": str(tutorials.target_dir()),
+            "version": tutorials.version()}
+
+
+@app.put("/api/tutorials/admin/{tutorial_id}")
+def api_tutorial_save(tutorial_id: str, body: dict) -> dict:
+    _require_debug_tools()
+    doc = dict(body or {})
+    doc["id"] = paths.safe_id(tutorial_id).lower()
+    try:
+        saved = tutorials.save(doc)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    return {"tutorial": saved, "can_ship": tutorials.can_ship()}
+
+
+@app.delete("/api/tutorials/admin/{tutorial_id}")
+def api_tutorial_delete(tutorial_id: str) -> dict:
+    _require_debug_tools()
+    try:
+        tutorials.delete(tutorial_id)
+    except KeyError:
+        raise HTTPException(404, "no such tutorial")
+    return {"ok": True}
+
+
 @app.post("/api/settings/engines")
 async def api_add_engine(body: dict) -> dict:
     """Add a user-owned image engine. Contract: the endpoint must speak the
@@ -1539,15 +1615,23 @@ def _record_engine_test(provider: str, ok: bool, detail: str = "") -> None:
 @app.post("/api/settings/test")
 async def api_test_settings(body: dict = None) -> dict:
     provider = (body or {}).get("provider", generate.DEFAULT_PROVIDER)
+    # An UNSAVED key can be proved without being stored (user 2026-08-20).
+    # The outcome is only recorded against the studio's own credential —
+    # a pass for a key the studio does not hold would be a lie on the row.
+    key = str((body or {}).get("key", "") or "")
+    record = not key
     try:
-        result = await run_in_threadpool(generate.test_connection, provider)
+        result = await run_in_threadpool(generate.test_connection, provider, key)
     except generate.GenerationError as e:
-        _record_engine_test(provider, False, str(e))
+        if record:
+            _record_engine_test(provider, False, str(e))
         raise HTTPException(422, str(e))
     except Exception as e:
-        _record_engine_test(provider, False, str(e))
+        if record:
+            _record_engine_test(provider, False, str(e))
         raise HTTPException(502, f"{provider} connection failed: {e}")
-    _record_engine_test(provider, True)
+    if record:
+        _record_engine_test(provider, True)
     return result
 
 
@@ -2213,7 +2297,12 @@ async def api_subject_reference(sid: str, file: UploadFile = File(...)) -> dict:
             notes=f"reference for subject {subj['name']} ({sid})")
     except ValueError as e:
         raise _err(e)
-    store.set_reference_status(ref["id"], "APPROVED")
+    # E2 (RULE_PASS_2 E, ruled 2026-08-18): supplying it deliberately IS
+    # the review, and Reject in Reference is the recourse — but it wore a
+    # bare APPROVED badge, identical to a plate that survived Reference's
+    # review. Two facts stay true at once: it attaches like any approved
+    # plate, and nobody later mistakes it for one that was judged.
+    store.set_reference_status(ref["id"], "APPROVED", "ON SUPPLY")
     return store.link_subject_ref(sid, ref["id"])
 
 
@@ -2256,7 +2345,15 @@ def api_put_wizard_analysis(body: dict) -> dict:
 
 @app.post("/api/wizard/analyze")
 async def api_wizard_analyze(body: dict) -> dict:
-    provider = body.get("provider", "gemini")
+    # Default to the narrative engine this studio HAS. Hardcoding gemini
+    # meant an OpenAI-only install got a stated-unavailable engine for any
+    # caller that did not pass one (found 2026-08-20 wiring the upload's
+    # own read).
+    provider = body.get("provider") or ""
+    if not provider:
+        cap = generate.capability()["narrative"]
+        provider = (generate.load_settings().get("narrative_provider")
+                    or (cap["engines"][0] if cap["engines"] else "gemini"))
     try:
         analysis = await run_in_threadpool(wizard.analyze_screenplay, provider)
     except autofill.AutofillError as e:
@@ -2511,7 +2608,23 @@ def api_get_sheet(sheet_id: str) -> dict:
     # the masthead band — not the full page. The arrange room MUST work
     # at this field's aspect or it previews panel shapes the export will
     # not have (user bug, 2026-08-13: room disagreed with map + export).
-    cw, ch, cx, cy = sheet._content_rect_fracs(rec)
+    # B6 (RULE_PASS_2 B, ruled 2026-08-18): the rect is the DRESSED one
+    # when a look is in force. The room computed its pixel readouts from
+    # the undressed field, while Tech Design's rail takes ~15% of the
+    # width and the swatch band takes a strip off the bottom — so the room
+    # said OK and the gate said SHORT for the same frame. Two numbers for
+    # one fact; the gate was the one that was right. The room reads the
+    # geometry of the look in force, and says which look that is.
+    geo = looks.dressed(rec) if (rec.get("look") or {}).get("key") else rec
+    cw, ch, cx, cy = sheet._content_rect_fracs(geo)
+    if geo is not rec:
+        # dressed() grows the PAGE to keep the panel field intact, so the
+        # fracs are of that larger page — restate them against the stored
+        # size the room actually draws.
+        gw, gh = float(geo["size"][0]), float(geo["size"][1])
+        sw_, sh_ = float(rec["size"][0]), float(rec["size"][1])
+        cw, cx = cw * gw / sw_, cx * gw / sw_
+        ch, cy = ch * gh / sh_, cy * gh / sh_
     rec["content_rect"] = {"w": cw, "h": ch, "x": cx, "y": cy}
     return rec
 
@@ -2682,6 +2795,7 @@ def _stamped_index() -> HTMLResponse:
     ver = paths.ROOT / "VERSION"
     v = ver.read_text(encoding="utf-8").strip() if ver.exists() else "dev"
     html = html.replace('src="/app.js"', f'src="/app.js?v={v}"')
+    html = html.replace('src="/tutorial.js"', f'src="/tutorial.js?v={v}"')
     html = html.replace('href="/styles.css"', f'href="/styles.css?v={v}"')
     # The tab remembers what it booted with, so a long-lived SPA tab can
     # notice the studio moving on beneath it (stale-tab bar, 2026-08-05).
