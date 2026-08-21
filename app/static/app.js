@@ -2492,8 +2492,9 @@ const theRead = {
   on: false, phase: "", engine: "", t0: 0, scenes: [], obs: [], at: -1,
   said: [], found: null, error: "", walk: null, clock: null, dwell: 900,
 
-  async begin(engine) {
+  async begin(engine, preview = false) {
     this.on = true; this.phase = "parse"; this.engine = engine || "the model";
+    this.preview = !!preview;
     this.t0 = Date.now(); this.at = -1; this.said = []; this.found = null;
     this.error = "";
     const d = await api("/api/screenplay/digest").catch(() => null);
@@ -2511,8 +2512,11 @@ const theRead = {
     if (!this.on || this.phase !== "parse") return;
     this.at += 1;
     if (this.at >= this.scenes.length) {
-      // The parse is done and the model is still working. Say so.
-      this.phase = "model";
+      // The parse is done. In a real read the model is still working; in a
+      // preview there is no model, and saying "MODEL" would be the one
+      // thing this surface exists not to do.
+      this.phase = this.preview ? "previewed" : "model";
+      if (this.preview) { this.said = this.obs.slice(); this.stopTimers(); }
       this.paint();
       return;
     }
@@ -2624,6 +2628,9 @@ const theRead = {
       else if (this.phase === "model")
         note.textContent = this.engine.toUpperCase() + " IS READING — ONE CALL, NO "
           + "PER-SCENE PROGRESS TO REPORT. THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
+      else if (this.phase === "previewed")
+        note.textContent = "PREVIEW ONLY — THE PARSE IS COMPLETE AND REAL. "
+          + "NO MODEL WAS CALLED, SO THE READ'S OWN FINDINGS ARE NOT HERE.";
       else if (this.phase === "found") note.textContent = "THE READ IS IN.";
       else {
         // Do NOT shout a provider's error back at the user. Uppercasing a
@@ -2686,6 +2693,10 @@ const theRead = {
           + "</p>");
         const go = $("[data-f=rd-go]", host);
         if (go) go.onclick = () => { this.dismiss(); showView("wizard"); };
+      }
+      if (this.phase === "previewed") {
+        tick.insertAdjacentHTML("beforeend",
+          '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Close preview</button></p>');
       }
       if (this.phase === "failed") {
         tick.insertAdjacentHTML("beforeend",
@@ -3810,6 +3821,24 @@ async function renderSettings(openTab = "") {
           ? "Mock engine ON — pick MOCK ENGINE in any model dropdown; nothing will be billed."
           : "Mock engine OFF — dropdowns show real engines only.");
       } catch (err) { mockBox.checked = !mockBox.checked; toast(err.message, true); }
+    };
+    /* Preview the read (owner tools only). The parse half needs no engine
+       — it is the same GET /api/screenplay/digest the real read walks — so
+       the animation and the copy can be checked without spending anything.
+       It stops where the model would take over rather than faking that
+       phase, because a preview that invented the model's half would be a
+       lie told by the one surface built to avoid telling them. */
+    const rp = $("#dbg-read-preview");
+    if (rp) rp.onclick = async () => {
+      const st = $("#dbg-read-state");
+      const d = await api("/api/screenplay/digest").catch(() => null);
+      if (!d || !d.available || !d.scenes.length) {
+        st.textContent = "NO SCREENPLAY PARSED — UPLOAD A DRAFT FIRST";
+        return;
+      }
+      st.textContent = "";
+      showView("screenplay");
+      setTimeout(() => theRead.begin("preview — no model called", true), 400);
     };
     const te = $("#dbg-textedit");
     te.checked = textEditMode();

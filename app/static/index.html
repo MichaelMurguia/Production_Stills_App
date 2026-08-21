@@ -657,6 +657,19 @@
         </label>
       </div>
       <div class="panel" style="margin-top:20px">
+        <h2>Preview the read <span class="hint">(watch the parse without calling a model)</span></h2>
+        <p class="hint">Replays stage 01&rsquo;s reading surface against the screenplay this
+        install already holds. The scene ladder, the snapshots and the observations are the
+        <b>same local parse the real read shows</b> &mdash; nothing here is simulated. What it
+        cannot show is the model half: no engine is called, nothing is billed, and the run
+        stops at the phase where a real read would hand off. For checking the animation and
+        the copy without spending anything.</p>
+        <div class="row" style="margin-top:12px;align-items:center">
+          <button class="ghost" id="dbg-read-preview">Preview the read on stage 01</button>
+          <span id="dbg-read-state" class="mini mono"></span>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:20px">
         <h2>Page text editing <span class="hint">(rewrite any static UI text in place)</span></h2>
         <p class="hint">While on, <b>Alt-click</b> any text in the app to rewrite it. Edits apply
         everywhere that exact text appears, survive refresh, and live on this install only —

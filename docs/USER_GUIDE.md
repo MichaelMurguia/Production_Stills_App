@@ -124,6 +124,10 @@ The root dependency gets its own room.
   rather than inventing a bar), and **FOUND**, which names the design
   languages and subject count and offers → Prod. Design. Leaving stage 01
   and coming back does not lose it.
+  *(Owner installs can replay this without calling a model: Settings →
+  Debug tools → **Preview the read on stage 01**. Same parse, same
+  animation, no spend — it stops at a `previewed` phase that says plainly
+  no model was called.)*
 - **The file card**: size, SHA-256, upload time, and what the read produced.
   **Downstream of this file**: design languages, breakdowns, cited evidence
   rows, approved panels — everything hanging off this exact draft.

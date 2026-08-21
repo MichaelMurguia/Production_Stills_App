@@ -250,11 +250,51 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         """The read has two doors — the first upload and the Scene Scan —
         and for one commit only the first one reported. The same operation
         must look the same however it was started."""
-        self.assertEqual(len(re.findall(r'api\("/api/wizard/analyze"', self.js)), 2,
+        doors = re.findall(r'api\("/api/wizard/analyze"', self.js)
+        self.assertEqual(len(doors), 2,
                          "a third caller of the read must also report")
         for door in self.js.split('api("/api/wizard/analyze"')[1:]:
             self.assertIn("theRead.finish(", door[:400])
-        self.assertEqual(self.js.count("theRead.begin("), 2)
+            self.assertIn("theRead.fail(", door[:600])
+        # Every other begin() must be the preview, which passes the flag.
+        for call in self.js.split("theRead.begin(")[1:]:
+            head = call[:80]
+            self.assertTrue("true" in head or "engine" in head
+                            or "selectedModelLabel" in head,
+                            f"unaccounted begin(): {head!r}")
+
+    def test_a_preview_never_claims_a_model_ran(self):
+        """The preview exists so the animation and the copy can be checked
+        without spending anything. It walks the SAME parse — so it must
+        stop where the model would take over, and say why. A preview that
+        invented the model's half would be a lie told by the one surface
+        built to avoid telling them."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn('this.phase = this.preview ? "previewed" : "model";', block)
+        self.assertIn("NO MODEL WAS CALLED", block)
+        # and it must not fall into the model phase's copy
+        i = block.index('"previewed"')
+        self.assertNotIn("IS READING", block[i:i + 400])
+
+    def test_the_preview_is_owner_only(self):
+        html = (STATIC / "index.html").read_text(encoding="utf-8")
+        i = html.index('id="dbg-read-preview"')
+        # it lives inside the debug subview, which the client hides unless
+        # settings.debug_tools is true
+        self.assertLess(html.index('data-subview="debug"'), i)
+        self.assertIn('_debugTools = !!settings.debug_tools;', self.js)
+
+    def test_the_preview_reads_the_same_digest_as_the_real_read(self):
+        """Two parses would be two answers to "what is in this screenplay"
+        — the failure mode this codebase has hit four times."""
+        i = self.js.index("dbg-read-preview")
+        self.assertIn('api("/api/screenplay/digest")', self.js[i:i + 900])
+        self.assertIn("theRead.begin(", self.js[i:i + 900])
+
+    def test_the_preview_can_be_closed(self):
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        i = block.rindex('this.phase === "previewed"')
+        self.assertIn("rd-dismiss", block[i:i + 400])
 
     def test_the_read_survives_leaving_the_view(self):
         self.assertIn("if (theRead.on) theRead.mount();", self.js)
