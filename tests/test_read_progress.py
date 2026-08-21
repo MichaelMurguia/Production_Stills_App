@@ -330,6 +330,70 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         i = block.rindex('this.phase === "previewed"')
         self.assertIn("rd-dismiss", block[i:i + 400])
 
+    def test_the_panel_cannot_change_height_while_it_is_watched(self):
+        """User, 2026-08-21: "that section should not change height, it
+        causes popping during the read." Two things moved — the snapshot
+        column re-flowed per scene, and the ticker grew as findings
+        landed. Both are reserved now."""
+        css = self.css
+        body = css.split(".rd-body {")[1].split("}")[0]
+        self.assertIn("height: 268px", body)
+        ticker = css.split(".rd-ticker {")[1].split("}")[0]
+        self.assertIn("min-height:", ticker)
+        obs = css.split(".rd-obs, .rd-found {")[1].split("}")[0]
+        self.assertIn("white-space: nowrap", obs)
+        # and the page's lines must refuse to shrink inside the fixed box,
+        # or a line of action breaks one word per row
+        self.assertIn(".rd-page > * { flex: 0 0 auto; }", css)
+
+    def test_the_findings_are_not_set_as_a_footnote(self):
+        """They are the point of the surface."""
+        ticker = self.css.split(".rd-ticker {")[1].split("}")[0]
+        self.assertIn("background: var(--field)", ticker)
+        self.assertIn("var(--ok)", ticker)
+        obs = self.css.split(".rd-obs, .rd-found {")[1].split("}")[0]
+        self.assertIn("font-size: 13px", obs)
+
+    def test_the_model_phase_spins_and_says_what_it_is_doing(self):
+        """A surface whose whole job is to look alive went static at the
+        one point the user had least idea what was happening."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn("Scoping production needs", block)
+        self.assertIn('class="spinner"', block)
+        # `wrap` is load-bearing: .busy-bar is flex-basis 100% and without
+        # it the label renders one word per line.
+        self.assertIn('class="busy wrap"', block)
+
+    def test_nothing_else_offers_to_start_work_during_a_read(self):
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn('document.body.dataset.readBusy', block)
+        self.assertIn('body[data-read-busy="1"]', self.css)
+        # the read's own controls stay live
+        self.assertIn('body[data-read-busy="1"] #read-live button', self.css)
+
+    def test_the_lock_never_outlives_the_read(self):
+        """A lock that survives its reason is how an app becomes
+        unusable."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        for fn in ("stopTimers() {", "dismiss() {"):
+            i = block.index(fn)          # the definition, not a call site
+            self.assertIn('readBusy = "0"', block[i:i + 400], fn)
+        # …and the nav is never locked, so nobody is trapped
+        self.assertNotIn('body[data-read-busy="1"] #nav', self.css)
+
+    def test_screenplay_grammar_is_never_a_finding(self):
+        """"INT appears in 20 scenes" is true of every script ever
+        written. It was topping the ticker and crowding out GT40."""
+        from app import insights
+        self.assertIn("INT", insights.SCREENPLAY_GRAMMAR)
+        self.assertIn("EXT", insights.SCREENPLAY_GRAMMAR)
+        self.assertIn("CONTINUOUS", insights.SCREENPLAY_GRAMMAR)
+        _load()
+        for obs in insights.screenplay_digest()["observations"]:
+            m = re.match(r"^([A-Z0-9'-]+) appears in", obs)
+            if m:
+                self.assertNotIn(m.group(1), insights.SCREENPLAY_GRAMMAR, obs)
+
     def test_the_read_survives_leaving_the_view(self):
         self.assertIn("if (theRead.on) theRead.mount();", self.js)
 

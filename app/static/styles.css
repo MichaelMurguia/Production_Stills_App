@@ -4072,15 +4072,20 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .rd-note.bad { color: var(--bad); }
 
+/* Fixed height, both columns (user, 2026-08-21). The snapshot re-flows on
+   every scene — two lines here, six there — and the panel was resizing
+   under the ladder on every tick, so the whole surface popped for the
+   length of the read. The read is the thing being watched; it may not
+   move. Long snapshots scroll inside their own box instead. */
 .rd-body {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 272px);
-  gap: 14px; align-items: stretch;
+  gap: 14px; align-items: stretch; height: 268px;
 }
 @media (max-width: 1100px) { .rd-body { grid-template-columns: minmax(0, 1fr); } }
 
 /* the ladder — one row per scene the parse actually found */
 .rd-ladder {
-  max-height: 268px; overflow-y: auto; background: var(--field);
+  height: 100%; overflow-y: auto; background: var(--field);
   border: 1px solid var(--line-soft); padding: 4px 0;
 }
 .rd-row {
@@ -4108,9 +4113,14 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .rd-page {
   background: var(--field); border: 1px solid var(--line-soft);
   padding: 12px 14px; font-family: var(--mono); font-size: 11.5px;
-  line-height: 1.55; color: var(--ink-dim); overflow: hidden;
+  line-height: 1.55; color: var(--ink-dim); height: 100%;
+  overflow-y: auto; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 2px;
 }
+/* The page is a fixed-height flex column, so its lines must refuse to
+   shrink. Without this they compress to fit and a line of action breaks
+   one word per row — "Kelly climbs / into / the". */
+.rd-page > * { flex: 0 0 auto; }
 .rd-slugline { color: var(--ink); margin-bottom: 2px; }
 /* the cast the ladder no longer has room for, where it does */
 .rd-with {
@@ -4120,12 +4130,36 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .rd-action { display: block; }
 .rd-cue { display: block; color: var(--ink); padding-left: 84px; }
 
-/* what the parse noticed — counts, never inferences */
-.rd-ticker { display: grid; gap: 3px; }
-.rd-obs, .rd-found {
-  margin: 0; font-size: 11.5px; color: var(--ink-dim); letter-spacing: .04em;
+/* What the parse noticed — counts, never inferences. These are the point
+   of the surface and they were set as a footnote under it (user,
+   2026-08-21: "needs to be highlighted in some way, more prominent"), so
+   they get their own ground, their own size, and a freshness order: the
+   newest finding is at full ink, the ones it pushed up step back. No
+   amber — the panel's single amber is the live bar, and during the model
+   phase it is the spinner. */
+.rd-ticker {
+  /* Four rows are reserved from the first frame. The feed shows the last
+     four findings, so it GREW as they landed — which moved the panel by
+     26px mid-read, the same popping the snapshot column was fixed for.
+     Reserving the space costs an empty box for a few seconds and buys a
+     surface that never moves while it is being watched. */
+  display: grid; gap: 5px; align-content: start;
+  min-height: 106px; box-sizing: border-box;
+  background: var(--field);
+  border: 1px solid var(--line-soft); border-left: 3px solid var(--ok);
+  padding: 11px 14px;
 }
-.rd-obs::before { content: "▸ "; color: var(--ink-faint); }
+.rd-obs, .rd-found {
+  margin: 0; font-size: 13px; line-height: 18px; color: var(--ink);
+  letter-spacing: .02em;
+  /* one line each, always — a wrapped finding would move the panel too */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rd-obs { color: var(--ink-faint); }
+.rd-obs:nth-last-child(3) { color: var(--ink-dim); }
+.rd-obs:nth-last-child(2) { color: var(--ink-dim); }
+.rd-obs:last-child { color: var(--ink); }
+.rd-obs::before { content: "▸ "; color: var(--ok); }
 .rd-found { color: var(--ink); border-top: 1px solid var(--line-soft); padding-top: 8px; margin-top: 5px; }
 /* The provider's own words, in the provider's own case. An engine error
    is evidence: paraphrasing it loses the cause, and uppercasing it buries
@@ -4136,3 +4170,18 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   border-left: 1px solid var(--bad-line); padding: 4px 0 4px 10px;
 }
 .rd-done-row { display: flex; gap: 8px; margin: 8px 0 0; }
+
+/* While the model half of a read is running, the app stops offering to
+   start more work (user, 2026-08-21: "no other button can be active
+   during this time"). Navigation stays live — locking someone out of
+   their own app for the length of a model call would be worse than the
+   double-spend this prevents. */
+body[data-read-busy="1"] .view button:not(.rd-done-row button):not([data-f^="rd-"]) {
+  pointer-events: none; opacity: .4;
+}
+body[data-read-busy="1"] .view input,
+body[data-read-busy="1"] .view select,
+body[data-read-busy="1"] .view textarea { pointer-events: none; opacity: .4; }
+body[data-read-busy="1"] #read-live button,
+body[data-read-busy="1"] #read-live input { pointer-events: auto; opacity: 1; }
+.rd .busy { margin-top: 0; }

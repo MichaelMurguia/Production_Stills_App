@@ -2584,9 +2584,15 @@ const theRead = {
   stopTimers() {
     clearTimeout(this.walk); clearInterval(this.clock);
     this.walk = this.clock = null;
+    // A lock that survives its reason is how an app becomes unusable.
+    document.body.dataset.readBusy = "0";
   },
 
-  dismiss() { this.stopTimers(); this.on = false; const h = $("#read-live"); if (h) h.remove(); },
+  dismiss() {
+    this.stopTimers(); this.on = false;
+    document.body.dataset.readBusy = "0";
+    const h = $("#read-live"); if (h) h.remove();
+  },
 
   /* ---- markup ---------------------------------------------------- */
 
@@ -2625,6 +2631,7 @@ const theRead = {
       <div class="rd-phase mono">
         <span data-p="parse">PARSE</span><span data-p="model">MODEL</span><span data-p="found">FOUND</span>
       </div>
+      <div id="rd-busy"></div>
       <p class="rd-note mono" id="rd-note"></p>
       <div class="rd-body">
         <div class="rd-ladder" id="rd-ladder">${rows
@@ -2646,6 +2653,27 @@ const theRead = {
         (p === "parse" && this.phase !== "parse")
         || (p === "model" && this.phase === "found"));
     });
+
+    /* The model half is a single call that can run for minutes, and it
+       used to be reported by a static line of text — so a surface whose
+       whole job is to look alive went still at exactly the point the user
+       had least idea what was happening. This is the app's own `.busy`
+       component, not a new one. */
+    const busy = $("#rd-busy", host);
+    if (busy) {
+      busy.innerHTML = this.phase === "model"
+        // `wrap` is required, not decorative: .busy-bar is flex-basis 100%
+        // and without wrapping it squeezes the label to one word per line.
+        ? '<div class="busy wrap"><span class="spinner"></span>'
+          + '<span class="busy-label">Scoping production needs — '
+          + esc(this.engine) + " is reading the whole draft in one call. "
+          + "It reports nothing until it is done.</span>"
+          + '<span class="busy-bar"></span></div>'
+        : "";
+    }
+    // Nothing else in the app offers to start work while a read is
+    // spending money on this one.
+    document.body.dataset.readBusy = this.phase === "model" ? "1" : "0";
 
     const note = $("#rd-note", host);
     if (note) {

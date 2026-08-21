@@ -796,6 +796,20 @@ def locations() -> dict:
 
 # ------------------------------------------------------------ citation check
 
+# The words every screenplay contains by construction. They are the form,
+# not the story, so they can never be a finding about a draft.
+SCREENPLAY_GRAMMAR = frozenset({
+    "INT", "EXT", "INT/EXT", "EXT/INT", "DAY", "NIGHT", "DAWN", "DUSK",
+    "EVENING", "MORNING", "AFTERNOON", "LATER", "CONTINUOUS", "SAME",
+    "MOMENTS", "SUNSET", "SUNRISE", "MIDNIGHT", "NOON", "PRE-DAWN",
+    "FADE", "CUT", "DISSOLVE", "SMASH", "MATCH", "ANGLE", "INSERT",
+    "MONTAGE", "INTERCUT", "SUPER", "TITLE", "CARD", "BEAT", "PAUSE",
+    "CONT", "CONTD", "MORE", "VO", "OS", "OC", "POV", "CLOSE", "WIDE",
+    "SHOT", "SCENE", "THE", "AND", "BUT", "FOR", "NOT", "YOU", "HIS",
+    "HER", "THEY", "THIS", "THAT", "WITH", "FROM", "INTO", "OMITTED",
+})
+
+
 def screenplay_digest(max_scenes: int = 400) -> dict:
     """The deterministic read, scene by scene, with what each scene gave
     up — for the reading surface that runs while the model works.
@@ -886,11 +900,20 @@ def screenplay_digest(max_scenes: int = 400) -> dict:
     ext = sum(1 for sc in scenes if sc["int_ext"].startswith("EXT"))
     if total:
         obs.append(f"{ext} exterior, {total - ext} interior")
-    # A name the script also gives dialogue to is a character, not a prop.
-    # Without this, VERA is reported twice — once as a lead and again as a
-    # thing the draft shouts — which reads as the parse not knowing what a
-    # person is.
+    # Two things a shouted word is NOT.
+    #
+    # A name the script also gives dialogue to is a character, not a prop:
+    # without this VERA came back twice, once as a lead and again as a
+    # thing the draft shouts, which reads as a parse that does not know
+    # what a person is.
+    #
+    # And the grammar of a screenplay is not its content. INT, EXT, DAY,
+    # NIGHT and CONTINUOUS are in every slugline of every script ever
+    # written, so they top the count on all of them — "INT appears in 20
+    # scenes" was true, useless, and crowded out GT40 (user, 2026-08-21).
     for w, n in sorted(props.items(), key=lambda kv: -kv[1]):
+        if w in SCREENPLAY_GRAMMAR:
+            continue
         if w in speakers or any(w in name.split() for name in speakers):
             continue
         if len(obs) >= total_obs_cap:
