@@ -283,21 +283,26 @@
     const pop = layer.querySelector(".tut-pop");
     const mount = layer.querySelector(".tut-mount");
     const block = layer.querySelector(".tut-block");
-    // `page` (user 2026-08-18): no scrim, no cutout, nothing blocked.
-    // For a step where more than one control is the right one to press,
-    // so pointing at any single one of them would be wrong.
-    const loose = running.step.surface === "page";
-    layer.classList.toggle("tut-loose", loose);
     const pop0 = layer.querySelector(".tut-pop");
-    pop0.classList.toggle("tut-docked", loose);
-    if (loose) {
+
+    /* Loose: no scrim, no cutout, nothing blocked — the page stays fully
+       usable and the popover docks out of the way. */
+    const goLoose = () => {
+      layer.classList.add("tut-loose");
+      pop0.classList.add("tut-docked");
       for (const m of layer.querySelectorAll(".tut-mask")) m.style.display = "none";
-      layer.querySelector(".tut-mount").classList.add("hidden");
-      layer.querySelector(".tut-block").classList.add("hidden");
+      mount.classList.add("hidden");
+      block.classList.add("hidden");
       pop0.classList.remove("tut-centred");
       pop0.style.left = pop0.style.top = "";
-      return;
-    }
+    };
+
+    // `page` (user 2026-08-18): for a step where more than one control is
+    // the right one to press, so pointing at any single one would be wrong.
+    if (running.step.surface === "page") return goLoose();
+
+    layer.classList.remove("tut-loose");
+    pop0.classList.remove("tut-docked");
     for (const m of layer.querySelectorAll(".tut-mask")) m.style.display = "";
     let el = running.step.anchor && !running.centredForResume
       ? anchorEl(running.step.anchor) : null;
@@ -322,6 +327,24 @@
     }
 
     if (!el) {
+      /* THE TOUR NEVER BLOCKS THE ACTION IT IS WAITING FOR (user,
+         2026-08-20: "you started after selecting the AI model, I can't
+         continue").
+
+         A step with an `advance` predicate is by definition held until
+         the user DOES something on the page. When such a step falls back
+         to its centred form — because the anchor is gone, or because
+         §5.11 centres a held step that was resumed into — the centred
+         form used to draw one mask across the whole viewport. That mask
+         has pointer-events, so it swallowed the click.
+
+         The result was a step reading "Upload a PDF, Final Draft,
+         Fountain or plain text" while covering the upload button with an
+         unclickable scrim. Next still worked, so it was not a hard trap;
+         it was worse than a trap, because the tour was refusing the exact
+         act it was teaching. A held step therefore goes loose instead. */
+      if (running.step.advance) return goLoose();
+
       // Centred: one mask covers everything, the rest collapse.
       mount.classList.add("hidden");
       block.classList.add("hidden");

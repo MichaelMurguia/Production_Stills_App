@@ -869,6 +869,8 @@ def screenplay_digest(max_scenes: int = 400) -> dict:
         })
 
     obs: list[str] = []
+    total_obs_cap = 9          # the ticker shows the last four; more
+                              # than this and early ones never land
     total = len(scenes)
     lead = sorted(speakers.items(), key=lambda kv: -kv[1])[:3]
     for name, n in lead:
@@ -884,7 +886,15 @@ def screenplay_digest(max_scenes: int = 400) -> dict:
     ext = sum(1 for sc in scenes if sc["int_ext"].startswith("EXT"))
     if total:
         obs.append(f"{ext} exterior, {total - ext} interior")
-    for w, n in sorted(props.items(), key=lambda kv: -kv[1])[:3]:
+    # A name the script also gives dialogue to is a character, not a prop.
+    # Without this, VERA is reported twice — once as a lead and again as a
+    # thing the draft shouts — which reads as the parse not knowing what a
+    # person is.
+    for w, n in sorted(props.items(), key=lambda kv: -kv[1]):
+        if w in speakers or any(w in name.split() for name in speakers):
+            continue
+        if len(obs) >= total_obs_cap:
+            break
         if n > 1:
             obs.append(f"{w} appears in {n} scenes — the draft shouts it")
     return {"available": True, "scenes": scenes, "observations": obs,

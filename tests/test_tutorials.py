@@ -139,6 +139,66 @@ class TheEditorReadsWhatItDraws(unittest.TestCase):
         self.assertIn('data-sf="actgoto"', self.ADMIN)
 
 
+class TheTourNeverBlocksWhatItWaitsFor(unittest.TestCase):
+    """Reported 2026-08-20: "you started after selecting the AI model, I
+    can't continue."
+
+    The walkthrough was resumed into its upload step. §5.11 centres a held
+    step that is resumed into — correct — but the centred form drew ONE
+    mask across the whole viewport, and a mask has pointer-events. So the
+    step read "Upload a PDF, Final Draft, Fountain or plain text" while
+    covering the upload button with a scrim that swallowed the click.
+
+    Next still worked, so this was not a hard trap. It was worse: the tour
+    was refusing the exact act it was teaching, and the only way forward
+    was to skip past the thing the step existed to make you do.
+
+    The rule that replaces it: a step with an `advance` predicate is held
+    until the user does something ON THE PAGE, so it never renders a
+    blocking scrim. It goes loose instead — no mask, page usable, popover
+    docked out of the way.
+    """
+
+    def test_a_held_step_goes_loose_before_the_centred_mask_is_drawn(self):
+        i = JS.index("function place()")
+        body = JS[i:i + 6000]
+        guard = body.index("if (running.step.advance) return goLoose();")
+        # The full-viewport mask is what used to eat the click.
+        mask = body.index('Object.assign(masks.top.style, { inset: "0"')
+        self.assertLess(guard, mask,
+                        "a held step must go loose BEFORE the covering mask "
+                        "is assigned")
+
+    def test_going_loose_clears_every_mask_and_the_blocker(self):
+        i = JS.index("const goLoose = ()")
+        body = JS[i:i + 700]
+        self.assertIn('m.style.display = "none"', body)
+        self.assertIn('mount.classList.add("hidden")', body)
+        self.assertIn('block.classList.add("hidden")', body)
+        self.assertIn('pop0.classList.add("tut-docked")', body)
+
+    def test_the_page_surface_still_goes_loose(self):
+        """The 2026-08-18 ruling that introduced `loose` must survive the
+        refactor that generalised it."""
+        i = JS.index("function place()")
+        body = JS[i:i + 3000]
+        self.assertIn('if (running.step.surface === "page") return goLoose();',
+                      body)
+
+    def test_every_held_step_in_shipped_content_is_covered_by_the_rule(self):
+        """The rule is only worth anything if the steps that stranded a
+        user are the ones it applies to."""
+        held = []
+        for f in sorted(tutorials.PACKAGED.glob("*.json")):
+            doc = json.loads(f.read_text(encoding="utf-8"))
+            for st in doc.get("steps", []):
+                if st.get("advance"):
+                    held.append((doc["id"], st.get("id"), st.get("surface")))
+        self.assertTrue(held, "no held step ships — this rule guards nothing")
+        # The reported one specifically.
+        self.assertIn(("first-board", "upload", "spotlight"), held)
+
+
 class AnchorRegistryTests(unittest.TestCase):
     """The registry is the reason authored content survives a redesign —
     which only holds while its selectors still match the app."""

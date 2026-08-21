@@ -168,6 +168,18 @@ class ObservationsAreArithmetic(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertEqual(int(m.group(1)) + int(m.group(2)), self.d["total"])
 
+    def test_a_character_is_never_also_reported_as_a_prop(self):
+        """Action lines name people in caps too. Without excluding known
+        speakers, VERA came back twice — once as a lead and again as "a
+        thing the draft shouts", which reads as a parse that does not know
+        what a person is."""
+        speakers = {p for sc in self.d["scenes"] for p in sc["speakers"]}
+        self.assertIn("VERA", speakers)
+        for obs in self.d["observations"]:
+            m = re.match(r"^([A-Z0-9'-]+) appears in \d+ scenes", obs)
+            if m:
+                self.assertNotIn(m.group(1), speakers, obs)
+
     def test_a_shouted_prop_claim_matches_the_page(self):
         for obs in self.d["observations"]:
             m = re.match(r"^([A-Z0-9'-]+) appears in (\d+) scenes", obs)
