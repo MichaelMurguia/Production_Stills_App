@@ -230,6 +230,32 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         # problem started.
         self.assertEqual(len(re.findall(r'api\("/api/', block)), 1)
 
+    def test_a_refused_key_is_named_as_a_refused_key(self):
+        """The panel's first real failure was a 401, and it uppercased the
+        whole 200-character provider body — URL and masked key included —
+        which made the one sentence that mattered the hardest to find."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn("REFUSED THE KEY IT WAS GIVEN", block)
+        self.assertIn("refused()", block)
+        # the provider's own words, unshouted, in their own element
+        self.assertIn('rd-raw', block)
+        self.assertNotIn('(this.error || "").toUpperCase()', block)
+
+    def test_a_refused_key_offers_the_door_that_fixes_it(self):
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn("data-f=rd-settings", block)
+        self.assertIn('showView("settings")', block)
+
+    def test_both_doors_to_the_read_report_the_same_way(self):
+        """The read has two doors — the first upload and the Scene Scan —
+        and for one commit only the first one reported. The same operation
+        must look the same however it was started."""
+        self.assertEqual(len(re.findall(r'api\("/api/wizard/analyze"', self.js)), 2,
+                         "a third caller of the read must also report")
+        for door in self.js.split('api("/api/wizard/analyze"')[1:]:
+            self.assertIn("theRead.finish(", door[:400])
+        self.assertEqual(self.js.count("theRead.begin("), 2)
+
     def test_the_read_survives_leaving_the_view(self):
         self.assertIn("if (theRead.on) theRead.mount();", self.js)
 

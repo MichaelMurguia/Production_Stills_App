@@ -2542,6 +2542,14 @@ const theRead = {
 
   fail(msg) { this.stopTimers(); this.phase = "failed"; this.error = msg || ""; this.paint(); },
 
+  /* A 401 from an engine is not "the read failed" — it is "your key does
+     not work", which has a specific door. Canon: a blocker states its
+     condition and links to where it is resolved. */
+  refused() {
+    return /\b401\b|invalid[_ ]?api[_ ]?key|incorrect api key|unauthoriz/i
+      .test(this.error || "");
+  },
+
   stopTimers() {
     clearTimeout(this.walk); clearInterval(this.clock);
     this.walk = this.clock = null;
@@ -2553,7 +2561,12 @@ const theRead = {
 
   mount() {
     if (!this.on) return;
-    const main = $(".dash-main");
+    /* The read has two doors — the first upload (stage 01) and the Scene
+       Scan (stage 02) — and the same operation must report the same way
+       through both. Mount into whichever view the user is actually on;
+       a progress panel on the tab they are not looking at is not
+       progress. */
+    const main = $(".dash-main") || $(".view.wiz-v3") || $(".view");
     if (!main) return;
     let host = $("#read-live");
     if (!host) {
@@ -2612,7 +2625,16 @@ const theRead = {
         note.textContent = this.engine.toUpperCase() + " IS READING — ONE CALL, NO "
           + "PER-SCENE PROGRESS TO REPORT. THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
       else if (this.phase === "found") note.textContent = "THE READ IS IN.";
-      else note.textContent = "THE READ DID NOT FINISH — " + (this.error || "").toUpperCase();
+      else {
+        // Do NOT shout a provider's error back at the user. Uppercasing a
+        // 200-character 401 body — URL, masked key and all — was the first
+        // thing this panel did on its first real failure, and it made the
+        // one sentence that mattered ("the key was refused") the hardest
+        // to find. The verbatim message goes below, in its own voice.
+        note.textContent = this.refused()
+          ? this.engine.toUpperCase() + " REFUSED THE KEY IT WAS GIVEN"
+          : "THE READ DID NOT FINISH";
+      }
       note.classList.toggle("bad", this.phase === "failed");
     }
 
@@ -2656,9 +2678,25 @@ const theRead = {
           + (langs.length ? " — " + esc(langs.slice(0, 4).join(" · ")).toUpperCase() : "")
           + " · " + subj + " SUBJECT(S)</p>"
           + '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Dismiss</button>'
-          + '<button class="primary" data-f="rd-go">Review on Prod. Design</button></p>');
+          // Offering "Review on Prod. Design" while standing on Prod.
+          // Design is an action that does nothing, which is worse than no
+          // action at all.
+          + (activeView === "wizard" ? ""
+             : '<button class="primary" data-f="rd-go">Review on Prod. Design</button>')
+          + "</p>");
         const go = $("[data-f=rd-go]", host);
         if (go) go.onclick = () => { this.dismiss(); showView("wizard"); };
+      }
+      if (this.phase === "failed") {
+        tick.insertAdjacentHTML("beforeend",
+          '<p class="rd-raw">' + esc(this.error || "no reason given") + "</p>"
+          + '<p class="rd-done-row">'
+          + (this.refused()
+              ? '<button class="primary" data-f="rd-settings">Connect a working key</button>'
+              : "")
+          + '<button class="ghost" data-f="rd-dismiss">Dismiss</button></p>');
+        const go = $("[data-f=rd-settings]", host);
+        if (go) go.onclick = () => { this.dismiss(); showView("settings"); };
       }
       const x = $("[data-f=rd-dismiss]", host);
       if (x) x.onclick = () => this.dismiss();
@@ -4084,6 +4122,10 @@ async function renderWizard() {
   $("#wiz-screenplay").innerHTML = state.screenplay
     ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
     : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
+
+  // A read started here survives this view re-rendering under it, the same
+  // way it survives leaving stage 01 and coming back.
+  if (theRead.on) theRead.mount();
 
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
@@ -5520,16 +5562,17 @@ async function renderWizard() {
     const busy = startBusy($("#wiz-analyze-busy"),
       `Reading the screenplay and identifying visual story elements and scenes — ${selectedModelLabel($("#wiz-provider"))}…`,
       "a minute or two");
+    await theRead.begin(selectedModelLabel($("#wiz-provider")));
     try {
       const analysis = await api("/api/wizard/analyze", {
         method: "POST", json: { provider: $("#wiz-provider").value } });
+      theRead.finish(analysis);
       saveAnalysis(analysis);
       expandedWorlds.clear();
       renderWorlds();
       renderAnalyzeLock();
       renderSubjectTags();
-      toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s) — review below.`);
-    } catch (err) { toast(err.message, true); }
+    } catch (err) { theRead.fail(err.message); toast(err.message, true); }
     finally { busy.done(); btn.disabled = false; }
   };
 

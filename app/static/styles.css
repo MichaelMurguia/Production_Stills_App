@@ -4127,4 +4127,12 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .rd-obs::before { content: "▸ "; color: var(--ink-faint); }
 .rd-found { color: var(--ink); border-top: 1px solid var(--line-soft); padding-top: 8px; margin-top: 5px; }
+/* The provider's own words, in the provider's own case. An engine error
+   is evidence: paraphrasing it loses the cause, and uppercasing it buries
+   the one readable sentence inside. */
+.rd-raw {
+  margin: 6px 0 0; font-family: var(--mono); font-size: 11px;
+  line-height: 1.5; color: var(--ink-faint); word-break: break-word;
+  border-left: 1px solid var(--bad-line); padding: 4px 0 4px 10px;
+}
 .rd-done-row { display: flex; gap: 8px; margin: 8px 0 0; }
