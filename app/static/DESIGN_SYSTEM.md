@@ -45,6 +45,14 @@ in Archivo.
 
 ## Tokens
 
+**`--ground` `#0b0c0e`** (added 2026-08-18, TUTORIAL_RULING Q3). Below the
+whole panel ladder — the only surface darker than `--field` that is not a
+film-roll material. It exists for one job: the tour layer's dim, which must
+move every surface it covers *down*. The previous scrim was `--bg` at `.78`
+— a panel colour over a darker ground, so it lightened the ground slightly
+and read as "slightly darker" rather than "not this". Not for chrome; the
+roll tokens remain off-limits to borrowing by eye.
+
 Use variables. Never hardcode a hex in new CSS.
 
 ```
@@ -730,6 +738,122 @@ Controls drop their affordance and read as values (`:disabled` with
 transparent chrome). Applies to every locked surface, not just the
 ledger.
 
+**The tour is made of board stock** (TUTORIAL_MATERIAL, ruled 2026-08-19).
+A tour step is a note written on the same paper the studio prints its
+boards on — of the product, but not part of the interface, which is exactly
+the relationship a tour has to an app. Removing the amber ring fixed a
+*colour* collision and left a *material* one: a `--panel2` card with a
+`--line` hairline sat beside a spotlit app card that is also a dark panel
+with a hairline, and nothing told a first-time user which layer was the
+teacher. **Dimming cannot fix that** — it makes the app quieter, not the
+tour different.
+
+It works because it separates on **hue as well as value**: the app is cool
+near-black, parchment is warm, and `#ece4d2` is off-white and desaturated,
+so it is legible at night without being a lamp. It applies to every tour
+surface — anchored, centred and the announcement — so the tour reads as one
+layer everywhere. `.tut-pop` shares the `.sheet[data-style="ART_BOARD"]`
+declaration outright, so its material cannot drift from the artifact it is
+made of.
+
+**This is the one sanctioned exception to *artifact ink, never `:root`,
+never chrome*.** A tour is not chrome: it is an artifact laid over the app.
+Nothing else may borrow sheet ink.
+
+On that paper: **emphasis is type and rule, not colour** — the held line is
+ink at weight under a 2px `--sheet-accent` rule, which is the sheet's own
+masthead grammar. **The primary act inverts rather than colouring** (paper
+on ink). And chrome amber never appears on the tour layer at all — on
+parchment the rule holds by construction rather than by a discipline the
+build has to remember.
+
+**An artifact's ink is calibrated for the size it is printed at**
+(TUTORIAL_MATERIAL, ruled 2026-08-19). A screen surface that borrows it
+re-checks contrast at screen size and derives what fails, naming the
+derivation. `ART_BOARD`'s own `dim` is print-legible on 3840×2160 artwork
+and measures 3.94:1 as 9px UI text; `--sheet-dim-ui` (`#695e4c`, 5.02:1) is
+that derivation and belongs to the tour layer only — `sheet_render.py` must
+never adopt it, because in print the original is correct.
+
+**Over a dimmed app, elevation cannot be drawn with shadow**
+(TUTORIAL_MATERIAL). Near-black on a ground dimmed to near-black is about
+one value step in 255 — invisible in the mock and in production. A layer
+above the app separates by material or not at all.
+
+**A tour is never the work. It points at the work** (TUTORIAL_RULING §0,
+ruled 2026-08-18 — the tour layer's opening sentence). On a step whose
+subject is one of the app's own controls, nothing in the tour is amber —
+not the target, not `Next`. The only amber left in the view is the control
+the step is asking for. On a step with no target the tour is all there is,
+and its `Next` takes the amber it has earned. A ghost `Next` makes the
+tour's progression feel weightless, which is correct: the tour is not the
+achievement.
+
+The layer, ruled: the target is **matted, not lit** — an 8px `--field`
+mount closed by a `1px --ink-faint` hairline, no ring, no colour; the dim
+is `--ground` at `.90`, darker than the app's darkest panel so every dimmed
+surface moves the same direction; two widths, one component (anchored
+`440px`, centred `620px` — the app's prose measure, and the anchor-missing
+fallback takes it); the held line is Courier `--ink-dim`, the most
+important line in the popover at that moment; an announcement earns one
+structural distinction, a `--line-soft` rule under its kicker, standing in
+for the counter a flow has; and **hatch has exactly one job here** — the
+blocked target, the only state where the user is shown something they
+cannot touch.
+
+**A list may mix scopes if it names them** (TRIAGE §2, ruled 2026-08-18).
+Where a list of blockers, records or facts contains one whose truth does not
+travel with the production, the groups take a Courier scope head — and the
+second head is drawn only when the first group is non-empty, so a list with
+one scope is unchanged.
+
+**Where a surface exists so you can judge pictures, the pictures are the
+surface** (RULE_PASS_2 E0, ruled 2026-08-18 — the modal case of *the image
+is the hero*, beside B1's card rule). They lead, at their own ratio, at the
+largest size the surface affords — not a thumbnail with the judgement
+written beside it. Text on such a surface is reduced to what the picture
+cannot say: its id, its jurisdiction, its provenance. Anything that rewards
+reading goes behind one door. The reference viewer exists because one
+rear-view plate produced weird renders, and it showed those plates at
+thumb tier under five lines of text; the cast modal exists to decide what a
+character looks like, and it put the photos last.
+
+**A record that entered a reviewed set without review says so in the badge**
+(RULE_PASS_2 E2, extending B6). `APPROVED ON SUPPLY` is a different fact
+from `APPROVED`, and the journal is not where someone reads a card.
+
+**A structure the app *read* discloses itself per item, not per surface**
+(RULE_PASS_2 D1, ruled 2026-08-18). A provenance line at the head of a list
+describes the list; a reader judging one entry needs it on that entry. Where
+some members are authored and some inferred, each says which — in the
+`--ink-faint` Courier marker, never a chip. And the evidence behind an
+inferred reading is printed, not hidden in a `title`: an act name with no
+beat behind it is a guess wearing a label.
+
+**A ghost is a working state, not a style** (RULE_PASS_2 A3, ruled
+2026-08-18). Where the surface's subject is the arrangement rather than the
+image, the images carry a scrim so the geometry reads over them — and hover
+returns the photograph, because what a frame *contains* still decides where
+it belongs. The scrim is `--field` at `.45`, lifting to `.12`. Tags,
+dimensions and verdicts sit on solid `--field` and are unaffected by either
+state. This is the sanctioned exception to *the image is the hero*, and it
+earns itself: you are judging shape, and one hover gets the picture back.
+
+**A mode hands over the whole surface, not one panel** (RULE_PASS_2 A7,
+ruled 2026-08-18). When a surface switches into a mode, everything the mode
+replaces goes with it — not just the panel it most obviously supersedes.
+The arrange room hid the readiness map but left this spec's earlier boards
+below it, each with a live `Approve` and a live `Delete forever`: two
+copies of the board *plus* the destructive verbs of a different task. One
+board on screen at a time.
+
+**A blocked-by-geometry frame is not a rejected one** (RULE_PASS_2 A5,
+ruled 2026-08-18). `--bad` is reserved for REJECTED. A condition with a
+remedy states itself in Courier on the object and spends the surface's
+amber once, in the gate that names the consequence. A SHORT frame is not a
+rejection: the take is fine, the frame is currently bigger than the plate
+can fill, and both remedies are in the room.
+
 **Sheet-render typography is the artifact's; app chrome is the
 system's** (HARNESS_AUDIT R4.6b, ruled 2026-08-14). A render may bundle
 a face the chrome may not use — the same separation as sheet ink not
@@ -781,6 +905,81 @@ Prose was ~3:1 over interface by area in v1. Rules:
 - Sentence case in prose; uppercase only for Courier labels and badges.
 
 ---
+
+**A direct-manipulation surface states its grammar once, at its head**
+(RULE_PASS_2 A9, ruled 2026-08-18 — an exception to *an explanation goes in
+a tooltip, never beside the control*). Where the control *is* the surface
+there is nothing to hang a tooltip on, and four verbs in one line beats
+four gestures discoverable by accident. One line, at the head, in sans;
+never repeated per element.
+
+**The app has no first person** (RULE_PASS_2 C5, ruled 2026-08-18). It names
+what happens to the work, not who does it. `THE SCREENPLAY IS READ FOR IT`,
+not `I READ THE SCREENPLAY FOR IT`. An interface that says "I" is claiming
+to be an agent with intent, and then every honest statement of a limit reads
+as a personality trait. Four first-person constructions arrived on one
+surface and would have spread, because whoever writes the next door copies
+the last one.
+
+**Where one control performs different acts depending on what is filled in,
+its label states the act it will perform** (RULE_PASS_2 C2, ruled
+2026-08-18). A branch the user cannot see before committing is a branch they
+will discover by undoing. Recomputed as they type — the breakdown door's one
+submit reads `Create an empty sheet` / `Read the screenplay for it` / `Break
+down the pasted section`.
+
+**A primary is sized to its label, or the label to its button** (RULE_PASS_2
+A8 + C7, ruled 2026-08-18). Three primaries clipped their own text past the
+button's bottom edge on one pass — three instances is a rule, not three
+accidents.
+
+**A verb repeated per row is never amber** (RULE_PASS_2 D6, ruled
+2026-08-18). Amber marks one action in view. A row-level verb is a property
+of the row, not the surface's next act — and forty of them in a column is
+the definition of a signal that has stopped being one. `Create breakdown`
+sat amber on every location without a sheet: five stacked on a first look,
+thirty-eight more after one `Expand`, on a screenplay whose normal day-one
+state is exactly that.
+
+**A line that tells the user what to do does not also narrate the app's
+state** (TUTORIAL_RULING Q4, ruled 2026-08-18). `UPLOAD THE SCREENPLAY AND
+THIS STEP MOVES ON`, not `WAITING — UPLOAD…`. Telling them what to do is
+the line's only job.
+
+**A tour does not teach what a blocker already states** (TRIAGE §3.1, ruled
+2026-08-18). A tour that explains a condition the app states by itself is a
+tour teaching the app's failure to state things. The walkthrough's
+credential step went when the `KEY` blocker made credentials readable on
+Status from first boot.
+
+**Layered content waits its turn** (promoted from `docs/FIRST_RUN.md`,
+2026-08-18). Where the app has its own first-run screen, authored content
+does not open on top of it: an empty install is already onboarding.
+
+### Density
+
+Five rules from the 2026-08-17 density pass. They are general, and they are
+the part worth keeping once the surfaces ship.
+
+1. **A prose hint that explains a control is deleted; a Courier line that
+   states a fact replaces it.** `<p class="hint">` appeared 14 times across
+   the live templates and in 11 of those it explained something the reader
+   could already see. The exception is a surface with no data to state.
+2. **Counts collapse into one line in the surface's head.** Four integers in
+   `.card` blocks spent ~180px of vertical; a tally line carries the same
+   four plus two more in 22px, and reads left to right like a slate.
+3. **Every surface that has a picture leads with it, at the subject's own
+   ratio, and the specification sits in a rail.** The sanctioned exception
+   is a surface whose subject is text.
+4. **A full-width panel that appears and disappears becomes a standing rail
+   register.** Broken citations, CANNOT-LOCK, rejection reasons and slot
+   readiness all shifted everything beneath them when they rendered. In a
+   rail they occupy the same space whether populated or not, and their empty
+   state is one Courier line.
+5. **A status word becomes a compound fact where the reader's next question
+   is obvious.** `LOCKED` → `LOCKED · 4 OF 9 APPROVED`. `14.2 / 40 GB` →
+   `ROOM FOR ~640 MORE 4K TAKES`. The highest value per character in the
+   pass, and it applies almost everywhere.
 
 ## Components
 
@@ -987,6 +1186,30 @@ composer survives only as the arrange room opened inline on stage 05):
    Anything drawn to help the user aim lives in the DOM; the sheet
    carries only its ink — namespaced under `.sheet[data-style]`, never
    `:root`.
+8. **A sheet composes the pictures it has** (RULE_PASS_2 B1, ruled
+   2026-08-18). A panel with no approved take is not drawn — an empty
+   frame reserves the shape of a missing thing and promises a picture the
+   board does not have. The packer works with the panels that exist and
+   the absence is stated once, in the sheet's own Courier foot beside the
+   size (`9 PANELS · 4 COMPOSED · P05–P09 HAVE NO APPROVED TAKE`), so the
+   export gate is not the only place the truth lives.
+9. **A legend that cannot be read is decoration** (RULE_PASS_2 B2). A
+   swatch strip draws the design languages the board's own panels cite,
+   capped at twelve, and **a name is never truncated — a strip that
+   cannot fit its names draws fewer swatches, not shorter words.** A hex
+   is recoverable from the pixel; a material name is not, so the name is
+   the half that survives. What is left out is stated (`AND 7 MORE
+   LANGUAGES IN THE REFERENCE LIBRARY`).
+10. **Nothing on a sheet clips mid-word** (RULE_PASS_2 B3). A sheet is a
+    fixed page; there is no scroll to recover lost content. Text wraps to
+    two lines at the sheet's measure and ellipsises only at that limit.
+11. **Artifact ink is mirrored, both ways** (RULE_PASS_2 B4). Every style
+    in `sheet_render.STYLE_INK` has a `.sheet[data-style="…"]` mirror, so
+    a DOM-rendered ground cannot drift from the exported pixels — asserted
+    by test, because two of eight styles had silently fallen outside it.
+    Look styles carry the same rule: `ART_BOARD` paper `#ece4d2` / mat
+    `#ded4c0` / ink `#28221a`; `TECH_DESIGN` paper `#101216` / ink
+    `#e2e6eb`. Artifact ink, never `:root`, never chrome.
 8. **A rule applies to shipped output too.** When unification changes
    what already ships — type sizes, a ground colour, a default — change
    the output. Do not exempt it, and do not fork a style to preserve
@@ -1501,22 +1724,10 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
+| 2026-08-18 | **The screenplay is locked until a model is connected** (user, reversing two rulings from the same day's pass): `POST /api/screenplay` refuses with 423, both upload forms disable their file input and their verb, and the condition is stated beneath in Courier with `Connect one ↗` beside it. The Status lead no longer renders the upload form when it cannot be used — it falls through to the promoted `KEY` blocker, so the lead never names an act the studio will refuse. The `KEY` row now **leads** the blocking list. The walkthrough starts on Settings → AI & engines on a **third tour surface, `page`** — docked in a corner, **no scrim, no cutout, the page fully usable** — because OpenRouter, OpenAI, Gemini, Anthropic and a custom endpoint are all correct answers and a cutout around one of them would be the app recommending it. Held until a credential exists, skipped for a studio that already has one. Meanwhile **every stage in the band is locked by the app**, with the credential as the first link in the existing gate chain — so someone who skips the tour meets the same wall and the tour explains the gate rather than being it | Status lead, stage 01, the blocking order, the walkthrough | **This reverses TRIAGE §3.1 and §2**, which removed the walkthrough's credential step (*a tour does not teach what a blocker already states*) and kept the upload unblocked with the screenplay leading (*the upload needs no engine and is the root dependency*). Both were sound before the user ruled that the upload requires an engine; that premise is now void. Review (1) whether a tour step held on a credential is still a tour or has become a wizard — it is the only step in the app that cannot be passed by reading; (2) the `page` surface itself — a tour popover with no scrim is new, and it raises whether a step with nothing dimmed still reads as part of a sequence; (3) the gate line's tier, which sits under a disabled control rather than beside it; (4) whether `DO THIS NEXT` should ever be a blocker's own text, which it now is on a keyless install |
 | 2026-08-17 | **A demoted citation, and the count that explains it** (adversarial review F21/F6/F7): a `SCRIPT_EXPLICIT` evidence row whose quote is not in the screenplay is now demoted at the write — `WEAK_INFERENCE`/`HOLD` on the narrative draft, `USER_DIRECTED` on a hand-written add — so a breakdown the user opens can carry rows at HOLD they did not put there, and the reason lives in `rationale`. The verdict now reads on stage 03's step 06 EVIDENCE meta in amber — `N OF M CITATIONS NOT FOUND IN THE SCREENPLAY — THOSE ROWS ARE HELD`, or `ALL N FOUND` when they hold. `unverified_citations` from the objects endpoint still has no surface | Stage 03 evidence ledger (existing rendering, new states) | Built from canon — nothing new is drawn yet, which is the point of the row. Review (1) where `N OF M CITATIONS COULD NOT BE FOUND IN THE SCREENPLAY` belongs — it is a fact about a draft's trustworthiness that the user needs BEFORE reviewing the ledger, and stage 03 has no home for a per-draft verdict; (2) whether a demoted row should read differently from one the model honestly filed weak, since today they are identical in the table; (3) whether a citation failure is a `--bad` fact or a neutral one — it is not the user's error |
 | 2026-08-17 | **Tell me about this panel** (user, reframing the 2026-08-16 "Scan screenplay"): a verb beside the panel's BRIEF on the workbench and beside PURPOSE on the breakdown row — "I want to be able to say just about anything and have it considered ... It is not an object scan". Free prose in, and back come a proposed BRIEF and proposed required content, each stating whose fact it is: `THE SCREENPLAY SAYS` (--ok, with the verbatim line) or `FROM WHAT YOU SAID` (dim ink, no citation, ever) opens a modal that asks ONE question, with `Open screenplay ↗` to read it yourself. Findings render as evidence — the reading, then the screenplay's own words in a Courier `blockquote` behind a rule, then one `+ object` act. Quotes are verified verbatim server-side; drops are counted on screen. Nothing changes until a find is accepted | Stage 04 step 02, and stage 03 panel row | New pattern: a MODEL PROPOSAL the user accepts item by item, which canon has no vocabulary for. Review (1) the quote-as-evidence block; (2) a modal that both asks and reports, growing downward after Scan; (3) whether an accepted find should be marked as screenplay-sourced in the ledger rather than USER_DIRECTED |
-| 2026-08-16 | **A lock is not a freeze** (user): a locked breakdown now disables only what an approval actually froze — a panel with an approved take, and the board-level fields once any take is approved. The lock strip states which of the three cases it is (nothing rendered / some panels frozen / all settled) instead of "read-only", which was false in two of them. Opening a breakdown also scrolls to it, since the editor renders below the list and its head sat ~1500px down | Stage 03 breakdown editor | Review (1) a gate whose copy changes shape across three states, which canon has no precedent for; (2) `Save` appearing on a LOCKED sheet, which reads contradictory until you know the rule; (3) whether the frozen panel rows should say WHY inline rather than only in the strip |
-| 2026-08-16 | **A required object can overrule its reference match** (user: "its green but the reference is wrong so I want to delete it"): `Remove reference` in the plate viewer unpairs the object from the matched group(s) — the tile returns to `+ REF`, the plates stay in the library and stay attached to every other object that really names them. Stored on the PANEL (`ref_exclusions`), journaled, lock re-stamped, refused on an approved take. Choosing that same group deliberately through `+ REF` undoes it | Panels workbench, step 02 plate viewer | Review (1) the verb's wording — the user chose `Remove reference`, which reads like a library deletion, so the tooltip carries the whole burden of saying it is not one; (2) that a false green is only correctable from INSIDE the viewer, two clicks from the tile that is wrong; (3) whether the exclusion should be visible anywhere as a standing rule, since today it is invisible once made |
-| 2026-08-16 | **An engine states whether it can see your plates** (user: "we need to use a model that uses image reference — this application depends on it"): the engine `<option>` carries `· NO REFERENCE IMAGES` in Courier, and step 06 shows a `gen-warn` naming the count, the consequence and the way out — but only when plates are actually ticked. Server-declared (`generate.sends_plates`), never a list in the JS | Step 06, and every engine dropdown | Built from canon (gen-warn, gate-readable-as-state) — review (1) a fact appended to an `<option>`, which no other select does and which cannot carry type or colour; (2) whether an engine that cannot honour this product's core mechanism should be offered at all, or offered only where no references are attached |
-| 2026-08-16 | **Choose an existing plate for a required object** (user: "in this dialogue I need to be able to select existing ref"): `+ REF` now asks first — a grid of approved plates at library-card anatomy (picture largest, then id and role in Courier), near-misses ordered first, with `Upload a new image instead` as the second door. Choosing ticks that plate's group in step 04 and scrolls to it, which is the same mechanism an auto-matched group uses | Panels workbench, step 02 | Review (1) a picker that RESOLVES to one of two different dialogs; (2) whether the grid should exclude style/palette anchors, which are selectable today and are never a sensible answer for a prop; (3) that the tick is per-render memory, not a durable object→plate link — it survives only by riding a take |
-| 2026-08-16 | **Withdraw approval** (user): an approved panel goes back to draft without being rejected. Offered on the workbench beside `Approve panel` and in the take gallery, as a plain `text-act` — deliberately NOT a danger act, because nothing is lost and dressing it as one pushes people back to `Reject`. Both copies state the difference that matters: Reject's reason rides every future prompt for the panel as a DIRECTOR'S CORRECTION, withdrawing carries nothing. The store verb and endpoint already existed and had no caller | Panels workbench + take gallery | Built from canon (existing act rows, text-act) — review (1) whether an UNDO belongs beside the act it undoes or somewhere quieter; (2) that it only appears when the STAGED take is the approved one, so a user whose newest take is a candidate must first click the approved take in the strip to find it |
-| 2026-08-16 | **The compiled prompt is editable** (user-caught bug): step 05's verb read `Read & edit` and the body was a read-only `<pre>` — the override existed end-to-end (`render_prompt` → `prompt_source: "edited"`, read back on the take) but only `Draft prose` ever fed it, so the one text an image model actually receives was the one text you could not correct. Now a textarea with `Generate from this prompt` · `Revert to compiled` and a Courier state line that flips to amber while it differs, because at that moment the panel below is no longer what gets sent. Unedited text is NOT sent as an override. Copy and Download take what is on screen | Panels workbench, step 05 | Built from canon (report host, prose editor's textarea, gate-readable-as-state) — review (1) amber on a transient text-diff state, which is a narrower use than "the current pipeline stage"; (2) a one-take escape hatch from the compile, sitting inside the step that IS the compile; (3) whether an edit this load-bearing should be able to persist to the panel |
 | 2026-08-16 | **A prompt can be saved onto the panel** (user): the one-take edit above grew an explicit `Save prompt to this panel` · `Clear saved prompt`, beside `Revert to compiled` which restores the COMPILE in the box without touching the save. While one is saved, steps 01–04 no longer write that panel's text — so step 05's head reads `SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL` and step 06 repeats it where the spend happens, both amber. Journaled, lock re-stamped, refused on an approved take. Saving patches those two heads in place rather than redrawing the card, which would close the editor you saved from | Panels workbench, steps 05 and 06 | Review (1) a step that declares the steps ABOVE it inert — the sequence has never had one, and this is the first control that can switch off part of the pipeline; (2) amber in two places on one card for one fact; (3) whether an override this sharp should be visible from the panel list, not only inside the open card |
-| 2026-08-16 | **A frozen panel states its refusal in place** (user-caught): Save was greyed by an approved take with the reason ONLY in a hover tooltip, while the help line below still said "Save prompt to this panel to make them stick" — a dead button being advertised. The state line now leads with the gate (`AN APPROVED TAKE FREEZES THIS PANEL · NO PROMPT CAN BE SAVED TO IT`), the help names the take that settled it and where the approval is withdrawn, and says the one-take `Generate from this prompt` path is still open. Frozen is `--ok`, not amber — canon already paints a settled step that way and the accent belongs to what a render is about to do | Panels workbench, step 05 | Built from canon (gate-readable-as-state, `.step-confirmed`'s settled green) — review whether a REFUSAL should share the settled colour with a CONFIRMATION, since one is an achievement and the other is a wall |
-| 2026-08-16 | **The breakdown door asks three things** (user, AFTER the rule pass — unreviewed): `What should I get?` reads the screenplay for you · `Or paste a screenplay section`, which WINS over the screenplay and carries `Open the screenplay ↗` · `What panels should it include?`, typed one per line or left to `Auto-generate`. Each field states what it does to the work rather than what it is filed as, per A1, and the Spec ID leads with its reassurance. An empty door still makes a genuinely empty sheet | Stage 03, the second door | Review (1) two doors on one page that now overlap — `Auto breakdown` reads the whole screenplay, this one reads it for a brief; (2) `Auto-generate` as a button that CLEARS a field rather than setting one, which is honest about the server contract but unusual; (3) the three Courier notes under the fields, which is a new density for a form |
-| 2026-08-16 | **The location list reads in acts** (user, AFTER the rule pass was written — unreviewed): grouped into three acts, chronological by first appearance rather than by scene count. A screenplay that MARKS its acts supplies its own divisions and titles; one that does not gets the standard 25/50/25 split and its NAMES from the scene scan, which is a reading of the story rather than a parse. The head states which half came from where. Five per act behind the app's one `Expand`; a location the slugline parse never saw has no act and says so | Stage 02, the read strip | Review (1) acts as the primary grouping where environment used to be; (2) an act heading the app INFERRED — the first place it shows a structure it read rather than parsed — and whether `Name the acts` belongs in the strip or with the scan |
-| 2026-08-16 | **Casting opens a modal** (user, AFTER the rule pass — unreviewed): `Cast` used to write the card immediately, and a cast card's `+` tile was a bare file input, so the OS picker arrived over the app with nothing confirmed. One modal carries what the read proposed — kind, identity, traits, editable — and a tray where photos are CHOSEN and shown as thumbnails; nothing is written until `Cast`. One `photoTray()` serves both casting and an existing card | Reference, subject cards | Review (1) an intake modal that both EDITS a proposal and STAGES an upload, where canon's dialogs do one or the other; (2) whether casting should be identity-only and photos stay the card's job |
-| 2026-08-12 | **Arrange room physics** (`.arr-*`, user-directed, prototyped in the Reflow Lab artifact): tiles are the real takes GHOSTED (field scrim, lifts on hover); linked-edge/corner resize with proportional renegotiation and 24×12 grid + film-ratio snap (Alt = free); drag-middle moves with a dashed-amber ghost previewing the exact landing; drop-on-a-tile splits it (sides beside, top/bottom stacks); EDGE-MIDPOINT CLAIM ARROWS (hover hints the territory, click claims to the canvas; displaced panels re-home to nearest neighbor); per-tile icon chips trash (bench) / + (dock nearby) / crop; corner + returns benched panels; live SHORT hatch + hud line. Commits PUT the rows/cols/cells structure; the server maps it to slot geometry | Stage 05 assembly page, inline under the slot map | Entirely new interaction vocabulary. Ruling wanted on: icon-chip shape (the user tuned ROUND buttons in the lab; canon forbids rounded corners so they ship square), chip sizes (40px tile verbs / 20px arrows / 48px corner), ghost-scrim strength, snap values, and the amended R2 reading (client owns arrangement STRUCTURE; server owns geometry)  **DEFERRED by HARNESS_AUDIT R2 (2026-08-14)** — the room was not in the recorded bundle and the designer will not rule it from a description; top item of the next recording walk. Already ruled: square chips stand (canon forbids rounding) and the amended R2 reading (client owns arrangement STRUCTURE, server owns GEOMETRY). Remaining: chip sizes, ghost-scrim strength, snap values, claim arrows |
-| 2026-08-13 | **Board looks** (`.arr-style-*`, user-directed): a `Style…` verb in the arrange room opens a picker whose cards are REAL small-scale renders of this board (INK — none, Art Board, Tech Design), with per-look option checkboxes; the chosen look dresses previews/export/assembly only — the room always works in INK. Renderer-side: two new sheet ink styles (`ART_BOARD` parchment/serif/hand-annotations, `TECH_DESIGN` near-black/mono/keylines+ticks), a `dress` element channel (swatch strip, material chips, spec table, atmosphere strip, profile prose) derived from canon at render time, and bundled OFL render faces incl. a new `hand` voice (Caveat) | Arrange room (stage 05) + board export/assembly | Open questions for the ruling: (1) the `dress` channel as a parallel grammar beside the closed twelve block types; (2) md-tier sources feeding preview-scale renders (scoped exception to "display tiers never feed a render"); (3) which palette languages a board's strip draws (ships: all live); (4) Art Board per-panel taglines vs. atmosphere-strip-only; (5) Tech Design comparison block, ortho-tick styling, and both styles' exact ink values; (6) hand-annotation collision rules, Caveat minimum size, and a ruling distinguishing sheet-render typography from app chrome (canon forbids new fonts in chrome); (7) whether the room's advisory SHORT readouts should read dressed geometry (the gate already does)  **PARTLY RULED by HARNESS_AUDIT R4 (2026-08-14)** — shipped: dress is a selector over the closed block set (PALETTE / MATERIAL / STRIP / SPEC / PRINCIPLES); md-tier feeds previews only, enforced in sheet_render; the chrome/artifact typography split is Layout canon. Still open, needing a rendered sheet: (3) which palette languages a strip draws, (4) Art Board taglines, (5) exact ink values + Tech Design comparison block, (6a) hand-annotation collision + Caveat minimum size, (7) dressed geometry in advisory readouts |
-| 2026-08-14 | **Add reference in place + View** (user-directed): a required object without a matching reference offers `+ REF` right in the workbench card (the work-order TABLE that carried the long-form `Add reference` was replaced by step 02's tile grid, 2026-08-14) — opens the existing add-reference dialog prefilled with the object; the reference enters the library APPROVED (supplying it deliberately is the review; Reject in Reference remains the recourse) and the card re-renders so the group attaches immediately. An object WITH a reference is marked `REF` on its tile, and that marker opens — a modal reference widget (library card anatomy: badge · id · role · CONTROLS/NOT · notes per matching plate), a Courier fact line "N PLATES MATCH · ALL ATTACH · THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", a stated thin-anchor warning at one plate, thumbs opening the lightbox, and `Add another plate` prefilled to the same group | Panels workbench card | Built from canon (roleDialog, ref-card anatomy, lightbox, act-where-condition-is-met) — review the auto-approve rule, the `+ REF` chip density, and the thin-anchor warning copy |
 
 ---
 
@@ -1525,6 +1736,67 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 Newest first. One line per change, dated. Amend the relevant section above as
 well — this log records what changed, it does not replace the rules.
 
+- **2026-08-20** — **The tutorial CMS transliterated from its board.**
+  Turn 2a of `Tutorial System.dc.html` had ruled the editor; the rulings
+  had shipped from the plan's prose but never from the mock. Now taken
+  value by value: the list is a grid of the board's eight tracks on
+  hairline rows, field labels and their facts are Courier caps at the
+  faint tier, editor inputs sit on `--ground`, the step card carries
+  `STEP 02 · SPOTLIGHT · HELD` with `↑ ↓ Duplicate Remove`, nested
+  conditions are numbered, the save refusal reads address-then-fault on a
+  `--bad` keyline, and the trigger gains a plain-English restatement
+  (`RUNS WHEN A PRODUCTION EXISTS AND …`) — a trigger you can read back is
+  one you can check. The CMS stays **chrome**: the board-stock material
+  belongs to the tour layer and is deliberately not here.
+- **2026-08-19** — **The tour is made of board stock.** The popover stops
+  being a `--panel2` panel and becomes the paper the studio prints its
+  boards on, reading `.sheet[data-style="ART_BOARD"]`'s own declaration so
+  it cannot drift. Chrome amber leaves the tour layer entirely; the held
+  line is ink at weight under a 2px sheet-accent rule; the primary act
+  inverts; the shadow is withdrawn as unrenderable over a dimmed app; the
+  dim rises to `--ground` at `.92`. One derived value, `--sheet-dim-ui`,
+  named as a screen-calibrated derivation rather than an eighth sheet ink.
+  `--accent-hover` ratified as-is after two weeks unratified.
+- **2026-08-18** — **The screenplay is locked until a model is
+  connected** (user). Enforced at the endpoint (423), stated as state on
+  both upload forms, and the `KEY` blocker now leads. The walkthrough
+  starts on Settings, held until a model is connected. **Reverses TRIAGE
+  §3.1 and §2 from the same day** — logged in the Uncanonized table so the
+  next review sees the reversal rather than re-ruling it.
+- **2026-08-18** — **Claude Design's ruling pass lands: fifteen rows
+  emptied.** Eight plans implemented in one sweep (RULE_PASS_2 A–E,
+  TUTORIAL_RULING + snippet, TRIAGE §1–§2, and the density pass's rules).
+  The arrange room lost five of its six ambers and stopped using the
+  approval colour for autosave and the rejection colour for a frame that
+  is merely too small; a sheet now composes the pictures it has and states
+  what it could not; the two breakdown doors became one and the app lost
+  its first person; the act strip discloses a read name per heading and
+  prints the beat it turns on; the reference viewer and the cast modal put
+  their pictures first. The tour layer's amber ring is **refused** — the
+  target is matted, not lit — its dim moved onto a new `--ground` token,
+  its foot decides its own amber (`a tour is never the work`), and the
+  walkthrough lost its credential step because a tour does not teach what
+  a blocker already states. The blocking list gained scope heads. Canon
+  gained a **Density** subsection, seven Components rules and four Copy
+  rules. Plans deleted and ledgered per the 2026-08-12 rule.
+- **2026-08-18** — **Non-canon: a missing credential is a blocker** (user
+  ruling). Status gains a fifth blocking kind, `KEY`, built from the
+  existing row: `--bad` badge, `Connect` verb, resolving jump to Settings →
+  AI & engines. Rows may now carry a `stage` naming what they block, so a
+  credential reddens stages 02 and 04 rather than the action-map's default
+  of 03. Behind it, `generate.capability()` became the single answer to
+  "can this role run" — the same question had four implementations, and the
+  client's copy is deleted. Row logged above.
+- **2026-08-17** — **Non-canon: the tutorial layer.** Onboarding became
+  content: a first-run walkthrough and release announcements are authored
+  JSON (`app/content/tutorials/`), written in Settings → Tutorials on owner
+  installs, and shipped to the fleet by committing them. Two new surfaces —
+  the spotlight (four masks, a real cutout, `--accent` ring, placed popover)
+  and the tutorial modal — plus a Courier waiting line that states what a
+  held step is waiting for. Steps name an **anchor**, never a selector, so a
+  redesign moves one line in `content/tutorial_schema.json` instead of
+  breaking every walkthrough. Row logged above; `/* UNCANONIZED */` block at
+  the foot of `styles.css`; token contracts in `tests/test_design_tokens.py`.
 - **2026-08-17** — **Non-canon: citations are verified at the write.** An
   adversarial whole-app review (REVIEW_v1/v2, answered in docs/REVIEW_ROUND_1.md
   and _2.md) found the app guarding the evidence class it could not check and
@@ -1557,6 +1829,7 @@ well — this log records what changed, it does not replace the rules.
   selection (and commits on it), and slot verdicts (`TOO_SMALL`,
   `STALE_APPROVAL`) leave the breakdown page for stage 05, which already
   reports them three ways.
+  **Superseded 2026-08-18 (RULE_PASS_2 C1): the two doors are one.**
 
 - **2026-08-16** — **The take selection stroke is ONE 1px outer line** (user:
   "this highlight state is aweful ... on outer strok 1 px"). It was 2px at a 1px

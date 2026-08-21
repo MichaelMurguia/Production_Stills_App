@@ -92,6 +92,7 @@ resolving jump:
 |---|---|---|
 | `HOLD` | Required objects on a draft breakdown lack PASS evidence rows | Review the breakdown's ledger |
 | `GAP` | A missing input — no screenplay, no approved Master Board, a subject with no approved reference | Add the missing piece |
+| `KEY` | No usable credential for an AI role — the research passes, or renders, or both, cannot run at all | Connect an engine in Settings → AI & engines |
 | `SIZE` | An approved render is smaller than its board slot | Regenerate larger — never upscaled |
 | `CITE` | A cited quote no longer exists in the current screenplay draft | Review the flagged rows |
 
@@ -453,9 +454,36 @@ approved image to harvest a region as a new narrow-role reference.
   experimental — prefer Gemini for 4K.
 - **Default engine** — GEMINI / GPT IMAGE 2 / PIPELINE; pre-selected in
   every Model dropdown, always overridable per render.
+- **Tutorials** *(owner installs only)* — the tutorial CMS. See §11a.
 - The footer states the privacy facts: everything lives in `data/`; the
   approval record is `project_state/approval_log.md`; nothing leaves the
   machine except generation calls.
+
+## 11a. Walkthroughs (2026-08-17)
+
+*The whole arrival flow — login, naming your first production, credentials, and where this walkthrough sits among them — is `docs/FIRST_RUN.md`.*
+
+**What you see as a user.** A new production with no screenplay starts a
+short walkthrough: what the studio does, how the band works, where engine
+credentials live, and then it hands you the real upload control and waits
+while you use it. It runs **once per install** — finish it, skip it, or
+close the tab mid-way and it resumes where you stopped. Esc ends it at any
+point. A release can also raise a one-step note pointing at whatever
+changed.
+
+Nothing about it is a video or a recording: every step points at the actual
+control on the actual screen, and the highlighted control stays clickable.
+
+**Seeing one again.** Settings → Tutorials → **Forget** on a row, or
+**Forget every tutorial on this install**. Forgetting touches nothing but
+which walkthroughs you have seen.
+
+**Writing them** *(owner installs only)*. Settings → **Tutorials** is a
+small CMS: a trigger, then steps, each pointing at a named control and
+optionally waiting for a real action before moving on. Preview runs what
+is in the editor without recording anything. On a git checkout, saving
+writes the copy that ships — commit and push and every studio gets it.
+Full reference: `docs/TUTORIALS.md`.
 
 ## 12. Canon guarantees enforced in code
 

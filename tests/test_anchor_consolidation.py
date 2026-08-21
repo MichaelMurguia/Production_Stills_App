@@ -854,8 +854,23 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
     def test_the_button_states_which_half_is_running(self):
         b = self.body()
         self.assertIn('setBusy(true, "Saving…")', b)
-        self.assertIn('setBusy(true, "Testing…")', b)
+        self.assertIn('setBusy(true, "Testing…", testBtn)', b)
         self.assertIn("ok.disabled = on", b, "and cannot be pressed twice")
+
+    def test_the_busy_label_lands_on_the_button_doing_the_work(self):
+        """Found in use 2026-08-20: a Test relabelled SAVE to `Testing…`,
+        which is the wrong button entirely."""
+        b = self.body()
+        self.assertIn("const setBusy = (on, label, which = null)", b)
+        self.assertIn("const btn = which || ok", b)
+
+    def test_the_modal_does_not_change_shape_while_it_tests(self):
+        """User 2026-08-20: the progress element is right; the modal
+        growing under it is not. The box is laid out whether it has
+        something to say or not."""
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        self.assertIn(".auth-modal .busy.busy-inline:empty { display: flex; }", css)
+        self.assertIn(".auth-modal .busy.busy-inline { min-height:", css)
 
     def test_the_slow_half_says_it_is_a_live_call(self):
         b = self.body()
@@ -873,22 +888,62 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
 
     def test_cancel_stays_live_so_the_modal_cannot_lock(self):
         """Disabling it was worse than the silence it replaced: a slow
-        provider left no way out. The key is saved before the test runs,
-        so leaving mid-test costs only the verification — and says so."""
+        provider left no way out. Since 2026-08-20 Test stores nothing, so
+        leaving mid-test costs nothing at all — and says so."""
         b = self.body()
         self.assertNotIn("cancel.disabled = on", b)
-        self.assertIn("Stopped waiting — the key was saved, but not verified.", b)
+        self.assertIn("Stopped waiting — nothing was saved.", b)
+
+    def test_testing_stores_nothing(self):
+        """User 2026-08-20: Test saved the key first, so a credential
+        EXISTED before the user agreed to keep it — the first-run
+        walkthrough advanced on Test, and Cancel left the key behind.
+        Only Save may write."""
+        b = self.body()
+        i = b.index("if (testBtn) testBtn.onclick")
+        test_half = b[i:b.index('$("[data-mf=ok]", ov).onclick', i)]
+        self.assertIn('json: { provider: P.test, key: k }', test_half,
+                      "the unsaved key is proved by being sent, not stored")
+        self.assertNotIn('"/api/settings"', test_half,
+                         "Test must not write the key")
+
+    def test_a_pass_is_only_recorded_for_a_key_the_studio_holds(self):
+        """A green row for a credential that was never saved would be a
+        lie on the settings page."""
+        main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        i = main.index('@app.post("/api/settings/test")')
+        seg = main[i:i + 1200]
+        self.assertIn("record = not key", seg)
+        self.assertIn("if record:", seg)
 
     def test_the_scrim_still_holds_mid_flight(self):
         b = self.body()
         self.assertIn("if (e.target === ov && !busy) done(null)", b)
 
     def test_a_failure_lands_in_the_modal_not_only_a_toast(self):
+        """EVERY failure path, not just one — the modal gained a second
+        act on 2026-08-20 when `Test & save` was split, and a toast can be
+        missed while the user is looking here."""
         b = self.body()
-        i = b.index("} catch (err) {")
-        seg = b[i:i + 240]
-        self.assertIn("setBusy(false)", seg)
-        self.assertIn('say(err.message, "bad")', seg)
+        catches = [i for i in range(len(b)) if b.startswith("} catch (err) {", i)]
+        self.assertGreaterEqual(len(catches), 2, "Test and Save each report")
+        for i in catches:
+            seg = b[i:i + 260]
+            self.assertIn("setBusy(false", seg)
+            self.assertIn('"bad"', seg)
+            self.assertIn("err.message", seg)
+
+    def test_test_and_save_are_two_acts(self):
+        """User 2026-08-20: one button doing two things read as a single
+        confusing act. Test answers and stays open; Save closes."""
+        b = self.body()
+        self.assertIn('data-mf="test"', b)
+        self.assertIn('data-mf="ok"', b)
+        # Save is a local write and nothing else — no live call rides it
+        i = b.index('$("[data-mf=ok]", ov).onclick')
+        save = b[i:]
+        self.assertNotIn("/api/settings/test", save,
+                         "Save must not smuggle the provider call back in")
 
     def test_an_empty_key_states_it_in_place(self):
         self.assertIn('say("Paste the key first.", "bad")', self.body())
@@ -1108,9 +1163,12 @@ class TheBreakdownDoorAsksThreeThings(unittest.TestCase):
             self.assertIn(probe, f, probe)
 
     def test_each_states_what_it_does_to_the_work(self):
-        """A1: a label names its effect, not its filing destination."""
+        """A1: a label names its effect, not its filing destination.
+        RULE_PASS_2 C5 (2026-08-18) took the first person out of it — the
+        app names what happens to the work, not who does it."""
         f = self.form()
-        self.assertIn("I READ THE SCREENPLAY FOR IT", f)
+        self.assertIn("THE SCREENPLAY IS READ FOR IT", f)
+        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", f)
         self.assertIn("PASTED TEXT WINS — THE SCREENPLAY IS NOT READ", f)
         self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", f)
 
@@ -1118,13 +1176,33 @@ class TheBreakdownDoorAsksThreeThings(unittest.TestCase):
         self.assertIn('id="spec-new-open-screenplay"', self.form())
         self.assertIn('window.open("/api/screenplay/file"', JS)
 
-    def test_auto_generate_means_empty_not_a_flag(self):
-        """An empty panels box already means "you decide" server-side, so
-        the button says so rather than inventing a second way to say it."""
-        i = JS.index('$("#spec-new-autopanels").onclick')
-        seg = JS[i:i + 400]
-        self.assertIn('box.value = ""', seg)
-        self.assertIn("build the panels it needs", seg)
+    def test_the_explaining_button_is_gone(self):
+        """C3 (2026-08-18): a verb whose effect was to EMPTY a field,
+        rewrite its placeholder and toast an explanation of what the
+        now-empty field means. The empty field already meant that; a
+        button is the wrong shape for an explanation. Its `.f-note` says
+        it, matching its two siblings."""
+        self.assertNotIn("spec-new-autopanels", JS)
+        self.assertNotIn("spec-new-autopanels", HTML)
+        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", self.form())
+
+    def test_the_submit_states_the_act_it_will_perform(self):
+        """C2: one submit fired three genuinely different acts, chosen by
+        which boxes were empty. A branch the user cannot see before
+        committing is one they discover by undoing."""
+        i = JS.index("const submitVerb = ")
+        seg = JS[i:i + 420]
+        for verb in ("Break down the pasted section",
+                     "Read the screenplay for it", "Create an empty sheet"):
+            self.assertIn(verb, seg, verb)
+
+    def test_the_app_has_no_first_person(self):
+        """C5: four first-person constructions arrived on one surface and
+        they spread, because whoever writes the next door copies this one.
+        Refused: the app states what happens to the work."""
+        f = self.form()
+        for slip in (">I ", " I will ", "I READ", "I FETCH", "I will decide"):
+            self.assertNotIn(slip, f, f"first person in the door: {slip!r}")
 
     def test_a_pasted_section_beats_the_screenplay(self):
         af = (ROOT / "app/autofill.py").read_text(encoding="utf-8")

@@ -8,6 +8,8 @@ is a second copy, and a second copy drifts.
 |---|---|---|
 | `app/` UI — markup, CSS, copy | `app/static/DESIGN_SYSTEM.md` | its `## Uncanonized patterns` table is a queue, not canon |
 | `app/` behaviour | `docs/ARCHITECTURE.md` | — |
+| what a NEW user meets, arrival to first upload | `docs/FIRST_RUN.md` | — |
+| tutorials — writing one, or the system behind them | `docs/TUTORIALS.md` | — |
 | prompts, models, token spend | `docs/INTENT.md` §Cost posture, then the docstrings in `app/generate.py` and `app/narrative.py` | — |
 | what the product IS | `docs/INTENT.md` | — |
 | `storefront/` code | `docs/WEBAPP_GUIDE.md` | — |

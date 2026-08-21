@@ -30,7 +30,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
-JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+# Every client script, not only app.js: the SPA gained a second and third
+# file (tutorial.js, tutorial-admin.js) and a route called from one of
+# them is just as reachable as one called from the first. Globbing keeps
+# this true for the next file too.
+JS = "\n".join(p.read_text(encoding="utf-8")
+               for p in sorted((ROOT / "app/static").glob("*.js")))
 HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
 CLIENT = JS + "\n" + HTML
 

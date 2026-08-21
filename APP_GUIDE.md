@@ -83,7 +83,7 @@ Your browser opens at `http://127.0.0.1:8765`. Close the console window to stop 
 ## The workflow
 
 1. **Status / Screenplay** — Status leads with DO THIS NEXT and the blocking
-   list (HOLD/GAP/SIZE/CITE rows with resolving jumps) plus the recent-
+   list (HOLD/GAP/KEY/SIZE/CITE rows with resolving jumps) plus the recent-
    activity feed; the Screenplay stage holds the file, the per-location
    coverage map, and the citation re-check. Upload drafts on stage 01 —
    cited quotes are re-searched on every replace and breaks surface as CITE
@@ -210,6 +210,28 @@ Lessons" and it is matched by its title automatically. Board-presentation and
 process sections are reserved for board assembly, not painted panels. The
 bible's Drift Prevention Rule is enforced on the prose rewriter, which acts as
 the Art Direction Guardian.
+
+### Walkthroughs, and writing them
+
+Onboarding is **content, not code** (2026-08-17). A first-run walkthrough
+and any release announcements are JSON documents in
+`app/content/tutorials/`: a trigger, then steps that point at real controls
+by name, navigate the app, and can hold until the user actually does the
+thing — the FTUE's last step waits on the screenplay upload and moves on by
+itself. They run once per install and resume where they were left.
+
+Settings → **Tutorials** is the editor, and exists only where
+`SCREENBOARD_DEBUG_TOOLS` is set (your installs). On a git checkout, saving
+writes the shipped file — the publish step is `git push`, and the fleet
+picks it up on its next auto-update; a cloud studio without a checkout
+edits its own copy and the page says so. **Forget** re-arms a walkthrough
+so you can test it twice.
+
+Steps name an **anchor** (`stage.screenplay`, `status.next`), never a CSS
+selector, so a redesign moves one line in
+`app/content/tutorial_schema.json` instead of breaking every walkthrough.
+Full reference: `docs/TUTORIALS.md`. The look is non-canon and awaiting a
+design ruling — spec in `TUTORIAL_DESIGN_BRIEF.md`.
 
 ## Canon guarantees enforced in code
 

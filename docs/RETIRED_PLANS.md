@@ -89,3 +89,40 @@ delta as new instructions.
   releases .14–.21; its items shipped across that week's commits. Moved to
   `docs/history/` rather than deleted so the review's reasoning survives —
   it is not binding and must not be implemented again.
+
+- **RULE_PASS_2_2026-08-16_A_ARRANGE / _B_LOOKS / _C_DOOR / _D_ACTS /
+  _E_PICTURES**, **TUTORIAL_RULING_PLAN.md + TUTORIAL_RULING_SNIPPET.html**,
+  **TRIAGE_PLAN_2026-08-18.md**, **DENSITY_PASS_2026-08-17.md** and
+  **README_2026-08-18.md** — delivered in `design_handoff/Tutorial_Design.zip`,
+  implemented 2026-08-18. **Do not confuse the `RULE_PASS_2_*` series with the
+  earlier `RULE_PASS_2026-08-16_*` series above** — different subjects
+  (ARRANGE/LOOKS/DOOR/ACTS/PICTURES vs RULES/STAGE02/SEQUENCE/SETTINGS/STORE),
+  and the near-identical filenames are exactly the trap this ledger exists
+  for. Fifteen Uncanonized rows emptied. **DENSITY_PASS is the one
+  exception: only its five rules were canonized.** Its eleven-surface
+  relayout is NOT implemented — the twelve `design_boards/*.dc.html` are its
+  specification and implementing it without reading them would be
+  reinterpretation, which the design-verify authority order forbids. It
+  needs its own pass, with the boards. Two deviations from the plans, both
+  deliberate: `--ground` was added as a token (the ruling names it and this
+  system had none; borrowing a film-roll token by eye is forbidden by that
+  token block's own comment), and the CMS's `block` checkbox reads *Stop the
+  control being clickable* rather than the plan's *Keep the control
+  clickable*, which would have inverted the stored flag on every authored
+  step.
+
+- **TUTORIAL_MATERIAL_2026-08-19.md** — delivered in
+  `design_handoff/Tut_ModalColors.zip`, implemented 2026-08-19. The tour
+  layer is made of board stock; supersedes §3 (the dim) of
+  TUTORIAL_RULING_PLAN and adds the material ruling that plan lacked. Also
+  ratified `--accent-hover` as-is and closed the `ART_BOARD` mirror's three
+  extra vars. **The rest of that zip was a RESURRECTION** — byte-identical
+  ghosts of RULE_PASS_2 A–E, TRIAGE_PLAN, DENSITY_PASS and
+  TUTORIAL_RULING_SNIPPET, all implemented 2026-08-18 and ledgered above;
+  none re-implemented. `TUTORIAL_RULING_PLAN.md` arrived larger than the
+  copy that shipped, but the README names the delta as the material plan
+  alone, and the ruling plan's own rulings were verified still in place.
+  The design boards were refreshed from it (`Tutorial System.dc.html`
+  gained turn 3a) and kept in `design_handoff/design_boards/` for the
+  density pass, which remains the one unbuilt item.
+

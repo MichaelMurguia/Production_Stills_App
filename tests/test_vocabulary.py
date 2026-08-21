@@ -23,16 +23,27 @@ JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 
 def button_labels() -> list[str]:
     """Every literal label on a location-finder verb."""
-    return re.findall(r'class="(?:block-act loc-draft|loc-open)"[^>]*>([^<${]+)</button>', JS)
+    # D6 (RULE_PASS_2 D, 2026-08-18): `Create breakdown` was an amber
+    # `.block-act` on every location row without a sheet — five or six
+    # stacked on a first look, thirty-eight more after one Expand. A verb
+    # repeated per row is never amber; both verbs are `.text-act` now.
+    return re.findall(r'class="text-act loc-draft"[^>]*>([^<${]+)</button>'
+                      r'|class="loc-open"[^>]*>([^<${]+)</button>', JS)
 
 
 class OneActOneName(unittest.TestCase):
     def test_the_finders_have_labels_to_check(self):
-        self.assertGreaterEqual(len(button_labels()), 3, button_labels())
+        flat = [x for pair in button_labels() for x in pair if x]
+        self.assertGreaterEqual(len(flat), 3, flat)
+
+    def test_a_row_verb_is_never_amber(self):
+        """D6: amber marks one action in view. A row-level verb is a
+        property of the row, not the surface's next act."""
+        self.assertNotIn('class="block-act loc-draft"', JS)
 
     def test_the_breakdown_verb_is_the_same_in_both_finders(self):
         """Screenplay and Production Design both offer it — one wording."""
-        labels = {l.strip() for l in button_labels()}
+        labels = {x.strip() for pair in button_labels() for x in pair if x}
         self.assertTrue(labels <= {"Create breakdown", "Open breakdown"},
                         f"unexpected verb wording: {labels}")
 
@@ -42,7 +53,7 @@ class OneActOneName(unittest.TestCase):
 
     def test_buttons_stay_sentence_case(self):
         """Not Courier caps — a verb is a word, not machine data."""
-        for label in button_labels():
+        for label in [x for pair in button_labels() for x in pair if x]:
             label = label.strip()
             self.assertEqual(label, label[0].upper() + label[1:].lower(), label)
 

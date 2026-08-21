@@ -140,8 +140,10 @@ class TheAffordanceOnlyAppearsWhenItIsNeeded(unittest.TestCase):
         self.assertIn("Reading the screenplay…", seg)
         self.assertIn("nameBtn.disabled = false", seg, "and comes back on failure")
 
-    def test_the_unnamed_state_says_so(self):
-        self.assertIn("STANDARD THREE-ACT SPLIT · UNNAMED", self.JS)
+    def test_one_control_two_presentations(self):
+        """D3/R7: the control becomes `Rename the acts` once names exist."""
+        self.assertIn('acts.some(a => a.title) ? "Rename the acts" : "Name the acts"',
+                      self.JS)
 
 
 class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
@@ -177,10 +179,13 @@ class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
         self.assertIn(".filter(x => x.title)", seg,
                       "clearing a name returns it to an unnamed act")
 
-    def test_the_beat_is_visible_so_the_reading_can_be_checked(self):
-        """The scan is asked for the turn precisely so the name can be
-        argued with. Capturing it and never showing it wastes the point."""
-        self.assertIn('Turns on: ', self.JS)
+    def test_the_beat_is_printed_not_hidden_in_a_tooltip(self):
+        """D2 (2026-08-18): the turn is the evidence that makes an inferred
+        act name checkable, and it was a bare `title` on the group — the
+        evidence, hidden. A tooltip nobody knows exists is not
+        documentation."""
+        self.assertIn("loc-turn mono\">TURNS ON —", self.JS)
+        self.assertNotIn("Turns on: ", self.JS)
 
 
 if __name__ == "__main__":

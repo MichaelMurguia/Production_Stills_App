@@ -54,12 +54,18 @@ class LooksHomeTest(unittest.TestCase):
 
 class FontTests(unittest.TestCase):
     """Phase 0 — bundled OFL faces. Linux tenants rendered bitmap type
-    for a month because _VOICES was Windows paths; the bundle is the fix
-    and the hand voice only exists bundled."""
+    for a month because _VOICES was Windows paths; the bundle is the fix.
+    The `hand` voice (Caveat) was withdrawn by RULE_PASS_2 B5 on
+    2026-08-18 — its face left the bundle with it, so a reappearance here
+    means the withdrawn look crept back into the render path."""
+
+    def test_the_withdrawn_hand_voice_stays_out_of_the_render_path(self):
+        self.assertNotIn("hand", sheet_render._VOICES)
+        self.assertFalse((ROOT / "app" / "fonts" / "caveat").exists())
 
     def test_every_voice_resolves_a_bundled_truetype(self):
         fonts_dir = ROOT / "app" / "fonts"
-        for voice in ("serif", "mono", "sans", "slab", "hand"):
+        for voice in ("serif", "mono", "sans", "slab"):
             first = sheet_render._VOICES[voice][0]
             self.assertTrue(str(first).startswith(str(fonts_dir)),
                             f"{voice} must resolve bundled-first: {first}")
@@ -125,7 +131,9 @@ class LookModelTests(LooksHomeTest):
         stored = sheet.get_sheet(rec["sheet_id"])
         d = looks.dressed(stored)
         self.assertEqual(d["style"], "ART_BOARD")
-        self.assertEqual(d["dress_annotations"], "hand")
+        # B5 (RULE_PASS_2 B, 2026-08-18): the `hand` (Caveat) voice is
+        # withdrawn — two real Art Boards used it zero times.
+        self.assertEqual(d["dress_annotations"], "callout")
         self.assertGreater(d["size"][1], stored["size"][1],
                            "the page must grow, never the panels shrink")
         self.assertEqual(d["size"][0], stored["size"][0])

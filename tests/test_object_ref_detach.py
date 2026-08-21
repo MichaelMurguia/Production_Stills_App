@@ -96,7 +96,11 @@ class TheUiOffersIt(unittest.TestCase):
 
     def test_the_plate_viewer_carries_the_verb(self):
         self.assertIn('data-f="vr-detach"', JS)
-        self.assertIn(">Remove reference</button>", JS)
+        # TRIAGE §1 (ruled 2026-08-18): `Remove reference` read as a
+        # library deletion, and the row's own note said the tooltip
+        # carried the whole burden — a verb that needs a tooltip to not
+        # be misread is the wrong verb.
+        self.assertIn(">Not this object's reference</button>", JS)
 
     def test_the_copy_says_the_plates_are_not_deleted(self):
         """The verb is "Remove reference" (user-chosen 2026-08-16), which

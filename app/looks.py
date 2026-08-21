@@ -25,17 +25,28 @@ from __future__ import annotations
 
 import copy
 
-from . import sheet, store, wizard
+from . import bible, sheet, store, wizard
 
 GAP = 0.015          # breathing space between dress regions
-MAX_SWATCHES = 24
+# B2 (RULE_PASS_2 B, ruled 2026-08-18): 24 put nineteen swatches in one flat
+# strip — Art Board truncated six of nineteen names and Tech Design dropped
+# the names entirely and kept the hexes. A legend that cannot be read is
+# decoration, and it had it backwards: a hex is recoverable from the pixel,
+# a material name is not. The strip now draws only the languages THIS
+# board's panels cite, capped at twelve, and the remainder is stated.
+MAX_SWATCHES = 12
 MAX_MATERIALS = 8
 
 LOOKS: dict[str, dict] = {
     "ART_BOARD": {
         "label": "Art Board",
         "style": "ART_BOARD",
-        "annotations": "hand",
+        # B5 (RULE_PASS_2 B, ruled 2026-08-18): the `hand` (Caveat) voice is
+        # WITHDRAWN. Two real rendered boards used it zero times, and a hand
+        # annotation on a production still board is decoration on the one
+        # artifact that must not be decorated. Do not reinstate without a
+        # board that needs it attached.
+        "annotations": "callout",
         "options": {
             "palette_strip": {"label": "Palette swatches", "default": True},
             "materials": {"label": "Material callouts", "default": False},
@@ -92,17 +103,45 @@ def set_look(sheet_id: str, key: str | None, options: dict | None = None) -> dic
 
 # ------------------------------------------------------------ canon pulls
 
-def _swatches() -> list[dict]:
-    """Every live swatch across the production's design languages, in
-    reference order — {language, name, hex, hero}."""
+def _cited_languages(spec: dict) -> list[str]:
+    """The design languages this board's own panels cite — the spec's
+    explicit scope when it has one, the same keyword inference the prompt
+    compiler uses when it does not. Reused, never reimplemented: the strip
+    and the render must agree about which languages are in play."""
+    explicit = spec.get("design_languages")
+    if isinstance(explicit, list) and explicit:
+        return [str(x) for x in explicit]
+    haystack = " ".join(str(x) for x in [
+        spec.get("subject", ""), spec.get("scene", ""),
+        (spec.get("setting") or {}).get("location", ""),
+        " ".join(str(p.get("purpose", "")) for p in spec.get("panels", [])),
+    ])
+    try:
+        return bible.infer_selection(haystack).get("design_languages", [])
+    except Exception:
+        return []
+
+
+def _swatches(spec: dict | None = None) -> dict:
+    """The swatches this board may draw, and what it had to leave out.
+
+    Returns {swatches, omitted_languages}. `omitted_languages` is stated on
+    the sheet in one Courier line rather than silently dropped — B2's rule
+    is that a name is never truncated, so a strip that cannot fit its names
+    draws fewer swatches, not shorter words."""
     live, _dead = wizard.swatches_in_play(None)
+    cited = _cited_languages(spec or {})
+    order = [l for l in cited if l in live] or list(live)
     out = []
-    for language in live:
+    for language in order:
         for sw in live[language]:
             out.append({"language": language, "name": sw.get("name", ""),
                         "hex": sw.get("hex", ""),
                         "hero": bool(sw.get("hero"))})
-    return out[:MAX_SWATCHES]
+    kept = out[:MAX_SWATCHES]
+    shown = {sw["language"] for sw in kept}
+    return {"swatches": kept,
+            "omitted_languages": [l for l in live if l not in shown]}
 
 
 def _materials() -> list[dict]:
@@ -181,19 +220,20 @@ def dressed(rec: dict) -> dict:
     col: list[dict] = []
     col_w = 0.0
     if key == "ART_BOARD":
-        sw = _swatches() if opts["palette_strip"] else []
+        swx = _swatches(spec) if opts["palette_strip"] else {}
+        sw, sw_more = swx.get("swatches", []), swx.get("omitted_languages", [])
         mats = _materials() if opts["materials"] else []
         if sw and mats:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
                 {"kind": "PALETTE", "span": (0.0, 0.5 - GAP / 2),
-                 "data": {"swatches": sw}},
+                 "data": {"swatches": sw, "more": sw_more}},
                 {"kind": "MATERIAL", "span": (0.5 + GAP / 2,
                                                     0.5 - GAP / 2),
                  "data": {"refs": mats}}]))
         elif sw:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
                 {"kind": "PALETTE", "span": (0.0, 1.0),
-                 "data": {"swatches": sw}}]))
+                 "data": {"swatches": sw, "more": sw_more}}]))
         elif mats:
             bands.append(("PALETTE_BAND", 0.08 * CH, [
                 {"kind": "MATERIAL", "span": (0.0, 1.0),
@@ -217,14 +257,15 @@ def dressed(rec: dict) -> dict:
                 col.append({"kind": "PRINCIPLES", "vspan": (0.62, 0.38),
                             "data": {"text": profile}})
         mats = _materials() if opts["materials"] else []
-        sw = _swatches() if opts["palette"] else []
+        swx = _swatches(spec) if opts["palette"] else {}
+        sw, sw_more = swx.get("swatches", []), swx.get("omitted_languages", [])
         if mats and sw:
             bands.append(("TECH_BAND", 0.07 * CH, [
                 {"kind": "MATERIAL", "span": (0.0, 0.5 - GAP / 2),
                  "data": {"refs": mats}},
                 {"kind": "PALETTE", "span": (0.5 + GAP / 2,
                                                   0.5 - GAP / 2),
-                 "data": {"swatches": sw, "compact": True}}]))
+                 "data": {"swatches": sw, "more": sw_more, "compact": True}}]))
         elif mats:
             bands.append(("TECH_BAND", 0.07 * CH, [
                 {"kind": "MATERIAL", "span": (0.0, 1.0),
@@ -232,7 +273,7 @@ def dressed(rec: dict) -> dict:
         elif sw:
             bands.append(("TECH_BAND", 0.07 * CH, [
                 {"kind": "PALETTE", "span": (0.0, 1.0),
-                 "data": {"swatches": sw, "compact": True}}]))
+                 "data": {"swatches": sw, "more": sw_more, "compact": True}}]))
 
     gap_y = GAP * CH
     gap_x = GAP * CW

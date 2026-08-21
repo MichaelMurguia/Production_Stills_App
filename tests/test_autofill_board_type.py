@@ -157,18 +157,22 @@ class TheIntakeStatesIt(unittest.TestCase):
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
     HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
 
-    def test_the_auto_form_has_a_board_type_control(self):
-        self.assertIn('<select id="spec-auto-btype">', self.HTML)
+    def test_the_door_has_a_board_type_control(self):
+        """RULE_PASS_2 C1 (2026-08-18) collapsed the two intake doors into
+        one — the second was a strict superset of the first, and amber sat
+        on the superseded one. `#spec-auto-*` retired."""
+        self.assertIn('<select id="spec-new-btype">', self.HTML)
+        self.assertNotIn("spec-auto-", self.JS)
 
-    def test_it_offers_the_same_vocabulary_as_the_blank_sheet_form(self):
-        self.assertIn("autoBtype.innerHTML = BOARD_TYPES.map", self.JS)
+    def test_it_offers_the_same_vocabulary_everywhere(self):
+        self.assertIn("BOARD_TYPES.map", self.JS)
 
     def test_it_is_posted(self):
-        self.assertIn('board_type: $("#spec-auto-btype")?.value || ""', self.JS)
+        self.assertIn('board_type: $("#spec-new-btype")?.value', self.JS)
 
     def test_it_survives_a_reload_like_the_other_fields(self):
-        i = self.JS.index('persistForm("breakdownDraft"')
-        self.assertIn("spec-auto-btype", self.JS[i:i + 240])
+        i = self.JS.index('persistForm("blankSpecDraft"')
+        self.assertIn("spec-new-btype", self.JS[i:i + 260])
 
     def test_the_hint_defaults_it_and_then_stops(self):
         """A scene row means SCENE, a location row LOCATION — but once the

@@ -108,10 +108,17 @@ class AddReferenceInPlacePins(unittest.TestCase):
         # grows, and this one already walked off twice (2026-08-14/15).
         i = JS.index("function viewObjectReferences")
         block = JS[i:JS.index(chr(10) + "const SHELVES", i)]
-        self.assertIn("THE RENDER WORKS FROM EXACTLY WHAT IS BELOW", block)
-        self.assertIn("One plate is a thin", block)
+        # E3 (RULE_PASS_2 E, 2026-08-18): the thin-anchor warning was a
+        # three-sentence paragraph AFTER the grid. It is a Courier fact at
+        # the head now, beside the count, and its verb was already there.
+        self.assertIn("THIN ANCHOR — ONE ANGLE STEERS EVERY RENDER", block)
+        self.assertNotIn("One plate is a thin", block)
         self.assertIn('data-f="vr-add"', block)
-        self.assertIn("CONTROLS ", block)
+        # E0: jurisdiction is ONE renderer now, shared with the library
+        # shelf — and it is not drawn at all where there is none to state.
+        self.assertIn("jurisRows(r.controls, r.does_not_control)", block)
+        self.assertIn('<div class="juris ok">CONTROLS ', JS)
+        self.assertIn("NO JURISDICTION SET", JS)
 
     def test_the_gallery_uses_the_library_grid_not_a_shrinking_column(self):
         """User-hit 2026-08-14: a flex column shrank five cards to 76px
@@ -122,9 +129,13 @@ class AddReferenceInPlacePins(unittest.TestCase):
         # grows, and this one already walked off twice (2026-08-14/15).
         i = JS.index("function viewObjectReferences")
         block = JS[i:JS.index(chr(10) + "const SHELVES", i)]
-        self.assertIn('class="ref-grid${narrowed ? " vr-only" : ""}"', block,
-                      "the library grid, optionally narrowed to the plates "
-                      "that actually ride (user 2026-08-15)")
+        # E1 (2026-08-18): the modal answers "do these plates cover the
+        # angles?" — a comparison. The plates ARE the surface: one row at
+        # full width, own ratios, md tier, not thumbs under five text rows.
+        self.assertIn('class="vr-strip${narrowed ? " vr-only" : ""}"', block,
+                      "a filmstrip of the thing being judged, optionally "
+                      "narrowed to the plates that actually ride")
+        self.assertIn("size=md", block, "not thumb tier — this is the judging")
         self.assertNotIn("flex-direction:column", block)
         self.assertNotIn('class="primary" data-f="vr-close"', block,
                          "a dismissal is not the view's primary action")

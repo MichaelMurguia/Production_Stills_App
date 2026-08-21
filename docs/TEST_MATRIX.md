@@ -49,6 +49,44 @@ bible section parsing + selective injection (`test_bible`); generation
 units (`test_generate_units`: aspect catalog, prompt pieces); wizard
 re-run merge semantics; path/project isolation (`test_paths_projects`).
 
+**Tutorials** (2026-08-17, `test_tutorials.py` 33 + `TutorialRoutes` in
+`test_app_api.py` 6) — the two places an authored-content system rots are
+both pinned. **The anchor registry**: every selector in
+`content/tutorial_schema.json` is resolved against the real markup, so a
+renamed id fails the build instead of stranding a spotlight in front of a
+customer. **One vocabulary, two languages**: the predicate kinds the Python
+validator accepts and the kinds `tutorial.js` evaluates are read off disk
+and compared both ways — a kind the server accepts and the browser ignores
+is a tutorial that silently never fires, and a kind only the browser knows
+can never be authored. Also: every packaged tutorial validates and the FTUE
+is live; the example announcement ships disabled; contexts are enforced
+(`first_run` refused as an *advance* condition, `click` refused as a
+trigger); `goto` cannot leave the app; install content overrides packaged
+by id and a tombstone hides one; a corrupt file does not take the others
+down; broken content is inert rather than half-run; state records/resumes
+/resets and refuses a traversing id; the CMS is 404 to a customer while the
+runtime bundle is open to every studio; and invalid content is refused with
+every reason at once.
+
+**Credentials as a blocker** (2026-08-18, `test_credential_blocker.py`
+19) — `generate.capability()` across the states that matter: nothing
+configured, a settings key, an environment key, a key that failed its own
+test (not usable, and `failed` set so the copy can differ), an untested key
+(usable — never proven to fail), a narrative-only credential leaving the
+image role down, and the mock engine (runnable without making the install
+*configured*, so Settings still offers its setup form). Then the rows
+themselves: one row while both roles are down, none when configured,
+per-role consequence and stage, failing-vs-missing copy, the sort position
+(screenplay leads, KEY outranks the board-layout gap), and that the KEY row
+becomes the next action once the draft is in. `KindsAreFullyWired` scans
+`insights.py` for every kind the server can emit and asserts each has a
+verb, a badge rule and a support line — a kind with no verb silently reads
+"Open". `OneAuthority` pins the consolidation: the client no longer
+recomputes whether a key exists, and the settings route no longer rebuilds
+the engine block. **The fixtures clear `OPENAI_API_KEY`/`GEMINI_API_KEY`
+from the environment** — without that these tests pass or fail depending on
+the developer's shell, which on this machine exports both.
+
 **Storefront** — fulfillment idempotency + Stripe-shaped access;
 provisioning converge/retry/revoke + fleet update (drain config, pinned
 sha, failure recording); magic-link lifecycle (single-use, uniform

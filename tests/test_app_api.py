@@ -4,6 +4,7 @@ home so the real install is never touched."""
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -347,6 +348,87 @@ class RenameTests(unittest.TestCase):
         self.assertEqual(state["project"], "Dune But Cheaper")
         self.assertEqual(self.client.post("/api/projects/rename",
                                           json={"name": "  "}).status_code, 422)
+
+
+class TutorialRoutes(unittest.TestCase):
+    """The gate that matters: consuming a tutorial is open to every studio,
+    authoring one is not. A customer must be able to run the FTUE and must
+    never reach the CMS."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-tut-api-"))
+        _redirect_home(self.tmp)
+        self.client = TestClient(appmain.app)
+        self._dbg = os.environ.pop("SCREENBOARD_DEBUG_TOOLS", None)
+        from app import tutorials
+        self._can = tutorials.can_ship
+        tutorials.can_ship = lambda: False   # never write the repo from a test
+
+    def tearDown(self):
+        from app import tutorials
+        tutorials.can_ship = self._can
+        if self._dbg is None:
+            os.environ.pop("SCREENBOARD_DEBUG_TOOLS", None)
+        else:
+            os.environ["SCREENBOARD_DEBUG_TOOLS"] = self._dbg
+        _restore_home()
+
+    def test_the_runtime_bundle_is_open_to_every_studio(self):
+        r = self.client.get("/api/tutorials")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body["anchors"], "a studio cannot resolve a spotlight "
+                                         "without the anchor map")
+        self.assertIn("first-board", [t["id"] for t in body["tutorials"]])
+
+    def test_a_customer_cannot_reach_the_cms(self):
+        self.assertEqual(self.client.get("/api/tutorials/admin").status_code, 404)
+        self.assertEqual(self.client.put(
+            "/api/tutorials/admin/x", json={"id": "x"}).status_code, 404)
+        self.assertEqual(self.client.delete(
+            "/api/tutorials/admin/x").status_code, 404)
+
+    def test_a_studio_records_and_resets_its_own_progress(self):
+        r = self.client.post("/api/tutorials/state",
+                             json={"id": "first-board", "status": "seen",
+                                   "step": 2, "rev": 1})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["state"]["first-board"]["step"], 2)
+        # Seeing it again is the user's right, not an owner privilege.
+        r = self.client.post("/api/tutorials/state/reset",
+                             json={"id": "first-board"})
+        self.assertEqual(r.json()["state"], {})
+
+    def test_a_bad_status_is_refused_at_the_edge(self):
+        r = self.client.post("/api/tutorials/state",
+                             json={"id": "first-board", "status": "vibes"})
+        self.assertEqual(r.status_code, 422)
+
+    def test_the_owner_can_write_and_delete(self):
+        os.environ["SCREENBOARD_DEBUG_TOOLS"] = "1"
+        listing = self.client.get("/api/tutorials/admin")
+        self.assertEqual(listing.status_code, 200)
+        self.assertIn("schema", listing.json())
+        doc = {"id": "made-up", "kind": "flow", "title": "Made up", "rev": 1,
+               "steps": [{"surface": "spotlight", "anchor": "band",
+                          "title": "Here"}]}
+        r = self.client.put("/api/tutorials/admin/made-up", json=doc)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertIn("made-up",
+                      [t["id"] for t in self.client.get("/api/tutorials").json()["tutorials"]])
+        self.assertEqual(self.client.delete(
+            "/api/tutorials/admin/made-up").status_code, 200)
+        self.assertNotIn("made-up",
+                         [t["id"] for t in self.client.get("/api/tutorials").json()["tutorials"]])
+
+    def test_invalid_content_is_refused_with_every_reason_at_once(self):
+        os.environ["SCREENBOARD_DEBUG_TOOLS"] = "1"
+        r = self.client.put("/api/tutorials/admin/broken", json={
+            "id": "broken", "kind": "flow", "title": "",
+            "steps": [{"surface": "spotlight", "title": "x"}]})
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("title", r.json()["detail"])
+        self.assertIn("anchor", r.json()["detail"])
 
 
 class CountsPluralise(unittest.TestCase):

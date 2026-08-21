@@ -816,6 +816,43 @@ class RenderTests(SheetHomeTest):
                 "crop": {"x": 0, "y": 0, "w": 1.0, "h": 1.0, "rotate": 0.0}}
         return _mk("SCREEN", [_block("HERO", slots=[slot])], size=size)
 
+    # -- RULE_PASS_2 Part B (ruled 2026-08-18) ---------------------------
+
+    def test_a_sheet_composes_the_pictures_it_has(self):
+        """B1: an empty cell reserved the shape of a missing thing and
+        promised a picture the board does not have — the same five cells
+        were empty in all three looks, including INK. It is not drawn, and
+        the foot states the absence so the export gate is no longer the
+        only place the truth lives."""
+        from app import sheet_render
+        s = self._filled_sheet(1920, 1080)
+        blk = s["blocks"][0]
+        for i in range(2, 5):
+            blk["slots"].append({
+                "slot_id": f"S{i}", "label": f"P0{i}",
+                "frac": {"x": 0, "y": 0, "w": 0.2, "h": 0.2},
+                "crop": {"x": 0, "y": 0, "w": 1.0, "h": 1.0, "rotate": 0.0}})
+        manifest: list = []
+        sheet_render.render_sheet(s, 1.0, manifest=manifest)
+        drawn = manifest[0]["slots"]
+        self.assertEqual(len(drawn), 4, "every slot still declares its rect")
+        self.assertEqual(sum(1 for d in drawn if d["filled"]), 1)
+
+    def test_the_foot_states_what_was_not_composed(self):
+        """B1's Courier line, contiguous ids collapsed to a run."""
+        from app import sheet_render
+        self.assertEqual(
+            sheet_render._run_names(["P05", "P06", "P07", "P08", "P09"]),
+            "P05–P09")
+        self.assertEqual(sheet_render._run_names(["P02", "P07"]), "P02, P07")
+
+    def test_nothing_on_a_sheet_clips_mid_word(self):
+        """B3: the atmosphere strip ran off the page — clipped mid-word,
+        no ellipsis, content silently lost, and a sheet has no scroll to
+        recover it."""
+        from app import sheet_render
+        self.assertEqual(sheet_render.MAX_STRIP_LINES, 2)
+
     def test_render_raises_rather_than_letterboxing_on_a_short_slot(self):
         from app import sheet_render
         s = self._filled_sheet(640, 360, size=(3840, 2160))

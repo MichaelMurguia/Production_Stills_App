@@ -445,10 +445,13 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".lb-room", [
             "grid-template-columns: 186px minmax(0, 1fr) 300px"])
 
-    def test_composer_selection_is_the_amber(self):
-        """The composer's selection outline spends the amber; unselected
-        blocks carry no color until hovered."""
-        self.assert_decls(".ov-block.sel", ["border-color: var(--accent)"])
+    def test_composer_selection_is_an_outline_not_a_colour(self):
+        """RULE_PASS_2 A5 (2026-08-18) reversed this: status owns colour,
+        selection owns an outline. Amber marks the current stage, the one
+        primary action and focus — a selected block is none of the three,
+        and the arrange room had SIX ambers on one screen."""
+        self.assert_decls(".ov-block.sel", ["border-color: var(--ink)"])
+        self.assertNotIn("--accent", block(".ov-block.sel"))
         self.assert_decls(".ov-block", ["border: 1px solid transparent"])
 
     def test_composer_amber_stops_at_two(self):
@@ -503,6 +506,180 @@ class TokenContractTests(unittest.TestCase):
         self.assertNotIn("--accent", block(".arr-style-card.on"))
         self.assert_decls(".arr-style-img", ["background: var(--bg2)"])
 
+    # -- tutorials (UNCANONIZED 2026-08-17) --------------------------------
+
+    def test_tutorial_layer_sits_between_the_dialog_and_the_lightbox(self):
+        """A step can point at something inside an app dialog (400), so the
+        tour must outrank it; the cropper (480) and lightbox (500) are
+        full-surface tools a tour has no business drawing over."""
+        z = int(re.search(r"z-index:\s*(\d+)", block(".tut-layer")).group(1))
+        self.assertGreater(z, 400)
+        self.assertLess(z, 480)
+
+    def test_the_tour_is_made_of_board_stock(self):
+        """TUTORIAL_MATERIAL (ruled 2026-08-19). Removing the amber ring
+        fixed a COLOUR collision and left a MATERIAL one — a --panel2 card
+        beside a spotlit app card that is also a dark panel with a
+        hairline. Dimming cannot fix that: it makes the app quieter, not
+        the tour different. The tour stops being a panel."""
+        self.assert_decls(".tut-pop", [
+            "background: var(--sheet-paper)", "color: var(--sheet-ink)",
+            "border: 4px solid var(--sheet-mat)"])
+        self.assert_decls(".tut-mask", ["pointer-events: auto"])
+
+    def test_it_reads_the_same_declaration_as_the_artifact(self):
+        """So the tour's material cannot drift from the board stock it is
+        made of — and the one sanctioned exception to `artifact ink, never
+        chrome` is visible in the CSS rather than remembered."""
+        self.assertIn('.sheet[data-style="ART_BOARD"], .tut-pop {', CSS)
+
+    def test_over_a_dimmed_app_elevation_is_not_a_shadow(self):
+        """Near-black on near-black is about one value step in 255."""
+        self.assertNotIn("box-shadow", block(".tut-pop.tut-docked"))
+
+    def test_the_tour_target_is_matted_not_lit(self):
+        """Q1 (TUTORIAL_RULING, ruled 2026-08-18): the ring is REFUSED. A
+        tour target is none of amber's three jobs — it is a thing POINTING
+        at one. A passe-partout, not a highlight."""
+        self.assertNotIn(".tut-ring", CSS)
+        self.assert_decls(".tut-mount", [
+            "border: 8px solid var(--field)",
+            "outline: 1px solid var(--ink-faint)",
+            "box-sizing: border-box"])
+        # the mat is the BAND — a fill would put a lid on the hole
+        self.assertIn("background: transparent", block(".tut-mount"))
+
+    def test_hatch_has_exactly_one_job_on_the_tour_layer(self):
+        """S10: the blocked target is the only state where the user is
+        shown something they cannot touch, and the app already has the
+        word for that."""
+        self.assertIn("repeating-linear-gradient", block(".tut-mount.is-blocked"))
+
+    def test_the_tour_layer_touches_no_chrome_amber_at_all(self):
+        """TUTORIAL_MATERIAL: chrome amber has no place on parchment, so
+        the rule now holds BY CONSTRUCTION rather than as a discipline the
+        build has to remember. `.tut-adm-*` is the CMS — that is chrome and
+        is not covered."""
+        for m in re.finditer(r"(\.tut-(?!adm)[\w.\[\]=\"'-]*)\s*{([^}]*)}", CSS):
+            for tok in ("--accent", "--accent-soft", "--accent-line",
+                        "--accent-hover"):
+                self.assertNotIn(tok, m.group(2),
+                                 f"{m.group(1)} borrows chrome amber")
+
+    def test_a_tour_spends_no_amber_except_on_its_own_foot(self):
+        """§0: a tour is never the work, it points at the work. The only
+        amber a tour may spend is a `.primary` on a step with no target,
+        and that is decided in JS, not in a .tut-* rule."""
+        for m in re.finditer(r"(\.tut-[\w.\[\]=\"-]*)\s*{([^}]*)}", CSS):
+            self.assertNotIn("--accent", m.group(2),
+                             f"{m.group(1)} spends amber on the tour layer")
+
+    def test_the_dim_goes_down_not_sideways(self):
+        """Q3: the old scrim was a PANEL colour over a darker ground, so it
+        lightened the ground slightly and read as "slightly darker"."""
+        self.assert_decls(".tut-mask", ["background: var(--ground)",
+                                        "opacity: .92"])
+
+    def test_the_held_line_is_type_and_rule_not_colour(self):
+        """Emphasis on paper is weight and a rule — which is how the
+        sheet's own masthead works. The sheet's accent is 3.15:1 on
+        parchment: fine for a 2px rule, refused for type."""
+        self.assert_decls(".tut-wait", [
+            "letter-spacing: .1em", "text-transform: uppercase",
+            "font-weight: 600", "color: var(--sheet-ink)",
+            "border-top: 2px solid var(--sheet-accent)"])
+        self.assert_decls(".tut-kicker", ["color: var(--sheet-dim-ui)"])
+
+    def test_the_primary_act_inverts_rather_than_colouring(self):
+        self.assert_decls(".tut-foot .primary", [
+            "background: var(--sheet-ink)", "color: var(--sheet-paper)"])
+
+    def test_tutorial_motion_is_reduced_motion_guarded(self):
+        blocks = re.findall(
+            r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", CSS, re.S)
+        self.assertTrue(any(".tut-nudge" in b for b in blocks),
+                        "the nudge must be silenced for reduced motion")
+
+    def test_the_cms_step_card_sits_on_the_panel_ladder(self):
+        """Transliterated from the board (turn 2a): #15181b is --bg2."""
+        self.assert_decls(".tut-adm-step", [
+            "background: var(--bg2)", "border: 1px solid var(--line)"])
+
+    def test_the_cms_is_chrome_not_board_stock(self):
+        """The 2026-08-19 material ruling is the TOUR layer's. The editor
+        is chrome and stays on the app's own surfaces — a warm editor
+        would claim to be the artifact it edits."""
+        for sel in (".tut-adm-step", ".tut-adm-errors"):
+            self.assertNotIn("--sheet-", block(sel))
+
+
+class ArrangeRoomTests(unittest.TestCase):
+    """RULE_PASS_2 Part A (ruled 2026-08-18). The room had SIX ambers on
+    one screen and used the approval colour for autosave and the rejection
+    colour for a frame that is merely too small. Status owns colour;
+    selection owns an outline."""
+
+    def assert_decls(self, sel, decls):
+        b = block(sel)
+        for d in decls:
+            self.assertIn(d, b, f"{sel}: missing '{d}'")
+
+    def test_selection_is_an_outline_not_the_accent(self):
+        for sel in (".arr-tile.active", ".arr-tile.lifted", ".arr-tool.on",
+                    ".arr-crop-box", ".arr-crop-box .bk", ".ov-block.sel"):
+            self.assertNotIn("--accent", block(sel),
+                             f"{sel} still spends the amber on selection")
+
+    def test_a_report_has_no_amber(self):
+        """.arr-chip is a readout following the pointer."""
+        self.assertNotIn("--accent", block(".arr-chip"))
+        self.assert_decls(".arr-chip", ["color: var(--ink)",
+                                        "border: 1px solid var(--line)"])
+
+    def test_a_short_frame_is_not_a_rejected_one(self):
+        self.assertNotIn("rgba(224, 82, 66", block(".arr-tile.short::after"))
+        self.assert_decls(".arr-verdict", ["color: var(--ink)"])
+        self.assert_decls(".arr-bad", ["color: var(--ink)"])
+
+    def test_a_control_at_rest_is_not_the_primary_act(self):
+        self.assert_decls('.arr-ctls input[type="range"]',
+                          ["accent-color: var(--ink)"])
+
+    def test_size_tracks_consequence(self):
+        """The claim arrow mutates OTHER tiles and was the smallest
+        target in the room."""
+        self.assert_decls(".arr-arrow", ["width: 28px", "height: 28px"])
+        self.assert_decls(".arr-arrow svg", ["width: 14px", "height: 14px"])
+
+    def test_the_corner_add_left_the_board(self):
+        """It floated on the board's bottom-right, which is always some
+        tile's bottom-right, four pixels off that tile's readout."""
+        b = block(".arr-corner-add")
+        self.assertNotIn("position: absolute", b)
+        self.assertIn("height: 40px", b)
+
+
+class BrandMarkTests(unittest.TestCase):
+    """The wordmark links to the website (user 2026-08-18). It opens in a
+    new tab on purpose: this is a work surface with renders in flight, and
+    leaving the studio must never be a side effect of clicking the logo."""
+
+    HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+
+    def test_it_is_a_real_link_to_the_site(self):
+        i = self.HTML.index('class="brand-title"')
+        seg = self.HTML[i - 40:i + 320]
+        self.assertIn("<a ", seg, "an anchor — focusable, and the browser's "
+                                  "own open-in-new-tab works on it")
+        self.assertIn('href="https://www.screenboardstudio.com"', seg)
+        self.assertIn('target="_blank"', seg)
+        self.assertIn('rel="noopener"', seg)
+
+    def test_it_still_reads_as_the_wordmark(self):
+        b = block(".brand-title")
+        self.assertIn("text-decoration: none", b)
+        self.assertIn("color: inherit", b)
+
 
 class MiniMonoTests(unittest.TestCase):
     def test_mini_mono_is_courier(self):
@@ -551,6 +728,52 @@ class HarnessAuditTests(unittest.TestCase):
                       "the forced 3-column break below ~1000px")
 
 
+class TourContrast(unittest.TestCase):
+    """TUTORIAL_MATERIAL (2026-08-19): the sheet's inks are calibrated for
+    PRINT — PIL draws them onto 3840×2160 artwork where a caption is
+    physically large. Borrowed verbatim as 9px UI text on the same paper,
+    `dim` measures 3.94:1 and the accent 3.15:1, which made the one line
+    the tour says must not be missed the least legible thing on the card.
+    Provenance was right; legibility was never checked. This is that
+    check."""
+
+    @staticmethod
+    def _lum(h):
+        h = h.lstrip("#")
+        def ch(c):
+            c /= 255
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+    @classmethod
+    def ratio(cls, a, b):
+        la, lb = cls._lum(a), cls._lum(b)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+    def vars_(self):
+        m = re.search(r'\.sheet\[data-style="ART_BOARD"\], \.tut-pop \{([^}]*)\}',
+                      CSS, re.S)
+        self.assertTrue(m, "the tour must read the artifact's own declaration")
+        return dict(re.findall(r"(--sheet-[\w-]+):\s*(#[0-9a-f]{6})", m.group(1)))
+
+    def test_every_text_colour_on_the_paper_clears_aa(self):
+        v = self.vars_()
+        paper = v["--sheet-paper"]
+        for key in ("--sheet-ink", "--sheet-dim-ui"):
+            r = self.ratio(paper, v[key])
+            self.assertGreaterEqual(round(r, 2), 4.5,
+                                    f"{key} is {r:.2f}:1 on the tour's paper")
+
+    def test_the_sheet_accent_is_never_type(self):
+        """It is 3.15:1 — carried in the mirror with that constraint so
+        nobody reasonably reaches for it as a label."""
+        v = self.vars_()
+        self.assertLess(self.ratio(v["--sheet-paper"], v["--sheet-accent"]), 4.5)
+        for sel in (".tut-title", ".tut-p", ".tut-wait", ".tut-kicker"):
+            self.assertNotIn("color: var(--sheet-accent)", block(sel))
+
+
 class NoUndocumentedHex(unittest.TestCase):
     """A hex outside `:root` must be sanctioned by a named ruling.
 
@@ -584,6 +807,17 @@ class NoUndocumentedHex(unittest.TestCase):
         "#1c4f7c": "BLUEPRINT paper", "#eef3f8": "BLUEPRINT ink",
         "#fbfbf9": "PLATE paper", "#1e1e1c": "PLATE ink",
         "#131418": "INK paper", "#e2ddd0": "INK inset",
+        # RULE_PASS_2 B4 (2026-08-18) — the two look styles were outside
+        # the mirror, which is the drift the mirror exists to prevent
+        "#ece4d2": "ART_BOARD paper", "#ded4c0": "ART_BOARD mat",
+        "#28221a": "ART_BOARD ink", "#101216": "TECH_DESIGN paper",
+        "#e2e6eb": "TECH_DESIGN ink",
+        # TUTORIAL_MATERIAL (2026-08-19) — the tour is made of board stock
+        "#a6763a": "ART_BOARD accent — a 2px RULE only, 3.15:1 on paper",
+        "#695e4c": "--sheet-dim-ui, a screen-calibrated derivation of "
+                   "ART_BOARD's dim (3.94:1 as 9px UI text) — 5.02:1, "
+                   "tour layer only, never a sheet ink",
+        "#3a3124": "the parchment primary's hover — ink, lifted",
         # artifact ink — the board preview frame is a picture of a board
         "#2a2723": "board-frame ground", "#232019": "board-frame slot",
         "#9a978f": "board-frame subtitle",
@@ -595,6 +829,17 @@ class NoUndocumentedHex(unittest.TestCase):
         "#211b1b": "hatch-bad band A", "#1b1717": "hatch-bad band B",
         "#000": "the colour picker's empty state — no colour, not a colour",
     }
+
+    def test_the_sheet_mirror_covers_every_render_style(self):
+        """RULE_PASS_2 B4: two of eight styles had no DOM mirror, which is
+        exactly the drift the mirror's own comment says it prevents. This
+        reads the renderer, so a new style fails here until it is
+        mirrored."""
+        sys.path.insert(0, str(ROOT))
+        from app.sheet_render import STYLE_INK
+        for key in STYLE_INK:
+            self.assertIn(f'.sheet[data-style="{key}"]', CSS,
+                          f"{key} has no DOM mirror")
 
     def test_every_hex_outside_root_is_sanctioned(self):
         body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)

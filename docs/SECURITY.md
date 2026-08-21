@@ -54,6 +54,22 @@ secrets exist only in Railway variables and local shells.
    response.
 6. **Release artifacts are clean.** The staged zip is verified to contain
    no `data/`, `projects/`, `project_state/`, `settings.json`, or bible.
+7. **Authored tutorials cannot become an injection surface** (2026-08-17).
+   A tutorial is content written through a text box and then rendered into
+   the app, so it is treated as untrusted even though its author holds the
+   workspace token. Bodies are escaped first and only `**bold**` and
+   `` `code` `` are restored — **HTML is never rendered**, and there is no
+   path by which authored text reaches `innerHTML` unescaped. A step's
+   `goto` and its act button's `goto` must match a single-leading-slash
+   same-origin path (`//host` and absolute URLs are refused at save), so a
+   tutorial cannot navigate a studio off-app; an `api` advance condition is
+   a *read* of what the user already did, never a call the tutorial makes.
+   Ids that become filenames pass the module's own `ID_RE`, and the
+   state-recording route rejects a traversing id with the same 404 as an
+   unknown one. Authoring is gated on `SCREENBOARD_DEBUG_TOOLS` — the CMS
+   routes 404 for a customer exactly as Debug tools do — while the read
+   bundle and the state routes stay open, because a studio must be able to
+   run and dismiss its own onboarding.
 
 ## Findings of the 2026-07-31 pass (all fixed)
 

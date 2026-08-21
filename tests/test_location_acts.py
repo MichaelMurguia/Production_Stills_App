@@ -114,7 +114,7 @@ class TheListIsChronological(unittest.TestCase):
 class FivePerActWithAnExpand(unittest.TestCase):
     def body(self):
         i = JS.index("// Grouped by ACT")
-        return JS[i:i + 6400]
+        return JS[i:i + 7600]   # the strip grew with RULE_PASS_2 D
 
     def test_it_groups_on_the_acts_the_server_derived(self):
         b = self.body()
@@ -133,16 +133,23 @@ class FivePerActWithAnExpand(unittest.TestCase):
         # the cap itself is the app's one capping rule, not a second one
         self.assertIn("const LOC_CAP = 5;", JS)
 
-    def test_the_head_says_where_the_acts_came_from(self):
+    def test_the_head_keeps_only_what_is_true_of_the_whole_strip(self):
+        """D1 (RULE_PASS_2 D, 2026-08-18): the provenance was one string in
+        the head covering all three acts, while each heading read the same
+        whether the screenplay printed the title or a model proposed it.
+        Position alone does not disclose, and a head three groups above the
+        thing it describes discloses less than position."""
         b = self.body()
-        self.assertIn("ACTS FROM THE SCREENPLAY", b)
-        self.assertIn("STANDARD THREE-ACT SPLIT", b)
+        self.assertIn("FIVE SHOWN PER ACT", b)
+        self.assertNotIn("NAMES FROM THE SCENE SCAN", b)
 
-    def test_a_location_with_no_scene_is_said_outright(self):
-        """It has no act because it has no scene. Filing it into one would
-        be inventing a position in the story."""
+    def test_a_location_with_no_scene_is_a_register_not_an_act(self):
+        """D4: it has no act because it has no scene — but as a fourth
+        group under a head reading EACH BECOMES ONE BREAKDOWN, the count
+        and the claim disagreed. It sits below the acts, labelled."""
         b = self.body()
-        self.assertIn("NOT IN A SLUGLINE", b)
+        self.assertIn("NOT IN ANY SLUGLINE", b)
+        self.assertIn("register: true", b)
 
     def test_the_environment_is_still_reachable_per_row(self):
         """Grouping moved to acts; inheritance is still a per-row fact."""
@@ -178,11 +185,11 @@ class NamesComeFromTheReadingWhenTheScriptPrintsNone(unittest.TestCase):
                       "a printed heading always wins over an inferred name")
         self.assertIn('titleFrom: "scan"', seg)
 
-    def test_the_head_says_which_half_came_from_where(self):
-        i = JS.index("ACTS FROM THE SCREENPLAY")
-        seg = JS[i:i + 400]
-        self.assertIn("NAMES FROM THE SCENE SCAN", seg)
-        self.assertIn("STANDARD THREE-ACT SPLIT", seg)
+    def test_a_read_name_discloses_itself_on_its_own_heading(self):
+        """D1: a generated entry and an authored one must not look
+        identical — so the marker rides the heading it qualifies."""
+        self.assertIn('loc-read mono">READ', JS)
+        self.assertIn('g.titleFrom === "scan"', JS)
 
 
 if __name__ == "__main__":

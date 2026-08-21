@@ -9,6 +9,10 @@ when they sit beside documents that are.
 contradicts `docs/INTENT.md`, `docs/ARCHITECTURE.md`,
 `app/static/DESIGN_SYSTEM.md` or `CLAUDE.md`, those win without argument.
 
+- `TUTORIAL_DESIGN_BRIEF_2026-08-17.md` — the design brief for the
+  tutorial layer. All eleven questions were ruled and implemented on
+  2026-08-18; it describes the pre-ruling build and is kept only for
+  the reasoning.
 - `SKILL_v2_2026-07.md` — the July "Beltminers Production Art Director"
   prompt-skill, written for one film before the app existed. Its
   source-authority ladder is the ancestor of the current evidence classes.

@@ -67,7 +67,7 @@ STYLE_INK: dict[str, dict] = {
     "ART_BOARD": {"paper": (236, 228, 210), "ink": (40, 34, 26),
                   "dim": (122, 110, 92), "edge": "matted",
                   "mat": (222, 212, 192), "voice": "serif",
-                  "accent": (166, 118, 58), "hand_ink": (58, 48, 92)},
+                  "accent": (166, 118, 58)},
     "TECH_DESIGN": {"paper": (16, 18, 22), "ink": (226, 230, 235),
                     "dim": (128, 136, 146), "edge": "flush",
                     "keyline": (70, 78, 88), "voice": "mono",
@@ -78,8 +78,7 @@ STYLE_INK: dict[str, dict] = {
 # typography is identical on every install — the old Windows-only paths
 # meant Linux tenants silently fell back to PIL's default bitmap font
 # (found 2026-08-13). Windows paths remain as a fallback for stripped
-# checkouts; load_default() is the last resort. "hand" is the Art Board
-# annotation voice (Caveat) — sheet-render typography, not app chrome.
+# checkouts; load_default() is the last resort.
 _FONTS_DIR = Path(__file__).resolve().parent / "fonts"
 _VOICES = {
     "serif": [str(_FONTS_DIR / "ebgaramond" / "EBGaramond.ttf"),
@@ -91,8 +90,6 @@ _VOICES = {
     "sans": [str(_FONTS_DIR / "inter" / "Inter.ttf"),
              "C:/Windows/Fonts/bahnschrift.ttf",
              "C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf"],
-    "hand": [str(_FONTS_DIR / "caveat" / "Caveat.ttf"),
-             "C:/Windows/Fonts/segoepr.ttf"],
 }
 _SANS_BOLD = [str(_FONTS_DIR / "inter" / "Inter.ttf"),
               "C:/Windows/Fonts/bahnschrift.ttf",
@@ -294,7 +291,8 @@ def _draw_palette_block(draw, sheet, block, rect, style, W) -> None:
 def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
                      allow_letterbox, warnings, annotations,
                      manifest: list | None = None,
-                     image_tier: str = "full") -> None:
+                     image_tier: str = "full",
+                     empties: list | None = None) -> None:
     rx, ry, rw, rh = rect
     cap_frac = sheet_mod.BLOCK_TYPES[block["type"]].frac
     cap_px = _type_px(sheet, None, cap_frac, W)
@@ -329,6 +327,13 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
 
     label_px = cap_px
     for s in block.get("slots", []):
+        # B1 (RULE_PASS_2 B, ruled 2026-08-18): a panel with no approved
+        # take is NOT DRAWN. Reserved empty frames promised pictures the
+        # board does not have — the same five cells were empty in all
+        # three looks, including INK, which has no `dress` channel at all
+        # — and only the export gate said so. Canon: never pad to three;
+        # show the members that exist and state the absence in one Courier
+        # line (the sheet's foot carries it).
         f = s["frac"]
         sx = rx + int(f["x"] * rw)
         sy = y + int(f["y"] * inner_h)
@@ -338,6 +343,13 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
             entry["slots"].append({"slot_id": s["slot_id"],
                                    "rect": [sx, sy, sw_, sh_],
                                    "filled": bool(s.get("candidate_id"))})
+        if not s.get("candidate_id"):
+            # B1: nothing is drawn for it — no frame, no label. The rect
+            # above still declares itself so the overlay keeps measuring
+            # nothing.
+            if empties is not None and s.get("label"):
+                empties.append(str(s["label"]))
+            continue
         label = str(s.get("label") or "")
         band = int(label_px * 1.5) + 8 if label else 0
         img_h = max(1, sh_ - band)
@@ -380,22 +392,12 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
                 pw_ = draw.textlength(pid.upper(), font=pf)
                 draw.text((sx + sw_ - pw_ - 6, sy + 5), pid.upper(),
                           font=pf, fill=style["ink"])
+        # B5 (RULE_PASS_2 B, ruled 2026-08-18): the `hand` voice is
+        # WITHDRAWN. Two real Art Boards used it zero times, and writing on
+        # the picture is decoration on the one artifact that must not be
+        # decorated. Annotations are numbered callouts on every look.
         ann = s.get("annotation")
-        mode = sheet.get("dress_annotations")
-        if ann and mode == "hand" and str(ann.get("text") or "").strip():
-            # Art Board hand notes: the annotation text itself, written
-            # on the image in the hand voice — no badge, no KEY entry.
-            # A paper-colored halo keeps the script legible on any take.
-            hf = _font("hand", max(14, int(cap_px * 2.0)))
-            note = str(ann["text"])[:60]
-            halo = style["paper"]
-            for ox, oy in ((-2, 0), (2, 0), (0, -2), (0, 2),
-                           (-1, -1), (1, 1), (-1, 1), (1, -1)):
-                draw.text((sx + 10 + ox, sy + 8 + oy), note, font=hf,
-                          fill=halo)
-            draw.text((sx + 10, sy + 8), note, font=hf,
-                      fill=style.get("hand_ink", style["ink"]))
-        elif ann and ann.get("n"):
+        if ann and ann.get("n"):
             r = max(8, int(cap_px * 0.9))
             draw.ellipse([sx + 6, sy + 6, sx + 6 + 2 * r, sy + 6 + 2 * r],
                          fill=style["ink"])
@@ -407,6 +409,21 @@ def _draw_slot_block(canvas, draw, sheet, block, rect, style, W,
     for line in cap_lines:
         draw.text((rx, cy0), line, font=cap_f, fill=style["dim"])
         cy0 += int(cap_px * 1.55)
+
+
+def _run_names(labels):
+    """`P05-P09` rather than five ids in a row. Contiguous numeric runs
+    collapse; anything else lists (B1's foot line)."""
+    import re as _re
+    ups = [l.upper() for l in labels]
+    ms = [_re.fullmatch(r"([A-Z]+)([0-9]+)", u) for u in ups]
+    if len(ups) > 2 and all(ms) and len({m.group(1) for m in ms}) == 1:
+        nums = [int(m.group(2)) for m in ms]
+        if nums == list(range(nums[0], nums[0] + len(nums))):
+            w = len(ms[0].group(2))
+            return (f"{ms[0].group(1)}{nums[0]:0{w}d}–"
+                    f"{ms[0].group(1)}{nums[-1]:0{w}d}")
+    return ", ".join(ups)
 
 
 # --------------------------------------------------------------- dress
@@ -525,20 +542,33 @@ def _draw_spec_table(draw, rect, style, W, rows):
     row_h = int(px * 2.1)
     key_w = int(rw * 0.42)
     y = ry
+    # B3: every row truncated (`EXTREME_WIDE · Le…`) — a per-panel purpose
+    # that stops after two words is not a spec. Rows wrap to two lines and
+    # ellipsise only at that limit; the row grows to fit what it wrapped.
     for k, v in rows:
         if y + row_h > ry + rh:
             break
-        draw.line([(rx, y + row_h - 2), (rx + rw, y + row_h - 2)],
-                  fill=style.get("keyline") or style["dim"], width=1)
         draw.text((rx, y + int(px * 0.4)), str(k).upper()[:18], font=key_f,
                   fill=style["dim"])
-        val = str(v)
-        while val and draw.textlength(val + "…", font=key_f) > rw - key_w:
-            val = val[:-1]
-        draw.text((rx + key_w, y + int(px * 0.4)),
-                  val + ("…" if val != str(v) else ""), font=key_f,
-                  fill=style["ink"])
-        y += row_h
+        vlines = _wrap(draw, str(v), key_f, rw - key_w)[:MAX_STRIP_LINES]
+        if len(_wrap(draw, str(v), key_f, rw - key_w)) > MAX_STRIP_LINES:
+            tail = vlines[-1]
+            while tail and draw.textlength(tail + "…", font=key_f) > rw - key_w:
+                tail = tail[:-1]
+            vlines[-1] = tail + "…"
+        vy = y + int(px * 0.4)
+        for line in vlines:
+            draw.text((rx + key_w, vy), line, font=key_f, fill=style["ink"])
+            vy += int(px * 1.5)
+        this_h = max(row_h, (vy - y) + int(px * 0.4))
+        draw.line([(rx, y + this_h - 2), (rx + rw, y + this_h - 2)],
+                  fill=style.get("keyline") or style["dim"], width=1)
+        y += this_h
+
+
+# B3 (RULE_PASS_2 B): nothing on a sheet clips mid-word. Text wraps to
+# this many lines at the sheet's measure and ellipsises only at the limit.
+MAX_STRIP_LINES = 2
 
 
 def _draw_atmosphere(draw, rect, style, W, text):
@@ -550,12 +580,22 @@ def _draw_atmosphere(draw, rect, style, W, text):
     if style.get("accent"):
         draw.line([(rx, ry), (rx + rw, ry)], fill=style["accent"],
                   width=max(1, W // 1600))
-    line = str(text).upper()
-    while line and draw.textlength(line + "…", font=f) > rw:
-        line = line[:-1]
-    draw.text((rx, ry + max(4, int(px * 0.6))),
-              line + ("…" if line != str(text).upper() else ""),
-              font=f, fill=style["dim"])
+    # B3 (RULE_PASS_2 B, ruled 2026-08-18): it was ONE line at the sheet's
+    # full width and it ran off the page — clipped mid-word, no ellipsis,
+    # content silently lost. A sheet is a fixed page; there is no scroll to
+    # recover it. Wrap to two lines at the text measure, and ellipsise only
+    # at that limit.
+    full = str(text).upper()
+    lines = _wrap(draw, full, f, rw)
+    y = ry + max(4, int(px * 0.6))
+    for i, line in enumerate(lines[:MAX_STRIP_LINES]):
+        last = i == MAX_STRIP_LINES - 1 and len(lines) > MAX_STRIP_LINES
+        if last:
+            while line and draw.textlength(line + "…", font=f) > rw:
+                line = line[:-1]
+            line += "…"
+        draw.text((rx, y), line, font=f, fill=style["dim"])
+        y += int(px * 1.5)
 
 
 def _draw_profile(draw, rect, style, W, text):
@@ -690,6 +730,7 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
             draw.line([(mx, ry_), (W - mx, ry_)], fill=style["accent"],
                       width=max(2, W // 1200))
 
+    empties: list[str] = []      # panels with no approved take (B1)
     for b in sheet.get("blocks", []):
         elastic = sheet_mod.BLOCK_TYPES[b["type"]].elastic
         if elastic and sheet.get("spine"):
@@ -705,7 +746,7 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
         else:
             _draw_slot_block(canvas, draw, sheet, b, rect, style, W,
                              allow_letterbox, warnings, annotations,
-                             manifest, image_tier)
+                             manifest, image_tier, empties)
 
     _draw_dress(canvas, draw, sheet, style, W, cx, cy, cw, ch, warnings)
 
@@ -714,10 +755,19 @@ def render_sheet(sheet: dict, scale: float = 1.0, *,
     foot_px = max(7, int(FOOTER_FRAC * W))
     foot_f = _font("mono", foot_px)
     unit = sheet_mod.LADDERS[sheet["medium"]]["unit"]
+    slots_total = sum(len(b.get("slots", [])) for b in sheet.get("blocks", []))
+    composed = slots_total - len(empties)
+    counts = []
+    if slots_total:
+        counts += [f"{slots_total} PANELS", f"{composed} COMPOSED"]
+    if empties:
+        counts.append(f"{_run_names(empties)} HAVE NO APPROVED TAKE"
+                      if len(empties) > 1
+                      else f"{empties[0].upper()} HAS NO APPROVED TAKE")
     left = " · ".join(x for x in [
         str(sheet.get("sheet_id") or ""), str(sheet.get("archetype", "")),
         f"{sheet['size'][0]}×{sheet['size'][1]} {unit}".upper(),
-        str(sheet.get("style", ""))] if x)
+        str(sheet.get("style", "")), *counts] if x)
     draw.text((mx, H - int(foot_px * 2.4)), left, font=foot_f,
               fill=style["dim"])
     if annotations:
