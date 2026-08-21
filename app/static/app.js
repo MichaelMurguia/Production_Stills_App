@@ -840,7 +840,15 @@ function authModal(key) {
         await api("/api/settings/test", {
           method: "POST", json: { provider: P.test, key: k } });
         setBusy(false, "", testBtn);
-        say(`${P.name} answered — the key works. Save to close.`, "ok");
+        // What Test proves and what it does not (user, 2026-08-21). The
+        // test is deliberately a models call, so it spends nothing — but
+        // that means it passes on an account with no credit, and this
+        // said "the key works" three seconds before the read died on
+        // 429/insufficient_quota. Claiming more than was measured is the
+        // one thing this product does not do.
+        say(`${P.name} accepted the key — it is authentic. This does not `
+            + `prove the account has credit; a run is what proves that. `
+            + `Save to close.`, "ok");
       } catch (err) {
         setBusy(false, "", testBtn);
         say(`${P.name} refused it: ${err.message}`, "bad");
@@ -2546,13 +2554,32 @@ const theRead = {
 
   fail(msg) { this.stopTimers(); this.phase = "failed"; this.error = msg || ""; this.paint(); },
 
-  /* A 401 from an engine is not "the read failed" — it is "your key does
-     not work", which has a specific door. Canon: a blocker states its
-     condition and links to where it is resolved. */
-  refused() {
-    return /\b401\b|invalid[_ ]?api[_ ]?key|incorrect api key|unauthoriz/i
-      .test(this.error || "");
+  /* An engine failure is never just "the read failed" — canon says a
+     blocker states its condition and links to where it is resolved, and
+     these conditions do not share a resolution.
+
+     Learned the hard way (user, 2026-08-21): a key that authenticated
+     fine, on an account with no credit, came back 429/insufficient_quota.
+     That matched nothing here, so the panel said "THE READ DID NOT
+     FINISH" and stopped — while the app was holding a message that said
+     exactly what was wrong and where to fix it. */
+  diagnose() {
+    const e = this.error || "";
+    const E = this.engine.toUpperCase();
+    if (/\b401\b|invalid[_ ]?api[_ ]?key|incorrect api key|unauthoriz/i.test(e))
+      return { kind: "auth", line: E + " REFUSED THE KEY IT WAS GIVEN" };
+    if (/insufficient_quota|credit[_ ]balance|no credits remaining|exceeded your current quota|billing/i.test(e))
+      return { kind: "quota",
+               line: E + " TOOK THE KEY AND REFUSED THE WORK — THE ACCOUNT "
+                 + "HAS NO CREDIT LEFT. THE KEY IS GOOD; THE BALANCE IS NOT" };
+    if (/rate[_ ]?limit|\b429\b|too many requests/i.test(e))
+      return { kind: "rate",
+               line: E + " IS RATE-LIMITING THIS KEY — THE READ CAN BE RUN "
+                 + "AGAIN SHORTLY" };
+    return { kind: "other", line: "THE READ DID NOT FINISH" };
   },
+
+  refused() { return this.diagnose().kind === "auth"; },
 
   stopTimers() {
     clearTimeout(this.walk); clearInterval(this.clock);
@@ -2638,9 +2665,7 @@ const theRead = {
         // thing this panel did on its first real failure, and it made the
         // one sentence that mattered ("the key was refused") the hardest
         // to find. The verbatim message goes below, in its own voice.
-        note.textContent = this.refused()
-          ? this.engine.toUpperCase() + " REFUSED THE KEY IT WAS GIVEN"
-          : "THE READ DID NOT FINISH";
+        note.textContent = this.diagnose().line;
       }
       note.classList.toggle("bad", this.phase === "failed");
     }

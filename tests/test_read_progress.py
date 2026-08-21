@@ -241,6 +241,40 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         self.assertIn('rd-raw', block)
         self.assertNotIn('(this.error || "").toUpperCase()', block)
 
+    def test_a_spent_account_is_named_as_a_spent_account(self):
+        """User, 2026-08-21: the read died on 429/insufficient_quota and
+        the panel said only "THE READ DID NOT FINISH". The key was fine,
+        the balance was not, and the app was holding a message that said
+        so. A billing failure and an auth failure have different fixes, so
+        they get different sentences."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        self.assertIn("insufficient_quota", block)
+        self.assertIn("HAS NO CREDIT LEFT", block)
+        self.assertIn('kind: "quota"', block)
+
+    def test_rate_limiting_is_not_confused_with_being_out_of_credit(self):
+        """Both arrive as 429. One is fixed by waiting, the other by
+        paying — telling a user to wait for a balance that will never
+        refill on its own is worse than saying nothing."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        q = block.index('kind: "quota"')
+        r = block.index('kind: "rate"')
+        self.assertLess(q, r, "quota must be tested before the bare 429 "
+                              "catch-all, or every spent account reads as "
+                              "a rate limit")
+
+    def test_the_key_test_does_not_claim_more_than_it_measured(self):
+        """`/api/settings/test` is deliberately a models call that spends
+        nothing — so it passes on an account with no credit. It said "the
+        key works" three seconds before a read failed on billing."""
+        i = self.js.index('api("/api/settings/test"')
+        # the success line only — a comment may quote the old copy
+        j = self.js.index('say(', i)
+        line = self.js[j:self.js.index('"ok");', j)]
+        self.assertNotIn("the key works", line)
+        self.assertIn("does not", line)
+        self.assertIn("credit", line)
+
     def test_a_refused_key_offers_the_door_that_fixes_it(self):
         block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
         self.assertIn("data-f=rd-settings", block)
