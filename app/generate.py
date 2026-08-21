@@ -103,6 +103,128 @@ def all_providers() -> dict:
     return providers
 
 
+def engine_credentials() -> dict:
+    """Which engines hold a credential, and where it came from.
+
+    THE single source for this fact. `/api/settings` renders its `engines`
+    block from it, the header dots derive from that, and `capability()`
+    below answers "can this role run" with it. Before 2026-08-18 the same
+    question was computed inline in the settings route, again per-role for
+    the dots, and a fourth time in the client as `anyCred` — which is how a
+    keyless install could show a control panel on one screen and a setup
+    form on another.
+
+    Honest status only: `configured` says where a key came from; it never
+    claims the key WORKS. `last_test` is the persisted outcome of the
+    user's own Test click.
+    """
+    import os
+    s = load_settings()
+    tests = s.get("engine_tests", {})
+    gkey = s.get("gemini_api_key", "")
+    okey = s.get("openai_api_key", "")
+    genv = os.environ.get("GEMINI_API_KEY", "").strip()
+    oenv = os.environ.get("OPENAI_API_KEY", "").strip()
+    gemini_src = "settings" if gkey else ("env" if genv else None)
+    openai_src = "settings" if okey else ("env" if oenv else None)
+
+    eng = {
+        "gemini": {"configured": bool(gemini_src), "source": gemini_src,
+                   "last_test": tests.get("gemini")},
+        "openai": {"configured": bool(openai_src), "source": openai_src,
+                   "last_test": tests.get("openai")},
+        "openai-chat": {"configured": bool(openai_src), "source": openai_src,
+                        "last_test": tests.get("openai-chat")},
+    }
+    if mock_enabled():
+        # The debug dry-run engine: always "configured" while the toggle is
+        # on — it has no key and no test because it never calls anything.
+        eng["mock"] = {"configured": True, "source": "debug", "last_test": None}
+    for e in custom_engines():
+        pid = f"custom:{e['id']}"
+        eng[pid] = {"configured": True, "source": "settings",
+                    "last_test": tests.get(pid)}
+    if str(s.get("anthropic_api_key", "")).strip():
+        # A narrative credential, carried in the same block and the same
+        # honest-status grammar as the image engines.
+        eng["anthropic"] = {"configured": True, "source": "settings",
+                            "last_test": tests.get("anthropic")}
+    return eng
+
+
+# Engines that serve the NARRATIVE role (research passes, bible drafting).
+# The image role is everything else — the two roles fail separately and a
+# studio can be able to run one and not the other.
+NARRATIVE_ENGINES = ("openai", "gemini", "anthropic")
+
+
+def capability() -> dict:
+    """Can this install actually RUN each AI role?
+
+    A credential that failed its own test is NOT usable — telling someone
+    to connect an engine when they have one that is failing sends them to
+    the wrong fix, so `failed` distinguishes the two and the copy differs.
+
+    `any_credential` is the weaker question the Settings page asks (is
+    there anything here at all), and deliberately excludes the mock engine:
+    the debug dry-run makes the pipeline RUNNABLE without making the
+    install CONFIGURED, and the setup form must still appear for its owner.
+    """
+    eng = engine_credentials()
+
+    def live(pid: str) -> bool:
+        e = eng.get(pid)
+        if not e or not e["configured"]:
+            return False
+        return (e.get("last_test") or {}).get("ok") is not False
+
+    def configured(pid: str) -> bool:
+        return bool(eng.get(pid, {}).get("configured"))
+
+    from . import narrative
+    mock = mock_enabled()
+
+    narr = [p for p in NARRATIVE_ENGINES if live(p)]
+    narr_configured = [p for p in NARRATIVE_ENGINES if configured(p)]
+    if narrative.usable("openrouter"):
+        narr.append("openrouter")
+        narr_configured.append("openrouter")
+
+    image = [p for p in eng if p not in ("anthropic", "mock") and live(p)]
+    image_configured = [p for p in eng
+                        if p not in ("anthropic", "mock") and configured(p)]
+    connector_models = [p for p in all_providers()
+                        if p.startswith(("or:", "fal:"))]
+    image += connector_models
+    image_configured += connector_models
+
+    if mock:
+        narr.append("mock")
+        image.append("mock")
+
+    connected = False
+    try:
+        from . import connectors as cx
+        connected = any(cx.connector_public(cid)["status"] != "NOT_CONNECTED"
+                        for cid in cx.REGISTRY)
+    except Exception:
+        pass  # a corrupt connectors file must never hide a real key
+
+    return {
+        "narrative": {
+            "usable": bool(narr), "engines": sorted(set(narr)),
+            # Configured, but every one of them failed its own test.
+            "failed": bool(narr_configured) and not narr,
+        },
+        "image": {
+            "usable": bool(image), "engines": sorted(set(image)),
+            "failed": bool(image_configured) and not image,
+        },
+        "any_credential": bool(
+            [p for p in eng if p != "mock" and eng[p]["configured"]] or connected),
+    }
+
+
 def _custom_engine(provider: str) -> dict:
     eng = next((e for e in custom_engines()
                 if f"custom:{e['id']}" == provider), None)
@@ -285,10 +407,10 @@ def save_settings(settings: dict) -> None:
     store._atomic_write_json(paths.SETTINGS, settings)
 
 
-def _client(timeout_ms: int = 300_000):
+def _client(timeout_ms: int = 300_000, key: str = ""):
     import os
     from google import genai
-    key = (load_settings().get("gemini_api_key", "").strip()
+    key = (key or "").strip() or (load_settings().get("gemini_api_key", "").strip()
            or os.environ.get("GEMINI_API_KEY", "").strip()
            or os.environ.get("GOOGLE_API_KEY", "").strip())
     if not key:
@@ -297,10 +419,13 @@ def _client(timeout_ms: int = 300_000):
     return genai.Client(api_key=key, http_options={"timeout": timeout_ms})
 
 
-def _openai_client(timeout_s: float = 300.0):
+def _openai_client(timeout_s: float = 300.0, key: str = ""):
+    """`key` lets a caller verify a credential WITHOUT storing it first —
+    the Test button's whole job (user 2026-08-20). Everything else passes
+    nothing and reads the studio's own."""
     import os
     from openai import OpenAI
-    key = (load_settings().get("openai_api_key", "").strip()
+    key = (key or "").strip() or (load_settings().get("openai_api_key", "").strip()
            or os.environ.get("OPENAI_API_KEY", "").strip())
     if not key:
         raise GenerationError(
@@ -308,13 +433,17 @@ def _openai_client(timeout_s: float = 300.0):
     return OpenAI(api_key=key, timeout=timeout_s)
 
 
-def test_connection(provider: str = DEFAULT_PROVIDER) -> dict:
+def test_connection(provider: str = DEFAULT_PROVIDER, key: str = "") -> dict:
+    """`key` proves a credential the studio has not saved. Testing must
+    not mutate: writing the key first made a credential EXIST before the
+    user had agreed to keep it — which advanced the first-run walkthrough
+    on Test, and left the key behind after Cancel (user 2026-08-20)."""
     if provider == "anthropic":
         # Narrative-only credential (F6 backend): the models list proves
         # the key without spending a token.
         from . import narrative
         try:
-            model = narrative.anthropic_test()
+            model = narrative.anthropic_test(key=key)
         except narrative.NarrativeError as e:
             raise GenerationError(str(e)) from e
         return {"ok": True, "provider": "anthropic", "model": model}
@@ -346,11 +475,11 @@ def test_connection(provider: str = DEFAULT_PROVIDER) -> dict:
                 f"{pub['last_error'].get('detail', 'see Settings')}")
         return {"ok": True, "provider": provider, "model": rec["provider_model_id"]}
     if provider in ("openai", "openai-chat"):
-        client = _openai_client(timeout_s=20.0)
+        client = _openai_client(timeout_s=20.0, key=key)
         want = OPENAI_MODEL if provider == "openai" else OPENAI_CHAT_MODEL
         model = client.models.retrieve(want)
         return {"ok": True, "provider": provider, "model": getattr(model, "id", want)}
-    client = _client(timeout_ms=20_000)
+    client = _client(timeout_ms=20_000, key=key)
     model = client.models.get(model=MODEL)
     return {"ok": True, "provider": "gemini", "model": getattr(model, "name", MODEL)}
 
@@ -1542,14 +1671,18 @@ def preferred_provider() -> str:
     p = load_settings().get("preferred_provider", "")
     if p in all_providers():
         return p
-    # Ruled default (CONNECTORS_UI_PLAN C1): the ChatGPT image pipeline is
-    # the recommended starting engine once an OpenAI key exists; without
-    # one the recommendation is a stated gate, and Gemini leads if that
-    # key is present instead. Never a preselected broken option.
+    # User ruling 2026-08-20: with an OpenAI key the default is GPT Image 2
+    # DIRECT, not the ChatGPT pipeline. CONNECTORS_UI_PLAN C1 had ruled the
+    # pipeline; use answered it. All 47 takes in the proving production
+    # were rendered by `openai`, and the pipeline's Responses image tool
+    # accepts only 1024/1536 sizes (`_chat_tool_size`), so it caps near
+    # 1.5K in a product whose first rule is that nothing is ever upscaled.
+    # A default that cannot reach the product's own output size is not a
+    # recommendation. Never a preselected broken option.
     import os
     if load_settings().get("openai_api_key", "").strip() or \
             os.environ.get("OPENAI_API_KEY", "").strip():
-        return "openai-chat"
+        return "openai"
     return DEFAULT_PROVIDER
 
 

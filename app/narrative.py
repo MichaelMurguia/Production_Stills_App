@@ -148,10 +148,11 @@ def anthropic_complete(doc: bytes, mime: str, instructions: str,
     return text, model
 
 
-def anthropic_test(http=None) -> str:
-    """Cheap connectivity check for Test & save: the models list costs
-    nothing and proves the key. Returns the first model id."""
-    key = anthropic_key()
+def anthropic_test(http=None, key: str = "") -> str:
+    """Cheap connectivity check for Test: the models list costs nothing
+    and proves the key. `key` verifies one that is NOT stored yet (user
+    2026-08-20). Returns the first model id."""
+    key = (key or "").strip() or anthropic_key()
     if not key:
         raise NarrativeError("no Anthropic key saved")
     http = http or _http_json

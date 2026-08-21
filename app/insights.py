@@ -42,13 +42,49 @@ def evidence_gaps(spec: dict) -> list[dict]:
 
 def blocking() -> list[dict]:
     """Everything that stops the next render, as structured rows:
-    kind HOLD (evidence), GAP (missing input), SIZE (undersized render),
-    CITE (screenplay citation no longer found). Each row carries an `action`
-    view hint so the UI can offer the resolving jump."""
+    kind HOLD (evidence), GAP (missing input), KEY (no usable credential
+    for an AI role), SIZE (undersized render), CITE (screenplay citation
+    no longer found). Each row carries an `action` view hint so the UI can
+    offer the resolving jump, and may carry a `stage` hint naming the
+    pipeline stage it blocks when that is not derivable from `action`."""
     out: list[dict] = []
     app_state = store.load_app_state()
     refs = store.list_references()
     specs = store.list_specs()
+
+    # A missing credential is a blocker (user ruling 2026-08-18; shape
+    # ruled by TRIAGE_PLAN §2, 2026-08-18). ONE row per missing
+    # credential, never one per stage — there is one thing to fix. The
+    # row names the SHAPE of the loss; the stage line beneath it carries
+    # the precision, which is how "the two roles fail separately" reads
+    # without a second row. `scope: install` because this is the only
+    # blocker whose truth survives a production switch, and a reader who
+    # fixes it once must never see it filed as this production's fault.
+    cap = generate.capability()
+    narr, img = cap["narrative"], cap["image"]
+    if not (narr["usable"] and img["usable"]):
+        both = not narr["usable"] and not img["usable"]
+        stages = ([] + (["wizard"] if not narr["usable"] else [])
+                  + (["boards"] if not img["usable"] else []))
+        if both:
+            text = ("Every engine key failed its last test — nothing can be "
+                    "read, drafted or rendered") if (narr["failed"] and img["failed"])                 else "No AI engine connected — nothing can be read, drafted or rendered"
+            sub = "BLOCKS STAGE 02 AND STAGE 04"
+        elif not narr["usable"]:
+            text = ("The narrative key failed its last test — the key is "
+                    "there, the engine will not run") if narr["failed"]                 else "No narrative model — nothing can be read or drafted"
+            sub = "BLOCKS STAGE 02 — RENDERING STILL RUNS"
+        else:
+            text = ("Every image engine failed its last test — the keys are "
+                    "there, the engines will not run") if img["failed"]                 else "No image engine — nothing can be rendered"
+            sub = "BLOCKS STAGE 04 — RESEARCH STILL RUNS"
+        out.append({
+            "kind": "KEY", "action": "settings", "scope": "install",
+            "stages": stages, "stage": stages[0] if stages else "wizard",
+            "text": text, "sub": sub,
+            "detail": "Settings → AI & engines. One OpenRouter connection "
+                      "serves both roles.",
+        })
 
     if not app_state.get("screenplay"):
         out.append({"kind": "GAP", "text": "Screenplay not uploaded",

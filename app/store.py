@@ -211,6 +211,29 @@ def _extract_screenplay_text(p: Path) -> str:
                              for page in PdfReader(str(p)).pages)
         except Exception:
             return ""
+    if p.suffix.lower() == ".fdx":
+        # Final Draft is XML. Passed through raw it is still READABLE — the
+        # slugline parser finds scene headings inside the markup — but it is
+        # three times the characters for the same script, and every one of
+        # them is billed on every model call, against this module's own rule
+        # that import converts ONCE to the efficient format (found by
+        # testing the four claimed formats, 2026-08-20).
+        try:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(p.read_bytes().decode("utf-8", "replace"))
+            out = []
+            for para in root.iter("Paragraph"):
+                line = "".join(t.text or "" for t in para.iter("Text")).rstrip()
+                # A scene heading gets the blank line that separates scenes
+                # in a plain-text script, so the parse sees what it expects.
+                if (para.get("Type") or "").strip() == "Scene Heading" and out:
+                    out.append("")
+                out.append(line)
+            text = chr(10).join(out).strip()
+            if text:
+                return text
+        except Exception:
+            pass  # not parseable as Final Draft — fall through to raw text
     try:
         return p.read_bytes().decode("utf-8", "replace")
     except Exception:
