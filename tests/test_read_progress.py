@@ -280,23 +280,42 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         self.assertIn("data-f=rd-settings", block)
         self.assertIn('showView("settings")', block)
 
-    def test_both_doors_to_the_read_report_the_same_way(self):
-        """The read has two doors — the first upload and the Scene Scan —
-        and for one commit only the first one reported. The same operation
-        must look the same however it was started."""
-        doors = re.findall(r'api\("/api/wizard/analyze"', self.js)
-        self.assertEqual(len(doors), 2,
-                         "a third caller of the read must also report")
-        for door in self.js.split('api("/api/wizard/analyze"')[1:]:
-            self.assertIn("theRead.finish(", door[:400])
-            self.assertIn("theRead.fail(", door[:600])
-        # Every other begin() must be the preview, which passes the flag.
-        for call in self.js.split("theRead.begin(")[1:]:
-            head = call[:80]
-            self.assertTrue("true" in head or "engine" in head
-                            or "selectedModelLabel" in head,
-                            f"unaccounted begin(): {head!r}")
+    def test_the_panel_belongs_to_stage_01_and_stays_there(self):
+        """User, 2026-08-21: "Reading the Draft panel was copied to the
+        Prod Design tab — remove." It had been mounted into whichever view
+        was open, so finishing a read and walking to stage 02 carried it
+        along. Reading the draft is a stage 01 fact; on the next stage the
+        same panel is not progress, it is a leftover."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        i = block.index("mount() {")
+        seg = block[i:i + 700]
+        self.assertIn('$(".dash-main")', seg)
+        self.assertNotIn("wiz-v3", seg)
+        # …and no other view re-mounts it
+        self.assertEqual(self.js.count("theRead.mount()"), 1)
 
+    def test_the_scene_scan_reports_through_its_own_busy_line(self):
+        """Removing the panel from stage 02 must not leave that door
+        silent — it reports the way it always did."""
+        i = self.js.index('#wiz-analyze").onclick')
+        seg = self.js[i:i + 1400]
+        self.assertIn("startBusy(", seg)
+        self.assertIn("design language(s)", seg)
+        self.assertNotIn("theRead.", seg)
+
+    def test_the_finish_state_does_not_outstay_the_work(self):
+        """"At the end of reading and processing, the read-is-in section
+        should go away." The panel is an account of something happening;
+        once nothing is happening it is a spent receipt on the stage. The
+        toast carries the result, so the finding survives the panel."""
+        block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
+        i = block.index("finish(analysis) {")
+        seg = block[i:i + 1200]
+        self.assertIn("this.dismiss()", seg)
+        self.assertIn("toast(", seg)
+        self.assertIn('if (this.phase === "found")', seg)
+        j = block.index("dismiss() {")
+        self.assertIn("clearTimeout(this.bye)", block[j:j + 200])
     def test_a_preview_never_claims_a_model_ran(self):
         """The preview exists so the animation and the copy can be checked
         without spending anything. It walks the SAME parse — so it must

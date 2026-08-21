@@ -2550,6 +2550,20 @@ const theRead = {
     this.said = this.obs.slice();      // the rest of what the parse saw
     this.at = this.scenes.length - 1;
     this.paint();
+    /* And then it leaves (user, 2026-08-21: "at the end of reading and
+       processing, the read-is-in section should go away"). The panel is
+       an account of something happening; once nothing is happening it is
+       a spent receipt sitting on the stage. It holds long enough to read
+       the count, and the toast carries the result durably — so the
+       finding survives the panel that announced it. Dismiss still works
+       immediately. */
+    const langs = (this.found.design_worlds || []).length;
+    const subj = (this.found.subjects || []).length;
+    toast(`The read found ${langs} design language(s) and ${subj} subject(s) `
+          + "— review them on Prod. Design.");
+    clearTimeout(this.bye);
+    this.bye = setTimeout(() => { if (this.phase === "found") this.dismiss(); },
+                          7000);
   },
 
   fail(msg) { this.stopTimers(); this.phase = "failed"; this.error = msg || ""; this.paint(); },
@@ -2589,7 +2603,7 @@ const theRead = {
   },
 
   dismiss() {
-    this.stopTimers(); this.on = false;
+    this.stopTimers(); clearTimeout(this.bye); this.on = false;
     document.body.dataset.readBusy = "0";
     const h = $("#read-live"); if (h) h.remove();
   },
@@ -2598,12 +2612,12 @@ const theRead = {
 
   mount() {
     if (!this.on) return;
-    /* The read has two doors — the first upload (stage 01) and the Scene
-       Scan (stage 02) — and the same operation must report the same way
-       through both. Mount into whichever view the user is actually on;
-       a progress panel on the tab they are not looking at is not
-       progress. */
-    const main = $(".dash-main") || $(".view.wiz-v3") || $(".view");
+    /* Stage 01 only (user, 2026-08-21: "Reading the Draft panel was
+       copied to the Prod Design tab — remove"). Reading the draft is a
+       stage 01 fact, and a panel that follows the user to the next stage
+       is not progress there, it is a leftover. The Scene Scan reports
+       through its own busy line, where it always did. */
+    const main = $(".dash-main");
     if (!main) return;
     let host = $("#read-live");
     if (!host) {
@@ -2738,12 +2752,7 @@ const theRead = {
           + (langs.length ? " — " + esc(langs.slice(0, 4).join(" · ")).toUpperCase() : "")
           + " · " + subj + " SUBJECT(S)</p>"
           + '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Dismiss</button>'
-          // Offering "Review on Prod. Design" while standing on Prod.
-          // Design is an action that does nothing, which is worse than no
-          // action at all.
-          + (activeView === "wizard" ? ""
-             : '<button class="primary" data-f="rd-go">Review on Prod. Design</button>')
-          + "</p>");
+          + '<button class="primary" data-f="rd-go">Review on Prod. Design</button></p>');
         const go = $("[data-f=rd-go]", host);
         if (go) go.onclick = () => { this.dismiss(); showView("wizard"); };
       }
@@ -4205,10 +4214,6 @@ async function renderWizard() {
     ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
     : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
 
-  // A read started here survives this view re-rendering under it, the same
-  // way it survives leaving stage 01 and coming back.
-  if (theRead.on) theRead.mount();
-
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
   // and lists only engines that actually have a key.
@@ -5644,17 +5649,16 @@ async function renderWizard() {
     const busy = startBusy($("#wiz-analyze-busy"),
       `Reading the screenplay and identifying visual story elements and scenes — ${selectedModelLabel($("#wiz-provider"))}…`,
       "a minute or two");
-    await theRead.begin(selectedModelLabel($("#wiz-provider")));
     try {
       const analysis = await api("/api/wizard/analyze", {
         method: "POST", json: { provider: $("#wiz-provider").value } });
-      theRead.finish(analysis);
       saveAnalysis(analysis);
       expandedWorlds.clear();
       renderWorlds();
       renderAnalyzeLock();
       renderSubjectTags();
-    } catch (err) { theRead.fail(err.message); toast(err.message, true); }
+      toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s) — review below.`);
+    } catch (err) { toast(err.message, true); }
     finally { busy.done(); btn.disabled = false; }
   };
 
