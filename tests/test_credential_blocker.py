@@ -318,7 +318,17 @@ class TheUploadStartsTheRead(unittest.TestCase):
         self.assertIn("return", b)
 
     def test_it_does_not_call_a_model_the_studio_does_not_have(self):
-        self.assertIn("s.capability?.narrative?.usable", self.body())
+        """The narrative capability is read from /api/settings and the
+        function returns before anything is spent or shown. Asserted as
+        order, not as a literal — the guard was split across two lines
+        adding the live read (2026-08-20) and this test failed over a
+        rename while the behaviour it names never moved."""
+        b = self.body()
+        self.assertRegex(b, r"capability\?\.narrative")
+        self.assertRegex(b, r"if \(!cap\?\.usable\) return;")
+        # …and that guard precedes both the spend and the surface.
+        self.assertLess(b.index("usable) return;"), b.index("/api/wizard/analyze"))
+        self.assertLess(b.index("usable) return;"), b.index("theRead.begin"))
 
     def test_a_failure_points_at_the_manual_door(self):
         self.assertIn("run the Scene Scan on", self.body())

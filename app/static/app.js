@@ -2450,6 +2450,11 @@ async function renderScreenplay() {
   }
 
   bindScreenplayUpload($("#screenplay-form"), state.capability);
+
+  // A read in flight survives leaving the view and coming back — it is
+  // the longest thing the app does, and losing sight of it is the whole
+  // complaint this surface answers.
+  if (theRead.on) theRead.mount();
 }
 
 // One upload path for every screenplay form (Status lead, the stage's
@@ -2469,20 +2474,220 @@ async function renderScreenplay() {
      `Upload a new draft` says it does.
    - **Only with an engine.** The read is a model call; with none it is
      not attempted, and the upload is gated on a credential anyway. */
+/* ================================================== the read, as it happens
+   The model's read is ONE call. It cannot report per-scene progress, and a
+   bar that implied otherwise would be the exact species of confident
+   fiction this product exists to prevent.
+
+   So the live feedback is the LOCAL parse — real sluglines, real cue
+   lines, real counts, from GET /api/screenplay/digest — walked scene by
+   scene while the model works. Every word on this surface is measured
+   from the file. The model's own phase says plainly that it has nothing
+   to report, because it has nothing to report.
+
+   Amber discipline: exactly one amber in this panel, ever — the bar of
+   the scene being read right now. Done bars are --ok, like every other
+   meter in the app. */
+const theRead = {
+  on: false, phase: "", engine: "", t0: 0, scenes: [], obs: [], at: -1,
+  said: [], found: null, error: "", walk: null, clock: null, dwell: 900,
+
+  async begin(engine) {
+    this.on = true; this.phase = "parse"; this.engine = engine || "the model";
+    this.t0 = Date.now(); this.at = -1; this.said = []; this.found = null;
+    this.error = "";
+    const d = await api("/api/screenplay/digest").catch(() => null);
+    this.scenes = (d && d.scenes) || [];
+    this.obs = (d && d.observations) || [];
+    // Spread the walk over about a minute — the shape of a read — but
+    // never so fast it cannot be read, nor so slow it feels stuck.
+    this.dwell = Math.max(420, Math.min(1700, 60000 / Math.max(1, this.scenes.length)));
+    if (activeView === "screenplay") this.mount();
+    this.clock = setInterval(() => this.tickClock(), 1000);
+    this.step();
+  },
+
+  step() {
+    if (!this.on || this.phase !== "parse") return;
+    this.at += 1;
+    if (this.at >= this.scenes.length) {
+      // The parse is done and the model is still working. Say so.
+      this.phase = "model";
+      this.paint();
+      return;
+    }
+    // Reveal an observation as the scenes that prove it go by.
+    const due = Math.round((this.at + 1) / Math.max(1, this.scenes.length) * this.obs.length);
+    while (this.said.length < Math.min(due, this.obs.length))
+      this.said.push(this.obs[this.said.length]);
+    this.paint();
+    this.walk = setTimeout(() => this.step(), this.dwell);
+  },
+
+  tickClock() { const el = $("#rd-clock"); if (el) el.textContent = this.elapsed(); },
+
+  elapsed() {
+    const s = Math.max(0, Math.round((Date.now() - this.t0) / 1000));
+    return String(Math.floor(s / 60)).padStart(2, "0") + ":"
+      + String(s % 60).padStart(2, "0");
+  },
+
+  finish(analysis) {
+    this.stopTimers();
+    this.phase = "found"; this.found = analysis || {};
+    this.said = this.obs.slice();      // the rest of what the parse saw
+    this.at = this.scenes.length - 1;
+    this.paint();
+  },
+
+  fail(msg) { this.stopTimers(); this.phase = "failed"; this.error = msg || ""; this.paint(); },
+
+  stopTimers() {
+    clearTimeout(this.walk); clearInterval(this.clock);
+    this.walk = this.clock = null;
+  },
+
+  dismiss() { this.stopTimers(); this.on = false; const h = $("#read-live"); if (h) h.remove(); },
+
+  /* ---- markup ---------------------------------------------------- */
+
+  mount() {
+    if (!this.on) return;
+    const main = $(".dash-main");
+    if (!main) return;
+    let host = $("#read-live");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "read-live"; host.className = "panel rd";
+      main.prepend(host);
+    }
+    host.innerHTML = this.html();
+    this.paint();
+  },
+
+  html() {
+    const rows = this.scenes.map(sc =>
+      '<div class="rd-row" data-n="' + sc.n + '">'
+      + '<span class="rd-n">' + String(sc.n).padStart(2, "0") + "</span>"
+      + '<span class="rd-slug">' + esc(sc.heading) + "</span>"
+      + '<span class="rd-bar"><i></i></span>'
+      + "</div>").join("");
+    return `
+      <div class="rd-head">
+        <h3 class="stage-headline">Reading the draft</h3>
+        <span class="rd-meta mono"><b>${esc(this.engine.toUpperCase())}</b>
+          · <span id="rd-clock">00:00</span></span>
+      </div>
+      <div class="rd-phase mono">
+        <span data-p="parse">PARSE</span><span data-p="model">MODEL</span><span data-p="found">FOUND</span>
+      </div>
+      <p class="rd-note mono" id="rd-note"></p>
+      <div class="rd-body">
+        <div class="rd-ladder" id="rd-ladder">${rows
+          || '<p class="hint">No sluglines parsed — the model is reading the text as a whole.</p>'}</div>
+        <div class="rd-page" id="rd-page"></div>
+      </div>
+      <div class="rd-ticker" id="rd-ticker"></div>`;
+  },
+
+  paint() {
+    const host = $("#read-live");
+    if (!host) return;
+
+    $$(".rd-phase span", host).forEach(el => {
+      const p = el.dataset.p;
+      el.classList.toggle("now", p === this.phase
+        || (this.phase === "failed" && p === "model"));
+      el.classList.toggle("done",
+        (p === "parse" && this.phase !== "parse")
+        || (p === "model" && this.phase === "found"));
+    });
+
+    const note = $("#rd-note", host);
+    if (note) {
+      if (this.phase === "parse")
+        note.textContent = "PARSED HERE — " + this.scenes.length
+          + " SCENES OFF THE PAGE, NOTHING SENT ANYWHERE YET";
+      else if (this.phase === "model")
+        note.textContent = this.engine.toUpperCase() + " IS READING — ONE CALL, NO "
+          + "PER-SCENE PROGRESS TO REPORT. THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
+      else if (this.phase === "found") note.textContent = "THE READ IS IN.";
+      else note.textContent = "THE READ DID NOT FINISH — " + (this.error || "").toUpperCase();
+      note.classList.toggle("bad", this.phase === "failed");
+    }
+
+    $$(".rd-row", host).forEach(row => {
+      const n = +row.dataset.n, bar = $("i", row);
+      const done = n <= this.at || this.phase === "found" || this.phase === "model";
+      const now = n === this.at + 1 && this.phase === "parse";
+      row.classList.toggle("done", done && !now);
+      row.classList.toggle("now", now);
+      if (now) { bar.style.transitionDuration = this.dwell + "ms"; bar.style.width = "100%"; }
+      else if (done) { bar.style.transitionDuration = "0ms"; bar.style.width = "100%"; }
+      if (now) row.scrollIntoView({ block: "nearest" });
+    });
+
+    const page = $("#rd-page", host);
+    const sc = this.scenes[Math.max(0, this.at)];
+    if (page && sc) {
+      // The snapshot is the script's own text, set the way a script is
+      // set: cue lines indented, action flush left. Nothing rewritten.
+      const lines = (sc.snapshot || []).map(l => {
+        const t = l.trim();
+        const cue = t && t === t.toUpperCase() && t.length <= 34;
+        return '<span class="' + (cue ? "rd-cue" : "rd-action") + '">' + esc(t) + "</span>";
+      }).join("");
+      const who = (sc.speakers || []).length
+        ? '<div class="rd-with">WITH ' + esc(sc.speakers.join(" · ")) + "</div>" : "";
+      page.innerHTML = '<div class="rd-slugline">' + esc(sc.heading) + "</div>"
+        + who + lines;
+    }
+
+    const tick = $("#rd-ticker", host);
+    if (tick) {
+      tick.innerHTML = this.said.slice(-4).map(o =>
+        '<p class="rd-obs mono">' + esc(o) + "</p>").join("");
+      if (this.phase === "found" && this.found) {
+        const langs = (this.found.design_worlds || [])
+          .map(w => w.name || w.title || "").filter(Boolean);
+        const subj = (this.found.subjects || []).length;
+        tick.insertAdjacentHTML("beforeend",
+          '<p class="rd-found mono">' + langs.length + " DESIGN LANGUAGE(S)"
+          + (langs.length ? " — " + esc(langs.slice(0, 4).join(" · ")).toUpperCase() : "")
+          + " · " + subj + " SUBJECT(S)</p>"
+          + '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Dismiss</button>'
+          + '<button class="primary" data-f="rd-go">Review on Prod. Design</button></p>');
+        const go = $("[data-f=rd-go]", host);
+        if (go) go.onclick = () => { this.dismiss(); showView("wizard"); };
+      }
+      const x = $("[data-f=rd-dismiss]", host);
+      if (x) x.onclick = () => this.dismiss();
+    }
+  },
+};
+
 async function startTheRead() {
   try {
     const have = await api("/api/wizard/analysis").catch(() => ({}));
     if (have && (have.design_worlds || have.subjects || have.analyzed_at)) return;
     const s = await api("/api/settings");
-    if (!s.capability?.narrative?.usable) return;
-    toast("Reading the screenplay — design languages, locations and cast. "
-          + "This takes a minute or two; you can keep working.");
-    const a = await api("/api/wizard/analyze", { method: "POST", json: {} });
-    toast(`The read found ${(a.design_worlds || []).length} design language(s) `
-          + `and ${(a.subjects || []).length} subject(s) — review them on `
-          + "Prod. Design.");
-    if (activeView === "wizard") renderWizard();
-    updateBand();
+    const cap = s.capability?.narrative;
+    if (!cap?.usable) return;
+    // The read takes minutes and used to report itself with one toast at
+    // each end. Between them the app looked idle over the most expensive
+    // thing it does (user, 2026-08-20). theRead runs the local parse as
+    // live feedback for the duration.
+    const engine = s.narrative_provider || cap.engines?.[0] || "the model";
+    await theRead.begin(engine);
+    try {
+      const a = await api("/api/wizard/analyze", { method: "POST", json: {} });
+      theRead.finish(a);
+      if (activeView === "wizard") renderWizard();
+      updateBand();
+    } catch (err) {
+      theRead.fail(err.message);
+      throw err;
+    }
   } catch (err) {
     toast(`The read did not finish: ${err.message} — run the Scene Scan on `
           + "Prod. Design when you are ready.", true);

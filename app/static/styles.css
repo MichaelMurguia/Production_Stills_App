@@ -4030,3 +4030,101 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .tut-adm-back { display: block; margin-bottom: 14px; }
 .tut-adm-foot { justify-content: flex-end; }
 .tut-adm-back { display: block; margin-bottom: 14px; }
+
+/* UNCANONIZED — 2026-08-20 — the read, as it happens
+   The one thing this app does that takes minutes reported itself with two
+   toasts and nothing in between. This surface fills that with the local
+   parse: a ladder of real scenes whose bars fill as each is read, the
+   script's own text beside it, and observations that are counts.
+
+   It is a PROGRESSIVE fill, which the canonical `.loc-meter` is not — that
+   meter counts coverage in four fixed segments and is finished the moment
+   it is drawn. Hence a new pattern rather than a borrowed one.
+
+   Amber law: exactly one amber here, the bar of the scene being read right
+   now — "the current thing", the same role the band's stage cell carries.
+   Done bars are --ok, matching every other meter. The MODEL phase gets no
+   bar at all, because there is nothing true to put in one. */
+.rd { display: grid; gap: 12px; }
+.rd-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.rd-head .stage-headline { margin: 0; }
+.rd-meta {
+  margin-left: auto; font-size: 11.5px; letter-spacing: .1em;
+  color: var(--ink-dim);
+}
+.rd-meta b { color: var(--ink); font-weight: 400; }
+
+/* Phase as a sentence, not a bar — three words, the live one lit. */
+.rd-phase { display: flex; gap: 0; font-size: 10.5px; letter-spacing: .12em; }
+.rd-phase span {
+  color: var(--ink-faint); padding: 4px 12px 4px 0;
+  border-top: 1px solid var(--line-soft); flex: 1;
+}
+.rd-phase span.done { color: var(--ink-dim); border-top-color: var(--ok); }
+/* The live phase is NOT amber: the panel's one amber is the bar of the
+   scene being read, and two ambers in one panel is how R1 was lost the
+   first time. The phase strip states position; the ladder shows it. */
+.rd-phase span.now  { color: var(--ink); border-top-color: var(--line); }
+
+.rd-note {
+  margin: 0; font-size: 10.5px; letter-spacing: .1em; color: var(--ink-faint);
+  line-height: 1.5;
+}
+.rd-note.bad { color: var(--bad); }
+
+.rd-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 272px);
+  gap: 14px; align-items: stretch;
+}
+@media (max-width: 1100px) { .rd-body { grid-template-columns: minmax(0, 1fr); } }
+
+/* the ladder — one row per scene the parse actually found */
+.rd-ladder {
+  max-height: 268px; overflow-y: auto; background: var(--field);
+  border: 1px solid var(--line-soft); padding: 4px 0;
+}
+.rd-row {
+  /* No cast column. It was here, and it cost the slug so much room that
+     `INT. RELAY STATION - MA…` and `INT. RELAY STATION - GA…` became the
+     same row — the truncation ate the only distinguishing half. Who is in
+     a scene is legible in the snapshot beside the ladder and in the
+     ticker; which scene this is, is legible nowhere else. */
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 110px;
+  gap: 12px; align-items: center; padding: 5px 12px;
+  font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+}
+.rd-row.done, .rd-row.now { color: var(--ink-dim); }
+.rd-row.now { color: var(--ink); }
+.rd-n { color: var(--ink-faint); }
+.rd-slug {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rd-bar { display: block; height: 4px; background: var(--line-soft); }
+.rd-bar i { display: block; height: 100%; width: 0; background: var(--ok); }
+.rd-row.now .rd-bar i { background: var(--accent); }
+
+/* the page — the script's own lines, set the way a script is set */
+.rd-page {
+  background: var(--field); border: 1px solid var(--line-soft);
+  padding: 12px 14px; font-family: var(--mono); font-size: 11.5px;
+  line-height: 1.55; color: var(--ink-dim); overflow: hidden;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rd-slugline { color: var(--ink); margin-bottom: 2px; }
+/* the cast the ladder no longer has room for, where it does */
+.rd-with {
+  color: var(--ink-faint); font-size: 10.5px; letter-spacing: .1em;
+  margin-bottom: 8px;
+}
+.rd-action { display: block; }
+.rd-cue { display: block; color: var(--ink); padding-left: 84px; }
+
+/* what the parse noticed — counts, never inferences */
+.rd-ticker { display: grid; gap: 3px; }
+.rd-obs, .rd-found {
+  margin: 0; font-size: 11.5px; color: var(--ink-dim); letter-spacing: .04em;
+}
+.rd-obs::before { content: "▸ "; color: var(--ink-faint); }
+.rd-found { color: var(--ink); border-top: 1px solid var(--line-soft); padding-top: 8px; margin-top: 5px; }
+.rd-done-row { display: flex; gap: 8px; margin: 8px 0 0; }

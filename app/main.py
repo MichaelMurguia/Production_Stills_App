@@ -821,6 +821,14 @@ def api_screenplay_file():
                         content_disposition_type="inline")
 
 
+@app.get("/api/screenplay/digest")
+def api_screenplay_digest() -> dict:
+    """Scene-by-scene parse for the reading surface. Deterministic and
+    local — the model's read is a single opaque call, so this is what
+    honest per-scene progress is made of."""
+    return insights.screenplay_digest()
+
+
 @app.get("/api/screenplay/keywords")
 def api_screenplay_keywords(name: str = "") -> dict:
     """Trigger words for a design language, derived deterministically from

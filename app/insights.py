@@ -457,6 +457,12 @@ _TIME_TAIL = {"DAY", "NIGHT", "DAWN", "DUSK", "MORNING", "AFTERNOON",
               "SUNSET", "SUNRISE", "NIGHTFALL", "TIME", "PRESENT"}
 
 
+_TRANSITION_RE = re.compile(
+    r"^(FADE|CUT|DISSOLVE|SMASH|MATCH|JUMP|WIPE|IRIS|TIME CUT|BACK TO|"
+    r"INTERCUT|TITLE|SUPER|MAIN TITLE|MONTAGE|END MONTAGE|OMITTED|"
+    r"THE END|CONTINUED|MORE)\b")
+
+
 def _strip_time_tail(place: str) -> str:
     words = place.split()
     while len(words) > 1 and words[-1].strip(".,") in _TIME_TAIL:
@@ -789,6 +795,101 @@ def locations() -> dict:
 
 
 # ------------------------------------------------------------ citation check
+
+def screenplay_digest(max_scenes: int = 400) -> dict:
+    """The deterministic read, scene by scene, with what each scene gave
+    up — for the reading surface that runs while the model works.
+
+    Everything here is PARSED, never inferred: the sluglines come from the
+    same `_SLUG_RE` walk the coverage table uses, the speakers are cue
+    lines, and the observations are counts. The model's findings arrive
+    separately and are marked as the model's. A reading surface that
+    invented commentary would be the one thing this product exists to
+    prevent, so it does not.
+    """
+    text = screenplay_text()
+    if not text.strip():
+        return {"available": False, "scenes": [], "observations": []}
+    lines = text.splitlines()
+
+    heads: list[dict] = []
+    for i, raw in enumerate(lines):
+        s2 = raw.strip()
+        if not s2 or len(s2) > 90 or s2 != s2.upper():
+            continue
+        m = _SLUG_RE.match(s2)
+        if not m:
+            continue
+        place = re.split(r"\s+[-–—]\s+", m.group(2))[0].strip(" .-–—")
+        place = _strip_time_tail(place)
+        if place:
+            heads.append({"line": i, "heading": s2,
+                          "int_ext": m.group(1).replace(".", "").upper(),
+                          "location": place})
+
+    speakers: dict[str, int] = {}
+    props: dict[str, int] = {}
+    scenes: list[dict] = []
+    for idx, h in enumerate(heads[:max_scenes]):
+        end = heads[idx + 1]["line"] if idx + 1 < len(heads) else len(lines)
+        body = [l.rstrip() for l in lines[h["line"] + 1:end]]
+        said, seen = [], set()
+        for l in body:
+            t = l.strip()
+            # A cue line: short, upper, not a slugline or a transition.
+            if (t and t == t.upper() and 1 < len(t) <= 34
+                    and not _SLUG_RE.match(t)
+                    and not t.endswith(":")
+                    and not t.endswith(".")
+                    and not _TRANSITION_RE.match(t)
+                    and any(c.isalpha() for c in t)):
+                name = re.sub(r"\s*\(.*?\)\s*$", "", t).strip()
+                if name and name not in seen:
+                    seen.add(name)
+                    said.append(name)
+        for name in said:
+            speakers[name] = speakers.get(name, 0) + 1
+        # Capitalised nouns inside action lines — the script shouting at
+        # you is the script telling you what matters.
+        for l in body:
+            t = l.strip()
+            if not t or t == t.upper():
+                continue
+            for w in re.findall(r"\b[A-Z][A-Z0-9'-]{2,}\b", t):
+                props[w] = props.get(w, 0) + 1
+        snapshot = [l for l in body if l.strip()][:4]
+        # Never end on a cue with nothing under it — a name alone at the
+        # foot of the snapshot reads as a character who says nothing.
+        while snapshot and snapshot[-1].strip() == snapshot[-1].strip().upper()                 and len(snapshot[-1].strip()) <= 34:
+            snapshot.pop()
+        scenes.append({
+            "n": idx + 1, "heading": h["heading"], "location": h["location"],
+            "int_ext": h["int_ext"], "lines": sum(1 for l in body if l.strip()),
+            "speakers": said[:6], "snapshot": snapshot,
+        })
+
+    obs: list[str] = []
+    total = len(scenes)
+    lead = sorted(speakers.items(), key=lambda kv: -kv[1])[:3]
+    for name, n in lead:
+        share = "probably a lead" if n >= max(3, total * 0.25) else "recurring"
+        obs.append(f"{name} speaks in {n} of {total} scenes — {share}")
+    places: dict[str, int] = {}
+    for sc in scenes:
+        places[sc["location"]] = places.get(sc["location"], 0) + 1
+    for place, n in sorted(places.items(), key=lambda kv: -kv[1])[:2]:
+        if n > 1:
+            obs.append(f"{place} carries {n} scenes — "
+                       "the script keeps coming back to it")
+    ext = sum(1 for sc in scenes if sc["int_ext"].startswith("EXT"))
+    if total:
+        obs.append(f"{ext} exterior, {total - ext} interior")
+    for w, n in sorted(props.items(), key=lambda kv: -kv[1])[:3]:
+        if n > 1:
+            obs.append(f"{w} appears in {n} scenes — the draft shouts it")
+    return {"available": True, "scenes": scenes, "observations": obs,
+            "total": total}
+
 
 def _norm(s: str) -> str:
     s = s.replace("’", "'").replace("‘", "'")

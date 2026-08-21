@@ -112,6 +112,18 @@ The root dependency gets its own room.
   evidence blocks the lock); uncovered ones offer **Create breakdown**,
   which jumps to
   Breakdowns with the location pre-filled.
+- **While the read runs** ("reading the draft"): the read takes minutes,
+  and stage 01 now shows it happening. A **scene ladder** lists every
+  slugline the local parser found, each bar filling as its scene is read;
+  the scene's **own lines** sit beside it, set as screenplay; and a ticker
+  states what the parse noticed — `VERA speaks in 16 of 24 scenes —
+  probably a lead`, `GT40 appears in 4 scenes — the draft shouts it`.
+  Everything on this panel is **counted from your file**, never guessed.
+  Three phases run left to right: **PARSE** (local, instant), **MODEL**
+  (one call — it reports no per-scene progress, and the panel says so
+  rather than inventing a bar), and **FOUND**, which names the design
+  languages and subject count and offers → Prod. Design. Leaving stage 01
+  and coming back does not lose it.
 - **The file card**: size, SHA-256, upload time, and what the read produced.
   **Downstream of this file**: design languages, breakdowns, cited evidence
   rows, approved panels — everything hanging off this exact draft.

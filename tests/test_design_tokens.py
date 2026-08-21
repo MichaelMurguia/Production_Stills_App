@@ -872,5 +872,64 @@ class NoUndocumentedHex(unittest.TestCase):
             self.assertIn(h.lower(), rest, f"sanctioned hex no longer used: {h}")
 
 
+class TheReadPanelIsLegibleAndHasOneAmber(unittest.TestCase):
+    """The read surface (2026-08-20) is dense Courier at 10.5–12px over
+    `--field`, and it is the only panel in the app whose whole job is to
+    be watched. Both facts make it worth measuring rather than assuming.
+    """
+
+    ROOT = dict(re.findall(r"(--[\w-]+):\s*(#[0-9a-f]{3,8})\b",
+                           CSS.split(":root {")[1].split("\n}")[0]))
+
+    @staticmethod
+    def _lum(h):
+        h = h.lstrip("#")
+        def ch(c):
+            c /= 255
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+    @classmethod
+    def ratio(cls, a, b):
+        la, lb = cls._lum(cls.ROOT.get(a, a)), cls._lum(cls.ROOT.get(b, b))
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+    def test_the_ladder_and_the_page_clear_aa_for_body_ink(self):
+        """`--ink-dim` is what the rows and the snapshot are set in."""
+        for ground in ("--field", "--panel"):
+            r = self.ratio(ground, "--ink-dim")
+            self.assertGreaterEqual(round(r, 2), 4.5,
+                                    f"--ink-dim on {ground} is {r:.2f}:1")
+
+    def test_the_phase_and_note_lines_clear_large_text_aa(self):
+        """`--ink-faint` carries the pending phases and the honesty note.
+        They are letterspaced Courier caps, which AA treats as small text
+        — 3:1 is the floor they must clear, and the note in particular is
+        the sentence that keeps this surface honest, so it is asserted
+        rather than eyeballed."""
+        r = self.ratio("--panel", "--ink-faint")
+        self.assertGreaterEqual(round(r, 2), 3.0,
+                                f"--ink-faint on --panel is {r:.2f}:1")
+
+    def test_a_done_bar_and_a_live_bar_are_told_apart(self):
+        """Green `--ok` and amber `--accent` must not be near-equal in
+        luminance, or the one live bar disappears into the finished ones
+        for anyone who cannot separate them by hue."""
+        a, b = self._lum(self.ROOT["--ok"]), self._lum(self.ROOT["--accent"])
+        self.assertGreater(abs(a - b), 0.05,
+                           "the live bar and a done bar are the same value")
+
+    def test_the_panel_carries_exactly_one_amber(self):
+        block = CSS.split(".rd {")[1]
+        uses = [ln.strip() for ln in block.splitlines()
+                if "--accent" in ln and not ln.strip().startswith(("*", "/*"))]
+        self.assertEqual(len(uses), 1, f"read panel ambers: {uses}")
+
+    def test_the_block_is_marked_uncanonized(self):
+        i = CSS.index(".rd {")
+        self.assertIn("UNCANONIZED — 2026-08-20", CSS[max(0, i - 1400):i])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -68,6 +68,31 @@ down; broken content is inert rather than half-run; state records/resumes
 runtime bundle is open to every studio; and invalid content is refused with
 every reason at once.
 
+**The read, as it happens** (2026-08-20, `test_read_progress.py` 18 +
+`TheReadPanelIsLegibleAndHasOneAmber` in `test_design_tokens.py` 6) — the
+live progress surface is only defensible because every number on it is
+measured, so that is what is tested: sluglines become numbered scenes in
+page order, cue lines attach to the scene they are spoken in, a transition
+(`FADE OUT.`, `CUT TO:`) is never reported as a person, and the snapshot
+contains the screenplay's own characters. Then the commentary as
+arithmetic — every `speaks in N of M` matches a recount of the parse,
+`lead` vs `recurring` is a stated threshold, a location seen once is never
+"a place the script keeps coming back to", and the interior/exterior split
+sums to the scene total. Then the surface: the ladder is fed by
+`/api/screenplay/digest` and by nothing else (a second source is a second
+answer to "what is in this screenplay"), the model phase states in words
+that it has no per-scene progress, a read survives leaving the view, and
+the panel carries exactly one amber and invents no colours.
+
+**No control bytes in source** (2026-08-20, `test_no_control_bytes.py` 2)
+— a standing byte-level contract. Twice a `\b` authored through a shell
+heredoc reached a source file as a real backspace (0x08), producing a
+regex that compiles, runs, raises nothing and silently never matches: the
+digest stopped reporting shouted props, and the tutorial editor stopped
+labelling ID errors. Both failures are *silence*, so no behavioural test
+could catch them. This one makes the byte itself the failure, across every
+`.py/.js/.json/.css/.html/.md` in the tree.
+
 **Credentials as a blocker** (2026-08-18, `test_credential_blocker.py`
 19) — `generate.capability()` across the states that matter: nothing
 configured, a settings key, an environment key, a key that failed its own

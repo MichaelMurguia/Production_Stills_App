@@ -650,7 +650,7 @@
     const row = l => {
       const m = /^step (\d+)(?:\s*[-—:]\s*|\s+)?/i.exec(l);
       const addr = m ? `STEP ${String(+m[1]).padStart(2, "0")}`
-        : /^id/i.test(l) ? "ID" : "";
+        : /^id\b/i.test(l) ? "ID" : "";
       const rest = m ? l.slice(m[0].length) : l;
       const inner = `<span class="tut-adm-faint">${esc(addr || "—")}</span>`
         + ` <span class="tut-adm-ink">${esc(rest)}</span>`;
