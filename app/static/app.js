@@ -2490,6 +2490,218 @@ async function renderScreenplay() {
      `Upload a new draft` says it does.
    - **Only with an engine.** The read is a model call; with none it is
      not attempted, and the upload is gated on a credential anyway. */
+/* ============================================ the bible, as it is written
+   One act (user, 2026-08-22: "generating the art direction bible and
+   swatches should happen in a single step ... same razzle-dazzle feedback
+   as the screenplay read"). It was two: write the bible, then find the
+   swatch control, then run a second pass that read the bible again.
+
+   Same honesty rule as theRead. Two of the four phases are single opaque
+   model calls and say so; the two that surround them are real local work
+   and carry the feedback:
+
+     ASSEMBLE  what is actually being sent — every design language, the
+               anchors in words, the cast count. Local, paced.
+     WRITE     one call. No per-section progress exists, so none is shown.
+     SECTIONS  the returned bible's OWN sections, walked as they are
+               parsed — including whether each design language got the
+               `Color identity` line that keeps its palette its own.
+     COLOUR    one call, then the real proposed ramps.
+
+   The ladder is one row per design language the whole way through, and
+   the row's right-hand cell evolves: what we sent, then what came back,
+   then the colours that language actually owns. */
+const theBible = {
+  on: false, phase: "", langs: [], anchors: [], subjects: 0,
+  t0: 0, at: -1, said: [], sections: [], ramps: {}, identity: {},
+  error: "", walk: null, clock: null, dwell: 700,
+
+  begin(inputs) {
+    Object.assign(this, {
+      on: true, phase: "assemble", t0: Date.now(), at: -1, said: [],
+      sections: [], ramps: {}, identity: {}, error: "",
+      langs: inputs.langs || [], anchors: inputs.anchors || [],
+      subjects: inputs.subjects || 0,
+    });
+    this.dwell = Math.max(320, Math.min(1100, 4200 / Math.max(1, this.langs.length)));
+    this.mount();
+    this.clock = setInterval(() => {
+      const el = $("#bb-clock");
+      if (el) el.textContent = this.elapsed();
+    }, 1000);
+    this.step();
+  },
+
+  elapsed() {
+    const s = Math.max(0, Math.round((Date.now() - this.t0) / 1000));
+    return String(Math.floor(s / 60)).padStart(2, "0") + ":"
+      + String(s % 60).padStart(2, "0");
+  },
+
+  step() {
+    if (!this.on || this.phase !== "assemble") return;
+    this.at += 1;
+    if (this.at >= this.langs.length) return this.writing();
+    const l = this.langs[this.at];
+    this.say(`${l} — sending its section of the read`);
+    this.paint();
+    this.walk = setTimeout(() => this.step(), this.dwell);
+  },
+
+  say(line) {
+    this.said.push(line);
+    if (this.said.length > 4) this.said.shift();
+  },
+
+  writing() {
+    this.phase = "writing";
+    clearTimeout(this.walk);
+    this.say(`${this.langs.length} design languages · ${this.subjects} cast `
+             + `· ${this.anchors.length} anchors stated`);
+    this.paint();
+  },
+
+  /* The bible landed. Walk its real sections, and record which design
+     languages were given a colour of their own — the thing whose absence
+     made every palette identical. */
+  written(markdown) {
+    this.phase = "sections";
+    this.sections = [...String(markdown || "").matchAll(/^##\s+(.+)$/gm)]
+      .map(m => m[1].trim());
+    for (const l of this.langs) {
+      // To the NEXT heading, not a fixed window. A 1400-character slice ran
+      // into the following section, so a language with no colour line
+      // borrowed its neighbour's and the count read 4 of 4 when it was 3.
+      const md = String(markdown || "");
+      const i = md.indexOf(`## ${l}`);
+      const next = i < 0 ? -1 : md.indexOf("\n## ", i + 3);
+      const body = i < 0 ? "" : md.slice(i, next < 0 ? undefined : next);
+      this.identity[l] = /\*\*Colou?r identity:\*\*/i.test(body);
+    }
+    const withColour = this.langs.filter(l => this.identity[l]).length;
+    this.say(`${this.sections.length} sections written`);
+    this.say(`${withColour} of ${this.langs.length} languages own a colour identity`);
+    this.at = this.langs.length;
+    this.paint();
+  },
+
+  colouring() { this.phase = "colour"; this.paint(); },
+
+  coloured(res) {
+    this.phase = "done";
+    this.stopTimers();
+    for (const g of (res.groups || [])) {
+      this.ramps[g.language] = (g.swatches || []).map(s => s.hex);
+    }
+    const n = (res.groups || []).reduce((t, g) => t + (g.swatches || []).length, 0);
+    this.say(`${n} colours proposed across ${(res.groups || []).length} languages`);
+    for (const c of (res.collisions || [])) this.say(c.text);
+    this.paint();
+  },
+
+  fail(msg) { this.phase = "failed"; this.error = msg || ""; this.stopTimers(); this.paint(); },
+
+  stopTimers() {
+    clearTimeout(this.walk); clearInterval(this.clock);
+    this.walk = this.clock = null;
+  },
+
+  dismiss() {
+    this.stopTimers(); this.on = false;
+    const h = $("#bible-live"); if (h) h.remove();
+  },
+
+  mount() {
+    if (!this.on) return;
+    const host = $("#wiz-draft-busy");
+    if (!host) return;
+    host.innerHTML = `<div id="bible-live" class="rd">
+      <div class="rd-head">
+        <h3 class="stage-headline">Writing the Art Direction Bible</h3>
+        <span class="rd-meta mono"><span id="bb-clock">00:00</span></span>
+      </div>
+      <div class="rd-phase mono">
+        <span data-p="assemble">ASSEMBLE</span><span data-p="writing">WRITE</span
+        ><span data-p="sections">SECTIONS</span><span data-p="colour">COLOUR</span>
+      </div>
+      <div id="bb-busy"></div>
+      <p class="rd-note mono" id="bb-note"></p>
+      <div class="rd-body">
+        <div class="rd-ladder" id="bb-ladder"></div>
+        <div class="rd-page" id="bb-page"></div>
+      </div>
+      <div class="rd-ticker" id="bb-ticker"></div>
+    </div>`;
+    this.paint();
+  },
+
+  paint() {
+    const host = $("#bible-live");
+    if (!host) return;
+    const done = { assemble: 1, writing: 2, sections: 3, colour: 4, done: 5, failed: 4 }[this.phase] || 0;
+    const order = ["assemble", "writing", "sections", "colour"];
+    $$(".rd-phase span", host).forEach(el => {
+      const n = order.indexOf(el.dataset.p) + 1;
+      el.classList.toggle("done", n < done);
+      el.classList.toggle("now", n === done && this.phase !== "done");
+    });
+
+    const busy = $("#bb-busy", host);
+    const spin = { writing: "Writing the Art Direction Bible from the anchors, "
+                          + "the read and the cast",
+                   colour: "Scoping colour — proposing a palette for each "
+                         + "design language from the bible just written" }[this.phase];
+    busy.innerHTML = spin
+      ? `<div class="busy wrap"><span class="spinner"></span>
+         <span class="busy-label">${esc(spin)}. One call — it reports nothing
+         until it is done.</span><span class="busy-bar"></span></div>` : "";
+
+    const note = $("#bb-note", host);
+    note.classList.toggle("bad", this.phase === "failed");
+    note.textContent = {
+      assemble: "ASSEMBLED HERE — NOTHING SENT ANYWHERE YET",
+      writing: "",
+      sections: "THE BIBLE IS WRITTEN AND SAVED — BREAKDOWNS ARE OPEN",
+      colour: "",
+      done: "THE BIBLE IS WRITTEN, SAVED, AND ITS COLOUR PROPOSED",
+      failed: `IT DID NOT FINISH — ${(this.error || "").toUpperCase()}`,
+    }[this.phase] || "";
+
+    $("#bb-ladder", host).innerHTML = this.langs.map((l, i) => {
+      const state = this.phase === "assemble"
+        ? (i <= this.at ? "done" : "") : "done";
+      const now = this.phase === "assemble" && i === this.at;
+      const ramp = this.ramps[l];
+      const right = ramp
+        ? `<span class="bb-ramp">${ramp.slice(0, 8).map(h =>
+            `<i style="background:${esc(h)}"></i>`).join("")}</span>`
+        : this.phase === "sections" || this.phase === "colour" || this.phase === "done"
+          ? `<span class="rd-cast">${this.identity[l] ? "OWNS ITS COLOUR"
+              : "NO COLOUR OF ITS OWN"}</span>`
+          : `<span class="rd-bar"><i style="width:${now || state ? 100 : 0}%"></i></span>`;
+      return `<div class="rd-row ${now ? "now" : state}">
+        <span class="rd-n">${String(i + 1).padStart(2, "0")}</span>
+        <span class="rd-slug">${esc(l)}</span>${right}</div>`;
+    }).join("") || '<p class="hint">No design languages — the bible will derive them.</p>';
+
+    const page = $("#bb-page", host);
+    page.innerHTML = this.phase === "assemble" || this.phase === "writing"
+      ? `<div class="rd-slugline">THE DIRECTOR'S ANSWERS</div>`
+        + this.anchors.map(a =>
+            `<span class="rd-action">${esc(a)}</span>`).join("")
+      : `<div class="rd-slugline">SECTIONS WRITTEN</div>`
+        + this.sections.map(x => `<span class="rd-action">${esc(x)}</span>`).join("");
+
+    $("#bb-ticker", host).innerHTML = this.said.map(o =>
+      `<p class="rd-obs mono">${esc(o)}</p>`).join("")
+      + (this.phase === "done" || this.phase === "failed"
+        ? `<p class="rd-done-row"><button type="button" class="ghost"
+             data-f="bb-close">Close</button></p>` : "");
+    const x = $("[data-f=bb-close]", host);
+    if (x) x.onclick = () => this.dismiss();
+  },
+};
+
 /* ================================================== the read, as it happens
    The model's read is ONE call. It cannot report per-scene progress, and a
    bar that implied otherwise would be the exact species of confident
@@ -4243,6 +4455,9 @@ async function renderWizard() {
   // Languages, and stay client-side until each approval creates the
   // reference.
   let syncSwatchGen = () => {};
+  // Same reason: the bible's one act renders the strip when its colour
+  // pass returns, and that call site is outside this block.
+  let renderSwatchStrip = () => {};
   {
     const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
     const colorIn = $("[data-f=sw-color]", col);
@@ -4403,13 +4618,23 @@ async function renderWizard() {
       } finally { busy.done(); }
     };
 
-    const renderSwatchStrip = r => {
+    renderSwatchStrip = r => {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
       const headTxt = n =>
         `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} — NOT CANON UNTIL APPROVED`;
+      /* What the set repeats, measured (2026-08-22). The user's first
+         real run returned four ramps built from one six-slot recipe — 23
+         of 27 colours had a near-twin in another design language — and
+         every swatch was individually defensible, so nothing on screen
+         said the set as a whole was one palette relabelled. */
+      const bad = r.collisions || [];
       strip.innerHTML = `
         <p class="prop-head">${esc(headTxt(total))}</p>
+        ${bad.length ? `<div class="sw-collide">${bad.map(c =>
+          `<p class="mono"><b>${esc(c.kind)}</b> ${esc(c.text)}</p>`).join("")
+          }<p class="mini mono">REGENERATE FOR A DIFFERENT READ, OR APPROVE WHAT
+           WORKS AND RESCAN THE LANGUAGE THAT DOES NOT</p></div>` : ""}
         ${r.groups.map((g, i) => `
           <div class="sw-ramp" data-lang="${esc(g.language)}" data-gi="${i}">${
             rampOrder(g.swatches).map(band).join("")}</div>
@@ -5794,9 +6019,18 @@ async function renderWizard() {
   const writeBible = async ({ replacing = false } = {}) => {
     const btn = $("#wiz-draft");
     btn.disabled = true;
-    const busy = startBusy($("#wiz-draft-busy"),
-      `Drafting the Art Direction Bible from screenplay, worlds, interview, and reference photos — ${selectedModelLabel($("#wiz-provider"))}…`,
-      "this is the big one — a few minutes is normal");
+    const regen = $("#bible-regen");
+    if (regen) regen.disabled = true;
+    theBible.begin({
+      langs: (getAnalysis()?.design_worlds || [])
+        .filter(w => w.status !== "PROPOSED" && (w.name || "").trim())
+        .map(w => w.name.trim()),
+      subjects: (getAnalysis()?.subjects || []).length,
+      anchors: [["TEXTURE", $("#wiz-texture").value], ["PALETTE", $("#wiz-palette").value],
+                ["CINEMATOGRAPHY", $("#wiz-light").value], ["MEDIUM", $("#wiz-medium").value]]
+        .filter(([, v]) => (v || "").trim())
+        .map(([k, v]) => `${k}: ${v.trim().slice(0, 90)}`),
+    });
     try {
       // PROPOSED worlds stay out of the draft — confirming is what writes a
       // Bible section (Gap 5 ruling §1).
@@ -5841,8 +6075,25 @@ async function renderWizard() {
          downstream opened — so the one gold button on the step produced a
          result that changed nothing until you found the grey one. */
       bibleEditing = false;
+      theBible.written(r.markdown);
       const saved = await saveBible();
       syncBibleSave();
+      if (saved) {
+        /* ONE act (user, 2026-08-22). Colour was a second pass behind a
+           second control that read the bible again — and a bible written
+           for it is the only thing it can be grounded in, so the two were
+           never really separable. */
+        theBible.colouring();
+        try {
+          const sw = await api("/api/wizard/swatches", { method: "POST",
+            json: { provider: $("#wiz-provider").value, note: "", deep: false } });
+          theBible.coloured(sw);
+          renderSwatchStrip(sw);
+          refreshRefs();
+        } catch (err) {
+          theBible.fail(`the bible is saved, but colour failed: ${err.message}`);
+        }
+      }
       if (saved) {
         $("#style-status").innerHTML =
           `<span class="badge LOCKED">SAVED</span> WRITTEN BY `
@@ -5851,8 +6102,8 @@ async function renderWizard() {
         toast(`Art Direction Bible written by ${r.model} and saved — Breakdowns `
               + "are open. Search it for (PROPOSED) to find its guesses.");
       }
-    } catch (err) { toast(err.message, true); }
-    finally { busy.done(); btn.disabled = false; }
+    } catch (err) { theBible.fail(err.message); toast(err.message, true); }
+    finally { btn.disabled = false; if (regen) regen.disabled = false; }
   };
 
   // ---- the Bible itself + project-wide lessons (the PD's living documents) ----

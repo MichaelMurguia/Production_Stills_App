@@ -316,6 +316,15 @@ if they genuinely conflict the director's words win.
 DESIGN LANGUAGES (one ## section each, in this order — first is the default world):
 {world_lines or '- derive 2-4 from the screenplay'}
 
+EACH DESIGN LANGUAGE OWNS ITS OWN COLOR (added 2026-08-22 after a bible whose
+four worlds named no color at all between them, which left every downstream
+palette identical). Give each world a `**Color identity:**` line that a
+production designer could act on, and make the worlds DIFFER: they share a
+film, not a palette. If two worlds genuinely share a look, say so in both
+lines and name the one thing that still separates them on screen. Ground each
+in the screenplay — a faction's materials, its era, its function, what it can
+afford — never in decoration.
+
 ENVIRONMENTS (one ### entry each under '## Environments' — the physical worlds
 panels live in; palette, light, and atmosphere only, never culture):
 {env_lines or '- none identified — omit the Environments section entirely'}
@@ -343,6 +352,9 @@ OUTPUT FORMAT — return ONLY markdown in EXACTLY this section structure
 ## <World 1 name>
 Keywords: <comma-separated lowercase trigger words>
 **Design language:** <one line>
+**Color identity:** <one line — the hues this world owns, its value key, how
+far saturation travels, and WHAT SEPARATES IT FROM THE OTHER WORLDS here. A
+reader must be able to tell two of these apart by this line alone.>
 (bullets)
 
 ## <World 2 name>
@@ -492,6 +504,13 @@ Rules:
   own proper nouns — units, factions, vehicles, materials — over generic
   color talk. If the Bible gives the color no name, use the shortest
   phrase that names where the color comes from.
+- THE DESIGN LANGUAGES MUST NOT SHARE A PALETTE. Each one's `Color identity`
+  line in the bible says what it owns and how it differs; honour that. Two
+  languages whose ramps a viewer cannot tell apart have failed, however
+  well each is grounded. In particular do not give every language the same
+  six-slot recipe — a near-black, a cream, a neutral grey, a blue-grey, a
+  brown and a rust red — which is what a model returns when it is writing
+  one palette four times.
 - Exactly ONE swatch per design language has "hero": true — the color a
   production designer would splash through that faction's sets, vehicles
   and costumes so the area reads on sight. Every other swatch is false.
@@ -527,6 +546,107 @@ def _clean_hex(v) -> str:
     if v and not v.startswith("#"):
         v = "#" + v
     return v.upper() if _HEX_RE.match(v) else ""
+
+
+def _lab(hexv: str) -> tuple[float, float, float]:
+    """sRGB hex to CIE L*a*b*. Distances in Lab are roughly perceptual,
+    which RGB distances are not — two greys and two reds are not equally
+    far apart just because their bytes are."""
+    def inv(c):
+        c /= 255
+        return ((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92
+    r, g, b = (inv(int(hexv.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 4))
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 1.0
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+
+    def f(t):
+        return t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+    fx, fy, fz = f(x), f(y), f(z)
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+
+def delta_e(a: str, b: str) -> float:
+    """CIE76. Under ~10 two colours read as the same colour to most eyes;
+    under ~5 they are hard to tell apart side by side."""
+    la, aa, ba = _lab(a)
+    lb, ab, bb = _lab(b)
+    return ((la - lb) ** 2 + (aa - ab) ** 2 + (ba - bb) ** 2) ** 0.5
+
+
+# Two languages whose HERO colours are this close are, on a board, the same
+# faction. The hero is defined as "the color a production designer would
+# splash through that faction's sets so the area reads on sight" — two that
+# read alike defeat the only thing a hero is for.
+HERO_MIN_DELTA = 18.0
+SWATCH_MIN_DELTA = 6.0
+# Two colours this close are the same colour in different words.
+TWIN_DELTA = 9.0
+# …and a language most of whose ramp has a twin in another language is not
+# a second palette, it is the first one relabelled. This is what a viewer
+# actually sees, and no per-colour check finds it: every individual swatch
+# can be defensible while the SET repeats.
+OVERLAP_SHARE = 0.6
+
+
+def swatch_collisions(groups: list[dict]) -> list[dict]:
+    """Where a proposal is repeating itself.
+
+    Added 2026-08-22, after a four-world bible produced four ramps built
+    from the same six-slot recipe — a near-black, a cream, a neutral grey,
+    a blue-grey, a brown and a rust red — with four rusty reds inside
+    ΔE 8 of each other. Every swatch was individually defensible and the
+    set as a whole was one palette wearing four labels.
+
+    Prompting alone cannot catch that; only measuring can. This reports it
+    so the surface can say so instead of presenting the four ramps as if
+    they were four palettes.
+    """
+    out = []
+    heroes = [(g["language"], sw["hex"]) for g in groups
+              for sw in g["swatches"] if sw.get("hero")]
+    for i, (l1, h1) in enumerate(heroes):
+        for l2, h2 in heroes[i + 1:]:
+            d = delta_e(h1, h2)
+            if d < HERO_MIN_DELTA:
+                out.append({"kind": "HERO", "a": l1, "b": l2,
+                            "hex_a": h1, "hex_b": h2, "delta": round(d, 1),
+                            "text": f"{l1} and {l2} have the same hero colour "
+                                    f"({h1} vs {h2}) — on a board they read as "
+                                    "one faction"})
+    # Set-level, not pairwise. Measured against the reporting production:
+    # 22 of 27 swatches had a twin in ANOTHER language, but no single pair
+    # of languages crossed 60% — the repetition was spread evenly across
+    # all four. A pairwise test finds nothing and a viewer sees it at a
+    # glance, so the question is asked of the whole set: how much of this
+    # proposal already exists somewhere else in it?
+    if len(groups) > 1:
+        flat = [(g["language"], sw) for g in groups for sw in g["swatches"]]
+        twinned = [(lang, sw) for lang, sw in flat
+                   if any(l2 != lang and delta_e(sw["hex"], s2["hex"]) < TWIN_DELTA
+                          for l2, s2 in flat)]
+        share = len(twinned) / max(1, len(flat))
+        if share >= OVERLAP_SHARE:
+            out.append({
+                "kind": "OVERLAP", "a": "", "b": "", "hex_a": "", "hex_b": "",
+                "delta": round(share * 100),
+                "text": f"{len(twinned)} of {len(flat)} colours repeat across "
+                        f"the {len(groups)} design languages — this is one "
+                        "palette relabelled, not one palette per language"})
+
+    for g in groups:
+        sw = g["swatches"]
+        for i, a in enumerate(sw):
+            for b in sw[i + 1:]:
+                d = delta_e(a["hex"], b["hex"])
+                if d < SWATCH_MIN_DELTA:
+                    out.append({"kind": "SWATCH", "a": g["language"],
+                                "b": g["language"], "hex_a": a["hex"],
+                                "hex_b": b["hex"], "delta": round(d, 1),
+                                "text": f"{g['language']}: {a['name']} and "
+                                        f"{b['name']} are the same colour "
+                                        f"({a['hex']} vs {b['hex']})"})
+    return out
 
 
 def parse_swatch_proposals(text: str) -> list[dict]:
@@ -815,6 +935,7 @@ def generate_swatches(provider: str = "gemini",
                 "The mock engine has nothing for "
                 + (", ".join(languages) if languages else "this Bible") + ".")
         return {"groups": persist_swatch_proposals(groups),
+                "collisions": swatch_collisions(groups),
                 "model": mockflow.MODEL_NAME}
 
     instructions = (
@@ -851,7 +972,11 @@ def generate_swatches(provider: str = "gemini",
             model=model, contents=[bible_text, instructions])
         text = (response.text or "").strip()
 
-    return {"groups": persist_swatch_proposals(parse_swatch_proposals(text)),
+    parsed = parse_swatch_proposals(text)
+    return {"groups": persist_swatch_proposals(parsed),
+            # Measured, not asserted: the prompt asks the languages to
+            # differ and only this can tell whether they did.
+            "collisions": swatch_collisions(parsed),
             "model": model}
 
 

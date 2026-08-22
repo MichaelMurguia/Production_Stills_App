@@ -70,7 +70,7 @@ class R2_AReportHasNoAmber(unittest.TestCase):
 
 class R3_GenerationLeavesTheVerdictBar(unittest.TestCase):
     def viewer(self) -> str:
-        return between(JS, "const openSwatchViewer", "\n    const renderSwatchStrip")
+        return between(JS, "const openSwatchViewer", "\n    renderSwatchStrip = r =>")
 
     def test_rescan_is_in_the_header_not_the_footer(self):
         head = between(self.viewer(), '<div class="sv-head">', "</div>")
@@ -105,7 +105,7 @@ class R4_DestructionWhereItsObjectReads(unittest.TestCase):
         self.assertNotIn("&times;", body)
 
     def test_remove_group_is_in_the_viewer_footer(self):
-        viewer = between(JS, "const openSwatchViewer", "\n    const renderSwatchStrip")
+        viewer = between(JS, "const openSwatchViewer", "\n    renderSwatchStrip = r =>")
         foot = between(viewer, '<div class="sv-foot">', "</div>")
         self.assertIn('data-f="rm-group"', foot)
         self.assertIn("Remove group", foot)
