@@ -8996,7 +8996,21 @@ async function cineRideSwitch(host) {
 async function loadCinemaStyles() {
   if (CINEMA_STYLES.length) return CINEMA_STYLES;
   let d;
-  try { d = await api("/api/cinematography/styles"); } catch { return CINEMA_STYLES; }
+  try {
+    d = await api("/api/cinematography/styles");
+  } catch (err) {
+    /* This used to swallow the failure and return an empty list, so a
+       picker that could not load its eight grammars rendered as a picker
+       with nothing in it — indistinguishable from a document that defines
+       no styles (user, 2026-08-21). The grammars are read from
+       docs/CINEMATOGRAPHY_STYLES.md, so "none" is a real possible answer
+       and a silent empty list cannot be told apart from a broken fetch.
+       Say which it was. */
+    toast(`Could not load the cinematography grammars: ${err.message} — `
+          + "they are read from docs/CINEMATOGRAPHY_STYLES.md.", true);
+    CINEMA_STYLES.failed = true;
+    return CINEMA_STYLES;
+  }
   for (const st of d.styles || []) {
     CINEMA_STYLES.push({
       ...st,

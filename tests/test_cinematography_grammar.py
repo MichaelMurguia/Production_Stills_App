@@ -254,5 +254,44 @@ class NothingForcesThePanelWider(unittest.TestCase):
         self.assertIn("max-width: 100%", b.group(1))
 
 
+class AFailedLoadIsStatedNotSwallowed(unittest.TestCase):
+    """Reported 2026-08-21: "on the Production Design board — failed to
+    fetch cinematography styles."
+
+    The cause that time was a dead port, not the app. But the report
+    exposed a real one: `loadCinemaStyles()` caught every failure and
+    returned the empty list, so a picker that could not reach its grammars
+    rendered as a picker with none.
+
+    That is not a cosmetic distinction here. The grammars are READ from
+    docs/CINEMATOGRAPHY_STYLES.md rather than hardcoded, so "this document
+    defines no styles" is a genuinely possible answer — and a silently
+    empty list is indistinguishable from it. The one case the user can act
+    on (the app cannot reach the server) looked exactly like the one they
+    cannot.
+    """
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    def body(self):
+        i = self.JS.index("async function loadCinemaStyles()")
+        return self.JS[i:i + 1400]
+
+    def test_the_failure_reaches_the_user(self):
+        b = self.body()
+        self.assertIn("catch (err)", b)
+        self.assertIn("toast(", b)
+        self.assertNotIn("catch { return CINEMA_STYLES; }", b)
+
+    def test_it_names_where_the_grammars_come_from(self):
+        """So the user can tell a missing document from a broken fetch."""
+        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", self.body())
+
+    def test_the_failure_is_recorded_on_the_cache(self):
+        """An empty list that failed must be distinguishable from an empty
+        list that is genuinely empty, for any later caller."""
+        self.assertIn("CINEMA_STYLES.failed = true", self.body())
+
+
 if __name__ == "__main__":
     unittest.main()
