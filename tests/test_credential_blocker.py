@@ -258,11 +258,19 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
         self.assertNotIn("pal-go", b)
         self.assertNotIn("<button", b)
 
-    def test_the_words_half_is_locked_with_the_colour_half(self):
-        """One statement about palette, one lock."""
+    def test_everything_that_states_a_palette_is_locked_together(self):
+        """Three passes, one per control left behind — the hand-added
+        colour, then the words, then Add images. Each survivor read as the
+        gate not meaning it."""
         b = self.body()
-        self.assertIn('const words = $("[data-f=words]", col)', b)
-        self.assertIn("words.disabled = locked", b)
+        self.assertIn('$$("input, button", add).forEach', b)   # the adder
+        self.assertIn("words.disabled = locked", b)            # the words
+        self.assertIn("addImgs.disabled = locked", b)          # the images
+        self.assertIn('$("[data-f=files]", col)', b)           # and its input
+
+    def test_the_callout_precedes_what_it_disables(self):
+        """A gate under half its own controls explains them too late."""
+        self.assertIn("col.insertBefore(gate, addImgs || add);", self.body())
 
     def test_the_gate_goes_when_the_bible_arrives(self):
         b = self.body()

@@ -2241,6 +2241,7 @@ details.meta pre {
 .swatch-add.is-locked input, .swatch-add.is-locked button,
 .wiz-words.is-locked input { cursor: not-allowed; }
 .wiz-words.is-locked { opacity: .4; }
+.wiz-add-btn.is-locked { opacity: .4; cursor: not-allowed; }
 .wiz-thumb-note { display: block; font-family: var(--mono); font-size: 8.5px;
   letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

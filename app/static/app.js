@@ -4295,22 +4295,36 @@ async function renderWizard() {
       const b = await api("/api/style-bible").catch(() => ({ text: "" }));
       const locked = !b.text.trim();
 
+      /* Everything in the column that STATES a palette, locked together:
+         the hand-added colour, the words, and the reference images (user,
+         2026-08-22, in three passes — each live control left behind read
+         as the gate not meaning it). What stays reachable is what only
+         reads: the existing thumbs and their viewer. */
       add.classList.toggle("is-locked", locked);
       $$("input, button", add).forEach(el => { el.disabled = locked; });
-      // The words half of the anchor is gated with the colour half (user,
-      // 2026-08-22) — one statement about palette, one lock.
+
       const words = $("[data-f=words]", col);
       if (words) {
         words.disabled = locked;
         words.closest(".wiz-words")?.classList.toggle("is-locked", locked);
       }
 
+      const addImgs = $("[data-f=addbtn]", col);
+      if (addImgs) {
+        addImgs.disabled = locked;
+        addImgs.classList.toggle("is-locked", locked);
+      }
+      const files = $("[data-f=files]", col);
+      if (files) files.disabled = locked;
+
       if (!locked) { if (gate) gate.remove(); return; }
       if (!gate) {
         gate = document.createElement("div");
         gate.className = "pal-gate";
         gate.dataset.f = "pal-gate";
-        add.parentElement.insertBefore(gate, add);
+        // Above the first thing it disables, not in the middle of them —
+        // a gate under half its own controls explains them too late.
+        col.insertBefore(gate, addImgs || add);
       }
       // Copy and shape are the user's, verbatim (2026-08-22). No verb:
       // the step it names is on the same page, and a button that scrolls
