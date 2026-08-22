@@ -3157,6 +3157,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    three-up plain card, so the diagram's native 68/56 became a column of
    empty ground with a mark at the bottom (2026-08-22). The SVG letterboxes
    inside it rather than distorting. */
+/* A saved bible reads as saved: locked until Edit is pressed (2026-08-22).
+   Dimmed would say "unavailable"; this says "not being edited". */
+#style-bible.is-locked {
+  background: var(--field); color: var(--ink-dim); cursor: default;
+}
 .rs-cards-rich .rs-frame { aspect-ratio: 16 / 9; }
 .rs-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .rs-cell { display: block; aspect-ratio: 16 / 9; background: var(--bg2);

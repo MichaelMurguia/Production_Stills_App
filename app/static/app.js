@@ -5801,17 +5801,31 @@ async function renderWizard() {
       const editor = $("#style-bible");
       if (editor.value.trim() && editor.value.trim() !== r.markdown.trim()) {
         if (!(await askConfirm("Replace the editor content?",
-          "The Art Direction Bible editor already holds text. Load the new draft over it? (Nothing is saved until you press Save.)",
-          "Load the draft"))) {
+          "The Art Direction Bible editor already holds text. Replace it with "
+          + "a newly written one, and save that? The text you have now is lost "
+          + "unless you have saved it.",
+          "Replace and save"))) {
           toast(`Draft ready but not loaded — the editor kept your text.`, true);
           return;
         }
       }
       editor.value = r.markdown;
+      /* Create SAVES (user, 2026-08-22: "it should also save it so it
+         unlocks breakdown tab"). The old flow drafted into an editor and
+         waited for a second, differently-worded button before anything
+         downstream opened — so the one gold button on the step produced a
+         result that changed nothing until you found the grey one. */
+      bibleEditing = false;
+      const saved = await saveBible();
       syncBibleSave();
-      $("#style-status").innerHTML =
-        `DRAFTED BY ${esc(r.model || "the model").toUpperCase()} — REVIEW, EDIT, THEN SAVE`;
-      toast(`Bible drafted by ${r.model} — review below, then save. Search for (PROPOSED) to find its guesses.`);
+      if (saved) {
+        $("#style-status").innerHTML =
+          `<span class="badge LOCKED">SAVED</span> WRITTEN BY `
+          + `${esc(r.model || "the model").toUpperCase()} — BREAKDOWNS ARE OPEN. `
+          + `EDIT BELOW TO CHANGE IT`;
+        toast(`Art Direction Bible written by ${r.model} and saved — Breakdowns `
+              + "are open. Search it for (PROPOSED) to find its guesses.");
+      }
     } catch (err) { toast(err.message, true); }
     finally { busy.done(); btn.disabled = false; }
   };
@@ -5820,9 +5834,25 @@ async function renderWizard() {
   // Save is disabled while the editor is empty (user-directed 2026-08-05):
   // the gate is readable as state — disabled control + the stated
   // condition beside it — instead of a 422 after the click.
+  /* The bible is a saved document, not a scratch pad (user, 2026-08-22).
+     Create writes it AND saves it, so Breakdowns open from the one gold
+     button; the editor below then holds a saved thing, and a saved thing
+     is read-only until you say otherwise. The grey button is the mode:
+     Edit unlocks it, Save writes it and locks it again. */
+  let bibleEditing = false;
   const syncBibleSave = () => {
-    const empty = !$("#style-bible").value.trim();
-    $("#style-save").disabled = empty;
+    const editor = $("#style-bible");
+    const empty = !editor.value.trim();
+    const btn = $("#style-save");
+    editor.readOnly = !bibleEditing;
+    editor.classList.toggle("is-locked", !bibleEditing && !empty);
+    btn.disabled = empty;
+    btn.textContent = bibleEditing ? "Save Art Direction Bible" : "Edit";
+    btn.classList.toggle("primary", bibleEditing);
+    btn.classList.toggle("ghost", !bibleEditing);
+    btn.title = bibleEditing
+      ? "Save the edited bible — every future prompt uses it from then on"
+      : "Unlock the bible for editing";
     // D8 ruling: the disabled control stays, its condition is the dashed
     // withheld tag beside it — a tag, not a sentence.
     $("#style-save-gate").classList.toggle("hidden", !empty);
@@ -6083,15 +6113,36 @@ async function renderWizard() {
   await loadBibleEditor();
   await loadCameraDefault();
   $("#style-save").onclick = async () => {
+    if (!bibleEditing) {          // Edit — unlock and hand over the caret
+      bibleEditing = true;
+      syncBibleSave();
+      const editor = $("#style-bible");
+      editor.focus();
+      editor.setSelectionRange(editor.value.length, editor.value.length);
+      $("#style-status").innerHTML =
+        "EDITING — NOTHING CHANGES UNTIL YOU SAVE";
+      return;
+    }
+    if (!(await saveBible())) return;
+    bibleEditing = false;
+    syncBibleSave();
+  };
+
+  /* One writer, two callers: Create saves the draft it just made, and Save
+     writes an edit. A second copy of this is how the two would drift on
+     what "saved" means — the band, the swatch gate and the status line all
+     hang off it. */
+  const saveBible = async () => {
     try {
       const text = $("#style-bible").value.trim();
-      if (!text) return toast("The bible is empty — draft it in step 4 (or paste content) before saving.", true);
+      if (!text) { toast("The bible is empty — create it above, or paste content, before saving.", true); return false; }
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
       syncSwatchGen();  // the step-1 swatch gate arms itself right now too
-      toast(`Art Direction Bible saved — Breakdowns are open.`);
-    } catch (err) { toast(err.message, true); }
+      toast("Art Direction Bible saved — Breakdowns are open.");
+      return true;
+    } catch (err) { toast(err.message, true); return false; }
   };
 }
 

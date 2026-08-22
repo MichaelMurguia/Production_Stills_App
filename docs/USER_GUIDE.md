@@ -155,6 +155,11 @@ refuse one entirely (`Grammar` in the panel's camera row: *— production
 default —*, *None — no grammar*, or one of the eight). Every take records which grammar it rendered under and where that choice
 came from — the production or the panel.
 
+**Creating the Bible opens Breakdowns.** `Create Art Direction Bible`
+writes it from the anchors, the scan and the cast **and saves it**, so
+stage 03 unlocks from that one action. The editor beneath holds the saved
+document read-only; `Edit` unlocks it and becomes `Save`.
+
 ## 5. Stage 02 — Production Design
 
 Six steps produce the **Art Direction Bible** — the locked lookbook every

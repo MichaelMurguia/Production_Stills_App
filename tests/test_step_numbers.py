@@ -81,10 +81,18 @@ class CopyPointsAtTheRightStep(unittest.TestCase):
                              f"palette origin says step {m.group(1)}, "
                              f"the Bible is step {self.bible()}")
 
-    def test_the_empty_bible_toast_points_at_the_bible(self):
-        m = re.search(r"The bible is empty — draft it in step (\d+)", JS)
-        self.assertTrue(m, "the empty-bible message must name its step")
-        self.assertEqual(int(m.group(1)), self.bible())
+    def test_the_empty_bible_toast_points_somewhere_real(self):
+        """It names the control rather than a step now — the button is on
+        the same panel, and "above" cannot go stale the way a number can.
+        If it ever names a step again, that step must be the Bible's."""
+        m = re.search(r"The bible is empty — ([^\"]+)", JS)
+        self.assertTrue(m, "the empty-bible message must say where to go")
+        said = m.group(1)
+        step = re.search(r"step (\d+)", said)
+        if step:
+            self.assertEqual(int(step.group(1)), self.bible())
+        else:
+            self.assertIn("above", said)
 
     def test_the_server_refusal_points_at_the_bible(self):
         m = re.search(r"Draft and save the Bible first \(step (\d+)\)", WIZ)
