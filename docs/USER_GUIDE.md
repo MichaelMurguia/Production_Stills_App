@@ -235,6 +235,44 @@ on the **breakdown sheet** each panel row has the same four dropdowns (leave one
 panel's camera **between takes** — it re-stamps the lock and the next take is shot
 that way. A panel with an approved take is frozen (reject it first to reframe).
 
+### The four style anchors, and where their vocabularies come from
+
+Three of the four anchors offer a **catalogue** as well as free text —
+World Texture (5), Cinematography (8) and Rendering Style (9). Those
+catalogues are **documents**, not app code:
+
+| anchor | its library |
+|---|---|
+| World Texture | [`docs/WORLD_TEXTURE_STYLES.md`](WORLD_TEXTURE_STYLES.md) |
+| Cinematography | [`docs/CINEMATOGRAPHY_STYLES.md`](CINEMATOGRAPHY_STYLES.md) |
+| Rendering Style | [`docs/RENDERING_STYLES.md`](RENDERING_STYLES.md) |
+
+Edit one of those files and the picker changes — no code involved. Each
+style carries a key question, a description, an operating principle, its
+visual mechanics, an image-model prompt and an avoid list; **Read the
+grammar** on any card opens the whole entry. Picking one writes its
+directive into the anchor, and the Bible drafter is handed the *full*
+entry — every mechanic and the avoid list, fenced into the sections that
+anchor feeds.
+
+Colour Palette has no catalogue on purpose: swatches are proposed **from**
+the Bible rather than chosen before it.
+
+### When a palette repeats itself
+
+Every design language should own its own colour, and the Bible is asked to
+say so in a `Color identity` line per language. When the proposals come
+back they are **measured** — in CIE Lab, not by eye — and if the languages
+turn out to share a palette the strip says so:
+
+> `OVERLAP` 23 of 27 colours repeat across the 4 design languages — this is
+> one palette relabelled, not one palette per language
+
+It reports rather than blocks; the proposals are still there to approve.
+The usual cause is a Bible whose design languages never named a colour, so
+the palette pass had nothing to tell them apart by — regenerating the
+Bible is the fix, not regenerating the swatches.
+
 ## 6. Stage 03 — Breakdowns
 
 **Drafting.** Describe the board ("Charlie's cabin — the workshop scenes

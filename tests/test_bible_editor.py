@@ -165,5 +165,68 @@ class ThereIsOneWriter(unittest.TestCase):
         self.assertNotIn("saved — every future prompt uses this", JS)
 
 
+class TheActIsWatched(unittest.TestCase):
+    """User, 2026-08-22: "generating the art direction bible and swatches
+    should happen in a single step ... same razzle-dazzle feedback during
+    generation as the screenplay read."
+
+    Two passes became one, and the surface reuses the read panel's own
+    `.rd-*` vocabulary rather than inventing a second one. Same honesty
+    rule: the two phases that are single opaque model calls say so, and
+    the two around them are real local work carrying the feedback.
+    """
+
+    def body(self):
+        i = JS.index("const theBible = {")
+        return JS[i:JS.index("\n};", i)]
+
+    def test_one_press_writes_saves_and_colours(self):
+        i = JS.index("const writeBible = async")
+        seg = JS[i:i + 4600]
+        self.assertIn("theBible.begin(", seg)
+        self.assertIn("await saveBible()", seg)
+        self.assertIn('api("/api/wizard/swatches"', seg)
+        self.assertIn("theBible.coloured(", seg)
+
+    def test_the_colour_pass_cannot_lose_a_saved_bible(self):
+        """Colour runs after the save, and its failure says the bible
+        survived — otherwise a swatch error reads as having lost the
+        thing that took two minutes to write."""
+        i = JS.index("const writeBible = async")
+        seg = JS[i:i + 4600]
+        self.assertIn("the bible is saved, but colour failed", seg)
+        self.assertLess(seg.index("await saveBible()"),
+                        seg.index('api("/api/wizard/swatches"'))
+
+    def test_the_opaque_phases_admit_they_are_opaque(self):
+        b = self.body()
+        self.assertIn("One call — it reports nothing", b)
+
+    def test_the_local_phases_carry_real_work(self):
+        """The ladder is the production's actual design languages and the
+        page is the director's actual answers — nothing invented."""
+        b = self.body()
+        self.assertIn("ASSEMBLED HERE — NOTHING SENT ANYWHERE YET", b)
+        self.assertIn("THE DIRECTOR'S ANSWERS", b)
+        self.assertIn("SECTIONS WRITTEN", b)
+
+    def test_it_reuses_the_read_panel_rather_than_a_second_one(self):
+        b = self.body()
+        for cls in ("rd-head", "rd-phase", "rd-ladder", "rd-page", "rd-ticker"):
+            self.assertIn(cls, b, f"{cls} — one pattern, two operations")
+
+    def test_a_language_with_no_colour_of_its_own_is_named(self):
+        """The diagnosis surfaced where it happens, not only afterwards."""
+        b = self.body()
+        self.assertIn("NO COLOUR OF ITS OWN", b)
+        self.assertIn("OWNS ITS COLOUR", b)
+
+    def test_the_timers_stop_however_it_ends(self):
+        b = self.body()
+        for fn in ("coloured(res)", "fail(msg)"):
+            i = b.index(fn)
+            self.assertIn("stopTimers()", b[i:i + 300], fn)
+
+
 if __name__ == "__main__":
     unittest.main()

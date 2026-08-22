@@ -1,3 +1,9 @@
+"""The scripts layer end to end: validate, compile, audit.
+
+The oldest suite here, and the one that guards the command-line tools the
+app was built on top of — a spec validates or names its faults, a prompt
+compiles from it, and the audit reaches a decision with an evidence budget.
+"""
 import json, sys, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]

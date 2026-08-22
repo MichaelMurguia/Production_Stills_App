@@ -17,9 +17,12 @@ is a second copy, and a second copy drifts.
 | security posture | `docs/SECURITY.md` | — |
 | camera / composition vocabulary | `docs/CAMERA_AND_COMPOSITION.md` | — |
 | cinematography grammars | `docs/CINEMATOGRAPHY_STYLES.md` | — |
+| world texture library | `docs/WORLD_TEXTURE_STYLES.md` | edit it and the picker changes |
+| rendering style library | `docs/RENDERING_STYLES.md` | style 1 is the house slot |
+| prompts to shoot the rendering plates | `docs/RENDERING_STYLE_PROMPTS.md` | generated — `python -m scripts.render_style_prompts` |
 | image serving and variants | `docs/IMAGE_SERVING.md` | — |
 | what to tell a user | `docs/USER_GUIDE.md`, `APP_GUIDE.md` | — |
-| test coverage | `docs/TEST_MATRIX.md` | — |
+| test coverage | `docs/TEST_MATRIX.md` | generated — `python -m scripts.test_matrix`, never hand-edited |
 | how an agent should work here | `CLAUDE.md`, then `.claude/skills/` | — |
 
 ## Before implementing any `*_PLAN.md`
