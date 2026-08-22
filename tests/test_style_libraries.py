@@ -292,6 +292,32 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
         on_disk = {p.name for p in base.glob("*.webp")}
         self.assertEqual(on_disk - named, set(), "unreferenced plate files")
 
+    def test_no_style_shows_the_same_frame_twice(self):
+        """User, 2026-08-22: "the cinematography images have the wrong
+        image for discovery." Classical Adventure was showing action,
+        character and character-again — its third slot held the old
+        character render rather than the discovery one, because that style
+        was the one gap in the new set and its two remaining frames came
+        from an older folder whose scene order nobody had checked.
+
+        A duplicate frame is invisible in a manifest and obvious on screen,
+        so it is checked where it is visible: in the pixels."""
+        import itertools
+        from PIL import Image, ImageChops
+        base = ROOT / "app" / "static" / "style-plates"
+
+        def sig(p):
+            return Image.open(p).convert("RGB").resize((48, 48), Image.LANCZOS)
+
+        for key, files in self.manifest().items():
+            sigs = [sig(base / f) for f in files]
+            for (i, a), (j, b) in itertools.combinations(enumerate(sigs), 2):
+                d = ImageChops.difference(a, b)
+                score = sum(sum(px) for px in d.getdata()) / (48 * 48 * 3)
+                self.assertGreater(
+                    score, 10,
+                    f"{key}: {files[i]} and {files[j]} are the same picture")
+
     def test_rendering_still_falls_back_to_its_diagrams(self):
         """Rendering style has no photographed set yet, and must therefore
         still show the drawn plates rather than a placeholder."""
