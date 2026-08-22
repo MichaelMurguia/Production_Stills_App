@@ -199,51 +199,52 @@ class BlockerTests(Install):
             self.assertIn(row["stage"], ("wizard", "boards"))
 
 
-class ThePaletteGateStatesItself(unittest.TestCase):
+class ThePaletteSaysWhereColourComesFrom(unittest.TestCase):
     """User, 2026-08-22: "I uploaded my screenplay and went to the
     Production Design panel. No color swatches."
 
-    The dependency was working as designed — swatches are proposed by a
-    narrative model reading the SAVED Art Direction Bible, each colour
-    cited to a line of it, which is the whole reason they can be trusted.
-    A scene scan alone produces design languages, not colour.
+    The dependency works as designed. The scene scan finds design
+    LANGUAGES; colour is proposed later by a model reading the SAVED
+    Bible, each swatch cited to a line of it — which is the whole reason a
+    swatch can be trusted. Nothing was broken.
 
-    The defect was that the gate rendered NOTHING: `genHost.innerHTML =
-    ""`. So a user who had done real work and come looking for colour
-    found an empty space and no reason for it. The product rule is that a
-    gate is readable as state BEFORE it is hit — the disabled control, the
-    unmet condition beside it, and a link to where it is resolved.
+    What was missing is that none of it was discoverable from the Color
+    Palette column, which is where a user looking for colour stands. The
+    generate control lives in step 5 and does not render before a save, by
+    an explicit ruling (SWATCH_GENERATE_RULING / D1: the same fact must not
+    be stated twice on one screen). That ruling holds — my first attempt
+    put a second gate there and was reverted. The line belongs where the
+    absence is FELT, and it states a fact stated nowhere else.
     """
 
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 
-    def gate(self):
+    def test_step_5_stays_silent_as_ruled(self):
         i = self.JS.index("syncSwatchGen = async ()")
-        return self.JS[i:i + 2600]
+        seg = self.JS[i:i + 1200]
+        self.assertIn('genHost.innerHTML = ""; return;', seg,
+                      "D1 ruled this control silent before a save")
 
-    def test_the_gate_is_not_silent(self):
-        g = self.gate()
-        self.assertNotIn('genHost.innerHTML = ""; return;', g)
+    def test_the_column_says_where_colour_comes_from(self):
+        i = self.JS.index("const paletteOrigin")
+        seg = self.JS[i:i + 1800]
+        self.assertIn("CITED TO THE BIBLE", seg)
+        self.assertIn("NOT COLOUR", seg)
 
-    def test_it_shows_the_control_disabled(self):
-        g = self.gate()
-        self.assertIn("Generate palette swatches", g)
-        self.assertIn("disabled", g)
+    def test_it_offers_the_step_that_produces_it(self):
+        i = self.JS.index("const paletteOrigin")
+        seg = self.JS[i:i + 1800]
+        self.assertIn("po-go", seg)
+        self.assertIn("#wiz-draft", seg)
 
-    def test_it_states_the_unmet_condition(self):
-        g = self.gate()
-        self.assertIn("NO SAVED ART DIRECTION BIBLE", g)
-        self.assertIn("NO NARRATIVE MODEL CONNECTED", g)
-
-    def test_it_links_to_where_each_is_resolved(self):
-        g = self.gate()
-        self.assertIn("sw-gate-bible", g)
-        self.assertIn("#wiz-draft", g)
-        self.assertIn("sw-gate-eng", g)
-        self.assertIn('showView("settings")', g)
+    def test_it_only_speaks_while_the_column_is_empty(self):
+        """A standing explanation over a full palette is clutter."""
+        i = self.JS.index("const paletteOrigin")
+        seg = self.JS[i:i + 1800]
+        self.assertIn('if (has) { host.classList.add("hidden"); return; }', seg)
 
     def test_the_server_still_refuses_without_a_bible(self):
-        """The gate is the courtesy; the refusal is the contract."""
+        """The line is the courtesy; the refusal is the contract."""
         self.assertIn("No saved Art Direction Bible yet",
                       (ROOT / "app/wizard.py").read_text(encoding="utf-8"))
 

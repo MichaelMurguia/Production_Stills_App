@@ -4259,6 +4259,46 @@ async function renderWizard() {
     const genHost = $("#swatch-gen");
     const strip = $("#swatch-strip");
 
+    /* Where the absence is FELT (user, 2026-08-22: "I uploaded my
+       screenplay and went to the Production Design panel. No color
+       swatches").
+
+       A generated palette does not come from the screenplay. The scene
+       scan finds design LANGUAGES; colour is proposed later by a model
+       reading the SAVED Bible, one citation per swatch, which is the
+       whole reason a swatch can be trusted. Standing in this column with
+       nothing in it, none of that was discoverable — step 5's generate
+       control simply does not render yet, and its own gate two lines up
+       talks about saving a draft, not about colour.
+
+       One line, here, only while the column is empty. It is not the
+       verbosity D1 cut: that ruling stopped the same fact being stated
+       twice on one screen, and this fact is stated nowhere else. */
+    const paletteOrigin = async () => {
+      const host = $("[data-f=palette-origin]", col)
+        || col.insertBefore(Object.assign(document.createElement("p"),
+             { className: "up-gate mono" }), strip);
+      host.dataset.f = "palette-origin";
+      const has = $$("img, .sw-ramp", col).length || strip.children.length;
+      if (has) { host.classList.add("hidden"); return; }
+      host.classList.remove("hidden");
+      const b = await api("/api/style-bible").catch(() => ({ text: "" }));
+      // Two facts and a door. The manual adder is directly above and
+      // speaks for itself; spelling it out again is the verbosity D1 cut.
+      host.innerHTML = b.text.trim()
+        ? `NO SWATCHES YET — GENERATE THEM FROM THE SAVED BIBLE
+           <button type="button" class="text-act" data-f="po-go">Step 5 ↗</button>`
+        : `COLOUR IS CITED TO THE BIBLE — THE SCREENPLAY READ FINDS DESIGN
+           LANGUAGES, NOT COLOUR
+           <button type="button" class="text-act" data-f="po-go">Draft it in step 5 ↗</button>`;
+      const go = $("[data-f=po-go]", host);
+      if (go) go.onclick = () => {
+        const el = $("#wiz-draft") || $("#style-bible");
+        if (el) window.scrollTo({ top: el.getBoundingClientRect().top
+                                       + window.scrollY - 120, behavior: "smooth" });
+      };
+    };
+
     // The colour block itself, without the card chrome — rebuilt in place
     // by a recolour so the edit does not cost a re-render of the strip.
     // PALETTE_GROUPS_PLAN (2026-08-06): a design language renders as ONE
@@ -4341,6 +4381,7 @@ async function renderWizard() {
       const reflow = () => {
         r.groups = r.groups.filter(g => g.swatches.length);
         renderSwatchStrip(r);
+        paletteOrigin();
       };
 
       $$(".sw-ramp", strip).forEach(ramp => {
@@ -4409,41 +4450,12 @@ async function renderWizard() {
     syncSwatchGen = async () => {
       const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
       if (!genHost?.isConnected) return;
-      /* A gate is readable as state BEFORE it is hit (product rule) —
-         this one rendered nothing at all, so a user who had read the
-         screenplay and come looking for colour found an empty space and
-         no reason for it (user, 2026-08-22: "no color swatches"). The
-         dependency is real and worth stating: swatches are grounded in
-         the saved Bible, one line of citation per colour, which is the
-         whole reason they are trustworthy. Say that, and point at the
-         step that produces it. */
-      if (!engReady || !bible.text.trim()) {
-        const noEngine = !engReady;
-        genHost.innerHTML = `
-          <button class="ghost" disabled
-            title="${noEngine ? "Connect a narrative model in Settings first."
-                              : "Swatches are grounded in the saved Bible — draft and save it first."}"
-            >Generate palette swatches</button>
-          <p class="up-gate mono">${noEngine
-            ? `NO NARRATIVE MODEL CONNECTED — A PALETTE IS READ FROM THE BIBLE BY ONE
-               <button type="button" class="text-act" data-f="sw-gate-eng">Connect one ↗</button>`
-            : `NO SAVED ART DIRECTION BIBLE — EVERY SWATCH IS CITED TO A LINE OF IT,
-               SO THERE IS NOTHING YET TO GROUND A COLOUR IN
-               <button type="button" class="text-act" data-f="sw-gate-bible">Draft it in step 5 ↗</button>`
-          }</p>`;
-        const eng = $("[data-f=sw-gate-eng]", genHost);
-        if (eng) eng.onclick = () => showView("settings");
-        const draft = $("[data-f=sw-gate-bible]", genHost);
-        if (draft) draft.onclick = () => {
-          const el = $("#wiz-draft");
-          if (el) {
-            window.scrollTo({ top: el.getBoundingClientRect().top
-                                   + window.scrollY - 120, behavior: "smooth" });
-            el.focus({ preventScroll: true });
-          }
-        };
-        return;
-      }
+      /* Deliberately silent HERE (SWATCH_GENERATE_RULING, D1): this
+         control sits two lines under step 5's own save gate, and saying
+         it twice on one screen is the verbosity that ruling cut. The
+         explanation a user actually needs belongs where the absence is
+         FELT — step 2's Color Palette column — not here. */
+      if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
         <button class="text-act" data-f="sw-deep"
@@ -4477,6 +4489,7 @@ async function renderWizard() {
       $("[data-f=sw-deep]", genHost).onclick = () => runGen(true);
     };
     await syncSwatchGen();
+    await paletteOrigin();
   }
 
   // D2 (PRODUCTION_DESIGN_V3) — the six-step rail: numbered chips in the
