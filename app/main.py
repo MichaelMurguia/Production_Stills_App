@@ -910,7 +910,8 @@ async def api_recolor_swatch(ref_id: str, body: dict) -> dict:
 
     try:
         return await run_in_threadpool(
-            wizard.recolor_swatch, ref_id, body.get("hex"), body.get("pair_hex"))
+            wizard.recolor_swatch, ref_id, body.get("hex"),
+            body.get("pair_hex"), body.get("name"))
     except KeyError:
         raise HTTPException(404, f"unknown reference: {ref_id}")
     except autofill.AutofillError as e:

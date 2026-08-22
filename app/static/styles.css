@@ -3172,6 +3172,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sw-collide p { margin: 0; font-size: 11.5px; color: var(--ink-dim); line-height: 1.5; }
 .sw-collide b { color: var(--bad); font-weight: 400; letter-spacing: .08em; }
 .sw-collide .mini { color: var(--ink-faint); font-size: 9.5px; letter-spacing: .1em; }
+.sw-collide { position: relative; }
+.sw-collide-x {
+  position: absolute; top: 6px; right: 8px; background: none; border: none;
+  color: var(--ink-faint); font-size: 15px; line-height: 1; cursor: pointer;
+  padding: 2px 4px;
+}
+.sw-collide-x:hover { color: var(--ink); }
 
 /* A saved bible reads as saved: locked until Edit is pressed (2026-08-22).
    Dimmed would say "unavailable"; this says "not being edited". */

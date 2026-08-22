@@ -268,7 +268,7 @@ turn out to share a palette the strip says so:
 > `OVERLAP` 23 of 27 colours repeat across the 4 design languages — this is
 > one palette relabelled, not one palette per language
 
-It reports rather than blocks; the proposals are still there to approve.
+It reports rather than blocks — the proposals are still there to approve — and it can be dismissed once you have read it.
 The usual cause is a Bible whose design languages never named a colour, so
 the palette pass had nothing to tell them apart by — regenerating the
 Bible is the fix, not regenerating the swatches.

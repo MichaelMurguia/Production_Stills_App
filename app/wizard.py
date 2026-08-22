@@ -780,11 +780,16 @@ def set_hero(ref_id: str) -> dict:
             "cleared": [k for k in updates if k != ref_id]}
 
 
-def recolor_swatch(ref_id: str, hexv: str, pair: str | None = None) -> dict:
-    """Repaint an existing swatch (user 2026-08-06). The reference keeps its
-    id, its language, its name and its place in the review strip — only the
-    pixels and the hex in its notes change, because a swatch IS its color
-    and a new id would orphan every approval already recorded against it."""
+def recolor_swatch(ref_id: str, hexv: str, pair: str | None = None,
+                   name: str | None = None) -> dict:
+    """Repaint an existing swatch (user 2026-08-06), and rename it while
+    you are there (user 2026-08-22: "when you choose to recolor a swatch
+    you need to be able to edit its name as well" — a colour whose name
+    no longer describes it is worse than an unnamed one).
+
+    The reference keeps its id, its language and its place in the review
+    strip: a swatch IS its colour, and a new id would orphan every
+    approval already recorded against it."""
     hexv = _clean_hex(hexv)
     if not hexv:
         raise autofill.AutofillError("A swatch needs a full hex — like #8A4B2E.")
@@ -806,12 +811,28 @@ def recolor_swatch(ref_id: str, hexv: str, pair: str | None = None) -> dict:
     # by shape. Nothing else in the notes is touched.
     parts = str(ref.get("notes") or "").split(" · ")
     swatch_hex = hexv + (f" / {pair}" if pair else "")
-    for i, seg in enumerate(parts):
-        if _HEX_RE.match(seg.split(" / ")[0].strip()):
-            parts[i] = swatch_hex
-            store.update_reference(ref_id, {"notes": " · ".join(parts)})
-            break
-    return {**store.get_reference(ref_id), "hex": hexv, "pair_hex": pair}
+    hex_at = next((i for i, seg in enumerate(parts)
+                   if _HEX_RE.match(seg.split(" / ")[0].strip())), None)
+    if hex_at is not None:
+        parts[hex_at] = swatch_hex
+        if name is not None:
+            # The name sits immediately before the hex, and which index
+            # that is depends on provenance rather than on counting: a
+            # proposal leads with its design LANGUAGE, a manual swatch
+            # leads with the name. Reading it off `source` means a
+            # proposal that came back without a name cannot have its
+            # language overwritten by a rename.
+            lead = 1 if str(ref.get("source") or "").startswith("swatch-proposal") else 0
+            clean = " ".join(str(name).split())[:48]
+            if hex_at > lead:
+                parts[lead] = clean
+            else:
+                parts.insert(lead, clean)
+        store.update_reference(ref_id, {"notes": " · ".join(x for x in parts if x)})
+    out = {**store.get_reference(ref_id), "hex": hexv, "pair_hex": pair}
+    if name is not None:
+        out["name"] = " ".join(str(name).split())[:48]
+    return out
 
 
 def render_swatch_png(hexv: str, pair: str | None = None) -> bytes:

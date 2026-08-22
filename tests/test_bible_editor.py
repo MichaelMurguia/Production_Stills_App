@@ -198,9 +198,15 @@ class TheActIsWatched(unittest.TestCase):
         self.assertLess(seg.index("await saveBible()"),
                         seg.index('api("/api/wizard/swatches"'))
 
-    def test_the_opaque_phases_admit_they_are_opaque(self):
+    def test_the_spinner_says_what_is_happening_and_stops(self):
+        """The label carried "One call — it reports nothing until it is
+        done" until the user cut it (2026-08-22). The spinner and the
+        phase strip already say the same thing without a sentence, and
+        the read panel keeps the fuller statement where it is the only
+        thing on screen."""
         b = self.body()
-        self.assertIn("One call — it reports nothing", b)
+        self.assertIn("Writing the Art Direction Bible from the anchors", b)
+        self.assertNotIn("it reports nothing", b)
 
     def test_the_local_phases_carry_real_work(self):
         """The ladder is the production's actual design languages and the

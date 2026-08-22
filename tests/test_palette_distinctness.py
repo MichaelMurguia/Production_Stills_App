@@ -177,6 +177,92 @@ class TheVerdictReachesTheScreen(unittest.TestCase):
         self.assertNotIn("--accent", block)
         self.assertIn("--bad-line", block)
 
+    def test_the_verdict_can_be_dismissed(self):
+        """It reports rather than blocks, so a verdict the user has read
+        and decided about must be closable — otherwise it is noise sitting
+        over the work it is about (user, 2026-08-22)."""
+        self.assertIn("sw-collide-x", JS)
+        self.assertIn('$("[data-f=collide]", strip)?.remove()', JS)
+        css = (ROOT / "app" / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".sw-collide-x", css)
+
+    def test_dismissing_leaves_the_proposals_alone(self):
+        """Only the block is removed — nothing about the swatches, their
+        approval state or the strip beneath it."""
+        i = JS.index('cx.onclick')
+        self.assertNotIn("api(", JS[i:i + 200])
+
+
+class ASwatchCanBeRenamedWhereItIsRepainted(unittest.TestCase):
+    """User, 2026-08-22: "when you choose to recolor a swatch you need to
+    be able to edit its name as well." A repaint is exactly the moment a
+    name stops being true — OXIDE BLOOM repainted blue is worse than an
+    unnamed colour."""
+
+    def home(self):
+        import tempfile
+        from app import paths
+        paths.HOME = pathlib.Path(tempfile.mkdtemp(prefix="rn-"))
+        paths.set_project("")
+        paths.ensure_dirs()
+
+    def swatch(self, notes, source):
+        from app import store, wizard
+        return store.add_reference("s.png", wizard.render_swatch_png("#8A4B2E"),
+                                   role="COLOR_PALETTE", controls=[],
+                                   does_not_control=[], notes=notes,
+                                   source=source)
+
+    def notes_of(self, ref_id):
+        from app import store
+        return store.get_reference(ref_id)["notes"]
+
+    def test_a_proposal_keeps_its_language(self):
+        """Proposals note LANGUAGE · NAME · HEX · CITE. A rename that
+        counted from the left would overwrite the design language."""
+        self.home()
+        from app import wizard
+        r = self.swatch("Skunkworks Engineering · OXIDE BLOOM · #8A4B2E · rust",
+                        "swatch-proposal")
+        wizard.recolor_swatch(r["id"], "#123456", None, "COLD STEEL")
+        self.assertEqual(self.notes_of(r["id"]),
+                         "Skunkworks Engineering · COLD STEEL · #123456 · rust")
+
+    def test_a_manual_swatch_leads_with_its_name(self):
+        """Manual swatches note NAME · HEX · CITE — one segment fewer, so
+        the name's index differs and is read off `source`, not counted."""
+        self.home()
+        from app import wizard
+        r = self.swatch("BLOOD · #AA0000", "swatch-manual")
+        wizard.recolor_swatch(r["id"], "#00AA00", None, "MOSS")
+        self.assertEqual(self.notes_of(r["id"]), "MOSS · #00AA00")
+
+    def test_a_proposal_that_came_back_nameless_gains_one(self):
+        self.home()
+        from app import wizard
+        r = self.swatch("CIA Covert Network · #010203", "swatch-proposal")
+        wizard.recolor_swatch(r["id"], "#040506", None, "INK")
+        self.assertEqual(self.notes_of(r["id"]),
+                         "CIA Covert Network · INK · #040506")
+
+    def test_omitting_the_name_leaves_it_alone(self):
+        """Recolouring without renaming must not blank the name."""
+        self.home()
+        from app import wizard
+        r = self.swatch("Oxcart Technology · JP-7 AMBER · #9A7041 · fuel",
+                        "swatch-proposal")
+        wizard.recolor_swatch(r["id"], "#111111")
+        self.assertIn("JP-7 AMBER", self.notes_of(r["id"]))
+
+    def test_the_verb_no_longer_says_only_repaint(self):
+        self.assertNotIn('confirmLabel: "Repaint swatch"', JS)
+        self.assertIn('confirmLabel: "Save swatch"', JS)
+
+    def test_the_modal_offers_the_name_first(self):
+        i = JS.index('title: "Edit this swatch"')
+        seg = JS[i:i + 900]
+        self.assertLess(seg.index('name: "name"'), seg.index('name: "hex"'))
+
 
 if __name__ == "__main__":
     unittest.main()

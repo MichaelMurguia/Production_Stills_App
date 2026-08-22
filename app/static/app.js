@@ -2653,8 +2653,8 @@ const theBible = {
                          + "design language from the bible just written" }[this.phase];
     busy.innerHTML = spin
       ? `<div class="busy wrap"><span class="spinner"></span>
-         <span class="busy-label">${esc(spin)}. One call — it reports nothing
-         until it is done.</span><span class="busy-bar"></span></div>` : "";
+         <span class="busy-label">${esc(spin)}.</span>
+         <span class="busy-bar"></span></div>` : "";
 
     const note = $("#bb-note", host);
     note.classList.toggle("bad", this.phase === "failed");
@@ -4191,25 +4191,33 @@ async function renderSettings(openTab = "") {
         json: { status, reason: status === "REJECTED"
           ? "swatch proposal rejected in review" : "" } });
 
-    const recolorSwatch = async (refId, hex, pair, refresh = () => {}) => {
+    const recolorSwatch = async (refId, hex, pair, swName = "",
+                                refresh = () => {}) => {
       const vals = await modal({
-        title: "Edit this swatch color",
-        body: "Repaints the swatch where it stands — it keeps its id, its name "
-          + "and its place in this review, and only its pixels change.",
+        title: "Edit this swatch",
+        body: "Edits the swatch where it stands — it keeps its id, its design "
+          + "language and its place in this review.",
         fields: [
+          // A colour whose name no longer describes it is worse than an
+          // unnamed one (user 2026-08-22), and a repaint is exactly when
+          // the name stops being true.
+          { name: "name", label: "Name", value: swName || "",
+            placeholder: "e.g. oxide rust", maxlength: 48,
+            hint: "Leave it as it is to keep the current name." },
           { name: "hex", label: "Color", value: hex, placeholder: "#8A4B2E",
             color: true },
           { name: "pair", label: "Value-key pair", value: pair || "",
             placeholder: "leave empty for one flat color", color: true,
             hint: "The same hue at the opposite value key — renders as two halves." },
         ],
-        confirmLabel: "Repaint swatch",
+        confirmLabel: "Save swatch",   // not "Repaint" — it renames too
       });
       if (vals === null) return null;
       const rec = await api(`/api/references/${refId}/swatch`,
-        { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair } });
+        { method: "POST", json: { hex: vals.hex, pair_hex: vals.pair,
+                                  name: (vals.name || "").trim() } });
       paintSwatch(refId, rec.hex, rec.pair_hex);
-      toast(`${refId} repainted ${rec.hex}.`);
+      toast(`${refId} is now ${(vals.name || "").trim() || rec.hex} ${rec.hex}.`);
       refresh();
       return rec;
     };
@@ -4232,7 +4240,8 @@ async function renderSettings(openTab = "") {
 
       const rows = g => rampOrder(g.swatches).map(sw => `
         <div class="sv-row${sw.hero ? " is-hero" : ""}" data-ref="${esc(sw.ref_id)}"
-             data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}">
+             data-hex="${esc(sw.hex)}" data-pair="${esc(sw.pair_hex || "")}"
+             data-name="${esc(sw.name || "")}">
           <span class="sv-chip">${swBlock(sw.hex, sw.pair_hex)}</span>
           <span class="sv-id">
             <span class="sv-name">${esc(sw.name)}${
@@ -4331,10 +4340,14 @@ async function renderSettings(openTab = "") {
               const refId = row.dataset.ref;
               $("[data-f=rc]", row).onclick = async () => {
                 try {
-                  const rec = await recolorSwatch(refId, row.dataset.hex, row.dataset.pair, refresh);
+                  const rec = await recolorSwatch(refId, row.dataset.hex,
+                    row.dataset.pair, row.dataset.name, refresh);
                   if (!rec) return;
                   const sw = groupOf(refId)?.swatches.find(s => s.ref_id === refId);
-                  if (sw) { sw.hex = rec.hex; sw.pair_hex = rec.pair_hex; }
+                  if (sw) {
+                    sw.hex = rec.hex; sw.pair_hex = rec.pair_hex;
+                    if (rec.name) sw.name = rec.name;
+                  }
                   onChange();
                 } catch (err) { toast(err.message, true); }
               };
@@ -4631,8 +4644,10 @@ async function renderWizard() {
       const bad = r.collisions || [];
       strip.innerHTML = `
         <p class="prop-head">${esc(headTxt(total))}</p>
-        ${bad.length ? `<div class="sw-collide">${bad.map(c =>
-          `<p class="mono"><b>${esc(c.kind)}</b> ${esc(c.text)}</p>`).join("")
+        ${bad.length ? `<div class="sw-collide" data-f="collide">
+          <button type="button" class="sw-collide-x" data-f="collide-x"
+            title="Dismiss — the proposals are unchanged">&times;</button>
+          ${bad.map(c => `<p class="mono"><b>${esc(c.kind)}</b> ${esc(c.text)}</p>`).join("")
           }<p class="mini mono">REGENERATE FOR A DIFFERENT READ, OR APPROVE WHAT
            WORKS AND RESCAN THE LANGUAGE THAT DOES NOT</p></div>` : ""}
         ${r.groups.map((g, i) => `
@@ -4646,6 +4661,13 @@ async function renderWizard() {
           ${unopened(r) ? `<span class="sw-bar-note mono">${unopened(r)} OF ${
             r.groups.length} LANGUAGE${r.groups.length === 1 ? "" : "S"} UNOPENED</span>` : ""}
         </div>`;
+      /* Dismissible (user, 2026-08-22). It is a REPORT, not a blocker —
+         the proposals below are untouched and still approvable — and a
+         verdict you have read and decided about must be closable, or it
+         is just noise sitting over the work it is about. */
+      const cx = $("[data-f=collide-x]", strip);
+      if (cx) cx.onclick = () => $("[data-f=collide]", strip)?.remove();
+
 
       const reflow = () => {
         r.groups = r.groups.filter(g => g.swatches.length);

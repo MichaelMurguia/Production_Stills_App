@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1820 tests** across 103 files.
+**1828 tests** across 103 files.
 
 
-## Product app — 1616 tests in 87 files
+## Product app — 1624 tests in 87 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -77,7 +77,7 @@ temp home and external services are faked.
 | `test_object_ref_matching.py` | 11 | One rule for "does this phrase name that thing", shared by every surface that asks (user-caught 2026-08-16: a panel with the required object "Sal's ey |
 | `test_one_resolved_manifest.py` | 18 | One fact, one computation — the manifest, the count, and the arrange room's SHORT verdict. |
 | `test_p1_lifecycle.py` | 13 | P1 coverage from docs/TEST_MATRIX.md: the sheet lock/hash contract, the candidate lifecycle, and the assemble endpoint — the behaviors that guard cano |
-| `test_palette_distinctness.py` | 15 | Four design languages must not share one palette. |
+| `test_palette_distinctness.py` | 23 | Four design languages must not share one palette. |
 | `test_palette_order.py` | 23 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
