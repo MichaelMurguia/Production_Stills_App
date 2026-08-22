@@ -498,7 +498,8 @@ def _draft_openai(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
 def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                   provider: str = "gemini", board_type: str = "",
-                  source_text: str = "", panels_hint: str = "") -> dict:
+                  source_text: str = "", panels_hint: str = "",
+                  panel_count: int | str = "", panels_brief: str = "") -> dict:
     """Draft a breakdown from the screenplay, or from a pasted section.
 
     Two sources, and the caller chooses (user 2026-08-16). Empty
@@ -508,10 +509,27 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
     screenplay is not consulted, so a production can break down a scene
     that is not in the uploaded draft yet.
 
-    `panels_hint` names the panels the board must contain, in order.
+    `panels_hint` names the panels the board must contain, in order — the
+    old textarea's meaning, kept for any caller that still sends a list.
+
+    `panel_count` and `panels_brief` are what the intake sends since
+    2026-08-22, when the user replaced a multi-line panel list with "a
+    dropdown for number of panels" and "a single line for what should the
+    panels contain". They are guidance of a different kind: the count is
+    an instruction, the brief shapes what each panel is ABOUT without
+    dictating a list. Evidence still rules what can be said in them.
     Empty means the model decides what the content needs, which is what
     `Auto-generate` sends.
     """
+    # Normalised BEFORE the branch: the mock path and the pasted-section
+    # path skip the block that used to compute it, and the record written
+    # at the end reads it on every path. It was a NameError on the mock
+    # pipeline the moment it was added.
+    try:
+        want_n = int(str(panel_count).strip() or 0)
+    except (TypeError, ValueError):
+        want_n = 0
+
     if mode not in {"CANON_EXTRACTION", "DESIGN_EXPLORATION"}:
         raise AutofillError(f"invalid mode: {mode}")
     board_type = str(board_type or "").strip().upper()
@@ -558,6 +576,22 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                 "user pasted, not the whole screenplay. Break down what is IN "
                 "it; do not reach for material outside it, and do not assume "
                 "scenes before or after it exist.")
+        if want_n > 0:
+            instructions += (
+                NLNL + f"PANEL COUNT: return exactly {want_n} panel"
+                + ("s" if want_n != 1 else "")
+                + ". This is the user's decision and it overrides your own "
+                "judgement about how many the evidence suggests. If the "
+                "screenplay cannot support that many WELL, still return "
+                f"{want_n} and put what is thin into unresolved_questions "
+                "rather than inventing to fill a panel.")
+        if panels_brief.strip():
+            instructions += (
+                NLNL + "WHAT THE PANELS SHOULD COVER: "
+                + " ".join(panels_brief.split())
+                + NL + "Shape the panels to that. It tells you what the board "
+                "is FOR; it does not license anything the screenplay does not "
+                "support, and every claim still cites its evidence.")
         if panels_hint.strip():
             wanted = [ln.strip(" -*" + TAB) for ln in panels_hint.splitlines()
                       if ln.strip(" -*" + TAB)]
@@ -582,6 +616,8 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                         "provider": provider, "created_at": store.utcnow(),
                         "source": ("pasted section" if source_text.strip()
                                    else "screenplay"),
-                        "panels_given": bool(panels_hint.strip())}
+                        "panels_given": bool(panels_hint.strip()),
+                        "panel_count": want_n or None,
+                        "panels_brief": " ".join(panels_brief.split()) or None}
     store.create_spec_from_dict(spec)
     return spec

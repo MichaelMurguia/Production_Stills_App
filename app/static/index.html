@@ -366,33 +366,54 @@
           <p class="door-head">Break it down for me
             <span class="door-nature mono">READS THE SCREENPLAY</span></p>
           <form id="spec-auto-form">
+            <!-- The read already knows every slugline, so finding a scene is
+                 a search rather than something to type from memory (user,
+                 2026-08-22). Picking one writes the brief beneath it, which
+                 is what the deterministic scene anchor matches on. -->
+            <label class="f-wide">
+              <span class="f-lab">Find a scene
+                <button type="button" class="text-act" id="spec-auto-open-screenplay"
+                  title="Open the screenplay to read it">Open the screenplay ↗</button></span>
+              <input type="text" id="spec-auto-scene" list="spec-scene-list"
+                placeholder="type any part of a slugline — INT. HANGAR, DUSK, GROOM LAKE">
+              <datalist id="spec-scene-list"></datalist>
+              <span class="f-note mono" id="spec-auto-scene-note">EVERY SLUGLINE THE READ FOUND</span></label>
+
             <label class="f-wide">What should I get?
               <input type="text" id="spec-auto-subject" placeholder="e.g. the film's lead location — the scenes the script sets there">
               <span class="f-note mono">THE SCREENPLAY IS READ FOR IT</span></label>
-            <label class="f-wide">
-              <span class="f-lab">Or paste a screenplay section
-                <button type="button" class="text-act" id="spec-auto-open-screenplay"
-                  title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
-              <textarea id="spec-auto-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
-              <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
-            <label class="f-wide">
-              <span class="f-lab">What panels should it include?</span>
-              <textarea id="spec-auto-panels" rows="4" placeholder="one per line — or leave empty and the content decides"></textarea>
-              <span class="f-note mono">EMPTY — THE PANELS COME FROM THE CONTENT</span></label>
-            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-              <input type="text" id="spec-auto-id" placeholder="GENETICS_FACTION_V001" required>
-              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
+
             <div class="door-pair">
-              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
-                <select id="spec-auto-mode">
-                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
-                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+              <label title="How many panels this board has. Left to the content, the evidence decides — which is usually right. Set a number when the board has a job that needs a fixed shape.">Panels
+                <select id="spec-auto-count">
+                  <option value="">The content decides</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="8">8</option>
+                  <option value="10">10</option>
+                  <option value="12">12</option>
                 </select>
               </label>
               <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
                 <select id="spec-auto-btype"></select>
               </label>
             </div>
+
+            <label class="f-wide">What should the panels contain?
+              <input type="text" id="spec-auto-panels-brief" placeholder="optional — e.g. the hangar interior, the aircraft, the ground crew">
+              <span class="f-note mono">SHAPES THEM — EVIDENCE STILL RULES WHAT THEY CAN SAY</span></label>
+            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
+              <input type="text" id="spec-auto-id" placeholder="GENETICS_FACTION_V001" required>
+              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
+            <label class="f-wide" title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+              <select id="spec-auto-mode">
+                <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+                <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+              </select>
+            </label>
             <div class="door-run">
               <label title="Which model reads the screenplay and drafts the specification. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review.">Model
                 <select id="spec-auto-provider">

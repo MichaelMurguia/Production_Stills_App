@@ -7640,7 +7640,7 @@ async function renderSpecs(openId = null) {
   // One draft per door — the two hold different fields, and a single key
   // would restore half a form into the wrong one.
   persistForm("autoSpecDraft", ["spec-auto-id", "spec-auto-subject",
-                                "spec-auto-source", "spec-auto-panels",
+                                "spec-auto-panels-brief", "spec-auto-count",
                                 "spec-auto-mode", "spec-auto-btype",
                                 "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject",
@@ -7656,6 +7656,63 @@ async function renderSpecs(openId = null) {
       const locs = d.locations || [];
       const titleCase = t => String(t).toLowerCase()
         .replace(/(^|[\s/#-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+
+      /* Find a scene by heading (user, 2026-08-22). The read already holds
+         every slugline, so this is a search over what is known rather than
+         something to type from memory. A native datalist, following the
+         wizard's sample-location field — no new pattern, and it filters on
+         any part of the heading for free.
+
+         Picking one writes the brief, because the brief is what the
+         deterministic scene anchor matches on: naming the slugline there
+         makes autofill quote that scene's own text into the instructions
+         instead of hunting for it. */
+      const sceneIn = $("#spec-auto-scene");
+      const sceneList = $("#spec-scene-list");
+      // Squashed and deduped: screenplays wrap sluglines with irregular
+      // spacing, and a location the script returns to has the same heading
+      // more than once — a picker offering the same line twice is a picker
+      // that looks broken. `insights.scene_anchor` normalises whitespace
+      // too, so squashing here cannot stop the anchor matching.
+      const seenHead = new Set();
+      const scenes = locs.flatMap(l => (l.scene_list || []).map(sc => ({
+        heading: String(sc.heading || "").replace(/\s+/g, " ").trim(),
+        location: l.location, int_ext: l.int_ext })))
+        .filter(sc => sc.heading && !seenHead.has(sc.heading)
+                      && seenHead.add(sc.heading));
+      if (sceneList) {
+        sceneList.innerHTML = scenes.map(sc =>
+          `<option value="${esc(sc.heading)}"></option>`).join("");
+        const note = $("#spec-auto-scene-note");
+        if (note) {
+          note.textContent = scenes.length
+            ? `${scenes.length} SLUGLINES THE READ FOUND`
+            : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD BELOW";
+        }
+      }
+      if (sceneIn) sceneIn.addEventListener("change", () => {
+        const pick = scenes.find(sc =>
+          sc.heading.toUpperCase() === sceneIn.value.trim().toUpperCase());
+        if (!pick) return;
+        const subj = $("#spec-auto-subject");
+        if (subj) {
+          subj.value = `${pick.heading} — a scene board for this single scene `
+            + `at ${titleCase(pick.location)}. Extract the set, dressing, `
+            + "props and atmosphere the script gives this scene.";
+          subj.dispatchEvent(new Event("input"));
+        }
+        const bt = $("#spec-auto-btype");
+        if (bt && !bt.dataset.touched) bt.value = "SCENE";
+        const id = $("#spec-auto-id");
+        if (id && !id.value.trim()) {
+          // From the LOCATION, not the whole slugline: an id reading
+          // INT._P-38_COCKPIT_-_DAY_V001 carries the grammar of a heading
+          // rather than the name of a board.
+          const base = slugSpecId(pick.location || pick.heading)
+            .replace(/^_+|_+$/g, "").slice(0, 40) || "BOARD";
+          id.value = `${base}_V001`;
+        }
+      });
       const top = locs[0]?.location;
       if (top) {
         const t = titleCase(top);
@@ -7815,21 +7872,9 @@ async function renderSpecs(openId = null) {
   $("#spec-auto-open-screenplay").onclick = () =>
     window.open("/api/screenplay/file", "_blank", "noopener");
 
-  /* Two acts behind this door — read the screenplay, or break down what
-     you pasted — and the label says which, recomputed as you type. The
-     third act the merged form carried (make an empty sheet) is its own
-     door now, so it is no longer a hidden branch of this one. */
-  const submitVerb = () =>
-    $("#spec-auto-source")?.value.trim() ? "Break down the pasted section"
-                                         : "Read the screenplay for it";
-  const syncVerb = () => {
-    const b = $("#spec-auto-go");
-    if (b) b.textContent = submitVerb();
-  };
-  for (const sel of ["#spec-auto-subject", "#spec-auto-source"]) {
-    $(sel)?.addEventListener("input", syncVerb);
-  }
-  syncVerb();
+  /* One act behind this door now (2026-08-22): read the screenplay. The
+     pasted-section path is gone with its textarea, so the verb no longer
+     has a branch to state — it says the one thing it does. */
 
   /* TWO handlers, because there are two acts and they call different
      endpoints. The merged form branched on which boxes were empty; the
@@ -7839,33 +7884,31 @@ async function renderSpecs(openId = null) {
     e.preventDefault();
     const btn = $("#spec-auto-go");
     const brief = $("#spec-auto-subject").value.trim();
-    const source = $("#spec-auto-source").value.trim();
-    const panels = $("#spec-auto-panels").value.trim();
-    if (!brief && !source) {
-      toast("Say what you want, or paste a section — this door reads one of "
-            + "them. To make an empty sheet, use Blank sheet beside it.", true);
+    const count = $("#spec-auto-count")?.value || "";
+    const panelsBrief = $("#spec-auto-panels-brief")?.value.trim() || "";
+    if (!brief) {
+      toast("Say what this board should get — find a scene above, or describe "
+            + "it. To make an empty sheet, use Blank sheet beside it.", true);
       return;
     }
     btn.disabled = true;
     const status = $("#spec-auto-status");
     const busy = status && startBusy(status,
-      source ? "Breaking down the section you pasted…"
-             : "Reading the screenplay and drafting the breakdown…",
-      panels ? "building the panels you named" : "deciding the panels it needs");
+      "Reading the screenplay and drafting the breakdown…",
+      count ? `${count} panels` : "deciding the panels it needs");
     try {
       const spec = await api("/api/specs/autofill", { method: "POST", json: {
         specification_id: slugSpecId($("#spec-auto-id").value),
         mode: $("#spec-auto-mode").value,
         board_type: $("#spec-auto-btype")?.value || "LOCATION",
         prompt: brief,
-        source_text: source,
-        panels,
+        panel_count: count,
+        panels_brief: panelsBrief,
         provider: $("#spec-auto-provider")?.value || "gemini",
       } });
       busy?.done();
       toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
-            + `${spec.evidence_ledger.length} evidence rows`
-            + (source ? " — from the section you pasted." : "."));
+            + `${spec.evidence_ledger.length} evidence rows.`);
       localStorage.removeItem("autoSpecDraft");
       renderSpecs(spec.specification_id);
     } catch (err) {

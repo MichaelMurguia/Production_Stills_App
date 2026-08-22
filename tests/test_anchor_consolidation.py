@@ -1220,10 +1220,41 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
 
     def test_the_generative_fields_belong_to_the_generative_door(self):
         a, b = self.auto(), self.blank()
-        for probe in ("What should I get?", "Or paste a screenplay section",
-                      "What panels should it include?"):
+        for probe in ("Find a scene", "What should I get?",
+                      "What should the panels contain?"):
             self.assertIn(probe, a, probe)
             self.assertNotIn(probe, b, f"{probe} must not be in the blank door")
+
+    def test_a_scene_is_found_by_search_not_typed_from_memory(self):
+        """User, 2026-08-22. The read already holds every slugline, so the
+        door searches what is known. A native datalist, following the
+        wizard's sample-location field — no new pattern."""
+        a = self.auto()
+        self.assertIn('id="spec-auto-scene" list="spec-scene-list"', a)
+        self.assertIn('<datalist id="spec-scene-list">', a)
+        self.assertIn("sceneList.innerHTML = scenes.map", JS)
+
+    def test_picking_a_scene_writes_the_brief(self):
+        """Because the brief is what the deterministic scene anchor matches
+        on — naming the slugline there makes autofill quote that scene's
+        own text instead of hunting for it."""
+        i = JS.index('sceneIn.addEventListener("change"')
+        seg = JS[i:i + 1100]
+        self.assertIn("a scene board for this single scene", seg)
+        self.assertIn('bt.value = "SCENE"', seg)
+
+    def test_the_panel_count_is_a_choice_not_a_list(self):
+        a = self.auto()
+        self.assertIn('id="spec-auto-count"', a)
+        self.assertIn("The content decides", a)
+        self.assertIn('id="spec-auto-panels-brief"', a)
+        self.assertNotIn("one per line", a)
+
+    def test_the_paste_door_is_gone(self):
+        """Its textarea, its note and its branch."""
+        for gone in ("spec-auto-source", "PASTED TEXT WINS"):
+            self.assertNotIn(gone, HTML, gone)
+            self.assertNotIn(gone, JS, gone)
 
     def test_the_blank_door_is_not_a_superset(self):
         """The merge's central objection. It asks for a name and nothing
@@ -1248,8 +1279,7 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         RULE_PASS_2 C5 took the first person out of it."""
         a = self.auto()
         self.assertIn("THE SCREENPLAY IS READ FOR IT", a)
-        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", a)
-        self.assertIn("PASTED TEXT WINS — THE SCREENPLAY IS NOT READ", a)
+        self.assertIn("SHAPES THEM — EVIDENCE STILL RULES WHAT THEY CAN SAY", a)
         self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", a)
 
     def test_the_section_carries_a_way_to_read_the_screenplay(self):
@@ -1257,22 +1287,19 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn('window.open("/api/screenplay/file"', JS)
 
     def test_the_explaining_button_is_gone(self):
-        """C3 (2026-08-18) survives the reversal: a verb whose effect was
-        to EMPTY a field and toast an explanation of what the now-empty
-        field means. The empty field already meant that."""
+        """C3 (2026-08-18) survives every later change: a verb whose effect
+        was to EMPTY a field and toast an explanation of what the
+        now-empty field means."""
         self.assertNotIn("autopanels", JS)
         self.assertNotIn("autopanels", HTML)
-        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", self.auto())
 
-    def test_the_submit_states_which_of_its_two_acts_it_will_perform(self):
-        """C2 survives too, narrowed: the auto door still holds two acts —
-        read the screenplay, or break down what you pasted — and says
-        which. The third act it used to hide is its own door now."""
-        i = JS.index("const submitVerb = ")
-        seg = JS[i:i + 420]
-        self.assertIn("Break down the pasted section", seg)
-        self.assertIn("Read the screenplay for it", seg)
-        self.assertNotIn("Create an empty sheet", seg)
+    def test_the_submit_says_the_one_thing_it_does(self):
+        """C2's recomputing verb existed because one submit hid three
+        acts. Two of the three are gone — the empty sheet is its own door,
+        the pasted section is retired — so the verb states its single act
+        and there is nothing left to recompute."""
+        self.assertNotIn("const submitVerb", JS)
+        self.assertIn('id="spec-auto-go">Read the screenplay for it', HTML)
 
     def test_it_reports_while_it_drafts(self):
         i = JS.index('$("#spec-auto-form").addEventListener("submit"')

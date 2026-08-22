@@ -275,6 +275,19 @@ Bible is the fix, not regenerating the swatches.
 
 ## 6. Stage 03 — Breakdowns
 
+**Two doors, one section.** *Break it down for me* reads the screenplay;
+*Blank sheet* makes an empty sheet you fill yourself. They are different
+acts, so amber marks the one that does the work.
+
+In the reading door: **Find a scene** searches every slugline the read
+found — type any part of one — and picking it writes the brief and sets
+the board type to SCENE. **What should I get?** is the brief itself, and
+naming a slugline in it makes the draft quote that scene's own text rather
+than hunting for it. **Panels** leaves the count to the evidence unless
+you set one, and **What should the panels contain?** shapes what each
+panel is about. Neither licenses anything the screenplay does not support:
+every claim still cites its evidence.
+
 **Drafting.** Describe the board ("Charlie's cabin — the workshop scenes
 with the GT40") and **Run breakdown**: the research pass reads the whole
 screenplay and drafts the breakdown — panels, objects, and an evidence ledger
