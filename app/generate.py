@@ -990,7 +990,7 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
     # has turned it on, so a render is byte-identical to before until it
     # does: that is what makes this reversible.
     from . import cinematography as _cine
-    lines += _cine.prompt_block()
+    lines += _cine.prompt_block(panel)
     lines += [
         "DETAIL BUDGET",
         ("Hero panel: full rendering attention on the primary subject; "
@@ -2342,7 +2342,7 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # Which cinematography grammar rode this render, if any — the
         # whole point of a reversible switch is being able to tell the
         # takes apart afterwards (user 2026-08-16).
-        "cinematography": _cine.stamp(),
+        "cinematography": _cine.stamp(panel),
         "panel_id": panel_id,
         "status": "CANDIDATE",
         "provider": provider,

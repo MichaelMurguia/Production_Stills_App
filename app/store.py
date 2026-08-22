@@ -1360,6 +1360,36 @@ def save_camera_defaults(fields: dict) -> dict:
     return clean
 
 
+# Per-panel render settings that are NOT camera axes but are set in the
+# same place, between takes, under the same contract: journaled, lock
+# re-stamped, refused once a take is approved (user, 2026-08-22 — "check
+# that we can actually set it when rendering a panel, including None").
+PANEL_GRAMMAR_FIELDS = ("cinematography",)
+
+
+def _clean_panel_grammar(fields: dict) -> dict:
+    """Validate a panel's grammar override. Three states: absent/empty
+    inherits the production's choice, NONE refuses it for this panel, and
+    a key names one. An unknown key is refused rather than dropped — a
+    silent drop would read on screen as "inherit" and render something the
+    user did not ask for."""
+    from . import cinematography
+    out = {}
+    if "cinematography" not in fields:
+        return out
+    v = str(fields.get("cinematography") or "").strip()
+    if not v:
+        out["cinematography"] = ""
+        return out
+    if v.upper() == cinematography.PANEL_NONE:
+        out["cinematography"] = cinematography.PANEL_NONE
+        return out
+    if not any(st["key"] == v for st in cinematography.styles()):
+        raise ValueError(f"unknown cinematography grammar: {v}")
+    out["cinematography"] = v
+    return out
+
+
 def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     """Set a panel's camera (angle/orientation/tilt/lens/scale) from the
     workbench between takes, without unlocking. Same controlled-edit contract as
@@ -1367,6 +1397,7 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     it; otherwise the lock re-stamps and the change is journaled. A present field
     with an empty value clears it (back to the bible default)."""
     clean = _clean_camera_fields(fields)  # validates before any mutation
+    clean.update(_clean_panel_grammar(fields))
     spec = get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
@@ -1375,7 +1406,7 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
         raise KeyError(f"{spec_id} has no panel {panel_id}")
     _refuse_carried(spec, panel_id)
     refuse_if_panel_approved(spec_id, panel_id, "camera")
-    for field in CAMERA_FIELDS:
+    for field in (*CAMERA_FIELDS, *PANEL_GRAMMAR_FIELDS):
         if field in fields:  # only touch fields the caller sent
             v = clean.get(field, "")
             if v:

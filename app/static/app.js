@@ -6059,10 +6059,13 @@ async function renderWizard() {
     title: "Cinematography",
     definition: `A cinematography grammar is <b>how the camera tells the
       story</b> — camera behaviour, lighting, composition, depth and
-      movement. It is not genre, and it is not the palette: the Color
-      Palette anchor owns colour, a panel states its own hour, and the
-      camera default below is a starting point every panel can override —
-      a cinematographer picks whatever lens gets the shot.`,
+      movement. <b>This sets the production default, and it can be changed
+      for any single render</b> — a panel can name a different grammar or
+      refuse one entirely. It is not genre, and it is not the palette: the
+      Color Palette anchor owns colour, a panel states its own hour, and
+      the camera default below is
+      a starting point every panel can override — a cinematographer picks
+      whatever lens gets the shot.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
     ownPlaceholder: "Describe how the camera should see",
     ...travels("#cam-default"),
@@ -9470,7 +9473,30 @@ function cameraSelect(prefix, axis, value, blank, disabled = false) {
 }
 function cameraRow(prefix, obj, blank, disabled = false) {
   return `<div class="cam-row" data-f="${prefix}-row">${
-    CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")}</div>`;
+    CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")
+  }${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled) : ""}</div>`;
+}
+
+/* The cinematography grammar as a per-panel axis (user, 2026-08-22: "check
+   that we can actually set it when rendering a panel, including None").
+   Three states, the same shape the camera axes already use — inherit the
+   production's choice, name one, or refuse one for this panel alone.
+
+   Only where there IS a blank option: the production defaults card sets
+   the default itself, and "— production default —" there would point at
+   itself. */
+function grammarSelect(prefix, value, blank, disabled = false) {
+  const v = String(value || "");
+  const opts = (CINEMA_STYLES.length ? CINEMA_STYLES : [])
+    .map(st => `<option value="${esc(st.key)}" ${v === st.key ? "selected" : ""}
+      >${esc(st.name)}</option>`).join("");
+  return `<label class="cam-field mini"><span>Grammar</span>
+    <select data-f="${prefix}-grammar" ${disabled ? "disabled" : ""}>
+      <option value="">${esc(blank)}</option>
+      <option value="NONE" ${v.toUpperCase() === "NONE" ? "selected" : ""}
+        >None — no grammar</option>
+      ${opts}
+    </select></label>`;
 }
 // Read the five axes back off a rendered row. The lens resolves its Custom
 // number field to a focal length like "28MM"; a blank select stays "".
@@ -9481,8 +9507,13 @@ function readCameraFields(prefix, root) {
     const mm = ($(`[data-f=${prefix}-lens-mm]`, root)?.value || "").trim();
     lens = mm ? `${mm}MM` : "";
   }
-  return { camera_angle: val("angle"), camera_orientation: val("orient"),
-           camera_lens: lens, camera_tilt: val("tilt"), scale: val("scale") };
+  const out = { camera_angle: val("angle"), camera_orientation: val("orient"),
+                camera_lens: lens, camera_tilt: val("tilt"), scale: val("scale") };
+  // Only sent when the row actually drew the control — the amend route
+  // touches a field only if the caller names it, so a surface without the
+  // grammar select must not silently clear a panel's choice.
+  if ($(`[data-f=${prefix}-grammar]`, root)) out.cinematography = val("grammar");
+  return out;
 }
 // Toggle the Custom focal-length input as the lens select changes, and run
 // `onChange` after any axis changes (each surface persists differently).
@@ -9841,6 +9872,9 @@ async function proposeCorrections(specId, candId, onDone) {
 
 async function renderBoardPanels(specId) {
   const host = $("#board-panels");
+  // The per-panel grammar select names the grammars, so the library has to
+  // be here before the card is drawn. Cached after the first call.
+  await loadCinemaStyles();
   // A REDRAW is not a LOAD (user 2026-08-16: "when I click on the frames in
   // the strip the page jumps to the top"). Staging a take, saving a camera,
   // withdrawing an approval and saving a prompt all call this — and blanking

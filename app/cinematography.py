@@ -106,30 +106,75 @@ def active() -> dict | None:
     return by_key(s["key"])
 
 
-def prompt_block() -> list[str]:
+PANEL_FIELD = "cinematography"
+PANEL_NONE = "NONE"
+
+
+def panel_choice(panel: dict | None) -> str:
+    """What this panel says about grammar: "" inherit, "NONE" refuse, or a
+    style key. Anything unrecognised inherits — an unknown value must not
+    silently delete a production's grammar from one render."""
+    v = str((panel or {}).get(PANEL_FIELD) or "").strip()
+    if not v:
+        return ""
+    if v.upper() == PANEL_NONE:
+        return PANEL_NONE
+    return v if any(st["key"] == v for st in styles()) else ""
+
+
+def resolve(panel: dict | None = None) -> dict | None:
+    """The grammar this panel actually renders under.
+
+    Three states, the same shape every camera axis already uses: unset
+    inherits the production's choice, a key overrides it, and NONE refuses
+    it for this panel alone (user, 2026-08-22).
+
+    A panel that names a grammar rides it even when the production switch
+    is off. The switch governs the DEFAULT — "add it to every render" —
+    and a panel naming a grammar is asking for it on that panel; if the
+    switch still suppressed it, choosing per panel would do nothing at all.
+    NONE is the inverse and wins over a switch that is on.
+    """
+    pick = panel_choice(panel)
+    if pick == PANEL_NONE:
+        return None
+    if pick:
+        return next((st for st in styles() if st["key"] == pick), None)
+    return active() if setting()["prompt_rides"] else None
+
+
+def prompt_block(panel: dict | None = None) -> list[str]:
     """The document's own image-model prompt, verbatim, as a render block.
 
     Placed AFTER the camera block and explicitly subordinate to it on
     framing: the grammar says "favour moderate wide-angle" and a panel may
     say 85mm, and the panel's camera is the one the user set on purpose.
     Same precedence the CAMERA block already claims over references."""
-    st = active()
+    st = resolve(panel)
     if not st:
         return []
+    scope = ("This panel names this grammar itself."
+             if panel_choice(panel) else
+             "This is the production's visual grammar and applies to every "
+             "panel.")
     return [f"CINEMATOGRAPHY GRAMMAR — {st['name'].upper()} ({st['subtitle']}). "
-            "This is the production's visual grammar and applies to every "
-            "panel. Where it suggests a framing, lens or angle that the "
+            + scope +
+            " Where it suggests a framing, lens or angle that the "
             "CAMERA block above states explicitly, the CAMERA block wins — "
             "this grammar governs approach, not the shot.",
             "", st["prompt"], ""]
 
 
-def stamp() -> dict:
+def stamp(panel: dict | None = None) -> dict:
     """What a take records about the grammar it was rendered under, so a
     take made with it can be told from one made without."""
     from common import stable_hash
-    st = active()
+    st = resolve(panel)
+    pick = panel_choice(panel)
     if not st:
-        return {"rides": False}
+        # A panel that refused says so — otherwise a take made under NONE
+        # is indistinguishable from one made before the grammar existed.
+        return {"rides": False, "refused": pick == PANEL_NONE}
     return {"rides": True, "key": st["key"], "name": st["name"],
+            "from": "panel" if pick else "production",
             "prompt_sha": stable_hash(st["prompt"])[:16]}

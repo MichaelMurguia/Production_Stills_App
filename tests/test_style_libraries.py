@@ -220,7 +220,7 @@ class TheDrafterSeesTheWholeDocument(unittest.TestCase):
         off-by-default switch."""
         gen = (ROOT / "app" / "generate.py").read_text(encoding="utf-8")
         self.assertNotIn("style_docs", gen)
-        self.assertIn("_cine.prompt_block()", gen)
+        self.assertIn("_cine.prompt_block(panel)", gen)
 
 
 class TheCardAlwaysShowsAPicture(unittest.TestCase):

@@ -149,6 +149,14 @@ Accepted formats: PDF, FDX, Fountain, TXT. (PDF text extraction is used for
 the coverage map and citation check; an image-only PDF disables those two
 features but nothing else.)
 
+**The cinematography grammar is a default, not a decree.** Stage 02 picks
+one for the production; any panel can then name a different grammar or
+refuse one entirely (`Grammar` in the panel's camera row: *— production
+default —*, *None — no grammar*, or one of the eight). A panel that names
+one uses it whether or not the production has turned the full image-model
+prompt on, and every take records which grammar it rendered under and
+where that choice came from.
+
 ## 5. Stage 02 — Production Design
 
 Six steps produce the **Art Direction Bible** — the locked lookbook every

@@ -127,7 +127,7 @@ class ItDefersToTheCamera(Grammar):
 
 class EveryTakeSaysWhetherItRode(Grammar):
     def test_a_take_made_without_it_records_that(self):
-        self.assertEqual(cine.stamp(), {"rides": False})
+        self.assertEqual(cine.stamp(), {"rides": False, "refused": False})
 
     def test_a_take_made_with_it_records_which_and_what_text(self):
         cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
@@ -140,8 +140,10 @@ class EveryTakeSaysWhetherItRode(Grammar):
 
     def test_the_record_carries_it(self):
         src = (ROOT / "app/generate.py").read_text(encoding="utf-8")
-        self.assertIn('"cinematography": _cine.stamp()', src)
-        i = src.index('"cinematography": _cine.stamp()')
+        self.assertIn('"cinematography": _cine.stamp(panel)', src,
+                      "the stamp records the PANEL's grammar, not just "
+                      "the production's")
+        i = src.index('"cinematography": _cine.stamp(panel)')
         # on the record a render writes, beside the spec hash it pairs with
         self.assertIn('"spec_hash": stable_hash(spec)', src[i - 400:i])
         self.assertIn('"candidate_id": cand_id', src[i - 600:i])
@@ -298,6 +300,113 @@ class AFailedLoadIsStatedNotSwallowed(unittest.TestCase):
         """An empty list that failed must be distinguishable from an empty
         list that is genuinely empty, for any later caller."""
         self.assertIn("into.failed = true", self.body())
+
+
+class APanelCanSetItsOwnGrammar(unittest.TestCase):
+    """User, 2026-08-22: "check that we can actually set it when rendering
+    a panel, including None. and if not - make it so." It could not — the
+    grammar was production-wide, `prompt_block()` took no panel, and there
+    was no way to refuse it for one render.
+
+    Three states, the shape every camera axis already uses: unset inherits
+    the production's choice, a key overrides it, NONE refuses it for this
+    panel alone.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-cine-"))
+        self._home, self._slug = paths.HOME, paths.ACTIVE_PROJECT
+        paths.HOME = self.tmp
+        paths.set_project("")
+        paths.ensure_dirs()
+        from app import store
+        store._atomic_write_json(store._spec_path("SPEC-0001"), {
+            "specification_id": "SPEC-0001", "locked": False, "status": "DRAFT",
+            "panels": [{"id": "P1", "required_objects": [], "brief": "x"}]})
+
+    def tearDown(self):
+        paths.HOME = self._home
+        paths.set_project(self._slug)
+
+    def key(self):
+        from app import cinematography as cine
+        return cine.styles()[2]["key"]
+
+    def panel(self):
+        from app import store
+        return store.get_spec("SPEC-0001")["panels"][0]
+
+    def test_a_panel_can_name_a_grammar(self):
+        from app import store, cinematography as cine
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
+        self.assertEqual(cine.resolve(self.panel())["key"], self.key())
+
+    def test_a_panel_can_refuse_one(self):
+        from app import store, cinematography as cine
+        cine.save_setting(key=self.key(), prompt_rides=True)
+        self.assertIsNotNone(cine.resolve({}), "the production default rides")
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": "NONE"})
+        self.assertIsNone(cine.resolve(self.panel()),
+                          "NONE wins over a switch that is on")
+        self.assertTrue(cine.stamp(self.panel())["refused"],
+                        "a take made under NONE says so")
+
+    def test_a_named_grammar_rides_even_with_the_switch_off(self):
+        """The switch governs the DEFAULT. A panel naming a grammar is
+        asking for it on that panel — if the switch still suppressed it,
+        choosing per panel would do nothing at all."""
+        from app import store, cinematography as cine
+        self.assertFalse(cine.setting()["prompt_rides"])
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
+        block = cine.prompt_block(self.panel())
+        self.assertTrue(block)
+        self.assertIn("This panel names this grammar itself", block[0])
+
+    def test_clearing_returns_it_to_the_production(self):
+        from app import store
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": ""})
+        self.assertNotIn("cinematography", self.panel())
+
+    def test_a_camera_only_amend_does_not_clear_it(self):
+        """The route touches a field only if the caller names it, and the
+        client only sends the grammar when the row actually drew it."""
+        from app import store
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
+        store.amend_panel_camera("SPEC-0001", "P1", {"camera_angle": "LOW"})
+        self.assertEqual(self.panel().get("cinematography"), self.key())
+
+    def test_an_unknown_grammar_is_refused_not_dropped(self):
+        """A silent drop would read on screen as "inherit" and render
+        something the user did not ask for."""
+        from app import store
+        with self.assertRaises(ValueError):
+            store.amend_panel_camera("SPEC-0001", "P1",
+                                     {"cinematography": "cine-nonsense"})
+
+    def test_the_stamp_says_where_the_grammar_came_from(self):
+        from app import store, cinematography as cine
+        store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
+        self.assertEqual(cine.stamp(self.panel())["from"], "panel")
+        cine.save_setting(key=self.key(), prompt_rides=True)
+        self.assertEqual(cine.stamp({})["from"], "production")
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    def test_the_control_offers_inherit_none_and_every_grammar(self):
+        JS = self.JS
+        self.assertIn("function grammarSelect", JS)
+        self.assertIn('None — no grammar', JS)
+        self.assertIn('data-f="${prefix}-grammar"', JS)
+        # only where a blank exists — the defaults card would point at itself
+        self.assertIn("${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled) : \"\"}", JS)
+
+    def test_the_picker_says_it_is_only_a_default(self):
+        JS = self.JS
+        i = JS.index('title: "Cinematography"')
+        seg = JS[i:i + 900]
+        self.assertIn("sets the production default", seg)
+        self.assertIn("changed", seg)
 
 
 if __name__ == "__main__":
