@@ -295,6 +295,82 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
                       (ROOT / "app/wizard.py").read_text(encoding="utf-8"))
 
 
+class AnAnchorCanBeWordsOrAPicture(Install):
+    """User, 2026-08-22, looking at stage 03's gate: "the breakdown sheet
+    is broken because — what is style reference?"
+
+    Two faults in one line. It was jargon, and its sub-line was wrong
+    twice: it named "board layout", which is not one of these anchors, and
+    said "three" where there are four.
+
+    The one that actually blocked them: it counted approved reference
+    IMAGES only. The 2026-08-16 ruling that dissolved the look interview
+    says the opposite in this codebase's own words — "the anchor cards ARE
+    that statement now: a picture, words, or both" — and the style pickers
+    write WORDS. So a production with texture, cinematography and
+    rendering style all stated was told to add a style reference, and
+    stage 03 stayed locked over a look that was fully described.
+    """
+
+    def words(self, **kw):
+        (paths.DATA / "interview.json").write_text(json.dumps(kw),
+                                                   encoding="utf-8")
+
+    def test_words_alone_state_an_anchor(self):
+        self.assertEqual(insights.anchors_stated(), 0)
+        self.words(texture="weathered, repairs visible")
+        self.assertEqual(insights.anchors_stated(), 1)
+
+    def test_every_anchor_has_a_words_field(self):
+        """If one were missing, that anchor could only ever be stated with
+        a picture — the exact asymmetry this fixes."""
+        self.assertEqual(set(insights.ANCHOR_WORDS), insights.STYLE_ANCHOR_ROLES)
+
+    def test_all_four_count_and_they_do_not_double_count(self):
+        self.words(texture="a", palette="b", light="c", medium="d")
+        self.assertEqual(insights.anchors_stated(), 4)
+        # a picture for an anchor already stated in words is still ONE
+        self.picture(approve=True)
+        self.assertEqual(insights.anchors_stated(), 4)
+
+    def picture(self, approve=False):
+        import io
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.new("RGB", (8, 8), (40, 40, 40)).save(buf, "PNG")
+        r = store.add_reference("t.png", buf.getvalue(), role="WORLD_TEXTURE",
+                                controls=["texture"], does_not_control=[])
+        if approve:
+            store.set_reference_status(r["id"], "APPROVED", "test")
+        return r
+
+    def test_a_picture_alone_still_states_one(self):
+        self.picture(approve=True)
+        self.assertEqual(insights.anchors_stated(), 1)
+
+    def test_an_unapproved_picture_states_nothing(self):
+        self.picture()
+        self.assertEqual(insights.anchors_stated(), 0)
+
+    def test_the_summary_carries_both_counts(self):
+        """`style_anchors` is pictures, which the reference library
+        reports. `anchors_stated` is what the GATE reads."""
+        self.words(texture="a")
+        pd = insights.stage_summary()["production_design"]
+        self.assertEqual(pd["style_anchors"], 0)
+        self.assertEqual(pd["anchors_stated"], 1)
+
+    def test_the_gate_reads_the_right_one_and_says_what_it_means(self):
+        i = JS.index("gateChain(state)")
+        seg = JS[i:i + 2600]
+        self.assertIn("done: (pd.anchors_stated || 0) > 0", seg)
+        self.assertNotIn("ADD STYLE REFERENCE", seg)
+        self.assertIn("DESCRIBE THE LOOK", seg)
+        self.assertIn("in words or a picture", seg)
+        self.assertIn("four anchors", seg)
+        self.assertNotIn("the three anchors", seg)
+
+
 class TheLeadNeverJumpsAheadOfTheWork(Install):
     """User, 2026-08-22: "the DO THIS NEXT in the current state is wrong —
     production design should be completed. You would not go to Board

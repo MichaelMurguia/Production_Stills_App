@@ -250,6 +250,40 @@ def blocking() -> list[dict]:
     return out
 
 
+# The words half of each style anchor, as the interview stores them.
+# Ordered to match STYLE_ANCHOR_ROLES so the two halves of one anchor are
+# obviously the same anchor.
+ANCHOR_WORDS = {"WORLD_TEXTURE": "texture", "COLOR_PALETTE": "palette",
+                "CINEMATOGRAPHY_STYLE": "light", "BOARD_RENDERING_STYLE": "medium"}
+
+
+def anchors_stated() -> int:
+    """How many of the four style anchors the director has actually stated
+    — in a picture, in words, or both.
+
+    The 2026-08-16 ruling that dissolved the separate look interview says
+    it plainly, in this codebase's own comment: "the anchor cards ARE that
+    statement now — a picture, words, or both". The gate chain counted
+    approved reference IMAGES only, so a production whose look was fully
+    described in words, or chosen from the style pickers (which write
+    words), stayed locked out of stage 03 and was told to "add style
+    reference" (user, 2026-08-22).
+    """
+    stated = {store.role_head(r["role"]) for r in store.list_references()
+              if r["status"] == "APPROVED"
+              and store.role_head(r["role"]) in STYLE_ANCHOR_ROLES}
+    p = paths.DATA / "interview.json"
+    if p.exists():
+        try:
+            saved = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            saved = {}
+        for role, field in ANCHOR_WORDS.items():
+            if str(saved.get(field, "")).strip():
+                stated.add(role)
+    return len(stated)
+
+
 def _interview_answered() -> int:
     """How many look-interview fields hold answers — the gate chain's
     interview step tracks real state now that the interview persists."""
@@ -302,6 +336,9 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
         "screenplay": app_state.get("screenplay") or None,
         "production_design": {
             "bible_saved": paths.BIBLE.exists(),
+            # Pictures only — kept because the reference library reports it.
+            # `anchors_stated` is what the GATE reads.
+            "anchors_stated": anchors_stated(),
             "bible_rev": int(app_state.get("bible_rev", 0)),
             # The Script Scene Scan has run (LOCKED_STAGE_PLAN L3) — feeds
             # the gate chain so its step drops off when done.

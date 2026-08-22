@@ -1525,8 +1525,16 @@ function gateChain(state) {
       sub: "The read starts here — everything downstream derives from the draft" },
     { label: "RUN THE SCRIPT SCAN", verb: "Run the script scan", done: !!pd.scan_done, stage: "wizard",
       sub: "Reads the draft for design languages, environments, locations and cast" },
-    { label: "ADD STYLE REFERENCE", verb: "Add style reference", done: (pd.style_anchors || 0) > 0, stage: "wizard",
-      sub: "Board layout, cinematography and rendering plates — the three anchors" },
+    // "What is style reference?" (user, 2026-08-22, looking at stage 03's
+    // gate). It was jargon, and its sub-line was wrong twice over: it named
+    // Board layout, which is not one of these anchors, and said three when
+    // there are four. It also counted approved IMAGES only, so a look
+    // stated entirely in words — including one chosen from the style
+    // pickers, which write words — never satisfied it.
+    { label: "DESCRIBE THE LOOK", verb: "Describe the look",
+      done: (pd.anchors_stated || 0) > 0, stage: "wizard",
+      sub: "Any one of the four anchors — world texture, colour, "
+         + "cinematography, rendering style — in words or a picture" },
     { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview",
       done: (pd.interview_answered || 0) > 0 || !!pd.bible_saved,
       optional: true, stage: "wizard",
