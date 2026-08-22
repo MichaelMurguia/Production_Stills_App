@@ -1271,6 +1271,37 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertEqual(JS.count("const sceneBrief = "), 1)
         self.assertEqual(JS.count("const locationBrief = "), 1)
 
+    def test_a_written_brief_is_not_searched(self):
+        """User, 2026-08-22: "if I pick a scene and then click into the
+        field I get strange text." Picking writes a 150-character sentence
+        into the field; focusing it searched for that sentence, found
+        nothing, and shouted the whole brief back in capitals.
+
+        Length is the test rather than a "was picked" flag — a query is
+        short, and the moment the field holds a written brief there is
+        nothing to look up, however it got there."""
+        i = JS.index("const QUERY_MAX")
+        seg = JS[i:i + 700]
+        self.assertIn("QUERY_MAX = 80", seg)
+        self.assertIn("t.length <= QUERY_MAX", seg)
+        self.assertIn("if (!isQuery(sceneIn.value)) { closeHits(); return; }", JS)
+
+    def test_choosing_does_not_re_enter_the_search(self):
+        """choose() used to dispatch a synthetic input event to refresh the
+        alternatives, which walked straight back into draw() with the new
+        brief in hand."""
+        i = JS.index("const choose = row =>")
+        seg = JS[i:i + 1200]
+        self.assertIn("syncAlternatives();", seg)
+        self.assertNotIn("dispatchEvent", seg)
+
+    def test_no_match_says_what_will_happen_instead(self):
+        """Echoing the query back in caps told the user nothing. What they
+        need to know is that typing something unmatched is FINE — it
+        becomes the brief."""
+        self.assertIn("IT WILL BE READ AS THE BRIEF", JS)
+        self.assertNotIn("NOTHING MATCHES ${esc(", JS)
+
     def test_the_brief_and_the_paste_are_alternatives(self):
         """User: they "should act as radio buttons — you cant do both".
         They are genuinely exclusive downstream: source_text REPLACES the

@@ -7753,7 +7753,9 @@ async function renderSpecs(openId = null) {
         if (sceneIn) {
           sceneIn.value = row.kind === "scene"
             ? sceneBrief(row.loc, row.scene) : locationBrief(row.loc);
-          sceneIn.dispatchEvent(new Event("input", { bubbles: false }));
+          syncAlternatives();   // not a synthetic input event: that would
+                                // re-enter draw() with the brief in hand
+
         }
         const bt = $("#spec-auto-btype");
         if (bt && !bt.dataset.touched) {
@@ -7768,15 +7770,32 @@ async function renderSpecs(openId = null) {
         closeHits();
       };
 
+      /* A composed brief is not a query (user, 2026-08-22: "if I pick a
+         scene and then click into the field I get strange text"). Picking
+         writes a 150-character sentence into this field; focusing it then
+         searched for that sentence, found nothing, and shouted the whole
+         brief back in caps.
+
+         Length is the honest test rather than a "was picked" flag: a
+         search query is short, and the moment the field holds a written
+         brief — picked or typed — there is nothing to look up. Clearing
+         it and typing `terra` searches again. */
+      const QUERY_MAX = 80;
+      const isQuery = v => {
+        const t = String(v || "").trim();
+        return t.length > 0 && t.length <= QUERY_MAX;
+      };
+
       let found = [];
       const draw = () => {
         if (!hits || !sceneIn) return;
+        if (!isQuery(sceneIn.value)) { closeHits(); return; }
         found = search(sceneIn.value).slice(0, 40);
         if (!found.length) {
-          hits.innerHTML = sceneIn.value.trim()
-            ? `<p class="scene-none mono">NOTHING MATCHES ${esc(sceneIn.value.trim().toUpperCase())}</p>`
-            : "";
-          hits.hidden = !sceneIn.value.trim();
+          hits.innerHTML =
+            `<p class="scene-none mono">NO LOCATION OR SLUGLINE MATCHES THAT — `
+            + `IT WILL BE READ AS THE BRIEF</p>`;
+          hits.hidden = false;
           return;
         }
         hits.innerHTML = found.map((r, i) => `
