@@ -24,15 +24,15 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1844 tests** across 103 files.
+**1848 tests** across 103 files.
 
 
-## Product app — 1640 tests in 87 files
+## Product app — 1644 tests in 87 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
-| `test_anchor_consolidation.py` | 149 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
+| `test_anchor_consolidation.py` | 153 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
 | `test_assemble_layout.py` | 8 | Board layout invariants: the aspect variant honors take ratios with a uniform minimal residual, variants resolve per the ruling, and geometry stays in |

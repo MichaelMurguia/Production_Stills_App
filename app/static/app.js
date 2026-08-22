@@ -7791,14 +7791,10 @@ async function renderSpecs(openId = null) {
         if (!hits || !sceneIn) return;
         if (!isQuery(sceneIn.value)) { closeHits(); return; }
         found = search(sceneIn.value).slice(0, 40);
-        if (!found.length) {
-          hits.innerHTML =
-            `<p class="scene-none mono">NO LOCATION OR SLUGLINE MATCHES THAT — `
-            + `IT WILL BE READ AS THE BRIEF</p>`;
-          hits.hidden = false;
-          return;
-        }
-        hits.innerHTML = found.map((r, i) => `
+        if (!found.length) { closeHits(); return; }
+        hits.innerHTML = `<p class="scene-ask mono">${found.length} MATCH${
+          found.length === 1 ? "" : "ES"} IN THE SCREENPLAY — PICK ONE, OR
+          PRESS AGAIN TO USE WHAT YOU TYPED</p>` + found.map((r, i) => `
           <button type="button" class="scene-hit${r.kind === "loc" ? " is-loc" : ""}"
             data-i="${i}" role="option">
             <span class="scene-hit-label">${esc(r.label)}</span>
@@ -7810,9 +7806,26 @@ async function renderSpecs(openId = null) {
           b.onclick = () => choose(found[+b.dataset.i]));
       };
 
+      /* The search runs when the SUBMIT is pressed, not while typing (user,
+         2026-08-22). Results appearing under the caret interrupted writing
+         a brief, which is the commoner act — so the door asks the question
+         at the moment it is about to spend money instead: "you typed
+         `terra`, and the screenplay has seven places called that — did you
+         mean one of them?"
+
+         Pressing it again drafts. So does choosing a result, or saying use
+         what I typed: the question is asked once per brief, never as a
+         gate you have to argue with. */
+      let asked = "";
+      window.__sceneSearchAsk = brief => {
+        if (!isQuery(brief) || asked === brief.trim()) return false;
+        asked = brief.trim();
+        draw();
+        return !hits?.hidden && found.length > 0;
+      };
+
       if (sceneIn) {
-        sceneIn.addEventListener("input", () => { draw(); syncAlternatives(); });
-        sceneIn.addEventListener("focus", draw);
+        sceneIn.addEventListener("input", () => { closeHits(); syncAlternatives(); });
         sceneIn.addEventListener("keydown", e => {
           if (hits?.hidden || !found.length) return;
           const rows = $$(".scene-hit", hits);
@@ -8014,6 +8027,15 @@ async function renderSpecs(openId = null) {
     if (!brief && !source) {
       toast("Say what this board should get, or paste a section. To make an "
             + "empty sheet, use Blank sheet beside it.", true);
+      return;
+    }
+    // Ask before spending: a short brief that names something the
+    // screenplay actually holds is almost always a request for THAT, and
+    // the difference between "terra" and the seven Terra Nova locations is
+    // the difference between a vague board and a grounded one. Asked once
+    // per brief — pressing again goes ahead with what was typed.
+    if (!source && window.__sceneSearchAsk?.(brief)) {
+      btn.disabled = false;
       return;
     }
     btn.disabled = true;

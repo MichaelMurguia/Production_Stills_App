@@ -279,12 +279,15 @@ Bible is the fix, not regenerating the swatches.
 *Blank sheet* makes an empty sheet you fill yourself. They are different
 acts, so amber marks the one that does the work.
 
-In the reading door, **What should I get?** is also the search. Type any
-part of a location or a slugline — `terra` lists every Terra Nova place
-with its scene count, then the individual scenes — and picking one writes
-the brief, which is what makes the draft quote that scene's own text
-rather than hunting for it. If nothing matches, what you typed is simply
-the brief.
+In the reading door, **What should I get?** is also the search — but it
+runs when you press the button, not while you type, so writing a brief is
+never interrupted. Press **Read the screenplay for it** with `terra` in
+the field and it answers *21 matches in the screenplay — pick one, or
+press again to use what you typed*, listing every Terra Nova place with
+its scene count, then the individual scenes. Picking one writes the brief,
+which is what makes the draft quote that scene's own text rather than
+hunting for it. It asks once per brief; if nothing matches, it just
+drafts.
 
 **Or paste a section** is the alternative, not an addition: filling one
 makes the other unavailable, because a pasted section *replaces* the

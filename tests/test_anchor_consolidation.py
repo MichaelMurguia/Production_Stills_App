@@ -1225,6 +1225,43 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
             self.assertIn(probe, a, probe)
             self.assertNotIn(probe, b, f"{probe} must not be in the blank door")
 
+    def test_the_search_runs_on_the_submit_not_on_typing(self):
+        """User, 2026-08-22: "the search should not run until the user
+        selects Read the screenplay for it."
+
+        Results appearing under the caret interrupted writing a brief,
+        which is the commoner act. The door asks its question at the moment
+        it is about to spend money instead — you typed `terra`, and the
+        screenplay holds seven places called that."""
+        self.assertIn("window.__sceneSearchAsk", JS)
+        i = JS.index('sceneIn.addEventListener("input"')
+        seg = JS[i:i + 200]
+        self.assertIn("closeHits()", seg, "typing closes rather than opens")
+        self.assertNotIn("draw()", seg)
+        self.assertNotIn('addEventListener("focus", draw)', JS)
+
+    def test_it_asks_once_per_brief_and_then_gets_out_of_the_way(self):
+        """A question you cannot get past is a gate. Pressing again goes
+        ahead with what was typed, and so does choosing a result."""
+        i = JS.index("window.__sceneSearchAsk = ")
+        seg = JS[i:i + 400]
+        self.assertIn("asked === brief.trim()", seg)
+        self.assertIn("asked = brief.trim()", seg)
+        self.assertIn("PRESS AGAIN TO USE WHAT YOU TYPED", JS)
+
+    def test_it_asks_before_it_spends_not_after(self):
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 1400]
+        self.assertLess(seg.index("__sceneSearchAsk"),
+                        seg.index('api("/api/specs/autofill"'))
+
+    def test_a_pasted_section_is_never_searched(self):
+        """It replaces the screenplay, so there is nothing in the
+        screenplay to offer instead of it."""
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 1400]
+        self.assertIn("!source && window.__sceneSearchAsk", seg)
+
     def test_the_brief_field_is_the_search(self):
         """User, 2026-08-22: "What should I get is our search field. If it
         matches a scene its listed. If not, the user can just type and
@@ -1295,12 +1332,15 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn("syncAlternatives();", seg)
         self.assertNotIn("dispatchEvent", seg)
 
-    def test_no_match_says_what_will_happen_instead(self):
-        """Echoing the query back in caps told the user nothing. What they
-        need to know is that typing something unmatched is FINE — it
-        becomes the brief."""
-        self.assertIn("IT WILL BE READ AS THE BRIEF", JS)
+    def test_a_no_match_simply_drafts(self):
+        """It briefly said "NO LOCATION OR SLUGLINE MATCHES THAT". Once the
+        search moved onto the submit that became a message standing between
+        the user and the thing they pressed, over nothing: an unmatched
+        brief is a perfectly good brief, so it goes straight through."""
+        i = JS.index("if (!found.length)")
+        self.assertIn("closeHits(); return;", JS[i:i + 120])
         self.assertNotIn("NOTHING MATCHES ${esc(", JS)
+        self.assertNotIn("IT WILL BE READ AS THE BRIEF", JS)
 
     def test_the_brief_and_the_paste_are_alternatives(self):
         """User: they "should act as radio buttons — you cant do both".
