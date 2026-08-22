@@ -343,60 +343,98 @@
 
 <template id="tpl-specs">
   <section class="view">
-    <!-- C1 (RULE_PASS_2 C, ruled 2026-08-18) — ONE door. The two doors
-         called the same endpoint with the same brief field; the second was
-         a strict superset of the first, and amber sat on the superseded
-         one — the app recommended the weaker door in its scarcest signal.
-         At 1440 the grid stacked, so the better door was below the fold of
-         the worse. `#spec-auto-*` retired; the door-foot survives because
-         it is true of every path through this one. -->
+    <!-- TWO DOORS AGAIN (user, 2026-08-22: "I want two separate columns").
+         This REVERSES C1 (RULE_PASS_2 C, ruled 2026-08-18), which merged
+         them; a user instruction outranks a design ruling, and the reversal
+         is logged in DESIGN_SYSTEM.md so the next pass does not re-merge
+         them from the same reasoning.
+
+         That reasoning was sound about what it saw, so its three faults are
+         FIXED here rather than reintroduced:
+           * "the second was a strict superset of the first" — no longer
+             true. The blank door has no brief, no paste and no panel list;
+             it makes an empty sheet and nothing else, and the two call
+             different endpoints. That is what makes them two acts.
+           * "amber sat on the superseded one" — amber is on the AUTO door,
+             which is the stronger one.
+           * "at 1440 the grid stacked" — .intake-doors stacks at 980, so
+             1440 is two columns. -->
     <div class="panel panel-lead intake">
       <h2>New breakdown</h2>
-      <form id="spec-new-form">
-        <label class="f-wide">What should I get?
-          <input type="text" id="spec-new-subject" placeholder="e.g. the film's lead location — the scenes the script sets there">
-          <span class="f-note mono">THE SCREENPLAY IS READ FOR IT</span></label>
-
-        <label class="f-wide">
-          <span class="f-lab">Or paste a screenplay section
-            <button type="button" class="text-act" id="spec-new-open-screenplay"
-              title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
-          <textarea id="spec-new-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
-          <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
-
-        <label class="f-wide">
-          <span class="f-lab">What panels should it include?</span>
-          <textarea id="spec-new-panels" rows="4" placeholder="one per line — or leave empty and the content decides"></textarea>
-          <span class="f-note mono">EMPTY — THE PANELS COME FROM THE CONTENT</span></label>
-
-        <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
-          <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required>
-          <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
-        <div class="door-pair">
-          <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
-            <select id="spec-new-mode">
-              <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
-              <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
-            </select>
-          </label>
-          <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
-            <select id="spec-new-btype"></select>
-          </label>
+      <div class="intake-doors">
+        <div class="door door-auto">
+          <p class="door-head">Break it down for me
+            <span class="door-nature mono">READS THE SCREENPLAY</span></p>
+          <form id="spec-auto-form">
+            <label class="f-wide">What should I get?
+              <input type="text" id="spec-auto-subject" placeholder="e.g. the film's lead location — the scenes the script sets there">
+              <span class="f-note mono">THE SCREENPLAY IS READ FOR IT</span></label>
+            <label class="f-wide">
+              <span class="f-lab">Or paste a screenplay section
+                <button type="button" class="text-act" id="spec-auto-open-screenplay"
+                  title="Open the screenplay to copy from">Open the screenplay ↗</button></span>
+              <textarea id="spec-auto-source" rows="5" placeholder="paste the scene — sluglines, action, dialogue"></textarea>
+              <span class="f-note mono">PASTED TEXT WINS — THE SCREENPLAY IS NOT READ</span></label>
+            <label class="f-wide">
+              <span class="f-lab">What panels should it include?</span>
+              <textarea id="spec-auto-panels" rows="4" placeholder="one per line — or leave empty and the content decides"></textarea>
+              <span class="f-note mono">EMPTY — THE PANELS COME FROM THE CONTENT</span></label>
+            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
+              <input type="text" id="spec-auto-id" placeholder="GENETICS_FACTION_V001" required>
+              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
+            <div class="door-pair">
+              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+                <select id="spec-auto-mode">
+                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+                </select>
+              </label>
+              <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule.">Board type
+                <select id="spec-auto-btype"></select>
+              </label>
+            </div>
+            <div class="door-run">
+              <label title="Which model reads the screenplay and drafts the specification. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review.">Model
+                <select id="spec-auto-provider">
+                  <option value="gemini">Gemini (research pass)</option>
+                  <option value="openai">OpenAI GPT-5.6</option>
+                </select>
+              </label>
+              <button type="submit" class="primary" id="spec-auto-go">Read the screenplay for it</button>
+              <span id="spec-auto-status" class="mini"></span>
+            </div>
+          </form>
+          <p class="door-foot mono">EVERY CLAIM CITED &middot; UNKNOWNS LEFT HONEST &middot; YOU REVIEW BEFORE ANYTHING LOCKS</p>
         </div>
-        <div class="door-run">
-          <label title="Which model reads the screenplay and drafts the specification. Both get the identical instructions and evidence rules — the draft always lands as an editable DRAFT for your review.">Model
-            <select id="spec-new-provider">
-              <option value="gemini">Gemini (research pass)</option>
-              <option value="openai">OpenAI GPT-5.6</option>
-            </select>
-          </label>
-          <!-- C2: one submit, three genuinely different acts. The label
-               states which, recomputed on every keystroke. -->
-          <button type="submit" class="primary" id="spec-new-go">Create an empty sheet</button>
-          <span id="spec-new-status" class="mini"></span>
+
+        <div class="door door-blank">
+          <p class="door-head">Blank sheet
+            <span class="door-nature mono">YOU FILL EVERYTHING</span></p>
+          <form id="spec-new-form">
+            <label class="f-wide">Subject
+              <input type="text" id="spec-new-subject" placeholder="what this sheet covers" required>
+              <span class="f-note mono">A NAME FOR THE BOARD — NOTHING IS READ</span></label>
+            <label class="f-wide"><span class="f-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button></span>
+              <input type="text" id="spec-new-id" placeholder="GENETICS_FACTION_V001" required>
+              <span class="f-note mono">JUST A NAME — IT DOES NOT AFFECT GENERATION</span></label>
+            <div class="door-pair">
+              <label title="CANON_EXTRACTION: an official board — only what the screenplay actually supports, tight budget for guesses. DESIGN_EXPLORATION: you are deciding new visual canon — looser budget for inferences, but unsupported inventions are still zero.">Mode
+                <select id="spec-new-mode">
+                  <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
+                  <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
+                </select>
+              </label>
+              <label class="f-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character.">Board type
+                <select id="spec-new-btype"></select>
+              </label>
+            </div>
+            <div class="door-run door-run-end">
+              <button type="submit" class="ghost" id="spec-new-go">Create an empty sheet</button>
+              <span id="spec-new-status" class="mini"></span>
+            </div>
+          </form>
         </div>
-        <p class="door-foot mono">EVERY CLAIM CITED &middot; UNKNOWNS LEFT HONEST &middot; YOU REVIEW BEFORE ANYTHING LOCKS</p>
-      </form>
+      </div>
     </div>
 
     <!-- B4: the table holds data. The create form no longer masquerades

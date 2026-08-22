@@ -98,7 +98,12 @@ delta as new instructions.
   earlier `RULE_PASS_2026-08-16_*` series above** — different subjects
   (ARRANGE/LOOKS/DOOR/ACTS/PICTURES vs RULES/STAGE02/SEQUENCE/SETTINGS/STORE),
   and the near-identical filenames are exactly the trap this ledger exists
-  for. Fifteen Uncanonized rows emptied. **DENSITY_PASS is the one
+  for. Fifteen Uncanonized rows emptied. **`_C_DOOR` was PARTLY REVERSED on
+  2026-08-22**: its C1 merged the two breakdown intake doors into one, and
+  the user restored two columns. Each of C1's three reasons is answered
+  rather than ignored — see the uncanonized row in `DESIGN_SYSTEM.md`. C2
+  (the recomputing submit verb) and C3 (the explaining button's removal)
+  both stand, narrowed to the door that still holds two acts. **DENSITY_PASS is the one
   exception: only its five rules were canonized.** Its eleven-surface
   relayout is NOT implemented — the twelve `design_boards/*.dc.html` are its
   specification and implementing it without reading them would be

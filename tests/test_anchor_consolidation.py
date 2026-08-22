@@ -1170,89 +1170,128 @@ class OneTrayForBothWaysIn(unittest.TestCase):
             self.assertIn('say(err.message, "bad")', seg[j:j + 300], fn)
 
 
-class TheBreakdownDoorAsksThreeThings(unittest.TestCase):
-    """User 2026-08-16: two ways in and the panels either typed or
-    generated. The old door asked for a Subject and gave you an empty
-    sheet; the model could already read the screenplay, it just was not
-    offered here."""
+class TheBreakdownHasTwoDoors(unittest.TestCase):
+    """User 2026-08-22: "I want two separate columns."
 
-    def form(self):
+    This REVERSES C1 (RULE_PASS_2 C, ruled 2026-08-18), which merged the
+    auto door and the blank sheet into one form. A user instruction
+    outranks a design ruling; the reversal is logged in DESIGN_SYSTEM.md's
+    uncanonized table so the next pass does not re-merge them from the
+    same reasoning.
+
+    That reasoning is answered rather than ignored. It said the two doors
+    "called the same endpoint with the same brief field" and the blank one
+    "was a strict superset" — so the doors are now genuinely different
+    acts calling different endpoints, and the blank one carries no brief,
+    no paste and no panel list at all.
+    """
+
+    def auto(self):
+        i = HTML.index('<form id="spec-auto-form">')
+        return HTML[i:HTML.index("</form>", i)]
+
+    def blank(self):
         i = HTML.index('<form id="spec-new-form">')
         return HTML[i:HTML.index("</form>", i)]
 
-    def test_the_three_fields_are_there(self):
-        f = self.form()
+    def test_there_are_two_doors_in_one_section(self):
+        i = HTML.index('class="intake-doors"')
+        seg = HTML[i:i + 6000]
+        self.assertIn('class="door door-auto"', seg)
+        self.assertIn('class="door door-blank"', seg)
+
+    def test_each_states_its_nature_once(self):
+        """Canon (2026-08-06): each door states its nature in Courier
+        beside its name."""
+        i = HTML.index('class="intake-doors"')
+        seg = HTML[i:i + 6000]
+        self.assertIn("READS THE SCREENPLAY", seg)
+        self.assertIn("YOU FILL EVERYTHING", seg)
+
+    def test_amber_marks_the_stronger_door(self):
+        """The merge's own complaint was that "amber sat on the superseded
+        one — the app recommended the weaker door in its scarcest signal".
+        Amber is on the door that reads the screenplay, and the blank
+        sheet's submit is a ghost."""
+        self.assertIn('class="door door-auto"', HTML)
+        self.assertIn(".door-auto { border-color: var(--accent-line)", CSS)
+        self.assertIn('class="ghost" id="spec-new-go"', HTML)
+        self.assertIn('class="primary" id="spec-auto-go"', HTML)
+
+    def test_the_generative_fields_belong_to_the_generative_door(self):
+        a, b = self.auto(), self.blank()
         for probe in ("What should I get?", "Or paste a screenplay section",
                       "What panels should it include?"):
-            self.assertIn(probe, f, probe)
+            self.assertIn(probe, a, probe)
+            self.assertNotIn(probe, b, f"{probe} must not be in the blank door")
+
+    def test_the_blank_door_is_not_a_superset(self):
+        """The merge's central objection. It asks for a name and nothing
+        that could be read."""
+        b = self.blank()
+        for gone in ("spec-new-source", "spec-new-panels", "spec-new-provider"):
+            self.assertNotIn(gone, b, f"{gone} makes it a superset again")
+        self.assertIn("A NAME FOR THE BOARD — NOTHING IS READ", b)
+
+    def test_they_call_different_endpoints(self):
+        """What actually makes them two acts rather than one form."""
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        auto = JS[i:i + 1800]
+        j = JS.index('$("#spec-new-form").addEventListener("submit"')
+        blank = JS[j:j + 900]
+        self.assertIn('api("/api/specs/autofill"', auto)
+        self.assertNotIn('api("/api/specs/autofill"', blank)
+        self.assertIn('api("/api/specs"', blank)
 
     def test_each_states_what_it_does_to_the_work(self):
         """A1: a label names its effect, not its filing destination.
-        RULE_PASS_2 C5 (2026-08-18) took the first person out of it — the
-        app names what happens to the work, not who does it."""
-        f = self.form()
-        self.assertIn("THE SCREENPLAY IS READ FOR IT", f)
-        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", f)
-        self.assertIn("PASTED TEXT WINS — THE SCREENPLAY IS NOT READ", f)
-        self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", f)
+        RULE_PASS_2 C5 took the first person out of it."""
+        a = self.auto()
+        self.assertIn("THE SCREENPLAY IS READ FOR IT", a)
+        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", a)
+        self.assertIn("PASTED TEXT WINS — THE SCREENPLAY IS NOT READ", a)
+        self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", a)
 
     def test_the_section_carries_a_way_to_read_the_screenplay(self):
-        self.assertIn('id="spec-new-open-screenplay"', self.form())
+        self.assertIn('id="spec-auto-open-screenplay"', self.auto())
         self.assertIn('window.open("/api/screenplay/file"', JS)
 
     def test_the_explaining_button_is_gone(self):
-        """C3 (2026-08-18): a verb whose effect was to EMPTY a field,
-        rewrite its placeholder and toast an explanation of what the
-        now-empty field means. The empty field already meant that; a
-        button is the wrong shape for an explanation. Its `.f-note` says
-        it, matching its two siblings."""
-        self.assertNotIn("spec-new-autopanels", JS)
-        self.assertNotIn("spec-new-autopanels", HTML)
-        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", self.form())
+        """C3 (2026-08-18) survives the reversal: a verb whose effect was
+        to EMPTY a field and toast an explanation of what the now-empty
+        field means. The empty field already meant that."""
+        self.assertNotIn("autopanels", JS)
+        self.assertNotIn("autopanels", HTML)
+        self.assertIn("EMPTY — THE PANELS COME FROM THE CONTENT", self.auto())
 
-    def test_the_submit_states_the_act_it_will_perform(self):
-        """C2: one submit fired three genuinely different acts, chosen by
-        which boxes were empty. A branch the user cannot see before
-        committing is one they discover by undoing."""
+    def test_the_submit_states_which_of_its_two_acts_it_will_perform(self):
+        """C2 survives too, narrowed: the auto door still holds two acts —
+        read the screenplay, or break down what you pasted — and says
+        which. The third act it used to hide is its own door now."""
         i = JS.index("const submitVerb = ")
         seg = JS[i:i + 420]
-        for verb in ("Break down the pasted section",
-                     "Read the screenplay for it", "Create an empty sheet"):
-            self.assertIn(verb, seg, verb)
-
-    def test_the_app_has_no_first_person(self):
-        """C5: four first-person constructions arrived on one surface and
-        they spread, because whoever writes the next door copies this one.
-        Refused: the app states what happens to the work."""
-        f = self.form()
-        for slip in (">I ", " I will ", "I READ", "I FETCH", "I will decide"):
-            self.assertNotIn(slip, f, f"first person in the door: {slip!r}")
-
-    def test_a_pasted_section_beats_the_screenplay(self):
-        af = (ROOT / "app/autofill.py").read_text(encoding="utf-8")
-        self.assertIn("if source_text.strip():", af)
-        self.assertIn("THE ATTACHED TEXT IS THE SOURCE", af)
-        self.assertIn("do not assume", af)
-
-    def test_typed_panels_are_pinned_in_order(self):
-        af = (ROOT / "app/autofill.py").read_text(encoding="utf-8")
-        self.assertIn("THE PANELS ARE GIVEN", af)
-        self.assertIn("do not add, drop or reorder", af)
-
-    def test_an_empty_door_still_makes_an_empty_sheet(self):
-        """The thing this door used to be, and still worth having."""
-        i = JS.index('$("#spec-new-form").addEventListener')
-        seg = JS[i:i + 1400]
-        self.assertIn("if (!brief && !source)", seg)
-        self.assertIn('api("/api/specs", { method: "POST"', seg)
+        self.assertIn("Break down the pasted section", seg)
+        self.assertIn("Read the screenplay for it", seg)
+        self.assertNotIn("Create an empty sheet", seg)
 
     def test_it_reports_while_it_drafts(self):
-        i = JS.index('$("#spec-new-form").addEventListener')
-        seg = JS[i:i + 2000]
-        self.assertIn("startBusy(status", seg)
-        self.assertIn("Breaking down the section you pasted", seg)
-        self.assertIn("btn.disabled = true", seg)
-        self.assertIn("btn.disabled = false", seg, "and comes back on failure")
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 1800]
+        self.assertIn("startBusy(", seg)
+        self.assertIn("Reading the screenplay and drafting the breakdown", seg)
+
+    def test_an_empty_auto_door_says_where_to_go(self):
+        """It cannot make an empty sheet any more, so it must not fail
+        silently — it names the door that can."""
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 900]
+        self.assertIn("use Blank sheet beside it", seg)
+
+    def test_each_door_keeps_its_own_draft(self):
+        """One localStorage key would restore half a form into the wrong
+        door."""
+        self.assertIn('persistForm("autoSpecDraft"', JS)
+        self.assertIn('persistForm("blankSpecDraft"', JS)
 
 
 class EveryDoorIntoCastingIsTheModal(unittest.TestCase):

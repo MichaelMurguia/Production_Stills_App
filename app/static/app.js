@@ -7636,13 +7636,17 @@ async function renderSpecs(openId = null) {
   // blank-sheet form offers (user-hit 2026-08-07).
   // C1 (RULE_PASS_2 C): one door. The board's shape is a STATED input
   // (user-hit 2026-08-07).
-  const autoBtype = $("#spec-new-btype");
+  const autoBtype = $("#spec-auto-btype");
+  // One draft per door — the two hold different fields, and a single key
+  // would restore half a form into the wrong one.
+  persistForm("autoSpecDraft", ["spec-auto-id", "spec-auto-subject",
+                                "spec-auto-source", "spec-auto-panels",
+                                "spec-auto-mode", "spec-auto-btype",
+                                "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject",
-                                "spec-new-source", "spec-new-panels",
-                                "spec-new-mode", "spec-new-btype",
-                                "spec-new-provider"]);
+                                 "spec-new-mode", "spec-new-btype"]);
 
-  await fillNarrativeSelect($("#spec-new-provider"));
+  await fillNarrativeSelect($("#spec-auto-provider"));
 
   // The instruction example speaks this production's screenplay, never a
   // hardcoded film's (user ruling 2026-08-01); the same fetch powers the
@@ -7657,7 +7661,7 @@ async function renderSpecs(openId = null) {
         const t = titleCase(top);
         // B2: the example IS the placeholder — a trailing italic
         // sentence is prose the field can carry itself.
-        const ta0 = $("#spec-new-subject");
+        const ta0 = $("#spec-auto-subject");
         if (ta0 && !ta0.value) ta0.placeholder = `${t} — the scenes the script sets there`;
       }
       if (!locHint) return;
@@ -7670,7 +7674,7 @@ async function renderSpecs(openId = null) {
           if (hit) { rec = l; scene = hit; break; }
         }
       }
-      const idEl = $("#spec-new-id");
+      const idEl = $("#spec-auto-id");
       if (idEl && !idEl.value.trim()) {
         const base = slugSpecId(rec?.location || locHint)
           .replace(/^_+|_+$/g, "").slice(0, 40) || "BOARD";
@@ -7684,7 +7688,7 @@ async function renderSpecs(openId = null) {
       if (autoBtype && !autoBtype.dataset.touched) {
         autoBtype.value = scene ? "SCENE" : "LOCATION";
       }
-      const promptEl = $("#spec-new-subject");
+      const promptEl = $("#spec-auto-subject");
       if (!promptEl || promptEl.value.trim()) return;
       if (scene) {
         promptEl.value = `${scene.heading} — a scene board for this single scene at `
@@ -7707,7 +7711,7 @@ async function renderSpecs(openId = null) {
 
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
   // underscores.
-  for (const idSel of ["#spec-new-id"]) {
+  for (const idSel of ["#spec-auto-id", "#spec-new-id"]) {
     const el = $(idSel);
     if (el) el.addEventListener("input", () => {
       const pos = el.selectionStart;
@@ -7717,11 +7721,17 @@ async function renderSpecs(openId = null) {
   }
 
   // Blank sheets seed their board grammar (panel count + allocations only).
-  const btypeSel = $("#spec-new-btype");
-  if (btypeSel && !btypeSel.options.length) {
-    btypeSel.innerHTML = BOARD_TYPES.map(t =>
-      `<option value="${t.value}">${esc(t.value)}</option>`).join("");
+  // Both doors carry a board type — it is a property of the SHEET, not of
+  // how the sheet was made — so both get filled. Filling only one left the
+  // blank door's select empty and its sheets untyped.
+  for (const sel of ["#spec-auto-btype", "#spec-new-btype"]) {
+    const el = $(sel);
+    if (el && !el.options.length) {
+      el.innerHTML = BOARD_TYPES.map(t =>
+        `<option value="${t.value}">${esc(t.value)}</option>`).join("");
+    }
   }
+  const btypeSel = $("#spec-auto-btype");
 
   // Arriving from the dashboard's location map: seed the draft subject.
   // Create Breakdown arrives with a real pre-population (user ruling
@@ -7790,9 +7800,10 @@ async function renderSpecs(openId = null) {
     el.setSelectionRange(caret, caret);
   });
   // Once the user has chosen, the hint never overwrites them.
-  $("#spec-new-btype")?.addEventListener("change", e => {
+  $("#spec-auto-btype")?.addEventListener("change", e => {
     e.target.dataset.touched = "1";
   });
+  bindSpecIdField($("#spec-auto-id"));
   bindSpecIdField($("#spec-new-id"));
 
   // Three fields, three ways to fill them (user 2026-08-16). A brief means
@@ -7801,76 +7812,83 @@ async function renderSpecs(openId = null) {
   // empty panels box means the model decides what the content needs.
   // Nothing typed at all still makes a genuinely blank sheet, which is
   // what this door used to be and is still worth having.
-  $("#spec-new-open-screenplay").onclick = () =>
+  $("#spec-auto-open-screenplay").onclick = () =>
     window.open("/api/screenplay/file", "_blank", "noopener");
 
-  // C2 (RULE_PASS_2 C): one submit, three genuinely different acts,
-  // chosen by which boxes are empty. A branch the user cannot see before
-  // committing is a branch they discover by undoing — so the label states
-  // it, recomputed as you type.
-  const submitVerb = () => {
-    const brief = $("#spec-new-subject")?.value.trim();
-    const source = $("#spec-new-source")?.value.trim();
-    return source ? "Break down the pasted section"
-      : brief ? "Read the screenplay for it"
-      : "Create an empty sheet";
-  };
+  /* Two acts behind this door — read the screenplay, or break down what
+     you pasted — and the label says which, recomputed as you type. The
+     third act the merged form carried (make an empty sheet) is its own
+     door now, so it is no longer a hidden branch of this one. */
+  const submitVerb = () =>
+    $("#spec-auto-source")?.value.trim() ? "Break down the pasted section"
+                                         : "Read the screenplay for it";
   const syncVerb = () => {
-    const b = $("#spec-new-go");
+    const b = $("#spec-auto-go");
     if (b) b.textContent = submitVerb();
   };
-  for (const sel of ["#spec-new-subject", "#spec-new-source"]) {
+  for (const sel of ["#spec-auto-subject", "#spec-auto-source"]) {
     $(sel)?.addEventListener("input", syncVerb);
   }
   syncVerb();
 
-  $("#spec-new-form").addEventListener("submit", async e => {
+  /* TWO handlers, because there are two acts and they call different
+     endpoints. The merged form branched on which boxes were empty; the
+     doors make that branch visible before it is committed, which is what
+     the user asked for by asking for two columns. */
+  $("#spec-auto-form").addEventListener("submit", async e => {
     e.preventDefault();
-    const btn = $("#spec-new-go");
-    const brief = $("#spec-new-subject").value.trim();
-    const source = $("#spec-new-source").value.trim();
-    const panels = $("#spec-new-panels").value.trim();
-    const body = {
-      specification_id: slugSpecId($("#spec-new-id").value),
-      mode: $("#spec-new-mode").value,
-      board_type: $("#spec-new-btype")?.value || "LOCATION",
-    };
-    // Neither source given: the old blank sheet, unchanged.
+    const btn = $("#spec-auto-go");
+    const brief = $("#spec-auto-subject").value.trim();
+    const source = $("#spec-auto-source").value.trim();
+    const panels = $("#spec-auto-panels").value.trim();
     if (!brief && !source) {
-      try {
-        const spec = await api("/api/specs", { method: "POST",
-          json: { ...body, subject: brief || body.specification_id } });
-        toast(`${spec.specification_id} created — an empty sheet to fill.`);
-        localStorage.removeItem("blankSpecDraft");
-        renderSpecs(spec.specification_id);
-      } catch (err) { toast(err.message, true); }
+      toast("Say what you want, or paste a section — this door reads one of "
+            + "them. To make an empty sheet, use Blank sheet beside it.", true);
       return;
     }
     btn.disabled = true;
-    const status = $("#spec-new-status");
+    const status = $("#spec-auto-status");
     const busy = status && startBusy(status,
       source ? "Breaking down the section you pasted…"
              : "Reading the screenplay and drafting the breakdown…",
       panels ? "building the panels you named" : "deciding the panels it needs");
     try {
       const spec = await api("/api/specs/autofill", { method: "POST", json: {
-        ...body,
+        specification_id: slugSpecId($("#spec-auto-id").value),
+        mode: $("#spec-auto-mode").value,
+        board_type: $("#spec-auto-btype")?.value || "LOCATION",
         prompt: brief,
         source_text: source,
         panels,
-        provider: $("#spec-new-provider")?.value || "gemini",
+        provider: $("#spec-auto-provider")?.value || "gemini",
       } });
       busy?.done();
       toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
             + `${spec.evidence_ledger.length} evidence rows`
             + (source ? " — from the section you pasted." : "."));
-      localStorage.removeItem("blankSpecDraft");
+      localStorage.removeItem("autoSpecDraft");
       renderSpecs(spec.specification_id);
     } catch (err) {
       busy?.done();
       toast(err.message, true);
       btn.disabled = false;
     }
+  });
+
+  $("#spec-new-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    try {
+      const id = slugSpecId($("#spec-new-id").value);
+      const spec = await api("/api/specs", { method: "POST", json: {
+        specification_id: id,
+        mode: $("#spec-new-mode").value,
+        board_type: $("#spec-new-btype")?.value || "LOCATION",
+        subject: $("#spec-new-subject").value.trim() || id,
+      } });
+      toast(`${spec.specification_id} created — an empty sheet to fill.`);
+      localStorage.removeItem("blankSpecDraft");
+      renderSpecs(spec.specification_id);
+    } catch (err) { toast(err.message, true); }
   });
 
   const specs = await api("/api/specs");

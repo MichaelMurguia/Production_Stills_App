@@ -157,12 +157,14 @@ class TheIntakeStatesIt(unittest.TestCase):
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
     HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
 
-    def test_the_door_has_a_board_type_control(self):
-        """RULE_PASS_2 C1 (2026-08-18) collapsed the two intake doors into
-        one — the second was a strict superset of the first, and amber sat
-        on the superseded one. `#spec-auto-*` retired."""
+    def test_both_doors_have_a_board_type_control(self):
+        """RULE_PASS_2 C1 collapsed the two intake doors into one on
+        2026-08-18 and `#spec-auto-*` retired; the user reversed that on
+        2026-08-22 ("I want two separate columns") and it came back. Board
+        type is a property of the sheet, not of how the sheet was made, so
+        BOTH doors carry it."""
+        self.assertIn('<select id="spec-auto-btype">', self.HTML)
         self.assertIn('<select id="spec-new-btype">', self.HTML)
-        self.assertNotIn("spec-auto-", self.JS)
 
     def test_it_offers_the_same_vocabulary_everywhere(self):
         self.assertIn("BOARD_TYPES.map", self.JS)
