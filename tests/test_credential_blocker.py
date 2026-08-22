@@ -242,12 +242,27 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
         self.assertIn('$$("input, button", add).forEach', b)
         self.assertIn("el.disabled = locked", b)
 
-    def test_the_callout_states_the_reason_and_the_door(self):
+    def test_the_callout_carries_the_users_own_copy(self):
+        """Verbatim, 2026-08-22. Not a paraphrase — the user wrote this
+        sentence and the step is bold."""
         b = self.body()
         self.assertIn("LOCKED — NO ART DIRECTION BIBLE", b)
-        self.assertIn("cited to a line of the Bible", b)
-        self.assertIn("pal-go", b)
-        self.assertIn("#wiz-draft", b)
+        self.assertIn("Color swatches reference the Art Direction Bible "
+                      "once created.", b)
+        self.assertIn("<b>Step 4</b>", b)
+
+    def test_the_callout_carries_no_verb(self):
+        """Removed on instruction: the step it names is on the same page,
+        and a button that only scrolls is not worth a primary's weight."""
+        b = self.body()
+        self.assertNotIn("pal-go", b)
+        self.assertNotIn("<button", b)
+
+    def test_the_words_half_is_locked_with_the_colour_half(self):
+        """One statement about palette, one lock."""
+        b = self.body()
+        self.assertIn('const words = $("[data-f=words]", col)', b)
+        self.assertIn("words.disabled = locked", b)
 
     def test_the_gate_goes_when_the_bible_arrives(self):
         b = self.body()

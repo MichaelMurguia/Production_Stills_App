@@ -2236,9 +2236,11 @@ details.meta pre {
   letter-spacing: .14em; color: var(--accent); margin-bottom: 5px;
 }
 .pal-gate p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink); }
-.pal-gate .act { margin-top: 9px; }
+.pal-gate p b { color: var(--accent); font-weight: 700; }
 .swatch-add.is-locked { opacity: .4; }
-.swatch-add.is-locked input, .swatch-add.is-locked button { cursor: not-allowed; }
+.swatch-add.is-locked input, .swatch-add.is-locked button,
+.wiz-words.is-locked input { cursor: not-allowed; }
+.wiz-words.is-locked { opacity: .4; }
 .wiz-thumb-note { display: block; font-family: var(--mono); font-size: 8.5px;
   letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

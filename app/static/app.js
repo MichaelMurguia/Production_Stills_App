@@ -4297,6 +4297,13 @@ async function renderWizard() {
 
       add.classList.toggle("is-locked", locked);
       $$("input, button", add).forEach(el => { el.disabled = locked; });
+      // The words half of the anchor is gated with the colour half (user,
+      // 2026-08-22) — one statement about palette, one lock.
+      const words = $("[data-f=words]", col);
+      if (words) {
+        words.disabled = locked;
+        words.closest(".wiz-words")?.classList.toggle("is-locked", locked);
+      }
 
       if (!locked) { if (gate) gate.remove(); return; }
       if (!gate) {
@@ -4305,20 +4312,13 @@ async function renderWizard() {
         gate.dataset.f = "pal-gate";
         add.parentElement.insertBefore(gate, add);
       }
+      // Copy and shape are the user's, verbatim (2026-08-22). No verb:
+      // the step it names is on the same page, and a button that scrolls
+      // is not worth the weight of a primary.
       gate.innerHTML = `
         <span class="k">LOCKED — NO ART DIRECTION BIBLE</span>
-        <p>Every colour here is cited to a line of the Bible, and there is no
-        Bible yet. The screenplay read finds design languages, not colour.</p>
-        <p class="act"><button type="button" class="primary"
-          data-f="pal-go">Draft the Bible in step 4</button></p>`;
-      $("[data-f=pal-go]", gate).onclick = () => {
-        const el = $("#wiz-draft");
-        if (el) {
-          window.scrollTo({ top: el.getBoundingClientRect().top
-                                 + window.scrollY - 120, behavior: "smooth" });
-          el.focus({ preventScroll: true });
-        }
-      };
+        <p>Color swatches reference the Art Direction Bible once created.
+        <b>Step 4</b></p>`;
     };
 
     // The colour block itself, without the card chrome — rebuilt in place
