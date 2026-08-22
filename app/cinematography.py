@@ -24,95 +24,27 @@ import re
 
 from . import paths
 
-_HEAD = re.compile(r"^#\s+(\d+)\.\s+(.+?)\s+[—-]\s+(.+?)\s*$", re.M)
+# The parser moved to style_docs on 2026-08-22, when world texture and
+# rendering style became document-backed too. Three libraries, one
+# implementation — a second copy of this parse is how the picker and the
+# document drift apart, which is the exact failure the 2026-08-16 ruling
+# was written to prevent.
+from . import style_docs
+
+LIB = "cinematography"
 
 
 def _doc_path():
-    return paths.ROOT / "docs" / "CINEMATOGRAPHY_STYLES.md"
+    return style_docs.doc_path(LIB)
 
 
 def slug(name: str) -> str:
-    return "cine-" + re.sub(r"[^a-z0-9]+", "-",
-                            str(name).lower()).strip("-")
-
-
-def _subsections(body: str) -> dict[str, str]:
-    out, cur = {}, None
-    for ln in body.splitlines():
-        m = re.match(r"^##\s+(.+?)\s*$", ln)
-        if m:
-            cur = m.group(1).strip()
-            out[cur] = ""
-        elif cur is not None:
-            out[cur] += ln + "\n"
-    return {k: v.strip() for k, v in out.items()}
-
-
-def _bullets(text: str) -> list[str]:
-    out = []
-    for ln in text.splitlines():
-        t = ln.strip()
-        # `---` is the document's section rule, not a fifth reference film.
-        if not t.startswith(("-", "*")) or set(t) <= {"-", "*", " "}:
-            continue
-        out.append(re.sub(r"^\s*[-*]\s*", "", t).strip())
-    return out
-
-
-def _fenced(text: str) -> str:
-    m = re.search(r"```(?:text)?\n(.*?)```", text, re.S)
-    return (m.group(1) if m else text).strip()
-
-
-def _avoid(prompt: str) -> list[str]:
-    """The prompt's own Avoid list becomes the card's NOT fence — the
-    document already states what each grammar is not."""
-    m = re.search(r"^Avoid:\s*$(.*)", prompt, re.M | re.S)
-    if not m:
-        return []
-    out = []
-    for ln in m.group(1).splitlines():
-        t = ln.strip()
-        if not t:
-            if out:
-                break
-            continue
-        out.append(t)
-    return out
+    return style_docs.slug(LIB, name)
 
 
 def styles() -> list[dict]:
-    p = _doc_path()
-    if not p.exists():
-        return []
-    text = p.read_text(encoding="utf-8")
-    heads = list(_HEAD.finditer(text))
-    out = []
-    for i, m in enumerate(heads):
-        body = text[m.end():heads[i + 1].start() if i + 1 < len(heads) else len(text)]
-        sub = _subsections(body)
-        name, subtitle = m.group(2).strip(), m.group(3).strip()
-        prompt = _fenced(sub.get("Image-Model Prompt", ""))
-        mechanics = _bullets(sub.get("Visual Mechanics", ""))
-        principle = sub.get("Operating Principle", "").strip()
-        # The directive: the style, its principle, its mechanics. Never the
-        # film titles — the document is explicit that those stay context.
-        value = "; ".join(x.rstrip(".") for x in
-                          [f"{name} cinematography — {subtitle.lower()}",
-                           principle.rstrip(".")] + mechanics[:6] if x)
-        out.append({
-            "n": int(m.group(1)), "key": slug(name), "name": name,
-            "subtitle": subtitle,
-            "question": sub.get("Key Question", "").strip(),
-            "description": sub.get("Description", "").strip(),
-            "principle": principle,
-            "mechanics": mechanics,
-            "films": _bullets(sub.get("Reference Films", "")),
-            "avoid": _avoid(prompt),
-            "prompt": prompt,
-            "value": value[:600],
-        })
-    return sorted(out, key=lambda s: s["n"])
+    """The eight grammars this document defines. See style_docs."""
+    return style_docs.styles(LIB)
 
 
 # ----------------------------------------------- the grammar that rides

@@ -274,23 +274,24 @@ class AFailedLoadIsStatedNotSwallowed(unittest.TestCase):
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 
     def body(self):
-        i = self.JS.index("async function loadCinemaStyles()")
+        i = self.JS.index("async function loadStyleLibrary(")
         return self.JS[i:i + 1400]
 
     def test_the_failure_reaches_the_user(self):
         b = self.body()
         self.assertIn("catch (err)", b)
         self.assertIn("toast(", b)
-        self.assertNotIn("catch { return CINEMA_STYLES; }", b)
+        self.assertNotIn("catch { return into; }", b)
 
     def test_it_names_where_the_grammars_come_from(self):
         """So the user can tell a missing document from a broken fetch."""
-        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", self.body())
+        self.assertIn("STYLE_DOCS[library]", self.body())
+        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", self.JS)
 
     def test_the_failure_is_recorded_on_the_cache(self):
         """An empty list that failed must be distinguishable from an empty
         list that is genuinely empty, for any later caller."""
-        self.assertIn("CINEMA_STYLES.failed = true", self.body())
+        self.assertIn("into.failed = true", self.body())
 
 
 if __name__ == "__main__":

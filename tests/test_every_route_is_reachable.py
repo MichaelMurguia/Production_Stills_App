@@ -69,13 +69,27 @@ def routes() -> list[tuple[str, str]]:
     return [(verb, path) for verb, path in ROUTE_RE.findall(MAIN)]
 
 
+# A path parameter, and what a caller may put in its place. Written with
+# character classes rather than backslash escapes so the pattern survives
+# being edited through a shell.
+PARAM = re.compile("[{][a-z_]+[}]")
+SEGMENT = "(?:[$][{][^}]+[}]|[A-Za-z0-9_.-]+)"
+
+
 def has_caller(path: str) -> bool:
-    """A caller is the path with its parameters relaxed to interpolation.
-    `/api/specs/{spec_id}/panels/{panel_id}/prompt` matches
-    `/api/specs/${specId}/panels/${p.id}/prompt`, and a query string or a
-    trailing segment does not break the match."""
-    pattern = re.escape(path)
-    pattern = re.sub(r"\\\{[a-z_]+\\\}", r"\\$\\{[^}]+\\}", pattern)
+    """A caller is the path with its parameters relaxed.
+
+    A parameter matches either an interpolation —
+    `/api/specs/{spec_id}/panels/{panel_id}/prompt` against
+    `/api/specs/${specId}/panels/${p.id}/prompt` — or a LITERAL segment,
+    because a route with a parameter can be called with a constant:
+    `/api/styles/{library}` is reached by
+    `api("/api/styles/cinematography")`. Only interpolation was matched
+    until 2026-08-22, so a genuinely reachable route read as an orphan.
+
+    A query string or a trailing segment does not break the match.
+    """
+    pattern = SEGMENT.join(re.escape(part) for part in PARAM.split(path))
     return re.search(pattern, CLIENT) is not None
 
 

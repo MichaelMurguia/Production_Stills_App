@@ -5999,11 +5999,16 @@ async function renderWizard() {
       btn.after(box);
     };
     sync();
-    if (styles === RENDER_STYLES) adoptHouseStyle().then(sync);
-    if (styles === CINEMA_STYLES) loadCinemaStyles().then(sync);
+    // All three libraries are read from documents now (2026-08-22), so all
+    // three load the same way rather than cinematography being special.
+    const load = async () => {
+      if (styles === RENDER_STYLES) { await loadRenderStyles(); await adoptHouseStyle(); }
+      else if (styles === TEXTURE_STYLES) await loadTextureStyles();
+      else if (styles === CINEMA_STYLES) await loadCinemaStyles();
+    };
+    load().then(sync);
     btn.onclick = async () => {
-      if (styles === RENDER_STYLES) await adoptHouseStyle();
-      if (styles === CINEMA_STYLES) await loadCinemaStyles();
+      await load();
       openStylePicker({
       ...opts, styles, current: field.value.trim(),
       onPick: v => {
@@ -8936,73 +8941,17 @@ const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:1
 // bible's Rendering Language section, so each one reads as a directive a
 // render can follow, not as a label. `not` follows the SETS/NOT grammar
 // the style-anchor columns already use.
-const RENDER_STYLES = [
-  // Replaced at open time by this production's OWN captured style when it
-  // has one (see adoptHouseStyle). The shipped text is the fallback for a
-  // production that has not drawn anything yet.
-  { name: "Production Painting", plate: "markPaint", key: "house",
-    value: "painterly production art, visible brushwork, matte finish",
-    desc: "Painted concept art with the brush left visible — the medium this production is drawn in.",
-    not: "photography · cel animation" },
-  { name: "Hand-Drawn Cartoon", plate: "markCartoon",
-    value: "hand-drawn cartoon, inked linework, flat cel color",
-    desc: "Drawn line with flat fills. The mark stays human and the shapes stay simple.",
-    not: "rendered volume · texture" },
-  { name: "Black & White Sketch", plate: "markSketch",
-    value: "black and white graphite sketch, hatched shading, no color",
-    desc: "Graphite on paper. Tone comes from hatching; there is no color at all.",
-    not: "color · painted surfaces" },
-  { name: "3D Rendered Cartoon", plate: "markRender3d",
-    value: "stylised 3D render, smooth shaded surfaces, clean edges",
-    desc: "Modelled and lit in three dimensions, but stylised — smooth surfaces, clean silhouettes.",
-    not: "photoreal detail · brushwork" },
-  { name: "Photo Real", plate: "markPhoto",
-    value: "photographic realism, lens-accurate detail, no visible brushwork",
-    desc: "Reads as a photograph. Detail is lens-accurate and no mark of the hand survives.",
-    not: "illustration · stylisation" },
-  { name: "Industrial Design", plate: "markIndustrial",
-    value: "industrial design illustration, clean keylines, controlled shading on a neutral ground",
-    desc: "The presentation drawing of a designed object: keylines, controlled shading, neutral ground.",
-    not: "environment · atmosphere" },
-  { name: "Ink & Wash", plate: "markInkWash",
-    value: "ink linework with wash tone, graphic-novel finish",
-    desc: "Pen line carrying the drawing, wash carrying the tone. A graphic-novel page.",
-    not: "full color rendering" },
-  { name: "Gouache & Watercolor", plate: "markGouache",
-    value: "gouache and watercolor on paper, visible pigment edges and paper grain",
-    desc: "Pigment on paper — edges pool, the grain shows through.",
-    not: "digital smoothness" },
-  { name: "Technical Blueprint", plate: "markBlueprint",
-    value: "orthographic technical drawing, keylines and dimension ticks, unrendered",
-    desc: "An orthographic drawing, dimensioned and unrendered. Information, not picture.",
-    not: "perspective · lighting" },
-];
+/* Retired 2026-08-22 — these two libraries now live in
+   docs/RENDERING_STYLES.md and docs/WORLD_TEXTURE_STYLES.md, parsed by
+   app/style_docs.py, the same way cinematography has since 2026-08-16.
+   Empty here on purpose: a fallback copy of a document is the second list
+   that ruling forbids, and it would be the stale one.
 
-// World texture (user-directed 2026-08-16, completing the set). The
-// anchor SETS wear, patina and entropy — how far the world has travelled
-// from new — so the catalogue is a scale of exactly that and nothing else.
-const TEXTURE_STYLES = [
-  { name: "Pristine", plate: "texPristine",
-    value: "pristine surfaces, no wear, factory-new finishes",
-    desc: "Nothing has aged. Pristine is a texture philosophy, not the absence of one.",
-    not: "palette · light" },
-  { name: "Lived-In", plate: "texLivedIn",
-    value: "lived-in surfaces, light wear at contact points, everything in use",
-    desc: "Used and maintained. Wear collects where hands and feet actually go.",
-    not: "decay · ruin" },
-  { name: "Weathered", plate: "texWeathered",
-    value: "weathered surfaces, patina, sun-bleach and oxidation, repairs visible",
-    desc: "Exposure has done its work, and someone has patched it since.",
-    not: "abandonment" },
-  { name: "Decayed", plate: "texDecayed",
-    value: "decayed surfaces, structural failure, reclaimed by growth and rust",
-    desc: "Past maintenance. What is left is what has not collapsed yet.",
-    not: "occupancy" },
-  { name: "Industrial Grime", plate: "texIndustrial",
-    value: "industrial grime, oil and carbon deposit on hard-wearing surfaces",
-    desc: "Heavy use, not age. Working surfaces carrying what the work leaves.",
-    not: "organic decay" },
-];
+   PLATES stays: a plate is drawn artwork keyed by style name, not
+   authored prose, so it cannot live in a markdown document. */
+const RENDER_STYLES = [];
+const TEXTURE_STYLES = [];
+const STYLE_PLATES = {"Production Painting": "markPaint", "Hand-Drawn Cartoon": "markCartoon", "Black & White Sketch": "markSketch", "3D Rendered Cartoon": "markRender3d", "Photo Real": "markPhoto", "Industrial Design": "markIndustrial", "Ink & Wash": "markInkWash", "Gouache & Watercolor": "markGouache", "Technical Blueprint": "markBlueprint", "Pristine": "texPristine", "Lived-In": "texLivedIn", "Weathered": "texWeathered", "Decayed": "texDecayed", "Industrial Grime": "texIndustrial"};
 
 // The eight cinematography grammars live in docs/CINEMATOGRAPHY_STYLES.md
 // and are READ from it (user ruling 2026-08-16), never copied — the
@@ -9076,35 +9025,64 @@ async function cineRideSwitch(host) {
   draw();
 }
 
-async function loadCinemaStyles() {
-  if (CINEMA_STYLES.length) return CINEMA_STYLES;
+/* Three anchors, three documents, one loader (2026-08-22). World texture
+   and rendering style used to be arrays in this file — five and nine
+   options carrying a one-line description and a prompt fragment of about
+   sixty characters, against 1,200 for a cinematography grammar. They were
+   exactly the "second list to keep in step" the 2026-08-16 ruling was
+   written against: adding a texture meant editing the client. */
+const STYLE_DOCS = {
+  cinematography: "docs/CINEMATOGRAPHY_STYLES.md",
+  texture: "docs/WORLD_TEXTURE_STYLES.md",
+  rendering: "docs/RENDERING_STYLES.md",
+};
+
+async function loadStyleLibrary(library, into) {
+  if (into.length) return into;
   let d;
   try {
-    d = await api("/api/cinematography/styles");
+    d = await api(`/api/styles/${library}`);
   } catch (err) {
-    /* This used to swallow the failure and return an empty list, so a
-       picker that could not load its eight grammars rendered as a picker
-       with nothing in it — indistinguishable from a document that defines
-       no styles (user, 2026-08-21). The grammars are read from
-       docs/CINEMATOGRAPHY_STYLES.md, so "none" is a real possible answer
-       and a silent empty list cannot be told apart from a broken fetch.
-       Say which it was. */
-    toast(`Could not load the cinematography grammars: ${err.message} — `
-          + "they are read from docs/CINEMATOGRAPHY_STYLES.md.", true);
-    CINEMA_STYLES.failed = true;
-    return CINEMA_STYLES;
+    /* Never swallow this. The styles are READ from a document, so "none"
+       is a real possible answer and a silently empty picker cannot be
+       told apart from a broken fetch (user, 2026-08-21). */
+    toast(`Could not load the ${library} styles: ${err.message} — they are `
+          + `read from ${STYLE_DOCS[library]}.`, true);
+    into.failed = true;
+    return into;
   }
   for (const st of d.styles || []) {
-    CINEMA_STYLES.push({
+    into.push({
       ...st,
       // the shared picker's vocabulary, mapped onto the document's
       desc: st.description,
       not: (st.avoid || []).slice(0, 3).join(" · "),
+      // A plate is drawn artwork keyed by style NAME — it cannot live in a
+      // markdown document, so it is looked up rather than parsed. A style
+      // the document adds simply has no plate until one is drawn.
+      plate: STYLE_PLATES[st.name] || undefined,
       rich: true,
     });
   }
-  return CINEMA_STYLES;
+  return into;
 }
+
+const loadCinemaStyles = () => loadStyleLibrary("cinematography", CINEMA_STYLES);
+const loadTextureStyles = () => loadStyleLibrary("texture", TEXTURE_STYLES);
+const loadRenderStyles = async () => {
+  const out = await loadStyleLibrary("rendering", RENDER_STYLES);
+  /* Style 1 is the HOUSE slot. adoptHouseStyle() replaces its words and
+     its plate with this production's own captured style once a Bible and
+     approved panels exist, so the card shows what this film is drawn in
+     rather than a shipped default. The document says so in its Purpose
+     section; carrying the marker by position rather than by name keeps
+     the client from holding a second copy of a style's title. */
+  if (out.length && out[0].key !== "house") {
+    out[0].docKey = out[0].key;
+    out[0].key = "house";
+  }
+  return out;
+};
 
 
 

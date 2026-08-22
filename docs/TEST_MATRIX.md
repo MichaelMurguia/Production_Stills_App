@@ -68,6 +68,20 @@ down; broken content is inert rather than half-run; state records/resumes
 runtime bundle is open to every studio; and invalid content is refused with
 every reason at once.
 
+**Anchor style libraries** (2026-08-22, `test_style_libraries.py` 11) —
+all three anchors are document-backed and share one parser. Every style in
+every library carries the whole promised format (subtitle, key question,
+description, operating principle, six or more visual mechanics, an
+image-model prompt over 400 characters) and states what it is not. Keys are
+namespaced per library and unique across all three. The directive that
+rides a render carries the principle and mechanics but is never the whole
+prompt, per the cinematography document's own Usage Note. A missing
+document degrades to an empty library rather than an invented fallback.
+Then the other half: the client's three arrays are empty, no retired style
+prose survives there to go stale, one loader serves all three, and the
+drawn plates — which are artwork keyed by style name and cannot live in
+markdown — still resolve for every style the documents define.
+
 **The read, as it happens** (2026-08-20, `test_read_progress.py` 18 +
 `TheReadPanelIsLegibleAndHasOneAmber` in `test_design_tokens.py` 6) — the
 live progress surface is only defensible because every number on it is

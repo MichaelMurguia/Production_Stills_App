@@ -2216,14 +2216,20 @@ def api_name_acts(body: dict) -> dict:
         raise HTTPException(502, f"naming the acts failed: {e}")
 
 
-@app.get("/api/cinematography/styles")
-def api_cinematography_styles() -> dict:
-    """The eight cinematography grammars, parsed from
-    docs/CINEMATOGRAPHY_STYLES.md (user ruling 2026-08-16). Read, never
+@app.get("/api/styles/{library}")
+def api_style_library(library: str) -> dict:
+    """An anchor's style library, parsed from its document. Read, never
     copied: the document is the source of truth, so editing it updates the
-    picker and there is never a second list to keep in step."""
-    from . import cinematography
-    return {"styles": cinematography.styles()}
+    picker and there is never a second list to keep in step (user ruling
+    2026-08-16 for cinematography; extended to world texture and rendering
+    style 2026-08-22, when those two WERE the second list).
+
+    One route for three libraries. A second endpoint answering the same
+    question per anchor is how the answers drift."""
+    from . import style_docs
+    if library not in style_docs.LIBRARIES:
+        raise HTTPException(404, f"no style library named {library!r}")
+    return {"library": library, "styles": style_docs.styles(library)}
 
 
 @app.get("/api/cinematography/setting")

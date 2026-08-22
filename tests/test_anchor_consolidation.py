@@ -166,17 +166,34 @@ class OnePickerServesEveryKnownVocabulary(unittest.TestCase):
                          "one helper: texture, cinematography, rendering")
 
     def test_every_catalogue_states_what_it_is_not_and_shows_it(self):
-        for cat in ("RENDER_STYLES", "TEXTURE_STYLES"):
-            i = JS.index(f"const {cat} = [")
-            seg = JS[i:JS.index("\n];", i)]
-            self.assertGreaterEqual(seg.count("name:"), 5,
-                                    f"{cat} is thin")
-            self.assertEqual(seg.count("name:"), seg.count("not:"),
-                             f"every {cat} card states its fence")
-            self.assertEqual(seg.count("name:"), seg.count("value:"),
-                             f"every {cat} card writes a directive")
-            self.assertEqual(seg.count("name:"), seg.count("plate:"),
-                             f"every {cat} card carries its example plate")
+        """Asserted against the DOCUMENTS now (2026-08-22). These two were
+        arrays in app.js carrying a one-line desc and a ~60-character
+        directive; they are libraries in docs/ with the depth
+        cinematography has had since 2026-08-16. The properties this test
+        has always checked are unchanged — a fence, a directive, real
+        content — only where they are read from."""
+        from app import style_docs
+        for lib, least in (("rendering", 9), ("texture", 5),
+                           ("cinematography", 8)):
+            st = style_docs.styles(lib)
+            self.assertGreaterEqual(len(st), least, f"{lib} is thin")
+            for x in st:
+                self.assertTrue(x["avoid"], f"{lib}/{x['name']} states no fence")
+                self.assertTrue(x["value"], f"{lib}/{x['name']} writes no directive")
+                self.assertGreater(len(x["prompt"]), 200,
+                                   f"{lib}/{x['name']} has no in-depth prompt")
+
+    def test_the_plates_survived_the_move_to_documents(self):
+        """A plate is drawn artwork keyed by style name, so it cannot live
+        in markdown — it stays in the client and is looked up. Every style
+        that had one must still find one."""
+        from app import style_docs
+        i = JS.index("const STYLE_PLATES = ")
+        plates = JS[i:JS.index(";", i)]
+        for lib in ("rendering", "texture"):
+            for x in style_docs.styles(lib):
+                self.assertIn('"' + x["name"] + '"', plates,
+                              f"{x['name']} lost its plate")
 
     def test_the_definition_leads_and_names_what_it_is_not(self):
         i = JS.index('title: "Rendering style"')
@@ -343,15 +360,20 @@ class TheProductionsOwnStyleIsCaptured(unittest.TestCase):
         self.assertIn("size=thumb", seg, "a card is not a full 4K render")
 
     def test_the_first_card_adopts_it_before_the_panel_opens(self):
+        self.assertIn("await loadRenderStyles(); await adoptHouseStyle();", JS,
+                      "the library loads before its house style is adopted")
         self.assertIn("async function adoptHouseStyle", JS)
-        self.assertIn('key: "house"', JS)
+        self.assertIn('out[0].key = "house"', JS,
+                      "style 1 of the rendering document is the house slot")
         i = JS.index("async function adoptHouseStyle")
         seg = JS[i:i + 900]
         self.assertIn("/api/bible/house-style", seg)
         self.assertIn("card._adopted", seg, "captured once, not per open")
         self.assertIn("if (!h?.has_bible) return", seg,
                       "a production with nothing drawn keeps the shipped text")
-        self.assertIn("if (styles === RENDER_STYLES) await adoptHouseStyle()", JS)
+        # all three libraries load through one path now (2026-08-22)
+        self.assertIn("if (styles === RENDER_STYLES) { await loadRenderStyles();"
+                      " await adoptHouseStyle(); }", JS)
 
     def test_a_card_can_carry_a_real_image_over_its_diagram(self):
         i = JS.index("function stylePlate(")
@@ -518,8 +540,10 @@ class TheGrammarsComeFromTheDocument(unittest.TestCase):
 
     def test_nothing_is_hardcoded_in_the_front_end(self):
         self.assertIn("const CINEMA_STYLES = [];", JS)
-        self.assertIn("async function loadCinemaStyles", JS)
-        self.assertIn("/api/cinematography/styles", JS)
+        self.assertIn("async function loadStyleLibrary", JS)
+        self.assertIn("loadCinemaStyles = () => loadStyleLibrary", JS)
+        self.assertIn("/api/styles/${library}", JS)
+        self.assertIn('loadStyleLibrary("cinematography", CINEMA_STYLES)', JS)
         for gone in ("Hard & Directional", "Overcast Flat", "Practical-Lit"):
             self.assertNotIn(gone, JS, f"{gone} outlived the replacement")
 
@@ -562,7 +586,7 @@ class TheGrammarsComeFromTheDocument(unittest.TestCase):
         self.assertNotIn("--accent", b.group(1))
 
     def test_the_endpoint_serves_it(self):
-        self.assertIn('@app.get("/api/cinematography/styles")', MAIN)
+        self.assertIn('@app.get("/api/styles/{library}")', MAIN)
 
 
 class TheFramesAreReal(unittest.TestCase):
