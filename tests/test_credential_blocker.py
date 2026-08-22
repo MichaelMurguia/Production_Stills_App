@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from app import generate, insights, paths  # noqa: E402
+from app import generate, insights, paths, store  # noqa: E402
 
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
@@ -197,6 +197,94 @@ class BlockerTests(Install):
         stage 03 red for a missing credential."""
         for row in self.keyrows():
             self.assertIn(row["stage"], ("wizard", "boards"))
+
+
+class TheLeadNeverJumpsAheadOfTheWork(Install):
+    """User, 2026-08-22: "the DO THIS NEXT in the current state is wrong —
+    production design should be completed. You would not go to Board
+    layout master before you complete the production design panel because
+    that panel creates it."
+
+    next_verb() took blockers[0] in APPEND order, and the board-layout gap
+    is appended third. So a keyed install with a screenplay and no Bible
+    led with a stage 05 need — pointing the user at a thing stage 02
+    produces, from a user standing at stage 02.
+
+    A blocker for a stage beyond the frontier stays in the BLOCKING list,
+    where it is true and useful. It just is not the one verb on screen.
+    """
+
+    DRAFT = b"INT. ROOM - DAY\n\nA room.\n"
+
+    def a_read_install(self):
+        """Key connected, screenplay uploaded, no Bible — the reported
+        state exactly."""
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", self.DRAFT)
+
+    def test_the_lead_is_the_stage_the_user_is_actually_on(self):
+        self.a_read_install()
+        b = insights.blocking()
+        sm = insights.stage_summary(b)
+        self.assertEqual(insights.frontier_rank(sm), 2, "standing at stage 02")
+        verb = insights.next_verb(sm, b)
+        self.assertIn("Bible", verb["text"])
+        self.assertEqual(verb["action"], "wizard")
+        self.assertNotIn("board layout", verb["text"].lower())
+
+    def test_the_later_blocker_is_still_reported(self):
+        """Demoting it from the lead must not hide it."""
+        self.a_read_install()
+        texts = [r["text"].lower() for r in insights.blocking()]
+        self.assertTrue(any("board layout master" in t for t in texts),
+                        "the gap is still true and must still be listed")
+
+    def test_blockers_read_in_pipeline_order(self):
+        self.a_read_install()
+        ranks = [insights.stage_rank(r) for r in insights.blocking()
+                 if r["kind"] != "CARE"]
+        self.assertEqual(ranks, sorted(ranks))
+
+    def test_a_credential_still_leads_everything(self):
+        """Install-scope: it blocks every stage, so it outranks them."""
+        store.set_screenplay("d.txt", self.DRAFT)
+        b = insights.blocking()
+        self.assertEqual(b[0]["kind"], "KEY")
+        self.assertEqual(insights.stage_rank(b[0]), 0)
+
+    def test_an_unranked_blocker_sorts_last_not_first(self):
+        """A row nobody has ranked must never outrank a real one."""
+        self.assertEqual(insights.stage_rank({"action": "who-knows"}), 9)
+        self.assertEqual(insights.stage_rank({}), 9)
+
+
+class BlockersSpeakEnglish(Install):
+    """User, 2026-08-22: "that underscore in the parentheses is not for end
+    users, it has no meaning, remove it." The row read "Board layout master
+    (BOARD_LAYOUT_STYLE) not approved". The role is a key the app matches
+    on, not a word anyone says."""
+
+    ROLES = ("BOARD_LAYOUT_STYLE", "CINEMATOGRAPHY_STYLE",
+             "BOARD_RENDERING_STYLE", "WORLD_TEXTURE", "COLOR_PALETTE")
+
+    def rows(self):
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", b"INT. ROOM - DAY")
+        return insights.blocking()
+
+    def test_no_blocker_shows_an_internal_role_name(self):
+        for row in self.rows():
+            for field in ("text", "sub", "detail"):
+                v = str(row.get(field) or "")
+                for role in self.ROLES:
+                    self.assertNotIn(role, v, f"{field}: {v}")
+
+    def test_the_role_is_still_carried_as_data(self):
+        """Removing it from the prose must not lose it — a consumer that
+        needs to know WHICH role is missing still can."""
+        row = next(r for r in self.rows()
+                   if "board layout master" in r["text"].lower())
+        self.assertEqual(row.get("role"), "BOARD_LAYOUT_STYLE")
 
 
 class TheUploadIsLocked(Install):

@@ -40,6 +40,37 @@ def evidence_gaps(spec: dict) -> list[dict]:
 
 # ------------------------------------------------------------------ blockers
 
+# Where each stage sits in the one sequence the product enforces:
+# screenplay -> bible -> breakdown -> lock -> panels -> board. A blocker
+# is ranked by the stage it BLOCKS, which is how the lead stops jumping
+# ahead of the work that produces the thing it is asking for.
+STAGE_RANK = {
+    "settings": 0,     # install-scope: blocks everything, so it leads
+    "dashboard": 1, "screenplay": 1,
+    "wizard": 2,
+    "specs": 3,
+    "boards": 4,
+    "references": 5,   # the board layout master is assembled with, not
+    "assembly": 5,     # rendered with — stage 05's need, not stage 04's
+}
+
+
+def stage_rank(b: dict) -> int:
+    """A blocker's place in the pipeline, taken from its `action` — the
+    door that resolves it.
+
+    NOT from `stage`. That field names the stage a row BLOCKS, which for
+    the credential row is "wizard" (it stops the read) while its door is
+    Settings. Ranking by it put the install-wide blocker behind a stage 01
+    gap, which is backwards: it blocks that gap too.
+
+    Unknown actions sort last rather than first — a row nobody has ranked
+    must never outrank a real one."""
+    if b.get("scope") == "install":
+        return 0
+    return STAGE_RANK.get(b.get("action") or b.get("stage"), 9)
+
+
 def blocking() -> list[dict]:
     """Everything that stops the next render, as structured rows:
     kind HOLD (evidence), GAP (missing input), KEY (no usable credential
@@ -91,10 +122,9 @@ def blocking() -> list[dict]:
                     "action": "dashboard"})
     if not any(r["role"] == "BOARD_LAYOUT_STYLE" and r["status"] == "APPROVED"
                for r in refs):
-        out.append({"kind": "GAP",
-                    "text": "Board layout master (BOARD_LAYOUT_STYLE) not "
-                            "approved — needed to ASSEMBLE boards, not to "
-                            "render panels",
+        out.append({"kind": "GAP", "role": "BOARD_LAYOUT_STYLE",
+                    "text": "No approved board layout master — needed to "
+                            "assemble boards, not to render panels",
                     "action": "references"})
 
     approved_ref_ids = {r["id"] for r in refs if r["status"] == "APPROVED"}
@@ -213,6 +243,10 @@ def blocking() -> list[dict]:
                 "text": f"Last backup {days} days ago — download a fresh one "
                         "from Productions",
             })
+    # Pipeline order, so the list reads the way the product runs. Stable,
+    # so rows that block the same stage keep the order they were found in;
+    # advisories sit under everything they are advisory about.
+    out.sort(key=lambda b: (b.get("kind") == "CARE", stage_rank(b)))
     return out
 
 
@@ -286,13 +320,39 @@ def stage_summary(blockers: list[dict] | None = None) -> dict:
     }
 
 
+def frontier_rank(summary: dict) -> int:
+    """The earliest stage that is not finished — where the user actually
+    is in the one sequence the product enforces."""
+    if not summary["screenplay"]:
+        return 1
+    if not summary["production_design"]["bible_saved"]:
+        return 2
+    if summary["breakdowns"]["locked"] == 0:
+        return 3
+    if summary["panels"]["approved"] == 0:
+        return 4
+    return 5
+
+
 def next_verb(summary: dict, blockers: list[dict]) -> dict:
     """The single next action when nothing is blocking — a screen with no
     verb is not finished (DESIGN_SYSTEM copy rule). Advisory rows (CARE)
-    are never promoted to the lead (design review 2026-08-01 §9)."""
+    are never promoted to the lead (design review 2026-08-01 §9).
+
+    The lead may not jump ahead of the work (user, 2026-08-22). It was
+    taking blockers[0] in append order, so a keyed install with a
+    screenplay led with "board layout master not approved" while the Art
+    Direction Bible did not exist yet — asking for a thing stage 02
+    produces, from a user standing at stage 02. A blocker for a stage
+    beyond where the user is stays in the BLOCKING list, where it is true
+    and useful, and does not become the one verb on the screen.
+    """
     blockers = [b for b in blockers if b.get("kind") != "CARE"]
-    if blockers:
-        b = blockers[0]
+    here = frontier_rank(summary)
+    reachable = sorted((b for b in blockers if stage_rank(b) <= here),
+                       key=stage_rank)
+    if reachable:
+        b = reachable[0]
         return {"text": b["text"], "action": b.get("action", "dashboard")}
     if not summary["screenplay"]:
         return {"text": "Upload the screenplay", "action": "dashboard"}

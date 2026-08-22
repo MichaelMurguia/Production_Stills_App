@@ -91,6 +91,14 @@ resolving jump:
 | Kind | Meaning | Resolve |
 |---|---|---|
 | `HOLD` | Required objects on a draft breakdown lack PASS evidence rows | Review the breakdown's ledger |
+**DO THIS NEXT names the stage you are on.** Blockers are ranked by the
+stage they block, and the lead is the earliest one you can actually act on
+— a stage 05 need never becomes the verb while stage 02 is unfinished,
+because the later thing is usually produced by the earlier one. Blockers
+beyond that point stay listed under BLOCKING, where they are true and
+useful, without pulling you out of sequence. A missing credential is the
+exception that always leads: it blocks every stage at once.
+
 | `GAP` | A missing input — no screenplay, no approved Master Board, a subject with no approved reference | Add the missing piece |
 | `KEY` | No usable credential for an AI role — the research passes, or renders, or both, cannot run at all | Connect an engine in Settings → AI & engines |
 | `SIZE` | An approved render is smaller than its board slot | Regenerate larger — never upscaled |
