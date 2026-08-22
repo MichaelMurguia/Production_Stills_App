@@ -223,5 +223,69 @@ class TheDrafterSeesTheWholeDocument(unittest.TestCase):
         self.assertIn("_cine.prompt_block()", gen)
 
 
+class TheCardAlwaysShowsAPicture(unittest.TestCase):
+    """User, 2026-08-22: "we lost the images on World Texture."
+
+    Making texture and rendering document-backed set `rich` on their
+    styles, which routed them down the photographed-frames path — and that
+    path had no fallback. Five textures and nine rendering styles silently
+    traded a diagram they HAD for a placeholder line saying they had none.
+
+    B3 still holds: a rich card must not pad to three empty cells. Showing
+    the drawn plate that already existed is not padding, and the
+    placeholder is reserved for a style with neither.
+    """
+
+    def test_a_rich_style_falls_back_to_its_drawn_plate(self):
+        i = JS.index("function styleCard(")
+        seg = JS[i:i + 1600]
+        self.assertIn("const drawn = st.plate || st.shot", seg)
+        self.assertIn(": drawn || `<span class=\"rs-nof mono\">", seg)
+
+    def test_the_placeholder_survives_for_a_style_with_neither(self):
+        i = JS.index("function styleCard(")
+        self.assertIn("REFERENCE FRAMES — NOT YET IN THE LIBRARY", JS[i:i + 1600])
+
+    def test_a_drawn_plate_takes_the_frame_shape_in_a_rich_card(self):
+        """The rich card is two-up and much wider than the three-up plain
+        card, so the diagram's native 68/56 became a column of empty ground
+        with a mark at the bottom."""
+        css = (ROOT / "app" / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".rs-cards-rich .rs-frame { aspect-ratio: 16 / 9; }", css)
+
+
+class TheCinematographyPlatesAreReal(unittest.TestCase):
+    """The user rendered all eight grammars, three scenes each, and the
+    manifest is what the picker reads."""
+
+    import json as _json
+
+    def manifest(self):
+        import json
+        return json.loads((ROOT / "app" / "static" / "style-plates"
+                           / "index.json").read_text(encoding="utf-8"))
+
+    def test_every_grammar_has_three_frames(self):
+        from app import style_docs
+        m = self.manifest()
+        for st in style_docs.styles("cinematography"):
+            self.assertIn(st["key"], m, f"{st['name']} has no plates")
+            self.assertEqual(len(m[st["key"]]), 3, st["name"])
+
+    def test_every_named_file_exists(self):
+        base = ROOT / "app" / "static" / "style-plates"
+        for key, files in self.manifest().items():
+            for f in files:
+                self.assertTrue((base / f).exists(), f"{key}: {f} is missing")
+
+    def test_the_manifest_names_no_orphans(self):
+        """A file on disk that nothing references is clutter; a manifest
+        entry with no file is a broken image."""
+        base = ROOT / "app" / "static" / "style-plates"
+        named = {f for files in self.manifest().values() for f in files}
+        on_disk = {p.name for p in base.glob("*.webp")}
+        self.assertEqual(on_disk - named, set(), "unreferenced plate files")
+
+
 if __name__ == "__main__":
     unittest.main()

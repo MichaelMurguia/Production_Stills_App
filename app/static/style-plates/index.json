@@ -1,7 +1,42 @@
 {
+  "cine-chromatic-operatic": [
+    "cine-chromatic-operatic-1.webp",
+    "cine-chromatic-operatic-2.webp",
+    "cine-chromatic-operatic-3.webp"
+  ],
   "cine-classical-adventure": [
     "cine-classical-adventure-1.webp",
     "cine-classical-adventure-2.webp",
     "cine-classical-adventure-3.webp"
+  ],
+  "cine-deep-space-mise-en-sc-ne": [
+    "cine-deep-space-mise-en-sc-ne-1.webp",
+    "cine-deep-space-mise-en-sc-ne-2.webp",
+    "cine-deep-space-mise-en-sc-ne-3.webp"
+  ],
+  "cine-expressionist-noir": [
+    "cine-expressionist-noir-1.webp",
+    "cine-expressionist-noir-2.webp",
+    "cine-expressionist-noir-3.webp"
+  ],
+  "cine-formalist-architectural": [
+    "cine-formalist-architectural-1.webp",
+    "cine-formalist-architectural-2.webp",
+    "cine-formalist-architectural-3.webp"
+  ],
+  "cine-immersive-experiential": [
+    "cine-immersive-experiential-1.webp",
+    "cine-immersive-experiential-2.webp",
+    "cine-immersive-experiential-3.webp"
+  ],
+  "cine-naturalistic-observational": [
+    "cine-naturalistic-observational-1.webp",
+    "cine-naturalistic-observational-2.webp",
+    "cine-naturalistic-observational-3.webp"
+  ],
+  "cine-subjective-poetic": [
+    "cine-subjective-poetic-1.webp",
+    "cine-subjective-poetic-2.webp",
+    "cine-subjective-poetic-3.webp"
   ]
 }

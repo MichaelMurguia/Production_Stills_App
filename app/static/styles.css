@@ -3152,6 +3152,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* B3 — no cell area at all when there are no frames, and one line saying so. */
 .rs-nof { display: block; font-size: 10px; letter-spacing: .08em;
   color: var(--ink-faint); }
+/* A drawn plate standing in for photographed frames takes THEIR shape,
+   not its own. The rich card is two-up and therefore much wider than the
+   three-up plain card, so the diagram's native 68/56 became a column of
+   empty ground with a mark at the bottom (2026-08-22). The SVG letterboxes
+   inside it rather than distorting. */
+.rs-cards-rich .rs-frame { aspect-ratio: 16 / 9; }
 .rs-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .rs-cell { display: block; aspect-ratio: 16 / 9; background: var(--bg2);
   border: 1px solid var(--line-soft); overflow: hidden; }

@@ -8995,12 +8995,14 @@ async function cineRideSwitch(host) {
              behind <i>Read the image-model prompt</i> — is added to every
              panel's render prompt, after the camera. Renders made now will
              differ from ones made with it off, and each take records which.`
-          : `<b>Off.</b> Choosing a grammar writes a short summary of it into
-             your Art Direction Bible, and that is all it does. The grammar's
-             full image-model prompt — the page behind <i>Read the
-             image-model prompt</i> — is reference only; it never reaches a
-             render. Turn this on to add that page to every panel's render
-             prompt.`}</span>
+          : `<b>Off.</b> Choosing a grammar hands its operating principle,
+             every visual mechanic and its avoid list to the Art Direction
+             Bible, which is what reaches a render — so the grammar already
+             shapes every panel through the Bible's own Lighting Language.
+             What it does NOT do is send the grammar's full image-model
+             prompt — the page behind <i>Read the image-model prompt</i> —
+             into the render itself. Turn this on to add that page to every
+             panel's render prompt, on top of the Bible.`}</span>
         <button class="block-act" data-f="ride">${
           s.prompt_rides ? "Remove it from renders" : "Add it to every render"}</button>
       </div>`;
@@ -9227,14 +9229,25 @@ function styleCard(st, { chosen = false } = {}) {
   const shots = st.rich ? plateShots(st.key).slice(0, 3) : [];
   // B3: never pad to three. A reserved shape is forbidden unless it states
   // the blocker that keeps it empty, and a dashed cell states nothing.
+  const drawn = st.plate || st.shot
+    ? `<span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>` : "";
   const picture = st.rich
     ? (shots.length
         ? `<span class="rs-frames">${shots.map((src, i) =>
             `<span class="rs-cell"><img class="rs-thumb" src="${esc(src)}"
                alt="${esc(st.name)} reference frame ${i + 1}"
                data-lb="${esc(src)}"></span>`).join("")}</span>`
-        : `<span class="rs-nof mono">REFERENCE FRAMES — NOT YET IN THE LIBRARY</span>`)
-    : `<span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>`;
+        /* A rich style with no photographed frames falls back to its drawn
+           plate (user, 2026-08-22: "we lost the images on World Texture").
+           Making texture and rendering document-backed set `rich`, which
+           routed them down the frames path — and that path had no fallback,
+           so five textures and nine rendering styles silently traded a
+           diagram they HAD for a placeholder saying they had nothing.
+           B3 still holds: this is not padding to three, it is the picture
+           that already existed. The placeholder is for a style with
+           neither. */
+        : drawn || `<span class="rs-nof mono">REFERENCE FRAMES — NOT YET IN THE LIBRARY</span>`)
+    : drawn;
   return `
     ${st.source ? `<span class="rs-src mono">${esc(st.source)}</span>
                    <span class="rs-seam"></span>` : ""}

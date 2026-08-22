@@ -161,9 +161,15 @@ class TheSwitchReadsAsStateBeforeItIsHit(unittest.TestCase):
         seg = self.JS[i:i + 3200]
         self.assertIn("<b>Off.</b>", seg)
         self.assertIn("<b>On.</b>", seg)
-        self.assertIn("it never reaches a", seg)
-        self.assertIn("reference only", seg)
+        # Both paths named in both states, without pinning the wording —
+        # the OFF copy was corrected 2026-08-22 when the bible began
+        # receiving the grammar's full mechanics and avoid list, so
+        # "writes a short summary" had stopped being true.
+        self.assertIn("Lighting Language", seg, "names the bible path")
+        self.assertIn("does NOT do is send", seg, "names what OFF withholds")
         self.assertIn("added to every", seg)
+        self.assertIn("on top of the Bible", seg,
+                      "ON is an addition to the bible path, not a swap")
         self.assertIn("Read the image-model prompt", seg,
                       "names the page it is talking about")
         self.assertIn("Remove it from renders", seg)
