@@ -6070,7 +6070,6 @@ async function renderWizard() {
     ownPlaceholder: "Describe how the camera should see",
     ...travels("#cam-default"),
     onPicked: st => saveCineSetting({ key: st?.key || "" }),
-    footer: cineRideSwitch,
   });
 
   await loadBibleEditor();
@@ -8977,58 +8976,18 @@ async function saveCineSetting(patch) {
 
 const BR = String.fromCharCode(10);
 
-async function cineRideSwitch(host) {
-  if (!host) return;
-  let s;
-  try { s = await api("/api/cinematography/setting"); } catch { return; }
-  const draw = () => {
-    // The copy the user could not read (2026-08-16, pointing at it: "what
-    // does this mean / do?"). The first version said "shapes the bible
-    // only" and "does not reach a render" — which assumes you already know
-    // there are two paths out of this panel and which one you are on.
-    // Name both, name the grammar, and say what changes.
-    const named = s.key
-      ? (CINEMA_STYLES.find(x => x.key === s.key)?.name || "The chosen grammar")
-      : "A chosen grammar";
-    host.innerHTML = `
-      <div class="gate-strip lock-strip cine-ride">
-        <span class="gate-label">RENDERS</span>
-        <span class="gate-text">${s.prompt_rides
-          ? `<b>On.</b> ${esc(named)}'s full image-model prompt — the page
-             behind <i>Read the image-model prompt</i> — is added to every
-             panel's render prompt, after the camera. Renders made now will
-             differ from ones made with it off, and each take records which.`
-          : `<b>Off.</b> Choosing a grammar hands its operating principle,
-             every visual mechanic and its avoid list to the Art Direction
-             Bible, which is what reaches a render — so the grammar already
-             shapes every panel through the Bible's own Lighting Language.
-             What it does NOT do is send the grammar's full image-model
-             prompt — the page behind <i>Read the image-model prompt</i> —
-             into the render itself. Turn this on to add that page to every
-             panel's render prompt, on top of the Bible.`}</span>
-        <button class="block-act" data-f="ride">${
-          s.prompt_rides ? "Remove it from renders" : "Add it to every render"}</button>
-      </div>`;
-    $("[data-f=ride]", host).onclick = async () => {
-      const next = !s.prompt_rides;
-      if (next && !(await askConfirm(
-        "Add the grammar to every render",
-        ["The grammar's full image-model prompt — about a page of "
-         + "directive — is added to every panel's render prompt from now on.",
-         "This WILL change what comes out. Takes you have already approved "
-         + "are untouched, and every new take records whether the grammar "
-         + "rode it, so you can tell them apart.",
-         "Reversible at any time: turning it off stops it riding the "
-         + "next render."].join(BR + BR),
-        "Add it"))) return;
-      const r = await saveCineSetting({ prompt_rides: next });
-      if (r) { s = r; draw(); toast(next
-        ? "Added — the grammar is in every render prompt from now on."
-        : "Removed — renders go back to what they were."); }
-    };
-  };
-  draw();
-}
+/* The RENDERS switch that stood here is retired (user, 2026-08-22:
+   "there should be no switch on the panels in the Production Design tab.
+   That sets the default. It should be over-rideable on the panel render
+   tab.").
+
+   It was an off-by-default toggle deciding whether a chosen grammar's
+   image-model prompt reached renders at all — built in 2026-08-16 so the
+   feature could be evaluated and rolled back, which it was. What it left
+   behind was a third lever: a production default, a global on/off, and a
+   per-panel override, where the middle one silently decided whether the
+   other two meant anything. Two levers now. Production Design sets the
+   default; the panel's Grammar select overrides it or refuses it. */
 
 /* Three anchors, three documents, one loader (2026-08-22). World texture
    and rendering style used to be arrays in this file — five and nine

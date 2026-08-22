@@ -59,55 +59,80 @@ class Grammar(unittest.TestCase):
         return generate.compile_panel_prompt(SPEC, SPEC["panels"][0], [])
 
 
-class ItIsOffUntilYouSaySo(Grammar):
-    def test_a_fresh_production_has_no_grammar_riding(self):
-        s = cine.setting()
-        self.assertEqual(s["key"], "")
-        self.assertFalse(s["prompt_rides"])
+class TwoLeversNotThree(Grammar):
+    """User, 2026-08-22: "there should be no switch on the panels in the
+    Production Design tab. That sets the default. It should be
+    over-rideable on the panel render tab."
+
+    A third lever stood between the other two — an off-by-default switch
+    deciding whether a chosen grammar reached a render at all. It was
+    built on 2026-08-16 so the feature could be evaluated and rolled back,
+    and it did that job. What it left was a control that silently decided
+    whether the production's choice and the panel's override meant
+    anything.
+
+    Production Design now sets a default and that default renders. The
+    panel is where it is varied or refused.
+    """
+
+    def test_a_fresh_production_has_no_grammar(self):
+        self.assertEqual(cine.setting()["key"], "")
         self.assertNotIn("CINEMATOGRAPHY GRAMMAR", self.prompt())
 
-    def test_choosing_a_grammar_does_not_by_itself_change_a_render(self):
-        """Picking a style writes the bible-facing words. Whether its page
-        of prompt reaches a render is a separate, stated act."""
+    def test_the_setting_carries_a_default_and_nothing_else(self):
+        """The retired field must not linger as a vestigial key that some
+        later reader treats as meaningful."""
+        self.assertEqual(set(cine.setting()), {"key"})
+        import inspect
+        self.assertEqual(list(inspect.signature(cine.save_setting).parameters),
+                         ["key"], "nothing else can be set")
+
+    def test_choosing_a_default_puts_it_in_every_render(self):
         before = self.prompt()
         cine.save_setting(key="cine-classical-adventure")
-        self.assertEqual(self.prompt(), before)
+        after = self.prompt()
+        self.assertNotEqual(after, before)
+        self.assertIn("CINEMATOGRAPHY GRAMMAR", after)
 
-    def test_the_switch_is_journaled_both_ways(self):
-        cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
-        cine.save_setting(prompt_rides=False)
+    def test_choosing_a_default_is_journaled(self):
+        cine.save_setting(key="cine-classical-adventure")
         log = paths.APPROVAL_LOG.read_text(encoding="utf-8")
-        self.assertIn("RIDES", log)
-        self.assertIn("does not ride", log)
+        self.assertIn("production default grammar", log)
+        self.assertIn("cine-classical-adventure", log)
 
+    def test_clearing_the_default_restores_the_prompt_byte_for_byte(self):
+        """Rollback survives the switch's removal — it is now clearing the
+        default rather than throwing a toggle. Anything less than
+        identical is not a rollback, it is a second variant."""
+        none = self.prompt()
+        cine.save_setting(key="cine-classical-adventure")
+        self.assertNotEqual(self.prompt(), none)
+        cine.save_setting(key="")
+        self.assertEqual(self.prompt(), none)
 
-class ItRollsBackExactly(Grammar):
-    def test_turning_it_off_restores_the_previous_prompt_byte_for_byte(self):
-        """The whole ask. Anything less than identical is not a rollback,
-        it is a second variant."""
-        off = self.prompt()
-        cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
-        on = self.prompt()
-        self.assertNotEqual(on, off)
-        cine.save_setting(prompt_rides=False)
-        self.assertEqual(self.prompt(), off)
-
-    def test_the_chosen_grammar_survives_the_rollback(self):
-        """Turning it off is not forgetting which one you picked — you are
-        evaluating, and you will turn it back on."""
-        cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
-        cine.save_setting(prompt_rides=False)
-        self.assertEqual(cine.setting()["key"], "cine-classical-adventure")
+    def test_a_panel_can_roll_it_back_for_itself(self):
+        """The per-panel equivalent, which is what the switch's removal
+        leaves in its place."""
+        cine.save_setting(key="cine-classical-adventure")
+        panel = {**SPEC["panels"][0], "cinematography": "NONE"}
+        self.assertNotIn("CINEMATOGRAPHY GRAMMAR",
+                         generate.compile_panel_prompt(SPEC, panel, []))
 
     def test_a_missing_document_cannot_break_a_render(self):
-        cine.save_setting(key="cine-nonexistent-grammar", prompt_rides=True)
+        cine.save_setting(key="cine-nonexistent-grammar")
         self.assertNotIn("CINEMATOGRAPHY GRAMMAR", self.prompt())
+
+    def test_no_switch_survives_in_the_client(self):
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertNotIn("cineRideSwitch", js)
+        self.assertNotIn("prompt_rides", js)
+        self.assertNotIn("Add it to every render", js)
 
 
 class ItDefersToTheCamera(Grammar):
     def setUp(self):
         super().setUp()
-        cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
+        cine.save_setting(key="cine-classical-adventure")
 
     def test_the_block_carries_the_documents_prompt_verbatim(self):
         st = cine.by_key("cine-classical-adventure")
@@ -130,7 +155,7 @@ class EveryTakeSaysWhetherItRode(Grammar):
         self.assertEqual(cine.stamp(), {"rides": False, "refused": False})
 
     def test_a_take_made_with_it_records_which_and_what_text(self):
-        cine.save_setting(key="cine-classical-adventure", prompt_rides=True)
+        cine.save_setting(key="cine-classical-adventure")
         st = cine.stamp()
         self.assertTrue(st["rides"])
         self.assertEqual(st["key"], "cine-classical-adventure")
@@ -147,60 +172,6 @@ class EveryTakeSaysWhetherItRode(Grammar):
         # on the record a render writes, beside the spec hash it pairs with
         self.assertIn('"spec_hash": stable_hash(spec)', src[i - 400:i])
         self.assertIn('"candidate_id": cand_id', src[i - 600:i])
-
-
-class TheSwitchReadsAsStateBeforeItIsHit(unittest.TestCase):
-    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
-    MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
-
-    def test_the_panel_states_which_way_it_is_set(self):
-        """User-caught 2026-08-16, pointing at the strip: "what does this
-        mean / do?" The first copy said "shapes the bible only" and "does
-        not reach a render", which assumes you already know there are two
-        paths out of this panel and which one you are on. Both states now
-        name both paths and say what changes."""
-        i = self.JS.index("async function cineRideSwitch")
-        seg = self.JS[i:i + 3200]
-        self.assertIn("<b>Off.</b>", seg)
-        self.assertIn("<b>On.</b>", seg)
-        # Both paths named in both states, without pinning the wording —
-        # the OFF copy was corrected 2026-08-22 when the bible began
-        # receiving the grammar's full mechanics and avoid list, so
-        # "writes a short summary" had stopped being true.
-        self.assertIn("Lighting Language", seg, "names the bible path")
-        self.assertIn("does NOT do is send", seg, "names what OFF withholds")
-        self.assertIn("added to every", seg)
-        self.assertIn("on top of the Bible", seg,
-                      "ON is an addition to the bible path, not a swap")
-        self.assertIn("Read the image-model prompt", seg,
-                      "names the page it is talking about")
-        self.assertIn("Remove it from renders", seg)
-        self.assertIn("Add it to every render", seg)
-
-    def test_the_on_state_names_the_grammar(self):
-        i = self.JS.index("async function cineRideSwitch")
-        seg = self.JS[i:i + 3200]
-        self.assertIn("CINEMA_STYLES.find(x => x.key === s.key)?.name", seg)
-
-    def test_turning_it_on_states_the_consequence_first(self):
-        i = self.JS.index("async function cineRideSwitch")
-        seg = self.JS[i:i + 2600]
-        self.assertIn("This WILL change what comes out", seg)
-        self.assertIn("about a page of ", seg)
-        self.assertIn("Reversible at any time", seg)
-        self.assertIn("already approved ", seg)
-        self.assertIn("are untouched", seg)
-
-    def test_turning_it_off_asks_nothing(self):
-        """A confirm on the way out of an experiment is friction on the
-        act that makes the experiment safe."""
-        i = self.JS.index("async function cineRideSwitch")
-        seg = self.JS[i:i + 2600]
-        self.assertIn("if (next && !(await askConfirm(", seg)
-
-    def test_the_routes_exist(self):
-        self.assertIn('@app.get("/api/cinematography/setting")', self.MAIN)
-        self.assertIn('@app.put("/api/cinematography/setting")', self.MAIN)
 
 
 class ItSurvivesConcurrentRenders(Grammar):
@@ -343,20 +314,19 @@ class APanelCanSetItsOwnGrammar(unittest.TestCase):
 
     def test_a_panel_can_refuse_one(self):
         from app import store, cinematography as cine
-        cine.save_setting(key=self.key(), prompt_rides=True)
+        cine.save_setting(key=self.key())
         self.assertIsNotNone(cine.resolve({}), "the production default rides")
         store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": "NONE"})
         self.assertIsNone(cine.resolve(self.panel()),
-                          "NONE wins over a switch that is on")
+                          "NONE wins over the production default")
         self.assertTrue(cine.stamp(self.panel())["refused"],
                         "a take made under NONE says so")
 
-    def test_a_named_grammar_rides_even_with_the_switch_off(self):
-        """The switch governs the DEFAULT. A panel naming a grammar is
-        asking for it on that panel — if the switch still suppressed it,
-        choosing per panel would do nothing at all."""
+    def test_a_panel_grammar_works_with_no_production_default(self):
+        """A panel may name a grammar for a production that has chosen
+        none — the panel is a full statement, not a modifier on one."""
         from app import store, cinematography as cine
-        self.assertFalse(cine.setting()["prompt_rides"])
+        self.assertEqual(cine.setting()["key"], "")
         store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
         block = cine.prompt_block(self.panel())
         self.assertTrue(block)
@@ -388,7 +358,7 @@ class APanelCanSetItsOwnGrammar(unittest.TestCase):
         from app import store, cinematography as cine
         store.amend_panel_camera("SPEC-0001", "P1", {"cinematography": self.key()})
         self.assertEqual(cine.stamp(self.panel())["from"], "panel")
-        cine.save_setting(key=self.key(), prompt_rides=True)
+        cine.save_setting(key=self.key())
         self.assertEqual(cine.stamp({})["from"], "production")
 
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")

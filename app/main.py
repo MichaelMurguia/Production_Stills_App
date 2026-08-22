@@ -2245,7 +2245,7 @@ def api_save_cine_setting(body: dict) -> dict:
     made under it keeps its own record of having done so."""
     from . import cinematography
     return cinematography.save_setting(
-        key=body.get("key"), prompt_rides=body.get("prompt_rides"))
+        key=body.get("key"))
 
 
 @app.get("/api/bible/house-style")

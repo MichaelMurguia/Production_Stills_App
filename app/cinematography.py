@@ -53,14 +53,21 @@ SETTING_KEY = "cinematography"
 
 
 def setting() -> dict:
-    """Which grammar this production has chosen, and whether its
-    image-model prompt rides every render.
+    """The production's DEFAULT grammar. Stored per production.
 
-    OFF by default, and stored per production (user 2026-08-16: "we need
-    to evaluate the output — so we need to be able to roll this back").
-    Rollback is therefore the absence of an act: nothing changes until the
-    switch is thrown, and throwing it back stops it, while every take made
-    under it keeps saying so."""
+    There was a second field here, `prompt_rides` — an off-by-default
+    switch controlling whether the grammar's image-model prompt reached a
+    render at all. It existed so the 2026-08-16 addition could be
+    evaluated and rolled back, and it earned its keep for that.
+
+    Retired 2026-08-22 by the user, who had done the evaluating: "there
+    should be no switch on the panels in the Production Design tab. That
+    sets the default. It should be over-rideable on the panel render tab."
+    So the model is two levers, not three — a production default, and a
+    per-panel override that can name another grammar or refuse one with
+    NONE. A stored `prompt_rides` from before is simply ignored; there is
+    nothing to migrate, because the value it held is no longer a
+    question anyone is asked."""
     from . import store
     # Under paths.SWITCH_LOCK, the same lock next_counter() uses. A render
     # compiles its prompt while other renders are allocating candidate
@@ -69,25 +76,22 @@ def setting() -> dict:
     # renders found this immediately.
     with paths.SWITCH_LOCK:
         raw = store.load_app_state().get(SETTING_KEY) or {}
-    return {"key": str(raw.get("key", "")),
-            "prompt_rides": bool(raw.get("prompt_rides", False))}
+    return {"key": str(raw.get("key", ""))}
 
 
-def save_setting(key: str = None, prompt_rides: bool = None) -> dict:
+def save_setting(key: str = None) -> dict:
     from . import store
     cur = setting()
     if key is not None:
         cur["key"] = str(key)
-    if prompt_rides is not None:
-        cur["prompt_rides"] = bool(prompt_rides)
     with paths.SWITCH_LOCK:
         state = store.load_app_state()
         state[SETTING_KEY] = cur
         store.save_app_state(state)
     store.append_approval_log(
-        f"CINEMATOGRAPHY: grammar={cur['key'] or 'none'}, "
-        f"image-model prompt {'RIDES' if cur['prompt_rides'] else 'does not ride'} "
-        "every render.")
+        f"CINEMATOGRAPHY: production default grammar = {cur['key'] or 'none'}. "
+        "Every panel renders under it unless the panel names another or "
+        "refuses one.")
     return cur
 
 
@@ -99,11 +103,9 @@ def by_key(key: str) -> dict | None:
 
 
 def active() -> dict | None:
-    """The grammar whose prompt should ride RIGHT NOW, or None."""
-    s = setting()
-    if not s["prompt_rides"] or not s["key"]:
-        return None
-    return by_key(s["key"])
+    """The production's default grammar, or None if it has not chosen one."""
+    key = setting()["key"]
+    return by_key(key) if key else None
 
 
 PANEL_FIELD = "cinematography"
@@ -140,7 +142,7 @@ def resolve(panel: dict | None = None) -> dict | None:
         return None
     if pick:
         return next((st for st in styles() if st["key"] == pick), None)
-    return active() if setting()["prompt_rides"] else None
+    return active()
 
 
 def prompt_block(panel: dict | None = None) -> list[str]:
