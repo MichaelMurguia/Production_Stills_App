@@ -199,52 +199,75 @@ class BlockerTests(Install):
             self.assertIn(row["stage"], ("wizard", "boards"))
 
 
-class ThePaletteSaysWhereColourComesFrom(unittest.TestCase):
-    """User, 2026-08-22: "I uploaded my screenplay and went to the
-    Production Design panel. No color swatches."
+class ThePaletteIsGatedOnTheBible(unittest.TestCase):
+    """User, 2026-08-22, in three passes.
 
-    The dependency works as designed. The scene scan finds design
-    LANGUAGES; colour is proposed later by a model reading the SAVED
-    Bible, each swatch cited to a line of it — which is the whole reason a
-    swatch can be trusted. Nothing was broken.
+    First: "no color swatches" after a screenplay upload. The dependency
+    was working — the scan finds design LANGUAGES; colour is proposed by a
+    model reading the SAVED Bible, each swatch cited to a line of it.
 
-    What was missing is that none of it was discoverable from the Color
-    Palette column, which is where a user looking for colour stands. The
-    generate control lives in step 5 and does not render before a save, by
-    an explicit ruling (SWATCH_GENERATE_RULING / D1: the same fact must not
-    be stated twice on one screen). That ruling holds — my first attempt
-    put a second gate there and was reverted. The line belongs where the
-    absence is FELT, and it states a fact stated nowhere else.
+    Then: "it does not show that" — I had put the explanation in step 4,
+    under a control that is deliberately silent before a save, rather than
+    in the column where the absence is felt.
+
+    Then: "it's not disabled, totally unclear, I can add swatches —
+    disable this section with an obvious callout on why." The faint 9.5px
+    line I moved into the column was a stated gate in principle and
+    invisible in practice, beside a control that still worked. A gate you
+    can act through is not a gate.
+
+    So the manual adder is genuinely disabled — inputs and verb — while no
+    Bible exists, and the reason is said at a size that competes with the
+    control it governs.
     """
 
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+    CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 
-    def test_step_5_stays_silent_as_ruled(self):
-        i = self.JS.index("syncSwatchGen = async ()")
-        seg = self.JS[i:i + 1200]
-        self.assertIn('genHost.innerHTML = ""; return;', seg,
-                      "D1 ruled this control silent before a save")
-
-    def test_the_column_says_where_colour_comes_from(self):
+    def body(self):
         i = self.JS.index("const paletteOrigin")
-        seg = self.JS[i:i + 1800]
-        self.assertIn("CITED TO THE BIBLE", seg)
-        self.assertIn("NOT COLOUR", seg)
+        return self.JS[i:i + 2400]
 
-    def test_it_offers_the_step_that_produces_it(self):
-        i = self.JS.index("const paletteOrigin")
-        seg = self.JS[i:i + 1800]
-        self.assertIn("po-go", seg)
-        self.assertIn("#wiz-draft", seg)
+    def test_the_condition_is_the_bible_and_nothing_else(self):
+        """An earlier attempt also unlocked once the column held any
+        colour — "you may add more by hand once you have added one by
+        hand" is not a rule, and the check was broken anyway: a swatch
+        thumb is a coloured block, not an <img>."""
+        b = self.body()
+        self.assertIn("const locked = !b.text.trim();", b)
+        self.assertNotIn("hasColour", b)
 
-    def test_it_only_speaks_while_the_column_is_empty(self):
-        """A standing explanation over a full palette is clutter."""
-        i = self.JS.index("const paletteOrigin")
-        seg = self.JS[i:i + 1800]
-        self.assertIn('if (has) { host.classList.add("hidden"); return; }', seg)
+    def test_the_control_is_really_disabled_not_merely_dimmed(self):
+        b = self.body()
+        self.assertIn('$$("input, button", add).forEach', b)
+        self.assertIn("el.disabled = locked", b)
+
+    def test_the_callout_states_the_reason_and_the_door(self):
+        b = self.body()
+        self.assertIn("LOCKED — NO ART DIRECTION BIBLE", b)
+        self.assertIn("cited to a line of the Bible", b)
+        self.assertIn("pal-go", b)
+        self.assertIn("#wiz-draft", b)
+
+    def test_the_gate_goes_when_the_bible_arrives(self):
+        b = self.body()
+        self.assertIn("if (!locked) { if (gate) gate.remove(); return; }", b)
+
+    def test_the_callout_is_visible_not_a_faint_line(self):
+        """The 9.5px --ink-faint `.up-gate` was technically compliant and
+        practically unreadable next to a live control."""
+        block = self.CSS.split(".pal-gate {")[1].split(".wiz-thumb-note")[0]
+        self.assertIn("var(--accent-line)", block)
+        self.assertIn("var(--accent-soft)", block)
+        self.assertIn("font-size: 12px", block)
+        self.assertNotIn("up-gate", self.body())
+
+    def test_the_gate_invents_no_colours(self):
+        block = self.CSS.split(".pal-gate {")[1].split(".wiz-thumb-note")[0]
+        self.assertEqual(re.findall(r"#[0-9a-fA-F]{3,8}", block), [])
 
     def test_the_server_still_refuses_without_a_bible(self):
-        """The line is the courtesy; the refusal is the contract."""
+        """The gate is the courtesy; the refusal is the contract."""
         self.assertIn("No saved Art Direction Bible yet",
                       (ROOT / "app/wizard.py").read_text(encoding="utf-8"))
 

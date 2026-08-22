@@ -4274,28 +4274,50 @@ async function renderWizard() {
        One line, here, only while the column is empty. It is not the
        verbosity D1 cut: that ruling stopped the same fact being stated
        twice on one screen, and this fact is stated nowhere else. */
+    /* The palette column is gated on the Bible (user, 2026-08-22: "it's
+       not disabled, totally unclear, I can add swatches — disable this
+       section with an obvious callout on why").
+
+       The faint 9.5px line this replaces was a stated gate in principle
+       and invisible in practice, sitting under a control that still
+       worked. A gate you can act through is not a gate, so the adder is
+       genuinely disabled — inputs and verb both — and the reason is said
+       at a size that competes with the control it governs.
+
+       The condition is the Bible and nothing else. A first attempt also
+       unlocked once the column held any colour, which was both wrong and
+       broken: wrong because "you may add more by hand once you have added
+       one by hand" is not a rule, and broken because a swatch thumb is a
+       coloured block, not an <img>, so the check never saw one anyway. */
     const paletteOrigin = async () => {
-      const host = $("[data-f=palette-origin]", col)
-        || col.insertBefore(Object.assign(document.createElement("p"),
-             { className: "up-gate mono" }), strip);
-      host.dataset.f = "palette-origin";
-      const has = $$("img, .sw-ramp", col).length || strip.children.length;
-      if (has) { host.classList.add("hidden"); return; }
-      host.classList.remove("hidden");
+      const add = $(".swatch-add", col);
+      let gate = $("[data-f=pal-gate]", col);
       const b = await api("/api/style-bible").catch(() => ({ text: "" }));
-      // Two facts and a door. The manual adder is directly above and
-      // speaks for itself; spelling it out again is the verbosity D1 cut.
-      host.innerHTML = b.text.trim()
-        ? `NO SWATCHES YET — GENERATE THEM FROM THE SAVED BIBLE
-           <button type="button" class="text-act" data-f="po-go">Step 4 ↗</button>`
-        : `COLOUR IS CITED TO THE BIBLE — THE SCREENPLAY READ FINDS DESIGN
-           LANGUAGES, NOT COLOUR
-           <button type="button" class="text-act" data-f="po-go">Draft it in step 4 ↗</button>`;
-      const go = $("[data-f=po-go]", host);
-      if (go) go.onclick = () => {
-        const el = $("#wiz-draft") || $("#style-bible");
-        if (el) window.scrollTo({ top: el.getBoundingClientRect().top
-                                       + window.scrollY - 120, behavior: "smooth" });
+      const locked = !b.text.trim();
+
+      add.classList.toggle("is-locked", locked);
+      $$("input, button", add).forEach(el => { el.disabled = locked; });
+
+      if (!locked) { if (gate) gate.remove(); return; }
+      if (!gate) {
+        gate = document.createElement("div");
+        gate.className = "pal-gate";
+        gate.dataset.f = "pal-gate";
+        add.parentElement.insertBefore(gate, add);
+      }
+      gate.innerHTML = `
+        <span class="k">LOCKED — NO ART DIRECTION BIBLE</span>
+        <p>Every colour here is cited to a line of the Bible, and there is no
+        Bible yet. The screenplay read finds design languages, not colour.</p>
+        <p class="act"><button type="button" class="primary"
+          data-f="pal-go">Draft the Bible in step 4</button></p>`;
+      $("[data-f=pal-go]", gate).onclick = () => {
+        const el = $("#wiz-draft");
+        if (el) {
+          window.scrollTo({ top: el.getBoundingClientRect().top
+                                 + window.scrollY - 120, behavior: "smooth" });
+          el.focus({ preventScroll: true });
+        }
       };
     };
 

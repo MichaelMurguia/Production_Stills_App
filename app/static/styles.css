@@ -2217,6 +2217,28 @@ details.meta pre {
 /* The name gets its own full-width line — squeezed beside the hex it
    collapsed to nothing at the 4-up column width. */
 .swatch-add .sw-name-in { flex: 1 1 100%; }
+/* UNCANONIZED — 2026-08-22 — the palette gate
+   User: "it's not disabled, totally unclear, I can add swatches — disable
+   this section with an obvious callout on why." The 9.5px faint `.up-gate`
+   line this replaces was technically a stated gate and practically
+   invisible beside a live control.
+
+   Amber is correct here by the standing rule "amber marks what blocks":
+   the kicker and the frame are the block, and the column carries no other
+   amber while it is locked. The control beneath is genuinely disabled,
+   not merely dimmed — a gate you can act through is not a gate. */
+.pal-gate {
+  border: 1px solid var(--accent-line); background: var(--accent-soft);
+  padding: 11px 13px; margin-top: 10px;
+}
+.pal-gate .k {
+  display: block; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .14em; color: var(--accent); margin-bottom: 5px;
+}
+.pal-gate p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink); }
+.pal-gate .act { margin-top: 9px; }
+.swatch-add.is-locked { opacity: .4; }
+.swatch-add.is-locked input, .swatch-add.is-locked button { cursor: not-allowed; }
 .wiz-thumb-note { display: block; font-family: var(--mono); font-size: 8.5px;
   letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
