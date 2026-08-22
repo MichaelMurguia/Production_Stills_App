@@ -137,5 +137,91 @@ class TheClientHoldsNoSecondList(unittest.TestCase):
                 self.assertIn('"' + st["name"] + '"', plates, st["name"])
 
 
+class TheDrafterSeesTheWholeDocument(unittest.TestCase):
+    """User, 2026-08-22: the deep prompts existed and only a human read
+    them.
+
+    An anchor answer is free text, and the picker writes a style's
+    DIRECTIVE into it — name, subtitle, principle and six mechanics,
+    capped at 600 characters. The document entry behind it also carries
+    the remaining mechanics and an explicit Avoid list, and the Bible
+    drafter never saw either. So the library's depth improved what a human
+    read and left the model working from a summary.
+
+    Deliberately NOT solved by injecting a style's image-model prompt into
+    renders. Every anchor already reaches a panel through the bible's own
+    global sections — `Rendering Language` is one, which is why picking
+    Production Painting produces brushwork today. A second injection
+    around the bible would be a second source for a fact the bible already
+    carries, on a product whose whole premise is canon-locked art
+    direction.
+    """
+
+    def answers(self, **kw):
+        from app import style_docs
+        out = {}
+        for field, lib in (("texture", "texture"), ("medium", "rendering"),
+                           ("light", "cinematography")):
+            if field in kw:
+                out[field] = style_docs.styles(lib)[kw[field]]["value"]
+        return out
+
+    def test_a_picked_style_hands_over_its_whole_entry(self):
+        from app import style_docs, wizard
+        st = style_docs.styles("texture")[2]
+        out = wizard.style_depth(self.answers(texture=2))
+        self.assertIn(st["name"], out)
+        self.assertIn(st["principle"][:40], out)
+        for m in st["mechanics"]:
+            self.assertIn(m, out, "every mechanic, not the directive's six")
+        self.assertIn(st["avoid"][0], out)
+
+    def test_it_carries_more_than_the_directive_did(self):
+        from app import style_docs, wizard
+        st = style_docs.styles("rendering")[4]
+        out = wizard.style_depth(self.answers(medium=4))
+        self.assertGreater(len(out), len(st["value"]) * 2)
+        self.assertGreater(len(st["mechanics"]), 6,
+                           "the directive only carries six")
+
+    def test_it_names_the_sections_the_anchor_is_fenced_into(self):
+        """A mechanic may only land in a section its anchor feeds — the
+        section fence the drafter already enforces."""
+        from app import wizard
+        out = wizard.style_depth(self.answers(medium=0, texture=0, light=0))
+        self.assertIn("Rendering Language and Production Board Presentation", out)
+        self.assertIn("Overall Visual Identity and Core Material Language", out)
+        self.assertIn("Lighting Language and Composition Rules", out)
+        self.assertIn("and nothing else", out)
+
+    def test_an_edited_answer_expands_to_nothing(self):
+        """The director's own words are theirs. An answer that no longer
+        matches a library entry verbatim must not drag that entry's full
+        mechanics along behind it."""
+        from app import style_docs, wizard
+        v = style_docs.styles("texture")[1]["value"]
+        self.assertEqual(wizard.style_depth({"texture": v[:-8]}), "")
+        self.assertEqual(wizard.style_depth({"texture": "my own words"}), "")
+        self.assertEqual(wizard.style_depth({}), "")
+
+    def test_palette_has_no_library_to_expand(self):
+        """Swatches are proposed FROM the bible, not chosen before it."""
+        from app import wizard
+        self.assertNotIn("palette", wizard._ANCHOR_LIBRARY)
+
+    def test_the_depth_reaches_the_bible_instructions(self):
+        from app import wizard
+        src = (ROOT / "app" / "wizard.py").read_text(encoding="utf-8")
+        self.assertIn("{style_depth(answers)}", src)
+
+    def test_no_style_prompt_is_injected_into_a_render(self):
+        """The evaluated call (2026-08-22): the bible is the one path.
+        Cinematography's ride block predates this and stays, behind its own
+        off-by-default switch."""
+        gen = (ROOT / "app" / "generate.py").read_text(encoding="utf-8")
+        self.assertNotIn("style_docs", gen)
+        self.assertIn("_cine.prompt_block()", gen)
+
+
 if __name__ == "__main__":
     unittest.main()

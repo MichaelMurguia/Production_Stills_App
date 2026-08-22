@@ -55,6 +55,13 @@ def slug(lib: str, name: str) -> str:
                                       str(name).lower()).strip("-")
 
 
+def _flat(text: str) -> str:
+    """Prose from a hand-wrapped document is one paragraph, not five lines.
+    The fenced image-model prompt is NOT run through this — its line
+    structure is authored."""
+    return re.sub(r"\s+", " ", str(text or "")).strip()
+
+
 def _subsections(body: str) -> dict[str, str]:
     out, cur = {}, None
     for ln in body.splitlines():
@@ -112,15 +119,16 @@ def styles(lib: str) -> list[dict]:
         name, subtitle = m.group(2).strip(), m.group(3).strip()
         prompt = _fenced(sub.get("Image-Model Prompt", ""))
         mechanics = _bullets(sub.get("Visual Mechanics", ""))
-        principle = sub.get("Operating Principle", "").strip()
+        principle = _flat(sub.get("Operating Principle", ""))
+        mechanics = [_flat(x) for x in mechanics]
         value = "; ".join(x.rstrip(".") for x in
                           [f"{name} {noun} — {subtitle.lower()}",
                            principle.rstrip(".")] + mechanics[:6] if x)
         out.append({
             "n": int(m.group(1)), "key": slug(lib, name), "name": name,
-            "subtitle": subtitle,
-            "question": sub.get("Key Question", "").strip(),
-            "description": sub.get("Description", "").strip(),
+            "subtitle": _flat(subtitle),
+            "question": _flat(sub.get("Key Question", "")),
+            "description": _flat(sub.get("Description", "")),
             "principle": principle,
             "mechanics": mechanics,
             "films": _bullets(sub.get("Reference Films", "")),

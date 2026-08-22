@@ -175,6 +175,76 @@ def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
     return out
 
 
+# Which anchor answer draws on which style library, and which bible
+# sections that anchor is fenced into. Palette has no library — its
+# swatches are proposed FROM the bible, not chosen before it.
+NL = chr(10)
+
+_ANCHOR_LIBRARY = {
+    "texture": ("WORLD_TEXTURE", "texture",
+                "Overall Visual Identity and Core Material Language"),
+    "light": ("CINEMATOGRAPHY_STYLE", "cinematography",
+              "Lighting Language and Composition Rules"),
+    "medium": ("BOARD_RENDERING_STYLE", "rendering",
+               "Rendering Language and Production Board Presentation"),
+}
+
+
+def style_depth(answers: dict) -> str:
+    """The full document entry behind a picked style, for the drafter.
+
+    An anchor answer is free text, and the picker writes a style's
+    DIRECTIVE into it verbatim — name, subtitle, operating principle and
+    the first six visual mechanics, capped at 600 characters. That is a
+    summary of a document entry which also carries the remaining mechanics
+    and an explicit Avoid list, and until 2026-08-22 the drafter never saw
+    them: the depth existed and only a human ever read it.
+
+    Matching is on the directive VERBATIM. An answer the director has
+    edited is theirs, and must not silently drag a library's full
+    mechanics along behind it — so an edited answer expands to nothing,
+    which is the honest outcome rather than a near-miss.
+
+    This strengthens the bible rather than routing around it. A style's
+    image-model prompt is deliberately NOT injected into renders: the
+    bible's own sections are what reach a panel, and a second source for
+    a fact the bible already carries is how the two drift apart.
+    """
+    from . import style_docs
+    out = []
+    for field, (role, lib, sections) in _ANCHOR_LIBRARY.items():
+        said = (answers.get(field) or "").strip()
+        if not said:
+            continue
+        match = next((st for st in style_docs.styles(lib)
+                      if st["value"].strip() == said), None)
+        if match is None:
+            continue
+        lines = [f"{role} — {match['name']} ({match['subtitle']}), from "
+                 f"{style_docs.LIBRARIES[lib][0]}. Feeds {sections} and "
+                 f"nothing else."]
+        if match["principle"]:
+            lines.append(f"  Operating principle: {match['principle']}")
+        if match["mechanics"]:
+            lines.append("  Visual mechanics:")
+            lines += [f"    - {m}" for m in match["mechanics"]]
+        if match["avoid"]:
+            lines.append("  Avoid: " + ", ".join(match["avoid"]))
+        out.append(NL.join(lines))
+    if not out:
+        return ""
+    head = ("STYLE LIBRARY DETAIL — the director did not type these answers, "
+            "they picked them from the studio" + chr(39) + "s style documents, "
+            "and this is what those documents say in full. This is not a fifth "
+            "answer or a set of extra decisions: it is the SAME answers above, "
+            "at the depth they were authored at. Carry the mechanics into the "
+            "sections each anchor feeds, using the document" + chr(39) + "s own "
+            "vocabulary, and fold each Avoid list into that section" + chr(39)
+            + "s avoid guidance. The section fence still governs — a mechanic "
+            "may only land in a section its anchor feeds.")
+    return NL + NL + head + NL + NL + (NL + NL).join(out)
+
+
 def _bible_instructions(answers: dict) -> str:
     worlds = answers.get("worlds") or []
     world_lines = "\n".join(
@@ -235,7 +305,7 @@ answer conflicts with your own instinct, the answer wins.
 - CINEMATOGRAPHY_STYLE in words (light behaviour, lens, framing): {answers.get('light') or 'not specified — propose, mark PROPOSED'}
 - BOARD_RENDERING_STYLE in words (medium and finish): {answers.get('medium') or 'not specified — propose, mark PROPOSED'}
 - It must NEVER look like: {answers.get('never') or 'not specified'}
-- Additional notes: {answers.get('notes') or 'none'}
+- Additional notes: {answers.get('notes') or 'none'}{style_depth(answers)}
 
 Each of those four answers is the WORDS half of the anchor it names, and
 carries exactly that anchor's scope — the same fence its attached photos
