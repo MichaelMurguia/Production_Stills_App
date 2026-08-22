@@ -5756,8 +5756,43 @@ async function renderWizard() {
   renderWorlds();
   renderAnalyzeLock();
 
-  $("#wiz-draft").onclick = async (e) => {
-    const btn = e.target;
+  /* The one button. It dispatches on state rather than asking the user to
+     pick a verb, which is the whole point of there being one. */
+  $("#wiz-draft").onclick = async () => {
+    const st = bibleState();
+    if (st === "saved") {                       // Edit — unlock, hand over
+      bibleEditing = true;
+      syncBibleSave();
+      const editor = $("#style-bible");
+      editor.focus();
+      editor.setSelectionRange(editor.value.length, editor.value.length);
+      return;
+    }
+    if (st === "editing" || st === "unsaved") { // Save
+      if (!(await saveBible({ quietIfUnchanged: true }))) return;
+      bibleEditing = false;
+      syncBibleSave();
+      return;
+    }
+    return writeBible();                        // Create
+  };
+
+  $("#bible-regen").onclick = async () => {
+    if (!(await askConfirm(
+      "Regenerate the Art Direction Bible",
+      ["The current bible is replaced by a newly written one, from your "
+       + "anchors, the scan and the cast as they stand now.",
+       "THE TEXT YOU HAVE NOW CANNOT BE RECOVERED. If you have edited it by "
+       + "hand, copy what you want to keep before continuing.",
+       "Approved work already made under it is untouched."].join(BR + BR),
+      "Regenerate it"))) return;
+    return writeBible({ replacing: true });
+  };
+
+  /* Create and Regenerate are the same act — write from the anchors and
+     save — differing only in whether something is being replaced. */
+  const writeBible = async ({ replacing = false } = {}) => {
+    const btn = $("#wiz-draft");
     btn.disabled = true;
     const busy = startBusy($("#wiz-draft-busy"),
       `Drafting the Art Direction Bible from screenplay, worlds, interview, and reference photos — ${selectedModelLabel($("#wiz-provider"))}…`,
@@ -5799,16 +5834,6 @@ async function renderWizard() {
       // the editor it will be saved from. Unsaved prior content is never
       // silently replaced.
       const editor = $("#style-bible");
-      if (editor.value.trim() && editor.value.trim() !== r.markdown.trim()) {
-        if (!(await askConfirm("Replace the editor content?",
-          "The Art Direction Bible editor already holds text. Replace it with "
-          + "a newly written one, and save that? The text you have now is lost "
-          + "unless you have saved it.",
-          "Replace and save"))) {
-          toast(`Draft ready but not loaded — the editor kept your text.`, true);
-          return;
-        }
-      }
       editor.value = r.markdown;
       /* Create SAVES (user, 2026-08-22: "it should also save it so it
          unlocks breakdown tab"). The old flow drafted into an editor and
@@ -5834,38 +5859,84 @@ async function renderWizard() {
   // Save is disabled while the editor is empty (user-directed 2026-08-05):
   // the gate is readable as state — disabled control + the stated
   // condition beside it — instead of a 422 after the click.
-  /* The bible is a saved document, not a scratch pad (user, 2026-08-22).
-     Create writes it AND saves it, so Breakdowns open from the one gold
-     button; the editor below then holds a saved thing, and a saved thing
-     is read-only until you say otherwise. The grey button is the mode:
-     Edit unlocks it, Save writes it and locks it again. */
+  /* ONE primary control, whose verb is always the next true thing (user,
+     2026-08-22: "I should not have to detail out how creating, editing and
+     saving should work — make it all one button").
+
+       no bible, editor empty      Create Art Direction Bible
+       no bible, text pasted       Save Art Direction Bible
+       saved                       Edit            + Regenerate
+       editing                     Save            (Regenerate hidden)
+
+     Two buttons existed before — a gold one that drafted and stopped, and
+     a grey one that was the only thing which actually opened Breakdowns.
+     Deciding how those decompose was never the user's job. */
   let bibleEditing = false;
+  let bibleSavedText = "";      // what is on disk, for "did anything change"
+
+  const bibleState = () => {
+    const text = $("#style-bible").value.trim();
+    if (bibleEditing) return "editing";
+    if (!bibleSavedText) return text ? "unsaved" : "empty";
+    return "saved";
+  };
+
   const syncBibleSave = () => {
     const editor = $("#style-bible");
-    const empty = !editor.value.trim();
-    const btn = $("#style-save");
-    editor.readOnly = !bibleEditing;
-    editor.classList.toggle("is-locked", !bibleEditing && !empty);
-    btn.disabled = empty;
-    btn.textContent = bibleEditing ? "Save Art Direction Bible" : "Edit";
-    btn.classList.toggle("primary", bibleEditing);
-    btn.classList.toggle("ghost", !bibleEditing);
-    btn.title = bibleEditing
-      ? "Save the edited bible — every future prompt uses it from then on"
-      : "Unlock the bible for editing";
-    // D8 ruling: the disabled control stays, its condition is the dashed
-    // withheld tag beside it — a tag, not a sentence.
-    $("#style-save-gate").classList.toggle("hidden", !empty);
+    const btn = $("#wiz-draft");
+    const regen = $("#bible-regen");
+    const cond = $("#bible-cond");
+    const st = bibleState();
+
+    // Editable whenever there is nothing saved to protect, and while
+    // editing. A saved bible is a document, and a document is read-only
+    // until you say otherwise.
+    editor.readOnly = st === "saved";
+    editor.classList.toggle("is-locked", st === "saved");
+
+    const VERB = {
+      empty: "Create Art Direction Bible",
+      unsaved: "Save Art Direction Bible",
+      saved: "Edit",
+      editing: "Save Art Direction Bible",
+    };
+    btn.textContent = VERB[st];
+    btn.classList.toggle("primary", st !== "saved");
+    btn.classList.toggle("ghost", st === "saved");
+    regen.classList.toggle("hidden", st !== "saved");
+    cond.textContent = {
+      empty: "FROM THE ANCHORS, THE SCAN AND THE CAST — WRITTEN, SAVED, AND BREAKDOWNS OPEN",
+      unsaved: "YOUR OWN TEXT — SAVING IT OPENS BREAKDOWNS",
+      // Nothing: the panel heading already carries this fact, and the
+      // status chip beside it carries the revision. Saying it a third
+      // time on one row is the verbosity the design system cuts.
+      saved: "",
+      editing: "ESC DISCARDS — NOTHING CHANGES UNTIL YOU SAVE",
+    }[st];
   };
   $("#style-bible").addEventListener("input", syncBibleSave);
+  // Escape is the way out of an edit, so Edit is never a trap.
+  $("#style-bible").addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !bibleEditing) return;
+    e.preventDefault();
+    $("#style-bible").value = bibleSavedText;
+    bibleEditing = false;
+    syncBibleSave();
+    $("#style-status").innerHTML = "";
+  });
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
     $("#style-bible").value = bible.text;
+    // What is on disk. The button's state hangs off this: with nothing
+    // saved the editor is yours to paste into, and once something IS
+    // saved the button becomes Edit rather than Create.
+    bibleSavedText = (bible.text || "").trim();
+    bibleEditing = false;
     // No template default exists (director's ruling 2026-08-01) — empty
     // means not yet drafted, and says so.
     $("#style-status").innerHTML = !bible.text.trim()
       ? ""
-      : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> every future prompt uses this` : "");
+      : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> saved` : "");
     syncBibleSave();
     return bible;
   };
@@ -6112,32 +6183,20 @@ async function renderWizard() {
 
   await loadBibleEditor();
   await loadCameraDefault();
-  $("#style-save").onclick = async () => {
-    if (!bibleEditing) {          // Edit — unlock and hand over the caret
-      bibleEditing = true;
-      syncBibleSave();
-      const editor = $("#style-bible");
-      editor.focus();
-      editor.setSelectionRange(editor.value.length, editor.value.length);
-      $("#style-status").innerHTML =
-        "EDITING — NOTHING CHANGES UNTIL YOU SAVE";
-      return;
-    }
-    if (!(await saveBible())) return;
-    bibleEditing = false;
-    syncBibleSave();
-  };
-
   /* One writer, two callers: Create saves the draft it just made, and Save
      writes an edit. A second copy of this is how the two would drift on
      what "saved" means — the band, the swatch gate and the status line all
      hang off it. */
-  const saveBible = async () => {
+  const saveBible = async ({ quietIfUnchanged = false } = {}) => {
     try {
       const text = $("#style-bible").value.trim();
       if (!text) { toast("The bible is empty — create it above, or paste content, before saving.", true); return false; }
+      // Pressing Save having changed nothing is not a save. No revision
+      // bump, no journal line, no toast claiming something happened.
+      if (quietIfUnchanged && text === bibleSavedText) return true;
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
-      $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
+      bibleSavedText = text;
+      $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
       syncSwatchGen();  // the step-1 swatch gate arms itself right now too
       toast("Art Direction Bible saved — Breakdowns are open.");

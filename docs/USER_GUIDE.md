@@ -155,10 +155,14 @@ refuse one entirely (`Grammar` in the panel's camera row: *— production
 default —*, *None — no grammar*, or one of the eight). Every take records which grammar it rendered under and where that choice
 came from — the production or the panel.
 
-**Creating the Bible opens Breakdowns.** `Create Art Direction Bible`
-writes it from the anchors, the scan and the cast **and saves it**, so
-stage 03 unlocks from that one action. The editor beneath holds the saved
-document read-only; `Edit` unlocks it and becomes `Save`.
+**One button runs the Bible**, at the top of the section, and its label is
+always the next thing to do: **Create Art Direction Bible** writes it from
+the anchors, the scan and the cast *and saves it*, so stage 03 unlocks from
+that one press. After that it reads **Edit** — which unlocks the text and
+becomes **Save** — and a **Regenerate** button appears beside it. Escape
+discards an edit; saving without changing anything just re-locks. A saved
+Bible is read-only until you press Edit, and regenerating replaces it
+permanently, so it asks first.
 
 ## 5. Stage 02 — Production Design
 

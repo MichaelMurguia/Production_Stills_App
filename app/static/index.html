@@ -280,20 +280,23 @@
 
     <div class="panel step" data-step="4">
       <h2>Art Direction Bible <span class="step-cond">context/01_ART_DIRECTION_BIBLE.md &middot; EDITS REACH EVERY FUTURE PROMPT</span></h2>
+      <!-- One primary control, at the top of the section (user, 2026-08-22:
+           "I should not have to detail out how creating, editing and saving
+           should work — make it all one button"). Its verb is always the
+           next true thing: Create, then Edit, then Save. Regenerate joins
+           it only once a bible exists, and hides again while editing. -->
       <div class="row" style="margin-top:0">
         <button id="wiz-draft" class="primary">Create Art Direction Bible</button>
-        <span class="step-cond">FROM THE ANCHORS, THE SCAN AND THE CAST &mdash; WRITTEN, SAVED, AND BREAKDOWNS OPEN</span>
+        <button id="bible-regen" class="ghost hidden">Regenerate</button>
+        <span class="step-cond" id="bible-cond">FROM THE ANCHORS, THE SCAN AND THE CAST &mdash; WRITTEN, SAVED, AND BREAKDOWNS OPEN</span>
+        <span id="style-status" class="mini"></span>
       </div>
       <label class="wiz-notes" title="Standing instructions for the drafter — anything true of the production that is not texture, palette, light or medium.">Standing notes
         <textarea id="wiz-notes" placeholder="anything else the bible must honor — e.g. &quot;1974, but nobody smokes&quot;"></textarea>
       </label>
       <div id="wiz-draft-busy"></div>
       <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
-      <div class="row">
-        <button class="ghost" id="style-save" disabled>Edit</button>
-        <span class="wv-tag hidden" id="style-save-gate">NOTHING TO EDIT UNTIL A BIBLE EXISTS</span>
-        <span id="style-status" class="mini"></span>
-      </div>
+
       <!-- SWATCH_GENERATE_RULING: an act lives where its precondition is
            met; its result lives where it belongs. Generation reads the
            SAVED Bible, so it stands here; the swatches land in step 1's
