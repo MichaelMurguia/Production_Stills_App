@@ -4409,7 +4409,41 @@ async function renderWizard() {
     syncSwatchGen = async () => {
       const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
       if (!genHost?.isConnected) return;
-      if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
+      /* A gate is readable as state BEFORE it is hit (product rule) —
+         this one rendered nothing at all, so a user who had read the
+         screenplay and come looking for colour found an empty space and
+         no reason for it (user, 2026-08-22: "no color swatches"). The
+         dependency is real and worth stating: swatches are grounded in
+         the saved Bible, one line of citation per colour, which is the
+         whole reason they are trustworthy. Say that, and point at the
+         step that produces it. */
+      if (!engReady || !bible.text.trim()) {
+        const noEngine = !engReady;
+        genHost.innerHTML = `
+          <button class="ghost" disabled
+            title="${noEngine ? "Connect a narrative model in Settings first."
+                              : "Swatches are grounded in the saved Bible — draft and save it first."}"
+            >Generate palette swatches</button>
+          <p class="up-gate mono">${noEngine
+            ? `NO NARRATIVE MODEL CONNECTED — A PALETTE IS READ FROM THE BIBLE BY ONE
+               <button type="button" class="text-act" data-f="sw-gate-eng">Connect one ↗</button>`
+            : `NO SAVED ART DIRECTION BIBLE — EVERY SWATCH IS CITED TO A LINE OF IT,
+               SO THERE IS NOTHING YET TO GROUND A COLOUR IN
+               <button type="button" class="text-act" data-f="sw-gate-bible">Draft it in step 5 ↗</button>`
+          }</p>`;
+        const eng = $("[data-f=sw-gate-eng]", genHost);
+        if (eng) eng.onclick = () => showView("settings");
+        const draft = $("[data-f=sw-gate-bible]", genHost);
+        if (draft) draft.onclick = () => {
+          const el = $("#wiz-draft");
+          if (el) {
+            window.scrollTo({ top: el.getBoundingClientRect().top
+                                   + window.scrollY - 120, behavior: "smooth" });
+            el.focus({ preventScroll: true });
+          }
+        };
+        return;
+      }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
         <button class="text-act" data-f="sw-deep"

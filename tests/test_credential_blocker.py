@@ -199,6 +199,55 @@ class BlockerTests(Install):
             self.assertIn(row["stage"], ("wizard", "boards"))
 
 
+class ThePaletteGateStatesItself(unittest.TestCase):
+    """User, 2026-08-22: "I uploaded my screenplay and went to the
+    Production Design panel. No color swatches."
+
+    The dependency was working as designed — swatches are proposed by a
+    narrative model reading the SAVED Art Direction Bible, each colour
+    cited to a line of it, which is the whole reason they can be trusted.
+    A scene scan alone produces design languages, not colour.
+
+    The defect was that the gate rendered NOTHING: `genHost.innerHTML =
+    ""`. So a user who had done real work and come looking for colour
+    found an empty space and no reason for it. The product rule is that a
+    gate is readable as state BEFORE it is hit — the disabled control, the
+    unmet condition beside it, and a link to where it is resolved.
+    """
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    def gate(self):
+        i = self.JS.index("syncSwatchGen = async ()")
+        return self.JS[i:i + 2600]
+
+    def test_the_gate_is_not_silent(self):
+        g = self.gate()
+        self.assertNotIn('genHost.innerHTML = ""; return;', g)
+
+    def test_it_shows_the_control_disabled(self):
+        g = self.gate()
+        self.assertIn("Generate palette swatches", g)
+        self.assertIn("disabled", g)
+
+    def test_it_states_the_unmet_condition(self):
+        g = self.gate()
+        self.assertIn("NO SAVED ART DIRECTION BIBLE", g)
+        self.assertIn("NO NARRATIVE MODEL CONNECTED", g)
+
+    def test_it_links_to_where_each_is_resolved(self):
+        g = self.gate()
+        self.assertIn("sw-gate-bible", g)
+        self.assertIn("#wiz-draft", g)
+        self.assertIn("sw-gate-eng", g)
+        self.assertIn('showView("settings")', g)
+
+    def test_the_server_still_refuses_without_a_bible(self):
+        """The gate is the courtesy; the refusal is the contract."""
+        self.assertIn("No saved Art Direction Bible yet",
+                      (ROOT / "app/wizard.py").read_text(encoding="utf-8"))
+
+
 class TheLeadNeverJumpsAheadOfTheWork(Install):
     """User, 2026-08-22: "the DO THIS NEXT in the current state is wrong —
     production design should be completed. You would not go to Board
