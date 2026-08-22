@@ -9245,7 +9245,13 @@ function openStylePicker({ title, definition, styles, current, onPick,
     <div class="modal rs-modal" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
-      ${styles.some(x => x.plate) ? `<p class="rs-placeholder mono">PLATES ARE DIAGRAMS UNTIL THE REFERENCE LIBRARY LANDS</p>` : ""}
+      ${/* Only while something in THIS picker is actually showing a diagram.
+             The note used to key off "has a plate", which stayed true after
+             a library gained photographed frames — so cinematography and
+             then world texture kept apologising for diagrams they no longer
+             showed (2026-08-22). */
+        styles.some(x => x.plate && !plateShots(x.key).length)
+          ? `<p class="rs-placeholder mono">PLATES ARE DIAGRAMS UNTIL THE REFERENCE LIBRARY LANDS</p>` : ""}
       <div class="rs-cards${styles.some(x => x.rich) ? " rs-cards-rich" : ""}">${styles.map((st, i) => `
         <div class="rs-card${st === hit ? " on" : ""}${
             st.rich ? " rs-rich" : ""}" data-i="${i}" role="button" tabindex="0">

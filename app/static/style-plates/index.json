@@ -38,5 +38,30 @@
     "cine-subjective-poetic-1.webp",
     "cine-subjective-poetic-2.webp",
     "cine-subjective-poetic-3.webp"
+  ],
+  "tex-decayed": [
+    "tex-decayed-1.webp",
+    "tex-decayed-2.webp",
+    "tex-decayed-3.webp"
+  ],
+  "tex-industrial-grime": [
+    "tex-industrial-grime-1.webp",
+    "tex-industrial-grime-2.webp",
+    "tex-industrial-grime-3.webp"
+  ],
+  "tex-lived-in": [
+    "tex-lived-in-1.webp",
+    "tex-lived-in-2.webp",
+    "tex-lived-in-3.webp"
+  ],
+  "tex-pristine": [
+    "tex-pristine-1.webp",
+    "tex-pristine-2.webp",
+    "tex-pristine-3.webp"
+  ],
+  "tex-weathered": [
+    "tex-weathered-1.webp",
+    "tex-weathered-2.webp",
+    "tex-weathered-3.webp"
   ]
 }

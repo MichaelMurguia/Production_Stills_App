@@ -254,23 +254,29 @@ class TheCardAlwaysShowsAPicture(unittest.TestCase):
         self.assertIn(".rs-cards-rich .rs-frame { aspect-ratio: 16 / 9; }", css)
 
 
-class TheCinematographyPlatesAreReal(unittest.TestCase):
-    """The user rendered all eight grammars, three scenes each, and the
-    manifest is what the picker reads."""
+class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
+    """The user rendered every grammar and every texture, three scenes
+    each, and the manifest is what the picker reads.
 
-    import json as _json
+    Cinematography: action / character / discovery.
+    World texture:  action / sci-fi / shark — the same three subjects
+    under each condition, so the five read as one comparison.
+    """
+
+    PHOTOGRAPHED = {"cinematography": "cine-", "texture": "tex-"}
 
     def manifest(self):
         import json
         return json.loads((ROOT / "app" / "static" / "style-plates"
                            / "index.json").read_text(encoding="utf-8"))
 
-    def test_every_grammar_has_three_frames(self):
+    def test_every_style_in_a_photographed_library_has_three_frames(self):
         from app import style_docs
         m = self.manifest()
-        for st in style_docs.styles("cinematography"):
-            self.assertIn(st["key"], m, f"{st['name']} has no plates")
-            self.assertEqual(len(m[st["key"]]), 3, st["name"])
+        for lib in self.PHOTOGRAPHED:
+            for st in style_docs.styles(lib):
+                self.assertIn(st["key"], m, f"{st['name']} has no plates")
+                self.assertEqual(len(m[st["key"]]), 3, st["name"])
 
     def test_every_named_file_exists(self):
         base = ROOT / "app" / "static" / "style-plates"
@@ -279,12 +285,33 @@ class TheCinematographyPlatesAreReal(unittest.TestCase):
                 self.assertTrue((base / f).exists(), f"{key}: {f} is missing")
 
     def test_the_manifest_names_no_orphans(self):
-        """A file on disk that nothing references is clutter; a manifest
-        entry with no file is a broken image."""
+        """A file nothing references is clutter; an entry with no file is a
+        broken image."""
         base = ROOT / "app" / "static" / "style-plates"
         named = {f for files in self.manifest().values() for f in files}
         on_disk = {p.name for p in base.glob("*.webp")}
         self.assertEqual(on_disk - named, set(), "unreferenced plate files")
+
+    def test_rendering_still_falls_back_to_its_diagrams(self):
+        """Rendering style has no photographed set yet, and must therefore
+        still show the drawn plates rather than a placeholder."""
+        from app import style_docs
+        m = self.manifest()
+        for st in style_docs.styles("rendering"):
+            self.assertNotIn(st["key"], m)
+        i = JS.index("const STYLE_PLATES = ")
+        plates = JS[i:JS.index(";", i)]
+        for st in style_docs.styles("rendering"):
+            self.assertIn('"' + st["name"] + '"', plates)
+
+    def test_the_diagram_apology_only_shows_over_a_diagram(self):
+        """It used to key off "has a plate", which stays true after a
+        library gains photographed frames — so cinematography and then
+        world texture kept apologising for diagrams they no longer
+        showed."""
+        self.assertIn("styles.some(x => x.plate && !plateShots(x.key).length)", JS)
+
+
 
 
 if __name__ == "__main__":
