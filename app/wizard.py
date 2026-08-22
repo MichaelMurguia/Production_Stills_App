@@ -733,7 +733,7 @@ def generate_swatches(provider: str = "gemini",
     if not bible_text:
         raise autofill.AutofillError(
             "No saved Art Direction Bible yet — swatches are grounded in it. "
-            "Draft and save the Bible first (step 5).")
+            "Draft and save the Bible first (step 4).")
 
     if provider == "mock" and generate.mock_enabled():
         from . import mockflow

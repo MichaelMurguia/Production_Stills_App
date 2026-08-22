@@ -4267,7 +4267,7 @@ async function renderWizard() {
        scan finds design LANGUAGES; colour is proposed later by a model
        reading the SAVED Bible, one citation per swatch, which is the
        whole reason a swatch can be trusted. Standing in this column with
-       nothing in it, none of that was discoverable — step 5's generate
+       nothing in it, none of that was discoverable — step 4's generate
        control simply does not render yet, and its own gate two lines up
        talks about saving a draft, not about colour.
 
@@ -4287,10 +4287,10 @@ async function renderWizard() {
       // speaks for itself; spelling it out again is the verbosity D1 cut.
       host.innerHTML = b.text.trim()
         ? `NO SWATCHES YET — GENERATE THEM FROM THE SAVED BIBLE
-           <button type="button" class="text-act" data-f="po-go">Step 5 ↗</button>`
+           <button type="button" class="text-act" data-f="po-go">Step 4 ↗</button>`
         : `COLOUR IS CITED TO THE BIBLE — THE SCREENPLAY READ FINDS DESIGN
            LANGUAGES, NOT COLOUR
-           <button type="button" class="text-act" data-f="po-go">Draft it in step 5 ↗</button>`;
+           <button type="button" class="text-act" data-f="po-go">Draft it in step 4 ↗</button>`;
       const go = $("[data-f=po-go]", host);
       if (go) go.onclick = () => {
         const el = $("#wiz-draft") || $("#style-bible");
@@ -4451,16 +4451,16 @@ async function renderWizard() {
       const bible = await api("/api/style-bible").catch(() => ({ text: "" }));
       if (!genHost?.isConnected) return;
       /* Deliberately silent HERE (SWATCH_GENERATE_RULING, D1): this
-         control sits two lines under step 5's own save gate, and saying
+         control sits two lines under step 4's own save gate, and saying
          it twice on one screen is the verbosity that ruling cut. The
          explanation a user actually needs belongs where the absence is
-         FELT — step 2's Color Palette column — not here. */
+         FELT — step 1's Color Palette column — not here. */
       if (!engReady || !bible.text.trim()) { genHost.innerHTML = ""; return; }
       genHost.innerHTML = `
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
         <button class="text-act" data-f="sw-deep"
           title="A second, wider read for the colors the Bible only mentions in passing — existing swatches excluded">Deep scan</button>
-        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 2 / COLOR PALETTE</span>
+        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>
         <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
       const runGen = async deep => {
@@ -6034,7 +6034,7 @@ async function renderWizard() {
   $("#style-save").onclick = async () => {
     try {
       const text = $("#style-bible").value.trim();
-      if (!text) return toast("The bible is empty — draft it in step 5 (or paste content) before saving.", true);
+      if (!text) return toast("The bible is empty — draft it in step 4 (or paste content) before saving.", true);
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved — every future prompt uses this`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
@@ -6858,7 +6858,7 @@ const SHELVES = [
   { key: "STYLE", name: "STYLE", ride: "RIDES ALONG — EVERY RENDER, AUTOMATICALLY",
     note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
   { key: "SUBJECT", name: "SUBJECTS", ride: "RIDES ALONG — WHEN ITS SUBJECT APPEARS ON A PANEL",
-    note: "cast in Production Design step 4 — same cards, this is where they live",
+    note: "cast in Production Design step 3 — same cards, this is where they live",
     count: n => `${n.cast} CAST · ${n.uncast} UNCAST` },
   { key: "SCENE", name: "SCENES", ride: "RIDES ALONG — WHEN A BOARD COVERS ITS SCENE",
     note: "promoted takes, light studies, crops of environments",
