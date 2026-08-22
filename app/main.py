@@ -2509,9 +2509,7 @@ async def api_autofill_spec(body: dict) -> dict:
             body.get("provider", "gemini"),
             str(body.get("board_type", "")),
             str(body.get("source_text", "")),
-            str(body.get("panels", "")),
-            body.get("panel_count", ""),
-            str(body.get("panels_brief", "")))
+            str(body.get("panels", "")))
     except autofill.AutofillError as e:
         raise HTTPException(422, str(e))
     except generate.GenerationError as e:

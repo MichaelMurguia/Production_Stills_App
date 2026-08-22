@@ -1654,7 +1654,13 @@ function checklistRows(state, upTo) {
   // (the interview) list plainly but never read as the blocker.
   const cur = chain.findIndex(s => !s.done && !s.optional);
   return chain.map((s, i) => ({
-    ...s, addr: `STAGE ${STAGE_NUM[s.stage]}${s.optional && !s.done ? " · OPTIONAL" : ""}`,
+    /* Not every link is a numbered stage. "Connect a model" points at
+       Settings, which has no number, and this read `STAGE undefined` from
+       the day that link was added (2026-08-18) until it was seen on
+       screen 2026-08-22. A place without a number says its own name. */
+    ...s, addr: (STAGE_NUM[s.stage] ? `STAGE ${STAGE_NUM[s.stage]}`
+                                    : String(s.stage || "").toUpperCase())
+      + (s.optional && !s.done ? " · OPTIONAL" : ""),
     state: s.done ? "done" : i === cur ? "cur" : "todo",
   }));
 }
@@ -7640,7 +7646,7 @@ async function renderSpecs(openId = null) {
   // One draft per door — the two hold different fields, and a single key
   // would restore half a form into the wrong one.
   persistForm("autoSpecDraft", ["spec-auto-id", "spec-auto-subject",
-                                "spec-auto-panels-brief", "spec-auto-count",
+                                "spec-auto-source", "spec-auto-panels",
                                 "spec-auto-mode", "spec-auto-btype",
                                 "spec-auto-provider"]);
   persistForm("blankSpecDraft", ["spec-new-id", "spec-new-subject",
@@ -7651,76 +7657,164 @@ async function renderSpecs(openId = null) {
   // The instruction example speaks this production's screenplay, never a
   // hardcoded film's (user ruling 2026-08-01); the same fetch powers the
   // Create Breakdown pre-population.
+  /* One composer per kind of board, shared by the deep link from the
+     coverage map and by the scene search below it. Two copies of this
+     drifted once already — the search wrote its own scene sentence while
+     the deep link wrote another, and a brief is not decoration: it is what
+     the deterministic scene anchor matches on. */
+  const titleCaseName = t => String(t).toLowerCase()
+    .replace(/(^|[\s/#-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+  const sceneBrief = (rec, scene) =>
+    `${scene.heading} — a scene board for this single scene at `
+    + `${titleCaseName(rec?.location || scene.location || "")}. Extract the `
+    + "set, dressing, props and atmosphere the script gives this scene.";
+  const locationBrief = rec => {
+    const heads = (rec.scene_list || []).map(x => x.heading);
+    const n = rec.scenes ?? heads.length;
+    return `${titleCaseName(rec.location)} — `
+      + `${rec.int_ext ? "an " + rec.int_ext + " " : "a "}location board covering `
+      + `the ${n} scene${n === 1 ? "" : "s"} the script sets there`
+      + (heads.length ? `: ${heads.slice(0, 4).join("; ")}`
+        + (heads.length > 4 ? ` (+${heads.length - 4} more)` : "") : "")
+      + ". Focus on the location itself — its set, dressing and atmosphere "
+      + "as the script establishes them.";
+  };
+
   Promise.all([api("/api/screenplay/locations"), api("/api/specs")])
     .then(([d, allSpecs]) => {
       const locs = d.locations || [];
       const titleCase = t => String(t).toLowerCase()
         .replace(/(^|[\s/#-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
 
-      /* Find a scene by heading (user, 2026-08-22). The read already holds
-         every slugline, so this is a search over what is known rather than
-         something to type from memory. A native datalist, following the
-         wizard's sample-location field — no new pattern, and it filters on
-         any part of the heading for free.
+      /* FIND A SCENE — a real search, not a datalist (user, 2026-08-22:
+         "Find a scene needs to be GOOD. If I type in Terra Nova, or Terra,
+         it will return all scenes with the name Terra in it").
 
-         Picking one writes the brief, because the brief is what the
-         deterministic scene anchor matches on: naming the slugline there
-         makes autofill quote that scene's own text into the instructions
-         instead of hunting for it. */
-      const sceneIn = $("#spec-auto-scene");
-      const sceneList = $("#spec-scene-list");
-      // Squashed and deduped: screenplays wrap sluglines with irregular
-      // spacing, and a location the script returns to has the same heading
-      // more than once — a picker offering the same line twice is a picker
-      // that looks broken. `insights.scene_anchor` normalises whitespace
-      // too, so squashing here cannot stop the anchor matching.
+         A native <datalist> filters however the browser feels like it —
+         prefix in some, substring in others — cannot rank, and cannot show
+         that TERRA NOVA is a location holding nine scenes. So the matching
+         is ours: every typed word must appear somewhere in the heading or
+         its location, in any order, so "terra bridge" finds
+         "INT. TERRA NOVA BRIDGE - NIGHT".
+
+         LOCATIONS lead the results, because "Terra Nova" is usually a
+         request for the place rather than one scene in it — and picking a
+         location composes a location board over all of its scenes, while
+         picking a scene composes a single-scene board. Both write the
+         brief, which is what the scene anchor matches on. */
+      const sceneIn = $("#spec-auto-subject");   // the brief IS the search
+      const hits = $("#spec-auto-scene-hits");
+      const note = $("#spec-auto-scene-note");
+
       const seenHead = new Set();
       const scenes = locs.flatMap(l => (l.scene_list || []).map(sc => ({
         heading: String(sc.heading || "").replace(/\s+/g, " ").trim(),
-        location: l.location, int_ext: l.int_ext })))
-        .filter(sc => sc.heading && !seenHead.has(sc.heading)
-                      && seenHead.add(sc.heading));
-      if (sceneList) {
-        sceneList.innerHTML = scenes.map(sc =>
-          `<option value="${esc(sc.heading)}"></option>`).join("");
-        const note = $("#spec-auto-scene-note");
-        if (note) {
-          note.textContent = scenes.length
-            ? `${scenes.length} SLUGLINES THE READ FOUND`
-            : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD BELOW";
-        }
+        loc: l })))
+        .filter(x => x.heading && !seenHead.has(x.heading)
+                     && seenHead.add(x.heading));
+      if (note) {
+        note.textContent = scenes.length
+          ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
+          : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD BELOW";
       }
-      if (sceneIn) sceneIn.addEventListener("change", () => {
-        const pick = scenes.find(sc =>
-          sc.heading.toUpperCase() === sceneIn.value.trim().toUpperCase());
-        if (!pick) return;
-        const subj = $("#spec-auto-subject");
-        if (subj) {
-          subj.value = `${pick.heading} — a scene board for this single scene `
-            + `at ${titleCase(pick.location)}. Extract the set, dressing, `
-            + "props and atmosphere the script gives this scene.";
-          subj.dispatchEvent(new Event("input"));
+
+      const lc = t => String(t || "").toLowerCase();
+      const search = q => {
+        const words = lc(q).split(/\s+/).filter(Boolean);
+        if (!words.length) return [];
+        const hitsAll = words.every.bind(words);
+        const out = [];
+        for (const l of locs) {
+          const hay = lc(l.location);
+          if (hitsAll(w => hay.includes(w))) {
+            out.push({ kind: "loc", loc: l, label: l.location,
+                       sub: `${l.scenes} scene${l.scenes === 1 ? "" : "s"}` });
+          }
+        }
+        for (const sc of scenes) {
+          const hay = lc(sc.heading + " " + sc.loc.location);
+          if (hitsAll(w => hay.includes(w))) {
+            out.push({ kind: "scene", loc: sc.loc, scene: sc,
+                       label: sc.heading, sub: "one scene" });
+          }
+        }
+        return out;
+      };
+
+      let marked = -1;
+      const closeHits = () => {
+        if (hits) { hits.hidden = true; hits.innerHTML = ""; }
+        marked = -1;
+      };
+      const choose = row => {
+        // The picked brief REPLACES what was typed: a match is a fuller
+        // statement of the same request, and it is what the deterministic
+        // scene anchor matches on.
+        if (sceneIn) {
+          sceneIn.value = row.kind === "scene"
+            ? sceneBrief(row.loc, row.scene) : locationBrief(row.loc);
+          sceneIn.dispatchEvent(new Event("input", { bubbles: false }));
         }
         const bt = $("#spec-auto-btype");
-        if (bt && !bt.dataset.touched) bt.value = "SCENE";
+        if (bt && !bt.dataset.touched) {
+          bt.value = row.kind === "scene" ? "SCENE" : "LOCATION";
+        }
         const id = $("#spec-auto-id");
         if (id && !id.value.trim()) {
-          // From the LOCATION, not the whole slugline: an id reading
-          // INT._P-38_COCKPIT_-_DAY_V001 carries the grammar of a heading
-          // rather than the name of a board.
-          const base = slugSpecId(pick.location || pick.heading)
+          const base = slugSpecId(row.loc?.location || row.label)
             .replace(/^_+|_+$/g, "").slice(0, 40) || "BOARD";
           id.value = `${base}_V001`;
         }
-      });
-      const top = locs[0]?.location;
-      if (top) {
-        const t = titleCase(top);
-        // B2: the example IS the placeholder — a trailing italic
-        // sentence is prose the field can carry itself.
-        const ta0 = $("#spec-auto-subject");
-        if (ta0 && !ta0.value) ta0.placeholder = `${t} — the scenes the script sets there`;
+        closeHits();
+      };
+
+      let found = [];
+      const draw = () => {
+        if (!hits || !sceneIn) return;
+        found = search(sceneIn.value).slice(0, 40);
+        if (!found.length) {
+          hits.innerHTML = sceneIn.value.trim()
+            ? `<p class="scene-none mono">NOTHING MATCHES ${esc(sceneIn.value.trim().toUpperCase())}</p>`
+            : "";
+          hits.hidden = !sceneIn.value.trim();
+          return;
+        }
+        hits.innerHTML = found.map((r, i) => `
+          <button type="button" class="scene-hit${r.kind === "loc" ? " is-loc" : ""}"
+            data-i="${i}" role="option">
+            <span class="scene-hit-label">${esc(r.label)}</span>
+            <span class="scene-hit-sub mono">${esc(r.sub)}</span>
+          </button>`).join("");
+        hits.hidden = false;
+        marked = -1;
+        $$(".scene-hit", hits).forEach(b =>
+          b.onclick = () => choose(found[+b.dataset.i]));
+      };
+
+      if (sceneIn) {
+        sceneIn.addEventListener("input", () => { draw(); syncAlternatives(); });
+        sceneIn.addEventListener("focus", draw);
+        sceneIn.addEventListener("keydown", e => {
+          if (hits?.hidden || !found.length) return;
+          const rows = $$(".scene-hit", hits);
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            marked = (marked + (e.key === "ArrowDown" ? 1 : -1) + rows.length)
+                     % rows.length;
+            rows.forEach((r, i) => r.classList.toggle("on", i === marked));
+            rows[marked]?.scrollIntoView({ block: "nearest" });
+          } else if (e.key === "Enter" && marked >= 0) {
+            e.preventDefault();
+            choose(found[marked]);
+          } else if (e.key === "Escape") {
+            closeHits();
+          }
+        });
+        document.addEventListener("click", e => {
+          if (!hits?.contains(e.target) && e.target !== sceneIn) closeHits();
+        });
       }
+
       if (!locHint) return;
       const norm = x => String(x).toUpperCase().trim();
       let rec = locs.find(l => norm(l.location) === norm(locHint));
@@ -7747,23 +7841,10 @@ async function renderSpecs(openId = null) {
       }
       const promptEl = $("#spec-auto-subject");
       if (!promptEl || promptEl.value.trim()) return;
-      if (scene) {
-        promptEl.value = `${scene.heading} — a scene board for this single scene at `
-          + `${titleCase(rec.location)}. Extract the set, dressing, props and `
-          + `atmosphere the script gives this scene.`;
-      } else if (rec) {
-        const heads = (rec.scene_list || []).map(s2 => s2.heading);
-        promptEl.value = `${titleCase(rec.location)} — `
-          + `${rec.int_ext ? "an " + rec.int_ext + " " : "a "}location board covering the `
-          + `${rec.scenes} scene${rec.scenes === 1 ? "" : "s"} the script sets there`
-          + (heads.length ? `: ${heads.slice(0, 4).join("; ")}`
-            + (heads.length > 4 ? ` (+${heads.length - 4} more)` : "") : "")
-          + `. Focus on the location itself — its set, dressing and atmosphere `
-          + `as the script establishes them.`;
-      } else {
-        promptEl.value = `${titleCase(locHint)} — the scenes the script sets `
-          + `there. Focus on the location's set, dressing and atmosphere as established.`;
-      }
+      promptEl.value = scene ? sceneBrief(rec, scene)
+        : rec ? locationBrief(rec)
+        : `${titleCase(locHint)} — the scenes the script sets there. Focus on `
+          + "the location's set, dressing and atmosphere as established.";
     }).catch(() => { /* the neutral example stands */ });
 
   // Sheet IDs are CAPS_WITH_UNDERSCORES — enforce as you type, spaces become
@@ -7872,9 +7953,34 @@ async function renderSpecs(openId = null) {
   $("#spec-auto-open-screenplay").onclick = () =>
     window.open("/api/screenplay/file", "_blank", "noopener");
 
-  /* One act behind this door now (2026-08-22): read the screenplay. The
-     pasted-section path is gone with its textarea, so the verb no longer
-     has a branch to state — it says the one thing it does. */
+  /* The brief and the pasted section are ALTERNATIVES (user, 2026-08-22:
+     "should act as radio buttons — you can't do both"). Not literal radio
+     buttons: the choice is made by typing, so the one you are not using
+     goes unavailable and says so through the verb rather than asking you
+     to declare an intent first.
+
+     They are genuinely exclusive downstream — `source_text` REPLACES the
+     screenplay, so a brief alongside it would name material the model has
+     been told not to look at. */
+  const syncAlternatives = () => {
+    const brief = $("#spec-auto-subject");
+    const paste = $("#spec-auto-source");
+    if (!brief || !paste) return;
+    const usingPaste = !!paste.value.trim();
+    const usingBrief = !!brief.value.trim();
+    brief.closest(".door-row")?.classList.toggle("is-off", usingPaste);
+    paste.closest(".door-row")?.classList.toggle("is-off", usingBrief);
+    brief.disabled = usingPaste;
+    paste.disabled = usingBrief;
+    const go = $("#spec-auto-go");
+    if (go) {
+      go.textContent = usingPaste ? "Break down the pasted section"
+                                  : "Read the screenplay for it";
+    }
+  };
+  $("#spec-auto-source")?.addEventListener("input", syncAlternatives);
+  syncAlternatives();
+
 
   /* TWO handlers, because there are two acts and they call different
      endpoints. The merged form branched on which boxes were empty; the
@@ -7884,31 +7990,33 @@ async function renderSpecs(openId = null) {
     e.preventDefault();
     const btn = $("#spec-auto-go");
     const brief = $("#spec-auto-subject").value.trim();
-    const count = $("#spec-auto-count")?.value || "";
-    const panelsBrief = $("#spec-auto-panels-brief")?.value.trim() || "";
-    if (!brief) {
-      toast("Say what this board should get — find a scene above, or describe "
-            + "it. To make an empty sheet, use Blank sheet beside it.", true);
+    const source = $("#spec-auto-source")?.value.trim() || "";
+    const panels = $("#spec-auto-panels")?.value.trim() || "";
+    if (!brief && !source) {
+      toast("Say what this board should get, or paste a section. To make an "
+            + "empty sheet, use Blank sheet beside it.", true);
       return;
     }
     btn.disabled = true;
     const status = $("#spec-auto-status");
     const busy = status && startBusy(status,
-      "Reading the screenplay and drafting the breakdown…",
-      count ? `${count} panels` : "deciding the panels it needs");
+      source ? "Breaking down the section you pasted…"
+             : "Reading the screenplay and drafting the breakdown…",
+      panels ? "building the panels you named" : "deciding the panels it needs");
     try {
       const spec = await api("/api/specs/autofill", { method: "POST", json: {
         specification_id: slugSpecId($("#spec-auto-id").value),
         mode: $("#spec-auto-mode").value,
         board_type: $("#spec-auto-btype")?.value || "LOCATION",
         prompt: brief,
-        panel_count: count,
-        panels_brief: panelsBrief,
+        source_text: source,
+        panels,
         provider: $("#spec-auto-provider")?.value || "gemini",
       } });
       busy?.done();
       toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
-            + `${spec.evidence_ledger.length} evidence rows.`);
+            + `${spec.evidence_ledger.length} evidence rows`
+            + (source ? " — from the section you pasted." : "."));
       localStorage.removeItem("autoSpecDraft");
       renderSpecs(spec.specification_id);
     } catch (err) {

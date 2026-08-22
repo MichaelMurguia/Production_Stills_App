@@ -295,6 +295,33 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
                       (ROOT / "app/wizard.py").read_text(encoding="utf-8"))
 
 
+class AChainLinkWithoutANumberSaysItsName(unittest.TestCase):
+    """Seen on screen 2026-08-22: the gate chain read "Connect a model ·
+    STAGE undefined · DONE".
+
+    STAGE_NUM maps the five pipeline stages; the credential link points at
+    Settings, which is not one of them. It has read `STAGE undefined`
+    since that link was added on 2026-08-18 — four days of a template
+    printing a JavaScript failure mode at the user, in the first row of
+    the first thing a locked stage shows them."""
+
+    def test_a_numbered_stage_still_says_stage_n(self):
+        i = JS.index("const cur = chain.findIndex")
+        seg = JS[i:i + 900]
+        self.assertIn("STAGE_NUM[s.stage] ? `STAGE ${STAGE_NUM[s.stage]}`", seg)
+
+    def test_an_unnumbered_one_says_its_own_name(self):
+        i = JS.index("const cur = chain.findIndex")
+        seg = JS[i:i + 900]
+        self.assertIn('String(s.stage || "").toUpperCase()', seg)
+
+    def test_settings_is_the_link_that_has_no_number(self):
+        self.assertNotIn('settings:', JS[JS.index("const STAGE_NUM"):
+                                         JS.index("const STAGE_NUM") + 200])
+        i = JS.index("CONNECT AN AI MODEL")
+        self.assertIn('stage: "settings"', JS[i:i + 400])
+
+
 class AnAnchorCanBeWordsOrAPicture(Install):
     """User, 2026-08-22, looking at stage 03's gate: "the breakdown sheet
     is broken because — what is style reference?"

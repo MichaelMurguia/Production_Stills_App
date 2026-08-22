@@ -1220,41 +1220,74 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
 
     def test_the_generative_fields_belong_to_the_generative_door(self):
         a, b = self.auto(), self.blank()
-        for probe in ("Find a scene", "What should I get?",
-                      "What should the panels contain?"):
+        for probe in ("What should I get?", "Or paste a section",
+                      "Panels to include"):
             self.assertIn(probe, a, probe)
             self.assertNotIn(probe, b, f"{probe} must not be in the blank door")
 
-    def test_a_scene_is_found_by_search_not_typed_from_memory(self):
-        """User, 2026-08-22. The read already holds every slugline, so the
-        door searches what is known. A native datalist, following the
-        wizard's sample-location field — no new pattern."""
-        a = self.auto()
-        self.assertIn('id="spec-auto-scene" list="spec-scene-list"', a)
-        self.assertIn('<datalist id="spec-scene-list">', a)
-        self.assertIn("sceneList.innerHTML = scenes.map", JS)
+    def test_the_brief_field_is_the_search(self):
+        """User, 2026-08-22: "What should I get is our search field. If it
+        matches a scene its listed. If not, the user can just type and
+        that is what is passed to the engine."
 
-    def test_picking_a_scene_writes_the_brief(self):
-        """Because the brief is what the deterministic scene anchor matches
-        on — naming the slugline there makes autofill quote that scene's
-        own text instead of hunting for it."""
-        i = JS.index('sceneIn.addEventListener("change"')
+        A native datalist was tried first and withdrawn: it filters however
+        the browser feels like it, cannot rank, and cannot show that TERRA
+        NOVA is a location holding seven scenes."""
+        a = self.auto()
+        self.assertIn('id="spec-auto-subject"', a)
+        self.assertIn('id="spec-auto-scene-hits"', a)
+        self.assertNotIn("datalist", a)
+        self.assertIn('const sceneIn = $("#spec-auto-subject")', JS)
+
+    def test_every_typed_word_must_appear_somewhere(self):
+        """"terra" finds all seven Terra Nova locations; "terra bridge"
+        finds the one. Order does not matter and neither does position —
+        that is what makes it a search rather than a prefix filter."""
+        i = JS.index("const search = q =>")
+        seg = JS[i:i + 900]
+        self.assertIn("words.every", seg)
+        self.assertIn("hay.includes(w)", seg)
+
+    def test_locations_lead_the_results(self):
+        """"Terra Nova" is usually a request for the place rather than one
+        scene in it, and a location result composes a board over all of
+        its scenes."""
+        i = JS.index("const search = q =>")
         seg = JS[i:i + 1100]
-        self.assertIn("a scene board for this single scene", seg)
-        self.assertIn('bt.value = "SCENE"', seg)
+        self.assertLess(seg.index('kind: "loc"'), seg.index('kind: "scene"'))
 
-    def test_the_panel_count_is_a_choice_not_a_list(self):
-        a = self.auto()
-        self.assertIn('id="spec-auto-count"', a)
-        self.assertIn("The content decides", a)
-        self.assertIn('id="spec-auto-panels-brief"', a)
-        self.assertNotIn("one per line", a)
+    def test_picking_a_result_writes_the_brief(self):
+        """The brief is what the deterministic scene anchor matches on, so
+        a pick replaces what was typed with the fuller statement."""
+        i = JS.index("const choose = row =>")
+        seg = JS[i:i + 1200]
+        self.assertIn("sceneBrief(row.loc, row.scene)", seg)
+        self.assertIn("locationBrief(row.loc)", seg)
+        self.assertIn('row.kind === "scene" ? "SCENE" : "LOCATION"', seg)
 
-    def test_the_paste_door_is_gone(self):
-        """Its textarea, its note and its branch."""
-        for gone in ("spec-auto-source", "PASTED TEXT WINS"):
-            self.assertNotIn(gone, HTML, gone)
-            self.assertNotIn(gone, JS, gone)
+    def test_there_is_one_brief_composer_per_kind(self):
+        """The deep link from the coverage map and the search compose the
+        same sentences; two copies drifted once already."""
+        self.assertEqual(JS.count("const sceneBrief = "), 1)
+        self.assertEqual(JS.count("const locationBrief = "), 1)
+
+    def test_the_brief_and_the_paste_are_alternatives(self):
+        """User: they "should act as radio buttons — you cant do both".
+        They are genuinely exclusive downstream: source_text REPLACES the
+        screenplay, so a brief alongside it would name material the model
+        has been told not to look at."""
+        i = JS.index("const syncAlternatives = ")
+        seg = JS[i:i + 1200]
+        self.assertIn("brief.disabled = usingPaste", seg)
+        self.assertIn("paste.disabled = usingBrief", seg)
+        self.assertIn('classList.toggle("is-off"', seg)
+        self.assertIn(".door-row.is-off", CSS)
+
+    def test_the_verb_says_which_alternative_is_live(self):
+        i = JS.index("const syncAlternatives = ")
+        seg = JS[i:i + 1200]
+        self.assertIn("Break down the pasted section", seg)
+        self.assertIn("Read the screenplay for it", seg)
 
     def test_the_blank_door_is_not_a_superset(self):
         """The merge's central objection. It asks for a name and nothing
@@ -1262,7 +1295,8 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         b = self.blank()
         for gone in ("spec-new-source", "spec-new-panels", "spec-new-provider"):
             self.assertNotIn(gone, b, f"{gone} makes it a superset again")
-        self.assertIn("A NAME FOR THE BOARD — NOTHING IS READ", b)
+        self.assertIn("NOTHING IS READ", b)
+        self.assertIn("NO MODEL RUNS", HTML)
 
     def test_they_call_different_endpoints(self):
         """What actually makes them two acts rather than one form."""
@@ -1278,9 +1312,10 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         """A1: a label names its effect, not its filing destination.
         RULE_PASS_2 C5 took the first person out of it."""
         a = self.auto()
-        self.assertIn("THE SCREENPLAY IS READ FOR IT", a)
-        self.assertIn("SHAPES THEM — EVIDENCE STILL RULES WHAT THEY CAN SAY", a)
-        self.assertIn("JUST A NAME — IT DOES NOT AFFECT GENERATION", a)
+        self.assertIn("SCREENPLAY IS READ FOR IT", a)
+        self.assertIn("PASTE WINS — SCRIPT NOT READ", a)
+        self.assertIn("EMPTY — CONTENT DECIDES", a)
+        self.assertIn("A NAME ONLY", a)
 
     def test_the_section_carries_a_way_to_read_the_screenplay(self):
         self.assertIn('id="spec-auto-open-screenplay"', self.auto())
@@ -1293,13 +1328,12 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertNotIn("autopanels", JS)
         self.assertNotIn("autopanels", HTML)
 
-    def test_the_submit_says_the_one_thing_it_does(self):
-        """C2's recomputing verb existed because one submit hid three
-        acts. Two of the three are gone — the empty sheet is its own door,
-        the pasted section is retired — so the verb states its single act
-        and there is nothing left to recompute."""
-        self.assertNotIn("const submitVerb", JS)
+    def test_the_submit_states_the_act_it_will_perform(self):
+        """C2 survives: the door holds two acts and the verb says which.
+        The third act it used to hide is the other door now."""
         self.assertIn('id="spec-auto-go">Read the screenplay for it', HTML)
+        i = JS.index("const syncAlternatives = ")
+        self.assertIn("go.textContent", JS[i:i + 1200])
 
     def test_it_reports_while_it_drafts(self):
         i = JS.index('$("#spec-auto-form").addEventListener("submit"')

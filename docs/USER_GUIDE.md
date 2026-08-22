@@ -279,14 +279,18 @@ Bible is the fix, not regenerating the swatches.
 *Blank sheet* makes an empty sheet you fill yourself. They are different
 acts, so amber marks the one that does the work.
 
-In the reading door: **Find a scene** searches every slugline the read
-found — type any part of one — and picking it writes the brief and sets
-the board type to SCENE. **What should I get?** is the brief itself, and
-naming a slugline in it makes the draft quote that scene's own text rather
-than hunting for it. **Panels** leaves the count to the evidence unless
-you set one, and **What should the panels contain?** shapes what each
-panel is about. Neither licenses anything the screenplay does not support:
-every claim still cites its evidence.
+In the reading door, **What should I get?** is also the search. Type any
+part of a location or a slugline — `terra` lists every Terra Nova place
+with its scene count, then the individual scenes — and picking one writes
+the brief, which is what makes the draft quote that scene's own text
+rather than hunting for it. If nothing matches, what you typed is simply
+the brief.
+
+**Or paste a section** is the alternative, not an addition: filling one
+makes the other unavailable, because a pasted section *replaces* the
+screenplay rather than adding to it. The submit says which one it is about
+to do. **Panels to include** names them one per line, or leave it empty
+and the content decides.
 
 **Drafting.** Describe the board ("Charlie's cabin — the workshop scenes
 with the GT40") and **Run breakdown**: the research pass reads the whole

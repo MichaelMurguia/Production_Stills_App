@@ -163,8 +163,8 @@ class TheIntakeStatesIt(unittest.TestCase):
         2026-08-22 ("I want two separate columns") and it came back. Board
         type is a property of the sheet, not of how the sheet was made, so
         BOTH doors carry it."""
-        self.assertIn('<select id="spec-auto-btype">', self.HTML)
-        self.assertIn('<select id="spec-new-btype">', self.HTML)
+        self.assertIn('id="spec-auto-btype"', self.HTML)
+        self.assertIn('id="spec-new-btype"', self.HTML)
 
     def test_it_offers_the_same_vocabulary_everywhere(self):
         self.assertIn("BOARD_TYPES.map", self.JS)
