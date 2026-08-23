@@ -75,13 +75,23 @@ def _subsections(body: str) -> dict[str, str]:
 
 
 def _bullets(text: str) -> list[str]:
+    """Bullets, with wrapped ones kept whole.
+
+    A continuation line silently truncated its bullet until 2026-08-22 —
+    the first mechanic long enough to wrap lost its tail, and these
+    bullets are copied verbatim into the Art Direction Bible and from
+    there into every render prompt. An indented line under a bullet is
+    part of it; anything else ends it."""
     out = []
     for ln in text.splitlines():
         t = ln.strip()
         # `---` is the document's section rule, not a bullet.
-        if not t.startswith(("-", "*")) or set(t) <= {"-", "*", " "}:
+        if t.startswith(("-", "*")) and not set(t) <= {"-", "*", " "}:
+            out.append(re.sub(r"^\s*[-*]\s*", "", t).strip())
+        elif out and t and ln[:1] in (" ", "	"):
+            out[-1] = (out[-1] + " " + t).strip()
+        elif not t:
             continue
-        out.append(re.sub(r"^\s*[-*]\s*", "", t).strip())
     return out
 
 

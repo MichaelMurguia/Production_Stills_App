@@ -34,51 +34,57 @@ Subtitle` section adds a style; deleting one removes it.
 
 ---
 
-# 1. Production Painting — The Brush Left Visible
+# 1. Production Painting — Readable Form Over Surface
 
 ## Key Question
 
-What does this look like painted by a production artist, with the hand
-still showing?
+What does this look like painted by a production artist, read from across
+the room?
 
 ## Description
 
-Painted concept art in which the brush is deliberately not hidden. Forms
-are described in massed tone rather than outline, edges vary from lost to
-found, and the surface reads as pigment worked on a ground. This is the
-default medium of film production art: fast, confident, and honest about
-being a painting.
+Painterly production concept art made to be read on a wall, not studied at
+arm's length. Form is carried by large value groups, silhouette and edge
+quality; brushwork exists to support those, never to become a surface
+effect in its own right. Materials are told apart by value, edge and
+colour before any texture is described. This is the default medium of film
+production art: fast, confident, and built for the distance a board is
+actually viewed from.
 
 ## Operating Principle
 
-Describe form with masses and edges, not with line. Let the mark stay
-visible.
+Brushwork supports large readable forms — do not simulate brush texture
+across every surface; favour shape readability over surface texture.
 
 ## Visual Mechanics
 
-- Visible directional brushwork following form
-- Massed tonal blocks rather than outlined shapes
-- Edge hierarchy — lost, soft and hard edges used deliberately
-- Matte finish; no photographic specular sheen
-- Economy in the periphery, detail concentrated at the focal point
-- Ground colour showing through in passages
-- Palette-knife or dry-brush texture in broken passages
-- No outlines around objects
+- Painterly production concept art
+- Large value grouping over local detail
+- Strong silhouette design
+- Cinematic value grouping
+- Practical material logic
+- Materials read at production-board viewing distance: value, edge quality
+  and colour before texture — no microscopic surface variation
+- Real-world construction logic
+- Restrained visual effects
+- Clear production-design intent
+- Board layouts that resemble an internal studio development wall
 
 ## Image-Model Prompt
 
 ```text
-A production painting with visible brushwork. Form is described in massed
-tonal blocks and varied edges rather than outline — edges range from fully
-lost to crisply found, used deliberately to steer the eye. Directional
-brush marks follow the form and are not blended away. The finish is matte,
-with no photographic specular sheen. Detail concentrates at the focal
-point and drops to economical suggestion in the periphery. Ground colour
-shows through in places and broken dry-brush passages carry texture.
-Nothing is outlined.
+Painterly production concept art, built to read at production-board
+viewing distance. Form is carried by large value groups, strong silhouette
+design and deliberate edge quality — lost, soft and found — rather than by
+local detail. Brushwork supports those large readable forms; it is not
+simulated as texture across every surface, and shape readability wins over
+surface description everywhere the two compete. Materials are told apart
+by value, edge quality and colour before any texture is described, with no
+microscopic surface variation. Construction and material behaviour follow
+real-world logic. Visual effects are restrained. The image states a clear
+production-design intent.
 
-Avoid: photographic detail, cel outlines, flat vector fills, lens
-artefacts, airbrushed smoothness
+Avoid: photography, cel animation
 ```
 
 ---

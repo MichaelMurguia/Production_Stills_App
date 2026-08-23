@@ -340,5 +340,37 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
 
 
 
+
+NL = chr(10)
+
+
+class AWrappedBulletKeepsItsTail(unittest.TestCase):
+    def setUp(self):
+        from app import style_docs
+        self.style_docs = style_docs
+
+    """A mechanic long enough to wrap lost everything after the first line
+    until 2026-08-22, and these bullets are copied verbatim into the Art
+    Direction Bible and from there into every render prompt. "Materials
+    read at production-board viewing distance: value, edge quality and
+    colour before texture" arrived as "...value, edge quality"."""
+
+    def test_a_continuation_line_joins_its_bullet(self):
+        got = self.style_docs._bullets(
+            "- one" + NL + "- two that runs on" + NL
+            + "  and finishes here" + NL + "- three")
+        self.assertEqual(got, ["one", "two that runs on and finishes here",
+                               "three"])
+
+    def test_the_section_rule_is_still_not_a_bullet(self):
+        rule = "- a" + NL + NL + "---" + NL + NL + "- b"
+        self.assertEqual(self.style_docs._bullets(rule), ["a", "b"])
+
+    def test_the_real_document_carries_the_whole_mechanic(self):
+        m = [x for x in self.style_docs.styles("rendering")[0]["mechanics"]
+             if x.startswith("Materials read")]
+        self.assertEqual(len(m), 1)
+        self.assertIn("no microscopic surface variation", m[0])
+
 if __name__ == "__main__":
     unittest.main()

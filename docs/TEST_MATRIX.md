@@ -24,16 +24,16 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1899 tests** across 104 files.
+**1904 tests** across 104 files.
 
 
-## Product app — 1695 tests in 88 files
+## Product app — 1700 tests in 88 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
 | `test_anchor_consolidation.py` | 159 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
-| `test_anchors_stay_in_step.py` | 24 | Regression, user-hit 2026-08-22 and reproduced from the install. |
+| `test_anchors_stay_in_step.py` | 26 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
 | `test_assemble_layout.py` | 8 | Board layout invariants: the aspect variant honors take ratios with a uniform minimal residual, variants resolve per the ruling, and geometry stays in |
@@ -106,7 +106,7 @@ temp home and external services are faked.
 | `test_step_sequence_03.py` | 26 | Stage 03 in the step vocabulary — STEP_SEQUENCE_SPEC Part 3, mock hier-5a. |
 | `test_storage_guard.py` | 14 | Disk space is a gate, not a 502 (user 2026-08-07). |
 | `test_style_anchors.py` | 12 | The four-anchor ruling (2026-08-03): three movie parameters + one board parameter auto-attach, capped per role; board layout is assembly grammar. |
-| `test_style_libraries.py` | 27 | Three anchors, three documents, one parser. |
+| `test_style_libraries.py` | 30 | Three anchors, three documents, one parser. |
 | `test_style_plate_tooling.py` | 11 | The two scripts that stand between a folder of renders and the picker. |
 | `test_stylesheet_parses.py` | 4 | The stylesheet must actually parse. |
 | `test_subject_identity_match.py` | 16 | The SUBJECT IDENTITIES block missed the same way the workbench did. |

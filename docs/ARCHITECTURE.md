@@ -196,8 +196,13 @@ A production set Photo Real after the Bible was written, ran the Model
 Test, and got an oil painting — because the section still said
 Production Painting and listed "photographic detail" under Avoid.
 
-`bible.sync_from_anchors()` rebuilds the section from the entry
-when the anchor names a **different** style. It runs on the interview
+`bible.sync_from_anchors()` rebuilds the section from the entry on
+either kind of drift: the anchor naming a **different** style, or the same
+style whose **document entry has been edited** (the director changes what
+Production Painting *is* by editing `RENDERING_STYLES.md`, and that has to
+reach the productions using it). Hand edits to that section are therefore
+not a supported concept — the place to change what a style means is the
+style document, which is the same canon the picker reads. It runs on the interview
 save and once per production at boot; it is deterministic and free, so
 there is no button and no model call. It fires only on a real
 contradiction, so a hand-tuned section that still names the right style

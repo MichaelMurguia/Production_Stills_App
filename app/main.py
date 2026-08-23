@@ -707,9 +707,15 @@ def _resync_bible_anchors() -> None:
                 except Exception:  # noqa: BLE001 — one bad bible serves the rest
                     continue
                 for r in done:
-                    print(f"[migrate] {proj['slug'] or 'main'}: {r['section']} "
-                          f"{r['stated']} -> {r['chosen']} "
-                          f"(bible rev {r['rev']})", flush=True)
+                    # "Production Painting -> Production Painting" reads as
+                    # a no-op; say which kind of drift it actually was.
+                    what = (f"{r['stated']} -> {r['chosen']}"
+                            if r.get("kind") != "wording"
+                            else f"{r['chosen']} re-transcribed from the "
+                                 "style document")
+                    print(f"[migrate] {proj['slug'] or 'main'}: "
+                          f"{r['section']} {what} (bible rev {r['rev']})",
+                          flush=True)
                 # A drift the repairs cannot settle is not silent: the
                 # texture feeds a SYNTHESIS of anchor and screenplay, and
                 # only a re-draft can redo that.

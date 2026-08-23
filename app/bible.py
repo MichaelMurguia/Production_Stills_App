@@ -315,13 +315,24 @@ def stated_style(anchor: str = "medium", text: str = "") -> str:
 
 
 def anchor_drift(text: str = "") -> list[dict]:
-    """Every anchor whose section names a DIFFERENT style than the anchor.
+    """Every anchor whose section no longer matches the anchor.
 
-    One implementation, four callers: the two repairs below, the bible
-    panel (to state what could not be repaired) and `sample_probe` (to
-    refuse before spending). Only a NAMED disagreement counts — a section
-    that states no style, or an answer that names no known style, is not
-    a contradiction, it is silence."""
+    One implementation, four callers: the repairs below, the bible panel
+    (to state what could not be repaired) and `sample_probe` (to refuse
+    before spending).
+
+    Two kinds of drift, and both matter:
+
+    * a different style NAMED — the anchor was changed after the bible was
+      written, which is the reported bug;
+    * the same style, different WORDS — Rendering Language is a
+      transcription of the style's document entry, so the two disagreeing
+      means the entry was edited since. The director edits that document
+      to change what Production Painting IS (2026-08-22), and the change
+      has to reach the productions using it.
+
+    A section that states no style, or an answer that names no known
+    style, is not drift — it is silence."""
     out = []
     for anchor, cfg in ANCHORS.items():
         entry = anchor_entry(anchor)
@@ -329,11 +340,23 @@ def anchor_drift(text: str = "") -> list[dict]:
             continue
         stated = stated_style(anchor, text)
         want = str(entry.get("name") or "").strip()
-        if stated and stated.lower() != want.lower():
+        if not stated:
+            continue
+        if stated.lower() != want.lower():
             out.append({"anchor": anchor, "section": cfg["section"],
                         "label": cfg["label"], "stated": stated,
-                        "chosen": want, "entry": entry})
+                        "chosen": want, "entry": entry, "kind": "style"})
+        elif anchor == "medium" and _rl_body(text) != rendering_section(entry):
+            # Same style, stale transcription of it.
+            out.append({"anchor": anchor, "section": cfg["section"],
+                        "label": cfg["label"], "stated": stated,
+                        "chosen": want, "entry": entry, "kind": "wording"})
     return out
+
+
+def _rl_body(text: str = "") -> str:
+    return parse_sections(text or load_text()).get(
+        ANCHORS["medium"]["section"], "").strip()
 
 
 # --------------------------------------------------------------- repairs
@@ -430,13 +453,19 @@ def sync_from_anchors(answers: dict = None) -> list[dict]:
     done = []
     for d in anchor_drift(text):
         if d["anchor"] == "medium":
+            # Derived, so it is rewritten whether the STYLE changed or the
+            # style's own definition did. Hand edits to this section are
+            # not a supported concept: the place to change what a
+            # rendering style means is the style document, which is the
+            # canon both this and the picker read.
             text = replace_section(text, d["section"],
                                    rendering_section(d["entry"]))
         elif d["anchor"] == "light":
             text = _drop_stated_bullet(text, "light")
         else:
             continue
-        done.append({k: d[k] for k in ("anchor", "section", "stated", "chosen")})
+        done.append({k: d[k] for k in
+                     ("anchor", "section", "stated", "chosen", "kind")})
     if not done:
         return []
     save_text(text)

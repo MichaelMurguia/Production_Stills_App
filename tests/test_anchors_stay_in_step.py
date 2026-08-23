@@ -151,18 +151,55 @@ class TheBibleFollowsTheRenderingAnchor(unittest.TestCase):
                 continue
             self.assertEqual(after.get(name), body, f"{name} was disturbed")
 
-    def test_a_section_hand_tuned_within_the_right_style_is_left_alone(self):
-        """Only a genuine contradiction fires. A director who added a
-        bullet under Photo Real still has a section naming Photo Real."""
+    def test_rendering_language_is_derived_all_the_way_down(self):
+        """Two kinds of drift, and the SECOND is why hand edits to this
+        section are not a supported concept.
+
+        The director edits `docs/RENDERING_STYLES.md` to change what
+        Production Painting IS (2026-08-22), and that change has to reach
+        the productions using it. A name-only check would never see it —
+        the bible still says Production Painting, just the old definition
+        of it. So the section is rewritten whenever it differs from the
+        entry, and the place to change what a style MEANS is the style
+        document, which is the same canon the picker reads."""
         text = BIBLE.replace(
             "- Production Painting rendering style — the brush left visible.",
-            "- Photo Real rendering style — no mark of the hand.\n"
-            "- Shoot it as if on a 40mm.")
+            "- Photo Real rendering style — no mark of the hand." + chr(10)
+            + "- Shoot it as if on a 40mm.")
         paths.BIBLE.write_text(text, encoding="utf-8")
         self.answer(ANSWER)
+        [d] = bible.anchor_drift()
+        self.assertEqual(d["kind"], "wording")
+        [r] = bible.sync_from_anchors()
+        self.assertEqual(r["anchor"], "medium")
+        after = paths.BIBLE.read_text(encoding="utf-8")
+        self.assertNotIn("Shoot it as if on a 40mm.", after)
+        self.assertIn("Lens-accurate detail falloff", after)
+
+    def test_a_section_that_already_matches_is_not_rewritten(self):
+        """Otherwise every boot bumps the revision on every production."""
+        self.answer(ANSWER)
+        bible.sync_from_anchors()
         self.assertEqual(bible.sync_from_anchors(), [])
-        self.assertIn("Shoot it as if on a 40mm.",
-                      paths.BIBLE.read_text(encoding="utf-8"))
+        self.assertEqual(bible.anchor_drift(), [])
+
+    def test_an_edited_style_document_reaches_the_bible(self):
+        """The reported workflow end to end: the canon changes, and the
+        production's bible follows without anyone re-drafting it."""
+        self.answer(ANSWER)
+        bible.sync_from_anchors()
+        moved = dict(PHOTO_REAL, mechanics=["Shot on a long lens"],
+                     avoid=["illustration"])
+        real = bible.anchor_entry
+        bible.anchor_entry = (
+            lambda a, answer=None: moved if a == "medium" else real(a, answer))
+        try:
+            [r] = bible.sync_from_anchors()
+            self.assertEqual(r["anchor"], "medium")
+            self.assertIn("Shot on a long lens",
+                          paths.BIBLE.read_text(encoding="utf-8"))
+        finally:
+            bible.anchor_entry = real
 
     def test_an_anchor_naming_no_known_style_changes_nothing(self):
         """Free text is a legitimate answer and the app cannot rebuild
@@ -350,7 +387,7 @@ class TheReconciliationRunsRatherThanAsks(unittest.TestCase):
 
     def test_boot_reconciles_every_production(self):
         i = self.SRC.index("def _resync_bible_anchors")
-        seg = self.SRC[i:i + 1600]
+        seg = self.SRC[i:i + 2200]
         self.assertIn("paths.list_projects()", seg)
         self.assertIn("bible.sync_from_anchors()", seg)
         self.assertIn("bible.anchor_conflicts()", seg)
