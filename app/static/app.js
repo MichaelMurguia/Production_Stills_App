@@ -11643,7 +11643,13 @@ async function renderBoardPanels(specId) {
     // camera posts once (journaled + lock re-stamped server-side).
     const camInline = $("[data-f=cam-inline]", card);
     if (camInline) {
-      const openBtn = $("[data-f=cam-open]", camInline);
+      // Scoped to the CARD, not to cam-inline. seqStep puts `verbs` in
+      // the step's head and `body` beneath it, so the button is a sibling
+      // of this div and never a descendant — the lookup found nothing,
+      // no handler was bound, and Change camera did nothing at all
+      // (user-hit 2026-08-22). The editor it opens IS inside cam-inline;
+      // the two live in different halves of the step.
+      const openBtn = $("[data-f=cam-open]", card);
       const editor = $("[data-f=cam-editor]", camInline);
       wireCameraRow("cam", camInline, null);  // Custom-lens reveal only
       if (openBtn && !openBtn.disabled) openBtn.onclick = () => {
@@ -12041,7 +12047,10 @@ async function renderBoardPanels(specId) {
           <li><span class="mono"${f.severity === "WARN" ? ' style="color:var(--hold)"' : ""}>${f.severity} — ${esc(f.axis)}</span>
             <div class="mono" style="color:var(--ink-dim)">${esc(f.note)}${f.suggestion ? `<br>→ ${esc(f.suggestion)}` : ""}</div></li>`).join("");
         const camInl = $("[data-f=cam-inline]", card);
-        const camOpen = camInl && $("[data-f=cam-open]", camInl);
+        // Same scope mistake, same card: this one silently disabled the
+        // composition check's Apply suggested camera, since canApply
+        // needs the button it could not find.
+        const camOpen = $("[data-f=cam-open]", card);
         const canApply = v.suggested_camera && camOpen && !camOpen.disabled;
         const sugLine = v.suggested_camera
           ? `SUGGESTED CAMERA · ${esc(Object.entries(v.suggested_camera)

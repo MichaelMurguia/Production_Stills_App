@@ -331,6 +331,58 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         self.assertIn("Save camera", block)
 
 
+class ChangeCameraIsActuallyWired(unittest.TestCase):
+    """User-hit 2026-08-22: "on the panels screen there is the option to
+    Change camera but if you click it, nothing happens."
+
+    Nothing was bound to it. `seqStep` renders `verbs` inside the step's
+    HEAD and `body` beneath, so the button is a SIBLING of `.cam-inline`
+    and never a descendant — and both lookups scoped the query to
+    `.cam-inline`. `$()` returned null, the `if (openBtn ...)` guard
+    swallowed it, and the button sat there inert. The guard is what made
+    it silent: a missing element read as a disabled one."""
+
+    def test_the_button_is_rendered_in_the_steps_verbs(self):
+        i = JS.index('step({ n: "03", id: "camera"')
+        seg = JS[i:i + 900]
+        v, b = seg.index("verbs:"), seg.index("body:")
+        self.assertLess(v, b, "verbs come first in the step call")
+        self.assertIn('data-f="cam-open"', seg[v:b])
+        self.assertNotIn('data-f="cam-open"', seg[b:])
+
+    def test_the_editor_it_opens_is_inside_the_body(self):
+        """The two halves of the same step — which is exactly why one
+        scope cannot find both."""
+        i = JS.index('step({ n: "03", id: "camera"')
+        seg = JS[i:i + 1800]
+        b = seg.index("body:")
+        self.assertIn('data-f="cam-editor"', seg[b:])
+        self.assertIn('data-f="cam-inline"', seg[b:])
+
+    def test_both_lookups_scope_to_the_card(self):
+        """Not to cam-inline. The second one silently disabled the
+        composition check's Apply suggested camera as well, because
+        canApply needs the button it could not find."""
+        self.assertEqual(JS.count('$("[data-f=cam-open]", card)'), 2)
+        self.assertNotIn('$("[data-f=cam-open]", camInline)', JS)
+        self.assertNotIn('$("[data-f=cam-open]", camInl)', JS)
+
+    def test_opening_reveals_the_editor_and_hides_the_stated_line(self):
+        i = JS.index('const openBtn = $("[data-f=cam-open]", card);')
+        seg = JS[i:i + 400]
+        self.assertIn('editor.classList.remove("hidden")', seg)
+        self.assertIn('$(".cam-stated", camInline).classList.add("hidden")', seg)
+
+    def test_a_frozen_panel_still_refuses_to_open(self):
+        """The disabled state is the one case where nothing happening is
+        correct, and it states why in its title."""
+        i = JS.index('data-f="cam-open"')
+        seg = JS[i:i + 400]
+        self.assertIn("frozen ?", seg)
+        self.assertIn("Frozen by an approved take", seg)
+        self.assertIn("if (openBtn && !openBtn.disabled)", JS)
+
+
 class TheInheritLabelNamesTheRightPlace(unittest.TestCase):
     """User-caught 2026-08-16: "what does 'from Bible' mean on per panel
     camera settings?" It meant nothing — the default is the production's

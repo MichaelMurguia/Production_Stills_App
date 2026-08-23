@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1942 tests** across 106 files.
+**1952 tests** across 106 files.
 
 
-## Product app — 1726 tests in 89 files
+## Product app — 1736 tests in 89 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -44,9 +44,9 @@ temp home and external services are faked.
 | `test_bible.py` | 5 | Bible section model: every non-system ## section is a design language, environments ride the level-3 container, and render_context injects in the docu |
 | `test_bible_editor.py` | 25 | The Art Direction Bible panel: one button, at the top, four verbs. |
 | `test_brief_amend.py` | 9 | The panel brief is editable BETWEEN takes (user 2026-08-08). |
-| `test_camera.py` | 32 | Camera & composition language (user 2026-08-09). |
+| `test_camera.py` | 37 | Camera & composition language (user 2026-08-09). |
 | `test_canon_2026_08_07.py` | 22 | NON_CANON_REVIEW_2026-08-07 — the seven rulings, held. |
-| `test_cinematography_grammar.py` | 30 | The cinematography grammar that rides a render — and the ability to take it back (user 2026-08-16: "the doc provides a prompt — shouldn't we apply the |
+| `test_cinematography_grammar.py` | 35 | The cinematography grammar that rides a render — and the ability to take it back (user 2026-08-16: "the doc provides a prompt — shouldn't we apply the |
 | `test_citation_is_verified.py` | 18 | No route may file SCRIPT_EXPLICIT for a line the screenplay does not contain. |
 | `test_composition.py` | 15 | Scene composition check (2026-08-13). |
 | `test_concurrent_generation.py` | 1 | Two panels rendered simultaneously must be two separate prompts. |

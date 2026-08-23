@@ -379,5 +379,98 @@ class APanelCanSetItsOwnGrammar(unittest.TestCase):
         self.assertIn("changed", seg)
 
 
+class TheGrammarOutranksTheBibleOnColour(unittest.TestCase):
+    """User-hit 2026-08-22: set Chromatic / Operatic, got a desaturated
+    frame back.
+
+    Both blocks were in the prompt. The bible's Lighting Language is a
+    SYNTHESIS written when the bible was drafted — under whatever grammar
+    was chosen then — and it survives a change of anchor because the
+    production's own contrast rules and atmosphere studies live in it.
+    That bible carried "maintain generally restrained saturation" and
+    "avoid unmotivated colored light" from its Classical Adventure draft,
+    and the art-direction block closes with "non-negotiable; it overrides
+    model defaults". The model obeyed the last and strongest thing it was
+    told.
+
+    So precedence is stated, and stated LAST."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path as _P
+        from app import paths, store
+        self._home, self._slug = paths.HOME, paths.ACTIVE_PROJECT
+        self.addCleanup(self._restore)
+        paths.HOME = _P(tempfile.mkdtemp(prefix="prec-"))
+        paths.set_project("")
+        paths.ensure_dirs()
+        paths.BIBLE.parent.mkdir(parents=True, exist_ok=True)
+        paths.BIBLE.write_text(
+            "# P" + chr(10) * 2
+            + "## Rendering Language" + chr(10) + "### Required" + chr(10)
+            + "- Production Painting rendering style - x." + chr(10) * 2
+            + "## Lighting Language" + chr(10)
+            + "- Maintain generally restrained saturation." + chr(10),
+            encoding="utf-8")
+        self.spec = store.new_spec("S1", "cockpit", "CANON_EXTRACTION")
+        self.spec["panels"] = [{"id": "P01", "title": "H", "purpose": "the cockpit"}]
+        store.save_spec("S1", self.spec)
+        self.panel = self.spec["panels"][0]
+
+    def _restore(self):
+        from app import paths
+        paths.HOME = self._home
+        paths.set_project(self._slug)
+
+    def compiled(self):
+        from app import generate
+        return generate.compile_panel_prompt(self.spec, self.panel, [])
+
+    def test_no_grammar_means_no_precedence_line(self):
+        """A production without one renders byte-identically to before,
+        which is what makes this reversible."""
+        self.assertNotIn("WHERE THEY DISAGREE", self.compiled())
+
+    def test_it_is_stated_AFTER_the_bible_not_before(self):
+        """Position is the whole point: the bible's own closing line
+        claims to override defaults, so anything meant to outrank it has
+        to come later."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        lines = self.compiled().splitlines()
+        i = next(n for n, l in enumerate(lines) if l.startswith("VISUAL STYLE"))
+        j = next(n for n, l in enumerate(lines) if "restrained saturation" in l)
+        k = next(n for n, l in enumerate(lines) if l.startswith("WHERE THEY DISAGREE"))
+        self.assertLess(i, k)
+        self.assertLess(j, k)
+
+    def test_it_names_the_grammar_that_is_actually_riding(self):
+        from app import cinematography
+        st = cinematography.styles()[0]
+        cinematography.save_setting(st["key"])
+        self.assertIn(st["name"].upper(), self.compiled())
+
+    def test_it_claims_light_and_colour_only(self):
+        """Narrow on purpose. The bible keeps medium, finish, materials,
+        world condition and what may appear — a grammar that could
+        overrule the rendering style would undo the anchor split."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        i = self.compiled().index("WHERE THEY DISAGREE")
+        seg = self.compiled()[i:i + 700]
+        for owns in ("saturation", "hue", "contrast", "value key"):
+            self.assertIn(owns, seg)
+        for keeps in ("medium", "brushwork", "finish", "materials"):
+            self.assertIn(keeps, seg)
+
+    def test_a_panel_that_refused_a_grammar_gets_no_line(self):
+        """NONE means no grammar, so there is nothing to give precedence
+        to and nothing to say."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        self.panel["cinematography"] = "NONE"
+        self.assertNotIn("WHERE THEY DISAGREE", self.compiled())
+
+
 if __name__ == "__main__":
     unittest.main()

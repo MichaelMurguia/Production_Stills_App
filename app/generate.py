@@ -788,6 +788,29 @@ def _compiled_lines(spec: dict, panel: dict) -> list[str]:
     return compile_panel_prompt(spec, panel, []).splitlines()
 
 
+def _grammar_precedence(panel: dict) -> list[str]:
+    """Who wins when the bible and the grammar disagree about light.
+
+    Empty unless a grammar actually rides, so a production without one
+    renders byte-identically to before."""
+    from . import cinematography as _cine
+    st = _cine.resolve(panel)
+    if not st:
+        return []
+    return [
+        f"WHERE THEY DISAGREE: the CINEMATOGRAPHY GRAMMAR above "
+        f"({st['name'].upper()}) governs LIGHT and COLOUR \u2014 saturation, "
+        "hue, contrast, value key, and the behaviour and colour of the "
+        "light sources. Where the art direction above states a lighting or "
+        "colour rule the grammar contradicts, follow the GRAMMAR: it is "
+        "the anchor set for exactly this, and the art direction's lighting "
+        "section may predate it. The art direction still rules everything "
+        "else without exception \u2014 medium, brushwork, finish, materials, "
+        "the condition of the world, and what may appear in frame.",
+        "",
+    ]
+
+
 def _setting_lines(spec: dict, panel: dict) -> list[str]:
     """The SETTING block — slugline discipline. Scene boards carry one time of
     day for every panel; location and lighting-study boards take it per panel.
@@ -1095,6 +1118,22 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         "",
         _style_context(spec, panel),
         "",
+        # Precedence, stated where it can be read LAST (user-hit
+        # 2026-08-22: Chromatic / Operatic set, and a desaturated frame
+        # back). The bible's Lighting Language is a SYNTHESIS written when
+        # the bible was drafted — under whatever grammar was chosen then —
+        # and it survives a change of anchor because the production's own
+        # contrast rules and atmosphere studies live in it. That user's
+        # bible carried "maintain generally restrained saturation" and
+        # "avoid unmotivated colored light" from its Classical Adventure
+        # draft, three lines below a CHROMATIC / OPERATIC grammar block,
+        # and closed with "non-negotiable; it overrides model defaults".
+        # The model obeyed the last and strongest thing it was told.
+        #
+        # The grammar is the anchor the director set for exactly this, so
+        # on light and colour it wins. Narrow on purpose: the bible keeps
+        # medium, finish, materials, world condition and what may appear.
+        *_grammar_precedence(panel),
         "BOARD-SPECIFIC TREATMENT",
         str(spec.get("render_intent", "Painterly production concept art with visible "
             "brushwork; production-development treatment, not glossy marketing art.")),
