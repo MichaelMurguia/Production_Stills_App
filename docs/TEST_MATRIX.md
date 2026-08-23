@@ -24,7 +24,7 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2015 tests** across 109 files.
+**2020 tests** across 109 files.
 
 
 ## Product app — 1799 tests in 92 files
@@ -125,7 +125,7 @@ temp home and external services are faked.
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
 
 
-## Storefront — 216 tests in 17 files
+## Storefront — 221 tests in 17 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -138,7 +138,7 @@ temp home and external services are faked.
 | `test_fulfillment.py` | 3 | Fulfillment invariants: idempotency on stripe_session_id, detached-safe returns, and Stripe-shaped (attribute-only, no dict .get()) field access. |
 | `test_mail_paths.py` | 17 | Mail, end to end — the send path and the receive path. |
 | `test_pipeline.py` | 3 | The /pipeline page: static, always 200, and its provenance claims stay tied to the real Beltminers record (STORE_DESIGN_SYSTEM §6 — true numbers). |
-| `test_provisioner.py` | 6 | Provisioning invariants: cloud fulfillment queues a workspace; reconcile converges PENDING → ACTIVE exactly once with a configured Railway; missing co |
+| `test_provisioner.py` | 11 | Provisioning invariants: cloud fulfillment queues a workspace; reconcile converges PENDING → ACTIVE exactly once with a configured Railway; missing co |
 | `test_recovery_and_export.py` | 9 | Tier A invariants: license recovery is anti-enumeration and env-gated, legal pages exist, the entitlement export hides without its token and never lea |
 | `test_seo.py` | 6 | SEO pass (user request 2026-08-03): public pages carry full head metadata and structured data; private/transactional pages and every tenant host say n |
 | `test_site_text.py` | 11 | Owner page-text rewrites (debug tool 2026-08-03): public reads — the overrides ARE the page copy — but writes exist only for signed-in OWNER_EMAILS ac |
