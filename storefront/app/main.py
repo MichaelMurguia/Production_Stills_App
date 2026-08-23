@@ -467,6 +467,40 @@ def success(request: Request, background: BackgroundTasks, session_id: str = "",
                                        "name_error": name_error[:120]})
 
 
+@app.get("/account/status")
+def account_status(request: Request):
+    """Tiny poll target for the account page: is anything still being
+    built, and has it landed?
+
+    The success page has had one of these since checkout existed. The
+    account page never did — and a TRIAL redeem lands on /account, not on
+    /success, so a customer who redeemed a code sat under "it appears
+    right here the moment it's ready" while the page did nothing at all
+    (user-hit 2026-08-22, ten minutes). The copy made a promise only this
+    endpoint can keep.
+
+    State only, never credentials — the same contract as /success/status.
+    """
+    email = request.state.account_email
+    if not email:
+        return {"pending": 0, "failed": 0, "active": 0}
+    out = {"pending": 0, "failed": 0, "active": 0}
+    with db.session() as s:
+        for purchase in s.scalars(select(db.Purchase).where(
+                db.Purchase.email == email)):
+            ws = purchase.workspace
+            if purchase.status not in ("PAID", "TRIAL"):
+                continue
+            state = (ws.status if ws else "PENDING") or "PENDING"
+            if state == "ACTIVE":
+                out["active"] += 1
+            elif state == "FAILED":
+                out["failed"] += 1
+            else:
+                out["pending"] += 1
+    return out
+
+
 @app.get("/success/status")
 def success_status(session_id: str = ""):
     """Tiny poll target for the success page: is the workspace ready yet?

@@ -75,9 +75,9 @@
     your productions are not touched. One studio per license.</p>
     {% endif %}
     {% elif p.status == "PAID" and p.workspace and p.workspace.status == "FAILED" %}
-    <p class="license-token">setup hit a snag — it retries automatically and your studio appears right here the moment it's ready. stuck for more than an hour? write help@screenboardstudio.com</p>
+    <p class="license-token" data-ws-wait>setup hit a snag — it retries automatically and your studio appears right here the moment it's ready. stuck for more than an hour? write help@screenboardstudio.com</p>
     {% elif p.status == "PAID" %}
-    <p class="license-token">your studio is being set up — it appears right here the moment it's ready</p>
+    <p class="license-token" data-ws-wait>your studio is being set up — it appears right here the moment it's ready</p>
     {% else %}
     <p class="license-token">subscription ended</p>
     {% endif %}
@@ -91,7 +91,43 @@
   address? <a href="/recover">Recover by email</a>.</p>
   {% endif %}
 
-  {% if request.state.is_owner %}
+  {# The page said "it appears right here the moment it's ready" and then sat
+   still: a customer who redeemed a trial code watched it for ten minutes
+   (user-hit 2026-08-22). Checkout has polled since it existed — a trial
+   redeem lands HERE instead, and this page never learned to. Same shape as
+   success.html: state only, reload when it lands, and stop claiming to
+   check rather than spinning for ever. #}
+<script>
+(() => {
+  if (!document.querySelector("[data-ws-wait]")) return;
+  let ticks = 0;
+  const say = t => document.querySelectorAll("[data-ws-wait]")
+    .forEach(el => { el.textContent = t; });
+  const poll = async () => {
+    ticks += 1;
+    try {
+      const d = await (await fetch("/account/status")).json();
+      if (!d.pending && !d.failed) { location.reload(); return; }
+      if (d.failed) {
+        say("setup hit a snag — it retries automatically and this page keeps "
+            + "checking. your subscription is safe. stuck for more than an "
+            + "hour? write help@screenboardstudio.com");
+      }
+    } catch (e) { /* transient — keep polling */ }
+    // Twenty minutes of checking, then stop claiming to. A promise the page
+    // cannot keep is what put the customer here in the first place.
+    if (ticks >= 150) {
+      say("this is taking longer than it should — refresh to check, or "
+          + "write help@screenboardstudio.com and we will finish it by hand");
+      return;
+    }
+    setTimeout(poll, 8000);
+  };
+  setTimeout(poll, 8000);
+})();
+</script>
+
+{% if request.state.is_owner %}
   {# Debug tools live on /admin now — this page is the customer's view of
      their own purchases, and an owner is a customer here too. #}
   <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">

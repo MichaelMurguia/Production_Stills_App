@@ -24,7 +24,7 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1929 tests** across 105 files.
+**1941 tests** across 106 files.
 
 
 ## Product app — 1725 tests in 89 files
@@ -122,10 +122,11 @@ temp home and external services are faked.
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
 
 
-## Storefront — 204 tests in 16 files
+## Storefront — 216 tests in 17 files
 
 | File | Tests | What it holds |
 |---|---:|---|
+| `test_account_keeps_its_promise.py` | 12 | Regression, user-hit 2026-08-22 on the live site. |
 | `test_accounts.py` | 14 | Account lifecycle: magic links are single-use and uniform, sessions come from signed cookies, the account page lists the email's purchases, Google rou |
 | `test_admin_storage.py` | 23 | Fleet storage on the admin page (user 2026-08-07). |
 | `test_audit_fixes.py` | 13 | Regression tests for the 2026-08-02 storefront audit batch: unpaid sessions never fulfill, refunds close the door, canceled services are never abandon |

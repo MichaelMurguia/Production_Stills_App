@@ -46,7 +46,8 @@ publicly or packaged into a release.**
 | `GET /admin/export?token=` | Entitlement backup (purchases/licenses/workspaces JSON). Exists only when `ADMIN_EXPORT_TOKEN` is set; wrong token → 404. |
 | `GET /signin`, `/signup` · `POST /auth/email` · `GET /auth/verify` | Passwordless accounts: magic links (single-use, 30 min, uniform responses) create-or-sign-in on click. No passwords exist anywhere. |
 | `GET /auth/google` + `/callback` · `POST /auth/logout` | Google OIDC (stdlib, no SDK): signed state, code exchange, verified-email required. Env-gated — button hides unconfigured. |
-| `GET /account` | Signed in: every purchase on the account email — download buttons, workspace doors, studio naming. Signed out: token-as-credential fallback. |
+| `GET /account` | Signed in: every purchase on the account email — download buttons, workspace doors, studio naming. Signed out: token-as-credential fallback. **Polls `/account/status` while any studio is still being built** — the page says "it appears right here the moment it's ready" and a trial redeem lands here rather than on `/success`, so it has to. |
+| `GET /account/status` | Counts only — `{pending, failed, active}` for the signed-in account. State, never a credential or an address; the same contract as `/success/status`. An anonymous caller gets zeroes. |
 | `POST /studio/name` | Owner-only claim/rename of a studio's subdomain (validated, reserved-listed, unique). Old domains keep answering — Railway serves every domain ever attached. Unclaimed studios carry a random two-word slug, never the purchase number. |
 
 Accounts are a **viewing lens** — `purchases` remains the entitlement
