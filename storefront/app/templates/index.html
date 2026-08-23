@@ -70,11 +70,14 @@
   <div class="fig"><span class="fig-num">5</span><span class="fig-lbl mono">GATED STAGES, SCRIPT TO BOARD</span></div>
 </section>
 
-<!-- S3 — Pricing: two editions, honest trait lists. Cloud-based leads the
-     row (user 2026-08-23), and STANDALONE keeps `edition-lead` — the class
-     marks the RECOMMENDED edition, not the leftmost one, so the section's
-     only amber (top rule + Buy) travelled with it rather than staying in
-     the left column. The heading enumerates in column order. -->
+<!-- S3 — Pricing: two editions, honest trait lists. CLOUD-BASED is the
+     recommended edition (user 2026-08-23) and carries `edition-lead` plus
+     the section's only amber fill, on cloud-personal. Standalone moved to
+     the right and gave both up: the class marks the RECOMMENDED edition,
+     never the leftmost one, so position and recommendation are separate
+     decisions and this took both. One fill in the row — never two side by
+     side (STORE_DESIGN_SYSTEM §8). The heading enumerates in column
+     order. -->
 <section class="wrap editions-wrap" id="pricing">
   <div class="editions-head">
     <div>
@@ -122,7 +125,7 @@
   </div>
 
   <div class="editions">
-    <div class="edition">
+    <div class="edition edition-lead">
       <p class="edition-kind mono"><span class="ek-name">CLOUD-BASED</span> MONTHLY &middot; CANCEL ANY TIME</p>
       <h3>Hosted Online Studio</h3>
       <p class="edition-para">Your production gets a private workspace at
@@ -139,7 +142,7 @@
       <div class="sku">
         <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE WORKSPACE &middot; ONE SEAT</span></div>
         <span class="sku-price mono">$9.99<span class="per">/mo</span></span>
-        {% if ready["cloud-personal"] %}<a class="btn btn-secondary sku-btn" href="/checkout/cloud-personal">Subscribe</a>
+        {% if ready["cloud-personal"] %}<a class="btn btn-primary sku-btn" href="/checkout/cloud-personal">Subscribe</a>
         {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Subscribe</span>{% endif %}
       </div>
       <div class="sku">
@@ -160,7 +163,7 @@
       {% endif %}
     </div>
 
-    <div class="edition edition-lead">
+    <div class="edition">
       <p class="edition-kind mono"><span class="ek-name">STANDALONE APP</span> BUY ONCE &middot; OWN IT</p>
       <h3>Runs on your machine</h3>
       <p class="edition-para">Install it on the art department's workstation.
@@ -176,7 +179,7 @@
       <div class="sku">
         <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE ARTIST &middot; ONE MACHINE</span></div>
         <span class="sku-price mono">$119</span>
-        {% if ready["download-personal"] %}<a class="btn btn-primary sku-btn" href="/checkout/download-personal">Buy</a>
+        {% if ready["download-personal"] %}<a class="btn btn-secondary sku-btn" href="/checkout/download-personal">Buy</a>
         {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
       </div>
       <div class="sku">
