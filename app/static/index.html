@@ -391,6 +391,24 @@
               </div>
             </div>
 
+            <!-- A selection TAKES the paste slot (user, 2026-08-22). The
+                 field above holds the scene's title and nothing else; what
+                 the scan will ask for lands here, where the pasted section
+                 would otherwise be. The two are alternatives anyway: a
+                 pasted section replaces the screenplay, a picked scene
+                 points into it. Clearing the selection brings the paste
+                 row back. -->
+            <div class="door-row" id="spec-auto-picked-row" hidden>
+              <span class="door-lab" id="spec-auto-picked-lab">The scene
+                <span class="f-note mono" id="spec-auto-picked-note"></span></span>
+              <div class="door-field">
+                <textarea id="spec-auto-brief" rows="3"
+                  placeholder="what to extract from it"></textarea>
+                <button type="button" class="text-act" id="spec-auto-unpick"
+                  title="Drop the saved scene and search again">Clear selection</button>
+              </div>
+            </div>
+
             <div class="door-row">
               <span class="door-lab">Panels to include
                 <span class="f-note mono">EMPTY — CONTENT DECIDES</span></span>

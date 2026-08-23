@@ -24,15 +24,15 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1863 tests** across 103 files.
+**1869 tests** across 103 files.
 
 
-## Product app — 1659 tests in 87 files
+## Product app — 1665 tests in 87 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
-| `test_anchor_consolidation.py` | 155 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
+| `test_anchor_consolidation.py` | 159 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
 | `test_assemble_layout.py` | 8 | Board layout invariants: the aspect variant honors take ratios with a uniform minimal residual, variants resolve per the ruling, and geometry stays in |
@@ -55,7 +55,7 @@ temp home and external services are faked.
 | `test_credential_blocker.py` | 64 | A missing credential is a blocker (user ruling 2026-08-18). |
 | `test_debug_tools.py` | 7 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
-| `test_design_tokens.py` | 95 | Mechanical token assertions (design-verify step 4, standing suite). |
+| `test_design_tokens.py` | 97 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |
 | `test_every_route_is_reachable.py` | 6 | Every route a user needs must be reachable from the UI. |

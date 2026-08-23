@@ -901,6 +901,20 @@ class TheSceneSearchStatesRatherThanSignals(unittest.TestCase):
         is set in `--mono` and the count is the `.mono` sub."""
         self.assertIn("font-family: var(--mono)", self.block())
 
+    def test_the_two_switches_read_as_quieter_than_the_matches(self):
+        """`None` and `Paste a section` stand at the head of the list but
+        they are not results — `--ink-dim` against the matches' `--ink`,
+        and a rule under the pair where the count line is absent."""
+        b = self.block()
+        self.assertIn(".scene-hit.is-act .scene-hit-label { color: var(--ink-dim); }", b)
+        self.assertIn(".scene-hit.is-act + .scene-hit:not(.is-act)", b)
+
+    def test_a_swapped_row_actually_disappears(self):
+        """`.door-row` is `display: grid`, which beats the hidden
+        attribute — the selection row and the paste row occupy one slot
+        and would otherwise both be on screen."""
+        self.assertIn(".door-row[hidden] { display: none; }", CSS)
+
     def test_the_retired_no_match_line_left_the_stylesheet_too(self):
         """It said NO LOCATION OR SLUGLINE MATCHES THAT, then IT WILL BE
         READ AS THE BRIEF, and both were noise over a field still being

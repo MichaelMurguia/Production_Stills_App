@@ -1240,43 +1240,119 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn('sceneIn.addEventListener("focus", draw)', JS)
         self.assertNotIn("__sceneSearchAsk", JS)
 
-    def test_picking_a_scene_saves_a_pointer_to_it(self):
-        """"A reference is saved to that page and section including the
-        scene name." A scene carries the line its slugline sits on."""
-        i = JS.index("const choose = row =>")
-        seg = JS[i:i + 1400]
-        self.assertIn("sceneRef = row.kind === \"scene\"", seg)
-        self.assertIn("line: row.scene.line", seg)
-        self.assertIn("SCENE SAVED —", JS)
-
-    def test_a_location_pick_saves_no_pointer(self):
-        """A location has no single line, so it keeps the matched-by-name
-        path — which is what a location board wants anyway."""
-        i = JS.index("const choose = row =>")
-        seg = JS[i:i + 1400]
-        self.assertIn(": null;", seg)
-
-    def test_editing_the_brief_drops_the_pointer(self):
-        """The pointer is what the scan reads, so it may not outlive the
-        words it came from — otherwise an edited brief quietly aims the
-        scan somewhere else."""
-        i = JS.index('sceneIn.addEventListener("input"')
-        seg = JS[i:i + 260]
-        self.assertIn("if (sceneRef) { sceneRef = null; showRef(); }", seg)
-
-    def test_the_scan_sends_the_pointer(self):
-        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
-        seg = JS[i:i + 1800]
-        self.assertIn("window.__sceneRef", seg)
-        self.assertIn("scene_line: ref ? ref.line", seg)
-        self.assertIn("scene_heading: ref ? ref.heading", seg)
-
     def test_the_verb_is_scan_screenplay(self):
         self.assertIn('id="spec-auto-go">Scan Screenplay', HTML)
         i = JS.index("const syncAlternatives = ")
         seg = JS[i:i + 1200]
         self.assertIn('"Scan Screenplay"', seg)
         self.assertIn("Break down the pasted section", seg)
+
+    def test_only_the_title_lands_in_the_search_field(self):
+        """User, 2026-08-22: "whatever lands in that What should I get
+        field is awkward — when they select the scene, just put the scene
+        title in there."
+
+        A 150-character composed brief in a one-line input is unreadable
+        and unsearchable, and it made the field mean two things at once.
+        It means one now: the reference."""
+        i = JS.index("const choose = row =>")
+        seg = JS[i:i + 2200]
+        self.assertIn("sceneIn.value = scenePick.label", seg)
+        self.assertIn("label: row.scene.heading", seg)
+        self.assertIn("label: row.loc.location", seg)
+
+    def test_the_brief_moves_to_the_row_below_and_stays_editable(self):
+        """"All the other information, put it in a section below the
+        select field." It is still what the scan asks for, so it is a
+        field rather than a caption — the composed sentence is a starting
+        point, not a verdict."""
+        self.assertIn('id="spec-auto-brief"', HTML)
+        i = JS.index("const choose = row =>")
+        self.assertIn("box.value = scenePick.brief", JS[i:i + 2200])
+        j = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        self.assertIn('$("#spec-auto-brief")?.value.trim() || pick.brief',
+                      JS[j:j + 900])
+
+    def test_a_selection_takes_the_paste_slot_and_gives_it_back(self):
+        """"Have it take the place of the Or paste a section area. If they
+        remove the selection, the Or Paste A Section section comes back."
+        They are alternatives anyway — a pasted section REPLACES the
+        screenplay, a picked scene points into it."""
+        i = JS.index("const syncAlternatives = ")
+        seg = JS[i:i + 1400]
+        self.assertIn("pickRow.hidden = !scenePick", seg)
+        self.assertIn("pasteRow.hidden = !!scenePick", seg)
+        self.assertIn(".door-row[hidden] { display: none; }", CSS)
+
+    def test_the_list_carries_none_and_paste_above_the_matches(self):
+        """User, 2026-08-22: "at the top of the selection search should be
+        None"; then "next to it put Paste a section, which will activate
+        the Paste a section section and deactivate What should I get."
+
+        With a selection made the paste row is off screen, so the list is
+        the only way to reach it — a switch you cannot reach is not one."""
+        i = JS.index("const STANDING = [")
+        seg = JS[i:i + 400]
+        self.assertIn('kind: "none"', seg)
+        self.assertIn('kind: "paste"', seg)
+        self.assertLess(seg.index('"none"'), seg.index('"paste"'))
+        j = JS.index("const choose = row =>")
+        body = JS[j:j + 2200]
+        self.assertIn('if (row.kind === "none") { clearPick(); return; }', body)
+        self.assertIn("pasting = true;", body)
+
+    def test_paste_mode_is_stated_not_inferred_from_the_box(self):
+        """The list can switch the door into paste mode while the box is
+        still empty, and "has text" cannot tell that from "not chosen
+        yet". Emptying the box is the one way back out."""
+        i = JS.index("const syncAlternatives = ")
+        self.assertIn("const usingPaste = pasting || !!paste.value.trim();",
+                      JS[i:i + 1400])
+        j = JS.index('$("#spec-auto-source")?.addEventListener("input"')
+        self.assertIn("pasting = false;", JS[j:j + 400])
+
+    def test_typing_over_the_title_drops_the_pick_but_not_the_words(self):
+        """Two questions, two functions. Typing means search again, so the
+        pointer goes and the keystrokes stay; removing the selection
+        empties the field as well, because a title left behind still reads
+        as chosen."""
+        i = JS.index('sceneIn.addEventListener("input"')
+        self.assertIn("if (scenePick) dropPick();", JS[i:i + 220])
+        j = JS.index("clearPick = () => {" + chr(10) + "        dropPick();")
+        seg = JS[j:j + 260]
+        self.assertIn("dropPick();", seg)
+        self.assertIn('sceneIn.value = ""', seg)
+
+    def test_an_orphaned_brief_is_never_sent_with_the_next_pick(self):
+        """A hand-edited brief whose scene was dropped sits in a hidden
+        row. It would be invisible and still submitted."""
+        i = JS.index("const dropPick = () => {")
+        self.assertIn('box.value = ""', JS[i:i + 320])
+
+    def test_the_scan_sends_the_pointer_for_a_scene_only(self):
+        """A location board wants all of its scenes, which is the
+        matched-by-name path; only a scene has one line to point at."""
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 2200]
+        self.assertIn('pick && pick.kind === "scene" ? pick : null', seg)
+        self.assertIn("scene_line: ref ? ref.line", seg)
+        self.assertIn("scene_heading: ref ? ref.heading", seg)
+
+    def test_the_doors_source_lives_in_one_place(self):
+        """It was about to be inferred in three — the row visibility, the
+        disable state and the submit. One variable, read by all of them."""
+        self.assertEqual(JS.count("let scenePick = null;"), 1)
+        self.assertEqual(JS.count("window.__scenePick = () => scenePick;"), 1)
+        self.assertNotIn("__sceneRef", JS)
+
+    def test_a_no_match_still_says_nothing_unless_something_is_picked(self):
+        """An unmatched brief is a perfectly good brief, and two versions
+        of a message here were noise over a field still being typed in.
+        The one exception is a live selection: the list is then the only
+        way back out of it."""
+        i = JS.index("if (!matches.length && !scenePick)")
+        self.assertIn("closeHits(); return;", JS[i:i + 120])
+        self.assertNotIn("NOTHING MATCHES ${esc(", JS)
 
     def test_the_brief_field_is_the_search(self):
         """User, 2026-08-22: "What should I get is our search field. If it
@@ -1309,15 +1385,6 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         seg = JS[i:i + 1100]
         self.assertLess(seg.index('kind: "loc"'), seg.index('kind: "scene"'))
 
-    def test_picking_a_result_writes_the_brief(self):
-        """The brief is what the deterministic scene anchor matches on, so
-        a pick replaces what was typed with the fuller statement."""
-        i = JS.index("const choose = row =>")
-        seg = JS[i:i + 1200]
-        self.assertIn("sceneBrief(row.loc, row.scene)", seg)
-        self.assertIn("locationBrief(row.loc)", seg)
-        self.assertIn('row.kind === "scene" ? "SCENE" : "LOCATION"', seg)
-
     def test_there_is_one_brief_composer_per_kind(self):
         """The deep link from the coverage map and the search compose the
         same sentences; two copies drifted once already."""
@@ -1347,14 +1414,6 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         seg = JS[i:i + 1200]
         self.assertIn("syncAlternatives();", seg)
         self.assertNotIn("dispatchEvent", seg)
-
-    def test_a_no_match_says_nothing_at_all(self):
-        """An unmatched brief is a perfectly good brief. Two versions of a
-        message here were tried and both were noise over the field the user
-        was still typing in."""
-        i = JS.index("if (!found.length)")
-        self.assertIn("closeHits(); return;", JS[i:i + 120])
-        self.assertNotIn("NOTHING MATCHES ${esc(", JS)
 
     def test_the_brief_and_the_paste_are_alternatives(self):
         """User: they "should act as radio buttons — you cant do both".

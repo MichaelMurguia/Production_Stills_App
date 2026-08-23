@@ -7643,6 +7643,17 @@ async function renderSpecs(openId = null) {
   // C1 (RULE_PASS_2 C): one door. The board's shape is a STATED input
   // (user-hit 2026-08-07).
   const autoBtype = $("#spec-auto-btype");
+  /* THE DOOR'S SOURCE, in one variable rather than inferred in three
+     places. It is exactly one of: a picked scene or location, a pasted
+     section, or free text in the brief field — and every control that
+     cares (the two rows, the disable state, the verb, the submit) reads
+     these. `pasting` is explicit because the search list can now switch
+     the door into paste mode while the box is still empty, and "has text"
+     could not tell that apart from "not chosen yet". */
+  let scenePick = null;        // {kind, label, brief, heading?, line?, scenes?}
+  let pasting = false;
+  let clearPick = () => {};    // wired by the search block below
+  window.__scenePick = () => scenePick;
   // One draft per door — the two hold different fields, and a single key
   // would restore half a form into the wrong one.
   persistForm("autoSpecDraft", ["spec-auto-id", "spec-auto-subject",
@@ -7712,7 +7723,6 @@ async function renderSpecs(openId = null) {
         line: sc.line, loc: l })))
         .filter(x => x.heading && !seenHead.has(x.heading)
                      && seenHead.add(x.heading));
-      let sceneRef = null;
 
       const lc = t => String(t || "").toLowerCase();
       const search = q => {
@@ -7749,29 +7759,83 @@ async function renderSpecs(openId = null) {
          has landed on the wrong one twice. A location has no single line,
          so it keeps the matched-by-name path, which is what a location
          board wants anyway. */
-      const showRef = () => {
-        if (!note) return;
-        note.textContent = sceneRef
-          ? `SCENE SAVED — ${sceneRef.heading} · LINE ${sceneRef.line + 1}`
-          : (scenes.length
-             ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
-             : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD");
-        note.classList.toggle("scene-ref", !!sceneRef);
-      };
-      const choose = row => {
-        // The picked brief REPLACES what was typed: a match is a fuller
-        // statement of the same request, and it is what the deterministic
-        // scene anchor matches on.
-        if (sceneIn) {
-          sceneIn.value = row.kind === "scene"
-            ? sceneBrief(row.loc, row.scene) : locationBrief(row.loc);
-          syncAlternatives();   // not a synthetic input event: that would
-                                // re-enter draw() with the brief in hand
-
+      const showPick = () => {
+        if (note) {
+          note.textContent = !scenePick
+            ? (scenes.length
+               ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
+               : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD")
+            : scenePick.kind === "scene"
+              ? `SCENE SAVED · LINE ${scenePick.line + 1}`
+              : `LOCATION SAVED · ${scenePick.scenes} SCENE`
+                + (scenePick.scenes === 1 ? "" : "S");
+          note.classList.toggle("scene-ref", !!scenePick);
         }
-        sceneRef = row.kind === "scene"
-          ? { heading: row.scene.heading, line: row.scene.line } : null;
-        showRef();
+        // The heading is IN the field now, so the row below states only
+        // what the field cannot: where the scan lands, and how exactly.
+        const lab = $("#spec-auto-picked-lab");
+        const pnote = $("#spec-auto-picked-note");
+        if (scenePick && lab && pnote) {
+          lab.firstChild.nodeValue = scenePick.kind === "scene"
+            ? "The scene\n                " : "The location\n                ";
+          pnote.textContent = scenePick.kind === "scene"
+            ? `READ EXACTLY — LINE ${scenePick.line + 1}`
+            : `MATCHED BY NAME — ${scenePick.scenes} SCENE`
+              + (scenePick.scenes === 1 ? "" : "S");
+        }
+        syncAlternatives();
+      };
+      // Two questions, two functions: typing over the title DROPS the
+      // pointer and leaves the words alone, while removing the selection
+      // empties the field as well. Conflating them meant the field kept a
+      // title that was no longer selected.
+      const dropPick = () => {
+        scenePick = null;
+        // The brief belongs to the selection: a hand-edited one that
+        // outlived its scene would be sent, unseen, with the next pick.
+        const box = $("#spec-auto-brief");
+        if (box) box.value = "";
+        showPick();
+      };
+      clearPick = () => {
+        dropPick();
+        if (sceneIn) { sceneIn.value = ""; sceneIn.focus(); }
+        closeHits();
+        syncAlternatives();
+      };
+
+      const choose = row => {
+        /* The two standing rows at the head of the list are the door's
+           source switch (user, 2026-08-22) — with a selection made, the
+           paste row is not on screen, so this list is the only way to
+           reach it. */
+        if (row.kind === "none") { clearPick(); return; }
+        if (row.kind === "paste") {
+          dropPick();
+          if (sceneIn) sceneIn.value = "";
+          pasting = true;
+          closeHits();
+          syncAlternatives();
+          $("#spec-auto-source")?.focus();
+          return;
+        }
+        /* Only the TITLE lands in the field (user, 2026-08-22: "whatever
+           lands in that What should I get field is awkward — just put the
+           scene title in there"). The composed brief is still what the
+           scan asks for and what the anchor matches on, so it moves to
+           the row below, where it is editable and visibly attached to the
+           scene it came from. */
+        scenePick = row.kind === "scene"
+          ? { kind: "scene", label: row.scene.heading,
+              heading: row.scene.heading, line: row.scene.line,
+              brief: sceneBrief(row.loc, row.scene) }
+          : { kind: "loc", label: row.loc.location,
+              scenes: row.loc.scenes ?? (row.loc.scene_list || []).length,
+              brief: locationBrief(row.loc) };
+        if (sceneIn) sceneIn.value = scenePick.label;
+        const box = $("#spec-auto-brief");
+        if (box) box.value = scenePick.brief;
+        showPick();
         const bt = $("#spec-auto-btype");
         if (bt && !bt.dataset.touched) {
           bt.value = row.kind === "scene" ? "SCENE" : "LOCATION";
@@ -7801,20 +7865,46 @@ async function renderSpecs(openId = null) {
         return t.length > 0 && t.length <= QUERY_MAX;
       };
 
+      /* The head of the list is the door's SOURCE SWITCH (user,
+         2026-08-22). `None` drops the selection; `Paste a section` turns
+         the door over to the paste box and takes the search out of play.
+         They stand above the matches because with a selection made the
+         paste row is off screen, and a switch you cannot reach is not
+         one. */
+      const STANDING = [
+        { kind: "none", label: "None",
+          sub: "describe the board yourself" },
+        { kind: "paste", label: "Paste a section",
+          sub: "the screenplay is not read" },
+      ];
+
       let found = [];
       const draw = () => {
         if (!hits || !sceneIn) return;
         if (!isQuery(sceneIn.value)) { closeHits(); return; }
-        found = search(sceneIn.value).slice(0, 40);
-        if (!found.length) { closeHits(); return; }
-        hits.innerHTML = `<p class="scene-ask mono">${found.length} IN THE
-          SCREENPLAY — PICKING ONE SAVES ITS PLACE FOR THE SCAN</p>`
-          + found.map((r, i) => `
-          <button type="button" class="scene-hit${r.kind === "loc" ? " is-loc" : ""}"
+        const matches = search(sceneIn.value).slice(0, 40);
+        // Nothing to show and nothing selected is the no-match case, which
+        // says nothing at all. With a selection made, the list opens even
+        // on no matches — it is the only way back out of the selection.
+        if (!matches.length && !scenePick) { closeHits(); return; }
+        found = STANDING.concat(matches);
+        const row = (r, i) => `
+          <button type="button" class="scene-hit${
+            r.kind === "loc" ? " is-loc" : ""}${
+            r.kind === "none" || r.kind === "paste" ? " is-act" : ""}"
             data-i="${i}" role="option">
             <span class="scene-hit-label">${esc(r.label)}</span>
             <span class="scene-hit-sub mono">${esc(r.sub)}</span>
-          </button>`).join("");
+          </button>`;
+        // The count line sits BELOW the two switches and above the
+        // matches, because it describes the matches and neither switch is
+        // in the screenplay.
+        hits.innerHTML = STANDING.map(row).join("")
+          + (matches.length
+             ? `<p class="scene-ask mono">${matches.length} IN THE
+                SCREENPLAY — PICKING ONE SAVES ITS PLACE FOR THE SCAN</p>`
+             : "")
+          + matches.map((r, i) => row(r, i + STANDING.length)).join("");
         hits.hidden = false;
         marked = -1;
         $$(".scene-hit", hits).forEach(b =>
@@ -7831,14 +7921,17 @@ async function renderSpecs(openId = null) {
          Pressing it again drafts. So does choosing a result, or saying use
          what I typed: the question is asked once per brief, never as a
          gate you have to argue with. */
-      /* The pointer is what Scan Screenplay reads, so it may not outlive
-         the words it came from: edit the brief and the saved scene goes
-         with it rather than quietly aiming the scan somewhere else. */
-      window.__sceneRef = () => sceneRef;
+      /* The pointer may not outlive the TITLE it came from: type over
+         the field and the saved scene goes with it, rather than quietly
+         aiming the scan somewhere else. Editing the brief below is not
+         that — the brief is the ask, the title is the reference, and they
+         are two fields now precisely so one can change without the
+         other. */
+      showPick();
 
       if (sceneIn) {
         sceneIn.addEventListener("input", () => {
-          if (sceneRef) { sceneRef = null; showRef(); }
+          if (scenePick) dropPick();
           draw();
           syncAlternatives();
         });
@@ -8015,10 +8108,16 @@ async function renderSpecs(openId = null) {
     const brief = $("#spec-auto-subject");
     const paste = $("#spec-auto-source");
     if (!brief || !paste) return;
-    const usingPaste = !!paste.value.trim();
-    const usingBrief = !!brief.value.trim();
+    const usingPaste = pasting || !!paste.value.trim();
+    const usingBrief = !usingPaste && (!!scenePick || !!brief.value.trim());
+    // One slot, two occupants: a selection states itself where the paste
+    // box would be, and the paste box comes back the moment it is cleared.
+    const pasteRow = paste.closest(".door-row");
+    const pickRow = $("#spec-auto-picked-row");
+    if (pickRow) pickRow.hidden = !scenePick;
+    if (pasteRow) pasteRow.hidden = !!scenePick;
     brief.closest(".door-row")?.classList.toggle("is-off", usingPaste);
-    paste.closest(".door-row")?.classList.toggle("is-off", usingBrief);
+    pasteRow?.classList.toggle("is-off", usingBrief);
     brief.disabled = usingPaste;
     paste.disabled = usingBrief;
     const go = $("#spec-auto-go");
@@ -8027,7 +8126,14 @@ async function renderSpecs(openId = null) {
                                   : "Scan Screenplay";
     }
   };
-  $("#spec-auto-source")?.addEventListener("input", syncAlternatives);
+  $("#spec-auto-source")?.addEventListener("input", () => {
+    // Emptying the box is how you leave paste mode. The row that put you
+    // in it lives in the search list, and this is the only way back —
+    // one rule, so there is nothing to keep in step.
+    if (!$("#spec-auto-source").value.trim()) pasting = false;
+    syncAlternatives();
+  });
+  $("#spec-auto-unpick")?.addEventListener("click", () => clearPick());
   syncAlternatives();
 
 
@@ -8038,7 +8144,12 @@ async function renderSpecs(openId = null) {
   $("#spec-auto-form").addEventListener("submit", async e => {
     e.preventDefault();
     const btn = $("#spec-auto-go");
-    const brief = $("#spec-auto-subject").value.trim();
+    // The brief is the picked row's box when something is picked, and the
+    // field itself when nothing is — one question, answered once.
+    const pick = window.__scenePick?.() || null;
+    const brief = pick
+      ? ($("#spec-auto-brief")?.value.trim() || pick.brief)
+      : $("#spec-auto-subject").value.trim();
     const source = $("#spec-auto-source")?.value.trim() || "";
     const panels = $("#spec-auto-panels")?.value.trim() || "";
     if (!brief && !source) {
@@ -8046,12 +8157,14 @@ async function renderSpecs(openId = null) {
             + "empty sheet, use Blank sheet beside it.", true);
       return;
     }
-    const ref = window.__sceneRef?.() || null;
+    // Only a scene carries a line to point at; a location board wants all
+    // of its scenes, which is the matched-by-name path.
+    const ref = pick && pick.kind === "scene" ? pick : null;
     btn.disabled = true;
     const status = $("#spec-auto-status");
     const busy = status && startBusy(status,
       source ? "Breaking down the section you pasted…"
-             : ref ? `Reading ${ref.heading} and drafting the breakdown…`
+             : pick ? `Reading ${pick.label} and drafting the breakdown…`
              : "Reading the screenplay and drafting the breakdown…",
       panels ? "building the panels you named" : "deciding the panels it needs");
     try {

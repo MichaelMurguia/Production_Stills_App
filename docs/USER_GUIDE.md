@@ -284,24 +284,39 @@ In the reading door, **What should I get?** is also the search. Type
 individual scenes; `terra bridge` narrows to the one. Every word you type
 has to appear somewhere in the heading or its location, in any order.
 
-**Picking a scene saves its place.** The field says so — `SCENE SAVED —
-INT. TERRA NOVA BRIDGE – DAY · LINE 2857` — and **Scan Screenplay**
-then reads exactly that scene rather than working out which scene your
-words meant. Picking a *location* saves no place, because a location is
-several scenes and the board is meant to cover all of them.
+**Picking one leaves the title in the field and nothing else.** The line
+under it says what was saved — `SCENE SAVED · LINE 2857` — and a
+new row appears in the place of *Or paste a section*: **The scene**, with
+`READ EXACTLY — LINE 2857` beside it and the brief the scan will use.
+That brief is a starting point, not a verdict: edit it to ask for
+something narrower and the saved scene stays put.
 
-Edit the brief and the saved scene is dropped: the words and the pointer
-travel together, so a rewritten brief never quietly aims the scan at the
-old scene. If you replace the screenplay after picking, the scan says so
-and asks you to search again rather than reading whatever now sits at that
-line. If nothing matches what you typed, nothing is said — it is a
-perfectly good brief, and Scan Screenplay reads the screenplay for it the
-old way.
+**Scan Screenplay** then reads exactly that scene rather than working out
+which scene your words meant. Picking a *location* saves no line — a
+location is several scenes and the board covers all of them — so it says
+`MATCHED BY NAME` instead.
+
+Two rows stand at the top of the results:
+
+- **None** — drops the selection. The field empties and *Or paste a
+  section* comes back.
+- **Paste a section** — hands the door over to the paste box and takes
+  the search out of play. Empty the box again to come back.
+
+They are there because a selection hides the paste row, so the list is the
+only way to reach it once you have chosen something.
+
+Typing over the title drops the saved scene, and the brief with it: the
+title is the reference, and typing means you are searching again. If you
+replace the screenplay after picking, the scan says so and asks you to
+search again rather than reading whatever now sits at that line. If
+nothing matches what you typed, nothing is said — it is a perfectly good
+brief, and Scan Screenplay reads the screenplay for it the old way.
 
 **Or paste a section** is the alternative, not an addition: filling one
 makes the other unavailable, because a pasted section *replaces* the
 screenplay rather than adding to it. The submit says which one it is about
-to do. **Panels to include** names them one per line, or leave it empty
+to do, and a selection takes that row's place entirely. **Panels to include** names them one per line, or leave it empty
 and the content decides.
 
 **Drafting.** Describe the board ("Charlie's cabin — the workshop scenes
