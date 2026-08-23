@@ -689,9 +689,9 @@ def _collapse_legacy_revisions() -> None:
 
 
 @app.on_event("startup")
-def _resync_rendering_language() -> None:
-    """Every production, once, at boot: bring each bible's Rendering
-    Language back onto its rendering-style anchor.
+def _resync_bible_anchors() -> None:
+    """Every production, once, at boot: bring each bible back onto its
+    look anchors.
 
     The bug that made this necessary shipped renders, so the installs that
     have it are the ones already carrying a stale section. A migration
@@ -703,13 +703,19 @@ def _resync_rendering_language() -> None:
             for proj in paths.list_projects():
                 paths.set_project(proj["slug"])
                 try:
-                    r = bible.sync_rendering_language()
+                    done = bible.sync_from_anchors()
                 except Exception:  # noqa: BLE001 — one bad bible serves the rest
                     continue
-                if r.get("changed"):
-                    print(f"[migrate] {proj['slug'] or 'main'}: Rendering "
-                          f"Language {r['from']} -> {r['to']} "
+                for r in done:
+                    print(f"[migrate] {proj['slug'] or 'main'}: {r['section']} "
+                          f"{r['stated']} -> {r['chosen']} "
                           f"(bible rev {r['rev']})", flush=True)
+                # A drift the repairs cannot settle is not silent: the
+                # texture feeds a SYNTHESIS of anchor and screenplay, and
+                # only a re-draft can redo that.
+                for line in bible.anchor_conflicts():
+                    print(f"[migrate] STALE {proj['slug'] or 'main'}: {line} "
+                          "— re-draft the Bible", flush=True)
         finally:
             paths.set_project(prev)
 
@@ -2218,8 +2224,8 @@ def api_get_style_bible() -> dict:
             # Readable as state before a render is paid for, never only as
             # an error afterwards. Empty when they agree, which is the
             # normal case now that the save reconciles.
-            "medium_conflict": bible.medium_conflict(),
-            "medium": bible.stated_style()}
+            "anchor_conflicts": bible.anchor_conflicts(),
+            "medium": bible.stated_style("medium")}
 
 
 @app.put("/api/style-bible")
@@ -2512,7 +2518,7 @@ async def api_save_interview(body: dict) -> dict:
     # judgement in it — the anchor IS the decision and the section is its
     # transcription. Free and deterministic: the style's document entry is
     # what the section is made of.
-    fields["bible_sync"] = bible.sync_rendering_language(fields["medium"])
+    fields["bible_sync"] = bible.sync_from_anchors()
     return fields
 
 

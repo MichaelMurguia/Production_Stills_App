@@ -24,15 +24,16 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1887 tests** across 104 files.
+**1897 tests** across 104 files.
 
 
-## Product app — 1683 tests in 88 files
+## Product app — 1693 tests in 88 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
 | `test_anchor_consolidation.py` | 159 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
+| `test_anchors_stay_in_step.py` | 24 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
 | `test_assemble_layout.py` | 8 | Board layout invariants: the aspect variant honors take ratios with a uniform minimal residual, variants resolve per the ruling, and geometry stays in |
@@ -69,7 +70,6 @@ temp home and external services are faked.
 | `test_lock_is_not_freeze.py` | 13 | A LOCK is not a FREEZE. |
 | `test_looks.py` | 19 | Board looks (2026-08-13): a look is a persisted sheet-level property that survives arrangement commits; dress is PURE DERIVATION resolved from canon a |
 | `test_medium_guard.py` | 4 | Regression (user-hit 2026-08-06): a bake-off sample rendered photo-real past an attached BOARD_RENDERING_STYLE anchor. |
-| `test_medium_stays_in_step.py` | 14 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_name_acts.py` | 16 | Naming the acts is its own small call (user 2026-08-16: "No Act Titles", reported on an analysis that predates the field). |
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |

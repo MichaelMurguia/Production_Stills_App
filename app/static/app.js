@@ -6218,8 +6218,9 @@ async function renderWizard() {
     // EDITED BY HAND back onto a different medium, which is the director's
     // right and not something to silently overwrite. So it is stated,
     // where it can be read before a render is paid for.
-    const clash = bible.medium_conflict
-      ? `<span class="badge REJECTED">MEDIUM</span> ${esc(bible.medium_conflict)}`
+    const clash = (bible.anchor_conflicts || []).length
+      ? `<span class="badge REJECTED">ANCHOR</span> `
+        + esc(bible.anchor_conflicts.join("; "))
       : "";
     $("#style-status").innerHTML = (!bible.text.trim()
       ? ""

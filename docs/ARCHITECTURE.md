@@ -196,12 +196,12 @@ A production set Photo Real after the Bible was written, ran the Model
 Test, and got an oil painting — because the section still said
 Production Painting and listed "photographic detail" under Avoid.
 
-`bible.sync_rendering_language()` rebuilds the section from the entry
+`bible.sync_from_anchors()` rebuilds the section from the entry
 when the anchor names a **different** style. It runs on the interview
 save and once per production at boot; it is deterministic and free, so
 there is no button and no model call. It fires only on a real
 contradiction, so a hand-tuned section that still names the right style
-is left alone. `bible.medium_conflict()` is the one answer to "do these
+is left alone. `bible.anchor_conflicts()` is the one answer to "do these
 two agree?", read by the Bible panel (to state it) and by `sample_probe`
 (to refuse before spending).
 

@@ -339,7 +339,13 @@ OUTPUT FORMAT — return ONLY markdown in EXACTLY this section structure
 (one line: authoritative visual context; agents must not reinterpret without user instruction)
 
 ## Overall Visual Identity
-(bulleted feel/influences from the anchors + screenplay; end with one line on what the world must feel designed for)
+(FIRST BULLET, exactly: `<Name> world texture — <subtitle>`, naming the
+director's chosen world texture the way the Rendering Language section names
+the rendering style. It is how the app can later tell that this section was
+written under a texture the production has since changed — without it the
+bible silently keeps describing the old world. Then the bulleted
+feel/influences from the anchors + screenplay; end with one line on what the
+world must feel designed for)
 
 ## Rendering Language
 ### Required

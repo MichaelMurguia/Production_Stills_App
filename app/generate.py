@@ -1839,12 +1839,12 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     # which is what happened on 2026-08-22 (Photo Real anchor, Production
     # Painting bible, an oil painting back). Normally reconciled before it
     # gets here; this refuses the case that could not be.
-    clash = bible.medium_conflict()
+    clash = bible.anchor_conflicts()
     if clash:
         raise GenerationError(
-            f"{clash}. Re-draft the Bible, or set the rendering style back "
-            "— the sample renders from the Bible, so it would come back in "
-            "the wrong medium.")
+            "; ".join(clash) + ". Re-draft the Bible, or set the anchor back "
+            "— the sample renders FROM the Bible, so it would come back "
+            "stating the older answer.")
     parts = [
         "STYLE SAMPLE PROBE — engine selection test",
         "",
