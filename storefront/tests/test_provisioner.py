@@ -162,6 +162,66 @@ class ProvisionerTests(unittest.TestCase):
         ws = self._workspace_for(p.id)
         self.assertIn("update failed", ws.detail)
 
+    def test_every_studio_gets_an_at_rest_wrap_key(self):
+        """2026-08-23. The key wraps that studio's API keys on its volume,
+        and is held as a VARIABLE precisely so the volume does not carry
+        the key that opens it."""
+        configure_railway(True)
+        p = _fulfill(cloud_session("cs_prov_sec1", "sub_sec1"))
+        fake = FakeRailway()
+        provisioner.reconcile(railway=fake)
+        key = fake.variables.get("SCREENBOARD_SECRET_KEY")
+        self.assertTrue(key)
+        ws = self._workspace_for(p.id)
+        self.assertEqual(ws.secret_key, key)
+
+    def test_an_already_active_studio_is_backfilled(self):
+        """The bug this test exists for, caught during the 2026-08-23
+        rollout: `_provision` runs only for PENDING/FAILED workspaces, so
+        the variable reached NEW studios and no existing one — which was
+        all of them. Without the standing upgrade the feature would have
+        shipped and applied to nobody, silently, while the studio kept its
+        keys in plaintext."""
+        configure_railway(True)
+        p = _fulfill(cloud_session("cs_prov_sec2", "sub_sec2"))
+        provisioner.reconcile(railway=FakeRailway())
+        ws = self._workspace_for(p.id)
+        self.assertEqual(ws.status, "ACTIVE")
+        # A FRESH fake: nothing carried over, so anything present had to be
+        # re-sent on this reconcile through the ACTIVE path.
+        fake2 = FakeRailway()
+        provisioner.reconcile(railway=fake2)
+        self.assertEqual(getattr(fake2, "variables", {}).get("SCREENBOARD_SECRET_KEY"),
+                         ws.secret_key)
+
+    def test_the_key_is_never_rotated(self):
+        """Rotating it would make every credential already stored on that
+        volume unreadable, and the studio would lose its API keys with no
+        stated cause."""
+        configure_railway(True)
+        p = _fulfill(cloud_session("cs_prov_sec3", "sub_sec3"))
+        provisioner.reconcile(railway=FakeRailway())
+        first = self._workspace_for(p.id).secret_key
+        for _ in range(3):
+            provisioner.reconcile(railway=FakeRailway())
+        self.assertEqual(self._workspace_for(p.id).secret_key, first)
+
+    def test_two_studios_do_not_share_a_key(self):
+        configure_railway(True)
+        a = _fulfill(cloud_session("cs_prov_sec4", "sub_sec4"))
+        b = _fulfill(cloud_session("cs_prov_sec5", "sub_sec5"))
+        provisioner.reconcile(railway=FakeRailway())
+        self.assertNotEqual(self._workspace_for(a.id).secret_key,
+                            self._workspace_for(b.id).secret_key)
+
+    def test_a_railway_refusal_does_not_stall_the_reconcile(self):
+        """Variables are best-effort with a retry next pass — a studio that
+        cannot take the key today must not block the rest of the fleet."""
+        configure_railway(True)
+        _fulfill(cloud_session("cs_prov_sec6", "sub_sec6"))
+        provisioner.reconcile(railway=FakeRailway())
+        provisioner.reconcile(railway=FakeRailway(fail=True))  # must not raise
+
     def test_owner_studios_get_debug_tools_customers_never(self):
         """User ruling 2026-08-03: debug tools are linked to the owner's
         account — the flag rides provisioning for OWNER_EMAILS purchases

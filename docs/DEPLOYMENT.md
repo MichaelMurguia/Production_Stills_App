@@ -451,7 +451,10 @@ hand** (2026-08-23). It is the AES key wrapping that studio's API keys in
 does not carry the key that opens it, which is what makes a volume
 snapshot, a disk leak, or a restore onto another service useless. It is
 generated once per workspace, stored in `workspaces.secret_key`, and
-re-sent on every provision. Change it and the studio's stored credentials
+re-sent on every provision **and on every reconcile of an ACTIVE
+workspace** — that standing upgrade is what carries it to studios
+built before 2026-08-23, since `_provision` only runs for
+PENDING/FAILED rows. Change it and the studio's stored credentials
 become unreadable: the app reports them ABSENT (never hands ciphertext to
 a provider), and the customer must paste their keys again. If a workspace
 row is ever rebuilt, carry `secret_key` across with `access_token`.

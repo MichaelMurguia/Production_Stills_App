@@ -125,13 +125,7 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
             ws.railway_volume_id = railway.create_volume(
                 ws.railway_service_id, MOUNT_PATH)
             s.commit()
-        if not ws.secret_key:
-            # Backfilled for studios provisioned before 2026-08-23. Set once
-            # and never rotated here: rotating would make every credential
-            # already stored on that volume unreadable.
-            import secrets as _secrets
-            ws.secret_key = _secrets.token_urlsafe(32)
-            s.commit()
+        _ensure_secret_key(s, ws)
         variables = {
             "SCREENBOARD_HOME": MOUNT_PATH,
             "SCREENBOARD_ACCESS_TOKEN": ws.access_token,
@@ -239,6 +233,17 @@ def _revoke(s, ws: db.Workspace, railway, reason: str = "") -> None:
     except Exception as e:
         ws.detail = f"revoke failed, will retry: {str(e)[:500]}"
     s.commit()
+
+
+def _ensure_secret_key(s, ws) -> str:
+    """This studio's at-rest wrap key, generated once and never rotated
+    here — rotating it would make every credential already stored on that
+    volume unreadable, and the studio would silently lose its API keys."""
+    if not ws.secret_key:
+        import secrets as _secrets
+        ws.secret_key = _secrets.token_urlsafe(32)
+        s.commit()
+    return ws.secret_key
 
 
 def update_tenants(railway=railway_client) -> dict:
@@ -372,6 +377,18 @@ def _reconcile(railway, out: dict) -> dict:
                                 "SCREENBOARD_DEBUG_TOOLS": "1"})
                         except Exception:
                             pass  # next reconcile retries
+                    try:
+                        # Standing upgrade (2026-08-23): the at-rest wrap
+                        # key. _provision only runs for PENDING/FAILED, so
+                        # without this every studio that already existed —
+                        # which is all of them — would keep its API keys in
+                        # plaintext on the volume and never say why.
+                        # upsert is idempotent and the key never changes,
+                        # so this is a no-op after the first reconcile.
+                        railway.upsert_variables(ws.railway_service_id, {
+                            "SCREENBOARD_SECRET_KEY": _ensure_secret_key(s, ws)})
+                    except Exception:
+                        pass  # next reconcile retries
                     # Doors must open before they are offered: the branded
                     # address unlocks in the UI only once it provably
                     # serves. Probe is read-only — never a re-attach.
