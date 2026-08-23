@@ -318,17 +318,36 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
                     score, 10,
                     f"{key}: {files[i]} and {files[j]} are the same picture")
 
-    def test_rendering_still_falls_back_to_its_diagrams(self):
-        """Rendering style has no photographed set yet, and must therefore
-        still show the drawn plates rather than a placeholder."""
-        from app import style_docs
+    # Rendering is the PARTLY photographed library (2026-08-22): the user
+    # rendered five of the ten, one scene each — the same spaceport street
+    # in five media — so five cards show a frame and five still show their
+    # drawn diagram. Both halves have to keep working.
+    RENDERED = {"rend-production-painting", "rend-photo-real",
+                "rend-ink-wash", "rend-hand-drawn-cartoon",
+                "rend-3d-rendered-cartoon"}
+
+    def test_the_rendered_five_are_exactly_what_is_in_the_manifest(self):
         m = self.manifest()
-        for st in style_docs.styles("rendering"):
-            self.assertNotIn(st["key"], m)
+        self.assertEqual({k for k in m if k.startswith("rend-")}, self.RENDERED)
+
+    def test_every_rendering_style_keeps_a_diagram_to_fall_back_to(self):
+        """Half the library is still unrendered, and a card with neither a
+        frame nor a diagram is a hole."""
+        from app import style_docs
         i = JS.index("const STYLE_PLATES = ")
         plates = JS[i:JS.index(";", i)]
         for st in style_docs.styles("rendering"):
             self.assertIn('"' + st["name"] + '"', plates)
+
+    def test_a_partly_photographed_library_still_apologises(self):
+        """The note is per-picker and reads "some card here is a diagram",
+        which is true while five of ten are. It keys off the cards, not off
+        the library having any frames at all — that earlier version had
+        cinematography apologising for diagrams it no longer showed."""
+        i = JS.index("PLATES ARE DIAGRAMS")
+        seg = JS[max(0, i - 400):i]
+        self.assertIn("styles.some(x => x.plate && !plateShots(x.key).length)",
+                      seg)
 
     def test_the_diagram_apology_only_shows_over_a_diagram(self):
         """It used to key off "has a plate", which stays true after a
