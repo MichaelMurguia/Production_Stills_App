@@ -53,6 +53,8 @@ SYSTEM_SECTIONS = set(GLOBAL_SECTIONS) | {
     "Drift Prevention Rule",
 }
 
+NEWLINE = chr(10)
+
 _STOPWORDS = {"the", "and", "for", "with", "current", "locked", "scene",
               "specific", "lessons", "technology", "design", "language",
               "family", "families"}
@@ -228,6 +230,150 @@ def render_context(haystack: str,
             parts.append(_block(f"Locked lessons — {title}", lessons[title]))
 
     return "\n\n".join(p for p in parts if p)
+
+
+# ------------------------------------------- the rendering anchor, kept
+# ONE question — "what medium do the panels render in?" — and until
+# 2026-08-22 it had two answers. The rendering-style ANCHOR is the
+# director's decision. The bible's `Rendering Language` section is a
+# transcription of that decision, written once by the drafter and then
+# frozen. Nothing kept them in step, and the bible is the half that
+# reaches a render: `render_context` carries Rendering Language into
+# every panel prompt, and into the Model Test's entire brief.
+#
+# What that cost (user-hit 2026-08-22, proven from the install): the
+# bible was written at 16:17 saying Production Painting — "the brush left
+# visible… Avoid: photographic detail". The anchor was changed to Photo
+# Real at 18:04. The Model Test ran at 18:06 and returned an oil painting.
+# The engine rendered exactly what it was sent.
+#
+# The section IS the style's document entry — its mechanics as Required,
+# its avoid-list as Avoid — so it can be rebuilt from the anchor exactly,
+# for free, with no model call. It is derived now and kept derived: the
+# anchor is upstream of the bible the way the design system is upstream
+# of the CSS.
+
+_RL_TITLE = "Rendering Language"
+
+
+def rendering_section(entry: dict) -> str:
+    """The Rendering Language body for one rendering-style entry.
+
+    Deliberately fuller than the drafter's version, which saw only the
+    six mechanics that fit inside an anchor answer's 600 characters.
+    Nothing here is a summary — the document entry is the source."""
+    name = str(entry.get("name") or "").strip()
+    sub = str(entry.get("subtitle") or "").strip().lower()
+    req = [f"{name} rendering style" + (f" — {sub}." if sub else ".")]
+    principle = str(entry.get("principle") or "").strip()
+    if principle:
+        req.append(principle.rstrip(".") + ".")
+    for m in entry.get("mechanics") or []:
+        t = str(m).strip().rstrip(".")
+        if t:
+            req.append(t + ".")
+    avoid = [str(a).strip().rstrip(".") for a in (entry.get("avoid") or []) if str(a).strip()]
+    lines = ["### Required"] + [f"- {x}" for x in req]
+    if avoid:
+        lines += ["", "### Avoid"] + [f"- {a[:1].upper() + a[1:]}." for a in avoid]
+    return NEWLINE.join(lines)
+
+
+def replace_section(text: str, title: str, body: str) -> str:
+    """Swap ONE `## ` section's body, leaving every other byte alone.
+
+    Rewriting the whole document through parse_sections would reflow the
+    parts it does not own, and this is a document the director edits."""
+    marker = "## " + title
+    out, i, lines = [], 0, text.splitlines()
+    while i < len(lines):
+        if lines[i].strip() == marker:
+            out.append(lines[i])
+            out.append(body)
+            i += 1
+            while i < len(lines) and not lines[i].startswith("## "):
+                i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return NEWLINE.join(out).rstrip() + NEWLINE
+
+
+def stated_style(text: str = "") -> str:
+    """Which rendering style the bible's own section NAMES.
+
+    The first Required bullet reads `<Name> rendering style — <subtitle>`,
+    which both the drafter's template and `rendering_section` produce. A
+    bible that names none simply has no stated style, and a document that
+    states nothing can never be contradicted."""
+    body = parse_sections(text or load_text()).get(_RL_TITLE, "")
+    m = re.search(r"^\s*[-*]\s*(.+?)\s+rendering style\b", body, re.M | re.I)
+    return m.group(1).strip() if m else ""
+
+
+def medium_entry(answer: str = None) -> dict:
+    """The rendering-style document entry the anchor answer names."""
+    from . import store, style_docs
+    if answer is None:
+        answer = store.interview_answers().get("medium", "")
+    a = " ".join(str(answer or "").split())
+    if not a:
+        return {}
+    entries = style_docs.styles("rendering")
+    for e in entries:                       # the picker's own verbatim value
+        if a == " ".join(str(e.get("value") or "").split()):
+            return e
+    low = a.lower()
+    for e in entries:                       # or it simply names one
+        n = str(e.get("name") or "").strip().lower()
+        if n and low.startswith(n):
+            return e
+    return {}
+
+
+def sync_rendering_language(answer: str = None) -> dict:
+    """Rebuild the section when the anchor names a DIFFERENT style.
+
+    Only on a genuine contradiction. A director who hand-tuned bullets
+    within Photo Real still has a section naming Photo Real, and nothing
+    is touched. A section naming Production Painting under a Photo Real
+    anchor is wrong by definition, and is rebuilt.
+
+    It runs — it is not offered (user ruling on migrations). There is no
+    judgement here for a person to make: the anchor is the decision and
+    the section is its transcription."""
+    from . import store
+    text = load_text()
+    if not text.strip() or ("## " + _RL_TITLE) not in text:
+        return {"changed": False, "reason": "no bible"}
+    entry = medium_entry(answer)
+    if not entry:
+        return {"changed": False, "reason": "no rendering style chosen"}
+    stated, want = stated_style(text), str(entry.get("name") or "").strip()
+    if stated.lower() == want.lower():
+        return {"changed": False, "reason": "already agrees", "style": want}
+    save_text(replace_section(text, _RL_TITLE, rendering_section(entry)))
+    state = store.load_app_state()
+    state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
+    store.save_app_state(state)
+    return {"changed": True, "from": stated or "(unstated)", "to": want,
+            "rev": state["bible_rev"]}
+
+
+def medium_conflict() -> str:
+    """One sentence naming both sides, or "" when they agree.
+
+    What a render refuses on. It outlives a failed sync: an anchor naming
+    a style the library does not carry cannot be rebuilt from, and that is
+    precisely when the contradiction would otherwise ride silently."""
+    entry = medium_entry()
+    if not entry:
+        return ""
+    stated, want = stated_style(), str(entry.get("name") or "").strip()
+    if not stated or stated.lower() == want.lower():
+        return ""
+    return (f"the Art Direction Bible's Rendering Language says {stated}, "
+            f"and the board rendering style is {want}")
 
 
 def drift_prevention() -> str:

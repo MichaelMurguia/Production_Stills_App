@@ -689,6 +689,32 @@ def _collapse_legacy_revisions() -> None:
 
 
 @app.on_event("startup")
+def _resync_rendering_language() -> None:
+    """Every production, once, at boot: bring each bible's Rendering
+    Language back onto its rendering-style anchor.
+
+    The bug that made this necessary shipped renders, so the installs that
+    have it are the ones already carrying a stale section. A migration
+    runs — it does not wait to be asked (user ruling), and it costs a file
+    read per production."""
+    with paths.SWITCH_LOCK:
+        prev = paths.ACTIVE_PROJECT
+        try:
+            for proj in paths.list_projects():
+                paths.set_project(proj["slug"])
+                try:
+                    r = bible.sync_rendering_language()
+                except Exception:  # noqa: BLE001 — one bad bible serves the rest
+                    continue
+                if r.get("changed"):
+                    print(f"[migrate] {proj['slug'] or 'main'}: Rendering "
+                          f"Language {r['from']} -> {r['to']} "
+                          f"(bible rev {r['rev']})", flush=True)
+        finally:
+            paths.set_project(prev)
+
+
+@app.on_event("startup")
 def _warm_display_variants() -> None:
     """Pre-build the back-catalogue's display variants in the background at boot,
     so a cold board never triggers a storm of synchronous 4K resizes on first
@@ -2188,7 +2214,12 @@ async def api_candidate_promote(spec_id: str, cand_id: str, body: dict) -> dict:
 def api_get_style_bible() -> dict:
     return {"text": generate.load_style_bible(),
             "is_default": not paths.BIBLE.exists(),
-            "rev": int(store.load_app_state().get("bible_rev", 0))}
+            "rev": int(store.load_app_state().get("bible_rev", 0)),
+            # Readable as state before a render is paid for, never only as
+            # an error afterwards. Empty when they agree, which is the
+            # normal case now that the save reconciles.
+            "medium_conflict": bible.medium_conflict(),
+            "medium": bible.stated_style()}
 
 
 @app.put("/api/style-bible")
@@ -2474,6 +2505,14 @@ async def api_save_interview(body: dict) -> dict:
     fields = {k: str(body.get(k, "")).strip() for k in _INTERVIEW_FIELDS}
     paths.ensure_dirs()
     store._atomic_write_json(_interview_path(), fields)
+    # Changing the rendering style rewrites the bible's Rendering Language
+    # (user ruling 2026-08-22: "if a rendering style is changed after the
+    # Art Direction Bible was generated, the bible needs to update"). It
+    # runs here rather than offering a button, because there is no
+    # judgement in it — the anchor IS the decision and the section is its
+    # transcription. Free and deterministic: the style's document entry is
+    # what the section is made of.
+    fields["bible_sync"] = bible.sync_rendering_language(fields["medium"])
     return fields
 
 

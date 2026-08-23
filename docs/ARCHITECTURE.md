@@ -183,6 +183,28 @@ Install-level: `HOME/settings.json` (keys), `active_project.json`.
   `?size=thumb` (≤256px), `?size=md` (mid pane), or full (zoom/pixel edit).
   See `docs/IMAGE_SERVING.md`.
 
+## The rendering anchor is upstream of the Bible
+
+`bible.Rendering Language` is not an independent statement of the medium
+— it is a transcription of the **BOARD_RENDERING_STYLE anchor**'s
+document entry (`docs/RENDERING_STYLES.md`, via `style_docs`). The bible
+is the half that reaches a render: `render_context` carries the section
+into every panel prompt and into the Model Test's entire brief.
+
+Until 2026-08-22 the drafter wrote it once and nothing kept it in step.
+A production set Photo Real after the Bible was written, ran the Model
+Test, and got an oil painting — because the section still said
+Production Painting and listed "photographic detail" under Avoid.
+
+`bible.sync_rendering_language()` rebuilds the section from the entry
+when the anchor names a **different** style. It runs on the interview
+save and once per production at boot; it is deterministic and free, so
+there is no button and no model call. It fires only on a real
+contradiction, so a hand-tuned section that still names the right style
+is left alone. `bible.medium_conflict()` is the one answer to "do these
+two agree?", read by the Bible panel (to state it) and by `sample_probe`
+(to refuse before spending).
+
 ## The screenplay is stored twice, and only one copy costs money
 
 Every production keeps both:

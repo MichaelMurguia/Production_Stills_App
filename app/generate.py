@@ -1834,6 +1834,17 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     if not language:
         raise GenerationError("no rendering language — save the Art "
                               "Direction Bible before running a style probe")
+    # The probe's ENTIRE brief is the bible, so a bible that contradicts the
+    # rendering-style anchor spends a render proving the contradiction —
+    # which is what happened on 2026-08-22 (Photo Real anchor, Production
+    # Painting bible, an oil painting back). Normally reconciled before it
+    # gets here; this refuses the case that could not be.
+    clash = bible.medium_conflict()
+    if clash:
+        raise GenerationError(
+            f"{clash}. Re-draft the Bible, or set the rendering style back "
+            "— the sample renders from the Bible, so it would come back in "
+            "the wrong medium.")
     parts = [
         "STYLE SAMPLE PROBE — engine selection test",
         "",

@@ -707,6 +707,24 @@ def spec_lock_hash(spec_id: str) -> str:
     return str((_load_locks().get(spec_id) or {}).get("hash", ""))
 
 
+# The look interview's four anchor answers, read in one place. main.py's
+# routes owned this and bible.py now asks too — a second reader of a file
+# this small is how the medium ended up with two answers to begin with.
+INTERVIEW_FIELDS = ("texture", "palette", "light", "medium", "never", "notes")
+
+
+def interview_answers() -> dict:
+    p = paths.DATA / "interview.json"
+    blank = {k: "" for k in INTERVIEW_FIELDS}
+    if not p.exists():
+        return blank
+    try:
+        saved = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return blank
+    return {k: str(saved.get(k, "")) for k in INTERVIEW_FIELDS}
+
+
 def spec_locked(spec_id: str) -> bool:
     return spec_id in _load_locks()
 

@@ -6213,9 +6213,18 @@ async function renderWizard() {
     bibleEditing = false;
     // No template default exists (director's ruling 2026-08-01) — empty
     // means not yet drafted, and says so.
-    $("#style-status").innerHTML = !bible.text.trim()
+    // A clash is normally impossible — the interview save and boot both
+    // reconcile the section onto the anchor. What reaches here is a bible
+    // EDITED BY HAND back onto a different medium, which is the director's
+    // right and not something to silently overwrite. So it is stated,
+    // where it can be read before a render is paid for.
+    const clash = bible.medium_conflict
+      ? `<span class="badge REJECTED">MEDIUM</span> ${esc(bible.medium_conflict)}`
+      : "";
+    $("#style-status").innerHTML = (!bible.text.trim()
       ? ""
-      : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> saved` : "");
+      : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> saved` : ""))
+      + (clash ? (bible.text.trim() ? " &middot; " : "") + clash : "");
     syncBibleSave();
     return bible;
   };

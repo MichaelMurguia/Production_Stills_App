@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1873 tests** across 103 files.
+**1887 tests** across 104 files.
 
 
-## Product app — 1669 tests in 87 files
+## Product app — 1683 tests in 88 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -69,6 +69,7 @@ temp home and external services are faked.
 | `test_lock_is_not_freeze.py` | 13 | A LOCK is not a FREEZE. |
 | `test_looks.py` | 19 | Board looks (2026-08-13): a look is a persisted sheet-level property that survives arrangement commits; dress is PURE DERIVATION resolved from canon a |
 | `test_medium_guard.py` | 4 | Regression (user-hit 2026-08-06): a bake-off sample rendered photo-real past an attached BOARD_RENDERING_STYLE anchor. |
+| `test_medium_stays_in_step.py` | 14 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_name_acts.py` | 16 | Naming the acts is its own small call (user 2026-08-16: "No Act Titles", reported on an analysis that predates the field). |
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |

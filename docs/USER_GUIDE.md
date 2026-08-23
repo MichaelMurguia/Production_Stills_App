@@ -197,6 +197,14 @@ render obeys. Each step's header badge states where it stands.
    schema; you edit and save. Saving increments the **REV** counter shown on
    the editor and the band.
 6. **Model Test** — the same brief to every engine; pick a default.
+   The brief is the saved Bible, so a Bible that disagrees with your
+   rendering style would come back in the wrong medium. Changing the
+   rendering style rewrites the Bible's Rendering Language section to
+   match — you do not have to re-draft it, and nothing else in the
+   Bible is touched. If you edit that section by hand back onto a
+   different medium, the Bible panel says so rather than overruling
+   you, and the Model Test refuses instead of spending a render on
+   the contradiction.
 
 The Bible is data-driven: any non-system `##` section is a design language;
 a `Keywords:` line sets its auto-match triggers. Environments live as `###`
