@@ -3130,6 +3130,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-plate { width: 100%; height: 100%; display: block; }
 .rs-card.on .rs-frame { border-color: var(--ink-faint); }
 .rs-thumb { width: 100%; height: 100%; object-fit: cover; min-width: 0; }
+/* Every frame that opens full size says so under the pointer. */
+[data-lb] { cursor: zoom-in; }
 .rs-own-in { margin-top: 2px; }
 /* RULE_PASS_2026-08-16 Part B — ONE card, two lives. The catalogue cell
    and the chosen card render from one function at two scales, in one
@@ -3255,7 +3257,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   background: var(--field); color: var(--ink-dim); cursor: default;
 }
 .rs-cards-rich .rs-frame { aspect-ratio: 16 / 9; }
+/* The row is as wide as it has frames. Three renders read as a
+   comparison at a third each; ONE render at a third reads as a
+   thumbnail beside the full-width diagram next to it (user-hit
+   2026-08-22, when the rendering library became partly photographed).
+   B3 still holds — nothing pads to three, the row just stops
+   pretending there are three. */
 .rs-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.rs-frames[data-n="1"] { grid-template-columns: 1fr; }
+.rs-frames[data-n="2"] { grid-template-columns: repeat(2, 1fr); }
 .rs-cell { display: block; aspect-ratio: 16 / 9; background: var(--bg2);
   border: 1px solid var(--line-soft); overflow: hidden; }
 .rs-cell img { width: 100%; height: 100%; object-fit: cover; display: block;
@@ -3326,6 +3336,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-chosen .rs-frame { flex: none; width: 100%; }
 /* A grammar's chosen block carries its three frames, same strip as the
    panel card — one plate cannot stand for three reference images. */
+.rs-chosen .rs-frames[data-n="1"] { grid-template-columns: 1fr; }
+.rs-chosen .rs-frames[data-n="2"] { grid-template-columns: repeat(2, 1fr); }
 .rs-chosen .rs-frames { display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 4px; }
 .rs-chosen .rs-cell { aspect-ratio: 16 / 9; }

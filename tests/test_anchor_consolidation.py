@@ -314,7 +314,7 @@ class TheCardIsItsButton(unittest.TestCase):
         self.assertIn("${styleCard(st)}", seg)
         self.assertIn("styleCard(hit, { chosen: true })", JS)
         body = JS[JS.index("function styleCard(st,"):]
-        self.assertIn("stylePlate(st.plate, st.shot)", body)
+        self.assertIn("stylePlate(st.plate, st.shot, st.name)", body)
 
     def test_the_picture_leads_at_both_scales(self):
         j = JS.index("function styleCard(st,")

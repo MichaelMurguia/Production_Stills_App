@@ -9859,14 +9859,22 @@ let PLATE_SHOTS = null;
 const loadPlateShots = () => PLATE_SHOTS ??= fetch("/style-plates/index.json")
   .then(r => r.ok ? r.json() : {}).then(m => (PLATE_SHOTS = m || {}), () => (PLATE_SHOTS = {}));
 
-function stylePlate(key, shot) {
+function stylePlate(key, shot, alt = "") {
   const body = PLATE[key];
   if (!body && !shot) return "";
   const file = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
   const src = shot || (file ? `/style-plates/${file}` : "");
+  // A real picture opens full size, the same as the photographed frames
+  // beside it (user, 2026-08-22: "the one on the left does not expand if
+  // I click on it"). `data-lb` is what the picker binds the lightbox to,
+  // and this image never carried one — so the production's OWN captured
+  // plate, the single most interesting picture in the modal, was the one
+  // frame you could not look at. The drawn diagram gets none: an SVG at
+  // 68x56 has no full size to open.
   return (body ? `<svg class="rs-plate" viewBox="0 0 68 56" aria-hidden="true"
     fill="none" stroke-width="1" vector-effect="non-scaling-stroke">${body}</svg>` : "")
-    + (src ? `<img class="rs-shot" src="${esc(src)}" alt="">` : "");
+    + (src ? `<img class="rs-shot" src="${esc(src)}" alt="${esc(alt)}"
+         data-lb="${esc(src)}">` : "");
 }
 
 // The picker, shared by every anchor whose answer comes from a known
@@ -9955,10 +9963,10 @@ function styleCard(st, { chosen = false } = {}) {
   // B3: never pad to three. A reserved shape is forbidden unless it states
   // the blocker that keeps it empty, and a dashed cell states nothing.
   const drawn = st.plate || st.shot
-    ? `<span class="rs-frame">${stylePlate(st.plate, st.shot)}</span>` : "";
+    ? `<span class="rs-frame">${stylePlate(st.plate, st.shot, st.name)}</span>` : "";
   const picture = st.rich
     ? (shots.length
-        ? `<span class="rs-frames">${shots.map((src, i) =>
+        ? `<span class="rs-frames" data-n="${shots.length}">${shots.map((src, i) =>
             `<span class="rs-cell"><img class="rs-thumb" src="${esc(src)}"
                alt="${esc(st.name)} reference frame ${i + 1}"
                data-lb="${esc(src)}"></span>`).join("")}</span>`

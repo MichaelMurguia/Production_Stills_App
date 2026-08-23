@@ -349,6 +349,32 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
         self.assertIn("styles.some(x => x.plate && !plateShots(x.key).length)",
                       seg)
 
+    def test_a_row_is_as_wide_as_it_has_frames(self):
+        """User-hit 2026-08-22 once rendering became partly photographed:
+        three renders read as a comparison at a third each, but ONE render
+        at a third is a thumbnail beside the full-width diagram next to
+        it. B3 still holds — nothing pads to three, the row just stops
+        pretending there are three."""
+        css = (ROOT / "app" / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('.rs-frames[data-n="1"] { grid-template-columns: 1fr; }', css)
+        self.assertIn('.rs-frames[data-n="2"] { grid-template-columns: repeat(2, 1fr); }', css)
+        js = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('class="rs-frames" data-n="${shots.length}"', js)
+
+    def test_the_captured_house_plate_opens_like_every_other_frame(self):
+        """User, 2026-08-22: "the one on the left does not expand if I
+        click on it." `data-lb` is what the picker binds the lightbox to,
+        and `.rs-shot` never carried one — so the production's OWN plate,
+        the single most interesting picture in the modal, was the one
+        frame you could not look at."""
+        js = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+        i = js.index("function stylePlate(")
+        seg = js[i:i + 1400]
+        self.assertIn('class="rs-shot"', seg)
+        self.assertIn("data-lb=", seg)
+        # the drawn diagram gets none: an SVG at 68x56 has no full size
+        self.assertNotIn('class="rs-plate"' + " data-lb", seg)
+
     def test_the_diagram_apology_only_shows_over_a_diagram(self):
         """It used to key off "has a plate", which stays true after a
         library gains photographed frames — so cinematography and then

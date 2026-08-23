@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1909 tests** across 104 files.
+**1911 tests** across 104 files.
 
 
-## Product app — 1705 tests in 88 files
+## Product app — 1707 tests in 88 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -106,7 +106,7 @@ temp home and external services are faked.
 | `test_step_sequence_03.py` | 26 | Stage 03 in the step vocabulary — STEP_SEQUENCE_SPEC Part 3, mock hier-5a. |
 | `test_storage_guard.py` | 14 | Disk space is a gate, not a 502 (user 2026-08-07). |
 | `test_style_anchors.py` | 12 | The four-anchor ruling (2026-08-03): three movie parameters + one board parameter auto-attach, capped per role; board layout is assembly grammar. |
-| `test_style_libraries.py` | 35 | Three anchors, three documents, one parser. |
+| `test_style_libraries.py` | 37 | Three anchors, three documents, one parser. |
 | `test_style_plate_tooling.py` | 11 | The two scripts that stand between a folder of renders and the picker. |
 | `test_stylesheet_parses.py` | 4 | The stylesheet must actually parse. |
 | `test_subject_identity_match.py` | 16 | The SUBJECT IDENTITIES block missed the same way the workbench did. |
