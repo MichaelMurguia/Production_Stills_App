@@ -141,10 +141,12 @@ class AnAnchorIsAnsweredByEither(unittest.TestCase):
 
     def test_the_card_badge_never_reads_none_over_its_own_answer(self):
         i = JS.index("const inWords =")
-        seg = JS[i - 400:i + 400]
+        seg = JS[i - 400:i + 1400]
         self.assertIn('"IN WORDS"', seg)
-        self.assertIn("mine.length ? `${mine.length}`", seg,
-                      "pictures still carry the count")
+        # a palette counts GROUPS (2026-08-23); other anchors count refs
+        self.assertIn("nMine ? `${nMine}`", seg)
+        self.assertIn('`${nProp} PROPOSED`', seg,
+                      "a column full of proposed colour never reads NONE")
 
     def test_the_badge_is_resynced_when_the_words_arrive(self):
         """The interview loads after the cards render, so a badge read at

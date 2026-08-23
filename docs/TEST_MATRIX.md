@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1989 tests** across 108 files.
+**1990 tests** across 108 files.
 
 
-## Product app — 1773 tests in 91 files
+## Product app — 1774 tests in 91 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -80,7 +80,7 @@ temp home and external services are faked.
 | `test_one_resolved_manifest.py` | 18 | One fact, one computation — the manifest, the count, and the arrange room's SHORT verdict. |
 | `test_p1_lifecycle.py` | 13 | P1 coverage from docs/TEST_MATRIX.md: the sheet lock/hash contract, the candidate lifecycle, and the assemble endpoint — the behaviors that guard cano |
 | `test_palette_distinctness.py` | 25 | Four design languages must not share one palette. |
-| `test_palette_order.py` | 23 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
+| `test_palette_order.py` | 24 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
 | `test_prompt_download.py` | 5 | The compiled-prompt download (user 2026-08-06). |

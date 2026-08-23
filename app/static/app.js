@@ -4288,10 +4288,10 @@ async function renderSettings(openTab = "") {
             ${sw.cite ? `<span class="sv-cite">&ldquo;${esc(sw.cite)}&rdquo;</span>` : ""}
           </span>
           <span class="sv-acts">
-            <button class="text-act" data-f="rc">Recolor</button>
-            ${approved || sw.approved ? "" : '<button class="text-act ok-act" data-f="ap">Approve</button>'}
+            <button class="text-act" data-f="rc">Edit</button>
             <button class="text-act" data-f="rj"${approved
-              ? ' title="Demote out of canon — a status record with a reason, not a deletion"' : ""
+              ? ' title="Demote out of canon — a status record with a reason, not a deletion"'
+              : ' title="Drop this colour from the palette — the rest approve together"'
               }>Reject</button>
           </span>
         </div>`).join("");
@@ -4330,10 +4330,11 @@ async function renderSettings(openTab = "") {
           ${many ? '<p class="sv-note mono sv-note-top">HERO — THE COLOR SPLASHED THROUGH THAT FACTION\u2019S SETS, COSTUMES AND PROPS</p>' : ""}
           <div class="sv-body">${groups.map(section).join("")}</div>
           <div class="sv-foot">
-            ${approved ? "" : `<button class="ghost" data-f="ap-all">Approve all ${n}</button>
+            ${approved ? "" : `<button class="primary" data-f="ap-all">${
+              many ? `Approve all ${groups.length} palettes` : "Approve palette"}</button>
             <button class="text-act" data-f="rj-all">${
               many ? `Reject all ${n}` : "Reject the group"}</button>`}
-            <span class="sv-footnote mono">EACH VERDICT IS ITS OWN REFERENCE RECORD</span>
+            <span class="sv-footnote mono">A LANGUAGE'S SWATCHES APPROVE AS ONE PALETTE</span>
             ${approved && !many ? `<button class="text-act sv-remove" data-f="rm-group"
               title="Delete these references for good — the ramp row no longer carries this act">Remove group</button>` : ""}
           </div>
@@ -4387,11 +4388,6 @@ async function renderSettings(openTab = "") {
                   }
                   onChange();
                 } catch (err) { toast(err.message, true); }
-              };
-              const ap = $("[data-f=ap]", row);
-              if (ap) ap.onclick = async () => {
-                try { await verdictFor(refId, "APPROVED"); refresh(); drop(refId); }
-                catch (err) { toast(err.message, true); }
               };
               $("[data-f=rj]", row).onclick = async () => {
                 try { await verdictFor(refId, "REJECTED"); drop(refId); }
@@ -4615,13 +4611,21 @@ async function renderWizard() {
     // PALETTE_GROUPS_PLAN (2026-08-06): a design language renders as ONE
     // contiguous ramp — the group is the swatch, the colour is a detail.
     // Every per-colour fact and verb lives in the viewer, one click away.
-    const rampLabel = g => {
+    const rampLabel = (g, gi = -1) => {
       const hero = g.swatches.find(s => s.hero);
+      // Edit and Approve live ON the row (user, 2026-08-23): the ramp
+      // states every colour right here, so a group verdict is a judgment
+      // on something fully visible — the acts were a click further away
+      // than the thing they act on.
       return `<p class="sw-ramp-label">
         <span class="lang">${esc(g.language.toUpperCase())}</span>
         <span class="n">${g.swatches.length}</span>
         <span class="hero${hero ? "" : " open"}">${
-          hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span></p>`;
+          hero ? `HERO ${esc(hero.hex)}` : "OPEN"}</span>${gi < 0 ? "" : `
+        <span class="sw-row-acts">
+          <button class="text-act" data-f="g-edit" data-gi="${gi}">Edit</button>
+          <button class="text-act ok-act" data-f="g-ap" data-gi="${gi}">Approve</button>
+        </span>`}</p>`;
     };
 
     // Which languages the user has actually looked at. Outside the render
@@ -4692,7 +4696,7 @@ async function renderWizard() {
         ${r.groups.map((g, i) => `
           <div class="sw-ramp" data-lang="${esc(g.language)}" data-gi="${i}">${
             rampOrder(g.swatches).map(band).join("")}</div>
-          ${rampLabel(g)}`).join("")}
+          ${rampLabel(g, i)}`).join("")}
         <div class="sw-bar">
           <button class="ghost" data-f="review">Review all ${total}</button>
           <button class="ghost" data-f="ap-all"${unopened(r) ? " disabled" : ""}>Approve all ${total}</button>
@@ -4753,6 +4757,28 @@ async function renderWizard() {
       };
       $("[data-f=ap-all]", strip).onclick = () => sweep("APPROVED");
       $("[data-f=discard]", strip).onclick = () => sweep("REJECTED");
+      // The row's own acts. Edit is the same door the ramp click opens;
+      // Approve files the whole language — its colours are all on the row,
+      // so this is not a judgment on anything unseen.
+      $$("[data-f=g-edit]", strip).forEach(b => b.onclick = () => {
+        const g = r.groups[Number(b.dataset.gi)];
+        seen.add(g.language);
+        openSwatchViewer([g], { onChange: reflow, refresh: refreshRefs,
+            onRescan: (lang, host) => runSwatchScan(host,
+              { languages: [lang], label: `Rescanning ${lang}…` }) })
+          .then(reflow);
+      });
+      $$("[data-f=g-ap]", strip).forEach(b => b.onclick = async () => {
+        const g = r.groups[Number(b.dataset.gi)];
+        for (const sw of [...g.swatches]) {
+          try { await verdictFor(sw.ref_id, "APPROVED"); }
+          catch (err) { toast(err.message, true); return reflow(); }
+          g.swatches = g.swatches.filter(x => x.ref_id !== sw.ref_id);
+        }
+        toast(`${g.language} approved as one palette.`);
+        refreshRefs();
+        reflow();
+      });
     };
 
     // Pending proposals from an earlier run survive reload — rebuild the
@@ -5050,7 +5076,7 @@ async function renderWizard() {
     if (groups.length > 1 && badge) {
       const act = document.createElement("button");
       act.className = "text-act pal-review";
-      act.textContent = `Review all ${total}`;
+      act.textContent = `Review all ${groups.length} palettes`;
       act.onclick = () => openSwatchViewer(groups,
         { approved: true, refresh: refreshRefs, onChange: () => {} })
         .then(refreshRefs);
@@ -5061,9 +5087,14 @@ async function renderWizard() {
   const refreshRefs = async () => {
     // Pending swatch proposals live in the review strip, not the anchor
     // rows (D8: they persist as PROVISIONAL refs so verdicts are records).
-    const refs = (await api("/api/references")).filter(r =>
-      r.status !== "REJECTED"
-      && !(r.source === "swatch-proposal" && r.status === "PROVISIONAL"));
+    const all = (await api("/api/references")).filter(r => r.status !== "REJECTED");
+    // Pending proposals stay OUT of the anchor rows (D8: the strip is
+    // their review surface) — but the badge must still see them, or a
+    // column full of proposed colour reads NONE (user-hit 2026-08-23).
+    const pendingPal = all.filter(r =>
+      r.source === "swatch-proposal" && r.status === "PROVISIONAL");
+    const refs = all.filter(r =>
+      !(r.source === "swatch-proposal" && r.status === "PROVISIONAL"));
     // Every anchor in a column rides the bible draft (user ruling
     // 2026-08-05: inclusion IS the selection — no per-row checkbox).
     wizAnchorIds = refs.filter(r =>
@@ -5077,8 +5108,26 @@ async function renderWizard() {
       // is the badge calling the user a liar — pictures still carry the
       // count, and words say so in their own right.
       const inWords = !!$("[data-f=words]", col)?.value.trim();
-      badge.className = `badge ${mine.length || inWords ? "APPROVED" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
-      badge.textContent = mine.length ? `${mine.length}`
+      // A design language is ONE palette (user, 2026-08-23: "it should
+      // say 4 proposed, not 24"): the badge counts groups, never colours.
+      // A swatch with no language is its own group of one, same rule the
+      // ramp rows follow.
+      const palGroups = rs => {
+        const langs = new Set(); let singles = 0;
+        rs.forEach(r => {
+          const lang = (r.notes || "").split(" · ").length >= 3
+            ? (r.notes || "").split(" · ")[0].trim() : "";
+          lang ? langs.add(lang) : singles += 1;
+        });
+        return langs.size + singles;
+      };
+      const isPal = role === "COLOR_PALETTE";
+      const nMine = isPal ? palGroups(mine) : mine.length;
+      const nProp = isPal ? palGroups(pendingPal) : 0;
+      badge.className = `badge ${nMine || inWords ? "APPROVED"
+        : nProp ? "PROVISIONAL" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
+      badge.textContent = nMine ? `${nMine}`
+        : nProp ? `${nProp} PROPOSED`
         : inWords ? "IN WORDS" : "NONE";
       const list = $("[data-f=list]", col);
       list.innerHTML = "";

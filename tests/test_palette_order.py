@@ -157,14 +157,22 @@ class SourceImplementsTheRule(unittest.TestCase):
         self.assertIn("UNOPENED", JS)
         self.assertIn("const seen = new Set()", JS)
 
-    def test_the_approved_mode_swaps_the_verbs(self):
-        """Approve is meaningless on an approved swatch; Reject there means
-        demote out of canon, and is NOT the row's × (which deletes)."""
+    def test_a_swatch_row_edits_but_never_approves_alone(self):
+        """User, 2026-08-23: "the swatches need to be approved as one...
+        only one approve button." A colour is editable and droppable on
+        its own row; the VERDICT belongs to the language. Reject in
+        approved mode still means demote, never the row's × (delete)."""
         body = self.viewer_fn()
-        self.assertIn('data-f="ap">Approve</button>', body)
-        self.assertIn('approved ? "" :', body)
+        self.assertNotIn('data-f="ap"', body)
+        self.assertIn('data-f="rc">Edit</button>', body)
         self.assertIn("Demote out of canon", body)
         self.assertIn('approved ? "APPROVED" : "PROPOSED, NOT CANON"', body)
+
+    def test_the_one_approve_names_the_palette(self):
+        body = self.viewer_fn()
+        self.assertIn('"Approve palette"', body)
+        self.assertIn("Approve all ${groups.length} palettes", body)
+        self.assertIn("A LANGUAGE'S SWATCHES APPROVE AS ONE PALETTE", body)
 
     def test_approved_rows_open_the_viewer(self):
         """The rule the ramp canonized: members are one click away. The
@@ -218,7 +226,8 @@ class SourceImplementsTheRule(unittest.TestCase):
         """NON_CANON_REVIEW R4: the count is what the verb acts on, so the
         header is where the two belong together — not under the rows."""
         body = self.column_fn()
-        self.assertIn("Review all ${total}", body)
+        self.assertIn("Review all ${groups.length} palettes", body,
+                      "palettes, not colours (2026-08-23)")
         self.assertIn("[data-f=state]", body, "anchored to the column's count badge")
         self.assertIn("badge.after(act)", body)
         self.assertIn("approved: true", body)
