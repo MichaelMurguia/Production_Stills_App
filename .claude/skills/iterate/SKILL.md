@@ -90,8 +90,10 @@ The release chain, once, for everything accumulated.
    archives HEAD; running it first ships stale content. This has been got
    wrong twice.
 5. **Commit the zips**, then `git push origin main`.
-6. **Poll `/api/healthz`** on the tenant until `version` matches, then
-   report it. A push is not a deploy.
+6. **Watch the rollout** — `/deploy-watch`. Poll `/api/healthz` until the
+   rev matches and report it. A push is not a deploy. The mechanics of
+   steps 4–6, and what to do when a studio misses the update, live in
+   `/fleet-push`; do not re-derive them here.
 7. Clear `pending`, keep `mode` as it was.
 
 Local commits made without a VERSION bump are fine: CI checks the pushed
