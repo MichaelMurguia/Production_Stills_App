@@ -125,9 +125,20 @@ def _provision(s, ws: db.Workspace, purchase: db.Purchase, railway) -> None:
             ws.railway_volume_id = railway.create_volume(
                 ws.railway_service_id, MOUNT_PATH)
             s.commit()
+        if not ws.secret_key:
+            # Backfilled for studios provisioned before 2026-08-23. Set once
+            # and never rotated here: rotating would make every credential
+            # already stored on that volume unreadable.
+            import secrets as _secrets
+            ws.secret_key = _secrets.token_urlsafe(32)
+            s.commit()
         variables = {
             "SCREENBOARD_HOME": MOUNT_PATH,
             "SCREENBOARD_ACCESS_TOKEN": ws.access_token,
+            # Wraps the studio's API keys on its volume. Deliberately a
+            # variable, not a file — the volume must not carry the key that
+            # opens it.
+            "SCREENBOARD_SECRET_KEY": ws.secret_key,
             # Railway's edge proxies every request; uvicorn must trust its
             # X-Forwarded-Proto so cookies see the real (https) scheme.
             "FORWARDED_ALLOW_IPS": "*",

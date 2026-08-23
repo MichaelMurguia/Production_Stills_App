@@ -439,10 +439,26 @@ Lifecycle (all driven by `provisioner.reconcile()` — startup, after cloud
 fulfillment, after subscription webhooks): PAID cloud purchase → service
 created from `TENANT_REPO` (repo root, `uvicorn app.main:app`), volume at
 `/workspace`, env `SCREENBOARD_HOME=/workspace` +
-`SCREENBOARD_ACCESS_TOKEN=<workspace token>`, generated
+`SCREENBOARD_ACCESS_TOKEN=<workspace token>` +
+`SCREENBOARD_SECRET_KEY=<workspace secret_key>`, generated
 `*.up.railway.app` domain → row ACTIVE; buyer collects URL + token on the
 success page (revisitable). CANCELED → service deleted, row REVOKED
 (token kept as the record). Probe a tenant with `GET /api/healthz`.
+
+**`SCREENBOARD_SECRET_KEY` is load-bearing and must never be rotated by
+hand** (2026-08-23). It is the AES key wrapping that studio's API keys in
+`settings.json` on the volume — held as a variable precisely so the volume
+does not carry the key that opens it, which is what makes a volume
+snapshot, a disk leak, or a restore onto another service useless. It is
+generated once per workspace, stored in `workspaces.secret_key`, and
+re-sent on every provision. Change it and the studio's stored credentials
+become unreadable: the app reports them ABSENT (never hands ciphertext to
+a provider), and the customer must paste their keys again. If a workspace
+row is ever rebuilt, carry `secret_key` across with `access_token`.
+
+This protects the studio's credentials from everyone except us — we hold
+the variable. That is a disclosure, not a gap to be closed with a stronger
+algorithm; do not write "we cannot read your key" anywhere.
 
 ## Not built (deliberate scope cuts, do not silently "fix")
 

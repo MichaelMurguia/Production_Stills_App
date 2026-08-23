@@ -18,12 +18,31 @@ machine. No auth by design; the OS user account is the boundary. API keys
 live in the install's `settings.json` and leave the machine only in calls
 to the provider they belong to.
 
+**Keys are wrapped at rest** (2026-08-23): Windows DPAPI, bound to the
+user account, so the file is inert on another machine or profile. That
+closes *file exfiltration*, not the OS-user boundary — nothing tells a
+customer where to unzip, so the install folder is routinely Downloads,
+Desktop or Documents, all OneDrive-synced by default on Windows 11, and a
+plaintext key there synced to Microsoft's cloud and every other device on
+the account. A plaintext file from an earlier version is wrapped once at
+boot. Where no wrap is available the app stores plaintext and **says so**
+via `secrets_at_rest` on `/api/settings`; a wrap we cannot perform is
+never reported as one.
+
 **Cloud workspace (one tenant = one Railway service):** the whole app sits
 behind the workspace access token (`SCREENBOARD_ACCESS_TOKEN`): pages
 redirect to `/login`, APIs return 401, the session cookie is HttpOnly /
 SameSite=Lax / Secure-on-HTTPS, comparisons are constant-time, and failed
 logins pay a 0.5 s delay. Only `/login`, `/api/login`, `/api/healthz`, and
-the stylesheet are reachable unauthenticated. Isolation between tenants is
+the stylesheet are reachable unauthenticated. Studio API keys are wrapped on the volume with
+AES-GCM under `SCREENBOARD_SECRET_KEY`, a per-workspace Railway variable —
+held off the volume on purpose, so a volume snapshot, a disk leak, or a
+restore onto another service yields ciphertext. **This is not a defence
+against us**: we hold that variable, and encryption whose key the operator
+also holds protects against everyone except the operator. Stated plainly
+rather than dressed up (ruled 2026-08-23); the only real fixes would be a
+browser-held key or not taking keys at all, and neither is built.
+Isolation between tenants is
 service-level (separate Railway services, separate volumes); tenant data
 exists only on the tenant's volume — repo-derived deploy images contain no
 user canon (`data/`, `projects/`, `project_state/`, `settings.json`, and

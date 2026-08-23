@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import (activity, assemble, autofill, backup, bible, composition,
                scan,
                connectors, generate, insights, looks, paths, sheet,
-               sheet_render, store, tutorials, wizard)
+               secrets_at_rest, sheet_render, store, tutorials, wizard)
 from . import validation
 from .validation import check_spec, full_validate
 
@@ -660,6 +660,25 @@ async def activity_middleware(request: Request, call_next):
 
 
 @app.on_event("startup")
+def _wrap_credentials_at_rest() -> None:
+    """Any plaintext key left by an earlier version gets wrapped, once, at
+    boot (2026-08-23 audit). Migrations run — they are never offered as a
+    button, because a security fix nobody presses is not a fix.
+
+    Silent when there is nothing to do, and a no-op where no wrap is
+    available; `GET /api/settings` states which of the two it is rather
+    than implying protection the platform cannot give."""
+    try:
+        r = generate.rewrap_settings_at_rest()
+    except Exception as e:  # never block boot over storage hygiene
+        print(f"[secrets] rewrap skipped: {e}")
+        return
+    if r["rewrapped"]:
+        print(f"[secrets] wrapped {r['rewrapped']} credential(s) at rest "
+              f"({r['scheme']})")
+
+
+@app.on_event("startup")
 def _collapse_legacy_revisions() -> None:
     """Revisions are retired (2026-08-16) — collapse any chain still on
     disk before the first request sees it.
@@ -1220,6 +1239,7 @@ def api_get_settings() -> dict:
     from . import narrative
     provider_meta = generate.all_providers()
     return {"capability": generate.capability(),
+            "secrets_at_rest": secrets_at_rest.status(),
             "openai_env_key_hint": f"…{oenv[-4:]}" if oenv else None,
             "anthropic_api_key_set": bool(akey),
             "anthropic_api_key_hint": f"…{akey[-4:]}" if akey else None,

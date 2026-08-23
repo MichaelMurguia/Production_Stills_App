@@ -107,6 +107,13 @@ class Workspace(Base):
     # bookmarks keep working instead of landing on the unclaimed page.
     prev_subdomain: Mapped[str] = mapped_column(String(63), default="")
     access_token: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
+    # AES key for this studio's credentials at rest (2026-08-23 audit). It
+    # is handed to the service as a Railway VARIABLE and never written to
+    # the volume, so a volume snapshot, a disk leak, or a restore onto
+    # another service yields ciphertext and nothing else. Generated once
+    # and kept here, because regenerating it would orphan the keys the
+    # studio already holds.
+    secret_key: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(32))
     railway_service_id: Mapped[str] = mapped_column(String(64), default="")
     railway_url: Mapped[str] = mapped_column(String(255), default="")
     domain_live: Mapped[int] = mapped_column(Integer, default=0)
@@ -244,6 +251,7 @@ def init_db() -> None:
                 "ALTER TABLE workspaces ADD COLUMN railway_url VARCHAR(255) DEFAULT ''",
                 "ALTER TABLE workspaces ADD COLUMN domain_live INTEGER DEFAULT 0",
                 "ALTER TABLE workspaces ADD COLUMN prev_subdomain VARCHAR(63) DEFAULT ''",
+                "ALTER TABLE workspaces ADD COLUMN secret_key VARCHAR(64) DEFAULT ''",
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_workspaces_subdomain "
                 "ON workspaces (subdomain) WHERE subdomain <> ''"):
         try:

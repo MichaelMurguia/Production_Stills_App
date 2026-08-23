@@ -5,3 +5,7 @@ pillow>=10.4
 google-genai>=2.12
 openai>=2.0
 pypdf>=4.0
+# Credentials at rest on a cloud studio (AES-GCM). Already present
+# transitively via google-genai -> google-auth, but declared because
+# app/secrets_at_rest.py imports it directly.
+cryptography>=42

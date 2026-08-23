@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from . import (bible, imaging, mockflow, palette_plate, paths, revisions,
-               storage, store)
+               secrets_at_rest, storage, store)
 
 MODEL = "gemini-3-pro-image"  # default provider's model (Gemini / Nano Banana Pro)
 OPENAI_MODEL = "gpt-image-2"
@@ -381,6 +381,30 @@ def project_negatives() -> list[str]:
 
 # ------------------------------------------------------------------ settings
 
+# Every credential in settings.json is wrapped on the way out and unwrapped
+# on the way in (2026-08-23 audit). This is the ONLY place either happens —
+# paths.SETTINGS is touched in exactly these two functions, which is what
+# made at-rest encryption a small change rather than a refactor. Callers
+# see plain strings and are unaware, by design.
+_SECRET_FIELDS = ("gemini_api_key", "openai_api_key", "anthropic_api_key")
+
+
+def _map_secrets(settings: dict, fn) -> dict:
+    """Apply fn to every credential, in place, including the ones nested in
+    the custom-engine registry — a user-added engine's key is exactly as
+    sensitive as the three first-class ones and was the likelier leak in
+    the audit."""
+    for f in _SECRET_FIELDS:
+        if isinstance(settings.get(f), str) and settings[f]:
+            settings[f] = fn(settings[f])
+    engines = settings.get("custom_engines")
+    if isinstance(engines, list):
+        for e in engines:
+            if isinstance(e, dict) and isinstance(e.get("api_key"), str) and e["api_key"]:
+                e["api_key"] = fn(e["api_key"])
+    return settings
+
+
 def load_settings() -> dict:
     """Settings (API keys, engines, preferences) are INSTALL-level — they
     follow the user across projects. Pre-multi-project installs kept them
@@ -388,15 +412,18 @@ def load_settings() -> dict:
     them to the install home."""
     if paths.SETTINGS.exists():
         try:
-            return json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
+            raw = json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             # A corrupt file must not brick every route — set it aside
             # (nothing is destroyed) and present a fresh, stated blank.
             paths.SETTINGS.replace(paths.SETTINGS.with_suffix(".json.corrupt"))
             return {}
+        return _map_secrets(raw, secrets_at_rest.unprotect)
     legacy = paths.HOME / "data" / "settings.json"  # pre-multi-project home
     if legacy.exists():
-        return json.loads(legacy.read_text(encoding="utf-8"))
+        return _map_secrets(
+            json.loads(legacy.read_text(encoding="utf-8")),
+            secrets_at_rest.unprotect)
     return {}
 
 
@@ -404,7 +431,37 @@ def save_settings(settings: dict) -> None:
     # Atomic — a truncated settings.json would 500 every route, including
     # the Settings page the user would need to repair it.
     paths.ensure_dirs()
-    store._atomic_write_json(paths.SETTINGS, settings)
+    # Deep-copied first: callers hold this dict and must keep seeing plain
+    # values. Wrapping in place handed one caller ciphertext as a key.
+    store._atomic_write_json(
+        paths.SETTINGS,
+        _map_secrets(copy.deepcopy(settings), secrets_at_rest.protect))
+
+
+def rewrap_settings_at_rest() -> dict:
+    """Migration, run at boot — never offered as a button. Reads through
+    the unwrap, writes back through the wrap, so a plaintext file left by
+    any earlier version becomes wrapped once and stays that way."""
+    if not secrets_at_rest.status()["wrapped"] or not paths.SETTINGS.exists():
+        return {"rewrapped": 0, "scheme": secrets_at_rest.scheme()}
+    try:
+        raw = json.loads(paths.SETTINGS.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"rewrapped": 0, "scheme": secrets_at_rest.scheme()}
+    plain = [v for v in _collect_secrets(raw) if not secrets_at_rest.is_wrapped(v)]
+    if not plain:
+        return {"rewrapped": 0, "scheme": secrets_at_rest.scheme()}
+    save_settings(load_settings())
+    return {"rewrapped": len(plain), "scheme": secrets_at_rest.scheme()}
+
+
+def _collect_secrets(settings: dict) -> list:
+    out = [settings[f] for f in _SECRET_FIELDS
+           if isinstance(settings.get(f), str) and settings[f]]
+    for e in settings.get("custom_engines") or []:
+        if isinstance(e, dict) and isinstance(e.get("api_key"), str) and e["api_key"]:
+            out.append(e["api_key"])
+    return out
 
 
 def _client(timeout_ms: int = 300_000, key: str = ""):
