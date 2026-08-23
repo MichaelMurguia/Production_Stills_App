@@ -372,5 +372,31 @@ class AWrappedBulletKeepsItsTail(unittest.TestCase):
         self.assertEqual(len(m), 1)
         self.assertIn("no microscopic surface variation", m[0])
 
+    def test_a_wrapped_avoid_line_keeps_its_tail(self):
+        """Seven of the nine rendering styles wrap their Avoid line, and
+        every one lost the tail until 2026-08-22. These become the card's
+        NOT fence AND the Bible's `### Avoid` bullets, so the loss rode
+        every render prompt silently."""
+        got = self.style_docs._avoid(
+            "text" + NL + NL + "Avoid: one, two," + NL + "three, four" + NL)
+        self.assertEqual(got, ["one", "two", "three", "four"])
+
+    def test_it_stops_at_the_blank_line(self):
+        got = self.style_docs._avoid(
+            "Avoid: one, two" + NL + NL + "Some other paragraph, with commas")
+        self.assertEqual(got, ["one", "two"])
+
+    def test_the_real_documents_lost_nothing(self):
+        """The concrete recoveries — 3D Rendered Cartoon refused "heavy
+        texture" where the document says "heavy texture maps", and Photo
+        Real never refused cartoon proportion at all."""
+        by = {e["name"]: e["avoid"]
+              for e in self.style_docs.styles("rendering")}
+        self.assertIn("heavy texture maps", by["3D Rendered Cartoon"])
+        self.assertIn("chromatic aberration", by["3D Rendered Cartoon"])
+        self.assertIn("cartoon proportion", by["Photo Real"])
+        self.assertIn("background detail", by["Industrial Design"])
+        self.assertNotIn("heavy texture", by["3D Rendered Cartoon"])
+
 if __name__ == "__main__":
     unittest.main()

@@ -508,6 +508,8 @@ rendered volume
 soft shading
 texture
 photographic detail
+airbrush
+vector precision
 ```
 
 ## 02-B — Figure — Hand-Drawn Cartoon
@@ -629,6 +631,8 @@ rendered volume
 soft shading
 texture
 photographic detail
+airbrush
+vector precision
 ```
 
 ## 02-C — Environment — Hand-Drawn Cartoon
@@ -750,6 +754,8 @@ rendered volume
 soft shading
 texture
 photographic detail
+airbrush
+vector precision
 ```
 
 ---
@@ -876,6 +882,7 @@ colour
 ink wash
 painted surfaces
 digital smoothness
+photographic detail
 ```
 
 ## 03-B — Figure — Black & White Sketch
@@ -998,6 +1005,7 @@ colour
 ink wash
 painted surfaces
 digital smoothness
+photographic detail
 ```
 
 ## 03-C — Environment — Black & White Sketch
@@ -1120,6 +1128,7 @@ colour
 ink wash
 painted surfaces
 digital smoothness
+photographic detail
 ```
 
 ---
@@ -1245,7 +1254,9 @@ Avoid:
 photoreal detail
 visible brushwork
 cel outlines
-heavy texture
+heavy texture maps
+lens dirt
+chromatic aberration
 ```
 
 ## 04-B — Figure — 3D Rendered Cartoon
@@ -1367,7 +1378,9 @@ Avoid:
 photoreal detail
 visible brushwork
 cel outlines
-heavy texture
+heavy texture maps
+lens dirt
+chromatic aberration
 ```
 
 ## 04-C — Environment — 3D Rendered Cartoon
@@ -1489,7 +1502,9 @@ Avoid:
 photoreal detail
 visible brushwork
 cel outlines
-heavy texture
+heavy texture maps
+lens dirt
+chromatic aberration
 ```
 
 ---
@@ -1618,6 +1633,7 @@ brushwork
 outlines
 stylisation
 painterly edges
+cartoon proportion
 ```
 
 ## 05-B — Figure — Photo Real
@@ -1742,6 +1758,7 @@ brushwork
 outlines
 stylisation
 painterly edges
+cartoon proportion
 ```
 
 ## 05-C — Environment — Photo Real
@@ -1866,6 +1883,7 @@ brushwork
 outlines
 stylisation
 painterly edges
+cartoon proportion
 ```
 
 ---
@@ -1992,7 +2010,8 @@ environment
 scene lighting
 atmosphere
 weather
-background
+background detail
+painterly texture
 ```
 
 ## 06-B — Figure — Industrial Design
@@ -2115,7 +2134,8 @@ environment
 scene lighting
 atmosphere
 weather
-background
+background detail
+painterly texture
 ```
 
 ## 06-C — Environment — Industrial Design
@@ -2238,7 +2258,8 @@ environment
 scene lighting
 atmosphere
 weather
-background
+background detail
+painterly texture
 ```
 
 ---
@@ -2364,6 +2385,8 @@ Avoid:
 full colour rendering
 painted volume
 photographic detail
+airbrush
+digital gradients
 ```
 
 ## 07-B — Figure — Ink & Wash
@@ -2485,6 +2508,8 @@ Avoid:
 full colour rendering
 painted volume
 photographic detail
+airbrush
+digital gradients
 ```
 
 ## 07-C — Environment — Ink & Wash
@@ -2606,6 +2631,8 @@ Avoid:
 full colour rendering
 painted volume
 photographic detail
+airbrush
+digital gradients
 ```
 
 ---
@@ -2731,6 +2758,7 @@ digital smoothness
 airbrush
 photographic detail
 vector edges
+uniform flat fills
 ```
 
 ## 08-B — Figure — Gouache & Watercolor
@@ -2852,6 +2880,7 @@ digital smoothness
 airbrush
 photographic detail
 vector edges
+uniform flat fills
 ```
 
 ## 08-C — Environment — Gouache & Watercolor
@@ -2973,6 +3002,7 @@ digital smoothness
 airbrush
 photographic detail
 vector edges
+uniform flat fills
 ```
 
 ---
@@ -3100,6 +3130,8 @@ lighting
 shading
 cast shadow
 rendering
+atmosphere
+painterly marks
 ```
 
 ## 09-B — Figure — Technical Blueprint
@@ -3223,6 +3255,8 @@ lighting
 shading
 cast shadow
 rendering
+atmosphere
+painterly marks
 ```
 
 ## 09-C — Environment — Technical Blueprint
@@ -3346,6 +3380,8 @@ lighting
 shading
 cast shadow
 rendering
+atmosphere
+painterly marks
 ```
 
 ---

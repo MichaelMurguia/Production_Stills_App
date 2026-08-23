@@ -102,11 +102,27 @@ def _fenced(text: str) -> str:
 
 def _avoid(prompt: str) -> list[str]:
     """The prompt's own Avoid list becomes the card's NOT fence — the
-    document already states what each style is not."""
-    m = re.search(r"^\s*Avoid:?\s*(.+)$", prompt, re.M | re.I)
-    if not m:
-        return []
-    return [x.strip() for x in re.split(r"[,;]", m.group(1)) if x.strip()]
+    document already states what each style is not.
+
+    Read to the end of the PARAGRAPH, not the end of the line. Seven of
+    the nine rendering styles wrap their Avoid line, and until 2026-08-22
+    every one of them lost its tail: 3D Rendered Cartoon avoided "heavy
+    texture" where the document says "heavy texture maps, lens dirt,
+    chromatic aberration", and Photo Real never refused cartoon
+    proportion at all. These become the Bible's `### Avoid` bullets and
+    ride every render prompt, so the loss was silent and expensive."""
+    lines = prompt.splitlines()
+    for i, ln in enumerate(lines):
+        m = re.match(r"^\s*Avoid:?\s*(.*)$", ln, re.I)
+        if not m:
+            continue
+        buf = [m.group(1).strip()]
+        for nxt in lines[i + 1:]:
+            if not nxt.strip():
+                break
+            buf.append(nxt.strip())
+        return [x.strip() for x in re.split(r"[,;]", " ".join(buf)) if x.strip()]
+    return []
 
 
 def styles(lib: str) -> list[dict]:
