@@ -36,6 +36,7 @@ sys.path.insert(0, str(ROOT))
 
 WIZ = (ROOT / "app" / "wizard.py").read_text(encoding="utf-8")
 JS = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+HTML = (ROOT / "app" / "static" / "index.html").read_text(encoding="utf-8")
 
 # The reporting production's real proposals, by design language.
 REAL = {
@@ -258,10 +259,32 @@ class ASwatchCanBeRenamedWhereItIsRepainted(unittest.TestCase):
         self.assertNotIn('confirmLabel: "Repaint swatch"', JS)
         self.assertIn('confirmLabel: "Save swatch"', JS)
 
-    def test_the_modal_offers_the_name_first(self):
-        i = JS.index('title: "Edit this swatch"')
-        seg = JS[i:i + 900]
+    def test_the_form_offers_the_name_first(self):
+        i = JS.index("const swatchFields = ")
+        seg = JS[i:i + 1100]
         self.assertLess(seg.index('name: "name"'), seg.index('name: "hex"'))
+
+    def test_adding_and_editing_state_a_swatch_the_same_way(self):
+        """They were two forms. The inline one could not state a value-key
+        pair at all, and it left an `input[type=color]` painted #8a4b2e in
+        the palette column — a filled rust square that read as a swatch
+        nobody had added (user-hit 2026-08-22: "I am still getting the odd
+        Oxide color swatch that shows up when there are no other color
+        swatches")."""
+        self.assertEqual(JS.count("const swatchFields = "), 1)
+        self.assertEqual(JS.count("fields: swatchFields("), 2)
+        for gone in ("sw-color", "sw-hex", "sw-name-in", "sw-hex-in"):
+            self.assertNotIn(gone, HTML, gone)
+            self.assertNotIn(gone, JS, gone)
+        # nothing coloured is left on the page that is not a swatch
+        i = HTML.index('<div class="swatch-add">')
+        self.assertNotIn("<input", HTML[i:HTML.index("</div>", i)])
+
+    def test_a_hand_added_swatch_can_state_its_value_key_pair(self):
+        """What the shared form gains it: the endpoint always took
+        `pair_hex`, and only the editing half ever sent one."""
+        i = JS.index('title: "Add a palette swatch"')
+        self.assertIn("pair_hex:", JS[i:i + 1100])
 
 
 if __name__ == "__main__":

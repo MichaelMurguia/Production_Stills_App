@@ -194,10 +194,15 @@
           <p class="hint">SETS hue, value key, saturation<br>NOT framing &middot; light source &middot; medium</p>
           <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
+          <!-- The adder is a BUTTON, not a live row (user-hit 2026-08-22:
+               "I am still getting the odd Oxide color swatch that shows up
+               when there are no other color swatches"). It held an
+               `<input type="color" value="#8a4b2e">`, which a browser draws
+               as a filled rust square — indistinguishable from a swatch,
+               sitting in the column of a production that had none. The form
+               it opens is the one that already existed for editing a
+               swatch. -->
           <div class="swatch-add">
-            <input type="color" data-f="sw-color" value="#8a4b2e" title="Pick a color — it lands as an approved COLOR_PALETTE swatch">
-            <input type="text" data-f="sw-hex" class="mono sw-hex-in" value="#8a4b2e" maxlength="7" spellcheck="false">
-            <input type="text" data-f="sw-name" class="sw-name-in" placeholder="name — e.g. oxide rust" maxlength="48">
             <button class="ghost" data-f="sw-add">Add swatch</button>
           </div>
           <label class="wiz-words" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words

@@ -2207,16 +2207,14 @@ details.meta pre {
 /* UNCANONIZED — 2026-08-05 — color swatches (user-directed, wireframe
    approved): manual add row, Bible-cited generate widget, proposal
    strip. Swatch tiles are pure color — no text in the pixels. */
-.swatch-add { display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+/* One button. The live colour/hex/name row that lived here left an
+   `input[type=color]` painted #8a4b2e sitting in the column — a filled
+   rust square that read as a swatch nobody had added (user-hit
+   2026-08-22). The form moved into the modal that already edits a swatch,
+   so there is one statement of what a swatch is and nothing coloured on
+   screen that is not one. */
+.swatch-add { display: flex; gap: 7px; align-items: center;
   border: 1px dashed var(--line); padding: 8px; margin-top: 10px; }
-.swatch-add input[type=color] { width: 30px; height: 30px; padding: 0;
-  border: 1px solid var(--line); background: var(--field); flex: none; cursor: pointer; }
-.swatch-add input[type=text] { background: var(--field); border: 1px solid var(--line);
-  color: var(--ink-dim); font-size: 11px; padding: 6px 8px; min-width: 0; }
-.swatch-add .sw-hex-in { width: 76px; flex: none; }
-/* The name gets its own full-width line — squeezed beside the hex it
-   collapsed to nothing at the 4-up column width. */
-.swatch-add .sw-name-in { flex: 1 1 100%; }
 /* UNCANONIZED — 2026-08-22 — the palette gate
    User: "it's not disabled, totally unclear, I can add swatches — disable
    this section with an obvious callout on why." The 9.5px faint `.up-gate`
@@ -2238,7 +2236,7 @@ details.meta pre {
 .pal-gate p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink); }
 .pal-gate p b { color: var(--accent); font-weight: 700; }
 .swatch-add.is-locked { opacity: .4; }
-.swatch-add.is-locked input, .swatch-add.is-locked button,
+.swatch-add.is-locked button,
 .wiz-words.is-locked input { cursor: not-allowed; }
 .wiz-words.is-locked { opacity: .4; }
 .wiz-add-btn.is-locked { opacity: .4; cursor: not-allowed; }

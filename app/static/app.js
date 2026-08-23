@@ -4197,25 +4197,34 @@ async function renderSettings(openTab = "") {
         json: { status, reason: status === "REJECTED"
           ? "swatch proposal rejected in review" : "" } });
 
+    /* ONE statement of what a swatch IS — a name, a colour, and an
+       optional value-key pair — shared by adding one and editing one.
+       They were two forms: this modal, and an inline row in the palette
+       column that could not state a pair at all and left a filled colour
+       chip on screen looking like a swatch nobody had added. */
+    const swatchFields = ({ name = "", hex = "", pair = "", editing } = {}) => [
+      // A colour whose name no longer describes it is worse than an
+      // unnamed one (user 2026-08-22), and a repaint is exactly when
+      // the name stops being true.
+      { name: "name", label: "Name", value: name,
+        placeholder: "e.g. oxide rust", maxlength: 48,
+        hint: editing ? "Leave it as it is to keep the current name."
+                      : "Optional — the hex names it otherwise." },
+      { name: "hex", label: "Color", value: hex, placeholder: "#8A4B2E",
+        color: true },
+      { name: "pair", label: "Value-key pair", value: pair,
+        placeholder: "leave empty for one flat color", color: true,
+        hint: "The same hue at the opposite value key — renders as two halves." },
+    ];
+
     const recolorSwatch = async (refId, hex, pair, swName = "",
                                 refresh = () => {}) => {
       const vals = await modal({
         title: "Edit this swatch",
         body: "Edits the swatch where it stands — it keeps its id, its design "
           + "language and its place in this review.",
-        fields: [
-          // A colour whose name no longer describes it is worse than an
-          // unnamed one (user 2026-08-22), and a repaint is exactly when
-          // the name stops being true.
-          { name: "name", label: "Name", value: swName || "",
-            placeholder: "e.g. oxide rust", maxlength: 48,
-            hint: "Leave it as it is to keep the current name." },
-          { name: "hex", label: "Color", value: hex, placeholder: "#8A4B2E",
-            color: true },
-          { name: "pair", label: "Value-key pair", value: pair || "",
-            placeholder: "leave empty for one flat color", color: true,
-            hint: "The same hue at the opposite value key — renders as two halves." },
-        ],
+        fields: swatchFields({ name: swName, hex, pair: pair || "",
+                               editing: true }),
         confirmLabel: "Save swatch",   // not "Repaint" — it renames too
       });
       if (vals === null) return null;
@@ -4479,21 +4488,23 @@ async function renderWizard() {
   let renderSwatchStrip = () => {};
   {
     const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
-    const colorIn = $("[data-f=sw-color]", col);
-    const hexIn = $("[data-f=sw-hex]", col);
-    colorIn.oninput = () => { hexIn.value = colorIn.value; };
-    hexIn.oninput = () => {
-      if (HEXOK.test(hexIn.value.trim())) colorIn.value = hexIn.value.trim();
-    };
     $("[data-f=sw-add]", col).onclick = async () => {
-      const hex = hexIn.value.trim();
+      const vals = await modal({
+        title: "Add a palette swatch",
+        body: "Your own colour, stated by hand. It lands approved — a "
+          + "swatch you chose is not a proposal to review.",
+        fields: swatchFields(),
+        confirmLabel: "Add swatch",
+      });
+      if (vals === null) return;
+      const hex = (vals.hex || "").trim();
       if (!HEXOK.test(hex)) return toast("A swatch needs a full hex — like #8A4B2E.", true);
-      const name = $("[data-f=sw-name]", col).value.trim();
+      const name = (vals.name || "").trim();
       try {
         const ref = await api("/api/references/swatch",
-          { method: "POST", json: { hex, name: name || undefined, approve: true } });
+          { method: "POST", json: { hex, pair_hex: (vals.pair || "").trim(),
+                                    name: name || undefined, approve: true } });
         toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added as an approved palette swatch.`);
-        $("[data-f=sw-name]", col).value = "";
         refreshRefs();
       } catch (err) { toast(err.message, true); }
     };
