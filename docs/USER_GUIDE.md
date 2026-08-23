@@ -196,7 +196,7 @@ render obeys. Each step's header badge states where it stands.
 5. **Draft & review** — the model writes the Bible in the app's section
    schema; you edit and save. Saving increments the **REV** counter shown on
    the editor and the band.
-6. **Model bake-off** — the same brief to every engine; pick a default.
+6. **Model Test** — the same brief to every engine; pick a default.
 
 The Bible is data-driven: any non-system `##` section is a design language;
 a `Keywords:` line sets its auto-match triggers. Environments live as `###`

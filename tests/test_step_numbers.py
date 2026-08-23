@@ -1,7 +1,7 @@
 """Copy that names a wizard step names the right one.
 
 Reported 2026-08-22: a gate line read "Draft it in step 5", and step 5 is
-the Model bake-off. The Bible is step 4.
+the Model Test. The Bible is step 4.
 
 The cause was a renumbering. On 2026-08-16 the separate look interview was
 dissolved into the anchor cards — "the anchor cards ARE that statement
@@ -61,8 +61,8 @@ class TheRailAgreesWithThePanels(unittest.TestCase):
     def test_the_scan_panel_is_the_rail_s_scan_chip(self):
         self.assertEqual(step_of('<h2>Script scene scan</h2>'), rail()["scan"])
 
-    def test_the_bakeoff_is_last(self):
-        self.assertEqual(rail()["bake-off"], max(rail().values()))
+    def test_the_model_test_is_last(self):
+        self.assertEqual(rail()["model test"], max(rail().values()))
 
 
 class CopyPointsAtTheRightStep(unittest.TestCase):

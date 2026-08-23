@@ -74,7 +74,7 @@ blockers).
 5. *Art Direction Bible* — draft (model), review, edit, save. The single
    source every prompt draws from. There is no template default: every
    production's look comes from its own material.
-6. *Model bake-off* — every configured engine renders the same screenplay
+6. *Model Test* — every configured engine renders the same screenplay
    location under the saved bible; pick the default by looking.
 
 **03 Breakdowns** — unlocked by the saved bible. "Create Breakdown" from

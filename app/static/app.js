@@ -4797,7 +4797,7 @@ async function renderWizard() {
   // anchor cards ARE that statement now — a picture, words, or both. The
   // separate interview asked the same four questions a second time.
   const RAIL = [[1, "Anchors"], [2, "Scan"], [3, "Cast"],
-                [4, "Bible"], [5, "Bake-off"]];
+                [4, "Bible"], [5, "Model Test"]];
   const rail = $("#wiz-rail");
   rail.innerHTML = RAIL.map(([n, l]) =>
     `<button class="rail-chip" data-goto-step="${n}"><span class="rail-num">${n}</span> ${esc(l)}</button>`).join("");
@@ -4826,7 +4826,7 @@ async function renderWizard() {
   window.addEventListener("scroll", onRailScroll, { passive: true });
   railCurrent();
 
-  // ---- Step 6: model bake-off (after the production design is set) ----
+  // ---- Step 6: the model test (after the production design is set) ----
   // Every engine renders the same screenplay location; suggestions come from
   // the Step 2 analysis's recurring locations.
   const locInput = $("#wiz-sample-loc");
@@ -10610,7 +10610,7 @@ async function renderBoardPanels(specId) {
   const prefKeyFailed =
     appSettings.engines?.[prefProvider]?.last_test?.ok === false;
   const genGateTitle = prefKeyFailed
-    ? "The default engine's key failed its last test — retest it in Settings or pick another default in the bake-off."
+    ? "The default engine's key failed its last test — retest it in Settings or pick another default in the Model Test."
     : "";
   // `isAutoStyle` used to live here with two of the four auto-attach roles
   // and no per-role cap (adversarial review F8). AUTO_ATTACH_HEADS has held
