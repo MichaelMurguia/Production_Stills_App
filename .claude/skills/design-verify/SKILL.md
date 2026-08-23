@@ -56,6 +56,112 @@ curl -s -X POST localhost:87xx/api/projects -H "Content-Type: application/json" 
 Mocks are authored at 1360px content width; 1420 viewport ≈ 1360 content
 + chrome. `--virtual-time-budget` lets the SPA finish its fetches.
 
+## 2b. Drive it — when the view needs interaction, or you need numbers
+
+A URL screenshot only reaches what a cold boot renders. Anything behind a
+tab, a subview, a modal, or a scroll needs a driver — and driving also
+lets you MEASURE instead of eyeballing, which is how you catch a wrong
+token that looks right.
+
+Edge with a debugging port, then CDP over `websockets` (already installed;
+`websocket-client` is not):
+
+```bash
+"/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"   --headless=new --disable-gpu --hide-scrollbars   --remote-debugging-port=9333 --user-data-dir="$SCRATCH/edge"   --window-size=1420,1000 "http://127.0.0.1:87xx/" &
+```
+
+Always a **fresh `--user-data-dir`** and a port nothing else holds; a
+reused profile brings back a stale session and you verify the wrong state.
+
+```python
+import asyncio, base64, json, urllib.request, websockets
+
+def target():
+    for t in json.load(urllib.request.urlopen("http://127.0.0.1:9333/json")):
+        if t["type"] == "page":
+            return t["webSocketDebuggerUrl"]
+
+async def main():
+    n = 0
+    async with websockets.connect(target(), max_size=200_000_000) as ws:
+        async def cmd(method, **params):
+            nonlocal n; n += 1
+            await ws.send(json.dumps({"id": n, "method": method, "params": params}))
+            while True:
+                m = json.loads(await ws.recv())
+                if m.get("id") == n:
+                    if "error" in m: raise SystemExit(f"{method}: {m['error']}")
+                    return m.get("result", {})
+        async def js(expr):
+            r = await cmd("Runtime.evaluate", expression=expr,
+                          awaitPromise=True, returnByValue=True)
+            return r.get("result", {}).get("value")
+        await cmd("Page.navigate", url="http://127.0.0.1:87xx/")
+        await asyncio.sleep(4)          # let the SPA finish its fetches
+asyncio.run(main())
+```
+
+`max_size` matters — a full-page screenshot exceeds the default frame cap
+and the socket dies mid-capture.
+
+**Reach the view the way a user does.** Call the app's own navigation
+rather than faking state:
+
+```python
+await js("showView('settings')")
+await js("document.querySelector('#settings-subnav button[data-sub=debug]').click()")
+await asyncio.sleep(1.5)
+```
+
+**Clip coordinates are PAGE coordinates.** `getBoundingClientRect()` is
+viewport-relative, so a clip built from it captures the wrong region once
+the page has scrolled — silently, and the screenshot looks plausible.
+Add the scroll offsets:
+
+```python
+box = await js("""(() => {
+  const el = document.querySelector('#target');
+  el.scrollIntoView({block:'center'});
+  const r = el.closest('.panel').getBoundingClientRect(), cs = getComputedStyle(el);
+  return {x: Math.round(r.x + scrollX - 16), y: Math.round(r.y + scrollY - 16),
+          w: Math.round(r.width + 32),      h: Math.round(r.height + 32),
+          font: cs.fontFamily.split(',')[0], size: cs.fontSize,
+          color: cs.color, bg: cs.backgroundColor, border: cs.borderColor};
+})()""")
+shot = await cmd("Page.captureScreenshot", format="png", captureBeyondViewport=True,
+                 clip={"x": box["x"], "y": box["y"], "width": box["w"],
+                       "height": box["h"], "scale": 2})
+open(out, "wb").write(base64.b64decode(shot["data"]))
+```
+
+**A zero-size rect means hidden, not missing.** An element can be in the
+DOM and unmeasurable because an ancestor is `display:none`. Do not
+conclude "the control did not render" — walk the chain and find out which
+ancestor:
+
+```python
+await js("""(() => {
+  let e = document.querySelector('#target'), out = [];
+  while (e && e.tagName !== 'BODY') {
+    const cs = getComputedStyle(e);
+    out.push(`${e.tagName}.${e.className} d=${cs.display} h=${e.getBoundingClientRect().height}`);
+    e = e.parentElement;
+  }
+  return out.join(' | ');
+})()""")
+```
+
+**Measure, then read the picture.** `getComputedStyle` settles token
+questions a screenshot cannot: `rgb(154,161,168)` IS `--ink-dim`,
+`rgb(43,48,55)` IS `--line`. Confirm the value, then still LOOK at the
+capture — the measurement proves the token, the eye catches the copy that
+contradicts the button beside it. (That is a real one: a panel read
+"edits live on this install only" directly above a *Publish to every
+studio* button. Every token was correct.)
+
+Kill the browser and the servers when done; an orphaned Edge holding a
+debug port makes the next session's capture stale.
+
 ## 3. Compare — eyes first, then pixels
 
 1. Read the capture AND the mock side by side (the Read tool renders
