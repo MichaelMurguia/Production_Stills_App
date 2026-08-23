@@ -7709,14 +7709,10 @@ async function renderSpecs(openId = null) {
       const seenHead = new Set();
       const scenes = locs.flatMap(l => (l.scene_list || []).map(sc => ({
         heading: String(sc.heading || "").replace(/\s+/g, " ").trim(),
-        loc: l })))
+        line: sc.line, loc: l })))
         .filter(x => x.heading && !seenHead.has(x.heading)
                      && seenHead.add(x.heading));
-      if (note) {
-        note.textContent = scenes.length
-          ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
-          : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD BELOW";
-      }
+      let sceneRef = null;
 
       const lc = t => String(t || "").toLowerCase();
       const search = q => {
@@ -7746,6 +7742,22 @@ async function renderSpecs(openId = null) {
         if (hits) { hits.hidden = true; hits.innerHTML = ""; }
         marked = -1;
       };
+      /* What the pick SAVES (user, 2026-08-22: "a reference is saved to
+         that page and section including the scene name"). A scene carries
+         the line its slugline sits on, so Scan Screenplay goes straight
+         there instead of working out which scene the brief meant — which
+         has landed on the wrong one twice. A location has no single line,
+         so it keeps the matched-by-name path, which is what a location
+         board wants anyway. */
+      const showRef = () => {
+        if (!note) return;
+        note.textContent = sceneRef
+          ? `SCENE SAVED — ${sceneRef.heading} · LINE ${sceneRef.line + 1}`
+          : (scenes.length
+             ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
+             : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD");
+        note.classList.toggle("scene-ref", !!sceneRef);
+      };
       const choose = row => {
         // The picked brief REPLACES what was typed: a match is a fuller
         // statement of the same request, and it is what the deterministic
@@ -7757,6 +7769,9 @@ async function renderSpecs(openId = null) {
                                 // re-enter draw() with the brief in hand
 
         }
+        sceneRef = row.kind === "scene"
+          ? { heading: row.scene.heading, line: row.scene.line } : null;
+        showRef();
         const bt = $("#spec-auto-btype");
         if (bt && !bt.dataset.touched) {
           bt.value = row.kind === "scene" ? "SCENE" : "LOCATION";
@@ -7792,9 +7807,9 @@ async function renderSpecs(openId = null) {
         if (!isQuery(sceneIn.value)) { closeHits(); return; }
         found = search(sceneIn.value).slice(0, 40);
         if (!found.length) { closeHits(); return; }
-        hits.innerHTML = `<p class="scene-ask mono">${found.length} MATCH${
-          found.length === 1 ? "" : "ES"} IN THE SCREENPLAY — PICK ONE, OR
-          PRESS AGAIN TO USE WHAT YOU TYPED</p>` + found.map((r, i) => `
+        hits.innerHTML = `<p class="scene-ask mono">${found.length} IN THE
+          SCREENPLAY — PICKING ONE SAVES ITS PLACE FOR THE SCAN</p>`
+          + found.map((r, i) => `
           <button type="button" class="scene-hit${r.kind === "loc" ? " is-loc" : ""}"
             data-i="${i}" role="option">
             <span class="scene-hit-label">${esc(r.label)}</span>
@@ -7816,16 +7831,18 @@ async function renderSpecs(openId = null) {
          Pressing it again drafts. So does choosing a result, or saying use
          what I typed: the question is asked once per brief, never as a
          gate you have to argue with. */
-      let asked = "";
-      window.__sceneSearchAsk = brief => {
-        if (!isQuery(brief) || asked === brief.trim()) return false;
-        asked = brief.trim();
-        draw();
-        return !hits?.hidden && found.length > 0;
-      };
+      /* The pointer is what Scan Screenplay reads, so it may not outlive
+         the words it came from: edit the brief and the saved scene goes
+         with it rather than quietly aiming the scan somewhere else. */
+      window.__sceneRef = () => sceneRef;
 
       if (sceneIn) {
-        sceneIn.addEventListener("input", () => { closeHits(); syncAlternatives(); });
+        sceneIn.addEventListener("input", () => {
+          if (sceneRef) { sceneRef = null; showRef(); }
+          draw();
+          syncAlternatives();
+        });
+        sceneIn.addEventListener("focus", draw);
         sceneIn.addEventListener("keydown", e => {
           if (hits?.hidden || !found.length) return;
           const rows = $$(".scene-hit", hits);
@@ -8007,7 +8024,7 @@ async function renderSpecs(openId = null) {
     const go = $("#spec-auto-go");
     if (go) {
       go.textContent = usingPaste ? "Break down the pasted section"
-                                  : "Read the screenplay for it";
+                                  : "Scan Screenplay";
     }
   };
   $("#spec-auto-source")?.addEventListener("input", syncAlternatives);
@@ -8029,19 +8046,12 @@ async function renderSpecs(openId = null) {
             + "empty sheet, use Blank sheet beside it.", true);
       return;
     }
-    // Ask before spending: a short brief that names something the
-    // screenplay actually holds is almost always a request for THAT, and
-    // the difference between "terra" and the seven Terra Nova locations is
-    // the difference between a vague board and a grounded one. Asked once
-    // per brief — pressing again goes ahead with what was typed.
-    if (!source && window.__sceneSearchAsk?.(brief)) {
-      btn.disabled = false;
-      return;
-    }
+    const ref = window.__sceneRef?.() || null;
     btn.disabled = true;
     const status = $("#spec-auto-status");
     const busy = status && startBusy(status,
       source ? "Breaking down the section you pasted…"
+             : ref ? `Reading ${ref.heading} and drafting the breakdown…`
              : "Reading the screenplay and drafting the breakdown…",
       panels ? "building the panels you named" : "deciding the panels it needs");
     try {
@@ -8052,6 +8062,9 @@ async function renderSpecs(openId = null) {
         prompt: brief,
         source_text: source,
         panels,
+        // The saved pointer, when the brief came from a picked scene.
+        scene_line: ref ? ref.line : "",
+        scene_heading: ref ? ref.heading : "",
         provider: $("#spec-auto-provider")?.value || "gemini",
       } });
       busy?.done();

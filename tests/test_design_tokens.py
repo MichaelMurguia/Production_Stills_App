@@ -872,6 +872,43 @@ class NoUndocumentedHex(unittest.TestCase):
             self.assertIn(h.lower(), rest, f"sanctioned hex no longer used: {h}")
 
 
+class TheSceneSearchStatesRatherThanSignals(unittest.TestCase):
+    """The breakdown door's search (2026-08-22) is the one place a field
+    reports a saved reference under itself. Two things have to hold or the
+    surface starts arguing with canon: the report is not a signal, and the
+    list of results is not a set of primaries."""
+
+    def block(self):
+        i = CSS.index(".scene-find {")
+        return CSS[i:CSS.index(".bb-ramp {", i)]
+
+    def test_the_saved_pointer_is_a_confirmed_state_not_an_action(self):
+        """`SCENE SAVED — … · LINE 2857` states a fact the scan will act
+        on. Amber marks the one thing to DO, and this is not it — `--ok`
+        is the token for a condition that has been met."""
+        self.assertIn(".f-note.scene-ref { color: var(--ok); }", CSS)
+
+    def test_the_results_carry_no_amber_at_all(self):
+        """Amber in this door belongs to `Scan Screenplay`, which is the
+        one primary in view. Twenty-one results wearing it would be
+        twenty-two."""
+        uses = [ln.strip() for ln in self.block().splitlines()
+                if "--accent" in ln]
+        self.assertEqual(uses, [], f"scene search ambers: {uses}")
+
+    def test_a_result_is_machine_data_in_courier(self):
+        """A slugline and a scene count are both machine data — the label
+        is set in `--mono` and the count is the `.mono` sub."""
+        self.assertIn("font-family: var(--mono)", self.block())
+
+    def test_the_retired_no_match_line_left_the_stylesheet_too(self):
+        """It said NO LOCATION OR SLUGLINE MATCHES THAT, then IT WILL BE
+        READ AS THE BRIEF, and both were noise over a field still being
+        typed in. A rule with no markup left is a pattern waiting to be
+        re-adopted by whoever greps for it."""
+        self.assertNotIn("scene-none", CSS)
+
+
 class TheReadPanelIsLegibleAndHasOneAmber(unittest.TestCase):
     """The read surface (2026-08-20) is dense Courier at 10.5–12px over
     `--field`, and it is the only panel in the app whose whole job is to

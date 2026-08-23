@@ -1225,42 +1225,58 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
             self.assertIn(probe, a, probe)
             self.assertNotIn(probe, b, f"{probe} must not be in the blank door")
 
-    def test_the_search_runs_on_the_submit_not_on_typing(self):
-        """User, 2026-08-22: "the search should not run until the user
-        selects Read the screenplay for it."
+    def test_typing_finds_scenes_as_you_go(self):
+        """User, 2026-08-22: "search is not auto-filling scenes when I type
+        them in — it should auto-populate based on scene names in the
+        screenplay."
 
-        Results appearing under the caret interrupted writing a brief,
-        which is the commoner act. The door asks its question at the moment
-        it is about to spend money instead — you typed `terra`, and the
-        screenplay holds seven places called that."""
-        self.assertIn("window.__sceneSearchAsk", JS)
+        This reverses the same day's "do not run until the submit": the
+        results were moved onto the button, and the user wanted the
+        suggestions back. What the button does now is READ the saved scene,
+        not run the search."""
         i = JS.index('sceneIn.addEventListener("input"')
-        seg = JS[i:i + 200]
-        self.assertIn("closeHits()", seg, "typing closes rather than opens")
-        self.assertNotIn("draw()", seg)
-        self.assertNotIn('addEventListener("focus", draw)', JS)
+        seg = JS[i:i + 260]
+        self.assertIn("draw();", seg)
+        self.assertIn('sceneIn.addEventListener("focus", draw)', JS)
+        self.assertNotIn("__sceneSearchAsk", JS)
 
-    def test_it_asks_once_per_brief_and_then_gets_out_of_the_way(self):
-        """A question you cannot get past is a gate. Pressing again goes
-        ahead with what was typed, and so does choosing a result."""
-        i = JS.index("window.__sceneSearchAsk = ")
-        seg = JS[i:i + 400]
-        self.assertIn("asked === brief.trim()", seg)
-        self.assertIn("asked = brief.trim()", seg)
-        self.assertIn("PRESS AGAIN TO USE WHAT YOU TYPED", JS)
-
-    def test_it_asks_before_it_spends_not_after(self):
-        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+    def test_picking_a_scene_saves_a_pointer_to_it(self):
+        """"A reference is saved to that page and section including the
+        scene name." A scene carries the line its slugline sits on."""
+        i = JS.index("const choose = row =>")
         seg = JS[i:i + 1400]
-        self.assertLess(seg.index("__sceneSearchAsk"),
-                        seg.index('api("/api/specs/autofill"'))
+        self.assertIn("sceneRef = row.kind === \"scene\"", seg)
+        self.assertIn("line: row.scene.line", seg)
+        self.assertIn("SCENE SAVED —", JS)
 
-    def test_a_pasted_section_is_never_searched(self):
-        """It replaces the screenplay, so there is nothing in the
-        screenplay to offer instead of it."""
-        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+    def test_a_location_pick_saves_no_pointer(self):
+        """A location has no single line, so it keeps the matched-by-name
+        path — which is what a location board wants anyway."""
+        i = JS.index("const choose = row =>")
         seg = JS[i:i + 1400]
-        self.assertIn("!source && window.__sceneSearchAsk", seg)
+        self.assertIn(": null;", seg)
+
+    def test_editing_the_brief_drops_the_pointer(self):
+        """The pointer is what the scan reads, so it may not outlive the
+        words it came from — otherwise an edited brief quietly aims the
+        scan somewhere else."""
+        i = JS.index('sceneIn.addEventListener("input"')
+        seg = JS[i:i + 260]
+        self.assertIn("if (sceneRef) { sceneRef = null; showRef(); }", seg)
+
+    def test_the_scan_sends_the_pointer(self):
+        i = JS.index('$("#spec-auto-form").addEventListener("submit"')
+        seg = JS[i:i + 1800]
+        self.assertIn("window.__sceneRef", seg)
+        self.assertIn("scene_line: ref ? ref.line", seg)
+        self.assertIn("scene_heading: ref ? ref.heading", seg)
+
+    def test_the_verb_is_scan_screenplay(self):
+        self.assertIn('id="spec-auto-go">Scan Screenplay', HTML)
+        i = JS.index("const syncAlternatives = ")
+        seg = JS[i:i + 1200]
+        self.assertIn('"Scan Screenplay"', seg)
+        self.assertIn("Break down the pasted section", seg)
 
     def test_the_brief_field_is_the_search(self):
         """User, 2026-08-22: "What should I get is our search field. If it
@@ -1332,15 +1348,13 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn("syncAlternatives();", seg)
         self.assertNotIn("dispatchEvent", seg)
 
-    def test_a_no_match_simply_drafts(self):
-        """It briefly said "NO LOCATION OR SLUGLINE MATCHES THAT". Once the
-        search moved onto the submit that became a message standing between
-        the user and the thing they pressed, over nothing: an unmatched
-        brief is a perfectly good brief, so it goes straight through."""
+    def test_a_no_match_says_nothing_at_all(self):
+        """An unmatched brief is a perfectly good brief. Two versions of a
+        message here were tried and both were noise over the field the user
+        was still typing in."""
         i = JS.index("if (!found.length)")
         self.assertIn("closeHits(); return;", JS[i:i + 120])
         self.assertNotIn("NOTHING MATCHES ${esc(", JS)
-        self.assertNotIn("IT WILL BE READ AS THE BRIEF", JS)
 
     def test_the_brief_and_the_paste_are_alternatives(self):
         """User: they "should act as radio buttons — you cant do both".
@@ -1358,7 +1372,7 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         i = JS.index("const syncAlternatives = ")
         seg = JS[i:i + 1200]
         self.assertIn("Break down the pasted section", seg)
-        self.assertIn("Read the screenplay for it", seg)
+        self.assertIn("Scan Screenplay", seg)
 
     def test_the_blank_door_is_not_a_superset(self):
         """The merge's central objection. It asks for a name and nothing
@@ -1400,9 +1414,7 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertNotIn("autopanels", HTML)
 
     def test_the_submit_states_the_act_it_will_perform(self):
-        """C2 survives: the door holds two acts and the verb says which.
-        The third act it used to hide is the other door now."""
-        self.assertIn('id="spec-auto-go">Read the screenplay for it', HTML)
+        """C2 survives: the door holds two acts and the verb says which."""
         i = JS.index("const syncAlternatives = ")
         self.assertIn("go.textContent", JS[i:i + 1200])
 

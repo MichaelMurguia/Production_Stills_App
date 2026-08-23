@@ -498,7 +498,8 @@ def _draft_openai(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
 def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                   provider: str = "gemini", board_type: str = "",
-                  source_text: str = "", panels_hint: str = "") -> dict:
+                  source_text: str = "", panels_hint: str = "",
+                  scene_line: int | str = "", scene_heading: str = "") -> dict:
     """Draft a breakdown from the screenplay, or from a pasted section.
 
     Two sources, and the caller chooses (user 2026-08-16). Empty
@@ -578,7 +579,18 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
         # quoted into the instructions — the model reads the scene, it
         # never has to find it.
         from . import insights
-        anchor = insights.scene_anchor(subject_prompt)
+        # A PICKED scene is a pointer; a written brief has to be matched.
+        # Prefer the pointer — it cannot land on the wrong scene.
+        anchor = {}
+        if str(scene_line).strip() != "":
+            anchor = insights.scene_anchor_at(scene_line, scene_heading)
+            if not anchor.get("matched"):
+                raise AutofillError(
+                    "That scene could not be found in the current draft: "
+                    + str(anchor.get("reason", "unknown"))
+                    + ". Search for it again.")
+        if not anchor.get("matched"):
+            anchor = insights.scene_anchor(subject_prompt)
         if anchor.get("matched"):
             instructions += _anchor_block(anchor, board_type)
         draft, model = _draft(provider, doc, mime, instructions)
@@ -588,6 +600,8 @@ def autofill_spec(spec_id: str, subject_prompt: str, mode: str,
                         "provider": provider, "created_at": store.utcnow(),
                         "source": ("pasted section" if source_text.strip()
                                    else "screenplay"),
-                        "panels_given": bool(panels_hint.strip())}
+                        "panels_given": bool(panels_hint.strip()),
+                        "scene_line": (int(scene_line)
+                                       if str(scene_line).strip() != "" else None)}
     store.create_spec_from_dict(spec)
     return spec

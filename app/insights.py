@@ -627,6 +627,55 @@ def derive_keywords(name: str, limit: int = 20) -> dict:
             "keywords": (name_tokens + ranked)[:limit]}
 
 
+def scene_anchor_at(line: int, heading: str = "",
+                    max_chars: int = 7000) -> dict:
+    """The scene AT a known line — an exact anchor, not a matched one.
+
+    `scene_anchor` below has to work out which scene a written brief meant,
+    and it has been wrong twice in ways that were invisible (a board for
+    INT_BRIEFING_ROOM drafted the crash site; a request for TERRA NOVA
+    landed on TERRA NOVA HANGAR 02). When the user has PICKED a scene from
+    the search there is nothing to work out: the pick carries the line the
+    slugline sits on, so the reference is a pointer rather than a guess
+    (user, 2026-08-22 — "a reference is saved to that page and section").
+
+    The heading is carried alongside and verified: a screenplay replaced
+    since the pick would leave the line pointing at different material, and
+    silently breaking down the wrong scene is exactly the failure the
+    pointer exists to prevent.
+    """
+    text = screenplay_text()
+    if not text.strip():
+        return {"matched": False, "reason": "no screenplay"}
+    lines = text.splitlines()
+    try:
+        line = int(line)
+    except (TypeError, ValueError):
+        return {"matched": False, "reason": "no line"}
+    if not 0 <= line < len(lines):
+        return {"matched": False, "reason": "line is outside the draft"}
+
+    def squash(v):
+        return " ".join(str(v or "").split()).upper()
+
+    if heading and squash(lines[line]) != squash(heading):
+        return {"matched": False, "reason":
+                "the draft changed — that line no longer holds "
+                f"{squash(heading)!r}"}
+
+    starts = [i for i, raw in enumerate(lines)
+              if raw.strip() and len(raw.strip()) <= 90
+              and raw.strip() == raw.strip().upper()
+              and _SLUG_RE.match(raw.strip())]
+    after = [i for i in starts if i > line]
+    end = after[0] if after else len(lines)
+    quoted = "\n".join(lines[line:end]).strip()
+    if len(quoted) > max_chars:
+        quoted = quoted[:max_chars] + "\n[… scene text truncated …]"
+    return {"matched": True, "location": squash(lines[line]), "scenes": 1,
+            "exact": True, "text": quoted}
+
+
 def scene_anchor(subject: str, max_chars: int = 7000) -> dict:
     """Deterministic subject→slugline anchor for breakdowns (user-hit
     2026-08-06: a run for INT_BRIEFING_ROOM_DAY_V01 drafted the crash

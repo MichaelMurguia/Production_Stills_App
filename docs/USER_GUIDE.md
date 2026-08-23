@@ -279,15 +279,24 @@ Bible is the fix, not regenerating the swatches.
 *Blank sheet* makes an empty sheet you fill yourself. They are different
 acts, so amber marks the one that does the work.
 
-In the reading door, **What should I get?** is also the search — but it
-runs when you press the button, not while you type, so writing a brief is
-never interrupted. Press **Read the screenplay for it** with `terra` in
-the field and it answers *21 matches in the screenplay — pick one, or
-press again to use what you typed*, listing every Terra Nova place with
-its scene count, then the individual scenes. Picking one writes the brief,
-which is what makes the draft quote that scene's own text rather than
-hunting for it. It asks once per brief; if nothing matches, it just
-drafts.
+In the reading door, **What should I get?** is also the search. Type
+`terra` and it lists every Terra Nova place with its scene count, then the
+individual scenes; `terra bridge` narrows to the one. Every word you type
+has to appear somewhere in the heading or its location, in any order.
+
+**Picking a scene saves its place.** The field says so — `SCENE SAVED —
+INT. TERRA NOVA BRIDGE – DAY · LINE 2857` — and **Scan Screenplay**
+then reads exactly that scene rather than working out which scene your
+words meant. Picking a *location* saves no place, because a location is
+several scenes and the board is meant to cover all of them.
+
+Edit the brief and the saved scene is dropped: the words and the pointer
+travel together, so a rewritten brief never quietly aims the scan at the
+old scene. If you replace the screenplay after picking, the scan says so
+and asks you to search again rather than reading whatever now sits at that
+line. If nothing matches what you typed, nothing is said — it is a
+perfectly good brief, and Scan Screenplay reads the screenplay for it the
+old way.
 
 **Or paste a section** is the alternative, not an addition: filling one
 makes the other unavailable, because a pasted section *replaces* the
