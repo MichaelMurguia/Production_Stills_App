@@ -139,6 +139,58 @@ class TheArtDirectionIsNotThePanelsToFreeze(unittest.TestCase):
         self.assertEqual(out, mine)
         self.assertIn("left as written", note)
 
+    # ------------------------------------------- every anchor, not just one
+    def test_the_cinematography_grammar_follows_too(self):
+        """User, 2026-08-22: "did you confirm every other anchor does this
+        as well?" No — and checking found this. The grammar block sits
+        ABOVE the detail budget, outside the art-direction window, so the
+        first pass swapped the medium and left the grammar frozen. There
+        are two derived blocks and both are refreshed."""
+        from app import cinematography, generate
+        saved = self.edited_prompt()
+        self.assertNotIn("CINEMATOGRAPHY GRAMMAR", saved)
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        out, note = generate.refresh_art_direction(saved, self.spec, self.panel)
+        self.assertIn("CINEMATOGRAPHY GRAMMAR", out)
+        self.assertIn("wet, seen from the door", out)
+        self.assertIn("re-applied", note)
+
+    def test_a_grammar_turned_OFF_leaves_the_saved_prompt_too(self):
+        """Absent is a position: the block has to be removable as well as
+        insertable, or turning a grammar off would leave it riding every
+        saved prompt for ever."""
+        from app import cinematography, generate
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        saved = self.edited_prompt()
+        self.assertIn("CINEMATOGRAPHY GRAMMAR", saved)
+        cinematography.save_setting("")
+        out, _ = generate.refresh_art_direction(saved, self.spec, self.panel)
+        self.assertNotIn("CINEMATOGRAPHY GRAMMAR", out)
+        self.assertIn("wet, seen from the door", out)
+
+    def test_both_derived_blocks_are_named_in_one_place(self):
+        """Two windows, one list. A third derived block added to the
+        compiler and not to this list is the drift this whole class is
+        about."""
+        src = (ROOT / "app" / "generate.py").read_text(encoding="utf-8")
+        i = src.index("_DERIVED_BLOCKS = (")
+        seg = src[i:src.index(chr(10) + ")", i)]
+        self.assertIn('("CINEMATOGRAPHY GRAMMAR", "DETAIL BUDGET")', seg)
+        self.assertIn('("VISUAL STYLE", "BOARD-SPECIFIC TREATMENT")', seg)
+
+    def test_the_panels_own_blocks_are_never_touched(self):
+        """The setting, the camera, the required and forbidden content are
+        the PANEL's, and a saved prompt is exactly where a panel's own
+        wording belongs."""
+        from app import generate
+        saved = self.edited_prompt().replace(
+            "REQUIRED CONTENT", "REQUIRED CONTENT")
+        self.change_the_style_to("Photo Real")
+        out, _ = generate.refresh_art_direction(saved, self.spec, self.panel)
+        for kept in ("SETTING", "PANEL PURPOSE", "REQUIRED CONTENT",
+                     "FORBIDDEN CONTENT", "FINAL INSTRUCTION"):
+            self.assertIn(kept, out)
+
     # ------------------------------------------------------------ the wiring
     def test_a_per_call_prompt_still_renders_verbatim(self):
         """The one-take test path. A test has to be able to try something

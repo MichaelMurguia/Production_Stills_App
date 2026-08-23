@@ -696,45 +696,96 @@ def _style_context(spec: dict, panel: dict) -> str:
     return language
 
 
-# The art direction is the PRODUCTION's, not the panel's to freeze
-# (user-hit 2026-08-22, reproduced: "I can change the rendering style on
-# the production design page, go to the panel page and render — I don't
-# get the rendering style").
+# The production's canon is not the panel's to freeze (user-hit
+# 2026-08-22, reproduced: "I can change the rendering style on the
+# production design page, go to the panel page and render — I don't get
+# the rendering style").
 #
 # A prompt saved onto a panel rides every take, which is right: it is the
 # panel's own words about its own subject. But the editor opens on the
 # COMPILED prompt, so saving after any edit freezes a copy of everything
-# — the VISUAL STYLE block included. From then on that panel could never
-# see a Bible change, and nothing said so.
+# it contained. From then on that panel could never see a production
+# change, and nothing said so.
 #
-# So the authored half stays exactly as written and the derived half is
-# re-applied at render time. The block is bounded in the compiled prompt:
-# it opens on VISUAL STYLE and runs to BOARD-SPECIFIC TREATMENT.
-_AD_HEAD = "VISUAL STYLE"
-_AD_TAIL = "BOARD-SPECIFIC TREATMENT"
+# So the authored half stays exactly as written and the DERIVED blocks
+# are re-applied at render time. There are TWO of them, which is the
+# answer to "did you confirm every other anchor does this as well?" — the
+# first pass swapped only the art direction and left the cinematography
+# grammar frozen, because that block sits ABOVE the detail budget and
+# outside the window:
+#
+#   CINEMATOGRAPHY GRAMMAR ... DETAIL BUDGET      the live grammar
+#   VISUAL STYLE ........... BOARD-SPECIFIC ...   the bible: overall
+#                                                 identity, rendering
+#                                                 language, lighting
+#                                                 language, character
+#                                                 presentation, the
+#                                                 design languages,
+#                                                 environments, lessons
+#
+# All four look anchors reach a render through one of those two, so both
+# are refreshed. Everything else in the prompt — the setting, the camera,
+# the required and forbidden content — is the PANEL's, and a saved prompt
+# is exactly where a panel's own wording belongs.
+_DERIVED_BLOCKS = (
+    ("CINEMATOGRAPHY GRAMMAR", "DETAIL BUDGET"),
+    ("VISUAL STYLE", "BOARD-SPECIFIC TREATMENT"),
+)
+
+
+def _span(lines: list[str], head: str, tail: str) -> tuple:
+    a = next((i for i, ln in enumerate(lines) if ln.startswith(head)), None)
+    if a is None:
+        # Absent is a position too: a grammar can be turned ON after the
+        # prompt was saved, and it belongs where the compiler puts it.
+        t = next((i for i, ln in enumerate(lines) if ln.strip() == tail), None)
+        return (t, t) if t is not None else (None, None)
+    b = next((i for i, ln in enumerate(lines)
+              if i > a and ln.strip() == tail), None)
+    return (a, b) if b is not None else (None, None)
 
 
 def refresh_art_direction(text: str, spec: dict, panel: dict) -> tuple[str, str]:
-    """Re-apply the current art direction to a saved prompt.
+    """Re-apply the production's derived blocks to a saved prompt.
 
-    Returns (prompt, note). A prompt with no recognisable block — one
+    Returns (prompt, note). A prompt with none of the markers — one
     written from scratch rather than edited from a compile — is returned
     untouched with a note saying so, because there is nothing to replace
     and inventing a place to put it would be worse than leaving it.
     """
+    fresh = compile_panel_prompt(spec, panel, refs_for_prompt or []).splitlines() \
+        if False else None
+    fresh = _compiled_lines(spec, panel)
     lines = text.splitlines()
-    head = next((i for i, ln in enumerate(lines)
-                 if ln.startswith(_AD_HEAD)), None)
-    tail = next((i for i, ln in enumerate(lines)
-                 if head is not None and i > head and ln.strip() == _AD_TAIL),
-                None)
-    if head is None or tail is None:
-        return text, "no art-direction block in the saved prompt — left as written"
-    current = _style_context(spec, panel).rstrip()
-    if chr(10).join(lines[head:tail]).strip() == current.strip():
-        return text, ""
-    out = lines[:head] + current.splitlines() + [""] + lines[tail:]
-    return chr(10).join(out), "art direction re-applied from the Art Direction Bible"
+    changed, seen = [], 0
+    # Right to left: an earlier splice would move every later index.
+    for head, tail in reversed(_DERIVED_BLOCKS):
+        a, b = _span(lines, head, tail)
+        fa, fb = _span(fresh, head, tail)
+        if a is None or fa is None:
+            continue
+        seen += 1
+        old_block, new_block = lines[a:b], fresh[fa:fb]
+        if old_block == new_block:
+            continue
+        lines[a:b] = new_block
+        changed.append(head.title() if head != "VISUAL STYLE"
+                       else "art direction")
+    if not seen:
+        return text, "no production blocks in the saved prompt — left as written"
+    if not changed:
+        return chr(10).join(lines), ""
+    return (chr(10).join(lines),
+            " and ".join(reversed(changed)).lower()
+            + " re-applied from the production")
+
+
+def _compiled_lines(spec: dict, panel: dict) -> list[str]:
+    """The blocks as the compiler writes them NOW. Built without the
+    panel's references on purpose: the reference role lines are about
+    which plates ride this take, not about the production's canon, and
+    they are spliced from nothing here."""
+    return compile_panel_prompt(spec, panel, []).splitlines()
 
 
 def _setting_lines(spec: dict, panel: dict) -> list[str]:
