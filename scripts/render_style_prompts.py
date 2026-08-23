@@ -1,6 +1,6 @@
 """Generate the rendering-style calibration prompts.
 
-Nine rendering styles x three locked scenes = 27 generation prompts, in
+Ten rendering styles x three locked scenes = 30 generation prompts, in
 the shape of the user's own CINEMATOGRAPHY_24_PROMPTS_v2.md.
 
 That document's premise, inverted. Its baseline reads "the rendering
@@ -32,7 +32,7 @@ from app import style_docs  # noqa: E402
 OUT_DEFAULT = ROOT / "docs" / "RENDERING_STYLE_PROMPTS.md"
 
 # One subject, three framings. The vehicle is the same vehicle in all 27
-# images and the driver is the same driver, so the nine styles read as one
+# images and the driver is the same driver, so the ten styles read as one
 # comparison rather than twenty-seven unrelated pictures — the property
 # that makes the texture set legible in the picker.
 SCENES = [
@@ -93,7 +93,7 @@ its dimension annotations are part of the medium and are permitted.)"""
 BASELINE = """LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -133,7 +133,7 @@ the subject to satisfy the style."""
 CONTINUITY = """CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -177,16 +177,16 @@ Avoid:
 def build() -> str:
     styles = style_docs.styles("rendering")
     out = [
-        "# RENDERING STYLE CALIBRATION — 27 LOCKED GENERATION PROMPTS",
+        "# RENDERING STYLE CALIBRATION — 30 LOCKED GENERATION PROMPTS",
         "",
-        "Nine rendering styles x three locked standard scenes.",
+        "Ten rendering styles x three locked standard scenes.",
         "",
         "**A — Object:** the hauler alone, three-quarter front, neutral ground  ",
         "**B — Figure:** the driver, waist-up, at the open cab door  ",
         "**C — Environment:** the hauler crossing a dry lake bed at dusk",
         "",
         "The subject, camera, light and palette blocks are identical across all "
-        "nine styles. Only the rendering medium changes.",
+        "ten styles. Only the rendering medium changes.",
         "",
         "Generated from `docs/RENDERING_STYLES.md` by "
         "`scripts/render_style_prompts.py` — edit the document and re-run, "

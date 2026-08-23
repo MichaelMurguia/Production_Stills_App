@@ -2,7 +2,7 @@
 
 ## Purpose
 
-These nine rendering styles are reusable **medium** grammars for
+These ten rendering styles are reusable **medium** grammars for
 production stills. Each describes **how a panel is drawn** — the material,
 the mark, the finish — and nothing about what is drawn.
 
@@ -462,4 +462,62 @@ than as a picture.
 
 Avoid: perspective, lighting, shading, cast shadow, rendering,
 atmosphere, painterly marks
+```
+
+---
+
+# 10. Rendered Illustration — No Visible Hand
+
+## Key Question
+
+What does this look like as finished illustration — painted, then worked
+until no mark is left?
+
+## Description
+
+A fully rendered digital illustration, worked to a finish. Form is modelled
+in continuous tone, gradients are blended smooth, and speculars are sharp
+and deliberately placed. Detail is dense where the eye rests and falls away
+steeply into suggestion behind the subject. It is unmistakably illustrated
+rather than photographed, but nothing in it announces a hand.
+
+## Operating Principle
+
+Model in continuous tone and resolve every mark away. Spend detail only
+where the eye rests, and let the falloff behind it be painted rather than
+photographed.
+
+## Visual Mechanics
+
+- Continuous tonal modelling — no stroke, hatch, grain or paper tooth
+  anywhere in the frame
+- Gradients blended smooth across broad forms
+- Sharp, deliberately placed specular highlights that describe what each
+  material is
+- Detail dense where the eye rests, resolved down to panel lines, seams and
+  fasteners
+- Steep detail falloff into soft suggestion behind the subject
+- Hard subject edges against softer background edges — the falloff is
+  painted, not photographed
+- Colour laid in blended passages rather than discrete marks
+- The surface of the artwork itself clean and unbroken
+- Reads as finished illustration, never as a study or a sketch
+
+## Image-Model Prompt
+
+```text
+A fully rendered digital illustration, worked to a finish. Form is modelled
+in continuous tone — gradients are blended smooth and no stroke, hatch,
+grain or paper tooth is visible anywhere in the frame. Specular highlights
+are sharp and deliberately placed, describing what each material is. Detail
+is dense where the eye rests, resolved down to panel lines, seams and
+fasteners, and falls away steeply into soft suggestion behind the subject.
+Subject edges are hard against softer background edges, and that falloff is
+painted rather than photographed. Colour is laid in blended passages rather
+than discrete marks. The surface of the artwork itself is clean and
+unbroken. The result reads as finished illustration — not a study, not a
+sketch, and not a photograph.
+
+Avoid: photography, visible brushwork, cel outlines, flat vector fills,
+paper or canvas texture, sketch underdrawing, impasto
 ```

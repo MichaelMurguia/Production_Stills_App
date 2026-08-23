@@ -9709,7 +9709,7 @@ const ASPECT_FALLBACK = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:1
    authored prose, so it cannot live in a markdown document. */
 const RENDER_STYLES = [];
 const TEXTURE_STYLES = [];
-const STYLE_PLATES = {"Production Painting": "markPaint", "Hand-Drawn Cartoon": "markCartoon", "Black & White Sketch": "markSketch", "3D Rendered Cartoon": "markRender3d", "Photo Real": "markPhoto", "Industrial Design": "markIndustrial", "Ink & Wash": "markInkWash", "Gouache & Watercolor": "markGouache", "Technical Blueprint": "markBlueprint", "Pristine": "texPristine", "Lived-In": "texLivedIn", "Weathered": "texWeathered", "Decayed": "texDecayed", "Industrial Grime": "texIndustrial"};
+const STYLE_PLATES = {"Production Painting": "markPaint", "Hand-Drawn Cartoon": "markCartoon", "Black & White Sketch": "markSketch", "3D Rendered Cartoon": "markRender3d", "Photo Real": "markPhoto", "Industrial Design": "markIndustrial", "Ink & Wash": "markInkWash", "Gouache & Watercolor": "markGouache", "Technical Blueprint": "markBlueprint", "Rendered Illustration": "markRendered", "Pristine": "texPristine", "Lived-In": "texLivedIn", "Weathered": "texWeathered", "Decayed": "texDecayed", "Industrial Grime": "texIndustrial"};
 
 // The eight cinematography grammars live in docs/CINEMATOGRAPHY_STYLES.md
 // and are READ from it (user ruling 2026-08-16), never copied — the
@@ -9834,6 +9834,13 @@ const PLATE = {
   markIndustrial: `<rect x="12" y="16" width="32" height="22" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M44 16l10-6v22l-10 6z" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M12 44h32" stroke="#6b7278"/><path d="M12 41v6M44 41v6" stroke="#6b7278"/>`,
   markInkWash: `<rect x="10" y="16" width="26" height="20" fill="#2b3037"/><g stroke="#eceef0" stroke-width="1.5" fill="none"><rect x="10" y="16" width="26" height="20"/><path d="M40 14v32M40 14h18M40 46h18"/></g>`,
   markGouache: `<path d="M10 15h18l3 9-4 8H9l-2-9z" fill="#6b7278"/><path d="M32 20h16l4 10-3 9H30l-1-10z" fill="#9aa1a8"/><path d="M14 36h14l2 8H12z" fill="#2b3037"/>`,
+  // Continuous tone stepped through the plate palette's own greys, with
+  // one sharp specular and a soft shape behind: modelling, finish and
+  // falloff, which is all this style claims.
+  markRendered: `<rect x="6" y="18" width="16" height="18" fill="#23272c"/>\
+<circle cx="36" cy="30" r="15" fill="#2b3037"/><circle cx="36" cy="30" r="11" fill="#6b7278"/>\
+<circle cx="38" cy="27" r="6" fill="#9aa1a8"/><circle cx="40" cy="25" r="1.8" fill="#eceef0"/>\
+<ellipse cx="36" cy="48" rx="14" ry="3" fill="#23272c"/>`,
   markBlueprint: `<g stroke="#2b3037"><path d="M8 14h52M8 22h52M8 30h52M8 38h52M8 46h52M14 10v40M26 10v40M38 10v40M50 10v40"/></g><rect x="20" y="18" width="24" height="16" fill="none" stroke="#eceef0" stroke-width="1.5"/><path d="M20 42h24M20 39v6M44 39v6" stroke="#eceef0"/>`,
   // ---- world texture
   texPristine: `<rect x="10" y="14" width="48" height="32" fill="#6b7278"/>`,

@@ -26,7 +26,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 JS = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
 
-LIBRARIES = {"cinematography": 8, "texture": 5, "rendering": 9}
+LIBRARIES = {"cinematography": 8, "texture": 5, "rendering": 10}
 
 
 class EveryLibraryIsDocumentBacked(unittest.TestCase):
@@ -228,7 +228,7 @@ class TheCardAlwaysShowsAPicture(unittest.TestCase):
 
     Making texture and rendering document-backed set `rich` on their
     styles, which routed them down the photographed-frames path — and that
-    path had no fallback. Five textures and nine rendering styles silently
+    path had no fallback. Five textures and ten rendering styles silently
     traded a diagram they HAD for a placeholder line saying they had none.
 
     B3 still holds: a rich card must not pad to three empty cells. Showing

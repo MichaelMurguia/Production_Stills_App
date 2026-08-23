@@ -1,12 +1,12 @@
-# RENDERING STYLE CALIBRATION — 27 LOCKED GENERATION PROMPTS
+# RENDERING STYLE CALIBRATION — 30 LOCKED GENERATION PROMPTS
 
-Nine rendering styles x three locked standard scenes.
+Ten rendering styles x three locked standard scenes.
 
 **A — Object:** the hauler alone, three-quarter front, neutral ground  
 **B — Figure:** the driver, waist-up, at the open cab door  
 **C — Environment:** the hauler crossing a dry lake bed at dusk
 
-The subject, camera, light and palette blocks are identical across all nine styles. Only the rendering medium changes.
+The subject, camera, light and palette blocks are identical across all ten styles. Only the rendering medium changes.
 
 Generated from `docs/RENDERING_STYLES.md` by `scripts/render_style_prompts.py` — edit the document and re-run, never edit this file. It is the same nine styles the picker shows and the Art Direction Bible is written from, so a prompt here cannot describe a style the app does not have.
 
@@ -47,7 +47,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -87,7 +87,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -170,7 +170,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -210,7 +210,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -293,7 +293,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -333,7 +333,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -420,7 +420,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -460,7 +460,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -543,7 +543,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -583,7 +583,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -666,7 +666,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -706,7 +706,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -793,7 +793,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -833,7 +833,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -916,7 +916,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -956,7 +956,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1039,7 +1039,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1079,7 +1079,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1166,7 +1166,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1206,7 +1206,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1290,7 +1290,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1330,7 +1330,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1414,7 +1414,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1454,7 +1454,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1542,7 +1542,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1582,7 +1582,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1667,7 +1667,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1707,7 +1707,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1792,7 +1792,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1832,7 +1832,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -1921,7 +1921,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -1961,7 +1961,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2045,7 +2045,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2085,7 +2085,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2169,7 +2169,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2209,7 +2209,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2297,7 +2297,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2337,7 +2337,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2420,7 +2420,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2460,7 +2460,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2543,7 +2543,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2583,7 +2583,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2670,7 +2670,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2710,7 +2710,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2792,7 +2792,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2832,7 +2832,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -2914,7 +2914,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -2954,7 +2954,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -3040,7 +3040,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -3080,7 +3080,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -3165,7 +3165,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -3205,7 +3205,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -3290,7 +3290,7 @@ its dimension annotations are part of the medium and are permitted.)
 LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
 
 The rendering style is the ONLY variable in this calibration set. Everything
-else is locked across all nine styles and must not change to express a
+else is locked across all ten styles and must not change to express a
 medium.
 
 Locked:
@@ -3330,7 +3330,7 @@ the subject to satisfy the style.
 CALIBRATION CONTINUITY
 
 This is a controlled rendering-medium test. The vehicle, the driver, the
-location, the moment, the camera and the light are locked across all nine
+location, the moment, the camera and the light are locked across all ten
 rendering styles.
 
 Do not invent a different vehicle, a different driver or a different location
@@ -3382,6 +3382,397 @@ cast shadow
 rendering
 atmosphere
 painterly marks
+```
+
+---
+
+# 10. Rendered Illustration — No Visible Hand
+
+## 10-A — Object — Rendered Illustration
+
+```text
+OUTPUT CONTRACT
+
+Generate exactly ONE image.
+
+Aspect ratio: 16:9.
+
+The image fills the entire canvas.
+
+No typography.
+No labels.
+No captions.
+No borders.
+No split screen.
+No panels.
+No storyboard.
+No contact sheet.
+No mood board.
+No poster design.
+No multiple moments.
+No inset images.
+No watermarks.
+
+(Style 09, Technical Blueprint, is the single exception to "no typography":
+its dimension annotations are part of the medium and are permitted.)
+
+LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
+
+The rendering style is the ONLY variable in this calibration set. Everything
+else is locked across all ten styles and must not change to express a
+medium.
+
+Locked:
+- the vehicle: same design, same proportions, same fittings, same wear state
+- the driver: same face, apparent age, build, hair and costume
+- the scene, the moment, and what is happening
+- camera position, framing, and subject-to-camera distance
+- the light: same direction, same quality, same time of day
+- the palette: same hues and the same value key
+- the surface condition of the world: used and maintained, not pristine and
+  not derelict
+
+Do not redesign the vehicle, the driver, the location or the lighting in
+order to express the rendering style. If two images in this set differ in
+more than the MEDIUM, the calibration has failed.
+
+Express the rendering style ONLY through:
+- medium and material of the picture itself
+- mark, stroke, line and edge quality
+- how form is described: mass, outline, tone, hatching, or geometry
+- surface finish of the artwork
+- degree and kind of detail
+- how colour is laid down, if at all
+
+PRECEDENCE
+
+Where the scene description calls for something the rendering style forbids,
+THE STYLE WINS — the style is what is being calibrated.
+
+Scene C describes dusk atmosphere and Scene B describes a lit face. A style
+whose own avoid list refuses lighting, atmosphere or environment (Technical
+Blueprint, Industrial Design) must render the same SUBJECT under its own
+rules instead: the same vehicle at the same distance, drawn as that medium
+draws things. Do not add atmosphere to satisfy the scene, and do not abandon
+the subject to satisfy the style.
+
+CALIBRATION CONTINUITY
+
+This is a controlled rendering-medium test. The vehicle, the driver, the
+location, the moment, the camera and the light are locked across all ten
+rendering styles.
+
+Do not invent a different vehicle, a different driver or a different location
+for another style.
+
+SCENE A — OBJECT
+
+A single six-wheeled desert hauler, three-quarter front view, standing alone on flat neutral ground with no environment behind it.
+
+The vehicle is heavy, purpose-built and utilitarian: a high armoured cab, an open flatbed rear, six oversized run-flat wheels, external roll cage, stowed tools and fuel cans lashed along the flank, one spare wheel mounted behind the cab. It has been used and maintained, not restored and not wrecked.
+
+The whole vehicle is inside the frame with clear space around it. The form is the subject: proportion, structure, mechanical logic and silhouette.
+
+RENDERING STYLE
+
+RENDERED ILLUSTRATION — NO VISIBLE HAND
+
+A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+
+Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
+
+Visual mechanics:
+- Continuous tonal modelling — no stroke, hatch, grain or paper tooth anywhere in the frame
+- Gradients blended smooth across broad forms
+- Sharp, deliberately placed specular highlights that describe what each material is
+- Detail dense where the eye rests, resolved down to panel lines, seams and fasteners
+- Steep detail falloff into soft suggestion behind the subject
+- Hard subject edges against softer background edges — the falloff is painted, not photographed
+- Colour laid in blended passages rather than discrete marks
+- The surface of the artwork itself clean and unbroken
+- Reads as finished illustration, never as a study or a sketch
+
+A fully rendered digital illustration, worked to a finish. Form is modelled
+in continuous tone — gradients are blended smooth and no stroke, hatch,
+grain or paper tooth is visible anywhere in the frame. Specular highlights
+are sharp and deliberately placed, describing what each material is. Detail
+is dense where the eye rests, resolved down to panel lines, seams and
+fasteners, and falls away steeply into soft suggestion behind the subject.
+Subject edges are hard against softer background edges, and that falloff is
+painted rather than photographed. Colour is laid in blended passages rather
+than discrete marks. The surface of the artwork itself is clean and
+unbroken. The result reads as finished illustration — not a study, not a
+sketch, and not a photograph.
+
+Avoid: photography, visible brushwork, cel outlines, flat vector fills,
+paper or canvas texture, sketch underdrawing, impasto
+
+Avoid:
+photography
+visible brushwork
+cel outlines
+flat vector fills
+paper or canvas texture
+sketch underdrawing
+impasto
+```
+
+## 10-B — Figure — Rendered Illustration
+
+```text
+OUTPUT CONTRACT
+
+Generate exactly ONE image.
+
+Aspect ratio: 16:9.
+
+The image fills the entire canvas.
+
+No typography.
+No labels.
+No captions.
+No borders.
+No split screen.
+No panels.
+No storyboard.
+No contact sheet.
+No mood board.
+No poster design.
+No multiple moments.
+No inset images.
+No watermarks.
+
+(Style 09, Technical Blueprint, is the single exception to "no typography":
+its dimension annotations are part of the medium and are permitted.)
+
+LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
+
+The rendering style is the ONLY variable in this calibration set. Everything
+else is locked across all ten styles and must not change to express a
+medium.
+
+Locked:
+- the vehicle: same design, same proportions, same fittings, same wear state
+- the driver: same face, apparent age, build, hair and costume
+- the scene, the moment, and what is happening
+- camera position, framing, and subject-to-camera distance
+- the light: same direction, same quality, same time of day
+- the palette: same hues and the same value key
+- the surface condition of the world: used and maintained, not pristine and
+  not derelict
+
+Do not redesign the vehicle, the driver, the location or the lighting in
+order to express the rendering style. If two images in this set differ in
+more than the MEDIUM, the calibration has failed.
+
+Express the rendering style ONLY through:
+- medium and material of the picture itself
+- mark, stroke, line and edge quality
+- how form is described: mass, outline, tone, hatching, or geometry
+- surface finish of the artwork
+- degree and kind of detail
+- how colour is laid down, if at all
+
+PRECEDENCE
+
+Where the scene description calls for something the rendering style forbids,
+THE STYLE WINS — the style is what is being calibrated.
+
+Scene C describes dusk atmosphere and Scene B describes a lit face. A style
+whose own avoid list refuses lighting, atmosphere or environment (Technical
+Blueprint, Industrial Design) must render the same SUBJECT under its own
+rules instead: the same vehicle at the same distance, drawn as that medium
+draws things. Do not add atmosphere to satisfy the scene, and do not abandon
+the subject to satisfy the style.
+
+CALIBRATION CONTINUITY
+
+This is a controlled rendering-medium test. The vehicle, the driver, the
+location, the moment, the camera and the light are locked across all ten
+rendering styles.
+
+Do not invent a different vehicle, a different driver or a different location
+for another style.
+
+SCENE B — FIGURE
+
+The hauler's driver, waist-up, standing beside the open cab door with one hand on the frame and a wrench in the other.
+
+Late thirties, weathered, close-cropped hair, a heavy canvas work jacket over a dark undershirt, gloves pushed into a pocket. Looking off-frame at something that has just caught their attention.
+
+The cab door and part of the armoured flank are visible behind them, close enough to read as the same vehicle. The face and hands are the subject.
+
+RENDERING STYLE
+
+RENDERED ILLUSTRATION — NO VISIBLE HAND
+
+A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+
+Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
+
+Visual mechanics:
+- Continuous tonal modelling — no stroke, hatch, grain or paper tooth anywhere in the frame
+- Gradients blended smooth across broad forms
+- Sharp, deliberately placed specular highlights that describe what each material is
+- Detail dense where the eye rests, resolved down to panel lines, seams and fasteners
+- Steep detail falloff into soft suggestion behind the subject
+- Hard subject edges against softer background edges — the falloff is painted, not photographed
+- Colour laid in blended passages rather than discrete marks
+- The surface of the artwork itself clean and unbroken
+- Reads as finished illustration, never as a study or a sketch
+
+A fully rendered digital illustration, worked to a finish. Form is modelled
+in continuous tone — gradients are blended smooth and no stroke, hatch,
+grain or paper tooth is visible anywhere in the frame. Specular highlights
+are sharp and deliberately placed, describing what each material is. Detail
+is dense where the eye rests, resolved down to panel lines, seams and
+fasteners, and falls away steeply into soft suggestion behind the subject.
+Subject edges are hard against softer background edges, and that falloff is
+painted rather than photographed. Colour is laid in blended passages rather
+than discrete marks. The surface of the artwork itself is clean and
+unbroken. The result reads as finished illustration — not a study, not a
+sketch, and not a photograph.
+
+Avoid: photography, visible brushwork, cel outlines, flat vector fills,
+paper or canvas texture, sketch underdrawing, impasto
+
+Avoid:
+photography
+visible brushwork
+cel outlines
+flat vector fills
+paper or canvas texture
+sketch underdrawing
+impasto
+```
+
+## 10-C — Environment — Rendered Illustration
+
+```text
+OUTPUT CONTRACT
+
+Generate exactly ONE image.
+
+Aspect ratio: 16:9.
+
+The image fills the entire canvas.
+
+No typography.
+No labels.
+No captions.
+No borders.
+No split screen.
+No panels.
+No storyboard.
+No contact sheet.
+No mood board.
+No poster design.
+No multiple moments.
+No inset images.
+No watermarks.
+
+(Style 09, Technical Blueprint, is the single exception to "no typography":
+its dimension annotations are part of the medium and are permitted.)
+
+LOCKED SUBJECT AND CINEMATOGRAPHY BASELINE
+
+The rendering style is the ONLY variable in this calibration set. Everything
+else is locked across all ten styles and must not change to express a
+medium.
+
+Locked:
+- the vehicle: same design, same proportions, same fittings, same wear state
+- the driver: same face, apparent age, build, hair and costume
+- the scene, the moment, and what is happening
+- camera position, framing, and subject-to-camera distance
+- the light: same direction, same quality, same time of day
+- the palette: same hues and the same value key
+- the surface condition of the world: used and maintained, not pristine and
+  not derelict
+
+Do not redesign the vehicle, the driver, the location or the lighting in
+order to express the rendering style. If two images in this set differ in
+more than the MEDIUM, the calibration has failed.
+
+Express the rendering style ONLY through:
+- medium and material of the picture itself
+- mark, stroke, line and edge quality
+- how form is described: mass, outline, tone, hatching, or geometry
+- surface finish of the artwork
+- degree and kind of detail
+- how colour is laid down, if at all
+
+PRECEDENCE
+
+Where the scene description calls for something the rendering style forbids,
+THE STYLE WINS — the style is what is being calibrated.
+
+Scene C describes dusk atmosphere and Scene B describes a lit face. A style
+whose own avoid list refuses lighting, atmosphere or environment (Technical
+Blueprint, Industrial Design) must render the same SUBJECT under its own
+rules instead: the same vehicle at the same distance, drawn as that medium
+draws things. Do not add atmosphere to satisfy the scene, and do not abandon
+the subject to satisfy the style.
+
+CALIBRATION CONTINUITY
+
+This is a controlled rendering-medium test. The vehicle, the driver, the
+location, the moment, the camera and the light are locked across all ten
+rendering styles.
+
+Do not invent a different vehicle, a different driver or a different location
+for another style.
+
+SCENE C — ENVIRONMENT
+
+The same hauler crossing a dry lake bed at dusk, small in a wide frame, trailing a low plume of dust.
+
+Cracked pale ground running to a distant ridge line. A high thin sky with the last light behind the ridge. No other vehicles, no structures, no figures.
+
+Scale, distance and air are the subject: how far away the vehicle is, and how much atmosphere sits between it and the camera.
+
+RENDERING STYLE
+
+RENDERED ILLUSTRATION — NO VISIBLE HAND
+
+A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+
+Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
+
+Visual mechanics:
+- Continuous tonal modelling — no stroke, hatch, grain or paper tooth anywhere in the frame
+- Gradients blended smooth across broad forms
+- Sharp, deliberately placed specular highlights that describe what each material is
+- Detail dense where the eye rests, resolved down to panel lines, seams and fasteners
+- Steep detail falloff into soft suggestion behind the subject
+- Hard subject edges against softer background edges — the falloff is painted, not photographed
+- Colour laid in blended passages rather than discrete marks
+- The surface of the artwork itself clean and unbroken
+- Reads as finished illustration, never as a study or a sketch
+
+A fully rendered digital illustration, worked to a finish. Form is modelled
+in continuous tone — gradients are blended smooth and no stroke, hatch,
+grain or paper tooth is visible anywhere in the frame. Specular highlights
+are sharp and deliberately placed, describing what each material is. Detail
+is dense where the eye rests, resolved down to panel lines, seams and
+fasteners, and falls away steeply into soft suggestion behind the subject.
+Subject edges are hard against softer background edges, and that falloff is
+painted rather than photographed. Colour is laid in blended passages rather
+than discrete marks. The surface of the artwork itself is clean and
+unbroken. The result reads as finished illustration — not a study, not a
+sketch, and not a photograph.
+
+Avoid: photography, visible brushwork, cel outlines, flat vector fills,
+paper or canvas texture, sketch underdrawing, impasto
+
+Avoid:
+photography
+visible brushwork
+cel outlines
+flat vector fills
+paper or canvas texture
+sketch underdrawing
+impasto
 ```
 
 ---
