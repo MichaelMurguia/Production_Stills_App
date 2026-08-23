@@ -886,6 +886,10 @@ label.check {
    closes the block. */
 .uncast-block { border: 1px solid var(--line-soft); padding: 12px 14px; }
 .uncast-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
+/* Reassurance, highlighted (user, 2026-08-23): the questions read as a
+   gate and they are not one. Green is a met/benign state, never amber —
+   amber would mark the one thing this line exists to say it is NOT. */
+.uncast-label .q-optional { color: var(--ok); margin-left: 10px; }
 .uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
 .uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 10px; letter-spacing: .09em; color: var(--ink-faint); }
 /* Uncast triage (mock 6b) — plan P3/R4: rows cap at 8 chips behind a dashed

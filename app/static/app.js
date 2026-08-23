@@ -5780,7 +5780,8 @@ async function renderWizard() {
       </div>
       ${(analysis.key_locations || []).length || (analysis.environments || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
-        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED · ANSWERS RIDE THE BIBLE DRAFT</div>
+        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED · ANSWERS RIDE THE BIBLE DRAFT
+          <span class="q-optional">OPTIONAL — YOU CAN DO THIS OVER TIME</span></div>
         <div id="wiz-questions" class="q-grid"></div>
       </div>` : ""}`;
     const GOTO = {
