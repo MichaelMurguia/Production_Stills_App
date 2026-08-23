@@ -402,5 +402,82 @@ class TheReconciliationRunsRatherThanAsks(unittest.TestCase):
         self.assertIn("anchor_conflicts", self.SRC[i:i + 700])
 
 
+
+class ABibleThatNamesNoStyleStillFollowsTheAnchor(unittest.TestCase):
+    """User-hit on the LIVE tenant, 2026-08-22: "I changed the rendering
+    style on my oxcart screenplay, went to the panel tab and rendered
+    another take. It did not pick up the rendering style change."
+
+    The panel prompt reads `bible.render_context()` fresh on every render,
+    so nothing is cached — the break was upstream. `anchor_drift` began
+    with `if not stated: continue`, which needed the section to NAME a
+    style before it would look at it. A bible whose Rendering Language is
+    prose, or an older draft that never stamped a name, matched nothing:
+    no drift, so no rewrite and no conflict. The change landed nowhere and
+    said so nowhere.
+
+    Rendering Language is DERIVED, so the comparison is the body."""
+
+    NAMELESS = ("# Oxcart" + chr(10) * 2
+                + "## Rendering Language" + chr(10)
+                + "### Required" + chr(10)
+                + "- Painted concept art with the brush left visible." + chr(10)
+                + "- Massed tone rather than outline." + chr(10) * 2
+                + "### Avoid" + chr(10)
+                + "- Photographic detail." + chr(10) * 2
+                + "## Lighting Language" + chr(10)
+                + "- hard sun" + chr(10))
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sb-live-"))
+        self._bible, self._data = paths.BIBLE, paths.DATA
+        paths.BIBLE = self.tmp / "bible.md"
+        paths.DATA = self.tmp / "data"
+        paths.DATA.mkdir(parents=True, exist_ok=True)
+        paths.BIBLE.write_text(self.NAMELESS, encoding="utf-8")
+        store._atomic_write_json(paths.DATA / "interview.json",
+                                 {"medium": ANSWER})
+
+    def tearDown(self):
+        paths.BIBLE, paths.DATA = self._bible, self._data
+
+    def test_the_section_names_nothing_which_is_the_whole_problem(self):
+        self.assertEqual(bible.stated_style("medium"), "")
+
+    def test_it_is_caught_anyway(self):
+        [d] = bible.anchor_drift()
+        self.assertEqual(d["anchor"], "medium")
+        self.assertEqual(d["stated"], "(unstated)")
+        self.assertEqual(d["chosen"], "Photo Real")
+
+    def test_the_rewrite_reaches_the_panel_prompt(self):
+        """`render_context` is what `generate._style_context` calls for
+        every panel, and it reads the file fresh — so proving it here
+        proves the render."""
+        bible.sync_from_anchors()
+        brief = bible.render_context("")
+        self.assertIn("Photo Real rendering style", brief)
+        self.assertIn("Lens-accurate detail falloff", brief)
+        self.assertNotIn("brush left visible", brief)
+
+    def test_a_bible_with_no_such_section_is_not_drift(self):
+        """There is nothing to rebuild, and reporting one would refuse
+        renders over a section the document never had."""
+        paths.BIBLE.write_text("# Oxcart" + chr(10) * 2
+                               + "## Lighting Language" + chr(10)
+                               + "- hard sun" + chr(10), encoding="utf-8")
+        self.assertEqual(bible.anchor_drift(), [])
+        self.assertEqual(bible.anchor_conflicts(), [])
+        self.assertEqual(bible.sync_from_anchors(), [])
+
+    def test_the_other_two_anchors_still_need_a_name(self):
+        """Overall Visual Identity and Lighting Language are SYNTHESES of
+        the anchor and the screenplay, not transcriptions of an entry, so
+        there is no body to compare — only the style they name."""
+        i = (ROOT / "app" / "bible.py").read_text(encoding="utf-8")
+        j = i.index("# The other two sections are SYNTHESES")
+        self.assertIn("if stated and stated.lower() != want.lower():",
+                      i[j:j + 400])
+
 if __name__ == "__main__":
     unittest.main()

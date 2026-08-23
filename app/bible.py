@@ -340,17 +340,39 @@ def anchor_drift(text: str = "") -> list[dict]:
             continue
         stated = stated_style(anchor, text)
         want = str(entry.get("name") or "").strip()
-        if not stated:
+
+        if anchor == "medium":
+            # Rendering Language is DERIVED, so the comparison is the
+            # BODY, never the name. Requiring a name first was a hole the
+            # user fell into on the live tenant (2026-08-22): they changed
+            # the rendering style, rendered a take, and got the old
+            # medium. A bible whose section names no style — an older
+            # draft, or one written as prose — matched nothing, so
+            # `anchor_drift` skipped it, `sync_from_anchors` rewrote
+            # nothing, and `anchor_conflicts` reported nothing. The change
+            # landed nowhere and said so nowhere.
+            #
+            # A bible with no such section at all is not drift: there is
+            # nothing to rebuild, and reporting one would refuse renders
+            # over a section the document never had.
+            if ("## " + cfg["section"]) not in (text or load_text()):
+                continue
+            if _rl_body(text) != rendering_section(entry):
+                out.append({"anchor": anchor, "section": cfg["section"],
+                            "label": cfg["label"],
+                            "stated": stated or "(unstated)", "chosen": want,
+                            "entry": entry,
+                            "kind": "style" if stated
+                                    and stated.lower() != want.lower()
+                                    else "wording"})
             continue
-        if stated.lower() != want.lower():
+
+        # The other two sections are SYNTHESES, not transcriptions, so the
+        # only thing that can be checked is the style they name.
+        if stated and stated.lower() != want.lower():
             out.append({"anchor": anchor, "section": cfg["section"],
                         "label": cfg["label"], "stated": stated,
                         "chosen": want, "entry": entry, "kind": "style"})
-        elif anchor == "medium" and _rl_body(text) != rendering_section(entry):
-            # Same style, stale transcription of it.
-            out.append({"anchor": anchor, "section": cfg["section"],
-                        "label": cfg["label"], "stated": stated,
-                        "chosen": want, "entry": entry, "kind": "wording"})
     return out
 
 
