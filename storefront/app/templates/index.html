@@ -70,13 +70,16 @@
   <div class="fig"><span class="fig-num">5</span><span class="fig-lbl mono">GATED STAGES, SCRIPT TO BOARD</span></div>
 </section>
 
-<!-- S3 — Pricing: two editions, honest trait lists. Standalone carries the
-     section's only amber (top rule + Buy). -->
+<!-- S3 — Pricing: two editions, honest trait lists. Cloud-based leads the
+     row (user 2026-08-23), and STANDALONE keeps `edition-lead` — the class
+     marks the RECOMMENDED edition, not the leftmost one, so the section's
+     only amber (top rule + Buy) travelled with it rather than staying in
+     the left column. The heading enumerates in column order. -->
 <section class="wrap editions-wrap" id="pricing">
   <div class="editions-head">
     <div>
       <p class="kicker-dim mono">PRICING</p>
-      <h2 class="editions-title">Standalone App or Cloud-Based</h2>
+      <h2 class="editions-title">Cloud-Based or Standalone App</h2>
     </div>
     <p class="editions-note">Identical pipeline and identical output. The
     difference is where the work lives and who keeps the lights on.</p>
@@ -119,36 +122,6 @@
   </div>
 
   <div class="editions">
-    <div class="edition edition-lead">
-      <p class="edition-kind mono"><span class="ek-name">STANDALONE APP</span> BUY ONCE &middot; OWN IT</p>
-      <h3>Runs on your machine</h3>
-      <p class="edition-para">Install it on the art department's workstation.
-      The screenplay, the reference library, and every render stay on your
-      drive &mdash; nothing is uploaded to us, ever.</p>
-      <ul class="traits mono">
-        <li class="t-yes">SCRIPT + ART NEVER LEAVE THE BUILDING</li>
-        <li class="t-yes">WORKS AIR-GAPPED AFTER INSTALL</li>
-        <li class="t-yes">ANY ENGINE &mdash; YOUR OWN API KEY</li>
-        <li class="t-yes">NO SUBSCRIPTION &mdash; THE VERSION IS YOURS</li>
-        <li class="t-no">YOU RUN THE HARDWARE AND THE UPDATES</li>
-      </ul>
-      <div class="sku">
-        <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE ARTIST &middot; ONE MACHINE</span></div>
-        <span class="sku-price mono">$119</span>
-        {% if ready["download-personal"] %}<a class="btn btn-primary sku-btn" href="/checkout/download-personal">Buy</a>
-        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
-      </div>
-      <div class="sku">
-        <div class="sku-id"><span class="sku-name">Business</span><span class="sku-sub mono">PRODUCTION USE INSIDE A COMPANY</span></div>
-        <span class="sku-price mono">$249.99</span>
-        {% if ready["download-business"] %}<a class="btn btn-secondary sku-btn" href="/checkout/download-business">Buy</a>
-        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
-      </div>
-      {% if not (ready["download-personal"] and ready["download-business"]) %}
-      <p class="gate-line mono">UNAVAILABLE &mdash; CHECKOUT NOT CONFIGURED</p>
-      {% endif %}
-    </div>
-
     <div class="edition">
       <p class="edition-kind mono"><span class="ek-name">CLOUD-BASED</span> MONTHLY &middot; CANCEL ANY TIME</p>
       <h3>Hosted Online Studio</h3>
@@ -184,6 +157,36 @@
          trial (user, 2026-08-06). #}
       <p class="gate-line mono" style="color:var(--ink-dim)">RUN A PRODUCTION THROUGH IT FIRST &mdash;
         <a href="/trial">{{ trial_days }}-DAY TRIAL, EITHER EDITION</a></p>
+      {% endif %}
+    </div>
+
+    <div class="edition edition-lead">
+      <p class="edition-kind mono"><span class="ek-name">STANDALONE APP</span> BUY ONCE &middot; OWN IT</p>
+      <h3>Runs on your machine</h3>
+      <p class="edition-para">Install it on the art department's workstation.
+      The screenplay, the reference library, and every render stay on your
+      drive &mdash; nothing is uploaded to us, ever.</p>
+      <ul class="traits mono">
+        <li class="t-yes">SCRIPT + ART NEVER LEAVE THE BUILDING</li>
+        <li class="t-yes">WORKS AIR-GAPPED AFTER INSTALL</li>
+        <li class="t-yes">ANY ENGINE &mdash; YOUR OWN API KEY</li>
+        <li class="t-yes">NO SUBSCRIPTION &mdash; THE VERSION IS YOURS</li>
+        <li class="t-no">YOU RUN THE HARDWARE AND THE UPDATES</li>
+      </ul>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Personal</span><span class="sku-sub mono">ONE ARTIST &middot; ONE MACHINE</span></div>
+        <span class="sku-price mono">$119</span>
+        {% if ready["download-personal"] %}<a class="btn btn-primary sku-btn" href="/checkout/download-personal">Buy</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
+      </div>
+      <div class="sku">
+        <div class="sku-id"><span class="sku-name">Business</span><span class="sku-sub mono">PRODUCTION USE INSIDE A COMPANY</span></div>
+        <span class="sku-price mono">$249.99</span>
+        {% if ready["download-business"] %}<a class="btn btn-secondary sku-btn" href="/checkout/download-business">Buy</a>
+        {% else %}<span class="btn btn-disabled sku-btn" aria-disabled="true">Buy</span>{% endif %}
+      </div>
+      {% if not (ready["download-personal"] and ready["download-business"]) %}
+      <p class="gate-line mono">UNAVAILABLE &mdash; CHECKOUT NOT CONFIGURED</p>
       {% endif %}
     </div>
   </div>
