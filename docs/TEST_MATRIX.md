@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1952 tests** across 106 files.
+**1970 tests** across 107 files.
 
 
-## Product app — 1736 tests in 89 files
+## Product app — 1754 tests in 90 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -54,7 +54,7 @@ temp home and external services are faked.
 | `test_consolidate_revisions.py` | 29 | Collapsing a revision chain into one breakdown (user ruling 2026-08-16, "Yes Collapse", asked for concretely 2026-08-16: "I still have 2 CANYON_GRM br |
 | `test_correction_intake.py` | 14 | Correction intake (2026-08-13): a rejection becomes structure. |
 | `test_credential_blocker.py` | 64 | A missing credential is a blocker (user ruling 2026-08-18). |
-| `test_debug_tools.py` | 7 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
+| `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
 | `test_design_tokens.py` | 97 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
@@ -115,6 +115,7 @@ temp home and external services are faked.
 | `test_swatch_edit.py` | 31 | Swatch labels, hero colours and recolour (user 2026-08-06). |
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |
 | `test_take_bar.py` | 15 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
+| `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |
 | `test_vocabulary.py` | 5 | One act, one name. |

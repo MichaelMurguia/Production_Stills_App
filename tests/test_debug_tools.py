@@ -66,6 +66,13 @@ class DebugToolsBase(unittest.TestCase):
         # flag is set (the owner's machines / owner-provisioned studios).
         os.environ["SCREENBOARD_DEBUG_TOOLS"] = "1"
         self.addCleanup(lambda: os.environ.pop("SCREENBOARD_DEBUG_TOOLS", None))
+        # The SHIPPED text layer is a real file in source (2026-08-23). Point
+        # it at the throwaway home too, or these assertions start reading
+        # whatever copy the product has actually published.
+        shipped = self.tmp / "ui_text.json"
+        real = appmain._shipped_text_path
+        appmain._shipped_text_path = lambda: shipped
+        self.addCleanup(lambda: setattr(appmain, "_shipped_text_path", real))
         self.client = TestClient(appmain.app)
 
     def tearDown(self):
@@ -205,8 +212,13 @@ class OwnerGateTests(DebugToolsBase):
         self.assertNotIn("mock", s["engines"])
         self.assertEqual(self.client.post(
             "/api/settings", json={"debug_mock": True}).status_code, 404)
+        # The READ is deliberately open (2026-08-23): the shipped layer is
+        # published product copy and every studio renders it, debug tools or
+        # not. Only the WRITES are owner-gated.
         self.assertEqual(self.client.get(
-            "/api/debug/text-overrides").status_code, 404)
+            "/api/debug/text-overrides").status_code, 200)
+        self.assertEqual(self.client.post(
+            "/api/debug/text-overrides/publish").status_code, 404)
         self.assertEqual(self.client.put(
             "/api/debug/text-overrides",
             json={"overrides": {}}).status_code, 404)
@@ -219,7 +231,7 @@ class OwnerGateTests(DebugToolsBase):
 class TextOverrideTests(DebugToolsBase):
     def test_roundtrip_and_clear(self):
         r = self.client.get("/api/debug/text-overrides")
-        self.assertEqual(r.json(), {"overrides": {}})
+        self.assertEqual(r.json(), {"overrides": {}, "shipped": {}, "local": {}})
         r = self.client.put("/api/debug/text-overrides", json={
             "overrides": {"Approve board": "Sign off wall",
                           "  ": "never stored"}})
@@ -233,6 +245,18 @@ class TextOverrideTests(DebugToolsBase):
             self.client.delete("/api/debug/text-overrides").status_code, 200)
         self.assertEqual(
             self.client.get("/api/debug/text-overrides").json()["overrides"], {})
+
+    def test_a_clear_does_not_take_published_copy_with_it(self):
+        """Clear empties this install's scratchpad. Published copy is
+        removed by publishing its removal — otherwise one studio's tidy-up
+        would look like the fleet losing its wording."""
+        self.client.put("/api/debug/text-overrides",
+                        json={"overrides": {"Approve board": "Sign off wall"}})
+        self.assertTrue(self.client.post(
+            "/api/debug/text-overrides/publish").json()["published"])
+        r = self.client.delete("/api/debug/text-overrides").json()
+        self.assertEqual(r["local"], {})
+        self.assertEqual(r["overrides"], {"Approve board": "Sign off wall"})
 
     def test_put_rejects_non_object(self):
         r = self.client.put("/api/debug/text-overrides",

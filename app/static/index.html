@@ -773,14 +773,18 @@
       <div class="panel" style="margin-top:20px">
         <h2>Page text editing <span class="hint">(rewrite any static UI text in place)</span></h2>
         <p class="hint">While on, <b>Alt-click</b> any text in the app to rewrite it. Edits apply
-        everywhere that exact text appears, survive refresh, and live on this install only —
-        they are workbench copy, never production data. Turn the mode off here when done;
-        your rewrites stay until cleared.</p>
+        everywhere that exact text appears, survive refresh, and are workbench copy, never
+        production data. Turn the mode off here when done; your rewrites stay until cleared.</p>
+        <p class="hint">An edit starts on <b>this install only</b>. <b>Publish</b> writes it into
+        the app's shipped copy — <span class="mono">app/content/ui_text.json</span> — which rides
+        the next deploy to every studio and every downloadable app. Publishing needs a writable
+        checkout: on a hosted studio it writes nothing and hands back the JSON to commit instead.</p>
         <label class="row" style="margin-top:12px;align-items:center;gap:8px">
           <input type="checkbox" id="dbg-textedit">
           <span>Text edit mode (Alt-click to rewrite)</span>
         </label>
         <div class="row" style="margin-top:10px;align-items:center">
+          <button class="ghost" id="dbg-text-publish" title="Write this install's edits into app/content/ui_text.json — the shipped copy every studio and every downloadable app renders. It still needs a commit and a deploy; on a hosted studio the source is not writable and it hands back the JSON instead.">Publish to every studio</button>
           <button class="danger" id="dbg-text-clear">Clear all text edits</button>
           <span id="dbg-text-count" class="mini mono"></span>
         </div>

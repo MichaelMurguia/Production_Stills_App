@@ -4142,6 +4142,28 @@ async function renderSettings(openTab = "") {
         n ? `${n} REWRITE${n > 1 ? "S" : ""} ACTIVE` : "NO REWRITES YET";
     };
     count();
+    // Publishing is what makes an edit real for anyone but this install
+    // (user 2026-08-23). The local file is a scratchpad — never in
+    // backups, wiped by a volume replacement — so a rewrite that is not
+    // published reaches nobody, and the button says which of the two
+    // outcomes happened rather than reporting success either way.
+    $("#dbg-text-publish").onclick = async () => {
+      try {
+        const r = await api("/api/debug/text-overrides/publish", { method: "POST" });
+        if (r.published) {
+          toast(`${r.count} edit(s) written to source. Commit `
+                + "app/content/ui_text.json and deploy — then every studio has them.");
+        } else {
+          // Not a failure: it is the honest answer on a hosted studio, and
+          // the payload is what someone commits by hand.
+          await promptOverlay(
+            "Publish needs a commit — this install cannot write its own source",
+            JSON.stringify(r.overrides, null, 2),
+            "SAVE AS app/content/ui_text.json, COMMIT, DEPLOY");
+        }
+      } catch (err) { toast(err.message, true); }
+    };
+
     $("#dbg-text-clear").onclick = async () => {
       if (!(await askConfirm("Clear all text edits",
           "Every rewritten string on this install returns to its original text.",

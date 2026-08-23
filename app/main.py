@@ -1482,14 +1482,41 @@ def api_openrouter_callback(code: str = ""):
     return RedirectResponse("/", status_code=303)
 
 
-# -------------------------------------------------- debug: page-text edits
-# Debug tool (user request 2026-08-03): rewrite any static UI text in
-# place. Overrides are exact-text → replacement pairs, install-level (they
-# are workbench copy, not production data — never in backups), applied
-# client-side after every render.
+# -------------------------------------------------- page-text edits
+# Rewrite any static UI text in place (user request 2026-08-03), applied
+# client-side after every render. Exact-text → replacement pairs.
+#
+# TWO LAYERS, because "an admin's changes reach every studio at the next
+# redeploy" and "a studio can try wording without publishing it" are
+# different needs (user 2026-08-23):
+#
+#   SHIPPED  app/content/ui_text.json — part of the repo, so it rides every
+#            deploy and lands on every studio and every downloadable copy.
+#            This is the published copy of record.
+#   LOCAL    <HOME>/text_overrides.json — this install only. A scratchpad:
+#            never in backups, wiped by a volume replacement, invisible to
+#            anyone else.
+#
+# The local layer wins where both name the same string, so an editor always
+# sees their own edit. `publish` promotes local onto shipped; because a
+# tenant's filesystem is not the repo, it writes when the repo is writable
+# and otherwise hands back the exact JSON to commit, saying which happened.
+# It never pretends a tenant edit reached anyone.
 
 def _text_overrides_path():
     return paths.HOME / "text_overrides.json"
+
+
+def _shipped_text_path():
+    return paths.STATIC.parent / "content" / "ui_text.json"
+
+
+def _read_overrides(p) -> dict:
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _require_debug_tools() -> None:
@@ -1499,13 +1526,16 @@ def _require_debug_tools() -> None:
 
 @app.get("/api/debug/text-overrides")
 def api_get_text_overrides() -> dict:
-    _require_debug_tools()
-    p = _text_overrides_path()
-    try:
-        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-    except json.JSONDecodeError:
-        data = {}
-    return {"overrides": data if isinstance(data, dict) else {}}
+    """The merged view the client renders from: shipped, then local on top.
+
+    Open, unlike the write routes. The SHIPPED layer is published product
+    copy and every studio must render it whether or not its owner has debug
+    tools on — gating this behind the debug flag would mean a customer's
+    studio quietly showed the pre-edit wording."""
+    shipped = _read_overrides(_shipped_text_path())
+    local = _read_overrides(_text_overrides_path())
+    return {"overrides": {**shipped, **local},
+            "shipped": shipped, "local": local}
 
 
 @app.put("/api/debug/text-overrides")
@@ -1522,9 +1552,49 @@ async def api_put_text_overrides(body: dict) -> dict:
 
 @app.delete("/api/debug/text-overrides")
 def api_clear_text_overrides() -> dict:
+    """Clears the LOCAL layer only. Published copy is removed by publishing
+    its removal, not by a studio deleting a file."""
     _require_debug_tools()
     _text_overrides_path().unlink(missing_ok=True)
-    return {"overrides": {}}
+    shipped = _read_overrides(_shipped_text_path())
+    return {"overrides": shipped, "shipped": shipped, "local": {}}
+
+
+@app.post("/api/debug/text-overrides/publish")
+def api_publish_text_overrides() -> dict:
+    """Promote this install's local edits into the SHIPPED layer.
+
+    Where the repo is writable — a development install — this writes
+    app/content/ui_text.json, and the edits reach every studio and every
+    downloadable copy at the next deploy. It still needs a commit: the file
+    is source, and nothing here touches git.
+
+    On a cloud tenant the repo is not writable, so it writes nothing and
+    returns the exact JSON to commit instead. That refusal is the point —
+    an admin editing on a live studio must not be told their words shipped
+    when they only landed on one volume."""
+    _require_debug_tools()
+    local = _read_overrides(_text_overrides_path())
+    shipped = _read_overrides(_shipped_text_path())
+    merged = {**shipped, **local}
+    # An identical replacement is not an override, it is noise that would
+    # sit in source forever.
+    merged = {k: v for k, v in merged.items() if k != v}
+    target = _shipped_text_path()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        store._atomic_write_json(target, merged)
+    except OSError as e:
+        return {"published": False, "reason": str(e), "path": str(target),
+                "overrides": merged, "count": len(merged),
+                "detail": "This install cannot write its own source — commit "
+                          "the JSON below to app/content/ui_text.json and "
+                          "deploy; that is what reaches every studio."}
+    return {"published": True, "path": str(target), "overrides": merged,
+            "count": len(merged),
+            "detail": f"{len(merged)} override(s) written to source. They "
+                      "reach every studio and every downloadable copy at the "
+                      "next deploy — commit the file."}
 
 
 # ------------------------------------------------------------- tutorials

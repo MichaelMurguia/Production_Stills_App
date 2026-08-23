@@ -111,7 +111,27 @@ were rolled back earlier the same day).
 <base>/project_state/ (approval log, rejection history)
 ```
 `<base>` = `HOME` for the legacy root layout, else `HOME/projects/<slug>/`.
-Install-level: `HOME/settings.json` (keys), `active_project.json`.
+Install-level: `HOME/settings.json` (keys), `active_project.json`,
+`text_overrides.json` (see below).
+
+**UI text lives in two layers** (2026-08-23). Alt-click rewrites used to
+write only `HOME/text_overrides.json` — this install, this volume, gone on
+a replacement, invisible to every other studio and to the downloadable app.
+They now stack:
+
+| Layer | File | Reach |
+| --- | --- | --- |
+| Shipped | `app/content/ui_text.json` (in the repo) | rides every deploy — every studio, every downloadable copy |
+| Local | `HOME/text_overrides.json` | this install only; wins on conflict so an editor sees their own words |
+
+`POST /api/debug/text-overrides/publish` promotes local into shipped where
+the checkout is writable, and on a hosted studio writes nothing and returns
+the JSON to commit — it never reports success for an edit that reached one
+volume. The GET is deliberately **open** while PUT/DELETE/publish stay
+owner-gated: shipped copy is published product text and a customer's studio
+must render it whether or not its owner has debug tools. Storefront copy is
+a different mechanism entirely (`site_texts` in Postgres, one service, no
+deploy needed) — see `docs/WEBAPP_GUIDE.md`.
 
 ### Key flows
 
