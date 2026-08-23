@@ -2240,6 +2240,15 @@ async def api_save_style_bible(body: dict) -> dict:
     if not text:
         raise HTTPException(422, "style bible cannot be empty")
     generate.save_style_bible(text + "\n")
+    # The missing trigger (user-hit 2026-08-22, on a standard first-run
+    # setup: pick the anchors, draft the Bible, press Generate a sample,
+    # and be refused). The sync ran on the interview save and at boot —
+    # but a Bible DRAFTED after the anchors was written by a model, in
+    # the model's own words, and nothing re-derived its Rendering
+    # Language afterwards. The anchor is the style; the section is its
+    # transcription; so it is re-derived the moment a Bible is saved,
+    # however it was written.
+    bible.sync_from_anchors()
     state = store.load_app_state()
     state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
     store.save_app_state(state)

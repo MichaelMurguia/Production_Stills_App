@@ -500,16 +500,25 @@ def sync_from_anchors(answers: dict = None) -> list[dict]:
 
 
 def anchor_conflicts() -> list[str]:
-    """One sentence per disagreement the repairs could not settle.
+    """One sentence per disagreement NOTHING can settle on its own.
 
-    Read by the bible panel, to be legible before a render is paid for,
-    and by `sample_probe`, to refuse instead of spending one. After
-    `sync_from_anchors` this is normally empty — what reaches it is a
-    bible edited BY HAND back onto a different style, which is the
-    director's right and not something to overwrite."""
+    The medium is never one of them (user ruling 2026-08-22: "the
+    rendering style chosen in the style anchors is the style, period").
+    Rendering Language is rebuilt from the style document, so a medium
+    disagreement is a thing to FIX, not a thing to report — and reporting
+    it produced the sentence that earned the ruling: "the Bible's
+    Rendering Language says Rendered Illustration, and the board
+    rendering style is Rendered Illustration", the same name on both
+    sides, refusing a render over wording the app was about to rewrite
+    itself.
+
+    What is left is the texture: Overall Visual Identity is a synthesis
+    of the anchor and the screenplay, so only a re-draft can bring a new
+    one in, and that IS the director's call."""
+    sync_from_anchors()          # fix what can be fixed, then report
     return [f"the Bible's {d['section']} says {d['stated']}, "
             f"and the {d['label']} is {d['chosen']}"
-            for d in anchor_drift()]
+            for d in anchor_drift() if d["anchor"] != "medium"]
 
 
 def drift_prevention() -> str:

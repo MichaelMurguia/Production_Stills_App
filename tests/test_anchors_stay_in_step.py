@@ -108,9 +108,23 @@ class TheBibleFollowsTheRenderingAnchor(unittest.TestCase):
         self.answer(ANSWER)
         self.assertEqual(bible.stated_style("medium"), "Production Painting")
         self.assertEqual(bible.anchor_entry("medium").get("name"), "Photo Real")
-        [c] = bible.anchor_conflicts()
-        self.assertIn("Production Painting", c)
-        self.assertIn("Photo Real", c)
+        [d] = bible.anchor_drift()
+        self.assertEqual(d["anchor"], "medium")
+        self.assertEqual(d["stated"], "Production Painting")
+        self.assertEqual(d["chosen"], "Photo Real")
+
+    def test_but_it_is_never_REPORTED_as_a_conflict(self):
+        """User ruling 2026-08-22: "the rendering style chosen in the
+        style anchors is the style, period." A medium disagreement is a
+        thing to FIX, not to refuse over — and refusing produced "the
+        Bible's Rendering Language says Rendered Illustration, and the
+        board rendering style is Rendered Illustration", the same name on
+        both sides, blocking a render over wording the app was about to
+        rewrite itself."""
+        self.answer(ANSWER)
+        self.assertEqual(bible.anchor_conflicts(), [])
+        # and asking cleaned it up on the way past
+        self.assertEqual(bible.stated_style("medium"), "Photo Real")
 
     def test_what_the_probe_would_have_sent(self):
         """The exact defect: the only medium instruction in the sample's
