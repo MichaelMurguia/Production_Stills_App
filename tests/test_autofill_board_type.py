@@ -64,6 +64,58 @@ class StatedTypeWins(unittest.TestCase):
                                    "gemini", "NONSENSE")
 
 
+class OneVocabularyReadTwice(unittest.TestCase):
+    """The five board types are load-bearing in six places — the blank
+    sheet's panel template, the drafting prompt, the render prompt's
+    SETTING block, which fields the sheet editor shows, the assembled
+    board's header, and the layout solver. Two selects offer them, and
+    for a while the two rendered the same list differently."""
+
+    JS = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    HTML = (ROOT / "app" / "static" / "index.html").read_text(encoding="utf-8")
+
+    def test_the_intake_shows_the_label_not_the_machine_token(self):
+        """`LIGHTING_STUDY` reached the screen. The user had already ruled
+        on that exact shape (2026-08-22, on BOARD_LAYOUT_STYLE): "that
+        underscore is not for end users, has no meaning". The list carried
+        `label: "LIGHTING STUDY"` all along — this select rendered around
+        it while the sheet editor rendered through it."""
+        i = self.JS.index('for (const sel of ["#spec-auto-btype", "#spec-new-btype"])')
+        seg = self.JS[i:i + 800]
+        self.assertIn("esc(t.label)", seg)
+        self.assertNotIn("esc(t.value)", seg)
+
+    def test_both_selects_read_the_same_definitions(self):
+        """The intake's tooltip named three of the five; the sheet
+        editor's named all five. The intake is where a sheet is MADE, so
+        it was the one place the two undocumented types mattered — and
+        two hand-written copies of one vocabulary is how that happened."""
+        self.assertEqual(self.JS.count("const boardTypeTitle = "), 1)
+        self.assertEqual(self.JS.count("boardTypeTitle("), 2,
+                         "both selects, and no third copy")
+        i = self.JS.index("const BOARD_TYPES = [")
+        seg = self.JS[i:i + 900]
+        for t in ("SCENE", "LOCATION", "ASSET", "LIGHTING_STUDY", "MASTER"):
+            self.assertIn(t, seg)
+        self.assertEqual(seg.count("hint:"), 5, "every type defines itself")
+
+    def test_the_static_title_is_gone_from_the_markup(self):
+        """A title attribute in index.html cannot read the list, so it
+        would drift again the moment a type is added."""
+        i = self.HTML.index('id="spec-auto-btype"')
+        self.assertNotIn("SCENE:", self.HTML[max(0, i - 400):i + 400])
+
+    def test_the_client_list_and_the_server_set_agree(self):
+        """The server refuses anything outside `BOARD_TYPES`, so an option
+        the client offers and the server rejects is a door that fails at
+        the moment it is pressed."""
+        i = self.JS.index("const BOARD_TYPES = [")
+        seg = self.JS[i:self.JS.index("];", i)]
+        offered = {ln.split('value: "')[1].split('"')[0]
+                   for ln in seg.splitlines() if 'value: "' in ln}
+        self.assertEqual(offered, autofill.BOARD_TYPES)
+
+
 class TheShotLandsInTheEnum(unittest.TestCase):
     """Regression (2026-08-12 review): the drafting prompt asked for
     FULL_BODY | DETAIL — pre-camera-enum vocabulary — and _coerce persisted

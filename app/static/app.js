@@ -8007,8 +8007,16 @@ async function renderSpecs(openId = null) {
   for (const sel of ["#spec-auto-btype", "#spec-new-btype"]) {
     const el = $(sel);
     if (el && !el.options.length) {
+      // The LABEL, not the value: `LIGHTING_STUDY` put a machine token in
+      // front of the user, which was ruled out on 2026-08-22 ("that
+      // underscore is not for end users, has no meaning"). The list has
+      // carried the label all along — this select was the one rendering
+      // around it.
       el.innerHTML = BOARD_TYPES.map(t =>
-        `<option value="${t.value}">${esc(t.value)}</option>`).join("");
+        `<option value="${t.value}">${esc(t.label)}</option>`).join("");
+      el.title = boardTypeTitle("What kind of board this is — it governs the "
+        + "slugline, the panel template and how the scenes are read. Your "
+        + "choice, not the model's: it is sent as an absolute rule.");
     }
   }
   const btypeSel = $("#spec-auto-btype");
@@ -8596,7 +8604,7 @@ async function openSpecEditor(specId) {
           <option ${spec.mode === "DESIGN_EXPLORATION" ? "selected" : ""}>DESIGN_EXPLORATION</option>
         </select>
       </label>
-      <label title="What kind of board this is — it governs slugline behavior. SCENE: one screenplay scene, one time of day for all panels. LOCATION: a place across times — time of day is chosen per panel. ASSET: neutral subject presentation, no slugline. LIGHTING STUDY: derived from an approved panel, geometry locked. MASTER: presentation grammar.">Board type
+      <label title="${esc(boardTypeTitle("What kind of board this is — it governs slugline behavior."))}">Board type
         <select id="sp-btype" ${boardFrozen ? "disabled" : ""}>
           ${BOARD_TYPES.map(t => `<option value="${t.value}" ${(spec.board_type || "LOCATION") === t.value ? "selected" : ""}>${t.label}</option>`).join("")}
         </select>
@@ -10089,12 +10097,23 @@ function openStylePicker({ title, definition, styles, current, onPick,
 // deliberately set, so the option text is what gives — the definitions are
 // already in the control's own title. An option reads as its value.
 const BOARD_TYPES = [
-  { value: "SCENE", label: "SCENE" },
-  { value: "LOCATION", label: "LOCATION" },
-  { value: "ASSET", label: "ASSET" },
-  { value: "LIGHTING_STUDY", label: "LIGHTING STUDY" },
-  { value: "MASTER", label: "MASTER" },
+  { value: "SCENE", label: "SCENE",
+    hint: "one screenplay scene, one time of day for every panel" },
+  { value: "LOCATION", label: "LOCATION",
+    hint: "a place across times — time of day is chosen per panel" },
+  { value: "ASSET", label: "ASSET",
+    hint: "a prop, vehicle or character — neutral presentation, no slugline" },
+  { value: "LIGHTING_STUDY", label: "LIGHTING STUDY",
+    hint: "derived from an approved panel — geometry locked, only light varies" },
+  { value: "MASTER", label: "MASTER",
+    hint: "presentation grammar — four panels, neutral, no slugline" },
 ];
+/* ONE definition of the vocabulary, read by both selects. The intake's
+   title named three of the five and the sheet editor's named all five,
+   which is the drift this file has been bitten by before — and the
+   intake, where a sheet is MADE, was the one missing them. */
+const boardTypeTitle = lead => lead + " " + BOARD_TYPES
+  .map(t => `${t.label}: ${t.hint}.`).join(" ");
 const TIMES_OF_DAY = ["DAWN", "MORNING", "DAY", "AFTERNOON", "DUSK", "EVENING", "NIGHT"];
 
 // Camera & composition vocabulary (user 2026-08-09) — [value, label]. Values

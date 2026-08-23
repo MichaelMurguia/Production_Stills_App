@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1869 tests** across 103 files.
+**1873 tests** across 103 files.
 
 
-## Product app — 1665 tests in 87 files
+## Product app — 1669 tests in 87 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -37,7 +37,7 @@ temp home and external services are faked.
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
 | `test_assemble_layout.py` | 8 | Board layout invariants: the aspect variant honors take ratios with a uniform minimal residual, variants resolve per the ruling, and geometry stays in |
 | `test_audit_fixes.py` | 14 | Regression tests for the 2026-08-02 product-app audit batch: path traversal guards, canvas bounds, corrupt-state resilience, model-JSON shape, quarant |
-| `test_autofill_board_type.py` | 23 | The board's shape is the user's decision (user-hit 2026-08-07). |
+| `test_autofill_board_type.py` | 27 | The board's shape is the user's decision (user-hit 2026-08-07). |
 | `test_backup_import.py` | 22 | Importing a backup INTO an existing production (2026-08-06). |
 | `test_backup_security.py` | 7 | Backup roundtrip + security invariants: no keys in backups, zip-slip refused, restore never overwrites, traversal ids 404, headers present, and the re |
 | `test_bible.py` | 5 | Bible section model: every non-system ## section is a design language, environments ride the level-3 container, and render_context injects in the docu |

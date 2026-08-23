@@ -219,7 +219,7 @@
             <button type="button" class="ghost pick-btn" id="wiz-light-pick">Choose a cinematography look</button>
           </label>
           <div class="fgroup cam-default wiz-offpage" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
-        <span class="f-label">Camera grammar <span class="hint">the production default — every panel inherits it unless it overrides</span></span>
+        <span class="f-label">Camera grammar <span class="hint">choose the default lens — you can override it when you render</span></span>
         <div id="cam-default-row"></div>
         <span id="cam-default-status" class="mini"></span>
       </div>
@@ -432,7 +432,7 @@
                   <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
                   <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
                 </select>
-                <select id="spec-auto-btype" title="What kind of board this is. SCENE: one screenplay scene, slugline-bound. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character. Your choice, not the model's — it is sent as an absolute rule."></select>
+                <select id="spec-auto-btype"></select>
               </div>
             </div>
 
@@ -476,7 +476,7 @@
                   <option value="CANON_EXTRACTION">CANON_EXTRACTION</option>
                   <option value="DESIGN_EXPLORATION">DESIGN_EXPLORATION</option>
                 </select>
-                <select id="spec-new-btype" title="What kind of board this is. SCENE: one screenplay scene. LOCATION: the place across every scene set there. ASSET: a prop, vehicle or character."></select>
+                <select id="spec-new-btype"></select>
               </div>
             </div>
             <div class="door-row">
