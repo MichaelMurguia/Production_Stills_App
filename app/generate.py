@@ -696,6 +696,47 @@ def _style_context(spec: dict, panel: dict) -> str:
     return language
 
 
+# The art direction is the PRODUCTION's, not the panel's to freeze
+# (user-hit 2026-08-22, reproduced: "I can change the rendering style on
+# the production design page, go to the panel page and render — I don't
+# get the rendering style").
+#
+# A prompt saved onto a panel rides every take, which is right: it is the
+# panel's own words about its own subject. But the editor opens on the
+# COMPILED prompt, so saving after any edit freezes a copy of everything
+# — the VISUAL STYLE block included. From then on that panel could never
+# see a Bible change, and nothing said so.
+#
+# So the authored half stays exactly as written and the derived half is
+# re-applied at render time. The block is bounded in the compiled prompt:
+# it opens on VISUAL STYLE and runs to BOARD-SPECIFIC TREATMENT.
+_AD_HEAD = "VISUAL STYLE"
+_AD_TAIL = "BOARD-SPECIFIC TREATMENT"
+
+
+def refresh_art_direction(text: str, spec: dict, panel: dict) -> tuple[str, str]:
+    """Re-apply the current art direction to a saved prompt.
+
+    Returns (prompt, note). A prompt with no recognisable block — one
+    written from scratch rather than edited from a compile — is returned
+    untouched with a note saying so, because there is nothing to replace
+    and inventing a place to put it would be worse than leaving it.
+    """
+    lines = text.splitlines()
+    head = next((i for i, ln in enumerate(lines)
+                 if ln.startswith(_AD_HEAD)), None)
+    tail = next((i for i, ln in enumerate(lines)
+                 if head is not None and i > head and ln.strip() == _AD_TAIL),
+                None)
+    if head is None or tail is None:
+        return text, "no art-direction block in the saved prompt — left as written"
+    current = _style_context(spec, panel).rstrip()
+    if chr(10).join(lines[head:tail]).strip() == current.strip():
+        return text, ""
+    out = lines[:head] + current.splitlines() + [""] + lines[tail:]
+    return chr(10).join(out), "art direction re-applied from the Art Direction Bible"
+
+
 def _setting_lines(spec: dict, panel: dict) -> list[str]:
     """The SETTING block — slugline discipline. Scene boards carry one time of
     day for every panel; location and lighting-study boards take it per panel.
@@ -2316,8 +2357,15 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     # take, not just the one made from the editor (user 2026-08-16). A
     # per-call override still wins — that is the one-take test path, and a
     # test has to be able to try something other than what is saved.
-    override = (render_prompt or "").strip() or str(
-        panel.get("prompt_override", "")).strip()
+    asked = (render_prompt or "").strip()
+    override = asked or str(panel.get("prompt_override", "")).strip()
+    # A per-call prompt is the one-take test path and renders verbatim —
+    # a test has to be able to try something other than what is saved. A
+    # SAVED prompt is the panel's words plus a frozen copy of the
+    # production's art direction, and only the frozen copy is refreshed.
+    ad_note = ""
+    if override and not asked:
+        override, ad_note = refresh_art_direction(override, spec, panel)
 
     cand_id = store.next_counter("cand_counter", "CAND")
 
@@ -2382,6 +2430,8 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # third value there would silently relabel these takes. A take made
         # from the panel's saved prompt is reproducible from the panel; a
         # one-take test is not, and telling them apart later matters.
+        if ad_note:
+            record["prompt_art_direction"] = ad_note
         record["prompt_override_scope"] = (
             "panel" if override == str(panel.get("prompt_override", "")).strip()
             else "take")

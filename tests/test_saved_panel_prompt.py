@@ -209,13 +209,24 @@ class TheStoreHoldsIt(unittest.TestCase):
 
 class TheRenderUsesIt(unittest.TestCase):
     def test_a_saved_prompt_rides_every_take(self):
-        self.assertIn('or str(\n        panel.get("prompt_override", "")).strip()', GEN)
+        self.assertIn(
+            'override = asked or str(panel.get("prompt_override", "")).strip()',
+            GEN)
+
+    def test_but_it_does_not_freeze_the_art_direction(self):
+        """User-hit 2026-08-22. The editor opens on the COMPILED prompt,
+        so saving after any edit froze the VISUAL STYLE block too and the
+        panel could never see a Bible change. The panel's own words stay;
+        the production's art direction is re-applied at render time."""
+        i = GEN.index('asked = (render_prompt or "").strip()')
+        self.assertIn("refresh_art_direction(override, spec, panel)",
+                      GEN[i:i + 700])
 
     def test_a_per_call_override_still_wins(self):
         """The one-take test path has to be able to try something OTHER
         than what is saved, or a saved prompt could never be experimented
         against."""
-        i = GEN.index('override = (render_prompt or "").strip()')
+        i = GEN.index('asked = (render_prompt or "").strip()')
         self.assertIn("render_prompt or", GEN[i:i + 120])
         self.assertLess(GEN[i:i + 200].index("render_prompt"),
                         GEN[i:i + 200].index("prompt_override"))

@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1916 tests** across 104 files.
+**1925 tests** across 105 files.
 
 
-## Product app — 1712 tests in 88 files
+## Product app — 1721 tests in 89 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -95,7 +95,8 @@ temp home and external services are faked.
 | `test_revisions_are_inert.py` | 8 | After consolidation the revision machinery answers nothing. |
 | `test_revisions_board.py` | 32 | One board per creative unit (user model, 2026-08-13). |
 | `test_role_head_legacy.py` | 12 | A titled reference still belongs to its family (user 2026-08-07). |
-| `test_saved_panel_prompt.py` | 22 | A hand-edited prompt can be SAVED onto the panel (user 2026-08-16: "I need to be able to Save the prompt once I edit it — explicit button"). |
+| `test_saved_panel_prompt.py` | 23 | A hand-edited prompt can be SAVED onto the panel (user 2026-08-16: "I need to be able to Save the prompt once I edit it — explicit button"). |
+| `test_saved_prompt_follows_art_direction.py` | 8 | Regression, user-hit 2026-08-22 and reproduced end to end. |
 | `test_scan_screenplay.py` | 32 | Tell the app anything about a panel; it re-reads the screenplay. |
 | `test_scene_anchor.py` | 14 | Scene anchor regression (user-hit 2026-08-06): a breakdown run for "INT_BRIEFING_ROOM_DAY_V01" drafted the crash site. |
 | `test_screenplay_formats.py` | 4 | The four formats the app claims, actually read. |
