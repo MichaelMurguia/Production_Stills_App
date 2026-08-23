@@ -46,14 +46,38 @@ secrets exist only in Railway variables and local shells.
    overwrites, and every archive member is validated against zip-slip
    (absolute paths, drive letters, backslashes, dot segments, unexpected
    roots) before a byte is written, with size caps against zip bombs.
-4. **Secrets never echo.** `/api/settings` returns 4-character hints only;
-   the flight recorder redacts any field whose name contains
-   key/token/secret/b64/image_url (login tokens verified redacted).
+4. **Secrets never echo.** `/api/settings` returns 4-character hints only
+   — swept live 2026-08-23 across all 42 parameterless GET routes with a
+   sentinel key: none returned it. The flight recorder redacts by field
+   name (key/token/secret/b64/image_url) **and by value**: every credential
+   the install holds is matched literally in any string, plus a shape match
+   (`sk-`/`AIza`-style) for a key being verified before it is stored.
+
+   The value pass was added after this audit found the name-only rule
+   reachable. The middleware logs `str(e)[:500]` on a raised route and the
+   response body on any 4xx/5xx, both under `error`, which matched no
+   marker. A custom engine's `base_url` is user-supplied, so an upstream
+   that echoes the credential in its error message wrote the key into
+   `data/activity_log.jsonl` — and that file rides a project backup, which
+   guarantee 2 calls shareable. Proven end to end against a local endpoint,
+   then fixed; `tests/test_credentials_stay_put.py` holds the proof.
 5. **Headers.** Both apps send `X-Content-Type-Options: nosniff`,
    `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` on every
    response.
-6. **Release artifacts are clean.** The staged zip is verified to contain
-   no `data/`, `projects/`, `project_state/`, `settings.json`, or bible.
+6. **Release artifacts are clean.** The staged zip is `git archive HEAD --
+   app requirements.txt run.bat README.md INSTALL.md VERSION` — built from
+   committed content, not the worktree, so an untracked secret cannot reach
+   it by construction. Verified 2026-08-23: 143 files, six top-level
+   entries, no `settings.json`, `data/`, `projects/`, `project_state/`, or
+   bible.
+
+   `scripts/export_package.py` — a developer convenience, never the
+   product — did walk the worktree, and on a standalone install
+   `SCREENBOARD_HOME` **is** the repo root, so it would have zipped
+   `settings.json` with live keys, `.claude/settings.local.json`, and 1716
+   files of `data/` (3028 files total). It now packages `git ls-files`
+   output only (789 files) and refuses outright if a forbidden path is ever
+   tracked.
 7. **Authored tutorials cannot become an injection surface** (2026-08-17).
    A tutorial is content written through a text box and then rendered into
    the app, so it is treated as untrusted even though its author holds the

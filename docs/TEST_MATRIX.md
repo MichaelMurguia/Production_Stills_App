@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**1970 tests** across 107 files.
+**1989 tests** across 108 files.
 
 
-## Product app — 1754 tests in 90 files
+## Product app — 1773 tests in 91 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -54,6 +54,7 @@ temp home and external services are faked.
 | `test_consolidate_revisions.py` | 29 | Collapsing a revision chain into one breakdown (user ruling 2026-08-16, "Yes Collapse", asked for concretely 2026-08-16: "I still have 2 CANYON_GRM br |
 | `test_correction_intake.py` | 14 | Correction intake (2026-08-13): a rejection becomes structure. |
 | `test_credential_blocker.py` | 64 | A missing credential is a blocker (user ruling 2026-08-18). |
+| `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
 | `test_design_tokens.py` | 97 | Mechanical token assertions (design-verify step 4, standing suite). |
