@@ -173,7 +173,7 @@ function openRepair(imgUrl, onSubmit) {
         <button class="ghost" data-f="clear">Clear</button>
       </span>
       <span class="row" style="margin:0">
-        <span class="mini mono" data-f="gate"></span>
+        <span class="repair-gate mono" data-f="gate" role="status"></span>
         <button class="primary" data-f="go" disabled>Repair region</button>
         <button class="ghost" data-f="cancel">Cancel</button>
       </span>
@@ -233,6 +233,7 @@ function openRepair(imgUrl, onSubmit) {
     const painted = strokes.some(s => !s.erase);
     const said = !!instr.value.trim();
     goBtn.disabled = !(painted && said);
+    gate.classList.toggle("hidden", painted && said);
     gate.textContent = painted && said ? ""
       : !painted && !said ? "PAINT THE REGION, THEN SAY WHAT CHANGES"
       : !painted ? "NOTHING PAINTED YET — PAINT THE REGION TO REPAIR"
@@ -2172,11 +2173,21 @@ async function updateBand() {
       ? `${bo.assembled} assembled${bo.approved ? ` · ${bo.approved} approved` : ""}`
       : "none assembled",
   };
+  // The view named "boards" is STAGE 04, Panels. The view named "assembly"
+  // is stage 05, Boards. That collision produced a real deadlock, found in
+  // the first user test (2026-08-23: "Approved a panel, 5 did not unlock"):
+  // stage 04 read `bo.assembled` — the count of assembled BOARDS, which is
+  // stage 05's OUTPUT — so 04 was never complete, the frontier never
+  // advanced past it, and 05 rendered LOCKED however many panels were
+  // approved. The only way out was to click the locked cell, whose
+  // popover finds nothing outstanding and quietly lets you through.
+  //
+  // Stage 04 is complete when a PANEL is approved. `pn`, not `bo`.
   const complete = {
     screenplay: !!ss.screenplay,
     wizard: !!pd.bible_saved,
     specs: (bd.locked || 0) > 0,
-    boards: (bo.assembled || 0) > 0,
+    boards: (pn.approved || 0) > 0,
     assembly: (bo.approved || 0) > 0,
   };
   const BLOCK_STAGE = { dashboard: "screenplay", references: "wizard", wizard: "wizard",
@@ -6024,30 +6035,73 @@ async function renderWizard() {
               : `<button class="ghost" data-f="answer">Answer</button>
                  <button class="text-act" data-f="defer">${st.deferred ? "Reconsider" : "Decide later"}</button>`}
           </span>`;
-        const patch = updates => {
+        const patch = async updates => {
           const a = getAnalysis();
           a.question_answers = a.question_answers || {};
           a.question_answers[q] = { ...(a.question_answers[q] || {}), ...updates };
-          saveAnalysis(a);
+          const ok = await saveAnalysis(a);
           renderWorlds();
+          return ok;
         };
         $("[data-f=answer]", row).onclick = () => {
           const main = $(".q-main", row);
           if ($("input", main)) return;
+          // User-caught 2026-08-23, twice. Ada on the call: "I don't know how
+          // to save this answer... there should be a button here like and I'm
+          // clicking it." Then again on the fix's own test.
+          //
+          // Enter was the ONLY way to save. Typing an answer and clicking
+          // anywhere else discarded it with no request and therefore no
+          // feedback — which reads as the app losing your work, because from
+          // where the user sits that is exactly what happened. The first
+          // attempt at this hardened the transport (await, state the failure)
+          // and left the interaction alone, so it fixed a save that was never
+          // being attempted.
+          //
+          // Three ways out now, and none of them is silent: an explicit
+          // Save, Enter, or clicking away — which saves rather than
+          // discards. Escape is the only discard, and it is labelled.
+          const wrap = document.createElement("span");
+          wrap.className = "q-edit";
           const input = document.createElement("input");
           input.type = "text";
           input.value = st.answer || "";
-          input.placeholder = "your answer — Enter saves, Esc cancels";
+          input.placeholder = "your answer…";
           input.title = "Appended to the interview as a Q/A pair and honored by the Bible draft.";
-          main.append(input);
+          const save = document.createElement("button");
+          save.className = "primary"; save.textContent = "Save";
+          const cancel = document.createElement("button");
+          cancel.className = "text-act"; cancel.textContent = "Cancel";
+          const hint = document.createElement("span");
+          hint.className = "mini mono q-edit-hint";
+          hint.textContent = "ENTER SAVES · ESC DISCARDS";
+          wrap.append(input, save, cancel, hint);
+          main.append(wrap);
           input.focus();
-          input.onkeydown = e => {
-            if (e.key === "Escape") renderWorlds();
-            if (e.key !== "Enter") return;
+          input.select();
+
+          let settled = false;   // Save, blur and Enter must not double-fire
+          const commit = async () => {
+            if (settled) return;
+            settled = true;
             const v = input.value.trim();
-            patch({ answer: v, deferred: false });
-            if (v) toast("Answer saved — it rides into the Bible draft.");
+            if (v === (st.answer || "")) { renderWorlds(); return; }
+            save.disabled = true;
+            const ok = await patch({ answer: v, deferred: false });
+            if (ok && v) toast("Answer saved — it rides into the Bible draft.");
           };
+          const discard = () => { if (settled) return; settled = true; renderWorlds(); };
+
+          save.onclick = commit;
+          cancel.onmousedown = e => { e.preventDefault(); discard(); };
+          input.onkeydown = e => {
+            if (e.key === "Escape") return discard();
+            if (e.key === "Enter") return commit();
+          };
+          // Clicking away saves. Losing an answer to a stray click is the
+          // whole reported bug; a surprise save is recoverable, a silent
+          // discard is not.
+          input.onblur = () => setTimeout(() => { if (!settled) commit(); }, 120);
         };
         const defer = $("[data-f=defer]", row);
         if (defer) defer.onclick = () => patch({ deferred: !st.deferred });

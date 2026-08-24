@@ -214,5 +214,111 @@ class TheLauncherIntroducesTheRightProduct(unittest.TestCase):
                       "an unnamed false positive cannot be submitted to a vendor")
 
 
+class AnAnswerHasAWayToSaveIt(unittest.TestCase):
+    """The half the first attempt missed. Hardening the transport fixed a
+    save that was never being ATTEMPTED: Enter was the only commit, so
+    typing and clicking away discarded the answer with no request — which
+    is why there was no feedback either. Reported twice, once by Ada on the
+    call and once by the fix's own test."""
+
+    def edit(self) -> str:
+        return block('$("[data-f=answer]", row).onclick', "const defer = $(")
+
+    def test_there_is_an_explicit_save_button(self):
+        b = self.edit()
+        self.assertIn('save.textContent = "Save"', b)
+        self.assertIn('save.className = "primary"', b)
+
+    def test_clicking_away_saves_rather_than_discards(self):
+        """A surprise save is recoverable. A silent discard is the bug."""
+        b = self.edit()
+        self.assertIn("input.onblur", b)
+        self.assertIn("commit()", b)
+
+    def test_escape_is_the_only_discard_and_it_is_labelled(self):
+        b = self.edit()
+        self.assertIn('if (e.key === "Escape") return discard();', b)
+        self.assertIn("ENTER SAVES · ESC DISCARDS", b)
+
+    def test_the_three_paths_cannot_double_fire(self):
+        """Save, Enter and blur all commit; without a latch, clicking Save
+        also blurs and the answer saves twice."""
+        b = self.edit()
+        self.assertIn("let settled = false;", b)
+        self.assertIn("if (settled) return;", b)
+
+    def test_success_is_claimed_only_after_the_save_resolves(self):
+        """The old toast fired synchronously beside a fire-and-forget PUT,
+        so 'Answer saved' was printed whatever happened."""
+        b = self.edit()
+        self.assertIn("const ok = await patch(", b)
+        i = b.index("const ok = await patch(")
+        self.assertIn("if (ok && v) toast(", b[i:i + 240])
+
+    def test_patch_reports_the_outcome(self):
+        b = block("const patch = async updates", '$("[data-f=answer]", row)')
+        self.assertIn("const ok = await saveAnalysis(a);", b)
+        self.assertIn("return ok;", b)
+
+
+class StageFourIsCompleteWhenAPanelIsApproved(unittest.TestCase):
+    """The deadlock behind 'Approved a panel, 5 did not unlock'.
+
+    The VIEW named "boards" is stage 04, Panels; the view named "assembly"
+    is stage 05, Boards. Stage 04's completion read `bo.assembled` — the
+    count of assembled BOARDS, which is stage 05's own output. So 04 could
+    never complete, the frontier never advanced past it, and 05 rendered
+    LOCKED however many panels were approved. Clicking the locked cell let
+    you through, which is why it survived: it looked like a cosmetic lie
+    rather than a stuck gate."""
+
+    def test_stage_four_reads_the_panels_summary(self):
+        b = block("const complete = {", "const BLOCK_STAGE")
+        self.assertIn("boards: (pn.approved || 0) > 0", b)
+
+    def test_it_no_longer_reads_the_boards_summary(self):
+        b = block("const complete = {", "const BLOCK_STAGE")
+        self.assertNotIn("boards: (bo.assembled", b,
+                         "stage 04 cannot be gated on stage 05's output")
+
+    def test_stage_five_still_reads_boards(self):
+        b = block("const complete = {", "const BLOCK_STAGE")
+        self.assertIn("assembly: (bo.approved || 0) > 0", b)
+
+    def test_the_two_definitions_of_done_now_agree(self):
+        """The frontier (which draws the lock) and the gate chain (which
+        explains it) disagreed: the chain opened 05 on an approved panel
+        while the frontier demanded an assembled board. A lock whose own
+        popover finds nothing outstanding is the shape of that bug."""
+        chain = block('label: "RENDER AND APPROVE PANELS"', "];")
+        self.assertIn("(ss.panels?.approved || 0) > 0", chain)
+        comp = block("const complete = {", "const BLOCK_STAGE")
+        self.assertIn("pn.approved", comp)
+
+
+class TheGateIsHardToMiss(unittest.TestCase):
+    """Reported after the first attempt: 'Works but not obvious enough.'
+    The condition was stated, as dim caption text among eight other
+    controls in the repair toolbar."""
+
+    def test_it_is_a_chip_not_a_caption(self):
+        self.assertIn('class="repair-gate mono"', JS)
+        i = CSS.index(".repair-gate")
+        seg = CSS[i:i + 300]
+        self.assertIn("border:", seg)
+        self.assertIn("var(--ink)", seg)
+
+    def test_it_is_still_not_amber(self):
+        """Amber marks the action; this is the reason the action cannot be
+        taken. Same ruling as the tally."""
+        i = CSS.index(".repair-gate")
+        self.assertNotIn("--accent", CSS[i:i + 300])
+
+    def test_it_disappears_once_the_gate_is_met(self):
+        """An empty bordered box beside an enabled button is noise."""
+        b = block("const gate = $(\"[data-f=gate]\"", "let erasing = false;")
+        self.assertIn('gate.classList.toggle("hidden", painted && said)', b)
+
+
 if __name__ == "__main__":
     unittest.main()
