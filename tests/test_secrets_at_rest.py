@@ -277,5 +277,70 @@ class TheTenantKeyLivesOffTheVolume(unittest.TestCase):
         self.assertIn(len(d), (16, 24, 32))
 
 
+class TheDevLoopCannotSpend(unittest.TestCase):
+    """`dev.bat` promises "it blanks the API keys — a dev loop that can
+    spend money on a mis-click is not a dev loop". It kept that promise
+    only for the ENVIRONMENT, and stored settings win over the environment,
+    so a dev home whose settings.json held a key rendered and spent with
+    the guard nominally on. Found 2026-08-24 while answering "is it using
+    Adam's keys?" — one question before it was relied on."""
+
+    def setUp(self):
+        from app import paths
+        self.tmp = tempfile.TemporaryDirectory()
+        home = Path(self.tmp.name)
+        self._old = (paths.HOME, paths.SETTINGS)
+        paths.HOME, paths.SETTINGS = home, home / "settings.json"
+        paths.SETTINGS.write_text(json.dumps({
+            "openai_api_key": "sk-REAL-MONEY-abcdefghij",
+            "custom_engines": [{"id": "e", "api_key": "sk-ENGINE-abcdefghij"}],
+            "preferred_provider": "openai",
+        }), encoding="utf-8")
+        self._flag = os.environ.pop("SCREENBOARD_NO_KEYS", None)
+
+    def tearDown(self):
+        from app import paths
+        paths.HOME, paths.SETTINGS = self._old
+        if self._flag is None:
+            os.environ.pop("SCREENBOARD_NO_KEYS", None)
+        else:
+            os.environ["SCREENBOARD_NO_KEYS"] = self._flag
+        self.tmp.cleanup()
+
+    def test_a_stored_key_is_invisible_while_the_guard_is_on(self):
+        from app import generate
+        os.environ["SCREENBOARD_NO_KEYS"] = "1"
+        s = generate.load_settings()
+        self.assertEqual(s.get("openai_api_key"), "")
+        self.assertEqual(s["custom_engines"][0]["api_key"], "")
+
+    def test_the_file_is_never_written(self):
+        """The guard hides credentials from one process. Destroying them
+        would turn a safety rail into data loss."""
+        from app import generate, paths
+        os.environ["SCREENBOARD_NO_KEYS"] = "1"
+        generate.load_settings()
+        self.assertIn("sk-REAL-MONEY", paths.SETTINGS.read_text(encoding="utf-8"))
+
+    def test_without_the_guard_the_key_is_there(self):
+        from app import generate
+        self.assertEqual(generate.load_settings().get("openai_api_key"),
+                         "sk-REAL-MONEY-abcdefghij")
+
+    def test_non_secret_settings_survive_the_guard(self):
+        """Blanking the whole file would change which code paths run and
+        make the dev loop a different app."""
+        from app import generate
+        os.environ["SCREENBOARD_NO_KEYS"] = "1"
+        self.assertEqual(generate.load_settings().get("preferred_provider"), "openai")
+
+    def test_the_dev_loop_sets_it(self):
+        dev = (ROOT / "scripts/dev.py").read_text(encoding="utf-8")
+        self.assertIn('env["SCREENBOARD_NO_KEYS"] = "1"', dev)
+        i = dev.index('env["SCREENBOARD_NO_KEYS"]')
+        self.assertIn("if not a.keys:", dev[max(0, i - 700):i],
+                      "the guard must lift when --keys is passed")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,11 @@ Three things it refuses to do by default, each for a reason:
   you are polishing FOR.
 - **It blanks the API keys.** A dev loop that can spend money on a
   mis-click is not a dev loop. --keys opts back in when you genuinely
-  need to render.
+  need to render. Both sources are covered: the environment, and the
+  STORED keys in the dev home's settings.json — which win over the
+  environment, so blanking only the environment left the guard nominally
+  on while renders still spent (fixed 2026-08-24). Nothing is written;
+  the app simply cannot see its own credentials while the guard is set.
 - **It refuses a port that is already listening**, rather than serving you
   a stale build from a leaked server — which has happened, and you
   "verify" the wrong thing for twenty minutes before noticing.
@@ -216,6 +220,12 @@ def main() -> int:
         for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
                   "OPENROUTER_API_KEY", "REPLICATE_API_TOKEN"):
             env[k] = ""
+        # Blanking the environment was never enough: stored settings WIN
+        # over it, so a dev home whose settings.json holds a key rendered
+        # and spent with this guard nominally on (2026-08-24). The app
+        # blanks its own stored credentials while this is set; the file is
+        # not touched.
+        env["SCREENBOARD_NO_KEYS"] = "1"
 
     url = f"http://127.0.0.1:{port}"
     if not a.no_open:

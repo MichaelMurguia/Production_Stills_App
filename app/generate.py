@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import re
 from pathlib import Path
 
@@ -405,6 +406,22 @@ def _map_secrets(settings: dict, fn) -> dict:
     return settings
 
 
+def _no_keys(settings: dict) -> dict:
+    """Honour SCREENBOARD_NO_KEYS by blanking every stored credential.
+
+    The dev loop promises "it blanks the API keys — a dev loop that can
+    spend money on a mis-click is not a dev loop", and it kept that promise
+    only for the ENVIRONMENT. Stored settings win over the environment
+    here, so an install whose settings.json holds a key could render, and
+    spend, with the guard nominally on (found 2026-08-24, about to be
+    relied on). Nothing is written: the file keeps its keys, this process
+    simply cannot see them.
+    """
+    if not os.environ.get("SCREENBOARD_NO_KEYS"):
+        return settings
+    return _map_secrets(copy.deepcopy(settings), lambda _v: "")
+
+
 def load_settings() -> dict:
     """Settings (API keys, engines, preferences) are INSTALL-level — they
     follow the user across projects. Pre-multi-project installs kept them
@@ -418,11 +435,11 @@ def load_settings() -> dict:
             # (nothing is destroyed) and present a fresh, stated blank.
             paths.SETTINGS.replace(paths.SETTINGS.with_suffix(".json.corrupt"))
             return {}
-        return _map_secrets(raw, secrets_at_rest.unprotect)
+        return _map_secrets(_no_keys(raw), secrets_at_rest.unprotect)
     legacy = paths.HOME / "data" / "settings.json"  # pre-multi-project home
     if legacy.exists():
         return _map_secrets(
-            json.loads(legacy.read_text(encoding="utf-8")),
+            _no_keys(json.loads(legacy.read_text(encoding="utf-8"))),
             secrets_at_rest.unprotect)
     return {}
 
