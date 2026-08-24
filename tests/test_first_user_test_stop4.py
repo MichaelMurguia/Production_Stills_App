@@ -181,5 +181,49 @@ class AFrozenStepSaysWhyOnScreen(unittest.TestCase):
         self.assertNotIn("--bad", css[i:i + 200])
 
 
+class ThePanelShowsTheGrammarItWillRenderUnder(unittest.TestCase):
+    """User-caught 2026-08-24: "It did not update the cinematography style
+    on the new take after I changed it."
+
+    It did. The choice saved, persisted, and rode the compiled prompt —
+    every one of those verified. What did NOT happen was any visible
+    change: step 03's summary line lists the five camera axes, that line is
+    the whole of what the step shows once the editor closes, and the
+    grammar was not in it. `camOwn` had the same hole, so a panel naming
+    its own cinematography still read "— PRODUCTION DEFAULT".
+
+    A setting you cannot see is indistinguishable from one that did not
+    take, and the user is right to call that not working."""
+
+    def test_the_summary_states_the_grammar(self):
+        i = JS.index("const camSummary = (() => {")
+        self.assertIn("camGrammar ? `${head}", JS[i:i + 500])
+
+    def test_a_refusal_reads_as_a_refusal(self):
+        """NONE is a choice, not an absence — it must not render blank and
+        look like the production default."""
+        i = JS.index("const camGrammar = (() => {")
+        self.assertIn("no cinematography grammar", JS[i:i + 500])
+
+    def test_the_panel_claims_the_axis_as_its_own(self):
+        i = JS.index("const camOwn =")
+        self.assertIn("|| !!p.cinematography", JS[i:i + 120])
+
+    def test_the_amend_confirms_what_it_set(self):
+        """The response omitted the one field the call had changed, so
+        nothing reading it could confirm the change."""
+        store_src = (ROOT / "app/store.py").read_text(encoding="utf-8")
+        i = store_src.index("def amend_panel_camera")
+        seg = store_src[i:store_src.index("def amend_panel_content", i)]
+        self.assertIn("*PANEL_GRAMMAR_FIELDS", seg)
+
+    def test_the_take_still_stamps_what_rode_it(self):
+        """Pre-existing and load-bearing: without it the experiment is
+        unevaluable, which is the reason the axis exists."""
+        self.assertIn("shot-tag-grammar", JS)
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        self.assertIn('"cinematography": _cine.stamp(panel)', gen)
+
+
 if __name__ == "__main__":
     unittest.main()

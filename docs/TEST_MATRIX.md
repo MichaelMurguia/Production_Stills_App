@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2140 tests** across 112 files.
+**2145 tests** across 112 files.
 
 
-## Product app — 1919 tests in 95 files
+## Product app — 1924 tests in 95 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -64,7 +64,7 @@ temp home and external services are faked.
 | `test_file_pickers.py` | 4 | Programmatic file pickers must be attached to the document. |
 | `test_first_user_test_stop1.py` | 39 | Stop 1 of the first-user-test plan: nothing is lost, nothing refuses silently. |
 | `test_first_user_test_stop2.py` | 39 | Stop 2: the panel renders what the panel says. |
-| `test_first_user_test_stop4.py` | 20 | Stop 4: the app fills it in, and says so. |
+| `test_first_user_test_stop4.py` | 25 | Stop 4: the app fills it in, and says so. |
 | `test_generate_units.py` | 5 | Engine-facing unit rules: size legality (×16, ≤3840, no upscaling), the ChatGPT-pipeline preset clamp, and deterministic keyword derivation. |
 | `test_harness_tooling.py` | 17 | HARNESS tooling (2026-08-13): the fixture recorder and the replay harness builder. |
 | `test_image_variants.py` | 22 | Display-tier image serving (app.imaging + candidate/reference resolvers). |

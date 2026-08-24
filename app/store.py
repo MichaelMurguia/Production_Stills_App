@@ -1609,8 +1609,12 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
             f"(lock re-stamped {prev.get('hash', '?')[:16]}… → "
             f"{locks[spec_id]['hash'][:16]}…): {clean or 'cleared'}. Existing takes "
             "keep the hash they were generated against.")
+    # The grammar is amended by this call and was missing from its answer,
+    # so nothing that read the response could confirm what it had just set
+    # (2026-08-24). Same shape of omission as every other "success reported
+    # without confirmation" this month.
     return {"spec_id": spec_id, "panel_id": panel_id,
-            **{f: panel.get(f, "") for f in CAMERA_FIELDS}}
+            **{f: panel.get(f, "") for f in (*CAMERA_FIELDS, *PANEL_GRAMMAR_FIELDS)}}
 
 
 def amend_panel_content(spec_id: str, panel_id: str,

@@ -11295,7 +11295,10 @@ async function renderBoardPanels(specId) {
 
     const camAxes = ["camera_angle", "camera_orientation", "camera_lens",
                      "camera_tilt", "scale"];
-    const camOwn = camAxes.some(k => p[k]);
+    // The grammar is an axis of this step too — it is set in this editor
+    // and saved by this button. Leaving it out of `camOwn` meant a panel
+    // that named its OWN cinematography still read "— PRODUCTION DEFAULT".
+    const camOwn = camAxes.some(k => p[k]) || !!p.cinematography;
     const camRv = k => String(p[k] || camDefaults?.[k] || "—").replace(/_/g, " ");
     // Orientation states itself only when set — it has no baseline, and a
     // standing "—" would read as a missing value rather than a free axis.
@@ -11304,11 +11307,26 @@ async function renderBoardPanels(specId) {
     // The axes are stored uppercase (EYE_LEVEL); §1.2 makes this line prose,
     // and prose is sentence case — the Courier caps beside it are the
     // machine facts, this is what a person reads.
+    // User-caught 2026-08-24: "It did not update the cinematography style
+    // on the new take after I changed it." It did — it saved, and it rode.
+    // But this line listed the five camera axes and NOT the grammar, and
+    // this line is the whole of what the step shows once the editor
+    // closes. So changing the cinematography left the panel looking
+    // byte-identical, and the only place the change surfaced was a tag on
+    // a take that had not been rendered yet.
+    const camGrammar = (() => {
+      const v = String(p.cinematography || "");
+      if (!v) return "";
+      if (v.toUpperCase() === "NONE") return "no cinematography grammar";
+      const st = (CINEMA_STYLES || []).find(x => x.key === v);
+      return st ? st.name.toLowerCase() : "";
+    })();
     const camSummary = (() => {
       const s = [camRv("camera_angle"), camOrient, camRv("camera_lens"),
                  camRv("camera_tilt"), camRv("scale")]
         .filter(Boolean).join(" · ").toLowerCase();
-      return s.charAt(0).toUpperCase() + s.slice(1);
+      const head = s.charAt(0).toUpperCase() + s.slice(1);
+      return camGrammar ? `${head} — ${camGrammar}` : head;
     })();
 
     // Which PLATES of a group ride (user ruling 2026-08-15). Precedence:
