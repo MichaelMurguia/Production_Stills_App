@@ -6792,6 +6792,56 @@ function buildRefCard(r, lbItems, i) {
       { type: "reference", id: r.id }, `/api/references/${r.id}/image`);
     actions.append(cr);
   }
+  // User-caught 2026-08-24: "I cant edit and change Dark Ship refference
+  // type." A tester filed a spaceship as CHARACTER_LIKENESS — the role the
+  // walkthrough named — and nothing in the app could take it back. The
+  // PATCH endpoint existed and no screen had ever called it, so the role
+  // chosen at intake was permanent for the life of the reference.
+  //
+  // Re-scoping is not rejecting. REJECTED is a judgement on the IMAGE, and
+  // a misfiled image was never the problem.
+  {
+    const rs = document.createElement("button");
+    rs.className = "text-act"; rs.textContent = "Change role";
+    rs.title = "Change what this image GOVERNS. The picture, its approval "
+             + "and its place in the library are untouched.";
+    rs.onclick = async () => {
+      const res = await roleDialog({
+        title: `Change what ${r.id} governs`,
+        body: "The image does not change and its approval stands. What "
+            + "changes is the job it does in future renders — a reference "
+            + "controls only its own scope, so this is the whole of its "
+            + "authority.",
+        prefillHead: roleHead(r.role) || "SCENE_REFERENCE",
+        prefillTitle: (String(r.role).split("—")[1] || "").trim(),
+        confirmLabel: "Change role",
+        // Jurisdiction facets belonged to the OLD family — "face, hair,
+        // build" makes no sense once this is a vehicle. Shown prefilled
+        // rather than silently carried or silently cleared, because both
+        // of those are surprises the user finds out about in a render.
+        fields: [
+          { name: "controls", label: "Controls",
+            value: (r.controls || []).join(", "),
+            placeholder: "comma-separated — what this image DOES govern" },
+          { name: "does_not_control", label: "Does not control",
+            value: (r.does_not_control || []).join(", "),
+            placeholder: "comma-separated — what it explicitly does not" },
+        ],
+      });
+      if (!res) return;
+      const split = v => String(v || "").split(",").map(x => x.trim()).filter(Boolean);
+      try {
+        await api(`/api/references/${r.id}/rescope`, {
+          method: "POST",
+          json: { role: res.role, controls: split(res.controls),
+                  does_not_control: split(res.does_not_control) },
+        });
+        toast(`${r.id} now governs ${res.role}.`);
+        renderReferences();
+      } catch (err) { toast(err.message, true); }
+    };
+    actions.append(rs);
+  }
   if (r.status !== "REJECTED") {
     const b = document.createElement("button");
     b.className = "danger"; b.textContent = "Reject";

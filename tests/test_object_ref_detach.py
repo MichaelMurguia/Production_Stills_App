@@ -130,5 +130,134 @@ class TheUiOffersIt(unittest.TestCase):
         self.assertGreaterEqual(JS.count("/object-refs`"), 2)
 
 
+class AMisfiledReferenceCanBeRescoped(unittest.TestCase):
+    """User-caught 2026-08-24: "I cant edit and change Dark Ship refference
+    type."
+
+    A tester filed a spaceship as CHARACTER_LIKENESS — the role the
+    walkthrough named — and nothing in the app could take it back. The
+    PATCH endpoint existed and NO SCREEN HAD EVER CALLED IT, so the role
+    chosen at intake was permanent for the life of the reference; and for
+    an APPROVED reference the store refused the change outright, offering
+    "reject it first" as the remedy. Rejecting is a judgement on the
+    IMAGE, and a misfiled image was never the problem."""
+
+    def setUp(self):
+        import json as _json
+        import tempfile
+        from app import paths
+        self.tmp = tempfile.TemporaryDirectory()
+        d = Path(self.tmp.name)
+        self._old = (paths.REF_INDEX, paths.APPROVAL_LOG)
+        paths.REF_INDEX = d / "references.json"
+        paths.APPROVAL_LOG = d / "approval_log.md"
+        paths.REF_INDEX.write_text(_json.dumps([{
+            "id": "REF-0046", "role": "CHARACTER_LIKENESS — DARK SHIP",
+            "status": "APPROVED", "controls": ["face", "hair"],
+            "does_not_control": [], "file": "x.png"}]), encoding="utf-8")
+
+    def tearDown(self):
+        from app import paths
+        paths.REF_INDEX, paths.APPROVAL_LOG = self._old
+        self.tmp.cleanup()
+
+    def rec(self):
+        import json as _json
+        from app import paths
+        return _json.loads(paths.REF_INDEX.read_text(encoding="utf-8"))[0]
+
+    def test_the_reported_case(self):
+        from app import store
+        store.rescope_reference("REF-0046", "VEHICLE_GEOMETRY — DARK SHIP")
+        self.assertTrue(self.rec()["role"].startswith("VEHICLE_GEOMETRY"))
+
+    def test_the_approval_survives(self):
+        """Re-scoping is not re-judging. Forcing a reject to fix a filing
+        error would throw away the review the image already passed."""
+        from app import store
+        store.rescope_reference("REF-0046", "VEHICLE_GEOMETRY — DARK SHIP")
+        self.assertEqual(self.rec()["status"], "APPROVED")
+
+    def test_jurisdiction_travels_with_the_role(self):
+        """"face, hair" is meaningless once this is a vehicle."""
+        from app import store
+        store.rescope_reference("REF-0046", "VEHICLE_GEOMETRY — DARK SHIP",
+                                ["hull geometry"], ["colour"])
+        r = self.rec()
+        self.assertEqual(r["controls"], ["hull geometry"])
+        self.assertEqual(r["does_not_control"], ["colour"])
+
+    def test_omitting_jurisdiction_leaves_it_alone(self):
+        """A role correction must not silently wipe facets the user set."""
+        from app import store
+        store.rescope_reference("REF-0046", "VEHICLE_GEOMETRY — DARK SHIP")
+        self.assertEqual(self.rec()["controls"], ["face", "hair"])
+
+    def test_it_is_journaled(self):
+        """A canon anchor changing jurisdiction is a production fact: every
+        render made under the old role meant something different by it."""
+        from app import paths, store
+        store.rescope_reference("REF-0046", "VEHICLE_GEOMETRY — DARK SHIP")
+        log = paths.APPROVAL_LOG.read_text(encoding="utf-8")
+        self.assertIn("RE-SCOPED", log)
+        self.assertIn("CHARACTER_LIKENESS", log)
+        self.assertIn("VEHICLE_GEOMETRY", log)
+
+    def test_an_empty_role_is_refused(self):
+        from app import store
+        with self.assertRaises(ValueError):
+            store.rescope_reference("REF-0046", "   ")
+
+    def test_an_unknown_reference_is_a_keyerror(self):
+        from app import store
+        with self.assertRaises(KeyError):
+            store.rescope_reference("REF-9999", "VEHICLE_GEOMETRY")
+
+    def test_the_generic_patch_still_refuses(self):
+        """The lock was right for a silent field edit — this adds a stated
+        act beside it, it does not remove the guard."""
+        from app import store
+        with self.assertRaises(PermissionError):
+            store.update_reference("REF-0046", {"role": "VEHICLE_GEOMETRY"})
+
+    def test_the_library_offers_it(self):
+        js = (Path(__file__).resolve().parents[1] / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('rs.textContent = "Change role"', js)
+        self.assertIn("/rescope`", js)
+
+    def test_the_route_exists(self):
+        main = (Path(__file__).resolve().parents[1] / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn('@app.post("/api/references/{ref_id}/rescope")', main)
+
+
+class TheFlightRecorderCannotBeTheThingThatFails(unittest.TestCase):
+    """A body that is not valid UTF-8 raised UnicodeDecodeError inside the
+    activity middleware — which caught JSONDecodeError only — so the client
+    got a 500 from the recorder before any route saw the request. Found
+    2026-08-24 when a Windows shell sent a cp1252 em-dash."""
+
+    def test_it_catches_a_decode_error_too(self):
+        main = (Path(__file__).resolve().parents[1] / "app/main.py").read_text(encoding="utf-8")
+        i = main.index("body_summary = _redact_secrets(json.loads(raw))")
+        self.assertIn("UnicodeDecodeError", main[i:i + 200])
+
+    def test_a_non_utf8_body_does_not_500(self):
+        import tempfile
+        from fastapi.testclient import TestClient
+        from app import paths
+        from app.main import app
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        old = paths.HOME
+        paths.HOME = Path(tmp.name)
+        try:
+            r = TestClient(app).post("/api/references/NOPE/rescope",
+                                     content=b'{"role":"A ' + bytes([0x97]) + b' B"}',
+                                     headers={"Content-Type": "application/json"})
+            self.assertLess(r.status_code, 500, r.text)
+        finally:
+            paths.HOME = old
+
+
 if __name__ == "__main__":
     unittest.main()

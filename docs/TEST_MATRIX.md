@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2094 tests** across 111 files.
+**2106 tests** across 111 files.
 
 
-## Product app — 1873 tests in 94 files
+## Product app — 1885 tests in 94 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -77,7 +77,7 @@ temp home and external services are faked.
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
-| `test_object_ref_detach.py` | 10 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |
+| `test_object_ref_detach.py` | 22 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |
 | `test_object_ref_matching.py` | 11 | One rule for "does this phrase name that thing", shared by every surface that asks (user-caught 2026-08-16: a panel with the required object "Sal's ey |
 | `test_one_resolved_manifest.py` | 18 | One fact, one computation — the manifest, the count, and the arrange room's SHORT verdict. |
 | `test_p1_lifecycle.py` | 13 | P1 coverage from docs/TEST_MATRIX.md: the sheet lock/hash contract, the candidate lifecycle, and the assemble endpoint — the behaviors that guard cano |

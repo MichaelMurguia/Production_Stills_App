@@ -625,7 +625,13 @@ async def activity_middleware(request: Request, call_next):
         if raw:
             try:
                 body_summary = _redact_secrets(json.loads(raw))
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                # UnicodeDecodeError is NOT a JSONDecodeError, and a body
+                # that is not valid UTF-8 used to 500 here — in the FLIGHT
+                # RECORDER, before any route saw the request, so the client
+                # got "Internal Server Error" for what is a 422 (found
+                # 2026-08-24 when a Windows shell sent a cp1252 em-dash).
+                # The recorder must never be the thing that fails.
                 body_summary = {"raw_bytes": len(raw)}
 
     # Endpoints that parse multipart forms can surface their fields here via
@@ -1010,6 +1016,23 @@ async def api_update_reference(ref_id: str, fields: dict) -> dict:
     try:
         return store.update_reference(ref_id, fields)
     except (KeyError, PermissionError) as e:
+        raise _err(e)
+
+
+@app.post("/api/references/{ref_id}/rescope")
+async def api_rescope_reference(ref_id: str, body: dict) -> dict:
+    """Change what a reference GOVERNS without touching its approval.
+
+    The generic PATCH deliberately refuses this on an approved reference —
+    a jurisdiction change is not a field edit. This is the stated act, and
+    it is journaled."""
+    try:
+        return store.rescope_reference(
+            ref_id, str(body.get("role", "")),
+            body.get("controls"), body.get("does_not_control"))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except KeyError as e:
         raise _err(e)
 
 

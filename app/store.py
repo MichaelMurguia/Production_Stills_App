@@ -641,6 +641,54 @@ def replace_reference_image(ref_id: str, content: bytes,
     raise KeyError(ref_id)
 
 
+def rescope_reference(ref_id: str, role: str, controls: list | None = None,
+                      does_not_control: list | None = None) -> dict:
+    """Change what an existing reference GOVERNS, approval intact.
+
+    `update_reference` locks the role of an APPROVED reference and tells
+    the user to reject it first. That is right for a silent PATCH — an
+    approved reference's role is its jurisdiction, and every render that
+    used it meant something by it — but it left no way to correct a
+    misfiling at all, and the client never offered one either. A tester
+    filed a spaceship as CHARACTER_LIKENESS because that was the role the
+    walkthrough named, and nothing in the app could take it back
+    (2026-08-24: "I cant edit and change Dark Ship refference type").
+
+    Rejecting to re-scope is the wrong remedy: REJECTED is a judgement on
+    the image, and this image was never the problem. So this is the
+    explicit act — stated, journaled, and it keeps the approval.
+    """
+    role = str(role or "").strip().upper()
+    if not role:
+        raise ValueError("a reference must have a role")
+    refs = _load_refs()
+    for r in refs:
+        if r["id"] != ref_id:
+            continue
+        was = r.get("role", "")
+        if was == role and controls is None and does_not_control is None:
+            return r
+        r["role"] = role
+        if controls is not None:
+            r["controls"] = list(controls)
+        if does_not_control is not None:
+            r["does_not_control"] = list(does_not_control)
+        r["updated_at"] = utcnow()
+        _save_refs(refs)
+        # A canon anchor changing jurisdiction is a production fact, not a
+        # UI preference: renders made under the old role meant something
+        # different by this image.
+        try:
+            append_approval_log(
+                f"REFERENCE {ref_id} RE-SCOPED — role {was or '(none)'} -> {role}. "
+                "The image is unchanged and its approval stands; what it "
+                "GOVERNS in future renders has changed.")
+        except Exception:
+            pass
+        return r
+    raise KeyError(ref_id)
+
+
 def update_reference(ref_id: str, fields: dict) -> dict:
     refs = _load_refs()
     for r in refs:
