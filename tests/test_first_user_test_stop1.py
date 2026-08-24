@@ -342,5 +342,72 @@ class TheGateIsHardToMiss(unittest.TestCase):
         self.assertIn('gate.classList.toggle("hidden", painted && said)', b)
 
 
+class TheBandActuallyUnlocksFive(unittest.TestCase):
+    """Behaviour, not source strings — this runs the real band logic out of
+    app.js under node against two states.
+
+    Needed because the string assertions above would have passed against the
+    broken code too: `boards: (bo.assembled || 0) > 0` is a perfectly
+    plausible line. Only executing it shows that stage 05 never opens.
+    Skips where node is unavailable; the source assertions still stand."""
+
+    HARNESS = """
+%(order)s
+function bandFor(ss) {
+  const pd = ss.production_design || {}, bd = ss.breakdowns || {},
+        pn = ss.panels || {}, bo = ss.boards || {};
+%(complete)s
+  const frontier = STAGE_ORDER.find(s => !complete[s]) || "assembly";
+  const i = STAGE_ORDER.indexOf(frontier);
+  return { frontier, locked: STAGE_ORDER.filter((s, n) => n > i) };
+}
+const base = { screenplay: "x.pdf", production_design: { bible_saved: true },
+               breakdowns: { locked: 1, drafts: 1 } };
+const out = {
+  none: bandFor({ ...base, panels: { approved: 0, candidates: 3 },
+                  boards: { assembled: 0, approved: 0 } }),
+  one:  bandFor({ ...base, panels: { approved: 1, candidates: 3 },
+                  boards: { assembled: 0, approved: 0 } }),
+};
+console.log(JSON.stringify(out));
+"""
+
+    def band(self) -> dict:
+        import json as _json
+        import shutil
+        import subprocess
+        import tempfile
+        if not shutil.which("node"):
+            self.skipTest("node not available")
+        i = JS.index("const STAGE_ORDER = [")
+        order = JS[i:JS.index(chr(10), i) + 1]
+        a = JS.index("const complete = {")
+        complete = JS[a:JS.index("const BLOCK_STAGE", a)]
+        src = self.HARNESS % {"order": order, "complete": complete}
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "band.js"
+            f.write_text(src, encoding="utf-8")
+            r = subprocess.run(["node", str(f)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return _json.loads(r.stdout)
+
+    def test_five_is_locked_until_a_panel_is_approved(self):
+        self.assertIn("assembly", self.band()["none"]["locked"])
+
+    def test_five_opens_the_moment_one_panel_is_approved(self):
+        """The reported failure: 'Approved a panel, 5 did not unlock.'"""
+        b = self.band()["one"]
+        self.assertNotIn("assembly", b["locked"])
+        self.assertEqual(b["frontier"], "assembly")
+
+    def test_an_assembled_board_is_not_what_opens_stage_five(self):
+        """Stage 05 is where boards are MADE. Gating it on a board existing
+        is the deadlock, and it reads as plausible in review — which is why
+        this test executes the logic instead of reading it."""
+        b = self.band()["one"]
+        self.assertEqual(b["locked"], [],
+                         "nothing should be locked with zero boards assembled")
+
+
 if __name__ == "__main__":
     unittest.main()
