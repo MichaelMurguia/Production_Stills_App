@@ -313,11 +313,11 @@
     </div>
 
     <div class="panel step" data-step="5">
-      <h2>Model Test: <span class="step-cond">SAME LOCATION &middot; SAME BIBLE &middot; SAME ANCHORS</span></h2>
+      <h2>Test your model <span class="step-cond">SAME LOCATION &middot; SAME BIBLE &middot; SAME ANCHORS</span></h2>
       <div class="row" style="margin-top:0">
-        <div class="fgroup" style="flex:1;max-width:420px" title="The screenplay location every engine renders. Recommendations come from the Step 2 Script Scene Scan; free text works too. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
-          <input type="text" id="wiz-sample-loc" list="wiz-sample-locs" placeholder="run the Step 2 Scene Scan for suggestions, or type a location…">
-          <datalist id="wiz-sample-locs"></datalist>
+        <div class="fgroup" style="flex:1;max-width:460px" title="The screenplay location every engine renders. The list is your own screenplay's locations, read in the Step 2 Scene Scan. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
+          <select id="wiz-sample-pick"></select>
+          <input type="text" id="wiz-sample-loc" class="hidden" placeholder="type a location…">
         </div>
         <div class="gen-actions"><button class="primary" id="wiz-samples-go" title="Sends the identical brief (your Bible + style anchors + the chosen screenplay location) to every engine you have a key for — one 1K render each.">Generate a sample from every model</button></div>
       </div>
@@ -424,9 +424,9 @@
 
             <div class="door-row">
               <span class="door-lab">Spec ID <button type="button" class="q-help" data-help="spec-id" aria-label="What is a Spec ID?">?</button>
-                <span class="f-note mono">A NAME ONLY</span></span>
+                <span class="f-note mono">NAMED FROM YOUR SCENE &middot; EDIT IF YOU LIKE</span></span>
               <div class="door-field">
-                <input type="text" id="spec-auto-id" placeholder="GENETICS_FACTION_V001" required>
+                <input type="text" id="spec-auto-id" placeholder="fills itself when you pick or paste a scene" required>
               </div>
             </div>
 

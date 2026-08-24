@@ -4932,12 +4932,42 @@ async function renderWizard() {
   // ---- Step 6: the model test (after the production design is set) ----
   // Every engine renders the same screenplay location; suggestions come from
   // the Step 2 analysis's recurring locations.
+  // First user test, 2026-08-23: "if this is going to be a drop down like
+  // give me all my locations because you have the screenplay." It WAS a
+  // list — a `datalist`, which shows nothing until you type into it, so a
+  // user whose screenplay the app had just read saw an empty box and no
+  // sign that his own locations were behind it. A datalist is a
+  // convenience for a field you already know how to fill; this is a field
+  // whose whole value is that the app knows the answers.
   const locInput = $("#wiz-sample-loc");
+  const locPick = $("#wiz-sample-pick");
   const sampleLocs = wizACache()?.key_locations || [];
-  $("#wiz-sample-locs").innerHTML = sampleLocs.map(l => `<option value="${esc(l)}"></option>`).join("");
-  locInput.value = localStorage.getItem("wizardSampleLoc") || sampleLocs[0] || "";
-  locInput.oninput = () => localStorage.setItem("wizardSampleLoc", locInput.value);
-  const sampleSubject = () => locInput.value.trim();
+  // A sentinel no location can collide with. NOT a control byte:
+  // the repo forbids C0 characters in source, and a NUL in a value
+  // attribute is unreadable in a diff and in a DOM inspector.
+  const OTHER = "__type_your_own__";
+  const saved = localStorage.getItem("wizardSampleLoc") || "";
+  locPick.innerHTML =
+    (sampleLocs.length
+      ? sampleLocs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("")
+      : `<option value="">run the Step 2 Scene Scan to list your locations</option>`)
+    + `<option value="${OTHER}">Somewhere else — type it…</option>`;
+  const useOther = on => {
+    locInput.classList.toggle("hidden", !on);
+    if (on) locInput.focus();
+  };
+  if (saved && sampleLocs.includes(saved)) {
+    locPick.value = saved;
+  } else if (saved) {
+    locPick.value = OTHER; locInput.value = saved; useOther(true);
+  } else {
+    locPick.value = sampleLocs[0] || "";
+  }
+  const remember = () => localStorage.setItem("wizardSampleLoc", sampleSubject());
+  locPick.onchange = () => { useOther(locPick.value === OTHER); remember(); };
+  locInput.oninput = remember;
+  const sampleSubject = () =>
+    (locPick.value === OTHER ? locInput.value : locPick.value).trim();
 
   const renderSamples = async () => {
     const [samples, s] = await Promise.all([api("/api/wizard/samples"), api("/api/settings")]);
@@ -10510,7 +10540,13 @@ function grammarSelect(prefix, value, blank, disabled = false) {
   const opts = (CINEMA_STYLES.length ? CINEMA_STYLES : [])
     .map(st => `<option value="${esc(st.key)}" ${v === st.key ? "selected" : ""}
       >${esc(st.name)}</option>`).join("");
-  return `<label class="cam-field mini"><span>Grammar</span>
+  // Labelled "Grammar" until 2026-08-24, when the person who ASKED for
+  // this axis could not find it and asked for it again: "I want to be able
+  // to change the cinematography style when rendering the panel." The
+  // control was there; the word was not one anyone reaches for. The
+  // concept is still the production's cinematography grammar — the field
+  // just answers to the name people use for it.
+  return `<label class="cam-field mini"><span>Cinematography</span>
     <select data-f="${prefix}-grammar" ${disabled ? "disabled" : ""}>
       <option value="">${esc(blank)}</option>
       <option value="NONE" ${v.toUpperCase() === "NONE" ? "selected" : ""}

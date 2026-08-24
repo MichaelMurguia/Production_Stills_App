@@ -1461,7 +1461,13 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn("SCREENPLAY IS READ FOR IT", a)
         self.assertIn("PASTE WINS — SCRIPT NOT READ", a)
         self.assertIn("EMPTY — CONTENT DECIDES", a)
-        self.assertIn("A NAME ONLY", a)
+        # Was "A NAME ONLY" until 2026-08-24. That named the field's TYPE,
+        # not its effect — the rule this test exists for — and it read as
+        # an instruction to invent one, which is what happened in the first
+        # user test ("I don't have the vocabulary to understand what this
+        # should actually be") even though the field fills itself.
+        self.assertIn("NAMED FROM YOUR SCENE", a)
+        self.assertIn("EDIT IF YOU LIKE", a)
 
     def test_the_section_carries_a_way_to_read_the_screenplay(self):
         self.assertIn('id="spec-auto-open-screenplay"', self.auto())
