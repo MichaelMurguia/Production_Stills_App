@@ -6802,12 +6802,13 @@ function buildRefCard(r, lbItems, i) {
   // a misfiled image was never the problem.
   {
     const rs = document.createElement("button");
-    rs.className = "text-act"; rs.textContent = "Change role";
-    rs.title = "Change what this image GOVERNS. The picture, its approval "
-             + "and its place in the library are untouched.";
+    rs.className = "text-act"; rs.textContent = "Edit";
+    rs.title = "Edit what this image GOVERNS — its role and jurisdiction. "
+             + "The picture, its approval and its place in the library are "
+             + "untouched.";
     rs.onclick = async () => {
       const res = await roleDialog({
-        title: `Change what ${r.id} governs`,
+        title: `Edit ${r.id}`,
         body: "The image does not change and its approval stands. What "
             + "changes is the job it does in future renders — a reference "
             + "controls only its own scope, so this is the whole of its "

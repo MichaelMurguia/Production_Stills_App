@@ -222,7 +222,7 @@ class AMisfiledReferenceCanBeRescoped(unittest.TestCase):
 
     def test_the_library_offers_it(self):
         js = (Path(__file__).resolve().parents[1] / "app/static/app.js").read_text(encoding="utf-8")
-        self.assertIn('rs.textContent = "Change role"', js)
+        self.assertIn('rs.textContent = "Edit"', js)
         self.assertIn("/rescope`", js)
 
     def test_the_route_exists(self):
