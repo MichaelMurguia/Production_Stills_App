@@ -550,6 +550,8 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
              title="Mark this step confirmed. Advisory — it never blocks the act.">Confirm</button>` : ""}
         </span>
       </div>
+      ${frozen && id ? `<div class="step-frozen mono">${esc(frozenWhy
+         || "Settled by an approved take — withdraw the approval to change it")}</div>` : ""}
       ${body ? `<div class="step-content">${body}</div>` : ""}
     </div>
   </section>`;
@@ -11279,9 +11281,15 @@ async function renderBoardPanels(specId) {
       ...o,
       done: !!(o.id && confIs(o.id)),
       frozen: approvedTakes.length > 0,
+      // Named the fact but not the door. A user who cannot change the
+      // camera needs to know WHERE the approval is withdrawn, not only
+      // that one exists (2026-08-24: "it says I cant change camera... I
+      // get the 'no' icon when i hover over change camera").
       frozenWhy: approvedTakes.length
-        ? `Settled by ${approvedTakes.join(", ")} — withdraw that approval to `
-          + "change what this panel asks for"
+        ? `FROZEN BY ${approvedTakes.join(", ")} — WHAT THIS PANEL ASKS FOR IS `
+          + "SETTLED WHILE A TAKE IS APPROVED. USE WITHDRAW APPROVAL ON THAT "
+          + "TAKE IN THE STRIP ABOVE TO CHANGE IT. GENERATING A NEW TAKE IS "
+          + "NEVER BLOCKED."
         : "",
     });
 

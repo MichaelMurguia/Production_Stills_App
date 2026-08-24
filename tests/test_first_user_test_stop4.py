@@ -144,5 +144,42 @@ class TheCinematographyAxisIsFindable(unittest.TestCase):
                       'out.cinematography = val("grammar");', JS)
 
 
+class AFrozenStepSaysWhyOnScreen(unittest.TestCase):
+    """User-caught 2026-08-24: "it says I cant change camera. I rendered a
+    take and on that panel, I get the 'no' icon when i hover over change
+    camera."
+
+    The panel had an approved take, which settles what the panel ASKS FOR —
+    correct behaviour. But the step showed a green "✓ SETTLED" chip, which
+    reads as good and complete, beside a disabled verb whose only
+    explanation was a hover title. Third instance of the same defect in one
+    week (Repair Region, the board lock, this), so the fix is in seqStep and
+    covers every frozen step rather than the camera alone."""
+
+    def test_the_reason_renders_not_only_on_hover(self):
+        i = JS.index("function seqStep")
+        seg = JS[i:JS.index("function modal(", i)]
+        self.assertIn('class="step-frozen mono"', seg)
+        self.assertIn("frozenWhy", seg)
+
+    def test_it_names_the_take_that_froze_it(self):
+        self.assertIn("FROZEN BY ${approvedTakes.join", JS)
+
+    def test_it_names_the_door_out(self):
+        """Knowing you are blocked is half an answer."""
+        self.assertIn("USE WITHDRAW APPROVAL ON THAT", JS)
+
+    def test_it_says_what_is_still_allowed(self):
+        """An approval freezes the SHEET, not the experiment — the same
+        rule the prompt editor already states. A user who reads only
+        "frozen" reasonably concludes the panel is finished with them."""
+        self.assertIn("GENERATING A NEW TAKE IS", JS)
+
+    def test_a_settled_step_is_not_painted_as_an_error(self):
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        i = css.index(".step-frozen")
+        self.assertNotIn("--bad", css[i:i + 200])
+
+
 if __name__ == "__main__":
     unittest.main()

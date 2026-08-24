@@ -926,6 +926,14 @@ label.check {
 .q-idx { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding-top: 2px; }
 .q-main { flex: 1; min-width: 0; }
 .q-main input { width: min(520px, 100%); margin-top: 6px; }
+/* UNCANONIZED — 2026-08-24 — why a step is frozen */
+/* A frozen step showed "✓ SETTLED" — which reads as GOOD, as if the step
+   were complete — beside a disabled verb whose only explanation was a
+   hover title. User-caught: "it says I cant change camera... I get the
+   'no' icon when i hover over change camera." The cause and the remedy
+   now read on screen, under the head, for every frozen step. Ink, not
+   --bad: a settled panel is not an error. */
+.step-frozen { margin: 4px 0 0; color: var(--ink-dim); max-width: 76ch; }
 /* UNCANONIZED — 2026-08-24 — an attachment the panel will NOT get */
 /* Stated beneath the attachment manifest: a design language with no
    palette of its own attaches none, and says which languages do have one.
