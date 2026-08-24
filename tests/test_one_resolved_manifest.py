@@ -32,6 +32,15 @@ sys.path.insert(0, str(ROOT))
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 GEN = (ROOT / "app/generate.py").read_text(encoding="utf-8")
 
+def refcount_src() -> str:
+    """The whole of `updateRefCount`, bounded by the statement after it
+    rather than by a character count. Fixed windows have now silently
+    stopped covering their subject three times in one day as this function
+    grew (2026-08-24)."""
+    i = JS.index("const updateRefCount = () =>")
+    return JS[i:JS.index('$(".ref-groups", card).addEventListener', i)]
+
+
 def resolved_src() -> str:
     """The whole of `resolved_attachments`, bounded by the next top-level
     def rather than by a character count. A fixed window silently stops
@@ -87,23 +96,20 @@ class TheClientStoppedComputingIt(unittest.TestCase):
         self.assertIn("= ${m.count} OF ${m.max} ATTACHED", JS)
 
     def test_the_manifest_is_rendered_from_the_response(self):
-        i = JS.index("const updateRefCount = () =>")
-        seg = JS[i:i + 2600]
+        seg = refcount_src()
         self.assertIn("for (const a of m.attachments)", seg)
         self.assertNotIn("styleAnchors.length", seg,
                          "the client's own style tally is gone")
 
     def test_a_failure_says_so_rather_than_guessing(self):
         """A guessed manifest is what this replaced."""
-        i = JS.index("const updateRefCount = () =>")
-        seg = JS[i:i + 2600]
+        seg = refcount_src()
         self.assertIn("COULD NOT RESOLVE THE ATTACHMENTS", seg)
 
     def test_a_later_tick_wins(self):
         """It fires on every checkbox, so an out-of-order reply must not
         paint a stale manifest."""
-        i = JS.index("const updateRefCount = () =>")
-        seg = JS[i:i + 2600]
+        seg = refcount_src()
         self.assertIn("const seq = ++refCountSeq;", seg)
         self.assertIn("if (seq !== refCountSeq) return;", seg)
 

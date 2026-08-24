@@ -1403,6 +1403,60 @@ def amend_panel_prompt(spec_id: str, panel_id: str, text: str) -> dict:
             "was_saved": had, "chars": len(body)}
 
 
+def amend_panel_refs(spec_id: str, panel_id: str, ref_ids: list) -> dict:
+    """Remember which references a panel has picked.
+
+    Until now the tick lived only in the open page. The generate call took
+    `ref_ids` as a per-request parameter and nothing ever wrote them down,
+    so rejecting a take, switching panel, or any redraw dropped the
+    selection silently — and the next render went out without the
+    reference the user had just chosen, which is precisely what happened
+    to a tester's ship (first user test, 2026-08-23: he added "dark ship",
+    ticked it, rejected the take, generated, and the take attached the
+    palette and nothing else).
+
+    Not journaled and no lock re-stamp, deliberately: picking a reference
+    is not an amendment to the sheet's canon, it is how the user aims the
+    next take. Only ids are stored — the reference library stays the one
+    record of what a reference IS."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        raise KeyError(spec_id)
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None:
+        raise KeyError(f"{spec_id} has no panel {panel_id}")
+    clean, seen = [], set()
+    for rid in ref_ids or []:
+        rid = str(rid).strip()
+        if rid and rid not in seen:
+            seen.add(rid)
+            clean.append(rid)
+    panel["ref_ids"] = clean
+    _atomic_write_json(_spec_path(spec_id), spec)
+    return {"panel_id": panel_id, "ref_ids": clean}
+
+
+def panel_refs(spec_id: str, panel_id: str) -> list | None:
+    """The panel's remembered picks, or None if it has never chosen.
+
+    None and [] are different answers and the difference matters: None
+    means "fall back to the last take", [] means "the user deliberately
+    unticked everything", and collapsing them would resurrect references
+    the user had just removed.
+
+    Filtered to references that still exist and are still APPROVED — a
+    deleted or rejected one must not come back as a tick nobody can
+    explain."""
+    spec = get_spec(spec_id)
+    if spec is None:
+        return None
+    panel = next((p for p in spec.get("panels", []) if p.get("id") == panel_id), None)
+    if panel is None or "ref_ids" not in panel:
+        return None
+    live = {r["id"] for r in _load_refs() if r.get("status") == "APPROVED"}
+    return [rid for rid in (panel.get("ref_ids") or []) if rid in live]
+
+
 def panel_prompt_override(spec_id: str, panel_id: str) -> str:
     """The panel's saved prompt, or '' — one reader so the preview, the
     render and the state line can never disagree about what will be sent."""

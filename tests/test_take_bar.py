@@ -134,19 +134,54 @@ class AnApprovedTakeKeepsItsTools(unittest.TestCase):
 
 class TheSelectionIsRemembered(unittest.TestCase):
     """Reference selection carries generation to generation (user
-    2026-08-08). The memory is the take record itself — every take stores
-    which references it attached — so it survives reloads and devices
-    with no new storage, and an emptied selection is remembered too."""
+    2026-08-08). Two memories now, in order of authority.
+
+    A SAVED pick (2026-08-23) is what the user chose and has not rendered
+    yet. Below it, the take record — every take stores which references it
+    attached — remains the memory for a panel that has never chosen.
+
+    The take-derived layer alone was the bug: it can only remember what has
+    already been RENDERED, so the moment between ticking a reference and
+    generating with it had no memory at all. A tester ticked a ship,
+    rejected the take, and the redraw re-read the newest take — the one he
+    had just rejected, which never carried the ship."""
 
     def block(self) -> str:
-        i = JS.index("buildWorkbench.isChecked")
-        return JS[i - 900:i + 900]
+        i = JS.index("const lastTake = panelCands[0]")
+        return JS[i:JS.index("const approvedN", i)]
 
     def test_the_newest_take_is_the_memory(self):
         b = self.block()
         self.assertIn("const lastTake = panelCands[0]", b)
         self.assertIn("(lastTake?.references || []).map(r => r.id)", b)
         self.assertIn("g.ids.some(id => lastRefIds.has(id))", b)
+
+    def test_a_saved_pick_outranks_the_take(self):
+        b = self.block()
+        self.assertIn("const savedRefIds = Array.isArray(p.ref_ids)", b)
+        self.assertLess(b.index("savedRefIds"), b.index(": lastTake"),
+                        "the saved pick must be consulted first")
+
+    def test_never_chosen_and_chose_nothing_are_different(self):
+        """`null` falls back to the take; `[]` is a deliberate empty and
+        must not silently revert to whatever the last render used."""
+        b = self.block()
+        self.assertIn("? new Set(p.ref_ids) : null", b)
+
+    def test_the_row_says_the_pick_is_the_users_own(self):
+        b = self.block()
+        self.assertIn('"YOU PICKED THIS"', b)
+        self.assertIn('"YOU LEFT THIS OFF"', b)
+
+    def test_a_tick_is_written_down(self):
+        i = JS.index("p.ref_ids = checkedRefs();")
+        self.assertIn("/panels/${p.id}/refs`", JS[i:i + 400])
+        self.assertIn('method: "POST"', JS[i:i + 400])
+
+    def test_a_failed_save_is_stated(self):
+        """Silence here is how the pick was lost in the first place."""
+        i = JS.index("p.ref_ids = checkedRefs();")
+        self.assertIn("Reference pick not saved", JS[i:i + 600])
 
     def test_the_matcher_is_only_the_first_take_default(self):
         b = self.block()

@@ -11200,17 +11200,35 @@ async function renderBoardPanels(specId) {
     // keyword matcher is only the first-take default.
     const lastTake = panelCands[0];
     const lastRefIds = new Set((lastTake?.references || []).map(r => r.id));
-    buildWorkbench.isChecked = g => lastTake
-      ? g.ids.some(id => lastRefIds.has(id))
-      : reqObjs.some(o => matches(o, g.name));
+    // A take-derived memory can only remember what has already been
+    // RENDERED. It cannot hold an intention — and the moment between
+    // ticking a reference and generating with it is exactly when a user
+    // has one. First user test, 2026-08-23: he added "dark ship", ticked
+    // it, rejected the take, generated — and the new take attached the
+    // palette and nothing else. Rejecting redraws the card, the redraw
+    // re-read the newest take, and the newest take was the one he had
+    // just rejected, which never carried the ship.
+    //
+    // So a saved pick outranks the derivation. `null` means this panel has
+    // never chosen and the old behaviour stands; `[]` means the user
+    // deliberately unticked everything, which must not silently revert to
+    // whatever the last render happened to use.
+    const savedRefIds = Array.isArray(p.ref_ids) ? new Set(p.ref_ids) : null;
+    buildWorkbench.isChecked = g => savedRefIds
+      ? g.ids.some(id => savedRefIds.has(id))
+      : lastTake
+        ? g.ids.some(id => lastRefIds.has(id))
+        : reqObjs.some(o => matches(o, g.name));
     // §2.3: references are not a free choice — the app has already ticked
     // them and can say why, so every row states its reason AND the off rows
     // state theirs. The two rules never both fire (matches-an-object is the
     // first-take default only), so a row never shows a reason it cannot have.
-    const refWhy = lastTake ? "RODE THE PREVIOUS TAKE" : "MATCHES A REQUIRED OBJECT";
-    const refWhyOff = lastTake
-      ? "DID NOT RIDE THE PREVIOUS TAKE"
-      : "NOTHING ON THIS PANEL NAMES THEIR SUBJECT";
+    const refWhy = savedRefIds ? "YOU PICKED THIS"
+      : lastTake ? "RODE THE PREVIOUS TAKE" : "MATCHES A REQUIRED OBJECT";
+    const refWhyOff = savedRefIds ? "YOU LEFT THIS OFF"
+      : lastTake
+        ? "DID NOT RIDE THE PREVIOUS TAKE"
+        : "NOTHING ON THIS PANEL NAMES THEIR SUBJECT";
 
     const approvedN = panelCands.filter(c => c.status === "APPROVED").length;
     const takesWord = !panelCands.length ? "NO TAKES YET"
@@ -11597,7 +11615,13 @@ async function renderBoardPanels(specId) {
             .map(([role, rids]) => `${esc(String(role).toUpperCase())} ${idSpan(rids)}`);
           attachedHost.innerHTML =
             `<span class="attached-k">ATTACHED · ${m.count}</span>`
-            + (parts.length ? parts.join("&ensp;·&ensp;") : "NOTHING ATTACHED");
+            + (parts.length ? parts.join("&ensp;·&ensp;") : "NOTHING ATTACHED")
+            // D3.2 — a panel whose design language has no palette now gets
+            // none rather than the newest of some other faction's. Silence
+            // beats the wrong palette, but only if the silence is stated:
+            // otherwise it is a quieter version of the same surprise.
+            + (m.notes || []).map(n =>
+                `<div class="attached-note">${esc(n)}</div>`).join("");
           attachedHost.classList.toggle("over", m.over);
 
           // P6: what is about to be sent, legible at the moment of sending.
@@ -11648,6 +11672,15 @@ async function renderBoardPanels(specId) {
         }
       }
       updateRefCount();
+      // Write the pick down. Without this the tick lives in the DOM only,
+      // and the next redraw — a reject, a panel switch, a reload — throws
+      // it away silently.
+      p.ref_ids = checkedRefs();
+      api(`/api/specs/${specId}/panels/${p.id}/refs`, {
+        method: "POST", json: { ref_ids: p.ref_ids },
+      }).catch(err => toast(
+        `Reference pick not saved — ${err.message}. It will ride THIS take `
+        + "but may not survive a refresh.", true));
       // §1.7: a confirmation that outlives what it confirmed is a lie.
       if (confIs("references")) { confSet("references", false); renderBoardPanels(specId); }
     });

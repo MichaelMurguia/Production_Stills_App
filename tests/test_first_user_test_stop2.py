@@ -352,5 +352,99 @@ class HisActualProductionIsClean(unittest.TestCase):
             paths.REF_INDEX = old
 
 
+class ATickedReferenceSurvives(unittest.TestCase):
+    """D2.1 — the reference loss, which was never a model problem.
+
+    He added "dark ship", ticked it, rejected the take, generated — and
+    CAND-0005 attached the palette and nothing else. The selection lived in
+    the DOM, and the card's default came from the NEWEST TAKE's references.
+    Rejecting redraws the card; the redraw re-read the newest take, which
+    was the one he had just rejected and had never carried the ship."""
+
+    def setUp(self):
+        from app import paths
+        self.tmp = tempfile.TemporaryDirectory()
+        d = Path(self.tmp.name)
+        self._old = (paths.SPECS_DIR, paths.SPEC_LOCKS, paths.REF_INDEX)
+        paths.SPECS_DIR = d / "specs"
+        paths.SPECS_DIR.mkdir(parents=True)
+        paths.SPEC_LOCKS = d / "specs" / "locks.json"
+        paths.REF_INDEX = d / "references.json"
+        paths.REF_INDEX.write_text(json.dumps([
+            {"id": "REF-0046", "role": "VEHICLE_GEOMETRY", "status": "APPROVED"},
+            {"id": "REF-0002", "role": "COLOR_PALETTE", "status": "APPROVED"},
+            {"id": "REF-0099", "role": "PROP_REFERENCE", "status": "REJECTED"},
+        ]), encoding="utf-8")
+        (paths.SPECS_DIR / "S1.json").write_text(json.dumps({
+            "specification_id": "S1", "subject": "t", "mode": "CANON_EXTRACTION",
+            "board_type": "SCENE",
+            "panels": [{"id": "P01", "title": "t", "purpose": "p",
+                        "required_objects": ["x"]}],
+            "evidence_ledger": [],
+        }), encoding="utf-8")
+
+    def tearDown(self):
+        from app import paths
+        paths.SPECS_DIR, paths.SPEC_LOCKS, paths.REF_INDEX = self._old
+        self.tmp.cleanup()
+
+    def test_a_pick_is_written_down(self):
+        from app import store
+        store.amend_panel_refs("S1", "P01", ["REF-0046"])
+        self.assertEqual(store.panel_refs("S1", "P01"), ["REF-0046"])
+
+    def test_never_chosen_is_not_the_same_as_chose_nothing(self):
+        """None falls back to the last take; [] is a deliberate empty.
+        Collapsing them resurrects references the user just removed."""
+        from app import store
+        self.assertIsNone(store.panel_refs("S1", "P01"))
+        store.amend_panel_refs("S1", "P01", [])
+        self.assertEqual(store.panel_refs("S1", "P01"), [])
+
+    def test_a_rejected_reference_does_not_come_back_as_a_tick(self):
+        """A tick nobody can explain is worse than a lost one."""
+        from app import store
+        store.amend_panel_refs("S1", "P01", ["REF-0046", "REF-0099"])
+        self.assertEqual(store.panel_refs("S1", "P01"), ["REF-0046"])
+
+    def test_duplicates_collapse_and_order_holds(self):
+        from app import store
+        store.amend_panel_refs("S1", "P01", ["REF-0002", "REF-0046", "REF-0002"])
+        self.assertEqual(store.panel_refs("S1", "P01"), ["REF-0002", "REF-0046"])
+
+    def test_it_works_on_a_locked_sheet(self):
+        """Picking a reference is how you aim the next take, not an
+        amendment to the sheet's canon — a lock must not block it."""
+        from app import paths, store
+        paths.SPEC_LOCKS.write_text(json.dumps({"S1": {"hash": "x"}}), encoding="utf-8")
+        store.amend_panel_refs("S1", "P01", ["REF-0046"])
+        self.assertEqual(store.panel_refs("S1", "P01"), ["REF-0046"])
+
+    def test_an_unknown_panel_is_refused(self):
+        from app import store
+        with self.assertRaises(KeyError):
+            store.amend_panel_refs("S1", "P99", ["REF-0046"])
+
+    def test_the_route_exists(self):
+        main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn('@app.post("/api/specs/{spec_id}/panels/{panel_id}/refs")', main)
+
+
+class TheMissingPaletteIsOnScreen(unittest.TestCase):
+    """D3.2 — stated where the user is already looking at what will ride."""
+
+    JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+
+    def test_the_note_renders_under_the_manifest(self):
+        self.assertIn("attached-note", self.JS)
+        i = self.JS.index("attachedHost.innerHTML")
+        self.assertIn("(m.notes || [])", self.JS[i:i + 700])
+
+    def test_it_is_not_painted_as_a_fault(self):
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        i = css.index(".attached-note")
+        self.assertNotIn("--bad", css[i:i + 200])
+
+
 if __name__ == "__main__":
     unittest.main()

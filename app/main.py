@@ -1851,6 +1851,17 @@ def api_amend_object_refs(spec_id: str, panel_id: str, body: dict) -> dict:
         raise HTTPException(422, str(e))
 
 
+@app.post("/api/specs/{spec_id}/panels/{panel_id}/refs")
+async def api_panel_refs(spec_id: str, panel_id: str, body: dict) -> dict:
+    """Remember which references this panel has picked, so a tick survives
+    a reject, a redraw, a panel switch and a reload."""
+    try:
+        return store.amend_panel_refs(spec_id, panel_id,
+                                      body.get("ref_ids") or [])
+    except KeyError as e:
+        raise _err(e)
+
+
 @app.post("/api/specs/{spec_id}/panels/{panel_id}/prompt")
 def api_save_panel_prompt(spec_id: str, panel_id: str, body: dict) -> dict:
     """Save a hand-written prompt onto the panel, or clear it with an empty

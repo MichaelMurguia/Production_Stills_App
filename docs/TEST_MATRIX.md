@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2106 tests** across 111 files.
+**2120 tests** across 111 files.
 
 
-## Product app — 1885 tests in 94 files
+## Product app — 1899 tests in 94 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -63,7 +63,7 @@ temp home and external services are faked.
 | `test_every_route_is_reachable.py` | 6 | Every route a user needs must be reachable from the UI. |
 | `test_file_pickers.py` | 4 | Programmatic file pickers must be attached to the document. |
 | `test_first_user_test_stop1.py` | 39 | Stop 1 of the first-user-test plan: nothing is lost, nothing refuses silently. |
-| `test_first_user_test_stop2.py` | 30 | Stop 2: the panel renders what the panel says. |
+| `test_first_user_test_stop2.py` | 39 | Stop 2: the panel renders what the panel says. |
 | `test_generate_units.py` | 5 | Engine-facing unit rules: size legality (×16, ≤3840, no upscaling), the ChatGPT-pipeline preset clamp, and deterministic keyword derivation. |
 | `test_harness_tooling.py` | 17 | HARNESS tooling (2026-08-13): the fixture recorder and the replay harness builder. |
 | `test_image_variants.py` | 22 | Display-tier image serving (app.imaging + candidate/reference resolvers). |
@@ -118,7 +118,7 @@ temp home and external services are faked.
 | `test_suite_hygiene.py` | 3 | The suite checks itself for dead tests. |
 | `test_swatch_edit.py` | 31 | Swatch labels, hero colours and recolour (user 2026-08-06). |
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |
-| `test_take_bar.py` | 15 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
+| `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |

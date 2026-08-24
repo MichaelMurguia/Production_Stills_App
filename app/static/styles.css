@@ -926,6 +926,11 @@ label.check {
 .q-idx { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding-top: 2px; }
 .q-main { flex: 1; min-width: 0; }
 .q-main input { width: min(520px, 100%); margin-top: 6px; }
+/* UNCANONIZED — 2026-08-24 — an attachment the panel will NOT get */
+/* Stated beneath the attachment manifest: a design language with no
+   palette of its own attaches none, and says which languages do have one.
+   A fact about the render, not a fault — so ink, not --bad. */
+.attached-note { margin-top: 4px; color: var(--ink-dim); max-width: 70ch; }
 /* UNCANONIZED — 2026-08-23 — the production's period */
 /* WHEN this story is set, stated once and carried by every prompt. Sits
    with the logline because both are what the read understood, not what
