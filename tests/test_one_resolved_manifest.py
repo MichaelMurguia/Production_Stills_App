@@ -21,6 +21,7 @@ and declared… two implementations of one geometry is a drift bug with a
 permanent maintenance cost."*"""
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -30,6 +31,17 @@ sys.path.insert(0, str(ROOT))
 
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 GEN = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+
+def resolved_src() -> str:
+    """The whole of `resolved_attachments`, bounded by the next top-level
+    def rather than by a character count. A fixed window silently stops
+    covering the code it was written to pin as the function grows — which
+    is exactly what happened when the D3.2 palette note was added
+    (2026-08-24)."""
+    i = GEN.index("def resolved_attachments")
+    m = re.search(chr(10) + r"def ", GEN[i + 10:])
+    return GEN[i:i + 10 + m.start()] if m else GEN[i:]
+
 MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
 
 
@@ -37,21 +49,18 @@ class TheServerResolvesTheManifest(unittest.TestCase):
     def test_the_resolver_is_reused_not_reimplemented(self):
         """It must answer with the code a render actually uses, or it is
         just a fourth opinion."""
-        i = GEN.index("def resolved_attachments")
-        seg = GEN[i:i + 1800]
+        seg = resolved_src()
         self.assertIn("_resolve_generation_inputs(spec_id, panel_id, ref_ids)", seg)
 
     def test_it_reports_the_cap_rather_than_the_client_knowing_it(self):
-        i = GEN.index("def resolved_attachments")
-        seg = GEN[i:i + 1800]
+        seg = resolved_src()
         self.assertIn('"max": MAX_REFERENCE_IMAGES', seg)
         self.assertIn('"over": len(refs) > MAX_REFERENCE_IMAGES', seg)
 
     def test_it_says_why_each_plate_rides(self):
         """Picked or always-on: the distinction the client kept getting
         wrong, so it is the server's to state."""
-        i = GEN.index("def resolved_attachments")
-        self.assertIn('"auto": r.get("id", "") not in set(ref_ids)', GEN[i:i + 1800])
+        self.assertIn('"auto": r.get("id", "") not in set(ref_ids)', resolved_src())
 
     def test_the_endpoint_exists_and_has_a_caller(self):
         self.assertIn(
@@ -63,7 +72,8 @@ class TheServerResolvesTheManifest(unittest.TestCase):
         which is why this can answer on every tick."""
         i = GEN.index("def resolved_attachments")
         # body only — the docstring names the disk helper it deliberately avoids
-        seg = GEN[GEN.index("_resolve_generation_inputs(spec_id, panel_id, ref_ids)", i):i + 1800]
+        full = resolved_src()
+        seg = full[full.index("_resolve_generation_inputs(spec_id, panel_id, ref_ids)"):]
         for forbidden in ("_reference_image_paths", "_render_ready", "open("):
             self.assertNotIn(forbidden, seg, forbidden)
 

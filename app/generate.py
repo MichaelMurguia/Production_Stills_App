@@ -1033,6 +1033,7 @@ def _camera_block(panel: dict) -> list[str]:
 # normalisation, shared with the client through /api/state (adversarial
 # review F10). This module's own POLICY on top of them is unchanged and
 # deliberately stricter than the plate matcher's: see subjects_for_object.
+from .validation import is_common_word as _is_common       # noqa: F401
 from .validation import name_words as _name_words          # noqa: F401
 from .validation import norm_name as _norm_name            # noqa: F401
 from .validation import word_in as _word_in                # noqa: F401
@@ -1094,10 +1095,38 @@ def subjects_for_object(obj: str, subjects: list[dict]) -> list[dict]:
             out.append(s)   # the whole name is the strongest signal
             continue
         kind = str(s.get("kind", "")).upper()
-        if any(counts.get((w, kind), 0) == 1 and _word_in(w, o)
-               for w in _name_words(n)):
-            out.append(s)
+        words = _name_words(n)
+        # DISTINCTIVENESS is not enough on its own — a word can be unique
+        # among the cards and still be ordinary English (first user test,
+        # 2026-08-23: "six descending figures" summoned the aircraft
+        # LEDGER SIX, because "six" was distinctive across his twenty
+        # cards). A common word identifies a card only when it is the
+        # card's ONLY word: for COIN or KETTLE that word is all the
+        # evidence there is, while for LEDGER SIX the absence of "ledger"
+        # is positive evidence the phrase means something else.
+        hits = [w for w in words
+                if counts.get((w, kind), 0) == 1 and _word_in(w, o)]
+        if not hits:
+            continue
+        if len(words) > 1 and all(_is_common(w) for w in hits):
+            continue
+        out.append(s)
     return out
+
+
+def production_period() -> str:
+    """WHEN this production is set, as a renderable constraint.
+
+    Extracted by the screenplay scan and correctable by hand — a production
+    that predates the field can simply state it. Empty means UNSTATED, and
+    an unstated period injects NOTHING: inventing an era would be exactly
+    the class of fabrication this constraint exists to prevent."""
+    try:
+        a = store.load_wizard_analysis() or {}
+    except Exception:
+        return ""
+    p = str(a.get("period", "") or "").strip()
+    return "" if p.upper() in ("", "UNSTATED", "UNKNOWN", "N/A") else p
 
 
 def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
@@ -1120,6 +1149,23 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
         "characters, props, or action. Omit unspecified content rather than filling space.",
         "",
     ]
+    # PERIOD — the production says WHEN, once, and every render carries it
+    # (first user test, 2026-08-23). His screenplay is set 241 years ahead
+    # and no panel ever said so in its own content: the era lived in the
+    # bible's prose and in a logline no prompt reads, so nothing contradicted
+    # a WW2 aircraft on a salt pan. This is the cheap backstop that would
+    # have caught it even with the name collision unfixed.
+    period = production_period()
+    if period:
+        lines += [
+            "PERIOD",
+            f"This production is set in {period}. Every object, garment, vehicle, "
+            "weapon, structure and machine must belong to that period, or be "
+            "explicitly described by this panel's own content. Technology from "
+            "another era is forbidden even where it would look natural — an "
+            "anachronism is a canon violation, not a style choice.",
+            "",
+        ]
     # The director's corrections lead (user 2026-08-08): a rejection reason
     # is a PRIMARY rule for the next take, not a footnote. It used to ride
     # ~80% of the way into the prompt, after the forbidden list — in a
@@ -1218,9 +1264,19 @@ def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
             idents.append(f"- {s['name']} ({s['kind']}): "
                           + " ".join([s.get("subtitle", "")] + s.get("traits", [])).strip())
     if idents:
-        lines += ["", "SUBJECT IDENTITIES — required content above includes these canon "
-                  "subjects. Render each as EXACTLY what it is named to be — never a "
-                  "generic substitute of its type:"]
+        # The heading used to assert "required content above INCLUDES these
+        # canon subjects". It was not always true, and when it was false it
+        # was catastrophic: a coincidental name match put a WW2 recon
+        # aircraft into a far-future salt pan under an instruction the model
+        # had every reason to obey (first user test, 2026-08-23). The block
+        # says what it can actually vouch for — these subjects are named by
+        # the panel's content — and the render rule that follows applies
+        # only to whichever of them appear.
+        lines += ["", "SUBJECT IDENTITIES — canon subjects the required content above "
+                  "appears to name. Where one of these DOES appear in this panel, render "
+                  "it as EXACTLY what it is named to be, never a generic substitute of "
+                  "its type. Do not add a subject that the required content does not "
+                  "call for:"]
         lines += idents
     lines += ["", "FORBIDDEN CONTENT"]
     forbidden = list(panel.get("forbidden_objects", [])) + list(spec.get("forbidden_elements", []))
@@ -1432,7 +1488,12 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     seen_ids = {r["id"] for r in refs}
     user_palette = any(store.role_head(r.get("role", "")) == "COLOR_PALETTE"
                        for r in refs)
-    refs = refs + [r for r in store.auto_style_references()
+    # The panel's own design languages decide which SCOPED anchors ride.
+    # A panel about the pristine Descent Team must not be handed the
+    # weathered airbase faction's palette as the one image it sees.
+    langs = [str(x) for x in (panel.get("design_languages")
+                              or spec.get("design_languages") or [])]
+    refs = refs + [r for r in store.auto_style_references(langs)
                    if r["id"] not in seen_ids
                    and not (user_palette and store.role_head(r.get("role", ""))
                             == "COLOR_PALETTE")]
@@ -1459,6 +1520,26 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     return spec, panel, refs
 
 
+def _subject_manifest(spec: dict, panel: dict) -> list[dict]:
+    """Which canon subjects this panel's required content names, and which
+    WORD did it — so a wrong one can be seen and struck rather than
+    discovered in the render."""
+    subjects = store.list_subjects()
+    out, seen = [], set()
+    for obj in panel.get("required_objects", []) or []:
+        for s in subjects_for_object(str(obj), subjects):
+            key = (s.get("name", ""), str(obj))
+            if key in seen:
+                continue
+            seen.add(key)
+            o = _norm_name(str(obj))
+            why = [w for w in _name_words(_norm_name(s.get("name", "")))
+                   if _word_in(w, o)]
+            out.append({"name": s.get("name", ""), "kind": s.get("kind", ""),
+                        "because": str(obj), "matched": why})
+    return out
+
+
 def resolved_attachments(spec_id: str, panel_id: str,
                          ref_ids: list[str]) -> dict:
     """Exactly what a render would attach, resolved by the code that does it.
@@ -1476,12 +1557,38 @@ def resolved_attachments(spec_id: str, panel_id: str,
     `_reference_image_paths` — so this can answer the question without
     touching a file or spending anything.
     """
-    _, _, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
+    spec, panel, refs = _resolve_generation_inputs(spec_id, panel_id, ref_ids)
+    # D3.2 — silence beats the wrong faction, but only if the silence is
+    # stated. A panel whose design language has no palette of its own used
+    # to be handed whichever palette was newest; it now gets none, and
+    # "none" must be visible or it is just a quieter version of the same
+    # surprise (first user test, 2026-08-23).
+    langs = [str(x) for x in (panel.get("design_languages")
+                              or spec.get("design_languages") or [])]
+    notes = []
+    if langs and not any(store.role_head(r.get("role", "")) == "COLOR_PALETTE"
+                         for r in refs):
+        have = {store.reference_language(r) for r in store.list_references()
+                if r.get("status") == "APPROVED"
+                and store.role_head(r.get("role", "")) == "COLOR_PALETTE"}
+        have.discard("")
+        notes.append(
+            f"No colour palette is scoped to {' / '.join(langs)}, so this "
+            "render carries none — its colour comes from the Bible's words "
+            "alone."
+            + (f" Palettes exist for: {', '.join(sorted(have))}." if have else ""))
     return {
         "panel_id": panel_id,
         "max": MAX_REFERENCE_IMAGES,
         "count": len(refs),
         "over": len(refs) > MAX_REFERENCE_IMAGES,
+        "notes": notes,
+        "languages": langs,
+        # D1.3 — every canon subject this panel's words will summon, named
+        # BEFORE the spend. A coincidental match cost a paid render and a
+        # WW2 aircraft on a salt pan; the matcher is stricter now, but the
+        # user is the only one who can say "that is not what I meant".
+        "subjects": _subject_manifest(spec, panel),
         "attachments": [
             {"id": r.get("id", ""), "role": r.get("role", ""),
              "head": store.role_head(r.get("role", "")),

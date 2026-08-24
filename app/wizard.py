@@ -19,6 +19,7 @@ from . import autofill, generate, store
 ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
 {
   "logline": "one-sentence summary of the screenplay",
+  "period": "WHEN this story is set, as a renderable constraint and nothing more - e.g. 'the 1940s', '241 years in the future', 'present day', 'Bronze Age'. Say UNSTATED if the screenplay genuinely does not fix a period. This governs what technology, dress, and machinery may appear in every render.",
   "design_worlds": [
     {"name": "short name, e.g. a faction, culture, or technology family",
      "description": "1-2 sentences on what it is and what defines its look",

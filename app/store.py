@@ -431,18 +431,82 @@ def delete_reference(ref_id: str) -> dict:
     return {"deleted": ref_id}
 
 
-def auto_style_references() -> list[dict]:
+def role_scope(role: str) -> str:
+    """What a titled role is scoped TO — the part after the dash.
+
+    `COLOR_PALETTE — FENN HARROW COMPACT` is scoped to a design language;
+    a bare `COLOR_PALETTE` is scoped to the whole production. Mirrors
+    role_head, which returns the other half."""
+    raw = str(role or "")
+    if "—" in raw:
+        return raw.split("—", 1)[1].strip(" _-").upper()
+    return ""
+
+
+def reference_language(ref: dict) -> str:
+    """Which design language an anchor belongs to, or "" for the whole
+    production.
+
+    Two places carry it and both are real. A titled role says it outright
+    (`WORLD_TEXTURE — SALT PANS`). A colour swatch says it in its notes,
+    because a swatch is one colour of a named ramp and the ramp's name is
+    the language (`THE CATCHMENT · DARK IRON · #343936 · HERO`) — which is
+    why filtering on the role alone found nothing to filter."""
+    scope = role_scope(ref.get("role", ""))
+    if scope:
+        return scope
+    if role_head(ref.get("role", "")) == "COLOR_PALETTE":
+        from . import wizard
+        try:
+            return str(wizard.parse_swatch_notes(
+                ref.get("notes", "")).get("language", "") or "").strip().upper()
+        except Exception:
+            return ""
+    return ""
+
+
+def auto_style_references(languages: list[str] | None = None) -> list[dict]:
     """Approved style anchors attached to every panel generation — capped
     per role (newest first) so four global anchors cannot starve the
-    subject-reference budget that holds faces and vehicles on model."""
+    subject-reference budget that holds faces and vehicles on model.
+
+    Scoped anchors ride only the panels that use their design language
+    (first user test, 2026-08-23). Before this, the bucket was the role
+    HEAD alone: his production held 30 approved palettes across three
+    factions, all filed `COLOR_PALETTE`, and a panel got whichever two
+    were newest. The salt-pan panel — design language THE DESCENT TEAM,
+    whose whole point is a pristine future arriving into a worn world —
+    was handed the FENN HARROW COMPACT palette, the weathered wartime
+    faction's, as the ONE image it saw, holding authority over the film's
+    entire colour language. The bible said "unweathered bodies must
+    register as pristine" and the picture said otherwise.
+
+    `languages` None means no filtering — callers that genuinely want every
+    anchor (the library's own preview) still get it."""
+    want = {str(x).strip().upper() for x in (languages or []) if str(x).strip()}
     by_role: dict[str, list[dict]] = {}
     for r in _load_refs():
-        if r["status"] == "APPROVED" and role_head(r["role"]) in AUTO_STYLE_ROLES:
-            by_role.setdefault(role_head(r["role"]), []).append(r)
+        if r["status"] != "APPROVED" or role_head(r["role"]) not in AUTO_STYLE_ROLES:
+            continue
+        scope = reference_language(r)
+        # An unscoped anchor is the production's own and rides everything.
+        # A scoped one rides only where its language is in play — and when
+        # the caller states no languages, scoping cannot be judged, so
+        # nothing is filtered.
+        if languages is not None and scope and scope not in want:
+            continue
+        by_role.setdefault(role_head(r["role"]), []).append(r)
     out = []
     for role, refs in by_role.items():
-        out.extend(sorted(refs, key=lambda r: r.get("added_at", ""),
-                          reverse=True)[:STYLE_ATTACH_CAP])
+        ordered = sorted(refs, key=lambda r: r.get("added_at", ""), reverse=True)
+        # The cap exists so global anchors cannot starve the subject
+        # budget that holds faces and vehicles on model. Palette swatches
+        # are not subject to that arithmetic: palette_plate.collapse()
+        # composites however many of them into ONE image, so capping at
+        # two does not save a slot — it just sends two colours of a ramp
+        # and calls it the film's colour language.
+        out.extend(ordered if role == "COLOR_PALETTE"
+                   else ordered[:STYLE_ATTACH_CAP])
     return out
 
 

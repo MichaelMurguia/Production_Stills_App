@@ -189,7 +189,7 @@ Return ONLY a JSON object with exactly this shape:
       "id": "P01",
       "title": "short title",
       "purpose": "the single production question this panel answers",
-      "required_objects": ["object", "..."],
+      "required_objects": ["object, CARRYING ANY CONDITION THE SCREENPLAY STATES FOR IT IN THIS MOMENT - e.g. 'six descending figures, unweathered and pristine' rather than 'six descending figures'. A condition the screenplay states about these people or things HERE belongs in the object, because the object line is what the render is held to. Never invent a condition the screenplay does not state.", "..."],
       "forbidden_objects": ["likely-but-wrong additions to exclude", "..."],
       "scale": "AERIAL | EXTREME_WIDE | WIDE | MEDIUM | CLOSE | EXTREME_CLOSE | MACRO | MICRO",
       "allocation_percent": 60

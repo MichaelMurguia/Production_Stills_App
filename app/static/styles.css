@@ -926,6 +926,15 @@ label.check {
 .q-idx { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding-top: 2px; }
 .q-main { flex: 1; min-width: 0; }
 .q-main input { width: min(520px, 100%); margin-top: 6px; }
+/* UNCANONIZED — 2026-08-23 — the production's period */
+/* WHEN this story is set, stated once and carried by every prompt. Sits
+   with the logline because both are what the read understood, not what
+   the user must decide. The value is Courier: it is a constraint the
+   renders are held to, not prose. */
+.read-period { margin-top: 10px; }
+.read-period p { margin: 2px 0 4px; display: flex; gap: 10px; align-items: baseline; }
+.read-period .rp-val { color: var(--ink); }
+.read-period .mini { color: var(--ink-faint); display: block; max-width: 60ch; }
 /* UNCANONIZED — 2026-08-23 — stated gate on a disabled primary */
 /* First user test: the condition WAS stated and still missed, as dim text
    in a crowded toolbar beside eight other controls. A bordered chip at

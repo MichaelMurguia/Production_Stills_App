@@ -30,6 +30,43 @@ NAME_STOPWORDS = frozenset({
     "their", "that", "this", "over", "under", "onto", "off",
 })
 
+# Words that appear in ordinary scene description as readily as in a name.
+# A card whose ONLY matching word is one of these has not been identified —
+# it has been coincided with.
+#
+# First user test, 2026-08-23. His aircraft's callsign is LEDGER SIX; panel
+# P01 required "six descending figures"; "six" is distinctive among his
+# twenty cards, so the app told the model that a riveted, sun-cracked recon
+# aircraft with nineteen bullet holes was required content on a salt pan in
+# the far future, and the model obliged. Military and aviation naming is
+# built out of exactly this — LEDGER SIX, Delta Four, Red Two — so a
+# callsign production is the worst case, not a freak one.
+#
+# Deliberately short. Every word here is one that can no longer identify a
+# MULTI-WORD card by itself, and over-filling it re-opens the failure this
+# matcher was widened to fix on 2026-08-16 (a whole-name test missed "Sal
+# inside the cryochamber" and rendered a stranger's face).
+_NUMERAL_WORDS = {
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "nine", "ten", "eleven", "twelve", "dozen", "first", "second", "third",
+    "fourth", "fifth", "sixth", "hundred", "thousand",
+}
+_PLAIN_WORDS = {
+    "dark", "light", "black", "white", "gray", "grey", "red", "blue",
+    "green", "old", "new", "big", "small", "long", "short", "fine", "hard",
+    "soft", "man", "woman", "men", "women", "boy", "girl", "crew", "team",
+    "group", "unit", "air", "ground", "water", "fire", "night", "day",
+    "hand", "head", "face", "body", "eye", "eyes", "open", "closed",
+}
+COMMON_NAME_WORDS = frozenset(_NUMERAL_WORDS | _PLAIN_WORDS)
+
+
+def is_common_word(w: str) -> bool:
+    """True for a word that identifies nothing on its own. Digits count:
+    'LEDGER 6' is the same callsign shape as 'LEDGER SIX'."""
+    w = str(w or "").strip().lower()
+    return bool(w) and (w in COMMON_NAME_WORDS or w.isdigit())
+
 MIN_NAME_WORD = 3
 
 

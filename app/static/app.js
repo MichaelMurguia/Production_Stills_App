@@ -5830,6 +5830,15 @@ async function renderWizard() {
         ${analysis.logline ? `<div class="read-logline">
           <span class="read-log-kicker">LOGLINE</span>
           <p>${esc(analysis.logline)}</p></div>` : ""}
+        <div class="read-period">
+          <span class="read-log-kicker">PERIOD</span>
+          <p><span class="rp-val mono">${esc(analysis.period || "UNSTATED")}</span>
+             <button type="button" class="text-act" data-f="edit-period">${
+               analysis.period ? "Edit" : "State it"}</button></p>
+          <span class="mini">Every render is held to this. An unstated period
+            constrains nothing — which is how a WW2 aircraft reached a
+            far-future salt pan.</span>
+        </div>
         <div class="read-tiles">${tiles}</div>
       </div>
       <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
@@ -5862,6 +5871,30 @@ async function renderWizard() {
       if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80,
                                 behavior: "smooth" });
     });
+    // The production states WHEN it is set, once, and every render is held
+    // to it (first user test, 2026-08-23). Pre-filled by the scan; editable
+    // by hand so a production that predates the field can simply say it,
+    // without paying for another read.
+    const periodBtn = $("[data-f=edit-period]", host);
+    if (periodBtn) periodBtn.onclick = async () => {
+      const v = await askText("When is this production set?", "Period", {
+        value: analysis.period || "",
+        placeholder: "e.g. 241 years in the future",
+        body: "Every render is held to this. Say it the way you would say it "
+            + "to a concept artist — a decade, a century, an era, or a "
+            + "distance from now.",
+        hint: "Leave empty to constrain nothing.",
+        confirmLabel: "Save period",
+      });
+      if (v === null) return;
+      const a = getAnalysis();
+      a.period = String(v).trim();
+      if (await saveAnalysis(a)) {
+        toast(a.period ? `Period set — every render is held to "${a.period}".`
+                       : "Period cleared — renders are no longer era-constrained.");
+        renderWorlds();
+      }
+    };
     bindHelpButtons(host, WIZ_HELP);
     const tagHost = $("#wiz-world-tags", host);
     const wHost = $("#wiz-worlds", host);
