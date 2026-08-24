@@ -191,8 +191,37 @@ class TheDrafterSeesTheWholeDocument(unittest.TestCase):
         out = wizard.style_depth(self.answers(medium=0, texture=0, light=0))
         self.assertIn("Rendering Language and Production Board Presentation", out)
         self.assertIn("Overall Visual Identity and Core Material Language", out)
-        self.assertIn("Lighting Language and Composition Rules", out)
+        # Narrowed 2026-08-24: this anchor no longer feeds Composition
+        # Rules, and feeds Lighting Language's LIGHT BEHAVIOUR only. Its
+        # mechanics are camera doctrine, and the cinematography grammar
+        # became a per-panel axis on 2026-08-22 — a Bible carrying one
+        # style's lens and focus rules under a "non-negotiable" banner
+        # makes every later per-panel choice inert.
+        self.assertIn("Lighting Language — its LIGHT BEHAVIOUR only", out)
+        self.assertNotIn("Lighting Language and Composition Rules", out)
         self.assertIn("and nothing else", out)
+
+    def test_the_cinematography_mechanics_stay_out_of_the_bible(self):
+        """The whole of this change. A user picked Subjective/Poetic on a
+        panel and got a faithful Deep-Space frame, because the Bible said
+        "use wide or moderate-wide lenses with deep focus" and "light must
+        clarify multiple planes rather than isolate one subject" — written
+        when Deep-Space was the production's grammar, and non-negotiable
+        ever since."""
+        from app import style_docs, wizard
+        cine = style_docs.styles("cinematography")[0]
+        out = wizard.style_depth(self.answers(medium=0, texture=0, light=0))
+        self.assertIn("NOT carried into the", out)
+        for m in cine["mechanics"][:3]:
+            self.assertNotIn(m, out)
+
+    def test_the_other_anchors_still_expand_in_full(self):
+        """Only cinematography is scoped. Texture and rendering carry no
+        per-panel axis, so their depth is still the point."""
+        from app import style_docs, wizard
+        out = wizard.style_depth(self.answers(medium=0, texture=0, light=0))
+        tex = style_docs.styles("texture")[0]
+        self.assertIn(tex["mechanics"][0], out)
 
     def test_an_edited_answer_expands_to_nothing(self):
         """The director's own words are theirs. An answer that no longer

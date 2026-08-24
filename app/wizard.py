@@ -184,8 +184,12 @@ NL = chr(10)
 _ANCHOR_LIBRARY = {
     "texture": ("WORLD_TEXTURE", "texture",
                 "Overall Visual Identity and Core Material Language"),
+    # LIGHT, not camera. The cinematography grammar became a switchable
+    # per-panel axis on 2026-08-22, and a Bible that fixes the lens, the
+    # focus depth or the staging makes that switch inert — the doctrine it
+    # writes is "non-negotiable" and outlasts any later choice.
     "light": ("CINEMATOGRAPHY_STYLE", "cinematography",
-              "Lighting Language and Composition Rules"),
+              "Lighting Language — its LIGHT BEHAVIOUR only"),
     "medium": ("BOARD_RENDERING_STYLE", "rendering",
                "Rendering Language and Production Board Presentation"),
 }
@@ -206,10 +210,21 @@ def style_depth(answers: dict) -> str:
     mechanics along behind it — so an edited answer expands to nothing,
     which is the honest outcome rather than a near-miss.
 
-    This strengthens the bible rather than routing around it. A style's
-    image-model prompt is deliberately NOT injected into renders: the
-    bible's own sections are what reach a panel, and a second source for
-    a fact the bible already carries is how the two drift apart.
+    This strengthens the bible rather than routing around it — for the two
+    anchors it still expands in full. A style's image-model prompt is not
+    injected into renders as art direction: the bible's own sections are
+    what reach a panel, and a second source for a fact the bible already
+    carries is how the two drift apart.
+
+    CINEMATOGRAPHY_STYLE is the exception, since 2026-08-24. Its mechanics
+    are camera doctrine, the grammar became a per-panel axis on
+    2026-08-22, and a Bible carrying one style's mechanics under a
+    "non-negotiable" banner makes every later per-panel choice inert —
+    found when a user picked Subjective/Poetic on a panel and got a
+    faithful Deep-Space frame, because the Bible drafted months earlier
+    still said "use wide or moderate-wide lenses with deep focus" and
+    "light must clarify multiple planes rather than isolate one subject".
+    That anchor now contributes light behaviour only.
     """
     from . import style_docs
     out = []
@@ -227,8 +242,25 @@ def style_depth(answers: dict) -> str:
         if match["principle"]:
             lines.append(f"  Operating principle: {match['principle']}")
         if match["mechanics"]:
-            lines.append("  Visual mechanics:")
-            lines += [f"    - {m}" for m in match["mechanics"]]
+            if role == "CINEMATOGRAPHY_STYLE":
+                # A cinematography style's mechanics ARE camera doctrine —
+                # selective focus, lens choice, staging depth, shot size.
+                # Carrying them into the Bible was right while the grammar
+                # was a production-wide constant, and the note below said
+                # so: "a style's image-model prompt is deliberately NOT
+                # injected into renders". Then 2026-08-22 made the grammar
+                # switchable per panel, and the Bible's copy became the
+                # thing that outranks the switch. The grammar block now
+                # carries these words at render time, to whichever panels
+                # ask for them.
+                lines.append("  Visual mechanics: NOT carried into the "
+                             "Bible. This anchor contributes LIGHT "
+                             "BEHAVIOUR only; the camera doctrine behind "
+                             "it reaches a render through the panel's own "
+                             "cinematography grammar.")
+            else:
+                lines.append("  Visual mechanics:")
+                lines += [f"    - {m}" for m in match["mechanics"]]
         if match["avoid"]:
             lines.append("  Avoid: " + ", ".join(match["avoid"]))
         out.append(NL.join(lines))
@@ -273,8 +305,12 @@ by that split:
   Feeds Overall Visual Identity, Design Languages, Core Material Language.
 - COLOR_PALETTE (movie): the film's color language — permitted hues, value
   key, saturation limits. Feeds Environments and Lighting Language.
-- CINEMATOGRAPHY_STYLE (movie): light behaviour, lens and framing feel.
-  Feeds Lighting Language and Composition Rules.
+- CINEMATOGRAPHY_STYLE (movie): LIGHT BEHAVIOUR ONLY — how light falls,
+  what it separates, its contrast and direction. Feeds Lighting Language.
+  It must NOT produce lens choices, focus depth, framing, staging or
+  shot-size doctrine anywhere in the Bible. Those belong to the
+  cinematography grammar, which is chosen per panel at render time; a
+  Bible that fixes them makes that choice impossible to exercise.
 - BOARD_RENDERING_STYLE (board): how the BOARDS are drawn. It says nothing
   about the film's world and feeds ONLY the Rendering Language and
   Production Board Presentation sections.
@@ -382,10 +418,15 @@ reader must be able to tell two of these apart by this line alone.>
 (…)
 
 ## Lighting Language
-(contrast rules; then "Approved atmosphere studies include:" with 6-8 named studies)
+(contrast rules — how light behaves, what it separates, its direction,
+temperature and value. NEVER lens, focal length, depth of field, focus,
+framing or staging: those are the cinematography grammar's, set per panel.
+Then "Approved atmosphere studies include:" with 6-8 named studies)
 
 ## Composition Rules
-(board readability rules)
+(board readability rules — what must stay legible and in what relationship.
+Say what the frame must COMMUNICATE, never how the camera achieves it: no
+lens, focus, shot size or camera-position doctrine)
 
 ## Character Presentation
 (grounding rules; do-not-invent list)
