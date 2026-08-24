@@ -39,3 +39,8 @@ connectors.json
 
 # Iteration mode (.claude/skills/iterate) — per-machine, never shipped
 .claude/iteration.json
+
+# Tester feedback, and the production backups sent with it for diagnosis.
+# A tester's backup is their own creative work and tens of megabytes of it;
+# once committed it is in history forever. Kept on disk, never in the repo.
+feedback/

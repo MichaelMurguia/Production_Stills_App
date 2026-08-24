@@ -173,6 +173,7 @@ function openRepair(imgUrl, onSubmit) {
         <button class="ghost" data-f="clear">Clear</button>
       </span>
       <span class="row" style="margin:0">
+        <span class="mini mono" data-f="gate"></span>
         <button class="primary" data-f="go" disabled>Repair region</button>
         <button class="ghost" data-f="cancel">Cancel</button>
       </span>
@@ -221,8 +222,22 @@ function openRepair(imgUrl, onSubmit) {
     return { x: (e.clientX - r.left) * (img.naturalWidth / r.width),
              y: (e.clientY - r.top) * (img.naturalHeight / r.height) };
   };
+  const gate = $("[data-f=gate]", ov);
+  // User-caught 2026-08-23, and the author could not diagnose it live —
+  // "why isn't it allowing you to repair region. I don't know why that's a
+  // bug." It was not a bug: Repair needs BOTH paint and an instruction, and
+  // said neither. A disabled control has to state its unmet condition
+  // beside it (product rule: gates are readable as state before they are
+  // hit, never surfaced only as a refusal after the user acts).
   const update = () => {
-    goBtn.disabled = !(strokes.some(s => !s.erase) && instr.value.trim());
+    const painted = strokes.some(s => !s.erase);
+    const said = !!instr.value.trim();
+    goBtn.disabled = !(painted && said);
+    gate.textContent = painted && said ? ""
+      : !painted && !said ? "PAINT THE REGION, THEN SAY WHAT CHANGES"
+      : !painted ? "NOTHING PAINTED YET — PAINT THE REGION TO REPAIR"
+      : "SAY WHAT SHOULD CHANGE IN THE PAINTED REGION";
+    goBtn.title = goBtn.disabled ? gate.textContent : "";
   };
   let erasing = false;
   const modeP = $("[data-f=mode-paint]", ov), modeE = $("[data-f=mode-erase]", ov);
@@ -246,6 +261,7 @@ function openRepair(imgUrl, onSubmit) {
   canvas.addEventListener("pointerup", () => { drawing = null; });
   $("[data-f=clear]", ov).onclick = () => { strokes = []; redraw(); update(); };
   instr.addEventListener("input", update);
+  update();  // the gate must read before the first stroke, not after it
 
   const close = () => {
     window.removeEventListener("resize", sizeCanvas);
@@ -1542,8 +1558,16 @@ function gateChain(state) {
     { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
       sub: "Everything above becomes the document every render obeys" },
     { label: "DRAFT & LOCK A BREAKDOWN", verb: "Draft & lock a breakdown", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
+      tally: (ss.breakdowns?.locked || 0) > 0 ? "" : `${ss.breakdowns?.drafts || 0} DRAFTED · NONE LOCKED`,
       sub: "Only a locked breakdown can render" },
+    // The tally answers the question the label raises. User-caught
+    // 2026-08-23: "the board is still locked. Maybe it's not a bug. You
+    // might have to generate three panels" — even the author could not tell
+    // from the popover HOW MANY approvals the gate wanted, and guessed the
+    // wrong rule about his own app. It wants one.
     { label: "RENDER AND APPROVE PANELS", verb: "Render and approve panels", done: (ss.panels?.approved || 0) > 0, stage: "boards",
+      tally: (ss.panels?.approved || 0) > 0 ? ""
+        : `${ss.panels?.candidates || 0} TAKE${(ss.panels?.candidates || 0) === 1 ? "" : "S"} RENDERED · NONE APPROVED YET · ONE IS ENOUGH`,
       sub: "Takes are judged full-size, one at a time" },
   ];
 }
@@ -1592,7 +1616,8 @@ function lockPopover(stage) {
       ${remaining.map(s => `
         <div class="bp-step ${s === required[0] ? "cur" : ""}">
           <span class="bp-mark">${s === required[0] ? "→" : "·"}</span>
-          <span>${esc(s.label)}${s.optional ? " · OPTIONAL" : ""}</span>
+          <span>${esc(s.label)}${s.optional ? " · OPTIONAL" : ""}${
+            s.tally ? `<br><span class="bp-tally">${esc(s.tally)}</span>` : ""}</span>
         </div>`).join("")}
     </div>
     <div class="bp-foot mono">${STAGE_NUM[stage]} UNLOCKS ITSELF ${UNLOCK_LINE[stage] || ""}</div>`;
@@ -4473,7 +4498,15 @@ async function renderWizard() {
   const localAnalysis = wizACache();
   if (!wizAnalysis && localAnalysis) {
     wizAnalysis = localAnalysis;
-    api("/api/wizard/analysis", { method: "PUT", json: localAnalysis }).catch(() => {});
+    // The RECOVERY path: this browser holds a read the server does not. If
+    // it fails silently the analysis stays trapped in one tab's
+    // localStorage — invisible to every other device, and gone with the
+    // cache. Same defect as the interview save it sits beside (2026-08-23).
+    api("/api/wizard/analysis", { method: "PUT", json: localAnalysis })
+      .catch(err => toast(
+        `This browser holds a screenplay read the studio does not, and it `
+        + `could not be uploaded — ${err.message}. Do not clear site data.`,
+        true));
   }
   if (wizAnalysis) wizACacheSet(wizAnalysis);
   $("#wiz-screenplay").innerHTML = state.screenplay
@@ -5318,11 +5351,32 @@ async function renderWizard() {
   // The stored analysis is the source of truth for design languages; cards
   // edit it in place. Model choice locks after a read.
   const getAnalysis = () => wizAnalysis;
-  const saveAnalysis = a => {
+  // User-caught 2026-08-23 (first user test): "if I reload the page I can
+  // tell you that stuff's going away. I don't know where." This was
+  // fire-and-forget with `.catch(() => {})` — the local copy and the
+  // localStorage cache updated first, so the answer RENDERED as saved
+  // whatever the server did, and a reload showed the truth. An interview
+  // answer is the most expensive text in the app to retype; it is the
+  // director's own words about their film.
+  //
+  // Now the write is awaited and a failure is stated. The local copy is
+  // still set first — the input must not feel laggy — but a failed save
+  // rolls the CACHE back so a reload cannot resurrect an answer the server
+  // never took, which would be the same lie one refresh later.
+  const saveAnalysis = async a => {
+    const prev = wizAnalysis;
     wizAnalysis = a;
     wizACacheSet(a);
-    api("/api/wizard/analysis", { method: "PUT", json: a }).catch(() => {});
     wizardStepBadges();  // confirmations/drops move the step-2 badge
+    try {
+      await api("/api/wizard/analysis", { method: "PUT", json: a });
+      return true;
+    } catch (err) {
+      wizACacheSet(prev || {});
+      toast(`Not saved — ${err.message}. Your answer is still on screen; `
+            + "copy it before leaving this page.", true);
+      return false;
+    }
   };
 
   const renderAnalyzeLock = () => {
@@ -10499,6 +10553,13 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
       try {
         await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "APPROVED" });
         toast(`${c.candidate_id} approved.`); refresh();
+        // User-caught 2026-08-23: "the board is still locked" right after
+        // approving a panel. It was not a lock bug — approving is what
+        // OPENS stage 05, and the band simply never re-read. The two
+        // earlier transitions (breakdown lock, panel unlock) each call
+        // this on purpose; the last one in the chain was missed, so
+        // Boards opened silently on the next navigation instead of now.
+        updateBand();
       } catch (err) { toast(err.message, true); }
     };
     actions.append(b);
@@ -10516,6 +10577,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
         await post(`/api/specs/${specId}/candidates/${c.candidate_id}/unapprove`);
         toast(`${c.candidate_id} back to CANDIDATE — the panel is editable again.`);
         refresh();
+        updateBand();  // withdrawal can CLOSE 05 again — same fact, reversed
       } catch (err) { toast(err.message, true); }
     };
     actions.append(wd);
@@ -12390,6 +12452,13 @@ async function renderBoardPanels(specId) {
         try {
           await post(`/api/specs/${specId}/candidates/${c.candidate_id}/status`, { status: "APPROVED" });
           toast(`${c.candidate_id} approved.`); refresh();
+          // User-caught 2026-08-23: "the board is still locked" right after
+          // approving a panel. It was not a lock bug — approving is what
+          // OPENS stage 05, and the band simply never re-read. The two
+          // earlier transitions (breakdown lock, panel unlock) each call
+          // this on purpose; the last one in the chain was missed, so
+          // Boards opened silently on the next navigation instead of now.
+          updateBand();
         } catch (err) { toast(err.message, true); }
       }));
       // Withdrawing is NOT rejecting (user 2026-08-16: "I need to be able
@@ -12408,6 +12477,7 @@ async function renderBoardPanels(specId) {
             toast(`${r.candidate_id} back to CANDIDATE — the take is untouched, `
                   + "nothing rides future prompts, and the panel is editable again.");
             refresh();
+            updateBand();
           } catch (err) { toast(err.message, true); }
         },
         { title: "Put this panel back into draft. The take keeps its image and "

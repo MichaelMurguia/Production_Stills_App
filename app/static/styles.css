@@ -1735,6 +1735,12 @@ details.meta pre {
 .bp-step { display: flex; gap: 10px; font-size: 10.5px; letter-spacing: .08em; color: var(--ink-faint); padding: 3px 0; }
 .bp-step.cur { color: var(--ink); }
 .bp-step.cur .bp-mark { color: var(--accent); }
+/* UNCANONIZED — 2026-08-23 — locked-stage tally */
+/* The count under a gate's label: how far its own condition has got.
+   Dimmer than the label it explains, never amber — the gate is a
+   statement of fact, not the live signal. */
+.bp-tally { display: inline-block; margin-top: 2px; color: var(--ink-faint); opacity: .8; }
+.bp-step.cur .bp-tally { color: var(--ink-dim); }
 .bp-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 8.5px; letter-spacing: .1em; color: var(--ink-faint); }
 
 /* The stage checklist (LOCKED_STAGE_PLAN L4, mock 12c): the rows ARE the

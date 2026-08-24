@@ -33,6 +33,29 @@ If you see the dialog anyway, **Run** is safe — you can read every line of
 `run.bat` and the Python source in the folder first. (We do not yet
 code-sign the launcher; a signed release is planned.)
 
+### If your antivirus warns about a trojan or virus
+
+That is a **different** dialog from the one above, from a different part of
+Windows, and the steps above will not stop it. It is a false positive, and
+it happens because Screenboard Studio is an unsigned script that installs
+its own Python dependencies on first run — a shape that heuristic scanners
+score badly regardless of what the code does.
+
+What helps:
+
+1. **Let the first run finish.** Dependencies install once, not on every
+   launch, so repeated warnings should stop after the first start.
+2. **Add the install folder to your antivirus exclusions** if the warnings
+   continue. In Windows Security: *Virus & threat protection → Manage
+   settings → Exclusions → Add an exclusion → Folder.*
+3. **Tell us.** Send the exact detection name your scanner reports. A
+   named false positive can be submitted to the vendor; an unnamed one
+   cannot. This is the single most useful thing you can send us.
+
+We do not download or execute anything at runtime beyond the packages in
+`requirements.txt`, all from PyPI, and the app talks only to the AI
+provider whose key you supply. Nothing phones home.
+
 ## Running the app
 
 From the package root:
