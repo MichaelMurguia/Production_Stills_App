@@ -11144,8 +11144,10 @@ async function renderBoardPanels(specId) {
              whole reason the switch exists. Absent entirely on a take that
              did not ride. -->
         ${staged.cinematography?.rides
-          ? `<span class="shot-tag shot-tag-grammar">GRAMMAR — ${
-              esc(String(staged.cinematography.name || "").toUpperCase())}</span>`
+          ? `<button type="button" class="shot-tag shot-tag-grammar" data-f="read-cine"
+               data-key="${esc(staged.cinematography.key || "")}"
+               title="Read this cinematography — the words the render was given">CINEMATOGRAPHY — ${
+              esc(String(staged.cinematography.name || "").toUpperCase())} ↗</button>`
           : ""}
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
@@ -12048,6 +12050,38 @@ async function renderBoardPanels(specId) {
     // "Which references is this panel using?" must be answerable without a
     // mouse (user-asked 2026-08-14): the ids used to live in a hover title
     // on each row, and this verb revealed the style anchors' ids ONLY.
+    // "what is the grammer for that cenematography? Let me read it"
+    // (user, 2026-08-24). The take says which cinematography rode it; the
+    // words themselves lived only in docs/CINEMATOGRAPHY_STYLES.md, which
+    // is not somewhere a director is going to go mid-review. The document
+    // stays the source — this reads it, it does not copy it.
+    const readCine = $("[data-f=read-cine]", card);
+    if (readCine) readCine.onclick = async () => {
+      await loadCinemaStyles();
+      const st = (CINEMA_STYLES || []).find(x => x.key === readCine.dataset.key);
+      if (!st) return toast(
+        "That cinematography is no longer in docs/CINEMATOGRAPHY_STYLES.md — "
+        + "the take still records which one rode it.", true);
+      const NL = "\n";
+      const para = t => String(t || "").trim();
+      const list = a => (Array.isArray(a) ? a : [a]).filter(Boolean)
+        .map(x => "  · " + String(x).trim()).join(NL);
+      const body = [
+        para(st.description),
+        st.principle ? "PRINCIPLE" + NL + para(st.principle) : "",
+        st.mechanics ? "MECHANICS" + NL + list(st.mechanics) : "",
+        st.avoid ? "AVOID" + NL + list(st.avoid) : "",
+        st.films ? "SEEN IN" + NL + list(st.films) : "",
+        "─".repeat(60),
+        "SENT TO THE MODEL, VERBATIM:",
+        para(st.prompt),
+      ].filter(Boolean).join(NL + NL);
+      await promptOverlay(
+        st.name + (st.subtitle ? " — " + st.subtitle : ""),
+        body,
+        "READ FROM docs/CINEMATOGRAPHY_STYLES.md · THE DOCUMENT IS THE SOURCE");
+    };
+
     const showIds = $("[data-f=show-ids]", card);
     if (showIds) showIds.onclick = () => {
       const open = card.classList.toggle("ids-open");

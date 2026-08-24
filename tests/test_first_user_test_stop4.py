@@ -225,5 +225,48 @@ class ThePanelShowsTheGrammarItWillRenderUnder(unittest.TestCase):
         self.assertIn('"cinematography": _cine.stamp(panel)', gen)
 
 
+class TheCinematographyCanBeRead(unittest.TestCase):
+    """User, 2026-08-24: "The grammer tag is correct - it should say
+    Cinematography not grammer. what is the grammer for that
+    cenematography? Let me read it."
+
+    The take named which cinematography rode it and there was nowhere to
+    find out what that MEANT — the words live in
+    docs/CINEMATOGRAPHY_STYLES.md, which is not somewhere a director goes
+    mid-review."""
+
+    def test_the_tag_uses_the_users_word(self):
+        self.assertIn("CINEMATOGRAPHY — ${", JS)
+        self.assertNotIn("`GRAMMAR — ${", JS)
+
+    def test_the_tag_opens_the_text(self):
+        self.assertIn('data-f="read-cine"', JS)
+        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
+        seg = JS[i:i + 1600]
+        self.assertIn("await promptOverlay(", seg)
+
+    def test_it_shows_the_words_the_model_was_given(self):
+        """The description is the human summary; the prompt is what
+        actually rode. A reader that showed only the former would answer a
+        different question than the one asked."""
+        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
+        seg = JS[i:i + 1600]
+        self.assertIn("SENT TO THE MODEL, VERBATIM:", seg)
+        self.assertIn("para(st.prompt)", seg)
+
+    def test_it_names_the_document_as_the_source(self):
+        """One list, read not copied — the standing rule for style
+        libraries. Saying so keeps the reader honest about where to edit."""
+        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
+        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", JS[i:i + 1600])
+
+    def test_a_retired_style_says_so_rather_than_nothing(self):
+        """The document is editable, so a take can name a cinematography
+        that no longer exists. Silence there would read as a broken
+        button."""
+        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
+        self.assertIn("no longer in docs/CINEMATOGRAPHY_STYLES.md", JS[i:i + 1600])
+
+
 if __name__ == "__main__":
     unittest.main()

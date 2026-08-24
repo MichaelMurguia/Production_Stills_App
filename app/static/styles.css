@@ -1988,7 +1988,15 @@ details.meta pre {
 /* B10 (RULE_PASS 2026-08-16): facts about an image ride ON it. Absent
    entirely on a take the grammar did not ride — a fact that is sometimes
    true is only readable if its absence is also a fact. */
-.shot-tag-grammar { right: 10px; bottom: 34px; color: var(--ink-dim); }
+/* UNCANONIZED — 2026-08-24 — the cinematography a take rode, readable */
+/* Was a static label. The take named the cinematography and the words
+   themselves lived only in docs/CINEMATOGRAPHY_STYLES.md, which is not
+   somewhere a director goes mid-review: "what is the grammer for that
+   cenematography? Let me read it." Now a button — same tag, same place,
+   font and border inherited so it reads as the fact it always was. */
+.shot-tag-grammar { right: 10px; bottom: 34px; color: var(--ink-dim);
+  font: inherit; border: 0; cursor: pointer; }
+.shot-tag-grammar:hover { color: var(--ink); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
