@@ -450,18 +450,56 @@ class TheGrammarOutranksTheBibleOnColour(unittest.TestCase):
         cinematography.save_setting(st["key"])
         self.assertIn(st["name"].upper(), self.compiled())
 
-    def test_it_claims_light_and_colour_only(self):
-        """Narrow on purpose. The bible keeps medium, finish, materials,
-        world condition and what may appear — a grammar that could
-        overrule the rendering style would undo the anchor split."""
+    def test_it_claims_both_of_the_grammars_domains(self):
+        """Widened 2026-08-24, and this is the whole of that fix.
+
+        It used to claim LIGHT AND COLOUR ONLY and hand the art direction
+        "everything else without exception". That was written for a
+        LIGHTING conflict, and it went unnoticed because Deep-Space
+        Mise-en-Scène wants depth and width, which the art direction
+        already wanted. Subjective/Poetic is selective focus, negative
+        space, partial framing and point of view — not one word of which
+        is light or colour. So the prompt handed the model a grammar made
+        of framing and then told it, 13,000 characters later and "without
+        exception", that framing was not the grammar's business. Four
+        renders came back objective and correct.
+
+        Colour is still named in full: a colour grammar was desaturated on
+        2026-08-22 and that fix must not be traded for this one, so
+        neither domain is written as subordinate to the other."""
         from app import cinematography
         cinematography.save_setting(cinematography.styles()[0]["key"])
         i = self.compiled().index("WHERE THEY DISAGREE")
-        seg = self.compiled()[i:i + 700]
+        seg = self.compiled()[i:i + 1100]
         for owns in ("saturation", "hue", "contrast", "value key"):
-            self.assertIn(owns, seg)
+            self.assertIn(owns, seg)          # the 2026-08-22 fix
+        for owns in ("shot distance", "focus and depth of field",
+                     "subject placement", "point of view"):
+            self.assertIn(owns, seg)          # the 2026-08-24 fix
+        self.assertIn("Neither domain is subordinate", seg)
         for keeps in ("medium", "brushwork", "finish", "materials"):
             self.assertIn(keeps, seg)
+        self.assertNotIn("without exception", seg)
+
+    def test_the_camera_still_wins_on_an_axis_the_director_set(self):
+        """Widening the grammar must not silently take the camera away.
+        An axis left at the production default is the grammar's; an axis
+        the director named is the director's."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        i = self.compiled().index("WHERE THEY DISAGREE")
+        seg = self.compiled()[i:i + 1100]
+        self.assertIn("that named axis wins over the grammar", seg)
+        self.assertIn("left at the production default is the grammar", seg)
+
+    def test_the_art_direction_still_decides_what_is_in_frame(self):
+        """The anchor split survives: the grammar decides how a thing is
+        seen, never whether it is there."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        i = self.compiled().index("WHERE THEY DISAGREE")
+        seg = self.compiled()[i:i + 1100]
+        self.assertIn("decide WHAT is in the frame", seg)
 
     def test_a_panel_that_refused_a_grammar_gets_no_line(self):
         """NONE means no grammar, so there is nothing to give precedence

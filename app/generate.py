@@ -863,7 +863,27 @@ def _compiled_lines(spec: dict, panel: dict) -> list[str]:
 
 
 def _grammar_precedence(panel: dict) -> list[str]:
-    """Who wins when the bible and the grammar disagree about light.
+    """Who wins when the art direction and the grammar disagree.
+
+    This said LIGHT AND COLOUR, and gave the art direction "everything else
+    without exception". It was written when the cinematography anchor fed
+    the bible's Lighting Language, so the only conflict it anticipated was
+    a lighting one — and for DEEP-SPACE MISE-EN-SCENE, whose demands
+    (depth, layers, wide perspective) the art direction happened to agree
+    with, nobody noticed.
+
+    A cinematography grammar is mostly NOT about light. Subjective/Poetic
+    is selective focus, negative space, partial framing, unusual placement,
+    point of view. Scoping the axis to light and colour, in a clause that
+    lands ~13,000 characters after the grammar itself and claims authority
+    "without exception", told the model to ignore almost every instruction
+    the grammar had just given it. Found 2026-08-24 after four renders came
+    back objective: the user picked a grammar built entirely out of
+    framing, and the prompt said framing was not its business.
+
+    The split that is actually true: the art direction and the panel decide
+    WHAT is in the frame. The grammar decides HOW it is seen. Those do not
+    overlap, and an explicitly set CAMERA axis still wins over both.
 
     Empty unless a grammar actually rides, so a production without one
     renders byte-identically to before."""
@@ -873,14 +893,22 @@ def _grammar_precedence(panel: dict) -> list[str]:
         return []
     return [
         f"WHERE THEY DISAGREE: the CINEMATOGRAPHY GRAMMAR above "
-        f"({st['name'].upper()}) governs LIGHT and COLOUR \u2014 saturation, "
-        "hue, contrast, value key, and the behaviour and colour of the "
-        "light sources. Where the art direction above states a lighting or "
-        "colour rule the grammar contradicts, follow the GRAMMAR: it is "
-        "the anchor set for exactly this, and the art direction's lighting "
-        "section may predate it. The art direction still rules everything "
-        "else without exception \u2014 medium, brushwork, finish, materials, "
-        "the condition of the world, and what may appear in frame.",
+        f"({st['name'].upper()}) governs HOW THIS IS SEEN, in two domains "
+        "and both of them fully. FRAMING: shot distance, focus and depth "
+        "of field, subject placement, what is sharp and what is not, and "
+        "point of view. LIGHT AND COLOUR: saturation, hue, contrast, value "
+        "key, and the behaviour and colour of the light sources. Neither "
+        "domain is subordinate to the other. Where the art direction above "
+        "states a "
+        "rule about ANY of those that the grammar contradicts, follow the "
+        "GRAMMAR: it is the anchor set for exactly this, and the art "
+        "direction may predate it. The art direction and the panel's "
+        "required content still decide WHAT is in the frame — the "
+        "subjects, medium, brushwork, finish, materials and the condition "
+        "of the world. They do not decide how it is framed or focused. "
+        "Where the CAMERA block above names an angle, lens, tilt or shot "
+        "size explicitly, that named axis wins over the grammar; every "
+        "axis left at the production default is the grammar's to decide.",
         "",
     ]
 
