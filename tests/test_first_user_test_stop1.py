@@ -222,12 +222,34 @@ class AnAnswerHasAWayToSaveIt(unittest.TestCase):
     call and once by the fix's own test."""
 
     def edit(self) -> str:
-        return block('$("[data-f=answer]", row).onclick', "const defer = $(")
+        return block("answerBtn.onclick = () => {", "if (defer) defer.onclick =")
 
-    def test_there_is_an_explicit_save_button(self):
+    def test_the_answer_button_becomes_the_save_button(self):
+        """User-corrected 2026-08-24: "The answer button should become save,
+        not spawn a new button." The second attempt added a Save BESIDE the
+        Answer button that opened the field — two controls for one act, with
+        the now-meaningless Answer still sitting there. One control, whose
+        label always names what pressing it does next."""
         b = self.edit()
-        self.assertIn('save.textContent = "Save"', b)
-        self.assertIn('save.className = "primary"', b)
+        self.assertIn('answerBtn.textContent = "Save"', b)
+        self.assertIn('answerBtn.className = "primary"', b)
+        self.assertIn("answerBtn.onclick = commit;", b)
+
+    def test_no_second_button_is_created(self):
+        b = self.edit()
+        self.assertNotIn('document.createElement("button")', b,
+                         "the row's own buttons change role; none are spawned")
+
+    def test_decide_later_becomes_cancel_while_editing(self):
+        """The other button in the row would otherwise still offer to defer
+        a question the user is in the middle of answering."""
+        b = self.edit()
+        self.assertIn('defer.textContent = "Cancel"', b)
+
+    def test_discarding_restores_the_buttons_own_label(self):
+        b = self.edit()
+        self.assertIn("const wasLabel = answerBtn.textContent;", b)
+        self.assertIn("answerBtn.textContent = wasLabel;", b)
 
     def test_clicking_away_saves_rather_than_discards(self):
         """A surprise save is recoverable. A silent discard is the bug."""
@@ -235,14 +257,14 @@ class AnAnswerHasAWayToSaveIt(unittest.TestCase):
         self.assertIn("input.onblur", b)
         self.assertIn("commit()", b)
 
-    def test_escape_is_the_only_discard_and_it_is_labelled(self):
+    def test_escape_discards_and_the_row_says_so(self):
         b = self.edit()
         self.assertIn('if (e.key === "Escape") return discard();', b)
         self.assertIn("ENTER SAVES · ESC DISCARDS", b)
 
     def test_the_three_paths_cannot_double_fire(self):
-        """Save, Enter and blur all commit; without a latch, clicking Save
-        also blurs and the answer saves twice."""
+        """The button, Enter and blur all commit; without a latch, clicking
+        Save also blurs and the answer saves twice."""
         b = self.edit()
         self.assertIn("let settled = false;", b)
         self.assertIn("if (settled) return;", b)

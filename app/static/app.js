@@ -6043,67 +6043,76 @@ async function renderWizard() {
           renderWorlds();
           return ok;
         };
-        $("[data-f=answer]", row).onclick = () => {
+        const defer = $("[data-f=defer]", row);
+        const answerBtn = $("[data-f=answer]", row);
+        answerBtn.onclick = () => {
           const main = $(".q-main", row);
           if ($("input", main)) return;
-          // User-caught 2026-08-23, twice. Ada on the call: "I don't know how
-          // to save this answer... there should be a button here like and I'm
-          // clicking it." Then again on the fix's own test.
+          // User-caught 2026-08-23, three times before it was right.
           //
-          // Enter was the ONLY way to save. Typing an answer and clicking
-          // anywhere else discarded it with no request and therefore no
-          // feedback — which reads as the app losing your work, because from
-          // where the user sits that is exactly what happened. The first
-          // attempt at this hardened the transport (await, state the failure)
-          // and left the interaction alone, so it fixed a save that was never
-          // being attempted.
+          // Ada on the call: "I don't know how to save this answer... there
+          // should be a button here like and I'm clicking it." Enter was the
+          // ONLY commit, so typing and clicking away discarded the answer
+          // with no request and therefore no feedback.
           //
-          // Three ways out now, and none of them is silent: an explicit
-          // Save, Enter, or clicking away — which saves rather than
-          // discards. Escape is the only discard, and it is labelled.
-          const wrap = document.createElement("span");
-          wrap.className = "q-edit";
+          // The first fix hardened the transport, which was never the
+          // problem. The second added a Save button BESIDE the Answer button
+          // that opened the field — two controls for one act, with the
+          // now-meaningless Answer still sitting there.
+          //
+          // The button that opens the editor BECOMES the save. One control,
+          // one place to look, and its label always names what pressing it
+          // does next.
           const input = document.createElement("input");
           input.type = "text";
           input.value = st.answer || "";
           input.placeholder = "your answer…";
           input.title = "Appended to the interview as a Q/A pair and honored by the Bible draft.";
-          const save = document.createElement("button");
-          save.className = "primary"; save.textContent = "Save";
-          const cancel = document.createElement("button");
-          cancel.className = "text-act"; cancel.textContent = "Cancel";
           const hint = document.createElement("span");
           hint.className = "mini mono q-edit-hint";
           hint.textContent = "ENTER SAVES · ESC DISCARDS";
-          wrap.append(input, save, cancel, hint);
+          const wrap = document.createElement("span");
+          wrap.className = "q-edit";
+          wrap.append(input, hint);
           main.append(wrap);
           input.focus();
           input.select();
 
-          let settled = false;   // Save, blur and Enter must not double-fire
+          const wasLabel = answerBtn.textContent;
+          const wasClass = answerBtn.className;
+          answerBtn.textContent = "Save";
+          answerBtn.className = "primary";
+          if (defer) { defer.textContent = "Cancel"; defer.onclick = () => discard(); }
+
+          let settled = false;   // the button, Enter and blur share one act
           const commit = async () => {
             if (settled) return;
             settled = true;
             const v = input.value.trim();
             if (v === (st.answer || "")) { renderWorlds(); return; }
-            save.disabled = true;
+            answerBtn.disabled = true;
             const ok = await patch({ answer: v, deferred: false });
             if (ok && v) toast("Answer saved — it rides into the Bible draft.");
           };
-          const discard = () => { if (settled) return; settled = true; renderWorlds(); };
+          const discard = () => {
+            if (settled) return;
+            settled = true;
+            answerBtn.textContent = wasLabel;
+            answerBtn.className = wasClass;
+            renderWorlds();
+          };
 
-          save.onclick = commit;
-          cancel.onmousedown = e => { e.preventDefault(); discard(); };
+          answerBtn.onclick = commit;
           input.onkeydown = e => {
             if (e.key === "Escape") return discard();
             if (e.key === "Enter") return commit();
           };
           // Clicking away saves. Losing an answer to a stray click is the
           // whole reported bug; a surprise save is recoverable, a silent
-          // discard is not.
-          input.onblur = () => setTimeout(() => { if (!settled) commit(); }, 120);
+          // discard is not. The delay lets a click on Save land as Save
+          // rather than as a blur.
+          input.onblur = () => setTimeout(() => { if (!settled) commit(); }, 150);
         };
-        const defer = $("[data-f=defer]", row);
         if (defer) defer.onclick = () => patch({ deferred: !st.deferred });
         qHost.append(row);
       });

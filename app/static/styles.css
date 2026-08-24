@@ -937,9 +937,10 @@ label.check {
 }
 /* UNCANONIZED — 2026-08-23 — answer edit row */
 /* The answer field had no save affordance at all: Enter or lose it. The
-   act sits beside the field, not under it, so the way out is visible while
-   the user is still typing. */
-.q-edit { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+   act is NOT here — the row's own Answer button becomes Save while this is
+   open, so one control carries the whole interaction. This holds the field
+   and the keyboard hint only. */
+.q-edit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .q-edit input { margin-top: 0; width: min(420px, 100%); }
 .q-edit-hint { color: var(--ink-faint); }
 .q-text { margin: 0; font-size: 13px; color: var(--ink-dim); max-width: 74ch; }
