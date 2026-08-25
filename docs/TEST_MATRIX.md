@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2237 tests** across 117 files.
+**2257 tests** across 118 files.
 
 
-## Product app — 2016 tests in 100 files
+## Product app — 2036 tests in 101 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -58,7 +58,7 @@ temp home and external services are faked.
 | `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
-| `test_design_tokens.py` | 102 | Mechanical token assertions (design-verify step 4, standing suite). |
+| `test_design_tokens.py` | 103 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |
 | `test_every_route_is_reachable.py` | 6 | Every route a user needs must be reachable from the UI. |
@@ -66,6 +66,7 @@ temp home and external services are faked.
 | `test_first_user_test_stop1.py` | 39 | Stop 1 of the first-user-test plan: nothing is lost, nothing refuses silently. |
 | `test_first_user_test_stop2.py` | 39 | Stop 2: the panel renders what the panel says. |
 | `test_first_user_test_stop4.py` | 30 | Stop 4: the app fills it in, and says so. |
+| `test_framing_selection.py` | 19 | A3 — the pass that read the scene names the shot. |
 | `test_generate_units.py` | 5 | Engine-facing unit rules: size legality (×16, ≤3840, no upscaling), the ChatGPT-pipeline preset clamp, and deterministic keyword derivation. |
 | `test_harness_tooling.py` | 17 | HARNESS tooling (2026-08-13): the fixture recorder and the replay harness builder. |
 | `test_image_variants.py` | 22 | Display-tier image serving (app.imaging + candidate/reference resolvers). |

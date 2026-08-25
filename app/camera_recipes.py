@@ -147,3 +147,35 @@ def stamp(panel: dict | None = None) -> dict:
             "from": "panel" if pick else "grammar",
             "mods": [{"axis": m["axis"], "setting": m["setting"]}
                      for m in mods(panel)]}
+
+
+WHY_FIELD = "camera_recipe_why"
+
+
+def conflict(panel: dict | None = None) -> str:
+    """A3.3 — a panel whose framing fights its own grammar, said plainly.
+
+    Not silently resolved, and not refused either. The research pass is
+    only offered rows its grammar sanctions, so this arises the other way
+    round: someone chooses a framing and then changes the grammar under
+    it, or overrides the grammar on one panel. Both are legitimate — a
+    director wanting an epic environmental wide under a subjective grammar
+    is making a choice, not a mistake.
+
+    What is NOT legitimate is the app knowing the two disagree and saying
+    nothing, which is how a production-wide 24mm sat under a
+    selective-focus grammar for two days.
+    """
+    r = resolve(panel)
+    if not r:
+        return ""
+    from . import cinematography as _cine
+    st = _cine.resolve(panel)
+    ids = (st or {}).get("recipes") or []
+    if not ids or r["key"] in ids:
+        return ""
+    return (f"{r['name']} is not a framing {st['name']} sanctions. "
+            f"That grammar's own rows are "
+            + ", ".join((by_key(i) or {}).get("name", i) for i in ids[:3])
+            + ". Rendering it is a choice, not an error — but the two "
+              "will pull against each other.")

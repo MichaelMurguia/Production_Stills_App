@@ -146,6 +146,59 @@ def _board_rule(board_type: str) -> str:
             "the panels for it.")
 
 
+def _framing_rule() -> str:
+    """A3 — the framing menu and the method for choosing from it.
+
+    The research pass already reads the screenplay and writes each panel's
+    purpose and required objects. It is the only pass that has read the
+    scene, so it is the one that should name the shot — and naming it here
+    makes the choice inspectable before the spend rather than inferable
+    from the picture afterwards, which is the failure the whole framing
+    feature exists to end.
+
+    A lookup keyed on intent cannot do this, and that is worth stating
+    because it was the first design and it is wrong: a surfer at 400mm and
+    a race car at 24mm are both "action" and land on opposite rows
+    (`Compressed crowd / city / pursuit` against `Threatening /
+    confrontational proximity`). Choosing needs judgement about the shot,
+    not a table lookup on a label.
+
+    Where a grammar is already chosen, only its sanctioned rows are
+    offered — a menu that includes a contradiction is a menu that will
+    eventually be used to pick one. With no grammar, all twenty.
+    """
+    from . import camera_recipes as recipes
+    rows = recipes.sanctioned(None)
+    if not rows:
+        return ""
+    menu = "\n".join(
+        f"    {r['key']} — {r['name']}: {r['focal']}, {r['aperture']}, "
+        f"{r['relationship'].lower()}, {r['focus'].lower()} focus. {r['look']}"
+        for r in rows)
+    return f"""
+- Name the FRAMING for each panel, as `camera_recipe`, from this list and no other.
+  These are camera settings, not adjectives: a style can be satisfied by doing
+  nothing, a focal length and an aperture cannot.
+{menu}
+
+  Choose by reasoning about the shot, in this order — never by matching the
+  panel's genre to a row's name:
+    1. What is this panel FOR — the question its purpose answers.
+    2. Where does the weight sit: one face, a relationship, an object, a place,
+       an event?
+    3. What must stay READABLE, and what may be given up. This is the choice a
+       list of adjectives never forces anyone to make, and it is the one that
+       decides the row. A required object can be PRESENT without being SHARP —
+       a character at 1.5m on a wide lens keeps the hull, the ramp and the
+       figures behind her in frame, softer. Do not reject a row because the
+       panel has many required objects.
+    4. Then modifiers, as `camera_recipe_mods` — an object of axis:setting —
+       and ONLY where this shot departs from the row's baseline, so the panel
+       carries the difference rather than restating the row it already named.
+  Give one line in `camera_recipe_why` saying why that row and not its nearest
+  neighbour. A director has to be able to argue with it."""
+
+
 def _instructions(subject_prompt: str, mode: str, prohibited: list[str],
                   board_type: str = "") -> str:
     return f"""You are the research agent for a film production art department on the project "{store.project_name()}".
@@ -170,7 +223,7 @@ GOVERNING RULES — these are absolute:
   central question, largest allocation (~50; ~60 for ASSET boards); remaining panels are
   supporting strips splitting the rest. Evidence rules the COUNT; this grammar rules the
   SHAPE.
-- Mode for this board: {mode}.{_board_rule(board_type)}
+- Mode for this board: {mode}.{_board_rule(board_type)}{_framing_rule()}
 - Known prohibited inventions for this project (never include): {", ".join(prohibited) or "none recorded"}.
 
 Return ONLY a JSON object with exactly this shape:
@@ -192,6 +245,9 @@ Return ONLY a JSON object with exactly this shape:
       "required_objects": ["object, CARRYING ANY CONDITION THE SCREENPLAY STATES FOR IT IN THIS MOMENT - e.g. 'six descending figures, unweathered and pristine' rather than 'six descending figures'. A condition the screenplay states about these people or things HERE belongs in the object, because the object line is what the render is held to. Never invent a condition the screenplay does not state.", "..."],
       "forbidden_objects": ["likely-but-wrong additions to exclude", "..."],
       "scale": "AERIAL | EXTREME_WIDE | WIDE | MEDIUM | CLOSE | EXTREME_CLOSE | MACRO | MICRO",
+      "camera_recipe": "one id from the framing list above",
+      "camera_recipe_why": "one line: why this row and not its nearest neighbour",
+      "camera_recipe_mods": {{"axis": "setting"}},
       "allocation_percent": 60
     }}
   ],
@@ -248,6 +304,22 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
         scale = store.LEGACY_SCALE.get(scale, scale)
         if not store._camera_valid("scale", scale):
             scale = ""
+        # A3 — the framing, if the model named one the document defines.
+        # An unknown id is DROPPED rather than persisted: the panel then
+        # inherits its grammar's default row, which is a real framing,
+        # where a persisted unknown would resolve to nothing and put the
+        # panel back to having no optics at all — the original failure.
+        from . import camera_recipes as _rec
+        rec_key = str(p.get("camera_recipe", "") or "").strip()
+        if _rec.by_key(rec_key) is None:
+            rec_key = ""
+        rec_mods = {}
+        raw_mods = p.get("camera_recipe_mods")
+        if rec_key and isinstance(raw_mods, dict):
+            axes = {a["key"]: {x["setting"] for x in a["settings"]} for a in _rec.axes()}
+            rec_mods = {k: v for k, v in
+                        ((str(k).strip(), str(v or "").strip()) for k, v in raw_mods.items())
+                        if k in axes and v in axes[k]}
         panels.append({
             "id": pid,
             "title": str(p.get("title", ""))[:120],
@@ -256,6 +328,12 @@ def _coerce(draft: dict, spec_id: str, mode: str, board_type: str = "") -> dict:
             "forbidden_objects": [str(x) for x in (p.get("forbidden_objects") or [])][:20],
             "evidence": ["SCRIPT_EXPLICIT"],
             "scale": scale,
+            "camera_recipe": rec_key,
+            # The justification is stored beside the choice, not thrown
+            # away. A framing the director cannot argue with is a framing
+            # they will overrule blind.
+            "camera_recipe_why": str(p.get("camera_recipe_why", "") or "")[:240],
+            "camera_recipe_mods": rec_mods,
             "composition_role": "hero" if i == 1 else "support",
         })
         try:

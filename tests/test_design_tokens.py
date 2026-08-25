@@ -1025,6 +1025,19 @@ class TheFramingFieldAndTag(unittest.TestCase):
         self.assertNotIn("--accent", block)
         self.assertNotIn("--bad", block)
 
+    def test_the_framing_note_speaks_prose_not_machine(self):
+        """Rule 2: Courier carries machine data, Archivo carries prose.
+        The note is a sentence, and it sits inside `.cam-field`, whose
+        `> span` rule is the AXIS LABEL — Courier, caps, letterspaced.
+        Correct for the word ANGLE, wrong for a sentence, and it rendered
+        as a machine warning until the voice was reset. The selector has
+        to out-specify that rule, which `.cam-note` alone does not."""
+        self.assertIn(".cam-field > .cam-note {", CSS)
+        block = CSS.split(".cam-field > .cam-note {")[1].split("}")[0]
+        self.assertIn("var(--sans)", block)
+        self.assertIn("text-transform: none", block)
+        self.assertIn("letter-spacing: normal", block)
+
     def test_the_tag_is_not_a_button(self):
         """The grammar tag opens a document; a framing is one table row
         and the tag already states all of it. A control that opens

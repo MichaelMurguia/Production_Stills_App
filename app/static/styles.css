@@ -493,6 +493,20 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
    looking at and the row overflows the card it sits in. */
 .cam-field-wide { grid-column: 1 / -1; min-width: 0; }
 .cam-field-wide select { min-width: 0; width: 100%; }
+/* UNCANONIZED — 2026-08-25 — why this framing, and where it fights */
+/* Faint, under the control, empty most of the time. It says why the row
+   was chosen and warns where it disagrees with the panel's grammar —
+   both statements, never a gate: choosing a framing that pulls against a
+   grammar is a director's decision. Amber would make it a verdict. */
+/* The voice has to be reset, not inherited: `.cam-field > span` is the
+   AXIS LABEL — Courier, caps, letterspaced, correct for the word ANGLE
+   and wrong for a sentence. This is prose, so it is Archivo in sentence
+   case. Rule 2 of the design system, and it read as a machine warning
+   until it was fixed. */
+.cam-field > .cam-note { color: var(--ink-faint); max-width: 92ch;
+  font-family: var(--sans); font-size: 12px; letter-spacing: normal;
+  text-transform: none; line-height: 1.45; margin-top: 2px; }
+.cam-field > .cam-note:empty { display: none; }
 @media (max-width: 1000px) { .cam-row { grid-template-columns: repeat(3, minmax(150px, 1fr)); } }
 .cam-lens { display: flex; gap: 6px; align-items: center; }
 .cam-lens .cam-lens-mm { width: 70px; text-align: right; font-family: var(--mono); }

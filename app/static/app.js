@@ -10609,8 +10609,18 @@ function framingSelect(prefix, panel, blank, disabled = false) {
   const ids = (String(panel?.cinematography || "").toUpperCase() === "NONE" ? [] : (st?.recipes || []));
   const rows = ids.length ? ids.map(recipeByKey).filter(Boolean) : CAMERA_RECIPES;
   const inherit = ids.length ? recipeByKey(ids[0]) : null;
-  const opts = rows.map(r => `<option value="${esc(r.key)}" ${v === r.key ? "selected" : ""}
-      >${esc(r.name)} — ${esc(r.focal)}, ${esc(r.aperture)}</option>`).join("");
+  /* A framing the grammar does not sanction still has to APPEAR here when
+     the panel holds one — otherwise the select shows "inherit", and the
+     first save of any camera axis silently replaces a framing the
+     director chose on purpose. Which is this week's failure exactly: a
+     decision the app changes without saying so. It is labelled, and the
+     note below says what it disagrees with. */
+  const held = v && v.toUpperCase() !== "NONE" && !rows.some(r => r.key === v)
+    ? recipeByKey(v) : null;
+  const opts = [...(held ? [[held, " — outside this grammar"]] : []),
+                ...rows.map(r => [r, ""])]
+    .map(([r, tail]) => `<option value="${esc(r.key)}" ${v === r.key ? "selected" : ""}
+      >${esc(r.name)} — ${esc(r.focal)}, ${esc(r.aperture)}${esc(tail)}</option>`).join("");
   return `<label class="cam-field cam-field-wide mini"><span>Framing</span>
     <select data-f="${prefix}-framing" ${disabled ? "disabled" : ""}
       title="The lens, aperture and focus this panel renders at. Read live from docs/CAMERA_RECIPES.md.">
@@ -10620,7 +10630,38 @@ function framingSelect(prefix, panel, blank, disabled = false) {
       <option value="NONE" ${v.toUpperCase() === "NONE" ? "selected" : ""}
         >None — no framing</option>
       ${opts}
-    </select></label>`;
+    </select>
+    <span class="cam-note mini" data-f="${prefix}-framing-note">${framingNote(panel)}</span></label>`;
+}
+
+/* What the note under the framing says (A3.2 and A3.3).
+
+   Two facts, both of which the app knew and neither of which it said:
+
+   WHY this row — written by the pass that read the scene, so a director
+   can argue with the choice instead of overruling it blind.
+
+   That the row FIGHTS its grammar, where it does. Not silently resolved
+   and not refused: choosing an epic environmental wide under a
+   subjective grammar is a decision. What is not a decision is the app
+   knowing the two disagree and saying nothing, which is exactly how a
+   production-wide 24mm sat under a selective-focus grammar for two
+   days. */
+function framingNote(panel) {
+  const pick = String(panel?.camera_recipe || "");
+  const gk = String(panel?.cinematography || "");
+  const st = CINEMA_STYLES.find(x => x.key === gk);
+  const ids = gk.toUpperCase() === "NONE" ? [] : (st?.recipes || []);
+  const key = pick && pick.toUpperCase() !== "NONE" ? pick : (pick ? "" : ids[0] || "");
+  const out = [];
+  if (key && ids.length && !ids.includes(key)) {
+    const r = recipeByKey(key);
+    out.push(`${r ? r.name : key} is not a framing ${st.name} sanctions — `
+      + "rendering it is a choice, not an error, but the two will pull against each other.");
+  }
+  const why = String(panel?.camera_recipe_why || "").trim();
+  if (why && !pick) out.push(why);
+  return out.map(esc).join(" ");
 }
 // Read the five axes back off a rendered row. The lens resolves its Custom
 // number field to a focal length like "28MM"; a blank select stays "".
@@ -10659,7 +10700,14 @@ function wireCameraRow(prefix, root, onChange) {
                                                camera_recipe: keep }, "");
     const next = $(`[data-f=${prefix}-framing]`, holder);
     if (next) fram.innerHTML = next.innerHTML;
+    note();
   });
+  const note = () => {
+    const el = $(`[data-f=${prefix}-framing-note]`, root);
+    if (el && gram && fram) el.textContent = framingNote(
+      { cinematography: gram.value, camera_recipe: fram.value });
+  };
+  if (fram) fram.addEventListener("change", note);
   root.querySelectorAll(`[data-f^="${prefix}-"]`).forEach(el =>
     el.addEventListener("change", () => { toggle(); if (onChange) onChange(); }));
 }
