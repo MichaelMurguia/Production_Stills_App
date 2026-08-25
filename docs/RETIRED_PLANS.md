@@ -131,3 +131,30 @@ delta as new instructions.
   gained turn 3a) and kept in `design_handoff/design_boards/` for the
   density pass, which remains the one unbuilt item.
 
+- **CINEMATOGRAPHY_PLAN_2026-08-25.md** — written after two days and ~20
+  renders testing a per-panel cinematography axis that was wired correctly
+  end to end and produced almost no visible effect. Implemented
+  2026-08-25, in the plan's own order: **C7** (the hedged styles
+  rewritten), **C3** (a hedge lint), **C4** (a take says what it was
+  rendered from), **R1.5** (per-block prompt composition — the
+  instrumentation that corrected the plan's own headline figure and found
+  Character Presentation riding every panel whole), **A1** (`docs/
+  CAMERA_RECIPES.md` parsed as a fourth style library, 20 framings and 13
+  modifier axes), **A2** (the framing as a panel field chosen at breakdown
+  time, with the unchosen production default made to yield to it),
+  **A3** (the research pass chooses it, with a method and a justification
+  the director can argue with), **A4** (the Production Design camera card
+  retired), **R1** (a roster is not global — Character Presentation
+  selected per panel from the production's own cast, with what was
+  withheld stated), **R2** (the Bible read against itself for rules that
+  cannot both hold in one frame), **C6** (the style probe renders twice),
+  **C9** (a stated per-engine prompt limit, refused before the spend).
+  E1 was RESTATED rather than implemented: the plan read a 19,094-character
+  prompt against a 1,782-character one and concluded length is the
+  constraint; it is not, and acting on it would have thrown away canon the
+  panel needed. E4 and C5 were STRUCK by the user before implementation
+  (five required objects can appear in a subjective frame — present, not
+  sharp), along with a proposed screenplay↔cinematography slider. **C8
+  alone is unbuilt** and is not code: a controlled engine comparison
+  needing four renders, and the file is trimmed to that item.
+
