@@ -657,14 +657,30 @@ class NoMastersInTheRepo(unittest.TestCase):
     PNGs cost 8 MB for pictures nothing displays above 1280px — and they
     ship inside the release zip."""
 
+    # The rule is about IMAGE masters, which is what cost 8 MB. The folder
+    # also holds the camera-recipe documents now (2026-08-25) — prose that
+    # belongs in the repo and is read live by the app.
+    _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff",
+                       ".bmp", ".gif", ".psd"}
+
     def test_the_reference_folder_holds_no_masters(self):
         d = ROOT / "docs" / "Cinematography"
         if not d.exists():
             return
         for f in d.iterdir():
-            if f.is_file():
+            if f.is_file() and f.suffix.lower() in self._IMAGE_SUFFIXES:
                 self.assertEqual(f.suffix.lower(), ".webp", f.name)
                 self.assertLess(f.stat().st_size, 250_000, f.name)
+
+    def test_a_document_there_is_not_treated_as_a_master(self):
+        """The camera recipes live beside the plates. A rule written about
+        2.5 MB PNGs must not start refusing prose."""
+        d = ROOT / "docs" / "Cinematography"
+        if not d.exists():
+            self.skipTest("no cinematography folder")
+        docs = [f for f in d.iterdir()
+                if f.is_file() and f.suffix.lower() == ".md"]
+        self.assertTrue(docs, "the recipe documents belong here")
 
     def test_the_recipe_states_the_size(self):
         r = (ROOT / "app/static/style-plates/README.md").read_text(encoding="utf-8")
