@@ -2035,7 +2035,7 @@ details.meta pre {
 /* Every block reaches the model, and until this was measured nobody could
    see which ones were large. The bar is a value ground, not a colour: this
    is a measurement, and no block is good or bad on its own. */
-.prompt-comp { margin: 0 0 10px; }
+.prompt-comp { margin: 0 0 10px; max-width: 74ch; }
 .prompt-comp .pc-head { color: var(--ink-dim); margin-bottom: 6px; }
 .prompt-comp .pc-row {
   display: grid; grid-template-columns: 1fr 3.5em 1fr 5em;
@@ -2046,6 +2046,14 @@ details.meta pre {
 .prompt-comp .pc-name { color: var(--ink-dim); }
 .prompt-comp .pc-n { color: var(--ink-faint); text-align: right; }
 .prompt-comp .mini { margin-top: 6px; color: var(--ink-faint); max-width: 74ch; }
+/* UNCANONIZED — 2026-08-25 — what the selection withheld */
+/* Same faint prose as the note above it, separated by a rule rather than
+   a ground: it is a second reading of the same measurement, not a second
+   kind of thing. Never amber and never --bad — withholding a paragraph
+   about someone who is not in the frame is the system working. */
+.pc-with { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-soft);
+  color: var(--ink-faint); max-width: 74ch; }
+.pc-with b { color: var(--ink-dim); font-weight: 600; }
 /* UNCANONIZED — 2026-08-25 — what a take was rendered from */
 /* Sits above the cinematography tag, same corner and grammar. A take
    keeps two prompts — the compile, and the text actually sent when an

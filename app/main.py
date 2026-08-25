@@ -1820,6 +1820,11 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
             # first measurement found CHARACTER PRESENTATION at 31.5% of a
             # panel that names no characters.
             "composition": generate.prompt_composition(saved or compiled),
+            # R1.2 — and what the bible selection withheld from it. A
+            # number saying a block is 31% of the prompt is evidence; a
+            # list saying which paragraphs were left out is the decision
+            # behind it.
+            "bible_selection": generate.bible_selection(spec, panel),
             "saved": bool(saved),
             "saved_at": panel.get("prompt_override_at", ""),
             "frozen": bool(store.approved_takes_by_panel(spec_id).get(panel_id))}

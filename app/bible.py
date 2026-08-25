@@ -174,6 +174,164 @@ def _block(title: str, body: str) -> str:
     return f"{title.upper()}\n{body}" if body else ""
 
 
+# R1 — selection, not truncation (2026-08-25).
+#
+# The reading that produced this: one panel's prompt ran 19,094 characters
+# and rendered worse than a 1,782-character hand-written one. The obvious
+# conclusion was that length is the constraint. It is not, and acting on
+# it would have thrown away canon the panel needed — the opposite of what
+# this product is for.
+#
+# The short prompt worked because everything left in it AGREED with the
+# panel. What the long one carried was material that contradicted it:
+# `use wide or moderate-wide lenses with deep focus` against a
+# selective-focus grammar, `low-saturation gray-blue` against a colour
+# grammar. Nineteen thousand characters of purely supportive art direction
+# would have rendered correctly.
+#
+# So: a prompt fails when it contains instructions that contradict the
+# panel's intent. Length is a symptom of carrying everything.
+#
+# The instrumentation added the same day found the largest instance of
+# that, and it was not a design language at all. CHARACTER PRESENTATION
+# was 31.5% of the prompt — 5,868 characters — on a panel whose required
+# content is a hull, a pan, shivering air, a ramp and six figures. It
+# named no characters. It was describing two people who are not in the
+# frame, at nearly six times the size of the cinematography block that had
+# all the attention.
+#
+# These four sections ride EVERY panel. Three of them are genuinely
+# global: what the world looks like, what medium it is painted in, how it
+# is lit. The fourth is a roster, and a roster is not global — it is
+# per-subject material that happened to be filed at the top level.
+CHARACTER_SECTION = "Character Presentation"
+
+
+def characters(text: str = "") -> dict[str, str]:
+    """Each character's entry, where the section is written as `###` blocks.
+
+    Level 3, the same mechanism materials, environments and lessons
+    already use. Real bibles mostly are NOT written this way — the one
+    this was built against is a flat bullet list — so this is the
+    secondary path and `character_lines` is the primary one."""
+    return parse_sections(parse_sections(text or load_text()).get(
+        CHARACTER_SECTION, ""), level=3)
+
+
+_TITLES = {"lt", "col", "colonel", "capt", "captain", "sgt", "sergeant", "maj",
+           "major", "gen", "general", "dr", "mr", "mrs", "ms", "cmdr", "chief"}
+
+
+def _name_tokens(name: str) -> list[str]:
+    """The words of a cast name that could identify them in prose.
+
+    Ranks go: `COLONEL VANN OKAFOR` is Vann, and a bible line about a
+    different colonel is not about him."""
+    import re as _re
+    out = [w.lower() for w in _re.split(r"[^A-Za-z0-9]+", str(name or ""))
+           if len(w) > 2 and w.lower() not in _TITLES]
+    return out
+
+
+def _mentions(text: str, tokens: list[str]) -> bool:
+    import re as _re
+    hay = " " + _re.sub(r"[^a-z0-9]+", " ", str(text or "").lower()) + " "
+    return any(f" {t} " in hay for t in tokens)
+
+
+def cast_tokens(cast: list[dict] | None = None) -> dict[str, list[str]]:
+    """Every CHARACTER subject, as the words that identify them.
+
+    Read from the production's own cast rather than guessed from
+    capitalisation: the app already knows who the people are, and a
+    heuristic that decides `Descent Team` is a person will withhold the
+    line that governs six of them."""
+    if cast is None:
+        from . import store
+        cast = store.list_subjects()
+    out = {}
+    for sub in cast or []:
+        if str(sub.get("kind", "")).upper() != "CHARACTER":
+            continue
+        toks = _name_tokens(sub.get("name", ""))
+        if toks:
+            out[str(sub.get("name", ""))] = toks
+    return out
+
+
+def character_lines(text: str = "", cast: list[dict] | None = None) -> list[dict]:
+    """The Character Presentation section, one entry per bullet, with the
+    cast each bullet is about.
+
+    A bullet naming nobody is a rule for every panel — `do not beautify
+    injury into fashion styling` governs a frame with no people in it —
+    and it is never a candidate for withholding. Only a bullet that is
+    ABOUT specific people can be about the wrong ones."""
+    body = parse_sections(text or load_text()).get(CHARACTER_SECTION, "")
+    tokens = cast_tokens(cast)
+    out = []
+    for line in body.splitlines():
+        t = line.strip()
+        if not t.startswith(("-", "*")) or set(t) <= {"-", "*", " "}:
+            continue
+        t = t.lstrip("-* ").strip()
+        who = [n for n, toks in tokens.items() if _mentions(t, toks)]
+        out.append({"line": t, "who": who})
+    return out
+
+
+def character_selection(haystack: str, text: str = "",
+                        cast: list[dict] | None = None) -> dict:
+    """Which of Character Presentation this panel carries, and what it
+    withholds.
+
+    R1.2 — the withheld list is returned, never silently dropped. A
+    selector that quietly removes a section takes canon out of a render
+    and leaves nobody able to see it.
+
+    R1.3 — where it cannot tell, it carries everything and says so.
+    Losing canon silently is worse than carrying a line that does not
+    apply. Every uncertain case lands on the carry side by construction:
+    a bullet naming nobody is carried, a bullet naming anyone in the
+    panel is carried, an unparseable section is carried whole.
+
+    Matching is deliberately generous. Over-matching attaches MORE names
+    to a bullet, which makes it more likely one is in the panel, which
+    carries it. The only direction that loses canon is under-matching,
+    and that is the direction guarded against.
+    """
+    text = text or load_text()
+    lines = character_lines(text, cast)
+    if not lines:
+        # A `###`-structured section, or none, or flat prose. The first is
+        # handled; the rest are carried whole, which is right — a section
+        # this code cannot read is one it has no business editing.
+        entries = characters(text)
+        if not entries:
+            return {"carry": {}, "lines": [], "withheld": [], "unsure": True}
+        hit = {t: b for t, b in entries.items()
+               if _mentions(haystack, _name_tokens(t))}
+        if not hit:
+            return {"carry": entries, "lines": [], "withheld": [], "unsure": True}
+        return {"carry": hit, "lines": [],
+                "withheld": [{"title": t, "why": "this panel does not name them"}
+                             for t in entries if t not in hit],
+                "unsure": False}
+
+    keep, withheld = [], []
+    for row in lines:
+        if not row["who"] or any(_mentions(haystack, cast_tokens(cast)[n])
+                                 for n in row["who"]):
+            keep.append(row["line"])
+        else:
+            withheld.append({"title": ", ".join(row["who"]),
+                             "line": row["line"],
+                             "why": "this panel does not name them"})
+    if not withheld:
+        return {"carry": {}, "lines": keep, "withheld": [], "unsure": False}
+    return {"carry": {}, "lines": keep, "withheld": withheld, "unsure": False}
+
+
 def render_context(haystack: str,
                    design_languages: list[str] | None = None,
                    scene_lessons: list[str] | None = None,
@@ -202,8 +360,18 @@ def render_context(haystack: str,
                         "Non-negotiable; it overrides model defaults."]
 
     for name in GLOBAL_SECTIONS:
-        if sections.get(name):
-            parts.append(_block(name, sections[name]))
+        if not sections.get(name):
+            continue
+        if name == CHARACTER_SECTION:
+            sel = character_selection(haystack, text)
+            if sel["withheld"] and sel["lines"]:
+                parts.append(_block(name, "\n".join(f"- {x}" for x in sel["lines"])))
+                continue
+            if sel["withheld"] and sel["carry"]:
+                parts.append(_block(name, "\n\n".join(
+                    f"### {t}\n{b}".rstrip() for t, b in sel["carry"].items())))
+                continue
+        parts.append(_block(name, sections[name]))
 
     materials = parse_sections(sections.get(MATERIALS_SECTION, ""), level=3)
     for name in design_languages:

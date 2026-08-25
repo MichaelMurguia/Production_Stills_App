@@ -10657,6 +10657,37 @@ function framingSelect(prefix, panel, blank, disabled = false) {
    knowing the two disagree and saying nothing, which is exactly how a
    production-wide 24mm sat under a selective-focus grammar for two
    days. */
+/* What the bible selection carried and withheld for this panel (R1.2).
+
+   Character Presentation used to ride every prompt whole. On one real
+   panel it was 31.5% of 18,636 characters — 5,868 of them describing a
+   recon pilot and a colonel who are not in the frame, on a panel whose
+   required content is a hull, a pan, shivering air, a ramp and six
+   figures. Nearly six times the cinematography block that had all the
+   attention.
+
+   Withholding it is the fix. SAYING so is what keeps the fix honest. */
+function bibleSelectionHtml(sel) {
+  if (!sel || (!sel.withheld?.length && !sel.unsure)) return "";
+  if (sel.unsure) {
+    /* R1.3 — nothing matched, so everything was carried. The prompt did
+       not shrink; the reader still learns why, because "no saving here"
+       is a result and an empty panel is not. */
+    return `<div class="pc-with mini">
+      <b>Characters — all carried.</b> This panel names none of them, and a panel
+      that names no character may still be about one — a hand, a silhouette, a chair
+      someone has just left. Losing the roster is worse than carrying it.</div>`;
+  }
+  return `<div class="pc-with mini">
+    <b>Withheld from this panel</b> — ${sel.withheld.length} line${
+      sel.withheld.length === 1 ? "" : "s"} of Character Presentation, because this
+    panel does not name the people ${sel.withheld.length === 1 ? "it" : "they"}
+    describe${sel.withheld.length === 1 ? "s" : ""}:
+    ${[...new Set(sel.withheld.map(w => w.title))].map(esc).join(" · ")}.
+    The ${sel.carried} that govern any frame — how people are presented, what
+    not to invent — still ride.</div>`;
+}
+
 function framingNote(panel) {
   const pick = String(panel?.camera_recipe || "");
   const gk = String(panel?.cinematography || "");
@@ -12640,7 +12671,15 @@ async function renderBoardPanels(specId) {
                </div>`).join("")
             + `<div class="mini">Every block here reaches the image model. A block that
                describes something this panel does not contain is not neutral — it
-               competes with the ones that do.</div>`;
+               competes with the ones that do.</div>`
+            /* R1.2 — and what was left OUT, with the reason. The measure
+               above says a block is 31% of the prompt; this says which
+               paragraphs the selection decided not to send. A selector
+               that drops a section silently takes canon out of a render
+               and leaves nobody able to see it — which is exactly the
+               failure being fixed, so it is stated on the same surface as
+               the evidence for it. */
+            + bibleSelectionHtml(r.bible_selection);
         }
         $("[data-f=copy]", report).onclick = () => copyText(promptBox.value, "Compiled prompt");
         // The header carries what the prompt text itself does not: the

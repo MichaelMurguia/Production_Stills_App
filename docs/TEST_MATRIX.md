@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2257 tests** across 118 files.
+**2279 tests** across 119 files.
 
 
-## Product app — 2036 tests in 101 files
+## Product app — 2058 tests in 102 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -43,6 +43,7 @@ temp home and external services are faked.
 | `test_backup_security.py` | 7 | Backup roundtrip + security invariants: no keys in backups, zip-slip refused, restore never overwrites, traversal ids 404, headers present, and the re |
 | `test_bible.py` | 5 | Bible section model: every non-system ## section is a design language, environments ride the level-3 container, and render_context injects in the docu |
 | `test_bible_editor.py` | 25 | The Art Direction Bible panel: one button, at the top, four verbs. |
+| `test_bible_selection.py` | 22 | R1 — selection, not truncation. |
 | `test_brief_amend.py` | 9 | The panel brief is editable BETWEEN takes (user 2026-08-08). |
 | `test_camera.py` | 37 | Camera & composition language (user 2026-08-09). |
 | `test_camera_recipes.py` | 14 | A1 — the camera recipes, read as a fourth style library. |

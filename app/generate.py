@@ -735,15 +735,47 @@ def rejection_feedback(spec_id: str, panel_id: str) -> list[str]:
     return out
 
 
-def _style_context(spec: dict, panel: dict) -> str:
-    """Bible sections that apply to this panel; falls back to the flat style
-    bible text if the bible file is missing."""
-    haystack = " ".join(str(x) for x in [
+def _bible_haystack(spec: dict, panel: dict) -> str:
+    """The panel's searchable text — what the bible selector reads it as.
+
+    Its own function because two callers need the SAME string: the
+    compiler that selects with it, and the report that says what the
+    selection withheld. Two copies would drift, and the drift would be
+    invisible — the report would describe a selection the render did not
+    make."""
+    return " ".join(str(x) for x in [
         spec.get("subject", ""), spec.get("render_intent", ""),
         panel.get("title", ""), panel.get("purpose", ""),
         " ".join(panel.get("required_objects", [])),
         " ".join(panel.get("forbidden_objects", [])),
     ])
+
+
+def bible_selection(spec: dict, panel: dict) -> dict:
+    """R1.2 — what this panel's prompt carries from the bible, and what it
+    withheld, with reasons.
+
+    A selector that silently drops a section takes canon out of a render
+    and leaves nobody able to see it. That is the precise failure this
+    week was made of, so the selection is reported before it is trusted.
+    """
+    sel = bible.character_selection(_bible_haystack(spec, panel))
+    # `carry` is the subsection path, `lines` the bullet path — real
+    # bibles use the second. One count, whichever shape the section is in,
+    # so the report never reads "0 carried" beside six carried lines.
+    return {"carried": len(sel["carry"]) + len(sel.get("lines") or []),
+            "withheld": sel["withheld"],
+            # R1.3 — unsure carries everything and says so. A panel that
+            # names no character may still be about one: a hand, a
+            # silhouette, a chair someone has just left. Losing the roster
+            # is worse than carrying it.
+            "unsure": sel["unsure"]}
+
+
+def _style_context(spec: dict, panel: dict) -> str:
+    """Bible sections that apply to this panel; falls back to the flat style
+    bible text if the bible file is missing."""
+    haystack = _bible_haystack(spec, panel)
     # Explicit per-spec selection is the governed path; absent fields fall
     # back to keyword inference inside render_context. A panel's own scope
     # (design_languages / environment) overrides the sheet's for that panel
