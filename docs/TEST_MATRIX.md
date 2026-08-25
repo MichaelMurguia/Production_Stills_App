@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2154 tests** across 112 files.
+**2156 tests** across 112 files.
 
 
-## Product app — 1933 tests in 95 files
+## Product app — 1935 tests in 95 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -46,7 +46,7 @@ temp home and external services are faked.
 | `test_brief_amend.py` | 9 | The panel brief is editable BETWEEN takes (user 2026-08-08). |
 | `test_camera.py` | 37 | Camera & composition language (user 2026-08-09). |
 | `test_canon_2026_08_07.py` | 22 | NON_CANON_REVIEW_2026-08-07 — the seven rulings, held. |
-| `test_cinematography_grammar.py` | 37 | The cinematography grammar that rides a render — and the ability to take it back (user 2026-08-16: "the doc provides a prompt — shouldn't we apply the |
+| `test_cinematography_grammar.py` | 39 | The cinematography grammar that rides a render — and the ability to take it back (user 2026-08-16: "the doc provides a prompt — shouldn't we apply the |
 | `test_citation_is_verified.py` | 18 | No route may file SCRIPT_EXPLICIT for a line the screenplay does not contain. |
 | `test_composition.py` | 15 | Scene composition check (2026-08-13). |
 | `test_concurrent_generation.py` | 1 | Two panels rendered simultaneously must be two separate prompts. |

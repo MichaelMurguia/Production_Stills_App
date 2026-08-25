@@ -885,6 +885,23 @@ def _grammar_precedence(panel: dict) -> list[str]:
     WHAT is in the frame. The grammar decides HOW it is seen. Those do not
     overlap, and an explicitly set CAMERA axis still wins over both.
 
+    One carve-out, added the same day after the fix above was not enough
+    (user: "Nope"). The bible's Rendering Language is a PRODUCTION-BOARD
+    doctrine — "readable form over surface", "materials read at
+    production-board viewing distance", "large value grouping", "strong
+    silhouette design" — and a board exists to be read at a distance. Every
+    one of those is phrased as a rule about medium and materials, which the
+    clause above hands to the art direction, and their combined effect is
+    that nothing in the frame may be unreadable. Selective focus is the
+    deliberate act of making part of the frame unreadable, so the grammar
+    could reorganise a composition and never soften a single edge — which
+    is exactly what four renders showed.
+
+    So readability is scoped to what it actually describes: how a surface
+    is PAINTED where it is in focus. Which parts of the frame ARE in focus
+    is a camera decision. The medium keeps brushwork, finish and material
+    logic untouched; it simply no longer implies universal sharpness.
+
     Empty unless a grammar actually rides, so a production without one
     renders byte-identically to before."""
     from . import cinematography as _cine
@@ -906,6 +923,15 @@ def _grammar_precedence(panel: dict) -> list[str]:
         "required content still decide WHAT is in the frame — the "
         "subjects, medium, brushwork, finish, materials and the condition "
         "of the world. They do not decide how it is framed or focused. "
+        "In particular, a rendering or material rule about READABILITY "
+        "— readable form over surface, materials reading at "
+        "production-board viewing distance, large value grouping, strong "
+        "silhouette — describes how a surface is PAINTED where it is "
+        "in focus. It does not require every part of the frame to be "
+        "sharp. Where the grammar calls for selective focus, shallow "
+        "depth of field, or a subject given up to softness, the grammar "
+        "wins: WHAT is sharp is a camera decision, and the medium governs "
+        "only the treatment of whatever is. "
         "Where the CAMERA block above names an angle, lens, tilt or shot "
         "size explicitly, that named axis wins over the grammar; every "
         "axis left at the production default is the grammar's to decide.",

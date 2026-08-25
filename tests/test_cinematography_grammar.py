@@ -450,6 +450,16 @@ class TheGrammarOutranksTheBibleOnColour(unittest.TestCase):
         cinematography.save_setting(st["key"])
         self.assertIn(st["name"].upper(), self.compiled())
 
+    def precedence(self) -> str:
+        """The WHERE THEY DISAGREE clause, whole — bounded by the end of its
+        own paragraph rather than a character count. Five tests in this repo
+        have silently stopped covering their subject this way as the text
+        they pin grew."""
+        c = self.compiled()
+        i = c.index("WHERE THEY DISAGREE")
+        j = c.index(chr(10) + chr(10), i)
+        return c[i:j]
+
     def test_it_claims_both_of_the_grammars_domains(self):
         """Widened 2026-08-24, and this is the whole of that fix.
 
@@ -469,8 +479,7 @@ class TheGrammarOutranksTheBibleOnColour(unittest.TestCase):
         neither domain is written as subordinate to the other."""
         from app import cinematography
         cinematography.save_setting(cinematography.styles()[0]["key"])
-        i = self.compiled().index("WHERE THEY DISAGREE")
-        seg = self.compiled()[i:i + 1100]
+        seg = self.precedence()
         for owns in ("saturation", "hue", "contrast", "value key"):
             self.assertIn(owns, seg)          # the 2026-08-22 fix
         for owns in ("shot distance", "focus and depth of field",
@@ -487,18 +496,49 @@ class TheGrammarOutranksTheBibleOnColour(unittest.TestCase):
         the director named is the director's."""
         from app import cinematography
         cinematography.save_setting(cinematography.styles()[0]["key"])
-        i = self.compiled().index("WHERE THEY DISAGREE")
-        seg = self.compiled()[i:i + 1100]
+        seg = self.precedence()
         self.assertIn("that named axis wins over the grammar", seg)
         self.assertIn("left at the production default is the grammar", seg)
+
+    def test_readability_does_not_mean_universal_sharpness(self):
+        """The last thing holding the grammar back, and the subtlest.
+
+        The bible's Rendering Language is a production-board doctrine —
+        readable form over surface, materials reading at viewing distance,
+        large value grouping, strong silhouette. Every one is phrased as a
+        rule about MEDIUM and MATERIALS, which the clause hands to the art
+        direction, and together they mean nothing in the frame may be
+        unreadable. Selective focus is the deliberate act of making part of
+        the frame unreadable. So the grammar could rearrange a composition
+        and never soften an edge — which is what four renders showed.
+
+        Readability now scopes to what it describes: how a surface is
+        painted WHERE IT IS IN FOCUS."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        seg = self.precedence()
+        self.assertIn("does not require every part of the frame to be", seg)
+        self.assertIn("selective focus", seg.lower())
+        self.assertIn("shallow", seg.lower())
+        self.assertIn("WHAT is sharp is a camera decision", seg)
+
+    def test_the_medium_itself_is_untouched(self):
+        """The carve-out is about SHARPNESS, not about the painting. A
+        grammar that could overrule brushwork or finish would undo the
+        anchor split this whole system rests on."""
+        from app import cinematography
+        cinematography.save_setting(cinematography.styles()[0]["key"])
+        seg = self.precedence()
+        self.assertIn("the medium governs only the treatment of whatever is", seg)
+        for keeps in ("medium", "brushwork", "finish", "materials"):
+            self.assertIn(keeps, seg)
 
     def test_the_art_direction_still_decides_what_is_in_frame(self):
         """The anchor split survives: the grammar decides how a thing is
         seen, never whether it is there."""
         from app import cinematography
         cinematography.save_setting(cinematography.styles()[0]["key"])
-        i = self.compiled().index("WHERE THEY DISAGREE")
-        seg = self.compiled()[i:i + 1100]
+        seg = self.precedence()
         self.assertIn("decide WHAT is in the frame", seg)
 
     def test_a_panel_that_refused_a_grammar_gets_no_line(self):
