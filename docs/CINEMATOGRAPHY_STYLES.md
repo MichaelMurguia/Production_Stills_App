@@ -455,7 +455,7 @@ Build the image around a deliberate dramatic color relationship.
 
 Choose a dominant color family and a controlled secondary or opposing color. Coordinate lighting, environment, costume, and atmosphere around that relationship.
 
-Use saturation selectively. Allow color to express emotional state, danger, intimacy, power, or transformation.
+Push saturation hard where colour carries meaning, and let the rest fall away. Allow colour to express emotional state, danger, intimacy, power, or transformation.
 
 Maintain strong value structure beneath the color design.
 
@@ -464,7 +464,7 @@ intentional palette
 color contrast
 emotional color
 silhouette
-controlled saturation
+decisive saturation
 light interacting with atmosphere
 
 Avoid:
@@ -521,7 +521,7 @@ SUBJECTIVE POETIC CINEMATOGRAPHY — CAMERA AS CONSCIOUSNESS
 
 Photograph the scene according to the character's internal experience rather than objective spatial description.
 
-Use selective focus, negative space, reflections, partial framing, environmental abstraction, and unusual subject placement when emotionally motivated.
+Use selective focus, negative space, reflections, partial framing, environmental abstraction and unusual subject placement where the moment carries feeling.
 
 Allow memory, loneliness, fear, desire, or disorientation to influence composition, focus, exposure, and visual rhythm.
 

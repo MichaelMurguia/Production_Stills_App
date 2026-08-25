@@ -125,6 +125,70 @@ def _avoid(prompt: str) -> list[str]:
     return []
 
 
+# C3 — hedges in a style's own prompt (2026-08-25).
+#
+# The style libraries are user-maintained prose, and their wording decides
+# whether a style reaches an image at all. Nothing checked them.
+#
+# A hedge softens an instruction so that doing LESS still satisfies it. An
+# image model settles on the safest reading that satisfies everything, and
+# a hedge always makes "do less" a valid answer — so where a hedge and the
+# instruction it modifies pull in opposite directions, the hedge tends to
+# win. Chromatic/Operatic carried four restraint cues against one drama cue
+# and rendered restrained for two days; Deep-Space carries none and is the
+# only style that ever landed reliably.
+#
+# NOT an error. Naturalistic/Observational legitimately wants restraint,
+# and a craft rule like "maintain strong value structure" is a counterweight
+# doing real work. This reports; the author decides.
+# Three near-misses are deliberately NOT here, because a lint that cries
+# wolf is a lint nobody reads:
+#   "selective focus" / "selective attention" — a technique's NAME, not a
+#     softener. Only the adverb "selectively" softens an instruction.
+#   "moderately wide" — a real lens specification. Flagging it would have
+#     marked Deep-Space, the one style that has always landed.
+#   anything inside the Avoid block — a hedge there is inverted: "avoid
+#     uncontrolled background elements" asks for MORE control, not less.
+_HEDGES = (
+    # softeners — doing less still complies
+    "selectively", "controlled", "restrained", "subtle",
+    "carefully", "unforced", "sparingly", "gentle",
+    # opt-outs — the model may decline and still comply. The strongest kind:
+    # "unusual subject placement WHEN EMOTIONALLY MOTIVATED" is satisfied by
+    # deciding the moment is not emotionally motivated.
+    "when appropriate", "when emotionally motivated", "when necessary",
+    "where appropriate", "if appropriate", "only when",
+    # balance clauses — name a failure mode, and the safe distance is the middle
+    "without becoming", "rather than becoming", "while remaining",
+)
+
+
+def hedges(prompt: str) -> list[dict]:
+    """Every hedged line in a style's image-model prompt, with the word.
+
+    Line-level rather than a count, because the author needs to see WHICH
+    instruction was softened — a hedge on the style's defining mechanic is
+    a different fact from one in its Avoid list."""
+    out = []
+    in_avoid = False
+    for line in str(prompt or "").splitlines():
+        low = line.lower().strip()
+        if not low:
+            continue
+        if low.startswith("avoid"):
+            in_avoid = True
+            continue
+        if low.startswith("prioritize"):
+            in_avoid = False
+            continue
+        if in_avoid:
+            continue
+        found = sorted({h for h in _HEDGES if h in low})
+        if found:
+            out.append({"line": line.strip(), "words": found})
+    return out
+
+
 def styles(lib: str) -> list[dict]:
     """Every style the named document defines, in its own order.
 
@@ -160,6 +224,7 @@ def styles(lib: str) -> list[dict]:
             "films": _bullets(sub.get("Reference Films", "")),
             "avoid": _avoid(prompt),
             "prompt": prompt,
+            "hedges": hedges(prompt),
             "value": value[:600],
         })
     return sorted(out, key=lambda s: s["n"])

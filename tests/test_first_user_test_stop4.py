@@ -21,6 +21,14 @@ JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
 
 
+def reader() -> str:
+    """The cinematography reader handler, bounded by the statement after it
+    rather than a character count. Sixth fixed window to stop covering its
+    subject as the code grew (2026-08-25)."""
+    i = JS.index('const readCine = $("[data-f=read-cine]", card);')
+    return JS[i:JS.index('const showIds = $(', i)]
+
+
 def fn(name: str) -> str:
     """A whole function, bounded by the next top-level one. Fixed windows
     have stopped covering their subject four times in two days as these
@@ -243,31 +251,27 @@ class TheCinematographyCanBeRead(unittest.TestCase):
 
     def test_the_tag_opens_the_text(self):
         self.assertIn('data-f="read-cine"', JS)
-        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
-        seg = JS[i:i + 1600]
+        seg = reader()
         self.assertIn("await promptOverlay(", seg)
 
     def test_it_shows_the_words_the_model_was_given(self):
         """The description is the human summary; the prompt is what
         actually rode. A reader that showed only the former would answer a
         different question than the one asked."""
-        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
-        seg = JS[i:i + 1600]
+        seg = reader()
         self.assertIn("SENT TO THE MODEL, VERBATIM:", seg)
         self.assertIn("para(st.prompt)", seg)
 
     def test_it_names_the_document_as_the_source(self):
         """One list, read not copied — the standing rule for style
         libraries. Saying so keeps the reader honest about where to edit."""
-        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
-        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", JS[i:i + 1600])
+        self.assertIn("docs/CINEMATOGRAPHY_STYLES.md", reader())
 
     def test_a_retired_style_says_so_rather_than_nothing(self):
         """The document is editable, so a take can name a cinematography
         that no longer exists. Silence there would read as a broken
         button."""
-        i = JS.index('const readCine = $("[data-f=read-cine]", card);')
-        self.assertIn("no longer in docs/CINEMATOGRAPHY_STYLES.md", JS[i:i + 1600])
+        self.assertIn("no longer in docs/CINEMATOGRAPHY_STYLES.md", reader())
 
 
 if __name__ == "__main__":

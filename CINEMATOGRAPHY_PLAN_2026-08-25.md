@@ -28,6 +28,14 @@ part of the frame given up.
 Nineteen thousand characters of purely supportive art direction would have
 rendered correctly. **1,782 was a diagnostic, never a target.**
 
+And no length limit is enforced anywhere, nor has one ever been hit. Across
+132 takes the sent prompt ranges from 289 to 21,179 characters and every
+one succeeded; nothing in `generate.py` caps, truncates or checks. So
+capacity was never the constraint — the model read all 19,094 characters
+every time and resolved the conflict against the style, because the
+contradicting material was more numerous, more concrete and stated with
+more authority.
+
 **E2 — A style's own wording is the strongest single lever.** One word in
 `CINEMATOGRAPHY_STYLES.md` — `Use saturation selectively` → `extremely` —
 did what four code changes could not.
@@ -225,6 +233,19 @@ Not an error — Naturalistic/Observational legitimately wants restraint.
 The point is that four hedges in a style built on excess is a fact the
 author should see.
 
+## C9 — Check a prompt against the engine's limit before spending
+
+**Size: S. Unrelated to this week, found while measuring it.**
+
+Nothing checks prompt length against what an engine will accept. No limit
+has been hit — 21,179 characters went through — but a custom engine is a
+user-supplied endpoint with unknown limits, and some image APIs do impose
+one. A refusal there arrives after the render is attempted, which is the
+one place this app tries never to fail.
+
+**C9.1** — A per-engine stated limit in `PROVIDERS`, checked before the
+call, refused as a stated gate rather than an API error. **S**
+
 ## C6 — A two-render rule for style evaluation
 
 **Size: S.** Run-to-run variance is large enough that one take proves
@@ -299,7 +320,8 @@ grammar was its own; a panel could not send no colour reference.
 5. **A2 / A3** — the recipe as a panel field, chosen intelligently.
 6. **R1.1–R1.4** — the selector, with recipes and a clean Bible to reason
    about.
-7. **A4**, **C3**, **C6**, **C8** — small and independent.
+7. **A4**, **C3**, **C6**, **C9** — small and independent.
+8. **C8** — the engine comparison, which needs renders rather than code.
 
 R2 before R1 is deliberate: repairing contradictions at the source is
 cheaper than teaching a selector to route around them.

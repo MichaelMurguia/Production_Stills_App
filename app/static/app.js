@@ -12142,6 +12142,19 @@ async function renderBoardPanels(specId) {
         st.mechanics ? "MECHANICS" + NL + list(st.mechanics) : "",
         st.avoid ? "AVOID" + NL + list(st.avoid) : "",
         st.films ? "SEEN IN" + NL + list(st.films) : "",
+        // C3 — the author's own hedges, where the author is reading.
+        // Deliberately not in the picker: a director choosing a look does
+        // not need a lint, and a lint shown where it is noise gets
+        // ignored where it is not.
+        (st.hedges || []).length
+          ? "HEDGED LINES — THESE SOFTEN THE STYLE'S OWN INSTRUCTIONS"
+            + NL + "A hedge lets the model satisfy the line by doing LESS. "
+            + "Not always wrong — a craft rule is a counterweight — "
+            + "but a hedge on a style's defining mechanic is why it never "
+            + "reaches an image."
+            + NL + (st.hedges || []).map(h =>
+                "  · " + h.words.join(", ") + " — " + h.line).join(NL)
+          : "",
         "─".repeat(60),
         "SENT TO THE MODEL, VERBATIM:",
         para(st.prompt),
