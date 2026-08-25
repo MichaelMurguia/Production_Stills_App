@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2161 tests** across 112 files.
+**2170 tests** across 113 files.
 
 
-## Product app — 1940 tests in 95 files
+## Product app — 1949 tests in 96 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -124,6 +124,7 @@ temp home and external services are faked.
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |
 | `test_vocabulary.py` | 5 | One act, one name. |
+| `test_what_the_take_rendered_from.py` | 9 | C4 — a take can say what it was actually rendered from. |
 | `test_withdraw_approval_ui.py` | 13 | An approved panel can go back to draft WITHOUT being rejected (user 2026-08-16: "I need to be able to put an approved panel back into draft without ha |
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
 

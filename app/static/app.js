@@ -11143,6 +11143,9 @@ async function renderBoardPanels(specId) {
              no screen said so, which made the experiment unevaluable — the
              whole reason the switch exists. Absent entirely on a take that
              did not ride. -->
+        <button type="button" class="shot-tag shot-tag-prompt" data-f="read-sent"
+          title="Read the exact text this take was rendered from">${
+          staged.render_prompt ? "SENT — HAND-EDITED" : "SENT — THE COMPILE"} ↗</button>
         ${staged.cinematography?.rides
           ? `<button type="button" class="shot-tag shot-tag-grammar" data-f="read-cine"
                data-key="${esc(staged.cinematography.key || "")}"
@@ -12088,6 +12091,40 @@ async function renderBoardPanels(specId) {
     // words themselves lived only in docs/CINEMATOGRAPHY_STYLES.md, which
     // is not somewhere a director is going to go mid-review. The document
     // stays the source — this reads it, it does not copy it.
+    // C4 — what this take was actually rendered from.
+    //
+    // The record keeps two prompts and they are not the same thing:
+    // `prompt` is the compile at render time, the governance record, and
+    // `render_prompt` is the text the image model received when an
+    // override rode. Nothing on any screen showed either, and Preview
+    // prompt shows the panel's CURRENT compile, which may be nothing like
+    // what this take saw.
+    //
+    // Two days of this investigation were spent reading `prompt` and
+    // reasoning about renders it had never described (2026-08-25).
+    const readSent = $("[data-f=read-sent]", card);
+    if (readSent) readSent.onclick = () => {
+      const sent = String(staged.render_prompt || "").trim();
+      const compiled = String(staged.prompt || "").trim();
+      if (!sent && !compiled)
+        return toast("This take recorded no prompt.", true);
+      const NL = String.fromCharCode(10);
+      const body = sent
+        ? ["THE IMAGE MODEL RECEIVED THIS, VERBATIM:", "", sent, "",
+           "─".repeat(60), "",
+           "The steps 01–04 compile at the time of this render is kept "
+           + "as the governance record. It is NOT what was sent:", "",
+           compiled || "(none recorded)"].join(NL)
+        : compiled;
+      promptOverlay(
+        `${staged.candidate_id} — ${sent ? "hand-edited prompt" : "compiled prompt"}`,
+        body,
+        sent
+          ? `${sent.length} CHARACTERS SENT · ${compiled.length} COMPILED · `
+            + `OVERRIDE SCOPE: ${String(staged.prompt_override_scope || "take").toUpperCase()}`
+          : `${compiled.length} CHARACTERS · COMPILED FROM STEPS 01–04`);
+    };
+
     const readCine = $("[data-f=read-cine]", card);
     if (readCine) readCine.onclick = async () => {
       await loadCinemaStyles();

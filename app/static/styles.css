@@ -2003,6 +2003,13 @@ details.meta pre {
    somewhere a director goes mid-review: "what is the grammer for that
    cenematography? Let me read it." Now a button — same tag, same place,
    font and border inherited so it reads as the fact it always was. */
+/* UNCANONIZED — 2026-08-25 — what a take was rendered from */
+/* Sits above the cinematography tag, same corner and grammar. A take
+   keeps two prompts — the compile, and the text actually sent when an
+   override rode — and until now no screen showed either. */
+.shot-tag-prompt { right: 10px; bottom: 58px; color: var(--ink-dim);
+  font: inherit; border: 0; cursor: pointer; }
+.shot-tag-prompt:hover { color: var(--ink); }
 .shot-tag-grammar { right: 10px; bottom: 34px; color: var(--ink-dim);
   font: inherit; border: 0; cursor: pointer; }
 .shot-tag-grammar:hover { color: var(--ink); }
