@@ -370,25 +370,35 @@ the panel editor's `— production default —`. **XS**
 **A4.3** — The panel's manual camera override stays. It is the director
 disagreeing with the recipe on one shot, which is the point. **XS**
 
-## A5 — The slider, reframed
+## A5 — Struck: the slider
 
-The screenplay↔cinematography slider is no longer a weighting of prose. It
-is an **optical dial** over recipe fields, which is how a DP would think
-about it:
+Proposed, reframed three times, and cut.
 
-| | screenplay end | cinematography end |
-|---|---|---|
-| aperture | f/8–11 | f/1.4–2 |
-| depth of field | deep, all planes legible | shallow, subject only |
-| focus plane | the scene | the subject |
-| required content | all sharp | all PRESENT, selectively sharp |
+It began as screenplay-description ↔ cinematography, which was a real
+observation about P01. But each attempt to say what it would actually
+CHANGE produced something narrower than the last: first a weighting of
+prose, then aperture and depth of field written out four ways, then a
+legibility budget. Only the third was a real variable, and by then it had
+stopped being a slider and become a fact about the panel.
 
-Same objects at both ends. Auto-set from the same signals the recipe
-selection uses; overridable to either extreme.
+Two reasons it does not survive.
 
-This subsumes **C1** — the prompt budget becomes a consequence of shipping
-one recipe row instead of everything — and **C2**, whose permission grant
-becomes the recipe's own authority.
+The array does not sort along one line. `Distant observational` is
+detached — coverage and feeling at once. `Flat graphic composition` is
+highly expressive and not remotely intimate. A one-dimensional control
+over twenty recipes implies an ordering that is not there, and would push
+the selector toward the wrong row precisely where the choice is
+interesting.
+
+And the recipe selection already answers it. A2 and A3 have the narrative
+model read the panel and name a framing, with a line of justification and
+a picker to override it. That IS the control — twenty named choices a
+director can read and argue with, rather than a number that stands for
+something nobody can state plainly.
+
+If the panel's accountability turns out to need saying out loud — how many
+required objects the frame must make legible — it belongs as a stated
+field beside the recipe, not as a dial.
 
 ## What survives from the original plan
 
@@ -396,4 +406,8 @@ Unchanged and still wanted: **C3** (hedge lint), **C4** (show
 `render_prompt`), **C6** (two-render rule), **C7** (rewrite the hedged
 styles), **C8** (engine comparison).
 
-Superseded: **C1**, **C2**. Struck: **E4**, **C5**.
+Superseded by A1–A4: **C1** (the budget becomes a consequence of
+shipping one recipe row instead of everything) and **C2** (the
+permission grant becomes the recipe's own authority).
+
+Struck: **E4**, **C5**, **A5**.
