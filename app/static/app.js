@@ -11147,7 +11147,8 @@ async function renderBoardPanels(specId) {
           ? `<button type="button" class="shot-tag shot-tag-grammar" data-f="read-cine"
                data-key="${esc(staged.cinematography.key || "")}"
                title="Read this cinematography — the words the render was given">CINEMATOGRAPHY — ${
-              esc(String(staged.cinematography.name || "").toUpperCase())} ↗</button>`
+              esc(String(staged.cinematography.name || "").toUpperCase())} · ${
+              staged.cinematography.from === "panel" ? "THIS PANEL" : "PRODUCTION DEFAULT"} ↗</button>`
           : ""}
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed
@@ -11316,6 +11317,12 @@ async function renderBoardPanels(specId) {
     // closes. So changing the cinematography left the panel looking
     // byte-identical, and the only place the change surfaced was a tag on
     // a take that had not been rendered yet.
+    // Three renders were spent on panels that did not carry the setting the
+    // user had made on a DIFFERENT panel (2026-08-25). The take's stamp
+    // knew — "from": "panel" vs "production" — and no screen showed it, so
+    // "my grammar is live here" and "this panel inherits" looked identical
+    // both before and after paying. The axis is per-panel; the screen has
+    // to say so on the panel.
     const camGrammar = (() => {
       const v = String(p.cinematography || "");
       if (!v) return "";
@@ -11328,7 +11335,9 @@ async function renderBoardPanels(specId) {
                  camRv("camera_tilt"), camRv("scale")]
         .filter(Boolean).join(" · ").toLowerCase();
       const head = s.charAt(0).toUpperCase() + s.slice(1);
-      return camGrammar ? `${head} — ${camGrammar}` : head;
+      return camGrammar
+        ? `${head} — ${camGrammar} (this panel)`
+        : `${head} — cinematography inherited from the production`;
     })();
 
     // Which PLATES of a group ride (user ruling 2026-08-15). Precedence:

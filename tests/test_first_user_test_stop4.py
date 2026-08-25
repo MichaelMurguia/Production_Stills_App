@@ -197,7 +197,9 @@ class ThePanelShowsTheGrammarItWillRenderUnder(unittest.TestCase):
 
     def test_the_summary_states_the_grammar(self):
         i = JS.index("const camSummary = (() => {")
-        self.assertIn("camGrammar ? `${head}", JS[i:i + 500])
+        seg = JS[i:i + 600]
+        self.assertIn("(this panel)", seg)
+        self.assertIn("inherited from the production", seg)
 
     def test_a_refusal_reads_as_a_refusal(self):
         """NONE is a choice, not an absence — it must not render blank and
