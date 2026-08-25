@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2183 tests** across 114 files.
+**2193 tests** across 115 files.
 
 
-## Product app — 1962 tests in 97 files
+## Product app — 1972 tests in 98 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -86,6 +86,7 @@ temp home and external services are faked.
 | `test_palette_order.py` | 24 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
+| `test_prompt_composition.py` | 10 | R1.5 — what a compiled prompt is actually made of. |
 | `test_prompt_download.py` | 5 | The compiled-prompt download (user 2026-08-06). |
 | `test_prompt_edit.py` | 11 | Step 05's verb says "Read & edit" and both halves have to be true (user-caught 2026-08-16: "there is a 'Read and Edit' button on the prompt, but I can |
 | `test_read_progress.py` | 37 | The read, as it happens. |

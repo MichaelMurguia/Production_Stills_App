@@ -2003,6 +2003,21 @@ details.meta pre {
    somewhere a director goes mid-review: "what is the grammer for that
    cenematography? Let me read it." Now a button — same tag, same place,
    font and border inherited so it reads as the fact it always was. */
+/* UNCANONIZED — 2026-08-25 — what a prompt is made of */
+/* Every block reaches the model, and until this was measured nobody could
+   see which ones were large. The bar is a value ground, not a colour: this
+   is a measurement, and no block is good or bad on its own. */
+.prompt-comp { margin: 0 0 10px; }
+.prompt-comp .pc-head { color: var(--ink-dim); margin-bottom: 6px; }
+.prompt-comp .pc-row {
+  display: grid; grid-template-columns: 1fr 3.5em 1fr 5em;
+  gap: 10px; align-items: center; padding: 2px 0; font-size: 11px;
+}
+.prompt-comp .pc-bar { height: 8px; background: var(--line); display: block; }
+.prompt-comp .pc-pct { color: var(--ink); text-align: right; }
+.prompt-comp .pc-name { color: var(--ink-dim); }
+.prompt-comp .pc-n { color: var(--ink-faint); text-align: right; }
+.prompt-comp .mini { margin-top: 6px; color: var(--ink-faint); max-width: 74ch; }
 /* UNCANONIZED — 2026-08-25 — what a take was rendered from */
 /* Sits above the cinematography tag, same corner and grammar. A take
    keeps two prompts — the compile, and the text actually sent when an

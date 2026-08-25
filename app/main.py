@@ -1815,6 +1815,11 @@ def api_panel_prompt(spec_id: str, panel_id: str, refs: str = "") -> dict:
     # line can tell an unsaved edit from a saved one.
     return {"prompt": saved or compiled,
             "compiled": compiled,
+            # R1.5 — what the prompt is made of, so "why is my style not
+            # reaching the image" has an answer that is not a guess. The
+            # first measurement found CHARACTER PRESENTATION at 31.5% of a
+            # panel that names no characters.
+            "composition": generate.prompt_composition(saved or compiled),
             "saved": bool(saved),
             "saved_at": panel.get("prompt_override_at", ""),
             "frozen": bool(store.approved_takes_by_panel(spec_id).get(panel_id))}

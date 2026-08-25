@@ -1625,6 +1625,58 @@ def _subject_manifest(spec: dict, panel: dict) -> list[dict]:
     return out
 
 
+# R1.5 — what a compiled prompt is actually made of.
+#
+# Evidence for the selector, and a standing answer to "why is my style not
+# reaching the image". The 4%-of-19,094 figure that drove two days of work
+# came from one panel of one production, measured by hand.
+#
+# Blocks are recognised by their ALL-CAPS heads, which is how the compiler
+# writes them. An unrecognised span is reported as such rather than folded
+# into its neighbour: a breakdown that quietly attributes bytes to the
+# wrong owner is worse than one that admits a gap.
+_BLOCK_HEADS = (
+    "NON-NEGOTIABLE SOURCE RULES", "PERIOD", "SETTING", "THE SCENE",
+    "PANEL PURPOSE", "CAMERA", "CINEMATOGRAPHY GRAMMAR", "DETAIL BUDGET",
+    "DIRECTOR'S CORRECTIONS", "VISUAL STYLE", "OVERALL VISUAL IDENTITY",
+    "RENDERING LANGUAGE", "LIGHTING LANGUAGE", "COMPOSITION RULES",
+    "CHARACTER PRESENTATION", "DESIGN LANGUAGES", "ENVIRONMENTS",
+    "CORE MATERIAL LANGUAGE", "WHERE THEY DISAGREE",
+    "BOARD-SPECIFIC TREATMENT", "REQUIRED CONTENT", "SUBJECT IDENTITIES",
+    "FORBIDDEN CONTENT", "APPROVED REFERENCE ROLES",
+)
+
+
+def prompt_composition(text: str) -> dict:
+    """A per-block byte breakdown of a compiled prompt.
+
+    Returns blocks in the order they appear, each with its share, plus the
+    total. The share is what matters: a style block is not weak because it
+    is short, it is weak because everything disagreeing with it is long."""
+    lines = str(text or "").splitlines()
+    marks = []
+    for i, ln in enumerate(lines):
+        head = next((h for h in _BLOCK_HEADS
+                     if ln.strip().upper().startswith(h)), None)
+        if head:
+            marks.append((i, head))
+    total = len(text or "")
+    if not marks:
+        return {"total": total, "blocks": []}
+    out = []
+    if marks[0][0] > 0:
+        pre = chr(10).join(lines[:marks[0][0]])
+        if pre.strip():
+            out.append({"head": "(header)", "chars": len(pre)})
+    for n, (i, head) in enumerate(marks):
+        j = marks[n + 1][0] if n + 1 < len(marks) else len(lines)
+        body = chr(10).join(lines[i:j])
+        out.append({"head": head, "chars": len(body)})
+    for b in out:
+        b["share"] = round(b["chars"] / total, 4) if total else 0.0
+    return {"total": total, "blocks": out}
+
+
 def resolved_attachments(spec_id: str, panel_id: str,
                          ref_ids: list[str]) -> dict:
     """Exactly what a render would attach, resolved by the code that does it.

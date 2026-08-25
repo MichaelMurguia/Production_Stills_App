@@ -12306,6 +12306,7 @@ async function renderBoardPanels(specId) {
               <button class="verb" data-f="dl" title="Download this prompt as a .md file — the exact text this take was rendered from, with its conditions in the header">Download</button>
               <button class="ghost" data-f="close-report">Close</button>
             </span></div>
+          <div class="prompt-comp" data-f="composition"></div>
           <textarea data-f="prompt-edit" spellcheck="false"
             style="width:100%;min-height:300px;font-family:Consolas,monospace;font-size:12px"></textarea>
           <div class="row" style="margin-top:8px;align-items:baseline;gap:16px">
@@ -12465,6 +12466,26 @@ async function renderBoardPanels(specId) {
           runGenerate(e2.target, "Generate from this prompt",
                       text === inForce ? "" : text);
         };
+        // R1.5 — the prompt's own composition, biggest block first. A
+        // style is not weak because it is short; it is weak because
+        // everything disagreeing with it is long, and until this was
+        // measured nobody could see which blocks those were.
+        const comp = $("[data-f=composition]", report);
+        if (comp && r.composition?.blocks?.length) {
+          const cm = r.composition;
+          const rows = [...cm.blocks].sort((a, b) => b.chars - a.chars).slice(0, 8);
+          comp.innerHTML =
+            `<div class="pc-head mono">MADE OF · ${cm.total.toLocaleString()} CHARACTERS</div>`
+            + rows.map(b => `<div class="pc-row">
+                 <span class="pc-bar" style="width:${Math.max(2, Math.round(b.share * 100))}%"></span>
+                 <span class="pc-pct mono">${(b.share * 100).toFixed(1)}%</span>
+                 <span class="pc-name mono">${esc(b.head)}</span>
+                 <span class="pc-n mono">${b.chars.toLocaleString()}</span>
+               </div>`).join("")
+            + `<div class="mini">Every block here reaches the image model. A block that
+               describes something this panel does not contain is not neutral — it
+               competes with the ones that do.</div>`;
+        }
         $("[data-f=copy]", report).onclick = () => copyText(promptBox.value, "Compiled prompt");
         // The header carries what the prompt text itself does not: the
         // engine, the size, and WHICH references were actually attached —
