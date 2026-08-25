@@ -228,3 +228,115 @@ def styles(lib: str) -> list[dict]:
             "value": value[:600],
         })
     return sorted(out, key=lambda s: s["n"])
+
+
+# A1.2 — camera recipes, the fourth library (2026-08-25).
+#
+# The other three libraries answer "what is this style FOR". This one
+# answers "how is the shot actually taken", and it is a different shape:
+# a table of rows, not a set of essays. Same governing rule though — read
+# live from a document the user maintains, never a list in the code.
+#
+# It exists because a grammar written in adjectives can be satisfied by
+# doing nothing. `selective focus` and `negative space` are both true of
+# an everything-sharp frame if the model decides they are. `85–135mm,
+# f/1.4–2, very shallow` has no such reading, and says it in a quarter of
+# the characters.
+#
+# The ID column, not the name, is the contract: panels store the ID. That
+# is also why the ID is authored rather than derived — deriving it from
+# the name made `Deep-space mise-en-scène` into
+# `deep-space-mise-en-sc-ne`, and would have re-keyed every panel using it
+# the first time someone fixed a typo.
+CAMERA_DOC = "CAMERA_RECIPES.md"
+
+_ROW = re.compile(r"^\|(.*)\|\s*$")
+
+
+def camera_doc_path():
+    return paths.ROOT / "docs" / CAMERA_DOC
+
+
+def _rows(text: str, heading: str) -> list[list[str]]:
+    """Data rows under a `## n. Heading`, minus the header and the rule."""
+    out, on = [], False
+    for ln in text.splitlines():
+        if ln.startswith("## "):
+            on = heading.lower() in ln.lower()
+            continue
+        if not on:
+            continue
+        m = _ROW.match(ln)
+        if not m:
+            continue
+        cells = [c.strip() for c in m.group(1).split("|")]
+        if set("".join(cells)) <= {"-", ":", " "}:   # the |---|---| rule
+            continue
+        # A data row's ID cell is backticked; the header's says "ID". That
+        # is the document's own convention, so use it rather than assuming
+        # the header is always the first row — an edit that adds a note
+        # line above the table would break the positional guess silently.
+        if cells[0] and not cells[0].startswith("`"):
+            continue
+        out.append(cells)
+    return out
+
+
+def _plain(cell: str) -> str:
+    return re.sub(r"[`*]", "", str(cell or "")).strip()
+
+
+def camera_recipes() -> list[dict]:
+    """The base framings, in the document's order.
+
+    A row missing its ID is skipped rather than guessed at — an
+    auto-keyed row would look identical in the picker and point at
+    nothing once a panel stored it."""
+    p = camera_doc_path()
+    if not p.exists():
+        return []
+    out = []
+    for cells in _rows(p.read_text(encoding="utf-8"), "Framings"):
+        if len(cells) < 7:
+            continue
+        key = _plain(cells[0])
+        if not key:
+            continue
+        name, focal, ap, rel, focus, look = (_plain(c) for c in cells[1:7])
+        out.append({
+            "key": key, "name": name, "focal": focal, "aperture": ap,
+            "relationship": rel, "focus": focus, "look": look,
+            # What rides a prompt: the settings first, because they are the
+            # part no model can satisfy by doing nothing.
+            "value": (f"{name} — {focal}, {ap}, {rel.lower()}, "
+                      f"{focus.lower()} focus. {look.rstrip('.')}"),
+        })
+    return out
+
+
+def camera_recipe(key: str) -> dict | None:
+    key = str(key or "").strip()
+    return next((r for r in camera_recipes() if r["key"] == key), None)
+
+
+def modifier_axes() -> list[dict]:
+    """The thirteen axes, each with its settings.
+
+    Grouped rather than flat: an axis is a choice BETWEEN its settings,
+    and a flat list of thirty-four would invite shipping several settings
+    of the same axis in one prompt."""
+    p = camera_doc_path()
+    if not p.exists():
+        return []
+    out, cur = [], None
+    for cells in _rows(p.read_text(encoding="utf-8"), "Modifiers"):
+        if len(cells) < 4:
+            continue
+        key, name, setting, effect = (_plain(c) for c in cells[:4])
+        if key:
+            cur = {"key": key, "name": name, "settings": []}
+            out.append(cur)
+        if cur is None or not setting:
+            continue
+        cur["settings"].append({"setting": setting, "effect": effect})
+    return out
