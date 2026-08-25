@@ -181,7 +181,41 @@ class SwatchSelectorWiring(unittest.TestCase):
     def test_the_selector_sits_in_the_gen_row_and_feeds_the_send(self):
         self.assertIn('data-f="swatch-menu"', self.JS)
         self.assertIn("checkedSwatches()", self.JS)
-        self.assertIn("NONE SELECTED = AUTO", self.JS)
+        # Reworded 2026-08-25 when the menu gained a third answer: ticking
+        # NOTHING still means auto, but there is now an explicit "no colour
+        # reference" row, so "none selected" had become ambiguous between
+        # the two.
+        self.assertIn("NOTHING TICKED = AUTO", self.JS)
+
+    def test_a_panel_can_choose_no_colour_reference_at_all(self):
+        """User-caught 2026-08-25: "I cant see a way to remove the color
+        swatch reference." There was none. The menu chose WHICH palette
+        rode and ticking nothing meant the shelf's automatic pick, so a
+        production whose every palette is low-saturation could not ask a
+        colour grammar what it would do unaided — nor tell a picture's
+        influence from a paragraph's."""
+        self.assertIn('data-f="pal-none"', self.JS)
+        self.assertIn("No colour reference", self.JS)
+
+    def test_none_is_sent_rather_than_left_out(self):
+        """The server tops up an automatic palette when the caller supplies
+        no palette — right by default, and exactly wrong here. Omission and
+        refusal are different answers and only one of them travels."""
+        self.assertIn('["-COLOR_PALETTE"]', self.JS)
+
+    def test_the_server_honours_the_suppression(self):
+        gen = (Path(__file__).resolve().parents[1] / "app/generate.py").read_text(encoding="utf-8")
+        self.assertIn('if str(x).startswith("-")', gen)
+        self.assertIn('store.role_head(r.get("role", "")) not in suppress', gen)
+
+    def test_the_suppressed_role_is_not_mistaken_for_a_reference_id(self):
+        """A leading dash is a directive, not an id — feeding it to
+        get_reference would raise "unknown reference" and refuse the
+        render."""
+        gen = (Path(__file__).resolve().parents[1] / "app/generate.py").read_text(encoding="utf-8")
+        i = gen.index("suppress = {")
+        j = gen.index("for rid in ref_ids:", i)
+        self.assertIn("ref_ids = [x for x in ref_ids if not str(x).startswith", gen[i:j])
 
 
 if __name__ == "__main__":

@@ -1531,6 +1531,19 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
     if panel is None:
         raise KeyError(f"unknown panel: {panel_id}")
 
+    # A caller can SUPPRESS an auto-attached role by naming it with a
+    # leading dash: "-COLOR_PALETTE" means send no colour plate at all.
+    # Until 2026-08-25 the panel could choose WHICH palette rode and had no
+    # way to choose NONE — ticking nothing meant the shelf's automatic
+    # pick — so a production whose every palette is low-saturation could
+    # not ask a colour grammar what it would do unaided, and could not
+    # tell a picture's influence from a paragraph's. Not a test harness:
+    # a panel may legitimately want the Bible's colour words with no swatch
+    # plate steering the hues.
+    suppress = {str(x)[1:].strip().upper() for x in ref_ids
+                if str(x).startswith("-")}
+    ref_ids = [x for x in ref_ids if not str(x).startswith("-")]
+
     refs = []
     for rid in ref_ids:
         r = store.get_reference(rid)
@@ -1566,6 +1579,7 @@ def _resolve_generation_inputs(spec_id: str, panel_id: str,
                               or spec.get("design_languages") or [])]
     refs = refs + [r for r in store.auto_style_references(langs)
                    if r["id"] not in seen_ids
+                   and store.role_head(r.get("role", "")) not in suppress
                    and not (user_palette and store.role_head(r.get("role", ""))
                             == "COLOR_PALETTE")]
 

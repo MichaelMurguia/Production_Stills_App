@@ -11551,7 +11551,16 @@ async function renderBoardPanels(specId) {
                       </span>
                     </label>`;
                   }).join("")}
-                  <div class="mini mono pal-foot">NONE SELECTED = AUTO · A PALETTE ATTACHES WHOLE</div>
+                  <label class="pal-row pal-row-none"
+                    title="Send no colour reference at all. The palette's WORDS still reach the render through the Bible; only the swatch plate stops riding.">
+                    <input type="checkbox" data-f="pal-none">
+                    <span class="sw-ramp pal-ramp pal-ramp-none"></span>
+                    <span class="sw-ramp-label pal-row-label">
+                      <span class="lang">No colour reference</span>
+                      <span class="n">NO PLATE ATTACHED</span>
+                    </span>
+                  </label>
+                  <div class="mini mono pal-foot">NOTHING TICKED = AUTO · A PALETTE ATTACHES WHOLE</div>
                 </div>
               </div>`;
             })() : ""}` })}
@@ -11626,8 +11635,23 @@ async function renderBoardPanels(specId) {
 
     // A palette row carries every id in its group: selecting it attaches
     // the whole ramp, which is the object the user actually chose.
+    // "I cant see a way to remove the color swatch reference" (user,
+    // 2026-08-25). There was none: the menu chose WHICH palette rides and
+    // ticking nothing meant the shelf's automatic pick, so a production
+    // whose every palette is low-saturation could not ask a colour grammar
+    // what it would do unaided. The control said "which" and had no
+    // "none". This is the missing third answer — and it is a real
+    // production act, not only a test harness: a panel may legitimately
+    // want the Bible's colour words without a swatch plate steering the
+    // hues.
+    const paletteOff = () => !!$("[data-f=pal-none]", card)?.checked;
+    // The server tops up an automatic palette when the user picked none,
+    // which is right by default and exactly wrong here — so "none" has to
+    // be SENT, not merely left out.
     const checkedSwatches = () =>
+      paletteOff() ? ["-COLOR_PALETTE"] :
       $$("[data-f=swatch-menu] input:checked", card)
+        .filter(x => !x.dataset.f)
         .flatMap(x => JSON.parse(x.dataset.ids));
     const checkedRefs = () => [
       ...$$(".ref-groups input:checked", card).flatMap(x => JSON.parse(x.dataset.ids)),
