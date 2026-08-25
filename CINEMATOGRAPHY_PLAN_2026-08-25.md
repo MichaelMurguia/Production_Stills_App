@@ -252,3 +252,148 @@ green, thirteen commits unpushed.
 
 The first three cost almost nothing and would have saved most of the
 twenty renders this took.
+
+---
+
+# Addendum — camera recipes (2026-08-25, after review)
+
+This supersedes parts of the plan above. Read it before C1, C2 and C5.
+
+## A correction first
+
+The plan claims (E4) that a panel's required content can be structurally
+incompatible with a style — that five required objects cannot appear in a
+subjective frame. **That is wrong**, and wrong in the way that matters: it
+reasoned about content lists instead of about optics.
+
+Avrel at 1.5m on a 24mm wide open puts the hull, the pan, the ramp and the
+six figures behind her in the same frame. All present. Not all sharp. The
+recipes document says it outright — *"secondary characters remain present
+but substantially softer"*. **Strike E4 and C5.** There is no conflict to
+warn about; there is a camera to choose.
+
+## What the grammar was missing
+
+The styles speak in adjectives — *selective focus, negative space, unusual
+placement, when emotionally motivated*. An image model satisfies every one
+of those by doing nothing. `docs/Cinematography/CINEMATIC_LENS_AND_FRAMING_RECIPES.md`
+speaks in camera settings — `85mm, f/2, focus on the eyes, shallow, backed
+away enough to preserve facial perspective`. There is no reading of that
+which returns an everything-sharp frame.
+
+It is also **denser**: ~150 words carrying more instruction than the
+836-character grammar block. It helps E1 rather than fighting it.
+
+## A1 — Three documents, one job each
+
+| document | holds | edit cadence |
+|---|---|---|
+| `CINEMATOGRAPHY_STYLES.md` *(exists)* | what a style is FOR — principle, mechanics, avoid | rarely; creative doctrine |
+| `CAMERA_RECIPES.md` *(new)* | the 20 base framings and 13 modifier axes, lifted from `docs/Cinematography/` | whenever calibrated against renders |
+| `camera_defaults.json` *(exists)* | silent fallback only | never, once styles own the camera |
+
+Separate rather than folded together, for three reasons: they change on
+different schedules; a separate document makes it natural for the compiler
+to pull exactly ONE row instead of a whole style entry; and the person
+tuning f-stops is not the person writing what a style is for.
+
+Both markdown documents stay live-read, so an edit updates the picker, the
+prompt and the reader together — the property that let one word fix
+Chromatic.
+
+**A1.1** — Move section 2 (framings) and section 3 (modifiers) into
+`docs/CAMERA_RECIPES.md`, with a stable slug per row. **S**
+**A1.2** — Parse it in `style_docs` as a fourth library. **S**
+**A1.3** — Count check: section 2 reads as 20 rows, not 21. Confirm
+whether one was dropped in authoring. **XS**
+
+## A2 — The recipe is a PANEL FIELD, chosen at breakdown time
+
+Not at compile time, and this is the part to hold onto.
+
+The research pass already reads the screenplay and writes each panel's
+purpose and required objects. It should also name the framing. That makes
+the choice:
+
+- **inspectable before the spend** — the panel reads
+  `Extreme emotional isolation · 85–135mm · f/1.4–2`, and can be argued
+  with before paying
+- **editable** — a picker over 20 named framings, not free text
+- **recorded** — a take knows which framing it rode
+- **paid for once** — one call at breakdown, not one per render
+
+Deciding it at compile time would repeat this week's central failure: a
+decision the app makes invisibly, inferable only from the picture.
+
+**A2.1** — `camera_recipe` on the panel, with modifier deltas beside it. **M**
+**A2.2** — Picker in the breakdown row and the panel workbench. **M**
+**A2.3** — The take records the recipe it rode, beside the cinematography
+stamp. **S**
+
+## A3 — Teaching the narrative model to choose
+
+The heart of it. A lookup keyed on intent cannot work: a surfer at 400mm
+and a race car at 24mm are both "action" and land on opposite rows
+(`Compressed crowd / city / pursuit` versus `Threatening / confrontational
+proximity`). Selection needs judgement about the shot.
+
+The research pass's instructions gain the recipe array and a selection
+method. What it must reason about, in order:
+
+1. **What is this panel FOR** — the question its purpose answers.
+2. **Where does the weight sit** — one face, a relationship, an object, a
+   place, an event?
+3. **What must stay readable**, and what may be given up. This is the
+   choice the adjectives never forced anyone to make.
+4. **What does the STYLE allow** — the grammar constrains the family
+   without determining the row. Subjective/Poetic on an action beat is
+   `Subjective / poetic character` or `Immersive / inside the action`
+   opened up; never `Epic environmental wide`.
+5. **Then modifiers**, and only where the shot departs from the row's
+   baseline, so the prompt carries deltas rather than a restatement.
+
+**A3.1** — Add the array and the method to `autofill._instructions`. **M**
+**A3.2** — The chosen row carries one line of justification the director
+can read and argue with. **S**
+**A3.3** — A panel whose recipe fights its own style is a fact worth
+stating, not silently resolving. **S**
+
+## A4 — Retire the Production Design camera card
+
+`#cam-default-row` sets a production-wide `Eye level · 24mm · Level ·
+Wide`. Nobody chose that; it is a value the app needed. Once a style
+carries recipes it is superseded.
+
+**A4.1** — Remove the card. **S**
+**A4.2** — Keep `camera_defaults.json` as the silent fallback answering
+the panel editor's `— production default —`. **XS**
+**A4.3** — The panel's manual camera override stays. It is the director
+disagreeing with the recipe on one shot, which is the point. **XS**
+
+## A5 — The slider, reframed
+
+The screenplay↔cinematography slider is no longer a weighting of prose. It
+is an **optical dial** over recipe fields, which is how a DP would think
+about it:
+
+| | screenplay end | cinematography end |
+|---|---|---|
+| aperture | f/8–11 | f/1.4–2 |
+| depth of field | deep, all planes legible | shallow, subject only |
+| focus plane | the scene | the subject |
+| required content | all sharp | all PRESENT, selectively sharp |
+
+Same objects at both ends. Auto-set from the same signals the recipe
+selection uses; overridable to either extreme.
+
+This subsumes **C1** — the prompt budget becomes a consequence of shipping
+one recipe row instead of everything — and **C2**, whose permission grant
+becomes the recipe's own authority.
+
+## What survives from the original plan
+
+Unchanged and still wanted: **C3** (hedge lint), **C4** (show
+`render_prompt`), **C6** (two-render rule), **C7** (rewrite the hedged
+styles), **C8** (engine comparison).
+
+Superseded: **C1**, **C2**. Struck: **E4**, **C5**.
