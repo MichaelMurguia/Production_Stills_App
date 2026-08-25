@@ -189,6 +189,25 @@ def hedges(prompt: str) -> list[dict]:
     return out
 
 
+_RECIPE_ID = re.compile(r"^`([a-z0-9-]+)`")
+
+
+def _recipe_ids(text: str) -> list[str]:
+    """The framing IDs a style sanctions, in the order it lists them.
+
+    Bullets carry a reason after the ID for the person editing the
+    document; only the ID is data. An ID with no matching row is dropped
+    rather than surfaced — a picker option pointing at nothing is worse
+    than a shorter picker, and the count test catches the typo."""
+    known = {r["key"] for r in camera_recipes()}
+    out = []
+    for b in _bullets(text):
+        m = _RECIPE_ID.match(b.strip())
+        if m and m.group(1) in known and m.group(1) not in out:
+            out.append(m.group(1))
+    return out
+
+
 def styles(lib: str) -> list[dict]:
     """Every style the named document defines, in its own order.
 
@@ -225,6 +244,12 @@ def styles(lib: str) -> list[dict]:
             "avoid": _avoid(prompt),
             "prompt": prompt,
             "hedges": hedges(prompt),
+            # A3.4 — the framings this grammar sanctions, first one the
+            # default. The grammar constrains the FAMILY without
+            # determining the row: Subjective/Poetic on an action beat is
+            # `subjective-poetic-character` or `immersive-inside-the-action`
+            # opened up, never `epic-environmental-wide`.
+            "recipes": _recipe_ids(sub.get("Camera Recipes", "")),
             "value": value[:600],
         })
     return sorted(out, key=lambda s: s["n"])

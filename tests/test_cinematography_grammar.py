@@ -369,7 +369,10 @@ class APanelCanSetItsOwnGrammar(unittest.TestCase):
         self.assertIn('None — no grammar', JS)
         self.assertIn('data-f="${prefix}-grammar"', JS)
         # only where a blank exists — the defaults card would point at itself
-        self.assertIn("${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled) : \"\"}", JS)
+        i = JS.index("function cameraRow")
+        seg = " ".join(JS[i:i + 500].split())
+        self.assertIn("${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled)", seg)
+        self.assertIn(': ""}', seg)
 
     def test_the_picker_says_it_is_only_a_default(self):
         JS = self.JS

@@ -479,6 +479,20 @@ button.ghost:disabled, button.danger:disabled { background: none; color: #4a4d52
 .cam-field > span { color: var(--ink-faint); font-family: var(--mono);
   font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .cam-field select { min-width: 150px; }
+/* UNCANONIZED — 2026-08-25 — the framing field spans its row */
+/* Every other axis in this row is one word: LOW, WIDE, 24MM. A framing is
+   a name AND its optics — `Extreme emotional isolation — 85–135mm, f/1.4–2`
+   — and in a 150px cell it truncated to "Extreme emotion", hiding the only
+   part that matters. The whole reason this control exists is that the
+   decision must be readable BEFORE the spend, so it takes the width it
+   needs and the enum axes keep theirs. */
+/* `min-width: 0` on the ITEM, not only the select: a grid item's automatic
+   minimum size is its min-content width, and a select's min-content is its
+   longest OPTION — `Threatening / confrontational proximity — 24–32mm,
+   f/2.8–4`. Without this the track grows to fit an option nobody is
+   looking at and the row overflows the card it sits in. */
+.cam-field-wide { grid-column: 1 / -1; min-width: 0; }
+.cam-field-wide select { min-width: 0; width: 100%; }
 @media (max-width: 1000px) { .cam-row { grid-template-columns: repeat(3, minmax(150px, 1fr)); } }
 .cam-lens { display: flex; gap: 6px; align-items: center; }
 .cam-lens .cam-lens-mm { width: 70px; text-align: right; font-family: var(--mono); }
@@ -2028,6 +2042,13 @@ details.meta pre {
 .shot-tag-grammar { right: 10px; bottom: 34px; color: var(--ink-dim);
   font: inherit; border: 0; cursor: pointer; }
 .shot-tag-grammar:hover { color: var(--ink); }
+/* UNCANONIZED — 2026-08-25 — the framing a take rode */
+/* Same right-hand stack, one step down from the grammar, because it is
+   the same kind of fact and the two are read together. NOT a button: the
+   grammar has a document to open, a framing is one table row and the tag
+   already says the whole of it — focal length, aperture, focus. A control
+   that opens nothing new is a control that teaches people not to click. */
+.shot-tag-framing { right: 10px; bottom: 82px; color: var(--ink-dim); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;

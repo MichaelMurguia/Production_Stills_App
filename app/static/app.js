@@ -8594,7 +8594,11 @@ async function openSpecEditor(specId) {
   const [{ spec, locked, bible_catalog, bible_inferred }, subjects, allRefs,
          specCands] = await Promise.all([
     api(`/api/specs/${specId}`), api("/api/subjects"), api("/api/references"),
-    api(`/api/specs/${specId}/candidates`).catch(() => [])]);
+    api(`/api/specs/${specId}/candidates`).catch(() => []),
+    // The breakdown row carries the same grammar and framing selects the
+    // panel workbench does — A2's point is that the framing is chosen HERE,
+    // before the spend, not at compile time.
+    loadCinemaStyles(), loadCameraRecipes()]);
   // The slot map is the authority on WHY a slot is not ready. Without it
   // the frame can only say a take is missing — which is what it shows.
   const slotMap = await api(`/api/specs/${specId}/slot-map`).catch(() => null);
@@ -10092,6 +10096,31 @@ async function loadStyleLibrary(library, into) {
   return into;
 }
 
+/* A2 — the framings, from docs/CAMERA_RECIPES.md. Loaded once, like the
+   style libraries, and for the same reason: the document is the source of
+   truth and a list here would be the second one to keep in step.
+
+   Its own array rather than a fourth STYLE_DOCS entry, because it answers
+   a different question. The style libraries say what a look is FOR; this
+   says how the shot is taken — focal length, aperture, focus. */
+const CAMERA_RECIPES = [];
+async function loadCameraRecipes() {
+  if (CAMERA_RECIPES.length) return CAMERA_RECIPES;
+  try {
+    const d = await api("/api/camera-recipes");
+    CAMERA_RECIPES.push(...(d.recipes || []));
+  } catch (err) {
+    /* Same rule as the style libraries: never swallow it. An empty
+       picker and a failed fetch look identical, and this one decides the
+       lens a render is made at. */
+    toast(`Could not load the camera recipes: ${err.message} — they are `
+          + `read from docs/CAMERA_RECIPES.md.`, true);
+    CAMERA_RECIPES.failed = true;
+  }
+  return CAMERA_RECIPES;
+}
+const recipeByKey = k => CAMERA_RECIPES.find(r => r.key === String(k || ""));
+
 const loadCinemaStyles = () => loadStyleLibrary("cinematography", CINEMA_STYLES);
 const loadTextureStyles = () => loadStyleLibrary("texture", TEXTURE_STYLES);
 const loadRenderStyles = async () => {
@@ -10526,7 +10555,8 @@ function cameraSelect(prefix, axis, value, blank, disabled = false) {
 function cameraRow(prefix, obj, blank, disabled = false) {
   return `<div class="cam-row" data-f="${prefix}-row">${
     CAMERA_AXES.map(a => cameraSelect(prefix, a, obj?.[a.key], blank, disabled)).join("")
-  }${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled) : ""}</div>`;
+  }${blank ? grammarSelect(prefix, obj?.cinematography, blank, disabled)
+            + framingSelect(prefix, obj, blank, disabled) : ""}</div>`;
 }
 
 /* The cinematography grammar as a per-panel axis (user, 2026-08-22: "check
@@ -10556,6 +10586,42 @@ function grammarSelect(prefix, value, blank, disabled = false) {
       ${opts}
     </select></label>`;
 }
+/* The framing as a per-panel axis (A2).
+
+   The one control in this row written in optics rather than adjectives.
+   Everything else here is a word the model may interpret; a framing is
+   `85–135mm, f/1.4–2, very shallow`, which it cannot satisfy by doing
+   nothing — the failure that made this necessary.
+
+   Options are the framings the panel's grammar SANCTIONS, in the grammar's
+   own order, not all twenty. A grammar constrains the family without
+   determining the row, and offering an Epic environmental wide under
+   Subjective/Poetic would offer a contradiction as a menu item. With no
+   grammar chosen, nothing has been narrowed and all twenty are offered.
+
+   The blank option names the row it would inherit, with its settings,
+   rather than saying "default" — the whole point is that the decision is
+   readable BEFORE the render, not inferable from the picture after. */
+function framingSelect(prefix, panel, blank, disabled = false) {
+  if (!CAMERA_RECIPES.length) return "";
+  const v = String(panel?.camera_recipe || "");
+  const st = CINEMA_STYLES.find(x => x.key === String(panel?.cinematography || ""));
+  const ids = (String(panel?.cinematography || "").toUpperCase() === "NONE" ? [] : (st?.recipes || []));
+  const rows = ids.length ? ids.map(recipeByKey).filter(Boolean) : CAMERA_RECIPES;
+  const inherit = ids.length ? recipeByKey(ids[0]) : null;
+  const opts = rows.map(r => `<option value="${esc(r.key)}" ${v === r.key ? "selected" : ""}
+      >${esc(r.name)} — ${esc(r.focal)}, ${esc(r.aperture)}</option>`).join("");
+  return `<label class="cam-field cam-field-wide mini"><span>Framing</span>
+    <select data-f="${prefix}-framing" ${disabled ? "disabled" : ""}
+      title="The lens, aperture and focus this panel renders at. Read live from docs/CAMERA_RECIPES.md.">
+      <option value="">${esc(inherit
+        ? `${inherit.name} — ${inherit.focal}, ${inherit.aperture} (from the grammar)`
+        : blank)}</option>
+      <option value="NONE" ${v.toUpperCase() === "NONE" ? "selected" : ""}
+        >None — no framing</option>
+      ${opts}
+    </select></label>`;
+}
 // Read the five axes back off a rendered row. The lens resolves its Custom
 // number field to a focal length like "28MM"; a blank select stays "".
 function readCameraFields(prefix, root) {
@@ -10571,6 +10637,7 @@ function readCameraFields(prefix, root) {
   // touches a field only if the caller names it, so a surface without the
   // grammar select must not silently clear a panel's choice.
   if ($(`[data-f=${prefix}-grammar]`, root)) out.cinematography = val("grammar");
+  if ($(`[data-f=${prefix}-framing]`, root)) out.camera_recipe = val("framing");
   return out;
 }
 // Toggle the Custom focal-length input as the lens select changes, and run
@@ -10579,6 +10646,20 @@ function wireCameraRow(prefix, root, onChange) {
   const lensSel = $(`[data-f=${prefix}-lens]`, root);
   const mm = $(`[data-f=${prefix}-lens-mm]`, root);
   const toggle = () => { if (mm) mm.classList.toggle("hidden", !lensSel || lensSel.value !== "CUSTOM"); };
+  /* A grammar decides WHICH framings are on the menu, so changing it has
+     to redraw them — otherwise the select keeps offering the previous
+     grammar's rows and the inherited default names a row the new grammar
+     does not sanction. Redrawn in place; the panel is not re-fetched. */
+  const gram = $(`[data-f=${prefix}-grammar]`, root);
+  const fram = $(`[data-f=${prefix}-framing]`, root);
+  if (gram && fram) gram.addEventListener("change", () => {
+    const keep = fram.value;
+    const holder = document.createElement("div");
+    holder.innerHTML = framingSelect(prefix, { cinematography: gram.value,
+                                               camera_recipe: keep }, "");
+    const next = $(`[data-f=${prefix}-framing]`, holder);
+    if (next) fram.innerHTML = next.innerHTML;
+  });
   root.querySelectorAll(`[data-f^="${prefix}-"]`).forEach(el =>
     el.addEventListener("change", () => { toggle(); if (onChange) onChange(); }));
 }
@@ -10940,7 +11021,9 @@ async function renderBoardPanels(specId) {
   const host = $("#board-panels");
   // The per-panel grammar select names the grammars, so the library has to
   // be here before the card is drawn. Cached after the first call.
-  await loadCinemaStyles();
+  // The framing select needs both: the recipes for its options, and the
+  // grammars for which ones that panel's grammar sanctions.
+  await Promise.all([loadCinemaStyles(), loadCameraRecipes()]);
   // A REDRAW is not a LOAD (user 2026-08-16: "when I click on the frames in
   // the strip the page jumps to the top"). Staging a take, saving a camera,
   // withdrawing an approval and saving a prompt all call this — and blanking
@@ -11152,6 +11235,21 @@ async function renderBoardPanels(specId) {
                title="Read this cinematography — the words the render was given">CINEMATOGRAPHY — ${
               esc(String(staged.cinematography.name || "").toUpperCase())} · ${
               staged.cinematography.from === "panel" ? "THIS PANEL" : "PRODUCTION DEFAULT"} ↗</button>`
+          : ""}
+        <!-- A2.3 — and the framing, beside the grammar. Two decisions,
+             and the difference between a take under a grammar alone and
+             one under both is large: the grammar says "selective focus",
+             the framing says f/1.4–2. Until this the only place that
+             difference showed was the picture. -->
+        ${staged.camera_recipe?.rides
+          ? `<span class="shot-tag shot-tag-framing">FRAMING — ${
+              esc(String(staged.camera_recipe.name || "").toUpperCase())} · ${
+              esc(staged.camera_recipe.focal || "")}, ${
+              esc(staged.camera_recipe.aperture || "")}, ${
+              esc(String(staged.camera_recipe.focus || "").toUpperCase())}${
+              (staged.camera_recipe.mods || []).length
+                ? ` · +${staged.camera_recipe.mods.length} MODIFIER${
+                    staged.camera_recipe.mods.length === 1 ? "" : "S"}` : ""}</span>`
           : ""}
       </div>
       <!-- 17a (2026-08-08, superseding 14a's one-grammar row): one boxed

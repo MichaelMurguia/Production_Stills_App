@@ -982,5 +982,58 @@ class TheReadPanelIsLegibleAndHasOneAmber(unittest.TestCase):
         self.assertIn("UNCANONIZED — 2026-08-20", CSS[max(0, i - 1400):i])
 
 
+
+class TheFramingFieldAndTag(unittest.TestCase):
+    """A2 (2026-08-25). Two additions to surfaces that already existed:
+    a select in the camera row, and a tag in the take's badge stack.
+
+    Both had to be measured rather than eyeballed, and one caught a real
+    fault: at 150px the framing select truncated to `Extreme emotion`,
+    hiding the optics that are the entire reason the control exists.
+    """
+
+    def test_the_framing_field_spans_the_row_and_can_shrink(self):
+        """`min-width: 0` on the ITEM, not only the select. A grid item's
+        automatic minimum is its min-content width, and a select's
+        min-content is its longest OPTION — so without this the track
+        grows to fit `Threatening / confrontational proximity — 24–32mm,
+        f/2.8–4` and the row overflows the card."""
+        block = CSS.split(".cam-field-wide {")[1].split("}")[0]
+        self.assertIn("grid-column: 1 / -1", block)
+        self.assertIn("min-width: 0", block)
+        sel = CSS.split(".cam-field-wide select {")[1].split("}")[0]
+        self.assertIn("width: 100%", sel)
+
+    def test_the_framing_tag_joins_the_stack_it_belongs_to(self):
+        """Same right edge and the next step up from the grammar tag —
+        they are the same kind of fact and are read together."""
+        block = CSS.split(".shot-tag-framing {")[1].split("}")[0]
+        self.assertIn("right: 10px", block)
+        self.assertIn("bottom: 82px", block)
+        for other, bottom in (("prompt", "58px"), ("grammar", "34px")):
+            seg = CSS.split(f".shot-tag-{other} {{")[1].split("}")[0]
+            self.assertIn(f"bottom: {bottom}", seg)
+
+    def test_the_framing_tag_is_dim_ink_like_its_neighbours(self):
+        block = CSS.split(".shot-tag-framing {")[1].split("}")[0]
+        self.assertIn("var(--ink-dim)", block)
+
+    def test_it_is_not_amber_and_not_a_verdict(self):
+        """Amber marks the current stage, the one primary action, and
+        focus. What lens a take rode is none of those."""
+        block = CSS.split(".shot-tag-framing {")[1].split("}")[0]
+        self.assertNotIn("--accent", block)
+        self.assertNotIn("--bad", block)
+
+    def test_the_tag_is_not_a_button(self):
+        """The grammar tag opens a document; a framing is one table row
+        and the tag already states all of it. A control that opens
+        nothing new teaches people not to click."""
+        block = CSS.split(".shot-tag-framing {")[1].split("}")[0]
+        self.assertNotIn("cursor: pointer", block)
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        i = js.index("shot-tag-framing")
+        self.assertIn("<span", js[i - 40:i + 10])
+
 if __name__ == "__main__":
     unittest.main()

@@ -1067,7 +1067,16 @@ def _camera_block(panel: dict) -> list[str]:
     override the references' own framing. Emit order: shot, lens, orientation,
     angle, tilt (azimuth before elevation — one camera position, read left to
     right). Empty axes are omitted; an all-empty camera contributes nothing."""
-    defaults = store.camera_defaults()
+    from . import camera_recipes as _rec
+    framing = _rec.lines(panel)
+    # The production default is a value the app needed, not one anybody
+    # chose: `Eye level · 24mm · Level · Wide`. Against a framing row it is
+    # a straight contradiction — 24mm deep-focus wide under a line asking
+    # for 50–100mm at f/1.4–2.8 — and it is the contradiction that
+    # defeated the cinematography axis for two days. Where a framing
+    # resolves, only axes THIS panel set survive; the fallback yields.
+    # With no framing, nothing changes and renders stay byte-identical.
+    defaults = {} if framing else store.camera_defaults()
 
     def resolve(field):
         # An unrecognized persisted value (a pre-enum autofill draft, a
@@ -1084,6 +1093,10 @@ def _camera_block(panel: dict) -> list[str]:
                 return v
         return ""
 
+    # The framing leads, because it is the only part of this block written
+    # in optics rather than adjectives. The panel's own axes follow and
+    # win where they disagree: that is the director overruling the recipe
+    # on one shot, which is the point of keeping them.
     directives = [d for d in (
         SCALE_PHRASING.get(resolve("scale")),
         _lens_phrasing(resolve("camera_lens")),
@@ -1091,13 +1104,16 @@ def _camera_block(panel: dict) -> list[str]:
         CAMERA_ANGLE_PHRASING.get(resolve("camera_angle")),
         CAMERA_TILT_PHRASING.get(resolve("camera_tilt")),
     ) if d]
-    if not directives:
+    if not directives and not framing:
         return []
-    return (["CAMERA — the shot's framing. Follow these exactly; where an "
-             "attached reference shows a different angle, lens, or framing, follow "
-             "THIS, not the reference's composition. References anchor identity, "
-             "materials, colour and medium, never the camera."]
-            + [f"- {d}" for d in directives] + [""])
+    head = ("CAMERA — the shot's framing. Follow these exactly; where an "
+            "attached reference shows a different angle, lens, or framing, follow "
+            "THIS, not the reference's composition. References anchor identity, "
+            "materials, colour and medium, never the camera.")
+    if framing and directives:
+        head += (" Where the FRAMING line and a directive below it disagree, "
+                 "the directive wins — it was set on this panel deliberately.")
+    return [head] + framing + [f"- {d}" for d in directives] + [""]
 
 
 # The naming primitives live in app/validation.py — one stoplist, one
@@ -2785,6 +2801,7 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         width, height = im.size
 
     from . import cinematography as _cine
+    from .camera_recipes import stamp as _rec_stamp
     record = {
         "candidate_id": cand_id,
         "specification_id": spec_id,
@@ -2793,6 +2810,11 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # whole point of a reversible switch is being able to tell the
         # takes apart afterwards (user 2026-08-16).
         "cinematography": _cine.stamp(panel),
+        # A2.3 — and the framing it rode, beside it. Two decisions, two
+        # records: a take under a grammar with no framing renders very
+        # differently from one under both, and until this the difference
+        # was only visible in the picture.
+        "camera_recipe": _rec_stamp(panel),
         "panel_id": panel_id,
         "status": "CANDIDATE",
         "provider": provider,

@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2207 tests** across 116 files.
+**2237 tests** across 117 files.
 
 
-## Product app — 1986 tests in 99 files
+## Product app — 2016 tests in 100 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -58,7 +58,7 @@ temp home and external services are faked.
 | `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
-| `test_design_tokens.py` | 97 | Mechanical token assertions (design-verify step 4, standing suite). |
+| `test_design_tokens.py` | 102 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |
 | `test_every_route_is_reachable.py` | 6 | Every route a user needs must be reachable from the UI. |
@@ -85,6 +85,7 @@ temp home and external services are faked.
 | `test_p1_lifecycle.py` | 13 | P1 coverage from docs/TEST_MATRIX.md: the sheet lock/hash contract, the candidate lifecycle, and the assemble endpoint — the behaviors that guard cano |
 | `test_palette_distinctness.py` | 25 | Four design languages must not share one palette. |
 | `test_palette_order.py` | 24 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
+| `test_panel_framing.py` | 25 | A2 — the framing a panel renders at, chosen before the spend. |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
 | `test_prompt_composition.py` | 10 | R1.5 — what a compiled prompt is actually made of. |

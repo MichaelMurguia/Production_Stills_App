@@ -1548,7 +1548,7 @@ def save_camera_defaults(fields: dict) -> dict:
 # same place, between takes, under the same contract: journaled, lock
 # re-stamped, refused once a take is approved (user, 2026-08-22 — "check
 # that we can actually set it when rendering a panel, including None").
-PANEL_GRAMMAR_FIELDS = ("cinematography",)
+PANEL_GRAMMAR_FIELDS = ("cinematography", "camera_recipe", "camera_recipe_mods")
 
 
 def _clean_panel_grammar(fields: dict) -> dict:
@@ -1574,6 +1574,48 @@ def _clean_panel_grammar(fields: dict) -> dict:
     return out
 
 
+def _clean_panel_recipe(fields: dict) -> dict:
+    """Validate a panel's camera recipe and its modifier deltas (A2).
+
+    Same three states as the grammar — absent inherits the grammar's
+    default row, NONE refuses a framing for this panel, an ID names one —
+    and the same refusal of unknown values rather than a silent drop.
+
+    Modifiers are validated per axis against the document, because a
+    delta naming a setting the document no longer defines would ride a
+    prompt describing a camera move nobody can look up."""
+    from . import camera_recipes as recipes
+    out = {}
+    if "camera_recipe" in fields:
+        v = str(fields.get("camera_recipe") or "").strip()
+        if not v:
+            out["camera_recipe"] = ""
+        elif v.upper() == recipes.PANEL_NONE:
+            out["camera_recipe"] = recipes.PANEL_NONE
+        elif recipes.by_key(v) is None:
+            raise ValueError(f"unknown camera recipe: {v}")
+        else:
+            out["camera_recipe"] = v
+    if "camera_recipe_mods" in fields:
+        raw = fields.get("camera_recipe_mods") or {}
+        if not isinstance(raw, dict):
+            raise ValueError("camera_recipe_mods must be an object")
+        axes = {a["key"]: {s["setting"] for s in a["settings"]}
+                for a in recipes.axes()}
+        clean = {}
+        for k, v in raw.items():
+            k, v = str(k).strip(), str(v or "").strip()
+            if not v:
+                continue
+            if k not in axes:
+                raise ValueError(f"unknown modifier axis: {k}")
+            if v not in axes[k]:
+                raise ValueError(f"unknown setting for {k}: {v}")
+            clean[k] = v
+        out["camera_recipe_mods"] = clean
+    return out
+
+
 def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     """Set a panel's camera (angle/orientation/tilt/lens/scale) from the
     workbench between takes, without unlocking. Same controlled-edit contract as
@@ -1582,6 +1624,7 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     with an empty value clears it (back to the bible default)."""
     clean = _clean_camera_fields(fields)  # validates before any mutation
     clean.update(_clean_panel_grammar(fields))
+    clean.update(_clean_panel_recipe(fields))
     spec = get_spec(spec_id)
     if spec is None:
         raise KeyError(spec_id)
@@ -1613,8 +1656,12 @@ def amend_panel_camera(spec_id: str, panel_id: str, fields: dict) -> dict:
     # so nothing that read the response could confirm what it had just set
     # (2026-08-24). Same shape of omission as every other "success reported
     # without confirmation" this month.
+    # Modifier deltas are a dict; the rest are strings. Defaulting a dict
+    # field to "" would hand the client a shape it has to test for.
+    blank = {"camera_recipe_mods": {}}
     return {"spec_id": spec_id, "panel_id": panel_id,
-            **{f: panel.get(f, "") for f in (*CAMERA_FIELDS, *PANEL_GRAMMAR_FIELDS)}}
+            **{f: panel.get(f, blank.get(f, ""))
+               for f in (*CAMERA_FIELDS, *PANEL_GRAMMAR_FIELDS)}}
 
 
 def amend_panel_content(spec_id: str, panel_id: str,

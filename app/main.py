@@ -2414,6 +2414,20 @@ def api_style_library(library: str) -> dict:
     return {"library": library, "styles": style_docs.styles(library)}
 
 
+@app.get("/api/camera-recipes")
+def api_camera_recipes() -> dict:
+    """The framings and modifier axes, read from `docs/CAMERA_RECIPES.md`.
+
+    Deliberately NOT a fourth entry on /api/styles: that route answers
+    "what is this style FOR" and returns essays keyed by anchor. This
+    answers "how is the shot taken" and returns a table. One route per
+    question rather than one route with a shape that depends on its
+    argument."""
+    from . import style_docs
+    return {"recipes": style_docs.camera_recipes(),
+            "axes": style_docs.modifier_axes()}
+
+
 @app.get("/api/cinematography/setting")
 def api_get_cine_setting() -> dict:
     from . import cinematography

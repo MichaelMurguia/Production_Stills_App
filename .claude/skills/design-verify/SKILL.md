@@ -96,9 +96,26 @@ async def main():
             r = await cmd("Runtime.evaluate", expression=expr,
                           awaitPromise=True, returnByValue=True)
             return r.get("result", {}).get("value")
+        # --window-size does NOT set the layout viewport under headless
+        # CDP. Without this the page lays out at 800px, every media query
+        # below 1000 fires, and you verify a narrower build than anyone
+        # will see — silently, and the capture looks plausible (2026-08-25:
+        # a camera row measured as 3 collapsed columns that are 7 at the
+        # real width).
+        await cmd("Emulation.setDeviceMetricsOverride", width=1420, height=1200,
+                  deviceScaleFactor=1, mobile=False)
         await cmd("Page.navigate", url="http://127.0.0.1:87xx/")
         await asyncio.sleep(4)          # let the SPA finish its fetches
 asyncio.run(main())
+```
+
+**A clean install opens its first-run tour over everything.** Dismiss it
+before measuring or the clip captures the modal:
+
+```python
+await js("""[...document.querySelectorAll('button')]
+  .filter(x => /^(×|✕|Close|Skip|Done)$/i.test(x.textContent.trim()))
+  .forEach(x => x.click())""")
 ```
 
 `max_size` matters — a full-page screenshot exceeds the default frame cap

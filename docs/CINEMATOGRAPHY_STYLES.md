@@ -43,6 +43,19 @@ Every camera position, move, and cut should reveal story information or change o
 - Cinematic but motivated lighting
 - Favor evolving compositions over arbitrary coverage
 
+
+## Camera Recipes
+
+Camera as storyteller means the frame stays legible: human-scale distances, balanced character-and-environment, nothing the audience must decode. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `classic-cinematic-medium-wide` — the default register — dimensional without distortion
+- `epic-environmental-wide` — when the world is the story beat
+- `character-focused-medium-shot` — when one person carries the moment
+- `three-character-dramatic-staging` — when the relationships are the subject
+- `over-the-shoulder-dialogue` — exchanges
+- `low-angle-heroic` — when a subject must gain stature
+- `fast-readable-action` — action that must stay understandable
 ## Image-Model Prompt
 
 ```text
@@ -113,6 +126,17 @@ Stage relationships in depth before solving them with editing.
 - Characters differentiated through scale and position
 - Longer compositions capable of sustaining blocking
 
+
+## Camera Recipes
+
+The whole grammar is about information in every plane, so the framings all deepen the frame rather than flattening it. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `deep-space-mise-en-scene` — the grammar's own row — distinct FG/MG/BG, each carrying story
+- `character-inside-a-large-environment` — when the environment outweighs the person
+- `epic-environmental-wide` — establishing the world's scale
+- `three-character-dramatic-staging` — people at different depths, all readable
+- `claustrophobic-interior` — the same depth logic inside a small volume
 ## Image-Model Prompt
 
 ```text
@@ -181,6 +205,18 @@ Light what matters emotionally; allow everything else to disappear.
 - Controlled highlights
 - Intentional withholding of visual information
 
+
+## Camera Recipes
+
+Light is the psychology, and these framings put a subject where light can do something to them — pressed, isolated, or looming. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `claustrophobic-interior` — the default — walls and objects press in and take the light
+- `low-angle-heroic` — silhouette and monumentality
+- `intimate-close-up` — the face as the lit surface
+- `extreme-emotional-isolation` — when the environment should dissolve entirely
+- `threatening-confrontational-proximity` — presence made aggressive
+- `flat-graphic-composition` — when light should read as shape rather than volume
 ## Image-Model Prompt
 
 ```text
@@ -247,6 +283,17 @@ Find the beautiful image already present in the world before adding anything to 
 - Imperfect but believable illumination
 - Observational camera placement
 
+
+## Camera Recipes
+
+Discovered light asks the camera to witness rather than demonstrate, so the framings are the restrained ones — normal distances, unexceptional angles. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `natural-human-observation` — the default — restrained perspective, image feels witnessed
+- `distant-observational` — when the camera should feel unable to intervene
+- `character-focused-medium-shot` — one person, setting still identifiable
+- `character-inside-a-large-environment` — a person inside a place that continues without them
+- `over-the-shoulder-dialogue` — exchanges without staging them
 ## Image-Model Prompt
 
 ```text
@@ -314,6 +361,17 @@ Establish a visual rule and make everything in the frame obey it.
 - Controlled palette
 - Camera position determined by composition
 
+
+## Camera Recipes
+
+The frame is a system, so the framings are the ones that flatten space into deliberate graphic relationships. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `flat-graphic-composition` — the default — subjects and architecture become layers
+- `epic-environmental-wide` — geometry at the scale of the world
+- `distant-observational` — detachment as a formal choice
+- `elegant-portrait` — controlled separation, clean perspective
+- `deep-space-mise-en-scene` — when the system is depth rather than plane
 ## Image-Model Prompt
 
 ```text
@@ -382,6 +440,17 @@ Place the audience physically inside the event rather than safely outside observ
 - Physical lens proximity
 - Camera movement motivated by following, avoiding, searching, or discovering
 
+
+## Camera Recipes
+
+The camera is inside the event, which means physically close and wide — every row here has the camera in the space rather than observing it. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `immersive-inside-the-action` — the default — foreground interaction, camera present
+- `fast-readable-action` — when the event must still parse
+- `claustrophobic-interior` — inside a constrained volume
+- `threatening-confrontational-proximity` — when proximity is the threat
+- `low-angle-heroic` — the body from below, foreground expanded
 ## Image-Model Prompt
 
 ```text
@@ -446,6 +515,18 @@ Assign dramatic meaning to color, then control the frame around that relationshi
 - Atmosphere carrying light
 - Costume and environment deliberately separated or harmonized
 
+
+## Camera Recipes
+
+This grammar constrains COLOUR, not framing, and its list is deliberately wide for that reason. Where a shot needs colour to read as a block, the graphic and portrait rows serve it best; otherwise choose on the shot. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `classic-cinematic-medium-wide` — the default — colour carries the drama, the framing stays open
+- `flat-graphic-composition` — when colour should read as flat, adjacent areas
+- `elegant-portrait` — a face as the colour event
+- `epic-environmental-wide` — colour at the scale of a place
+- `intimate-close-up` — colour on skin and near surfaces
+- `extreme-emotional-isolation` — when everything but the colour of one face should go
 ## Image-Model Prompt
 
 ```text
@@ -514,6 +595,17 @@ Allow perception and emotion to distort objective photographic reality.
 - Environmental abstraction
 - Camera distance driven by emotional state
 
+
+## Camera Recipes
+
+Camera as consciousness is the grammar that suffered most from being written in adjectives: `selective focus`, `negative space` and `unusual placement` are all satisfied by an everything-sharp frame. These rows are not. Framings from `docs/CAMERA_RECIPES.md`; the first is the
+default when a panel chooses nothing.
+
+- `subjective-poetic-character` — the grammar's own row — 50–100mm at f/1.4–2.8, selective
+- `extreme-emotional-isolation` — 85–135mm at f/1.4–2; the environment dissolves
+- `intimate-close-up` — attention held on one face
+- `immersive-inside-the-action` — perception from inside the moment
+- `claustrophobic-interior` — perception pressed by the space
 ## Image-Model Prompt
 
 ```text
@@ -579,3 +671,16 @@ These grammars can later be combined as weighted cinematography systems—for ex
 - 10% Expressionist / Noir
 
 The weighting should influence mechanics such as framing, lens behavior, lighting, depth, movement, and color rather than averaging the aesthetics of the reference films.
+
+---
+
+## Changelog
+
+- **2026-08-25** — Each style gained a `## Camera Recipes` list (A1/A3),
+  naming the framings from `docs/CAMERA_RECIPES.md` that grammar sanctions,
+  first one the default. A grammar written in adjectives can be satisfied
+  by doing nothing — `selective focus` is true of a sharp frame if the model
+  decides it is. `50–100mm at f/1.4–2.8` is not.
+- **2026-08-25** — C7: the hedged wording in Chromatic / Operatic rewritten
+  (`use saturation selectively` → `push saturation hard where colour carries
+  meaning, and let the rest fall away`).
