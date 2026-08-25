@@ -1256,6 +1256,11 @@ def api_get_settings() -> dict:
     engines = generate.engine_credentials()
     customs = [{"id": e["id"], "label": e.get("label") or e["id"],
                 "model": e["model"], "base_url": e.get("base_url", ""),
+                # C9 — stated so the engine card can show it and the
+                # prompt preview can say how much room is left. A gate has
+                # to be readable BEFORE it is hit, not surfaced as an
+                # error after the user acts (product model).
+                "prompt_limit": e.get("prompt_limit") or 0,
                 "key_hint": f"…{e['api_key'][-4:]}"}
                for e in generate.custom_engines()]
     akey = s.get("anthropic_api_key", "")
@@ -1742,8 +1747,17 @@ async def api_add_engine(body: dict) -> dict:
     engines = s.get("custom_engines", [])
     if any(e.get("id") == eid for e in engines):
         raise HTTPException(409, f"an engine named '{eid}' already exists — remove it first")
+    # C9 — the owner of a user-supplied endpoint can state what it
+    # accepts, so an over-long prompt is refused before the spend instead
+    # of arriving as an API error mid-render. Absent or 0 means nobody has
+    # said, and nothing is checked.
+    try:
+        limit = max(0, int(body.get("prompt_limit") or 0))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "prompt_limit must be a whole number of characters")
     engines.append({"id": eid, "label": label, "base_url": base_url,
-                    "model": model, "api_key": api_key})
+                    "model": model, "api_key": api_key,
+                    "prompt_limit": limit})
     s["custom_engines"] = engines
     generate.save_settings(s)
     return api_get_settings()
@@ -2546,8 +2560,10 @@ def api_list_samples() -> list[dict]:
 
 
 @app.get("/api/wizard/samples/{provider}/image")
-def api_sample_image(provider: str):
-    p = generate.sample_image_path(provider)
+def api_sample_image(provider: str, run: str = "a"):
+    """C6 — a probe renders twice, so it is served twice. `run=b` is the
+    second of the pair; absent on samples made before the rule."""
+    p = generate.sample_image_path(provider, run)
     if p is None:
         raise HTTPException(404, f"no sample for {provider}")
     return FileResponse(p)

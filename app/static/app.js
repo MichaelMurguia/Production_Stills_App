@@ -923,6 +923,12 @@ async function addCustomEngineModal() {
       { name: "base_url", label: "Base URL", placeholder: "https://api.example.com/v1" },
       { name: "model", label: "Model", placeholder: "the model id this endpoint expects" },
       { name: "api_key", label: "API key" },
+      // C9 — an endpoint you host is the only one whose prompt limit
+      // anyone here knows. Stated, it becomes a gate readable before a
+      // render; unstated, nothing is checked, which is the honest
+      // default because nobody has said.
+      { name: "prompt_limit", label: "Prompt limit (characters)",
+        placeholder: "leave blank if it has none, or you do not know" },
     ],
     confirmLabel: "Add engine",
   });
@@ -3648,6 +3654,10 @@ async function renderSettings(openTab = "") {
 
   // User-added engines render inside the §02 credential list (C2).
   const customs = settings.custom_engines || [];
+  // C9 — one place the workbench can read an engine's stated limit from,
+  // filled wherever settings are already fetched rather than by a second
+  // request from the panel.
+  for (const e of customs) ENGINE_PROMPT_LIMITS[`custom:${e.id}`] = e.prompt_limit || 0;
 
   // C1 (CONNECTORS_UI_PLAN) — §01, the two AI roles. The recommendation
   // is a bordered ink-dim Courier chip plus one sentence of reason —
@@ -4099,7 +4109,10 @@ async function renderSettings(openTab = "") {
     box.innerHTML = `
       <div class="cred-form">
         <p class="cred-form-kicker">${esc((e.label || e.id).toUpperCase())} — YOUR ENDPOINT</p>
-        <p class="mini">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}${t ? ` · LAST TEST ${t.ok ? "PASS" : "FAIL"} ${esc(stamp(t.at))}` : ""}</p>
+        <p class="mini">${esc(e.model)} · ${esc(e.base_url)} · key ${esc(e.key_hint)}${
+          e.prompt_limit ? ` · PROMPTS UP TO ${e.prompt_limit.toLocaleString()} CHARACTERS`
+                         : " · NO STATED PROMPT LIMIT"}${
+          t ? ` · LAST TEST ${t.ok ? "PASS" : "FAIL"} ${esc(stamp(t.at))}` : ""}</p>
         <div class="row" style="margin-top:8px">
           <button class="ghost" data-f="t">Test</button>
           <button class="danger" data-f="d">Remove</button>
@@ -5014,16 +5027,37 @@ async function renderWizard() {
           ${isPref ? '<span class="badge APPROVED">DEFAULT</span>' : ""}
         </div>
         ${smp.subject ? `<p class="mini" style="margin:2px 0 6px" title="The screenplay location this sample rendered.">${esc(smp.subject)}</p>` : ""}
-        ${smp.has_image
-          ? `<img class="wiz-sample" src="/api/wizard/samples/${esc(smp.provider)}/image?t=${Date.now()}" alt="${esc(smp.provider)} sample">`
+        ${/* C6 — a probe renders TWICE and both are shown. Run-to-run
+              variance is large enough that one image proves nothing, and
+              this card exists to be compared: a single take invites a
+              conclusion the sample cannot support. Twenty renders were
+              read as evidence about a cinematography grammar over two
+              days without anyone ever establishing what two identical
+              runs look like. Samples made before this rule have one
+              image and say so. */
+          smp.has_image
+          ? `<div class="wiz-pair">
+               <img class="wiz-sample" src="/api/wizard/samples/${esc(smp.provider)}/image?t=${Date.now()}" alt="${esc(smp.provider)} sample, first run">
+               ${smp.has_image_b
+                 ? `<img class="wiz-sample" src="/api/wizard/samples/${esc(smp.provider)}/image?run=b&t=${Date.now()}" alt="${esc(smp.provider)} sample, second run">`
+                 : ""}
+             </div>
+             <p class="mini wiz-pair-note">${smp.has_image_b
+               ? "Two runs of the same prompt. What differs between them is this engine's variance, not a decision it made."
+               : "One run — the second did not complete, so nothing here shows this engine's variance."}</p>`
           : '<p class="mini">no sample yet</p>'}
         <div class="row" style="margin-top:auto">
           ${smp.has_image && !isPref ? `<button class="primary" data-f="pick">Make default</button>` : ""}
-          <button class="ghost" data-f="regen" title="Regenerate this engine's sample">${smp.has_image ? "Regenerate" : "Generate"}</button>
+          <button class="ghost" data-f="regen" title="Render this engine's sample twice from the same prompt — one take cannot show run-to-run variance, and this card exists to be compared">${smp.has_image ? "Regenerate" : "Generate"}</button>
         </div>`;
-      const img = $("img.wiz-sample", col);
-      if (img) img.onclick = () => openLightbox(
-        [{ src: img.src, caption: `${smp.label} — ${smp.subject || "style sample"}` }], 0);
+      // Both runs open in one lightbox, in order, so the comparison
+      // survives the click that magnifies it.
+      const imgs = $$("img.wiz-sample", col);
+      const shots = imgs.map((el, i) => ({
+        src: el.src,
+        caption: `${smp.label} — ${smp.subject || "style sample"} · RUN ${i + 1} OF ${imgs.length}`,
+      }));
+      imgs.forEach((el, i) => { el.onclick = () => openLightbox(shots, i); });
       const pick = $("[data-f=pick]", col);
       if (pick) pick.onclick = async () => {
         try {
@@ -5036,7 +5070,8 @@ async function renderWizard() {
         e.target.disabled = true;
         const subject = sampleSubject();
         const busy = startBusy($("#wiz-samples-busy"),
-          `Rendering ${subject || "the fallback test scene"} with ${smp.label}…`, "~30–90 s");
+          `Rendering ${subject || "the fallback test scene"} with ${smp.label} — two runs…`,
+          "~60–180 s · two takes of the same prompt, so the variance is visible");
         try {
           await api(`/api/wizard/samples/${smp.provider}`, { method: "POST", json: { subject } });
           renderSamples();
@@ -10731,6 +10766,26 @@ function framingSelect(prefix, panel, blank, disabled = false) {
    attention.
 
    Withholding it is the fix. SAYING so is what keeps the fix honest. */
+/* What an engine has been declared to accept, or 0 (C9).
+
+   Only a custom engine has one. The built-ins have never refused a
+   prompt — 132 takes from 289 to 21,179 characters all succeeded — and
+   inventing a limit for them would be inventing the constraint that
+   measurement disproved.
+
+   Filled by whichever screen last read settings; empty until then, which
+   states nothing rather than stating a wrong number. */
+const ENGINE_PROMPT_LIMITS = {};
+function promptCap(provider) {
+  return ENGINE_PROMPT_LIMITS[String(provider || "")] || 0;
+}
+// The engine step's own select, found from any node inside the panel
+// card. Read rather than captured, because the user can change it after
+// the prompt report is drawn and the number has to follow.
+function chosenEngine(node) {
+  return $("[data-f=model]", node?.closest?.(".panel, .stage-card") || document)?.value || "";
+}
+
 function bibleSelectionHtml(sel) {
   if (!sel || (!sel.withheld?.length && !sel.unsure)) return "";
   if (sel.unsure) {
@@ -12726,7 +12781,14 @@ async function renderBoardPanels(specId) {
           const cm = r.composition;
           const rows = [...cm.blocks].sort((a, b) => b.chars - a.chars).slice(0, 8);
           comp.innerHTML =
-            `<div class="pc-head mono">MADE OF · ${cm.total.toLocaleString()} CHARACTERS</div>`
+            /* C9 — and how that sits against what the engine has been
+               declared to take, where anyone has declared it. A gate must
+               be readable BEFORE it is hit; a refusal after Generate is
+               the shape this app tries never to have. */
+            `<div class="pc-head mono">MADE OF · ${cm.total.toLocaleString()} CHARACTERS${
+              promptCap(chosenEngine(report)) ? ` · OF ${
+                promptCap(chosenEngine(report)).toLocaleString()} THIS ENGINE ACCEPTS` : ""
+            }</div>`
             + rows.map(b => `<div class="pc-row">
                  <span class="pc-bar" style="width:${Math.max(2, Math.round(b.share * 100))}%"></span>
                  <span class="pc-pct mono">${(b.share * 100).toFixed(1)}%</span>

@@ -2041,6 +2041,13 @@ details.meta pre {
    call. The two headings are Courier (they are the document's own
    section names), the quoted rules are the document's prose, and the
    consequence is faint prose under them. */
+/* UNCANONIZED — 2026-08-25 — the two-run style probe */
+/* Side by side, equal size, no first-and-second hierarchy: neither run is
+   the answer, and making one larger would make it the answer. They share
+   a row so the eye compares rather than remembers. */
+.wiz-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.wiz-pair:has(> :only-child) { grid-template-columns: 1fr; }
+.wiz-pair-note { margin: 4px 0 0; color: var(--ink-faint); }
 .bible-check-row { margin-top: 10px; }
 .bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
 .bc-none { color: var(--ink-faint); max-width: 74ch; margin: 10px 0 0; }

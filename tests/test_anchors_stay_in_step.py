@@ -383,7 +383,11 @@ class TheProbeRefusesAContradiction(unittest.TestCase):
     def test_the_guard_is_on_the_path_that_spends_money(self):
         src = (ROOT / "app" / "generate.py").read_text(encoding="utf-8")
         i = src.index("def sample_probe(")
-        seg = src[i:i + 4000]
+        # Bounded by the next real landmark, not by a character count: the
+        # function grew when the probe started rendering twice (C6,
+        # 2026-08-25) and a fixed window silently stopped covering the
+        # thing it was asserting about.
+        seg = src[i:src.index("def list_samples(", i)]
         self.assertIn("bible.anchor_conflicts()", seg)
         # before the render is dispatched, not after
         self.assertLess(seg.index("anchor_conflicts"), seg.index("_samples_dir"))

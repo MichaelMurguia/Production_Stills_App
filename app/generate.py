@@ -37,6 +37,51 @@ PROVIDERS = {
 }
 
 
+# C9 — how long a prompt this engine will accept (2026-08-25).
+#
+# Nothing checked this. No limit has ever been hit — 21,179 characters
+# went through gpt-image-2, and 132 takes from 289 to 21,179 all
+# succeeded, which is the measurement that ended the "the prompt is too
+# long" theory. The built-in engines therefore state NO limit, because
+# inventing one would be inventing the very constraint that was just
+# disproved.
+#
+# A custom engine is different: it is a user-supplied endpoint with
+# unknown limits, and some image APIs do impose one. A refusal there
+# arrives as an API error from the middle of a paid render, which is the
+# one place this app tries never to fail. So the OWNER of that engine can
+# state its limit, and it becomes a gate readable before the spend rather
+# than an error after it.
+#
+# 0 means no stated limit, and that is not the same as "unlimited" — it
+# is "nobody has said", which is why nothing here guesses.
+def prompt_limit(provider: str) -> int:
+    """Characters this engine has been declared to accept, or 0."""
+    p = all_providers().get(provider) or {}
+    try:
+        return max(0, int(p.get("prompt_limit") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _require_prompt_fits(provider: str, prompt: str) -> None:
+    """Refuse before the spend, in the same voice as every other gate.
+
+    Stated with both numbers and with what to do, because a limit that
+    only says "too long" leaves the user guessing at how much to cut —
+    and the honest answer is usually to cut nothing and raise the limit."""
+    cap = prompt_limit(provider)
+    n = len(str(prompt or ""))
+    if not cap or n <= cap:
+        return
+    label = (all_providers().get(provider) or {}).get("label", provider)
+    raise GenerationError(
+        f"This prompt is {n:,} characters and {label} is set to accept "
+        f"{cap:,}. Nothing has been spent. Either shorten the prompt on this "
+        f"panel, or raise the engine's stated limit under Settings → Engines "
+        f"& keys if it actually accepts more.")
+
+
 def sends_plates(provider: str) -> bool:
     """Does this engine put the reference IMAGES in front of the image
     model? Connector models declare it as `refs`; a custom engine speaks the
@@ -85,6 +130,9 @@ def all_providers() -> dict:
     for e in custom_engines():
         providers[f"custom:{e['id']}"] = {
             "model": e["model"], "label": e.get("label") or e["id"],
+            # C9 — what this endpoint's owner says it accepts, if they
+            # said. Absent means nobody has, and nothing is checked.
+            "prompt_limit": e.get("prompt_limit") or 0,
             "custom": True}
     try:
         from . import connectors as cx
@@ -2359,20 +2407,47 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
                   "subject. A photographic result is a failed render."]
     parts += ["", "Render a single full-bleed image. No text, labels, or borders."]
     prompt = "\n".join(parts)
+    # C6 — TWO renders, not one.
+    #
+    # Run-to-run variance is large enough that one take proves nothing.
+    # This probe exists to be compared — against another engine, or
+    # against the same engine after an anchor changed — and a single image
+    # invites a conclusion the sample cannot support. Two from the same
+    # prompt, side by side, show the spread before anyone reads a
+    # difference into it.
+    #
+    # Learned expensively: twenty renders were read as evidence about a
+    # cinematography grammar over two days, and the actual variance
+    # between identical runs was never established, because nothing ever
+    # rendered the same thing twice.
+    def _one(out: Path) -> str:
+        if provider == "mock":
+            return mockflow.render(prompt, ref_paths, "1K", "16:9", out)
+        if provider == "openai-chat":
+            return _render_openai_chat(prompt, ref_paths, "1K", "16:9", out,
+                                       verbatim=True)
+        if provider == "openai":
+            return _render_openai(prompt, ref_paths, "1K", "16:9", out)
+        return _render_gemini(prompt, ref_paths, "1K", "16:9", out)
+
     out = _samples_dir() / f"{provider}.png"
-    if provider == "mock":
-        notes = mockflow.render(prompt, ref_paths, "1K", "16:9", out)
-    elif provider == "openai-chat":
-        notes = _render_openai_chat(prompt, ref_paths, "1K", "16:9", out, verbatim=True)
-    elif provider == "openai":
-        notes = _render_openai(prompt, ref_paths, "1K", "16:9", out)
-    else:
-        notes = _render_gemini(prompt, ref_paths, "1K", "16:9", out)
+    out_b = _samples_dir() / f"{provider}-b.png"
+    notes = _one(out)
+    # The second is best-effort. Half a comparison is still worth more
+    # than none, and a probe that fails entirely because its second run
+    # timed out would have thrown away a render already paid for.
+    try:
+        notes_b = _one(out_b)
+        pair = True
+    except Exception as e:  # noqa: BLE001 — reported, never raised
+        out_b.unlink(missing_ok=True)
+        notes_b, pair = f"second run failed: {e}"[:300], False
     meta = {"provider": provider, "model": all_providers()[provider]["model"],
             "label": all_providers()[provider]["label"],
             "subject": subject or None,
             "style_anchors": [r["id"] for r in style_refs],
-            "notes": notes[:500], "created_at": store.utcnow()}
+            "notes": notes[:500], "notes_b": notes_b[:300], "pair": pair,
+            "created_at": store.utcnow()}
     store._atomic_write_json(_samples_dir() / f"{provider}.json", meta)
     return meta
 
@@ -2386,12 +2461,16 @@ def list_samples() -> list[dict]:
                 if meta_p.exists() else {"provider": provider, "label": cfg["label"],
                                          "model": cfg["model"]})
         meta["has_image"] = img_p.exists()
+        # C6 — whether the second run of the pair is there. A sample from
+        # before this existed has one image and says so, rather than
+        # showing a gap where a picture should be.
+        meta["has_image_b"] = (_samples_dir() / f"{provider}-b.png").exists()
         out.append(meta)
     return out
 
 
-def sample_image_path(provider: str) -> Path | None:
-    p = _samples_dir() / f"{provider}.png"
+def sample_image_path(provider: str, run: str = "a") -> Path | None:
+    p = _samples_dir() / f"{provider}{'-b' if run == 'b' else ''}.png"
     return p if p.exists() else None
 
 
@@ -2811,6 +2890,10 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     # Refuse before the spend, not after it: a full volume used to
     # surface as a 502 from the middle of a paid render (2026-08-07).
     _require_room("this take")
+    # C9 — and the same for a prompt the engine has been declared unable
+    # to take. Built-in engines state no limit; this fires only where an
+    # owner has said what their own endpoint accepts.
+    _require_prompt_fits(provider, override or prompt)
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
     if provider == "mock":
