@@ -176,6 +176,116 @@ def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
     return out
 
 
+# R2 — does the Bible agree with itself? (2026-08-25)
+#
+# Selection is repair work. A Bible that does not contradict itself needs
+# less of it.
+#
+# At draft time the whole document is wanted — that is the point of it.
+# But nothing has ever read it back to ask whether its sections agree, and
+# the production this was built from carried, in three different places:
+#
+#   Lighting Language     "use wide or moderate-wide lenses with deep focus"
+#   Rendering Language    "readable form over surface"
+#   Composition Rules     legibility everywhere
+#
+# Three sections independently ruling out selective focus, none of them
+# aware of the others, under a Subjective/Poetic grammar whose whole
+# subject is selective focus. Two days of renders came back flat and every
+# part of the plumbing tested correct.
+#
+# Advisory, and it never edits the document. The director decides what a
+# contradiction means; the app's job is to have READ the thing.
+CONFLICT_NOTE = "bible-self-check"
+
+
+def _consistency_instructions(text: str) -> str:
+    return f"""You are auditing one film production's Art Direction Bible for
+statements that CONTRADICT each other. The whole document follows.
+
+A contradiction is two rules that CANNOT BOTH HOLD for the same subject in the
+same frame. Nothing else counts.
+
+This distinction is the whole job, so read it twice:
+
+  DESIGNED CONTRAST is not a contradiction. `Weathered Present` against
+  `Pristine Future` is the spine of a production, not an error: two rules
+  scoped to DIFFERENT subjects, deliberately opposed. So are night against
+  day, interior against exterior, one faction against another. A checker
+  that reports these will be turned off within a day, and it will be right
+  to turn off.
+
+  A CONTRADICTION is one frame being told two incompatible things. "Use
+  deep focus throughout" in one section and "let the background fall away"
+  in another. "Desaturated, near-monochrome" and "colour carries the
+  emotional argument". "Readable form over surface" and "surface detail is
+  the subject". Same subject. Same frame. Both non-negotiable.
+
+Judge only what the document SAYS. Do not invent rules it does not state, and
+do not resolve anything — you are reporting, not editing.
+
+Return ONLY a JSON object with exactly this shape:
+{{
+  "conflicts": [
+    {{
+      "sections": ["the section heading of the first rule",
+                   "the section heading of the second"],
+      "quotes": ["the exact sentence from the first", "the exact sentence from the second"],
+      "why": "one sentence on what a single frame cannot do while both hold",
+      "confidence": 0.9
+    }}
+  ]
+}}
+
+Return {{"conflicts": []}} when the document agrees with itself. An empty
+answer is a good answer and is expected more often than not.
+
+THE BIBLE:
+
+{text}"""
+
+
+def bible_self_check(text: str = "", provider: str = "gemini") -> dict:
+    """Read the Bible against itself and report conflicts. R2.1.
+
+    Never edits. Returns `{"conflicts": [...], "checked_chars": n}` — the
+    length is in the answer because "no conflicts" from a read of 400
+    characters and from a read of 40,000 are different facts.
+    """
+    from . import bible
+    text = (text or bible.load_text()).strip()
+    if not text:
+        return {"conflicts": [], "checked_chars": 0}
+    if provider == "mock":
+        return {"conflicts": [], "checked_chars": len(text)}
+    result, _model = autofill._draft(
+        provider, None, None, _consistency_instructions(text))
+    heads = set(bible.parse_sections(text))
+    out = []
+    for c in (result.get("conflicts") or []):
+        if not isinstance(c, dict):
+            continue
+        secs = [str(x).strip() for x in (c.get("sections") or []) if str(x).strip()]
+        quotes = [str(x).strip() for x in (c.get("quotes") or []) if str(x).strip()]
+        # Both halves, or it is not a conflict between two things. A
+        # one-sided report is a model complaining about a sentence it
+        # dislikes, which is not what was asked for.
+        if len(secs) < 2 or len(quotes) < 2:
+            continue
+        # R2.3 — the report lands in the Bible's own sections, so the fix
+        # is one edit away from the reading. A section heading the
+        # document does not have cannot be navigated to, and a quote the
+        # document does not contain was not read from it.
+        if not all(sec in heads for sec in secs[:2]):
+            continue
+        if not all(q[:60] in text for q in quotes[:2]):
+            continue
+        out.append({"sections": secs[:2], "quotes": quotes[:2],
+                    "why": str(c.get("why", "")).strip()[:400],
+                    "confidence": float(c.get("confidence", 0) or 0)})
+    return {"conflicts": out, "checked_chars": len(text)}
+
+
 # Which anchor answer draws on which style library, and which bible
 # sections that anchor is fenced into. Palette has no library — its
 # swatches are proposed FROM the bible, not chosen before it.

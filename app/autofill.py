@@ -478,9 +478,15 @@ def narrative_choices() -> set[str]:
     return out
 
 
-def _draft(provider: str, doc: bytes, mime: str,
+def _draft(provider: str, doc: bytes | None, mime: str | None,
            instructions: str) -> tuple[dict, str]:
-    """One narrative dispatch for every JSON research pass."""
+    """One narrative dispatch for every JSON research pass.
+
+    `doc` may be None. Every pass until 2026-08-25 read the screenplay, so
+    a document was assumed; the Bible self-check reads the Bible, which is
+    already inside `instructions`. Attaching a 130 KB screenplay to a
+    question that is not about it would be paid for on every run and
+    answer nothing."""
     if provider == "openai":
         return _draft_openai(doc, mime, instructions)
     if provider == "gemini":
@@ -542,12 +548,11 @@ def _draft_gemini(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
     client = generate._client()
     model = pick_text_model(client)
+    parts = ([] if doc is None
+             else [types.Part.from_bytes(data=doc, mime_type=mime)])
     response = client.models.generate_content(
         model=model,
-        contents=[
-            types.Part.from_bytes(data=doc, mime_type=mime),
-            instructions,
-        ],
+        contents=[*parts, instructions],
         config=types.GenerateContentConfig(response_mime_type="application/json"),
     )
     return _parse_json(response.text), model
@@ -558,7 +563,9 @@ def _draft_openai(doc: bytes, mime: str, instructions: str) -> tuple[dict, str]:
 
     client = generate._openai_client()
     model = generate._chat_model()
-    if mime == "application/pdf":
+    if doc is None:
+        content = [{"type": "input_text", "text": instructions}]
+    elif mime == "application/pdf":
         content = [
             {"type": "input_file", "filename": "screenplay.pdf",
              "file_data": "data:application/pdf;base64," + base64.b64encode(doc).decode()},

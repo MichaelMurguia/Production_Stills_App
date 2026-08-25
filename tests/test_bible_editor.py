@@ -37,9 +37,26 @@ def panel() -> str:
 
 class ThereIsOneButton(unittest.TestCase):
 
-    def test_the_panel_carries_one_primary_and_one_regenerate(self):
-        buttons = re.findall(r"<button[^>]*id=\"([^\"]+)\"", panel())
+    def test_the_act_row_carries_one_primary_and_one_regenerate(self):
+        """The 2026-08-04 ruling ("it should all work — make it all one
+        button") collapsed Create / Edit / Save into one verb that states
+        the next true thing. Its subject is the DOCUMENT'S VERB, and the
+        row that carries it.
+
+        Scoped to that row from 2026-08-25, when R2 added a read-the-bible
+        -against-itself act. That act belongs to the document, not to the
+        stage, so it sits under the editor beside the report it produces —
+        which is the distinction the ruling was making, not a count of
+        buttons in a panel."""
+        p = panel()
+        row = p[p.index('<div class="row" style="margin-top:0">'):p.index("</div>")]
+        buttons = re.findall(r"<button[^>]*id=\"([^\"]+)\"", row)
         self.assertEqual(buttons, ["wiz-draft", "bible-regen"])
+
+    def test_the_self_check_sits_under_the_document_it_reads(self):
+        p = panel()
+        self.assertLess(p.index('id="style-bible"'), p.index('id="bible-check"'))
+        self.assertLess(p.index('id="bible-check"'), p.index('id="bible-conflicts"'))
 
     def test_both_sit_at_the_top_above_the_editor(self):
         p = panel()

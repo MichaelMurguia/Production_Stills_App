@@ -2035,6 +2035,20 @@ details.meta pre {
 /* Every block reaches the model, and until this was measured nobody could
    see which ones were large. The bar is a value ground, not a colour: this
    is a measurement, and no block is good or bad on its own. */
+/* UNCANONIZED — 2026-08-25 — the bible read against itself */
+/* A report, not a gate: nothing here blocks a save and nothing is amber,
+   because a contradiction the director meant is still the director's
+   call. The two headings are Courier (they are the document's own
+   section names), the quoted rules are the document's prose, and the
+   consequence is faint prose under them. */
+.bible-check-row { margin-top: 10px; }
+.bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
+.bc-none { color: var(--ink-faint); max-width: 74ch; margin: 10px 0 0; }
+.bc-row { border-left: 2px solid var(--line); padding: 2px 0 2px 10px;
+  margin: 0 0 10px; max-width: 74ch; }
+.bc-secs { color: var(--ink-dim); font-size: 11px; letter-spacing: .04em; }
+.bc-q { color: var(--ink); margin-top: 4px; }
+.bc-why { color: var(--ink-faint); margin-top: 4px; }
 .prompt-comp { margin: 0 0 10px; max-width: 74ch; }
 .prompt-comp .pc-head { color: var(--ink-dim); margin-bottom: 6px; }
 .prompt-comp .pc-row {

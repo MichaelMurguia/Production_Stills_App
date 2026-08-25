@@ -6448,6 +6448,9 @@ async function renderWizard() {
     btn.classList.toggle("primary", st !== "saved");
     btn.classList.toggle("ghost", st === "saved");
     regen.classList.toggle("hidden", st !== "saved");
+    // Same condition as Regenerate: there has to BE a saved document to
+    // read against itself, and an unsaved edit is not one yet.
+    $("#bible-check")?.classList.toggle("hidden", st !== "saved");
     cond.textContent = {
       empty: "FROM THE ANCHORS, THE SCAN AND THE CAST — WRITTEN, SAVED, AND BREAKDOWNS OPEN",
       unsaved: "YOUR OWN TEXT — SAVING IT OPENS BREAKDOWNS",
@@ -6458,7 +6461,10 @@ async function renderWizard() {
       editing: "ESC DISCARDS — NOTHING CHANGES UNTIL YOU SAVE",
     }[st];
   };
-  $("#style-bible").addEventListener("input", syncBibleSave);
+  $("#style-bible").addEventListener("input", () => {
+    syncBibleSave();
+    renderBibleConflicts(null);
+  });
   // Escape is the way out of an edit, so Edit is never a trap.
   $("#style-bible").addEventListener("keydown", e => {
     if (e.key !== "Escape" || !bibleEditing) return;
@@ -6467,6 +6473,60 @@ async function renderWizard() {
     bibleEditing = false;
     syncBibleSave();
     $("#style-status").innerHTML = "";
+  });
+  /* R2 — the Bible read against itself (2026-08-25).
+
+     The production this was built from carried, in three different
+     places: "use wide or moderate-wide lenses with deep focus" in
+     Lighting Language, "readable form over surface" in Rendering
+     Language, and legibility everywhere in Composition Rules. Three
+     sections independently ruling out selective focus, none aware of the
+     others, under a grammar whose whole subject is selective focus. Two
+     days of renders came back flat and every part of the plumbing tested
+     correct.
+
+     Reports only. The director decides what a contradiction means; the
+     app's job is to have READ the thing. Designed contrast — Weathered
+     Present against Pristine Future — is the spine of a production and
+     never appears here, which is stated in the prompt and is the single
+     thing that decides whether this gets turned off. */
+  const renderBibleConflicts = (r) => {
+    const host = $("#bible-conflicts");
+    if (!host) return;
+    if (!r) { host.innerHTML = ""; return; }
+    if (!r.conflicts?.length) {
+      host.innerHTML = `<div class="bc-none mini">Read ${
+        (r.checked_chars || 0).toLocaleString()} characters — no two rules that
+        cannot both hold in one frame. Deliberate contrast between different
+        subjects is not counted, and is not a fault.</div>`;
+      return;
+    }
+    host.innerHTML = `<div class="bc-head mono">${r.conflicts.length} CONFLICT${
+      r.conflicts.length === 1 ? "" : "S"} — ADVISORY, NOTHING WAS CHANGED</div>`
+      + r.conflicts.map(c => `<div class="bc-row">
+          <div class="bc-secs mono">${c.sections.map(esc).join("  ✕  ")}</div>
+          ${c.quotes.map(q => `<div class="bc-q">“${esc(q)}”</div>`).join("")}
+          <div class="bc-why mini">${esc(c.why)}</div>
+        </div>`).join("");
+  };
+  $("#bible-check")?.addEventListener("click", async () => {
+    const btn = $("#bible-check");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = "Reading…";
+    try {
+      renderBibleConflicts(await api("/api/bible/self-check",
+        { method: "POST", json: { provider: $("#wiz-provider")?.value || "gemini" } }));
+    } catch (err) {
+      /* Never swallowed. "No conflicts" and "the read failed" look
+         identical on screen, and one of them means the document has not
+         been checked at all. */
+      renderBibleConflicts(null);
+      toast(`Could not read the bible against itself: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = was;
+    }
   });
   const loadBibleEditor = async () => {
     const bible = await api("/api/style-bible");
@@ -6491,6 +6551,10 @@ async function renderWizard() {
       ? ""
       : (bible.rev ? `<span class="badge LOCKED">REV ${bible.rev}</span> saved` : ""))
       + (clash ? (bible.text.trim() ? " &middot; " : "") + clash : "");
+    // A report describes the text it read. Once the document is reloaded
+    // it describes something that may no longer be on screen, and a stale
+    // all-clear is worse than no report.
+    renderBibleConflicts(null);
     syncBibleSave();
     return bible;
   };

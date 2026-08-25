@@ -2449,6 +2449,23 @@ def api_save_cine_setting(body: dict) -> dict:
         key=body.get("key"))
 
 
+@app.post("/api/bible/self-check")
+def api_bible_self_check(body: dict = None) -> dict:
+    """R2 — read the Bible against itself and report contradictions.
+
+    Advisory and on demand. NOT run on every save: a save happens on every
+    edit, and a paid re-read of the whole document on each one would train
+    people to stop saving. It reports; it never edits."""
+    from . import wizard
+    body = body or {}
+    try:
+        return wizard.bible_self_check(
+            str(body.get("text", "") or ""),
+            str(body.get("provider", "") or "gemini"))
+    except Exception as e:
+        raise HTTPException(422, str(e))
+
+
 @app.get("/api/bible/house-style")
 def api_house_style() -> dict:
     """This production's own rendering style, read from what already

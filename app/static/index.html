@@ -297,6 +297,19 @@
       <div id="wiz-draft-busy"></div>
       <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
 
+      <!-- R2 — the bible read against itself, for rules that cannot both
+           hold in one frame. It sits UNDER the document rather than in the
+           act row above it: that row carries one primary verb and
+           Regenerate (2026-08-04 one-button ruling), and this is an act on
+           the document, next to the report it produces. Advisory — it
+           never edits. Not run on save, because a save happens on every
+           edit and a paid re-read on each one trains people to stop
+           saving. -->
+      <div class="row bible-check-row">
+        <button id="bible-check" class="ghost hidden" title="Read the Art Direction Bible against itself — two rules that cannot both hold in one frame. Reports only; it never edits the document.">Check it agrees with itself</button>
+      </div>
+      <div id="bible-conflicts"></div>
+
       <!-- SWATCH_GENERATE_RULING: an act lives where its precondition is
            met; its result lives where it belongs. Generation reads the
            SAVED Bible, so it stands here; the swatches land in step 1's
