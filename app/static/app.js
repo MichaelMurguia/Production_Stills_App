@@ -6494,22 +6494,34 @@ async function renderWizard() {
     syncBibleSave();
     return bible;
   };
-  // The production's default camera grammar leads Production Design (edits reach
-  // every future prompt). It always carries a concrete value (a new production
-  // starts Eye level · 24mm · Level · Wide); each change saves. Panels override
-  // it per shot on the breakdown.
-  const loadCameraDefault = async () => {
-    const host = $("#cam-default-row");
-    if (!host) return;
-    const defaults = await api("/api/camera-defaults").catch(() => ({}));
-    host.innerHTML = cameraRow("dcam", defaults, "");  // no blank: always a value
-    wireCameraRow("dcam", host, async () => {
-      try {
-        await api("/api/camera-defaults", { method: "POST", json: readCameraFields("dcam", host) });
-        $("#cam-default-status").textContent = "Saved — every panel inherits this unless it overrides.";
-      } catch (err) { $("#cam-default-status").textContent = err.message; }
-    });
-  };
+  /* A4 — the production camera card is retired (2026-08-25).
+
+     It set a production-wide `Eye level · 24mm · Level · Wide` and led
+     Production Design, so it looked like a decision. It was not one:
+     nobody chose those values, they are what a new production starts
+     with. And they went into every prompt as directives, where they read
+     as deliberate.
+
+     That is not a cosmetic problem. Under a Subjective/Poetic grammar
+     asking for isolation and selective focus, a 24mm deep-focus wide is
+     a straight contradiction — and it is the contradiction that defeated
+     the cinematography axis for two days of renders while every part of
+     the plumbing tested correct. A grammar now carries framings that say
+     50–100mm at f/1.4–2.8, in optics a model cannot satisfy by doing
+     nothing, and a card offering a lens beside them is a second camera
+     authority in the same prompt.
+
+     What survives, and why it is enough:
+     - camera_defaults.json remains the SILENT fallback. The values still
+       exist and still answer the breakdown's "— production default —";
+       they are simply no longer presented as a choice anyone made.
+     - the panel's own camera axes stay, and beat the framing. That is a
+       director disagreeing with the recipe on one shot, which is the
+       whole point of keeping them.
+     - /api/camera-defaults stays, unread by any screen. Removing an
+       endpoint is a separate decision from removing a control, and a
+       production that set values before today keeps rendering with them.
+  */
   // Step-state badges (plan v3 C13): each step's h2 states where it stands,
   // from data already fetched or one cheap read. Existing badge classes only.
   const wizardStepBadges = async () => {
@@ -6693,8 +6705,7 @@ async function renderWizard() {
       if (host) $(`.wiz-col[data-role="${host.dataset.home}"]`)?.append(host);
     },
   });
-  for (const [sel, role] of [["#cam-default", "CINEMATOGRAPHY_STYLE"],
-                             ["#wiz-never-row", "BOARD_RENDERING_STYLE"]])
+  for (const [sel, role] of [["#wiz-never-row", "BOARD_RENDERING_STYLE"]])
     if ($(sel)) $(sel).dataset.home = role;
 
   bindPicker("wiz-texture", TEXTURE_STYLES, {
@@ -6725,19 +6736,18 @@ async function renderWizard() {
       movement. <b>This sets the production default, and it can be changed
       for any single render</b> — a panel can name a different grammar or
       refuse one entirely. It is not genre, and it is not the palette: the
-      Color Palette anchor owns colour, a panel states its own hour, and
-      the camera default below is
-      a starting point every panel can override — a cinematographer picks
-      whatever lens gets the shot.`,
+      Color Palette anchor owns colour, and a panel states its own hour.
+      Each grammar carries the <b>framings</b> it sanctions — real focal
+      lengths and apertures — and a panel picks one of those on the
+      breakdown, or overrules it with its own camera. A cinematographer
+      picks whatever lens gets the shot.`,
     uploadRole: "CINEMATOGRAPHY_STYLE", uploadLabel: "Cinematography",
     ownPlaceholder: "Describe how the camera should see",
-    ...travels("#cam-default"),
     onPicked: st => saveCineSetting({ key: st?.key || "" }),
   });
 
   await loadBibleEditor();
-  await loadCameraDefault();
-  /* One writer, two callers: Create saves the draft it just made, and Save
+    /* One writer, two callers: Create saves the draft it just made, and Save
      writes an edit. A second copy of this is how the two would drift on
      what "saved" means — the band, the swatch gate and the status line all
      hang off it. */

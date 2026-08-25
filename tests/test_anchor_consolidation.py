@@ -68,10 +68,14 @@ class TheInterviewIsGone(unittest.TestCase):
         self.assertIn('[1, "Anchors"]', seg)
         self.assertNotIn("Interview", seg)
 
-    def test_the_camera_sits_with_the_anchor_it_can_override(self):
+    def test_the_camera_card_no_longer_sits_here_because_it_no_longer_exists(self):
+        """Retired by A4 (2026-08-25). Consolidation put it beside the
+        anchor it could contradict, which was the right diagnosis and the
+        weaker cure — a production-wide 24mm nobody chose still rode every
+        prompt as a directive. The anchor carries framings now, so there
+        is nothing left to place beside it."""
         seg = card("CINEMATOGRAPHY_STYLE")
-        self.assertIn('id="cam-default"', seg)
-        self.assertIn('id="cam-default-row"', seg)
+        self.assertNotIn('id="cam-default"', seg)
 
     def test_the_never_list_sits_on_the_section_it_feeds(self):
         """wizard.py routes it to Rendering Language -> Avoid, which is
@@ -269,9 +273,10 @@ class TheCardIsItsButton(unittest.TestCase):
         self.assertTrue(b and "display: none" in b.group(1))
         self.assertIn(".rs-extra > .wiz-offpage", CSS)
 
-    def test_the_camera_and_the_never_list_travel_into_their_panel(self):
+    def test_the_never_list_travels_into_its_panel(self):
+        """The camera row travelled here too until A4 retired it."""
         self.assertIn("const travels = (sel)", JS)
-        self.assertIn('travels("#cam-default")', JS)
+        self.assertNotIn('travels("#cam-default")', JS)
         self.assertIn('travels("#wiz-never-row")', JS)
         i = JS.index("const travels = (sel)")
         seg = JS[i:i + 500]

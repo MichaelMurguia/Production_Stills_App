@@ -281,35 +281,52 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         for s in ('["AERIAL", "Aerial"]', '["MACRO", "Macro"]', '["MICRO", "Micro"]'):
             self.assertIn(s, JS)
 
-    def test_camera_sits_on_the_anchor_it_can_contradict(self):
-        """User ruling 2026-08-16, dissolving the look interview. The
-        CAMERA block is emitted high in the prompt and stated to override
-        the references' own framing, so a lens set a step away from the
-        cinematography anchor could silently beat it. Two inputs that can
-        contradict each other belong where you can see them together."""
-        i = HTML.index('data-role="CINEMATOGRAPHY_STYLE"')
-        j = HTML.index('id="cam-default"')
-        self.assertGreater(j, i, "the camera card sits inside the anchor card")
-        nxt = HTML.index('data-role="BOARD_RENDERING_STYLE"')
-        self.assertLess(j, nxt, "and does not fall through to the next card")
+    def test_the_production_camera_card_is_gone(self):
+        """A4 (2026-08-25), superseding the 2026-08-16 ruling that put
+        this card beside the cinematography anchor.
+
+        That ruling was right about the problem and reached for the
+        weaker fix. Two inputs that can contradict each other were placed
+        where you can see them together — but the card was still a
+        production-wide `Eye level · 24mm · Level · Wide` that nobody
+        chose, riding every prompt as a directive. Seeing a contradiction
+        is not the same as not having one, and under a grammar asking for
+        50–100mm at f/1.4–2.8 a deep-focus wide is a straight
+        contradiction. It defeated the cinematography axis for two days.
+
+        The grammar carries framings now. There is one camera authority."""
+        self.assertNotIn('id="cam-default"', HTML)
+        self.assertNotIn('id="cam-default-row"', HTML)
+        self.assertNotIn('cameraRow("dcam"', JS)
 
     def test_the_look_never_dictates_the_lens(self):
         """User 2026-08-16: "a cinematographer will pick any lens to get
         the shot." The catalogue is light behaviour only, and the picker
         writes one field — its own."""
         j = JS.index('title: "Cinematography"')
-        seg = JS[j:j + 800]
+        seg = JS[j:j + 900]
         self.assertIn("whatever lens gets the shot", seg)
-        self.assertIn("every panel can override", seg)
+        # The grammar SANCTIONS framings; it does not dictate one. A
+        # panel picks from that family or overrules it with its own
+        # camera, which is the same rule stated in optics rather than
+        # in a separate card (A4, 2026-08-25).
+        self.assertIn("overrules it with its own", seg)
         # and the picker writes ONE field — its own
         i = JS.index("const bindPicker =")
-        self.assertNotIn("cam-", JS[i:i + 1500].replace("cam-default", ""),
+        self.assertNotIn("cam-", JS[i:i + 1500],
                          "the look never reaches into the camera row")
 
-    def test_bible_default_card_loads_and_saves(self):
-        self.assertIn('id="cam-default-row"', HTML)
-        self.assertIn('cameraRow("dcam"', JS)
-        self.assertIn('/api/camera-defaults', JS)
+    def test_the_default_survives_as_a_silent_fallback(self):
+        """A4.2 — the values still exist and still answer the breakdown's
+        "— production default —". They are simply no longer presented as a
+        choice anyone made. The endpoint stays too: removing a control is
+        a separate decision from removing an endpoint, and a production
+        that set values before today keeps rendering with them."""
+        from app import store
+        self.assertTrue(store.camera_defaults())
+        self.assertIn('@app.get("/api/camera-defaults")',
+                      (ROOT / "app/main.py").read_text(encoding="utf-8"))
+        self.assertNotIn("loadCameraDefault", JS)
 
     def test_workbench_states_then_opens_then_freezes(self):
         """Canon pass R7 (2026-08-10, mock au-wb-camera): the workbench

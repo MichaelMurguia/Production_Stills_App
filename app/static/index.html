@@ -216,18 +216,13 @@
             <span class="f-label" title="How the film is photographed — stills whose light behaviour and framing you want. If a still's grade is loud, use it in black and white; palette belongs to the Color Palette anchor.">Cinematography</span>
             <span class="badge LOCKED" data-f="state">NONE</span>
           </div>
-          <p class="hint">SETS light behaviour, contrast, source<br>NOT palette &middot; lens &middot; a panel's hour</p>
+          <p class="hint">SETS light behaviour, contrast, source, the framings it allows<br>NOT palette &middot; a panel's hour</p>
           <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
           <label class="wiz-words" title="Light behaviour, lens and framing — becomes the Lighting Language and Composition Rules sections.">In words
             <input type="text" data-f="words" id="wiz-light" hidden>
             <button type="button" class="ghost pick-btn" id="wiz-light-pick">Choose a cinematography look</button>
           </label>
-          <div class="fgroup cam-default wiz-offpage" id="cam-default" title="The production's default camera grammar — the shot every panel starts from unless it overrides on the breakdown. The app writes the professional directive into every render prompt. Change any axis to reset the default.">
-        <span class="f-label">Camera grammar <span class="hint">choose the default lens — you can override it when you render</span></span>
-        <div id="cam-default-row"></div>
-        <span id="cam-default-status" class="mini"></span>
-      </div>
           <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">

@@ -3225,7 +3225,6 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    card three times its neighbours' height. Two up, and the auto-fit rule
    above stops fighting it. */
 .wiz-col .cam-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
-.wiz-col .cam-default { margin-top: 10px; }
 .pick-btn { width: 100%; text-align: left; font-family: var(--sans);
   font-size: 13px; letter-spacing: 0; text-transform: none;
   color: var(--ink-faint); padding: 8px 10px; }
