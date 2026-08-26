@@ -166,10 +166,37 @@ def engine_credentials() -> dict:
     Honest status only: `configured` says where a key came from; it never
     claims the key WORKS. `last_test` is the persisted outcome of the
     user's own Test click.
+
+    And a test result NEVER outlives the credential it tested (2026-08-26).
+    `engine_tests` is stored in settings.json and persists; the credential
+    can stop being visible to a process without the file changing — the
+    dev loop blanks stored keys unless `--keys` is passed, and does it by
+    making this process unable to see them rather than by editing
+    anything. So the Settings page showed `LAST TEST PASS 2026-08-16`
+    beside an engine this process holds no key for, and the honest reading
+    of that screen is "connected". The user's reading of it was "it is not
+    connecting to GPT auth even though tests ok before", which is the same
+    screen read correctly.
+
+    A PASS for a key nobody can see is the same fault as a take badge
+    naming a framing that was not in its prompt: a record describing an
+    intention rather than the present fact.
     """
     import os
     s = load_settings()
     tests = s.get("engine_tests", {})
+
+    def test_of(pid: str, configured: bool):
+        t = tests.get(pid)
+        if not t or configured:
+            return t
+        # Kept, not dropped — when it ran and what it said is still worth
+        # reading. Marked, so nothing downstream can mistake it for the
+        # state of a credential that is not here.
+        return {**t, "stale": True,
+                "stale_why": "no credential is visible to this process — "
+                             "the key was there when this ran"}
+
     gkey = s.get("gemini_api_key", "")
     okey = s.get("openai_api_key", "")
     genv = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -179,11 +206,11 @@ def engine_credentials() -> dict:
 
     eng = {
         "gemini": {"configured": bool(gemini_src), "source": gemini_src,
-                   "last_test": tests.get("gemini")},
+                   "last_test": test_of("gemini", bool(gemini_src))},
         "openai": {"configured": bool(openai_src), "source": openai_src,
-                   "last_test": tests.get("openai")},
+                   "last_test": test_of("openai", bool(openai_src))},
         "openai-chat": {"configured": bool(openai_src), "source": openai_src,
-                        "last_test": tests.get("openai-chat")},
+                        "last_test": test_of("openai-chat", bool(openai_src))},
     }
     if mock_enabled():
         # The debug dry-run engine: always "configured" while the toggle is

@@ -24,13 +24,14 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2349 tests** across 123 files.
+**2358 tests** across 124 files.
 
 
-## Product app — 2128 tests in 106 files
+## Product app — 2137 tests in 107 files
 
 | File | Tests | What it holds |
 |---|---:|---|
+| `test_a_pass_does_not_outlive_its_key.py` | 9 | A stored test result must not outlive the credential it tested. |
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
 | `test_anchor_consolidation.py` | 160 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
 | `test_anchors_stay_in_step.py` | 32 | Regression, user-hit 2026-08-22 and reproduced from the install. |

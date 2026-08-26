@@ -3804,6 +3804,14 @@ async function renderSettings(openTab = "") {
   const mark = kind => `<span class="cred-mark ${kind}"></span>`;
   const keyState = pid => {
     const e = engAll[pid] || {};
+    /* A PASS never outlives the credential it tested (2026-08-26). The
+       result is stored and persists; the key can stop being visible to
+       this process without the file changing — the dev loop blanks stored
+       keys unless `--keys` is passed, and does it by making the process
+       unable to see them rather than by editing anything. So this row
+       read SYNCED beside an engine holding no key, and every call failed.
+       The user read the screen correctly and the screen was wrong. */
+    if (e.last_test?.stale) return ["bad", `NO KEY HERE — LAST TEST ${stamp(e.last_test.at)}`];
     if (e.last_test?.ok) return ["ok", "SYNCED"];
     if (e.last_test && !e.last_test.ok) return ["bad", `KEY FAILED ${stamp(e.last_test.at)}`];
     if (e.source === "env") return ["hold", "ENV VAR — UNTESTED"];
