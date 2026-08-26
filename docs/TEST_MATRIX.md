@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2327 tests** across 121 files.
+**2336 tests** across 122 files.
 
 
-## Product app — 2106 tests in 104 files
+## Product app — 2115 tests in 105 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -130,6 +130,7 @@ temp home and external services are faked.
 | `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
+| `test_tutorial_does_not_poll.py` | 9 | An idle tab must not talk to the server. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |
 | `test_vocabulary.py` | 5 | One act, one name. |
 | `test_what_the_take_rendered_from.py` | 9 | C4 — a take can say what it was actually rendered from. |

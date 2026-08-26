@@ -35,9 +35,21 @@
   const listeners = new Set();
   const fire = ev => { for (const fn of [...listeners]) fn(ev); };
   document.addEventListener("sb:api", e => {
-    if (e.detail && e.detail.method !== "GET") stateCache = null;
+    if (e.detail && e.detail.method !== "GET") stateCache = firstRunCache = null;
     fire({ type: "api", detail: e.detail || {} });
-    considerLater();
+    // NOT while a trigger is being evaluated (2026-08-25). Evaluating a
+    // trigger makes API calls; every API call fires sb:api; sb:api
+    // re-arms the evaluation. That is a closed loop, and it ran: the only
+    // shipped trigger is `not first_run AND not stage_summary.screenplay`,
+    // so once the first-run tour was done and a screenplay existed, every
+    // idle tab asked GET /api/projects every 400ms and GET /api/state
+    // every 1.5s, for as long as it stayed open. Two tabs made ~5
+    // requests a second against a studio nobody was touching.
+    //
+    // The cache below made it cheaper and hid it. The fix is that
+    // consideration must not be able to re-arm itself — otherwise the next
+    // predicate that fetches anything reintroduces the same loop.
+    if (!probing) considerLater();
   });
   document.addEventListener("sb:view", e => {
     fire({ type: "view", detail: e.detail || {} });
@@ -56,13 +68,44 @@
 
   let stateCache = null;
   let stateCacheAt = 0;
+  let firstRunCache = null;
+  let firstRunCacheAt = 0;
+
+  /* Reads made to answer a predicate, marked as such.
+
+     They still emit sb:api — that event is the app's one honest record of
+     a call happening — but they must not re-arm trigger evaluation, or
+     asking whether to start a tutorial becomes the reason to ask again. */
+  let probing = 0;
+  async function probe(fn) {
+    probing++;
+    try { return await fn(); } finally { probing--; }
+  }
 
   async function productState() {
     const now = Date.now();
     if (stateCache && now - stateCacheAt < STATE_TTL_MS) return stateCache;
-    try { stateCache = await api("/api/state"); } catch { stateCache = {}; }
+    try { stateCache = await probe(() => api("/api/state")); }
+    catch { stateCache = {}; }
     stateCacheAt = now;
     return stateCache;
+  }
+
+  /* Whether this install has ever had a production.
+
+     Cached on the same clock as the state above, for the same reason and
+     one more: this is close to a constant. It flips false the moment a
+     production exists and only returns if every one is deleted, so asking
+     twice a second was asking a settled question over and over. */
+  async function firstRun() {
+    const now = Date.now();
+    if (firstRunCache !== null && now - firstRunCacheAt < STATE_TTL_MS) {
+      return firstRunCache;
+    }
+    try { firstRunCache = !!(await probe(() => api("/api/projects"))).first_run; }
+    catch { firstRunCache = false; }
+    firstRunCacheAt = now;
+    return firstRunCache;
   }
 
   const dig = (obj, path) =>
@@ -93,11 +136,9 @@
     switch (kind) {
       case "always":
         return true;
-      case "first_run": {
+      case "first_run":
         // The same fact the app boots on — /api/projects declares it.
-        try { return !!(await api("/api/projects")).first_run; }
-        catch { return false; }
-      }
+        return await firstRun();
       case "version_changed": {
         const r = seenRow(self && self.id);
         return !r || r.version !== (BUNDLE && BUNDLE.version);
