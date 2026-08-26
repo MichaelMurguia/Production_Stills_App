@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2336 tests** across 122 files.
+**2349 tests** across 123 files.
 
 
-## Product app — 2115 tests in 105 files
+## Product app — 2128 tests in 106 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -67,7 +67,7 @@ temp home and external services are faked.
 | `test_file_pickers.py` | 4 | Programmatic file pickers must be attached to the document. |
 | `test_first_user_test_stop1.py` | 39 | Stop 1 of the first-user-test plan: nothing is lost, nothing refuses silently. |
 | `test_first_user_test_stop2.py` | 39 | Stop 2: the panel renders what the panel says. |
-| `test_first_user_test_stop4.py` | 30 | Stop 4: the app fills it in, and says so. |
+| `test_first_user_test_stop4.py` | 31 | Stop 4: the app fills it in, and says so. |
 | `test_framing_selection.py` | 19 | A3 — the pass that read the scene names the shot. |
 | `test_generate_units.py` | 5 | Engine-facing unit rules: size legality (×16, ≤3840, no upscaling), the ChatGPT-pipeline preset clamp, and deterministic keyword derivation. |
 | `test_harness_tooling.py` | 17 | HARNESS tooling (2026-08-13): the fixture recorder and the replay harness builder. |
@@ -88,7 +88,7 @@ temp home and external services are faked.
 | `test_p1_lifecycle.py` | 13 | P1 coverage from docs/TEST_MATRIX.md: the sheet lock/hash contract, the candidate lifecycle, and the assemble endpoint — the behaviors that guard cano |
 | `test_palette_distinctness.py` | 25 | Four design languages must not share one palette. |
 | `test_palette_order.py` | 24 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
-| `test_panel_framing.py` | 25 | A2 — the framing a panel renders at, chosen before the spend. |
+| `test_panel_framing.py` | 26 | A2 — the framing a panel renders at, chosen before the spend. |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
 | `test_probe_pair_and_limit.py` | 24 | C6 and C9 — two small rules, both about not being fooled. |
@@ -114,6 +114,7 @@ temp home and external services are faked.
 | `test_screenplay_two_copies.py` | 6 | Two copies of the screenplay, and only one of them costs money (user rule, 2026-08-16). |
 | `test_secrets_at_rest.py` | 30 | Credentials are wrapped on disk, and the app never lies about whether. |
 | `test_sheet.py` | 70 | The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7, amended by the Lookbook rollback 2026-08-12): the size ladder with the R1 elastic/fixed rulin |
+| `test_stamp_reports_what_was_sent.py` | 11 | A take's framing badge must describe the text that was SENT. |
 | `test_step_numbers.py` | 9 | Copy that names a wizard step names the right one. |
 | `test_step_sequence.py` | 60 | The step sequence — STEP_SEQUENCE_SPEC_2026-08-14, mock hier-4a. |
 | `test_step_sequence_03.py` | 26 | Stage 03 in the step vocabulary — STEP_SEQUENCE_SPEC Part 3, mock hier-5a. |

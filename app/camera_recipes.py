@@ -132,14 +132,39 @@ def lines(panel: dict | None = None) -> list[str]:
     return out
 
 
-def stamp(panel: dict | None = None) -> dict:
+LINE_HEAD = "- FRAMING —"
+
+
+def stamp(panel: dict | None = None, sent: str = "") -> dict:
     """What a take records about the framing it rode.
 
-    C4's lesson, applied before the fact rather than after: a take that
-    cannot say what it was rendered under sends you looking in the code
-    for an answer the record should have held."""
+    `sent` is the text the image model was actually given. Pass it.
+
+    C4 was about reading `prompt` when `render_prompt` was the truth, and
+    this is the same mistake one level up: a stamp built from the panel's
+    CURRENT fields reports what the app intends, not what it sent. Those
+    differ whenever a saved prompt is in force, because the CAMERA block
+    is deliberately not one of the blocks refreshed into a saved prompt —
+    it is the panel's own wording, which is the right rule and makes the
+    stamp a liar without this check.
+
+    Caught by the user on CAND-0035 (2026-08-26): the badge read
+    `FRAMING — SUBJECTIVE / POETIC CHARACTER · 50-100mm, f/1.4-2.8,
+    SELECTIVE` over a deep-focus wide of a ship on a salt pan. The panel
+    did resolve that framing. The prompt that rendered it was saved before
+    framings existed and still said 24mm, wide, deep — and the image is
+    exactly what it asked for. The record was the only thing that was
+    wrong.
+    """
     r = resolve(panel)
     pick = panel_choice(panel)
+    if r and sent and LINE_HEAD not in sent:
+        # It resolves, and it did not ride. Both facts, because "no
+        # framing" alone would read as a panel that never chose one.
+        return {"rides": False, "refused": False, "in_prompt": False,
+                "would_be": r["key"], "would_be_name": r["name"],
+                "why": "the prompt this take was rendered from carries its "
+                       "own CAMERA block, saved before this framing was set"}
     if not r:
         return {"rides": False, "refused": pick == PANEL_NONE}
     return {"rides": True, "key": r["key"], "name": r["name"],

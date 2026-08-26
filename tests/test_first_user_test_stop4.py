@@ -204,10 +204,28 @@ class ThePanelShowsTheGrammarItWillRenderUnder(unittest.TestCase):
     take, and the user is right to call that not working."""
 
     def test_the_summary_states_the_grammar(self):
+        # Bounded by the next declaration rather than a character count —
+        # the summary grew when it started stating the framing too
+        # (2026-08-26) and a fixed window stopped covering its own tail.
         i = JS.index("const camSummary = (() => {")
-        seg = JS[i:i + 600]
+        seg = JS[i:JS.index("})();", i) + 6]
         self.assertIn("(this panel)", seg)
         self.assertIn("inherited from the production", seg)
+
+    def test_the_summary_states_the_camera_the_render_will_use(self):
+        """It listed the five axes resolved against the PRODUCTION
+        DEFAULT, and A2 made the compiler stop using that default the
+        moment a framing resolves. So a panel on Subjective / Poetic read
+        "Low · 24mm · level · wide" while its render would use 50–100mm at
+        f/1.4–2.8, and Framing appeared nowhere (user-caught 2026-08-26).
+        A step that states a camera the render will not use is the failure
+        this whole week was about."""
+        i = JS.index("const camSummary = (() => {")
+        seg = " ".join(JS[i:JS.index("})();", i)].split())
+        self.assertIn("camFraming.focal", seg)
+        self.assertIn("camFraming.aperture", seg)
+        # only axes THIS panel set join it — never the default it displaced
+        self.assertIn('const own = k => String(p[k] || "")', seg)
 
     def test_a_refusal_reads_as_a_refusal(self):
         """NONE is a choice, not an absence — it must not render blank and

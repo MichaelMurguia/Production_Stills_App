@@ -132,7 +132,8 @@ class ItReachesTheRender(unittest.TestCase):
     def test_the_take_records_the_framing_beside_the_grammar(self):
         g = (ROOT / "app/generate.py").read_text(encoding="utf-8")
         i = g.index('"cinematography": _cine.stamp(panel),')
-        self.assertIn('"camera_recipe": _rec_stamp(panel),', g[i:i + 700])
+        self.assertIn('"camera_recipe": _rec_stamp(panel, override or prompt),',
+                      g[i:i + 700])
 
 
 class TheAmendRouteValidates(unittest.TestCase):
@@ -169,14 +170,25 @@ class TheAmendRouteValidates(unittest.TestCase):
 class ItIsReadableBeforeTheSpend(unittest.TestCase):
     def test_the_picker_names_the_optics_in_every_option(self):
         i = JS.index("function framingSelect")
-        seg = " ".join(JS[i:i + 1800].split())
-        self.assertIn("${esc(r.focal)}, ${esc(r.aperture)}", seg)
+        seg = " ".join(JS[i:JS.index("function framingNote")].split())
+        self.assertIn("${esc(r.name)} — ${esc(r.focal)}, ${ esc(r.aperture)}", seg)
+
+    def test_every_framing_is_offered_somewhere(self):
+        """Hidden non-sanctioned rows made `conflict()` unreachable — the
+        only way to see the note was to choose a framing and then change
+        the grammar underneath it (user, 2026-08-26: "why only 8
+        options?"). Gates are readable as state, never enforced by
+        absence."""
+        i = JS.index("function framingSelect")
+        seg = " ".join(JS[i:JS.index("function framingNote")].split())
+        self.assertIn("Outside this grammar — a choice, not an error", seg)
+        self.assertIn("CAMERA_RECIPES.filter(r => !ids.includes(r.key))", seg)
 
     def test_the_inherit_option_names_the_row_it_would_inherit(self):
         """A bare "production default" is the phrasing that hid this
         decision for two days."""
         i = JS.index("function framingSelect")
-        seg = " ".join(JS[i:i + 1800].split())
+        seg = " ".join(JS[i:JS.index("function framingNote")].split())
         self.assertIn("(from the grammar)", seg)
 
     def test_changing_the_grammar_redraws_the_framings(self):

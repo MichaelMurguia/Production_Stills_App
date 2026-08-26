@@ -907,8 +907,6 @@ def refresh_art_direction(text: str, spec: dict, panel: dict) -> tuple[str, str]
     untouched with a note saying so, because there is nothing to replace
     and inventing a place to put it would be worse than leaving it.
     """
-    fresh = compile_panel_prompt(spec, panel, refs_for_prompt or []).splitlines() \
-        if False else None
     fresh = _compiled_lines(spec, panel)
     lines = text.splitlines()
     changed, seen = [], 0
@@ -2929,7 +2927,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
         # records: a take under a grammar with no framing renders very
         # differently from one under both, and until this the difference
         # was only visible in the picture.
-        "camera_recipe": _rec_stamp(panel),
+        # Built from the text that was SENT, not from the panel's current
+        # fields — those differ whenever a saved prompt is in force.
+        "camera_recipe": _rec_stamp(panel, override or prompt),
         "panel_id": panel_id,
         "status": "CANDIDATE",
         "provider": provider,

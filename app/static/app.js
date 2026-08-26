@@ -10717,6 +10717,20 @@ function framingSelect(prefix, panel, blank, disabled = false) {
   const st = CINEMA_STYLES.find(x => x.key === String(panel?.cinematography || ""));
   const ids = (String(panel?.cinematography || "").toUpperCase() === "NONE" ? [] : (st?.recipes || []));
   const rows = ids.length ? ids.map(recipeByKey).filter(Boolean) : CAMERA_RECIPES;
+  /* The rest of the twenty, offered under their own label rather than
+     withheld (user-caught 2026-08-26: "why only 8 options?").
+
+     They were hidden on the reasoning that a menu containing a
+     contradiction will eventually be used to pick one. That is true and
+     it is not this app's rule: A4.3 kept the manual camera axes exactly
+     so a director can overrule the recipe on one shot, and `conflict()`
+     was built to STATE a disagreement rather than prevent it. Hiding the
+     option made that note unreachable — the only way to see it was to
+     choose a framing and then change the grammar underneath it.
+
+     Gates are readable as state, never enforced by absence. */
+  const others = ids.length
+    ? CAMERA_RECIPES.filter(r => !ids.includes(r.key)) : [];
   const inherit = ids.length ? recipeByKey(ids[0]) : null;
   /* A framing the grammar does not sanction still has to APPEAR here when
      the panel holds one — otherwise the select shows "inherit", and the
@@ -10724,12 +10738,15 @@ function framingSelect(prefix, panel, blank, disabled = false) {
      director chose on purpose. Which is this week's failure exactly: a
      decision the app changes without saying so. It is labelled, and the
      note below says what it disagrees with. */
-  const held = v && v.toUpperCase() !== "NONE" && !rows.some(r => r.key === v)
-    ? recipeByKey(v) : null;
-  const opts = [...(held ? [[held, " — outside this grammar"]] : []),
-                ...rows.map(r => [r, ""])]
-    .map(([r, tail]) => `<option value="${esc(r.key)}" ${v === r.key ? "selected" : ""}
-      >${esc(r.name)} — ${esc(r.focal)}, ${esc(r.aperture)}${esc(tail)}</option>`).join("");
+
+  const opt = (r, tail = "") => `<option value="${esc(r.key)}" ${
+    v === r.key ? "selected" : ""}>${esc(r.name)} — ${esc(r.focal)}, ${
+    esc(r.aperture)}${esc(tail)}</option>`;
+  const opts = rows.map(r => opt(r)).join("")
+    + (others.length
+      ? `<optgroup label="Outside this grammar — a choice, not an error">${
+          others.map(r => opt(r)).join("")}</optgroup>`
+      : "");
   return `<label class="cam-field cam-field-wide mini"><span>Framing</span>
     <select data-f="${prefix}-framing" ${disabled ? "disabled" : ""}
       title="The lens, aperture and focus this panel renders at. Read live from docs/CAMERA_RECIPES.md.">
@@ -11449,7 +11466,11 @@ async function renderBoardPanels(specId) {
              one under both is large: the grammar says "selective focus",
              the framing says f/1.4–2. Until this the only place that
              difference showed was the picture. -->
-        ${staged.camera_recipe?.rides
+        ${staged.camera_recipe?.in_prompt === false
+          ? `<span class="shot-tag shot-tag-framing shot-tag-didnt">FRAMING — NOT IN THIS PROMPT · ${
+              esc(String(staged.camera_recipe.would_be_name || "").toUpperCase())
+            } WOULD RIDE A RECOMPILE</span>`
+          : staged.camera_recipe?.rides
           ? `<span class="shot-tag shot-tag-framing">FRAMING — ${
               esc(String(staged.camera_recipe.name || "").toUpperCase())} · ${
               esc(staged.camera_recipe.focal || "")}, ${
@@ -11639,11 +11660,41 @@ async function renderBoardPanels(specId) {
       const st = (CINEMA_STYLES || []).find(x => x.key === v);
       return st ? st.name.toLowerCase() : "";
     })();
+    /* The one line the step shows once the editor closes, so it has to be
+       what the next take will actually paint from.
+
+       It was not. It listed the five axes resolved against the PRODUCTION
+       DEFAULT, and A2 made the compiler stop using that default the
+       moment a framing resolves — so a panel on Subjective / Poetic read
+       "Low · 24mm · level · wide" while its render would use 50–100mm at
+       f/1.4–2.8, and the word Framing appeared nowhere (user-caught
+       2026-08-26). A step that states a camera the render will not use is
+       the failure this whole week was about.
+
+       So: the framing leads when there is one, only axes THIS PANEL set
+       follow it, and the production default is named as a fallback only
+       when nothing has displaced it. */
+    const camFraming = (() => {
+      const v = String(p.camera_recipe || "");
+      if (v.toUpperCase() === "NONE") return null;
+      const gk = String(p.cinematography || "");
+      const st = CINEMA_STYLES.find(x => x.key === gk);
+      const key = v || (gk.toUpperCase() === "NONE" ? "" : (st?.recipes || [])[0] || "");
+      return key ? recipeByKey(key) : null;
+    })();
     const camSummary = (() => {
-      const s = [camRv("camera_angle"), camOrient, camRv("camera_lens"),
-                 camRv("camera_tilt"), camRv("scale")]
-        .filter(Boolean).join(" · ").toLowerCase();
-      const head = s.charAt(0).toUpperCase() + s.slice(1);
+      const own = k => String(p[k] || "").replace(/_/g, " ");
+      const axes = camFraming
+        ? [own("camera_angle"), own("camera_orientation"), own("camera_lens"),
+           own("camera_tilt"), own("scale")].filter(Boolean)
+        : [camRv("camera_angle"), camOrient, camRv("camera_lens"),
+           camRv("camera_tilt"), camRv("scale")].filter(Boolean);
+      const lead = camFraming
+        ? `${camFraming.name} · ${camFraming.focal} · ${camFraming.aperture} · ${
+            camFraming.focus.toLowerCase()} focus`
+        : "";
+      const s = [lead, axes.join(" · ").toLowerCase()].filter(Boolean).join(" · ");
+      const head = camFraming ? s : s.charAt(0).toUpperCase() + s.slice(1);
       return camGrammar
         ? `${head} — ${camGrammar} (this panel)`
         : `${head} — cinematography inherited from the production`;
@@ -11756,7 +11807,8 @@ async function renderBoardPanels(specId) {
               </div>
               ${(() => {
                 const notes = [
-                  camOrient ? "" : "VIEW NOT FIXED — PRODUCTION DEFAULT",
+                  camFraming ? "" : camOrient ? "" : "VIEW NOT FIXED — PRODUCTION DEFAULT",
+                  camFraming ? "FRAMING SET — THE PRODUCTION DEFAULT DOES NOT RIDE THIS PANEL" : "",
                   scopeBits.length ? `SETTING ${esc(scopeBits.slice(-2).join(" "))} OVERRIDES THE HOUR AND HUE OF ANY ATTACHED STYLE IMAGE` : "",
                 ].filter(Boolean);
                 return notes.length ? `<div class="step-note mono">${notes.join("  ·  ")}</div>` : "";
