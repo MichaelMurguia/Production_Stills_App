@@ -93,6 +93,16 @@ def analyze_screenplay(provider: str = "gemini") -> dict:
     return result
 
 
+# The values that mean "nobody has said". `production_period()` reads the
+# same list — an unstated period injects nothing into a prompt, because
+# inventing an era is the fabrication the constraint exists to prevent.
+_NO_PERIOD = ("", "UNSTATED", "UNKNOWN", "N/A", "NONE")
+
+
+def _no_period(v) -> bool:
+    return str(v or "").strip().upper() in _NO_PERIOD
+
+
 def merge_analysis(prior: dict, fresh: dict) -> dict:
     """Re-run semantics (Gap 5, approved rulings): everything the user has
     confirmed survives by name — design languages and environments keep
@@ -112,6 +122,16 @@ def merge_analysis(prior: dict, fresh: dict) -> dict:
     for field in ("acts", "acts_named_by"):
         if not out.get(field) and prior.get(field):
             out[field] = prior[field]
+    # The period survives a re-run for the same reason the act names do:
+    # the user can type it by hand, and a scan about design languages must
+    # not silently drop it (2026-08-26).
+    #
+    # UNSTATED counts as not-stated, not as an answer. A fresh read that
+    # cannot fix a period is told to say UNSTATED — storing that over a
+    # period the director set would let the model overrule them by failing
+    # to find something. Only a fresh read that names a real period wins.
+    if _no_period(out.get("period")) and not _no_period(prior.get("period")):
+        out["period"] = prior["period"]
     for field in ("design_worlds", "environments"):
         if field not in fresh and field not in prior:
             continue

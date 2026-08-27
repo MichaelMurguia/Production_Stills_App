@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2358 tests** across 124 files.
+**2369 tests** across 125 files.
 
 
-## Product app — 2137 tests in 107 files
+## Product app — 2148 tests in 108 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -91,6 +91,7 @@ temp home and external services are faked.
 | `test_palette_order.py` | 24 | Band order in a palette ramp (PALETTE_GROUPS_PLAN §1, §5). |
 | `test_panel_framing.py` | 26 | A2 — the framing a panel renders at, chosen before the spend. |
 | `test_paths_projects.py` | 5 | Multi-project home: switching repoints every mutable path, the legacy root layout is always project '', and the active pointer persists. |
+| `test_period_survives.py` | 11 | The period a director states must survive a re-scan. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
 | `test_probe_pair_and_limit.py` | 24 | C6 and C9 — two small rules, both about not being fooled. |
 | `test_prompt_composition.py` | 10 | R1.5 — what a compiled prompt is actually made of. |

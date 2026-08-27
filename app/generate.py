@@ -1317,8 +1317,14 @@ def production_period() -> str:
         a = store.load_wizard_analysis() or {}
     except Exception:
         return ""
+    # One list of what "nobody has said" looks like, shared with the
+    # re-scan merge that must not overwrite a stated period with one. Two
+    # copies would drift, and the drift would be silent: a value this
+    # treats as absent and the merge treats as an answer is a period that
+    # vanishes from prompts while the screen still shows it.
+    from .wizard import _no_period  # late — wizard imports generate
     p = str(a.get("period", "") or "").strip()
-    return "" if p.upper() in ("", "UNSTATED", "UNKNOWN", "N/A") else p
+    return "" if _no_period(p) else p
 
 
 def compile_panel_prompt(spec: dict, panel: dict, refs: list[dict]) -> str:
