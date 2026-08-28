@@ -618,7 +618,7 @@ class TheUploadStartsTheRead(unittest.TestCase):
         self.assertLess(b.index("usable) return;"), b.index("theRead.begin"))
 
     def test_a_failure_points_at_the_manual_door(self):
-        self.assertIn("run the Scene Scan on", self.body())
+        self.assertIn("build the design plan on", self.body())
 
     def test_the_scan_defaults_to_an_engine_this_studio_has(self):
         """Hardcoding gemini handed an OpenAI-only install a stated-

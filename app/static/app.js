@@ -2515,6 +2515,68 @@ async function renderScreenplay() {
     $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
   }
 
+  /* Inventory Script — the deterministic read, made visible.
+
+     Every phase here is real and every number is one the parse actually
+     returned. That matters more than usual on this button: the whole act
+     takes a few hundred milliseconds, so a progress bar would be pure
+     theatre. What it shows instead is the inventory BUILDING — scenes,
+     then locations, then how many are thin, then broken citations — which
+     is worth reading after it finishes as well as during. */
+  const inventoryBtn = $("#scr-inventory");
+  if (inventoryBtn) inventoryBtn.onclick = async () => {
+    inventoryBtn.disabled = true;
+    const lad = runLadder.create($("#scr-inventory-busy"), {
+      title: "Inventorying the script",
+      phases: [{ key: "read", label: "READ" }, { key: "scenes", label: "SCENES" },
+               { key: "places", label: "LOCATIONS" }, { key: "cites", label: "CITATIONS" }],
+      rows: [{ key: "chars", label: "Characters of extracted text" },
+             { key: "scenes", label: "Scene headings" },
+             { key: "locs", label: "Locations" },
+             { key: "thin", label: "Thin coverage — leans on inference" },
+             { key: "broken", label: "Broken citations" }],
+    });
+    try {
+      lad.phase("read", "Reading the extracted text — the copy every model reads.");
+      // Already on the screenplay record; a second endpoint to re-count
+      // characters the app has known since upload would be a new route
+      // answering a question already answered.
+      lad.set("chars", (sp?.text_chars || 0).toLocaleString());
+
+      lad.phase("scenes", "Finding scene headings by slugline. No model involved.");
+      const locs = await api("/api/screenplay/locations");
+      const rows = locs.locations || [];
+      lad.set("scenes", rows.reduce((n, r) => n + (r.scenes || 0), 0));
+
+      lad.phase("places", "Grouping locations and scoring how much the script says about each.");
+      lad.set("locs", rows.length);
+      lad.set("thin", rows.filter(r => (r.detail ?? 4) <= 1).length);
+
+      lad.phase("cites", "Re-checking every quote the breakdowns cite against this draft.");
+      const cr = await api("/api/screenplay/citation-report").catch(() => ({ missing: [] }));
+      lad.set("broken", (cr.missing || []).length);
+
+      lad.done(rows.length
+        ? `Inventory complete — ${rows.length} location${rows.length === 1 ? "" : "s"} below.`
+        : "No scene headings found — is this an image-only PDF?");
+      /* The ladder STAYS. The Bible's panel dismisses itself when it
+         finishes, and that is right for a minute-long act you watched —
+         "once nothing is happening it is a spent receipt on the stage".
+         This act takes a few hundred milliseconds, so the same rule
+         inverts: nobody watches it, and the ladder is not a progress
+         display but the inventory itself. Re-rendering the whole stage
+         here wiped it before it could be read.
+
+         So only the locations table below is redrawn. */
+      const fresh = await api("/api/state").catch(() => null);
+      if (fresh) renderLocations(fresh, langs);
+      inventoryBtn.disabled = false;
+    } catch (err) {
+      lad.fail(err.message);
+      inventoryBtn.disabled = false;
+    }
+  };
+
   bindScreenplayUpload($("#screenplay-form"), state.capability);
 
   // A read in flight survives leaving the view and coming back — it is
@@ -2540,6 +2602,92 @@ async function renderScreenplay() {
      `Upload a new draft` says it does.
    - **Only with an engine.** The read is a model call; with none it is
      not attempted, and the upload is gated on a credential anyway. */
+/* A run ladder — phases across the top, results filling in beneath.
+
+   Built 2026-08-28 so two acts that had nothing (the script inventory)
+   or one spinner (the design plan) get the treatment the Bible draft
+   already had: you can see what is being done and what came back.
+
+   The rule it inherits from `theBible`, and the reason that one is worth
+   copying: it NEVER invents progress. Where a phase is one model call,
+   its comment says so — "one call. No per-section progress exists, so
+   none is shown" — and the ladder shows a clock rather than a bar
+   creeping toward a number nobody measured. A fake progress bar is a
+   record describing an intention, which is the fault this project has
+   spent a week removing from three other surfaces.
+
+   So: a row fills when its REAL value lands, and a phase nobody can see
+   inside says so in words. */
+const runLadder = {
+  create(host, { title, phases, rows }) {
+    if (!host) return null;
+    const t0 = Date.now();
+    host.innerHTML = `<div class="rd rl">
+      <div class="rd-head">
+        <h3 class="stage-headline">${esc(title)}</h3>
+        <span class="rd-meta mono"><span data-f="clock">00:00</span></span>
+      </div>
+      <div class="rd-phase mono">${phases.map(p =>
+        `<span data-p="${esc(p.key)}">${esc(p.label)}</span>`).join("")}</div>
+      <p class="rd-note mono" data-f="note"></p>
+      <div class="rl-rows">${rows.map(r =>
+        `<div class="rl-row" data-r="${esc(r.key)}">
+           <span class="rl-lab">${esc(r.label)}</span>
+           <span class="rl-val mono">—</span>
+         </div>`).join("")}</div>
+    </div>`;
+    const el = host.firstElementChild;
+    const order = phases.map(p => p.key);
+    const clock = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      const c = $("[data-f=clock]", el);
+      if (c) c.textContent = String(Math.floor(s / 60)).padStart(2, "0")
+        + ":" + String(s % 60).padStart(2, "0");
+    }, 1000);
+    return {
+      phase(key, note = "") {
+        const at = order.indexOf(key);
+        $$(".rd-phase span", el).forEach((s, i) => {
+          s.classList.toggle("done", i < at);
+          s.classList.toggle("now", i === at);
+        });
+        const n = $("[data-f=note]", el);
+        n.textContent = note;
+        n.classList.toggle("hidden", !note);
+      },
+      /* A row's value is whatever actually came back. `null` leaves it at
+         the em dash — a phase that produced nothing says nothing rather
+         than claiming a zero it did not measure. */
+      set(key, value) {
+        const r = $(`.rl-row[data-r="${key}"] .rl-val`, el);
+        if (r && value !== null && value !== undefined) {
+          r.textContent = String(value);
+          r.closest(".rl-row").classList.add("in");
+        }
+      },
+      done(note = "") {
+        clearInterval(clock);
+        $$(".rd-phase span", el).forEach(s => {
+          s.classList.add("done"); s.classList.remove("now");
+        });
+        const n = $("[data-f=note]", el);
+        n.textContent = note;
+        n.classList.toggle("hidden", !note);
+      },
+      fail(msg) {
+        clearInterval(clock);
+        $$(".rd-phase span", el).forEach(s => s.classList.remove("now"));
+        const n = $("[data-f=note]", el);
+        n.textContent = msg;
+        n.classList.remove("hidden");
+        el.classList.add("rl-failed");
+      },
+      dismiss() { clearInterval(clock); host.innerHTML = ""; },
+    };
+  },
+};
+
+
 /* ============================================ the bible, as it is written
    One act (user, 2026-08-22: "generating the art direction bible and
    swatches should happen in a single step ... same razzle-dazzle feedback
@@ -3070,7 +3218,7 @@ async function startTheRead() {
       throw err;
     }
   } catch (err) {
-    toast(`The read did not finish: ${err.message} — run the Scene Scan on `
+    toast(`The read did not finish: ${err.message} — build the design plan on `
           + "Prod. Design when you are ready.", true);
   }
 }
@@ -4922,7 +5070,7 @@ async function renderWizard() {
   // director states the look before the machine reads anything, and the
   // anchor cards ARE that statement now — a picture, words, or both. The
   // separate interview asked the same four questions a second time.
-  const RAIL = [[1, "Anchors"], [2, "Scan"], [3, "Cast"],
+  const RAIL = [[1, "Anchors"], [2, "Design Plan"], [3, "Cast"],
                 [4, "Bible"], [5, "Model Test"]];
   const rail = $("#wiz-rail");
   rail.innerHTML = RAIL.map(([n, l]) =>
@@ -4973,7 +5121,7 @@ async function renderWizard() {
   locPick.innerHTML =
     (sampleLocs.length
       ? sampleLocs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("")
-      : `<option value="">run the Step 2 Scene Scan to list your locations</option>`)
+      : `<option value="">build the design plan in Step 2 to list your locations</option>`)
     + `<option value="${OTHER}">Somewhere else — type it…</option>`;
   const useOther = on => {
     locInput.classList.toggle("hidden", !on);
@@ -5872,6 +6020,13 @@ async function renderWizard() {
     });
   };
 
+  /* The same words the server treats as "nobody has said" (wizard.py
+     `_NO_PERIOD`). The scan is TOLD to answer UNSTATED when the
+     screenplay does not fix a period, so printing that back as a result
+     would read as something it found. */
+  const wizNoPeriod = v =>
+    ["", "UNSTATED", "UNKNOWN", "N/A", "NONE"].includes(String(v || "").trim().toUpperCase());
+
   const renderWorlds = () => {
     const analysis = getAnalysis();
     const host = $("#wiz-analysis");
@@ -6298,20 +6453,54 @@ async function renderWizard() {
   $("#wiz-analyze").onclick = async (e) => {
     const btn = e.target;
     btn.disabled = true;
-    const busy = startBusy($("#wiz-analyze-busy"),
-      `Reading the screenplay and identifying visual story elements and scenes — ${selectedModelLabel($("#wiz-provider"))}…`,
-      "a minute or two");
+    /* The design plan's ladder.
+
+       Same honesty rule as the Bible's: ASSEMBLE is real client-side work
+       over inputs already known, READ is ONE model call with no visible
+       interior — so it shows a clock and says so rather than a bar
+       creeping toward a number nobody measured — and FOUND fills each row
+       from the response as it is parsed. */
+    const lad = runLadder.create($("#wiz-analyze-busy"), {
+      title: "Building the design plan",
+      phases: [{ key: "assemble", label: "ASSEMBLE" }, { key: "read", label: "READ" },
+               { key: "found", label: "FOUND" }],
+      rows: [{ key: "langs", label: "Design languages" },
+             { key: "envs", label: "Environments" },
+             { key: "locs", label: "Locations" },
+             { key: "subjects", label: "Subjects to cast" },
+             { key: "questions", label: "Open questions" },
+             { key: "period", label: "Period" }],
+    });
+    lad.phase("assemble", `Sending the screenplay to ${selectedModelLabel($("#wiz-provider"))}.`);
     try {
+      lad.phase("read", "One call, and no way to see inside it — the clock "
+                       + "is the only honest progress there is. A minute or two.");
       const analysis = await api("/api/wizard/analyze", {
         method: "POST", json: { provider: $("#wiz-provider").value } });
+      lad.phase("found", "");
+      lad.set("langs", (analysis.design_worlds || []).length);
+      lad.set("envs", (analysis.environments || []).length);
+      lad.set("locs", (analysis.key_locations || []).length);
+      lad.set("subjects", (analysis.subjects || []).length);
+      lad.set("questions", (analysis.unresolved || []).length);
+      // Blank rather than a claimed answer: the read is told to say
+      // UNSTATED when the screenplay does not fix a period, and printing
+      // that word as a result would read as something it found.
+      lad.set("period", wizNoPeriod(analysis.period) ? null : analysis.period);
+      lad.done("Review what it found below, then build the Art Direction Bible.");
       saveAnalysis(analysis);
       expandedWorlds.clear();
       renderWorlds();
       renderAnalyzeLock();
       renderSubjectTags();
       toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s) — review below.`);
-    } catch (err) { toast(err.message, true); }
-    finally { busy.done(); btn.disabled = false; }
+    } catch (err) {
+      // The ladder keeps its rows and states the failure in place. It
+      // used to vanish on error, taking with it the only record of how
+      // far the read got.
+      lad.fail(err.message);
+      toast(err.message, true);
+    } finally { btn.disabled = false; }
   };
 
   renderWorlds();
@@ -6482,7 +6671,7 @@ async function renderWizard() {
     editor.classList.toggle("is-locked", st === "saved");
 
     const VERB = {
-      empty: "Create Art Direction Bible",
+      empty: "Build Art Direction Bible",
       unsaved: "Save Art Direction Bible",
       saved: "Edit",
       editing: "Save Art Direction Bible",

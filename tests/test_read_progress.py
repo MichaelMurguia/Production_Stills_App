@@ -294,12 +294,14 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         # …and no other view re-mounts it
         self.assertEqual(self.js.count("theRead.mount()"), 1)
 
-    def test_the_scene_scan_reports_through_its_own_busy_line(self):
+    def test_the_design_plan_reports_through_its_own_ladder(self):
         """Removing the panel from stage 02 must not leave that door
-        silent — it reports the way it always did."""
+        silent. It reported through a plain spinner until 2026-08-28, when
+        it gained the same run ladder the Bible draft has — phases, and a
+        row per thing the read produced."""
         i = self.js.index('#wiz-analyze").onclick')
-        seg = self.js[i:i + 1400]
-        self.assertIn("startBusy(", seg)
+        seg = self.js[i:i + 2400]
+        self.assertIn("runLadder.create(", seg)
         self.assertIn("design language(s)", seg)
         self.assertNotIn("theRead.", seg)
 

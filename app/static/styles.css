@@ -2048,6 +2048,25 @@ details.meta pre {
 .wiz-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .wiz-pair:has(> :only-child) { grid-template-columns: 1fr; }
 .wiz-pair-note { margin: 4px 0 0; color: var(--ink-faint); }
+/* UNCANONIZED — 2026-08-28 — the run ladder */
+/* The Bible draft's live panel (`.rd`) generalised so the script
+   inventory and the design plan get the same treatment. Rows are label +
+   Courier value; a row fills only when its real value lands, and an
+   unfilled one keeps its em dash rather than claiming a zero nothing
+   measured. No progress bar anywhere: where a phase is one model call
+   there is nothing to measure, and a creeping bar would be a picture of
+   an intention. */
+/* Capped, or the phase chips space themselves across the full workbench
+   width and read as three unrelated words. The Bible's panel never hit
+   this because its host is narrow. */
+.rl { max-width: 92ch; }
+.rl .rl-rows { margin-top: 10px; border-top: 1px solid var(--line-soft); }
+.rl-row { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+.rl-row .rl-lab { color: var(--ink-faint); font-size: 12px; }
+.rl-row .rl-val { color: var(--ink-faint); font-size: 12px; }
+.rl-row.in .rl-val { color: var(--ink); }
+.rl-failed .rd-note { color: var(--bad); }
 .bible-check-row { margin-top: 10px; }
 .bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
 .bc-none { color: var(--ink-faint); max-width: 74ch; margin: 10px 0 0; }

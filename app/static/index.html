@@ -109,8 +109,18 @@
     <div class="dash-main">
       <div class="panel">
         <div class="stage-kicker">STAGE 01 OF 5</div>
-        <h3 class="stage-headline">What the script gave us</h3>
+        <h3 class="stage-headline">Script Inventory</h3>
         <p class="hint">Every location the read found, with how much the script actually says about each. Thin coverage means a breakdown here will lean on inference — and inference is budgeted.</p>
+        <!-- The inventory was an invisible act: a deterministic slugline
+             parse that ran on upload with no button, no name and no sign
+             it had happened. It is free and it is fast, and neither of
+             those is a reason for the one stage that reads the screenplay
+             to have nothing you can run (user, 2026-08-28). -->
+        <div class="row" style="margin-top:0">
+          <button id="scr-inventory" class="ghost" title="Re-read the screenplay for its scene headings, locations and coverage. Free — a deterministic parse, no model and no cost.">Inventory Script</button>
+          <span class="step-cond">DETERMINISTIC · NO MODEL · NO COST</span>
+        </div>
+        <div id="scr-inventory-busy"></div>
         <div id="dash-locations"></div>
       </div>
       <div class="panel hidden" id="scr-citations"></div>
@@ -246,7 +256,7 @@
     </div>
 
     <div class="panel step" data-step="2">
-      <h2>Script scene scan</h2>
+      <h2>Build Design Plan <span class="step-cond">THE VISUAL WORLDS, ENVIRONMENTS, CAST AND OPEN QUESTIONS THE SCRIPT IMPLIES</span></h2>
       <div class="row">
         <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
           <select id="wiz-provider">
@@ -254,7 +264,7 @@
             <option value="openai">OpenAI GPT-5.6</option>
           </select>
         </div>
-        <div class="gen-actions"><button id="wiz-analyze" class="primary">Run the Scene Scan</button></div>
+        <div class="gen-actions"><button id="wiz-analyze" class="primary" title="Reads the screenplay with the chosen model and derives the design languages, environments, cast, locations and open questions. This one costs money.">Build Design Plan</button></div>
       </div>
       <div id="wiz-analyze-lock" class="mini" style="margin-top:8px"></div>
       <div id="wiz-analyze-busy"></div>
@@ -286,7 +296,7 @@
            next true thing: Create, then Edit, then Save. Regenerate joins
            it only once a bible exists, and hides again while editing. -->
       <div class="row" style="margin-top:0">
-        <button id="wiz-draft" class="primary">Create Art Direction Bible</button>
+        <button id="wiz-draft" class="primary">Build Art Direction Bible</button>
         <button id="bible-regen" class="ghost hidden">Regenerate</button>
         <span class="step-cond" id="bible-cond">FROM THE ANCHORS, THE SCAN AND THE CAST &mdash; WRITTEN, SAVED, AND BREAKDOWNS OPEN</span>
         <span id="style-status" class="mini"></span>
@@ -323,7 +333,7 @@
     <div class="panel step" data-step="5">
       <h2>Test your model <span class="step-cond">SAME LOCATION &middot; SAME BIBLE &middot; SAME ANCHORS</span></h2>
       <div class="row" style="margin-top:0">
-        <div class="fgroup" style="flex:1;max-width:460px" title="The screenplay location every engine renders. The list is your own screenplay's locations, read in the Step 2 Scene Scan. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
+        <div class="fgroup" style="flex:1;max-width:460px" title="The screenplay location every engine renders. The list is your own screenplay's locations, read when Step 2 built the design plan. Left blank, a generic fallback scene is used."><span class="f-label">Sample location</span>
           <select id="wiz-sample-pick"></select>
           <input type="text" id="wiz-sample-loc" class="hidden" placeholder="type a location…">
         </div>

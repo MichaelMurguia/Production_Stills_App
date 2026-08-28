@@ -62,7 +62,7 @@ class TheLocationsAreOffered(unittest.TestCase):
         self.assertIn('locPick.value === OTHER', JS)
 
     def test_an_unscanned_production_says_what_to_do(self):
-        self.assertIn("run the Step 2 Scene Scan to list your locations", JS)
+        self.assertIn("build the design plan in Step 2 to list your locations", JS)
 
     def test_a_typed_location_is_remembered_as_typed(self):
         """Reopening on a free-text choice must restore the text, not

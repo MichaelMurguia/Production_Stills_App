@@ -71,7 +71,7 @@ class ThereIsOneButton(unittest.TestCase):
     def test_the_verb_is_a_function_of_state(self):
         i = JS.index("const VERB = {")
         seg = JS[i:i + 400]
-        for state, verb in (("empty", "Create Art Direction Bible"),
+        for state, verb in (("empty", "Build Art Direction Bible"),
                             ("unsaved", "Save Art Direction Bible"),
                             ("saved", "Edit"),
                             ("editing", "Save Art Direction Bible")):

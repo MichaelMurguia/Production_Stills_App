@@ -1025,6 +1025,38 @@ class TheFramingFieldAndTag(unittest.TestCase):
         self.assertNotIn("--accent", block)
         self.assertNotIn("--bad", block)
 
+    def test_a_ladder_row_states_only_what_landed(self):
+        """An unfilled row keeps its em dash in `--ink-faint`; a filled
+        one goes `--ink`. A row that printed 0 before its value arrived
+        would be claiming a measurement nobody made — the fault this
+        project spent a week removing from three other surfaces."""
+        empty = CSS.split(".rl-row .rl-val {")[1].split("}")[0]
+        self.assertIn("var(--ink-faint)", empty)
+        filled = CSS.split(".rl-row.in .rl-val {")[1].split("}")[0]
+        self.assertIn("var(--ink)", filled)
+
+    def test_the_ladder_has_no_progress_bar(self):
+        """Where a phase is one model call there is nothing to measure,
+        and a creeping bar would be a picture of an intention. The check
+        is on the JS, not the CSS: a bar is drawn by setting a width from
+        data, and `max-width` on the container is not that."""
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        i = js.index("const runLadder = {")
+        seg = js[i:js.index("const theBible = {", i)]
+        for word in ("style.width", "busy-bar", "@keyframes", "requestAnimationFrame"):
+            self.assertNotIn(word, seg, word)
+
+    def test_a_ladder_is_capped_so_its_phases_stay_together(self):
+        block = CSS.split(".rl {")[1].split("}")[0]
+        self.assertIn("max-width", block)
+
+    def test_only_a_failure_is_painted_bad(self):
+        block = CSS.split(".rl-failed .rd-note {")[1].split("}")[0]
+        self.assertIn("var(--bad)", block)
+        rows = CSS.split(".rl-row {")[1].split("}")[0]
+        self.assertNotIn("--bad", rows)
+        self.assertNotIn("--accent", rows)
+
     def test_the_framing_note_speaks_prose_not_machine(self):
         """Rule 2: Courier carries machine data, Archivo carries prose.
         The note is a sentence, and it sits inside `.cam-field`, whose

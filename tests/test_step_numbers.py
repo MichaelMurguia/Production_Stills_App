@@ -58,8 +58,10 @@ class TheRailAgreesWithThePanels(unittest.TestCase):
     def test_the_bible_panel_is_the_rail_s_bible_chip(self):
         self.assertEqual(step_of('id="wiz-draft"'), rail()["bible"])
 
-    def test_the_scan_panel_is_the_rail_s_scan_chip(self):
-        self.assertEqual(step_of('<h2>Script scene scan</h2>'), rail()["scan"])
+    def test_the_design_plan_panel_is_the_rails_design_plan_chip(self):
+        """Renamed 2026-08-28. "Script scene scan" named a mechanism and
+        collided with stage 01, which also calls itself a read."""
+        self.assertEqual(step_of("<h2>Build Design Plan"), rail()["design plan"])
 
     def test_the_model_test_is_last(self):
         self.assertEqual(rail()["model test"], max(rail().values()))
@@ -111,10 +113,14 @@ class CopyPointsAtTheRightStep(unittest.TestCase):
                                  r"step (\d+)", text):
                 self.assertEqual(int(m.group(1)), cast, where)
 
-    def test_the_scene_scan_pointers_name_the_scan_step(self):
-        scan = rail()["scan"]
-        for m in re.finditer(r"[Ss]tep (\d+) S(?:cript )?[Cc]ene [Ss]can", HTML):
-            self.assertEqual(int(m.group(1)), scan)
+    def test_the_design_plan_pointers_name_the_design_plan_step(self):
+        """Copy elsewhere that sends the user to this step must name the
+        step it is actually at. Renamed 2026-08-28 with the step."""
+        n = rail()["design plan"]
+        for m in re.finditer(r"[Ss]tep (\d+) built the design plan", HTML):
+            self.assertEqual(int(m.group(1)), n)
+        for m in re.finditer(r"design plan in Step (\d+)", JS):
+            self.assertEqual(int(m.group(1)), n)
 
 
 if __name__ == "__main__":
