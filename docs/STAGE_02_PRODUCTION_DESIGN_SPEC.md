@@ -509,22 +509,51 @@ feel free to rethink.
    period and acts — seven kinds of thing, four of which have their own
    review cycle. It may deserve to be more than one step.
 
-3. **The anchor columns are four narrow cards carrying a lot.** A head, a
+3. **"Script scene scan" collides with stage 01, and breaks this page's
+   own naming rule** (user-caught 2026-08-28: *"doesn't that happen in
+   stage 01?"*).
+
+   They are different operations. Stage 01 is a **deterministic parse** —
+   sluglines by regex, scene counts, a coverage heuristic. No model, no
+   cost, no button: it runs on upload. Stage 02 step 2 is a **paid model
+   call** deriving design languages, environments, subjects, open
+   questions, period, logline and acts. One is what the script *contains*;
+   the other is what it *implies visually*.
+
+   Nothing on either screen says so. Stage 01 calls itself *"What the
+   script gave us"* and *"every location **the read** found"*; step 2
+   calls itself a **scan**. Read and scan — two words for two operations
+   that differ in cost, mechanism and output.
+
+   They also overlap on the most visible artifact: **both render a
+   locations table** from the same slugline parse — stage 01 with a
+   coverage meter, step 2 joined to environments and breakdown sheets.
+
+   And "Script scene scan" names a mechanism, which this page's own D1/D2
+   ruling forbids: *a step states what it does to the movie, never what it
+   is.* "Cast the film" obeys it. Something like "Find the visual worlds"
+   would obey it and end the collision in the same move.
+
+   Worth ruling on: the name; whether the two locations tables should be
+   one; and whether either screen should state that one read is free and
+   mechanical while the other costs money and interprets.
+
+4. **The anchor columns are four narrow cards carrying a lot.** A head, a
    badge, a two-line jurisdiction hint, an upload button, a words control,
    a thumb strip, and for two of them extra controls that travel into a
    modal. They are dense.
 
-4. **Two anchors state themselves with a button, two with a text field.**
+5. **Two anchors state themselves with a button, two with a text field.**
    Consistent in code, inconsistent to look at. Whether Color Palette
    should also have a catalogue is an open design question.
 
-5. **Controls that travel into a modal and back** (`Never looks like`) are
+6. **Controls that travel into a modal and back** (`Never looks like`) are
    clever and hard to discover.
 
-6. **The swatch ramp has no legend.** A hero swatch is double-width and
+7. **The swatch ramp has no legend.** A hero swatch is double-width and
    nothing says so.
 
-7. **The 41 uncanonized patterns** in `app/static/DESIGN_SYSTEM.md` include
+8. **The 41 uncanonized patterns** in `app/static/DESIGN_SYSTEM.md` include
    several on this page. That table is the review queue.
 
 ---
