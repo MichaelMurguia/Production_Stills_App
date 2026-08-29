@@ -169,15 +169,20 @@ class TokenContractTests(unittest.TestCase):
             "background: var(--field)", "border: 1px solid var(--line)"])
         self.assert_decls(".prov-ico", ["width: 22px", "height: 22px"])
 
-    def test_four_anchor_row(self):
-        """User-directed 2026-08-05: the four style-anchor roles share
-        one 4-track grid, THE MOVIE label spans its three columns, and
-        the old boards group (whose lone card collapsed to a third of a
-        third of the page) is gone."""
+    def test_three_anchor_row(self):
+        """Four until 2026-08-29, when colour left this step for the
+        Bible: its palette is proposed FROM that document, so choosing a
+        colour language before the document existed was asking for the
+        answer ahead of the question. THE MOVIE now spans two.
+
+        The auto-attach shelf is still four — a palette reference still
+        rides every render, and moving a card cannot change that."""
         self.assert_decls(".wiz-cols-anchors",
-                          ["grid-template-columns: repeat(4, minmax(0,1fr))"])
-        self.assert_decls(".wiz-span3", ["grid-column: span 3"])
+                          ["grid-template-columns: repeat(3, minmax(0,1fr))"])
+        self.assert_decls(".wiz-span2", ["grid-column: span 2"])
         self.assertNotIn(".wiz-cols-board", CSS)
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('"WORLD_TEXTURE", "COLOR_PALETTE"', js)
 
     def test_two_doors_one_section(self):
         """B1: amber marks only the recommended door; the alternative is

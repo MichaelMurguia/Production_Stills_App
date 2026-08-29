@@ -2463,6 +2463,22 @@ def api_save_cine_setting(body: dict) -> dict:
         key=body.get("key"))
 
 
+@app.post("/api/wizard/suggest-anchors")
+async def api_suggest_anchors(body: dict = Body(default={})) -> dict:
+    """Three proposed look anchors, read from the screenplay (2026-08-29).
+
+    Proposals only. Nothing is written here — the client renders them for
+    the director to accept or dismiss, and accepting takes the same path
+    a manual pick takes."""
+    from . import wizard
+    try:
+        return await run_in_threadpool(
+            wizard.suggest_anchors,
+            str((body or {}).get("provider", "") or generate.DEFAULT_PROVIDER))
+    except (autofill.AutofillError, generate.GenerationError) as e:
+        raise HTTPException(422, str(e))
+
+
 @app.post("/api/bible/self-check")
 def api_bible_self_check(body: dict = None) -> dict:
     """R2 — read the Bible against itself and report contradictions.

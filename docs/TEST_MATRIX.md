@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2409 tests** across 127 files.
+**2431 tests** across 128 files.
 
 
-## Product app — 2188 tests in 110 files
+## Product app — 2210 tests in 111 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -128,6 +128,7 @@ temp home and external services are faked.
 | `test_style_plate_tooling.py` | 11 | The two scripts that stand between a folder of renders and the picker. |
 | `test_stylesheet_parses.py` | 4 | The stylesheet must actually parse. |
 | `test_subject_identity_match.py` | 16 | The SUBJECT IDENTITIES block missed the same way the workbench did. |
+| `test_suggested_anchors.py` | 22 | The screenplay proposes the look, and colour leaves step 01. |
 | `test_suite_hygiene.py` | 3 | The suite checks itself for dead tests. |
 | `test_swatch_edit.py` | 31 | Swatch labels, hero colours and recolour (user 2026-08-06). |
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |

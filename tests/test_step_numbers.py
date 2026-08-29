@@ -102,8 +102,12 @@ class CopyPointsAtTheRightStep(unittest.TestCase):
         self.assertEqual(int(m.group(1)), self.bible())
 
     def test_the_swatch_result_names_the_palette_s_own_step(self):
-        m = re.search(r"LANDS IN STEP (\d+) / COLOR PALETTE", JS)
-        self.assertTrue(m)
+        """The act and its result were two steps apart until 2026-08-29 —
+        generation reads the saved Bible in step 4 and the swatches landed
+        in step 1. Colour moved to the Bible, so they are one step now and
+        the line says "beside this" rather than pointing away."""
+        m = re.search(r"LANDS IN STEP (\d+) / COLOUR", JS)
+        self.assertTrue(m, "the swatch result must still name where it lands")
         self.assertEqual(int(m.group(1)), self.palette())
 
     def test_the_cast_pointer_names_the_cast_step(self):

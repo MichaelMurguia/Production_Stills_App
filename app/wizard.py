@@ -196,6 +196,114 @@ def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
     return out
 
 
+# Let the screenplay propose the three look anchors (2026-08-29).
+#
+# The anchors LEAD this stage, and that ordering is a ruling: the
+# director states what the film should feel like before the machine reads
+# anything (2026-08-07). This does not overturn it. It adds a second door
+# for the director who would rather be shown three candidates than face
+# three empty cards, and everything it produces is a PROPOSAL — the same
+# confirm-or-drop cycle the design languages already use.
+#
+# Three catalogues, one from each, and never a fourth: colour is not a
+# catalogue. Its palette is proposed FROM the Bible, which is why the
+# palette anchor moved out of this step entirely on the same day.
+#
+# What comes back is a KEY plus a reason. The key is validated against
+# the live document, so a model that invents a style produces nothing
+# rather than a value nobody can look up; the reason is what the director
+# argues with, and an anchor accepted without one is a look nobody chose.
+SUGGEST_LIBS = ("texture", "cinematography", "rendering")
+
+
+def _suggest_instructions(text: str) -> str:
+    from . import style_docs
+    menus = []
+    for lib in SUGGEST_LIBS:
+        rows = style_docs.styles(lib)
+        noun = style_docs.LIBRARIES[lib][2]
+        menus.append(f"{noun.upper()} — choose exactly one `key`:\n" + "\n".join(
+            f"  {st['key']} — {st['name']}: {st['subtitle']}. {st['description']}"
+            for st in rows))
+    return f"""You are a production designer reading a screenplay to propose its look.
+
+Choose ONE option from each of the three catalogues below. They are the app's
+own documents and you may not invent an option that is not listed.
+
+{chr(10).join(menus)}
+
+How to choose, in this order:
+  1. What is this film ABOUT — not its genre, its subject. A film about
+     scarcity and repair is a different world texture from one about a place
+     that has never been touched.
+  2. What does the screenplay SHOW repeatedly — the surfaces, the light
+     sources, the hours it keeps returning to. Recurrence is the evidence.
+  3. What would fight the material. State that in your reason where a strong
+     second choice exists.
+
+The three are independent. World texture is the world's condition; the
+cinematography grammar is how the camera tells the story; the rendering style
+is how the BOARDS are painted and says nothing about the film itself. Do not
+let one drag the other two after it.
+
+Return ONLY a JSON object with exactly this shape:
+{{
+  "texture":       {{"key": "one key from the world texture list", "why": "one sentence, grounded in something the screenplay actually shows"}},
+  "cinematography":{{"key": "one key from the cinematography list", "why": "one sentence"}},
+  "rendering":     {{"key": "one key from the rendering list", "why": "one sentence"}}
+}}
+
+Every `why` must name something in THIS screenplay. A reason that would fit any
+film is not a reason.
+
+THE SCREENPLAY FOLLOWS.
+
+{text}"""
+
+
+def suggest_anchors(provider: str = "gemini") -> dict:
+    """Three proposed look anchors, read from the screenplay.
+
+    Proposals, never assignments: the caller renders them for a director
+    to accept or dismiss, and accepting writes exactly what picking from
+    the catalogue by hand would write.
+
+    A key the live document does not define is DROPPED rather than
+    returned. An option nobody can open is worse than a shorter answer —
+    it would put a style on a card that no picker could ever show.
+    """
+    from . import style_docs
+    text = store.screenplay_text_cached()
+    if not text.strip():
+        raise autofill.AutofillError(
+            "No screenplay text to read. The original upload is never sent to "
+            "a model, so a screenplay that yielded no text cannot be read "
+            "here either — re-export it with selectable text.")
+    if provider == "mock":
+        return {"proposals": {}, "model": "mock"}
+    result, model = autofill._draft(
+        provider, None, None, _suggest_instructions(text))
+    out = {}
+    for field, lib in (("texture", "texture"),
+                       ("cinematography", "cinematography"),
+                       ("rendering", "rendering")):
+        row = result.get(field)
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("key", "")).strip()
+        st = next((x for x in style_docs.styles(lib) if x["key"] == key), None)
+        why = str(row.get("why", "")).strip()
+        # Both halves or neither. A style with no reason is a look nobody
+        # chose, and the reason is the whole of what makes this a proposal
+        # rather than an assignment.
+        if not st or not why:
+            continue
+        out[field] = {"key": st["key"], "name": st["name"],
+                      "subtitle": st["subtitle"], "value": st["value"],
+                      "why": why[:400]}
+    return {"proposals": out, "model": model}
+
+
 # R2 — does the Bible agree with itself? (2026-08-25)
 #
 # Selection is repair work. A Bible that does not contradict itself needs

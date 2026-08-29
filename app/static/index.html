@@ -179,8 +179,18 @@
          LOCKED_STAGE_PLAN L3: the interview precedes casting. -->
     <div class="panel step" data-step="1">
       <h2>Style anchors</h2>
+      <!-- A second door, not a replacement. The anchors LEAD this stage
+           because the director states the look before the machine reads
+           anything (2026-08-07); this is for the director who would
+           rather be shown three candidates than face three empty cards.
+           Everything it returns is a proposal with a reason. -->
+      <div class="row wiz-suggest-row">
+        <button id="wiz-suggest" class="ghost" title="Read the screenplay and propose one world texture, one cinematography grammar and one board rendering style — each with a reason you can argue with. Nothing is set until you accept it.">Suggest from the screenplay</button>
+        <span class="cost mono">COSTS A MODEL CALL &middot; PROPOSES, NEVER SETS</span>
+      </div>
+      <div id="wiz-suggest-busy"></div>
       <div class="wiz-cols wiz-cols-anchors">
-        <p class="wiz-group-label wiz-span3">THE MOVIE</p>
+        <p class="wiz-group-label wiz-span2">THE MOVIE</p>
         <p class="wiz-group-label wiz-label-boards">THE BOARDS</p>
         <div class="wiz-col" data-role="WORLD_TEXTURE">
           <button type="button" class="anchor-hero" data-f="hero"
@@ -200,36 +210,6 @@
             <button type="button" class="ghost pick-btn wiz-offpage" id="wiz-texture-pick" tabindex="-1">Choose a world texture</button>
           </label>
           <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
-        </div>
-        <div class="wiz-col" data-role="COLOR_PALETTE">
-          <button type="button" class="anchor-hero" data-f="hero"
-            title="Color Palette — click to choose or change it">
-            <span class="ah-shot" data-f="hero-shot"></span>
-            <span class="ah-role mono">COLOR PALETTE</span>
-            <span class="ah-state mono" data-f="state">NONE</span>
-            <span class="ah-scrim">
-              <span class="ah-name" data-f="hero-name">Not set</span>
-              <span class="ah-line" data-f="hero-line"></span>
-            </span>
-          </button>
-          <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
-          <input type="file" accept="image/*" multiple data-f="files" hidden>
-          <!-- The adder is a BUTTON, not a live row (user-hit 2026-08-22:
-               "I am still getting the odd Oxide color swatch that shows up
-               when there are no other color swatches"). It held an
-               `<input type="color" value="#8a4b2e">`, which a browser draws
-               as a filled rust square — indistinguishable from a swatch,
-               sitting in the column of a production that had none. The form
-               it opens is the one that already existed for editing a
-               swatch. -->
-          <div class="swatch-add wiz-offpage">
-            <button class="ghost" data-f="sw-add">Add swatch</button>
-          </div>
-          <label class="wiz-words wiz-offpage" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words
-            <input type="text" data-f="words" id="wiz-palette" placeholder="e.g. oxide and bone, low key, saturation held back">
-          </label>
-          <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
-          <div id="swatch-strip" class="wiz-offpage"></div>
         </div>
         <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
           <button type="button" class="anchor-hero" data-f="hero"
@@ -359,7 +339,40 @@
            save exists — step 4's own gate explains the situation two
            lines above, and saying it twice on one screen is the
            verbosity D1 cut. -->
-      <div class="swatch-gen" id="swatch-gen"></div>
+      <div class="wiz-colour-block">
+            <p class="wiz-group-label">COLOUR &mdash; PROPOSED FROM THE BIBLE, NOT CHOSEN BEFORE IT</p>
+            <div class="wiz-col" data-role="COLOR_PALETTE">
+              <button type="button" class="anchor-hero" data-f="hero"
+                title="Color Palette — click to choose or change it">
+                <span class="ah-shot" data-f="hero-shot"></span>
+                <span class="ah-role mono">COLOR PALETTE</span>
+                <span class="ah-state mono" data-f="state">NONE</span>
+                <span class="ah-scrim">
+                  <span class="ah-name" data-f="hero-name">Not set</span>
+                  <span class="ah-line" data-f="hero-line"></span>
+                </span>
+              </button>
+              <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
+              <input type="file" accept="image/*" multiple data-f="files" hidden>
+              <!-- The adder is a BUTTON, not a live row (user-hit 2026-08-22:
+                   "I am still getting the odd Oxide color swatch that shows up
+                   when there are no other color swatches"). It held an
+                   `<input type="color" value="#8a4b2e">`, which a browser draws
+                   as a filled rust square — indistinguishable from a swatch,
+                   sitting in the column of a production that had none. The form
+                   it opens is the one that already existed for editing a
+                   swatch. -->
+              <div class="swatch-add wiz-offpage">
+                <button class="ghost" data-f="sw-add">Add swatch</button>
+              </div>
+              <label class="wiz-words wiz-offpage" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words
+                <input type="text" data-f="words" id="wiz-palette" placeholder="e.g. oxide and bone, low key, saturation held back">
+              </label>
+              <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
+              <div id="swatch-strip" class="wiz-offpage"></div>
+            </div>
+          </div>
+          <div class="swatch-gen" id="swatch-gen"></div>
         </aside>
       </div>
     </div>

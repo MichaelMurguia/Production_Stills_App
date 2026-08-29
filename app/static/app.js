@@ -5037,7 +5037,7 @@ async function renderWizard() {
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
         <button class="text-act" data-f="sw-deep"
           title="A second, wider read for the colors the Bible only mentions in passing — existing swatches excluded">Deep scan</button>
-        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 1 / COLOR PALETTE</span>
+        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 4 / COLOUR, BESIDE THIS</span>
         <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
       const runGen = async deep => {
@@ -6980,7 +6980,7 @@ async function renderWizard() {
       // An anchor is SET by a picture OR by words (user 2026-08-16): the
       // interview asked the same four questions in prose, so folding it in
       // means an anchor answered in words is answered.
-      const roles = AUTO_ATTACH_HEADS;  // the four-anchor shelf
+      const roles = AUTO_ATTACH_HEADS.filter(r => r !== "COLOR_PALETTE");
       const ANCHOR_WORDS = { WORLD_TEXTURE: "#wiz-texture",
                              COLOR_PALETTE: "#wiz-palette",
                              CINEMATOGRAPHY_STYLE: "#wiz-light",
@@ -7073,6 +7073,86 @@ async function renderWizard() {
   // hidden, and the button states what it holds. A catalogue NAME reads
   // better on the button than the directive it writes, so the button
   // shows the name on a match and the phrase itself otherwise.
+  /* Proposed anchors, read from the screenplay (2026-08-29).
+
+     Each lands as an overlay on the card it is about — the style's name,
+     the reason, and two verbs. Accepting writes the SAME value a manual
+     pick writes and then runs the same sync, so nothing downstream can
+     tell the two apart; there is one path into an anchor, not two.
+
+     Dismissing leaves the card exactly as it was. Neither verb is amber:
+     the proposal is the thing needing attention and it says so in
+     `--hold`, and spending the accent on a card that already has an
+     overlay would be two claims on the same eye. */
+  const ANCHOR_FIELD = { texture: "#wiz-texture",
+                         cinematography: "#wiz-light",
+                         rendering: "#wiz-medium" };
+  const ANCHOR_ROLE = { texture: "WORLD_TEXTURE",
+                        cinematography: "CINEMATOGRAPHY_STYLE",
+                        rendering: "BOARD_RENDERING_STYLE" };
+
+  const showProposals = (proposals) => {
+    $$(".ah-prop").forEach(e => e.remove());
+    let n = 0;
+    for (const [field, p] of Object.entries(proposals || {})) {
+      const col = $(`.wiz-col[data-role="${ANCHOR_ROLE[field]}"]`);
+      const hero = col && $("[data-f=hero]", col);
+      if (!hero || !p) continue;
+      n += 1;
+      const box = document.createElement("div");
+      box.className = "ah-prop";
+      box.innerHTML = `
+        <span class="ah-prop-kick">PROPOSED FROM THE SCREENPLAY</span>
+        <span class="ah-prop-name">${esc(p.name)}</span>
+        <span class="ah-prop-why">${esc(p.why)}</span>
+        <span class="ah-prop-acts">
+          <button type="button" class="text-act" data-f="use">Use this</button>
+          <button type="button" class="text-act" data-f="drop">Dismiss</button>
+        </span>`;
+      $("[data-f=use]", box).onclick = () => {
+        const fld = $(ANCHOR_FIELD[field]);
+        if (fld) {
+          fld.value = p.value;
+          fld.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        box.remove();
+        toast(`${p.name} set — it rides every render from here.`);
+      };
+      $("[data-f=drop]", box).onclick = () => box.remove();
+      hero.parentElement.style.position = "relative";
+      hero.append(box);
+    }
+    return n;
+  };
+
+  const suggestBtn = $("#wiz-suggest");
+  if (suggestBtn) suggestBtn.onclick = async () => {
+    suggestBtn.disabled = true;
+    const lad = runLadder.create($("#wiz-suggest-busy"), {
+      title: "Reading the screenplay for its look",
+      phases: [{ key: "read", label: "READ" }, { key: "propose", label: "PROPOSE" }],
+      rows: [{ key: "texture", label: "World texture" },
+             { key: "cinematography", label: "Cinematography" },
+             { key: "rendering", label: "Board rendering" }],
+    });
+    try {
+      lad.phase("read", "One call, and no way to see inside it — the clock is "
+                      + "the only honest progress there is.");
+      const r = await api("/api/wizard/suggest-anchors", {
+        method: "POST", json: { provider: $("#wiz-provider")?.value || "" } });
+      lad.phase("propose", "");
+      for (const k of ["texture", "cinematography", "rendering"])
+        lad.set(k, r.proposals?.[k]?.name || null);
+      const n = showProposals(r.proposals);
+      lad.done(n ? `${n} proposed — accept or dismiss each on its card. `
+                 + "Nothing is set until you do."
+                 : "It proposed nothing it could name from the catalogues.");
+    } catch (err) {
+      lad.fail(err.message);
+      toast(err.message, true);
+    } finally { suggestBtn.disabled = false; }
+  };
+
   const bindPicker = (id, styles, opts) => {
     const btn = $(`#${id}-pick`), field = $(`#${id}`);
     if (!btn || !field) return;
