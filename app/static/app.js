@@ -2627,8 +2627,9 @@ const runLadder = {
         <h3 class="stage-headline">${esc(title)}</h3>
         <span class="rd-meta mono"><span data-f="clock">00:00</span></span>
       </div>
-      <div class="rd-phase mono">${phases.map(p =>
-        `<span data-p="${esc(p.key)}">${esc(p.label)}</span>`).join("")}</div>
+      <div class="rd-phase rl-phase mono">${phases.map((p, i) =>
+        `<span data-p="${esc(p.key)}"><b>${String(i + 1).padStart(2, "0")}</b> ${esc(p.label)}
+           <i class="rl-bar"></i></span>`).join("")}</div>
       <p class="rd-note mono" data-f="note"></p>
       <div class="rl-rows">${rows.map(r =>
         `<div class="rl-row" data-r="${esc(r.key)}">
@@ -5208,8 +5209,8 @@ async function renderWizard() {
                : "One run — the second did not complete, so nothing here shows this engine's variance."}</p>`
           : '<p class="mini">no sample yet</p>'}
         <div class="row" style="margin-top:auto">
-          ${smp.has_image && !isPref ? `<button class="primary" data-f="pick">Make default</button>` : ""}
-          <button class="ghost" data-f="regen" title="Render this engine's sample twice from the same prompt — one take cannot show run-to-run variance, and this card exists to be compared">${smp.has_image ? "Regenerate" : "Generate"}</button>
+          ${smp.has_image && !isPref ? `<button class="text-act" data-f="pick">Make default</button>` : ""}
+          <button class="text-act" data-f="regen" title="Render this engine's sample twice from the same prompt — one take cannot show run-to-run variance, and this card exists to be compared">${smp.has_image ? "Regenerate" : "Generate"}</button>
         </div>`;
       // Both runs open in one lightbox, in order, so the comparison
       // survives the click that magnifies it.
@@ -5713,11 +5714,48 @@ async function renderWizard() {
     }
   };
 
+  /* The model segments (§3.3). Built FROM the select, writing back to
+     it — one source of truth, one control, two presentations of the
+     same fact. The select is the one every other reader already asks,
+     and a second store for the same answer is how the two drift. */
+  const paintProviderSeg = () => {
+    const sel = $("#wiz-provider"), host = $("[data-f=provider-seg]");
+    if (!sel || !host) return;
+    host.innerHTML = "";
+    // Amber only where a choice is still live. A locked segment (the read
+    // has run) and a stated gate ("no narrative model — add a key") are
+    // neither a primary action nor something needing attention, and
+    // painting either one amber spends the accent on a fact.
+    host.className = "seg" + (sel.disabled ? " locked" : "");
+    for (const o of sel.options) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "seg-opt" + (o.value === sel.value ? " on" : "");
+      b.textContent = o.textContent.toUpperCase();
+      b.disabled = sel.disabled || o.disabled;
+      b.title = sel.disabled
+        ? "Locked — this production has already been read"
+        : `Use ${o.textContent}`;
+      b.onclick = () => {
+        sel.value = o.value;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        paintProviderSeg();
+      };
+      host.append(b);
+    }
+  };
+
   const renderAnalyzeLock = () => {
     const a = getAnalysis();
     const lockHost = $("#wiz-analyze-lock");
     $("#wiz-provider").disabled = !!a;
+    // §3.3 — "once the read has run, the model segments render locked".
+    // Locked, not hidden: which model read this screenplay is a fact
+    // worth keeping on screen.
+    paintProviderSeg();
     $("#wiz-analyze").classList.toggle("hidden", !!a);
+    $(".wiz-run-row .cost")?.classList.toggle("hidden", !!a);
+    $(".wiz-merge-note")?.classList.toggle("hidden", !a);
     if (!a) { lockHost.innerHTML = ""; return; }
     const sp = state.screenplay;
     const bits = [
@@ -6780,6 +6818,9 @@ async function renderWizard() {
     btn.classList.toggle("primary", st !== "saved");
     btn.classList.toggle("ghost", st === "saved");
     regen.classList.toggle("hidden", st !== "saved");
+    // The cost rides with the verb it belongs to (§2.4).
+    const regenCost = $("#bible-regen-cost");
+    if (regenCost) regenCost.hidden = st !== "saved";
     // Same condition as Regenerate: there has to BE a saved document to
     // read against itself, and an unsaved edit is not one yet.
     $("#bible-check")?.classList.toggle("hidden", st !== "saved");

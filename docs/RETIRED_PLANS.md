@@ -158,3 +158,38 @@ delta as new instructions.
   alone is unbuilt** and is not code: a controlled engine comparison
   needing four renders, and the file is trimmed to that item.
 
+- **PRODUCTION_DESIGN_UI_PLAN_2026-08-28.md** — delivered in
+  `design_handoff/Prod_Design_01.zip`, implemented 2026-08-29. An
+  appearance-only restandardisation of stage 02: §3.1 header, §3.2 anchor
+  heroes and the jurisdiction ruling, the palette's own modal, §2.4 cost
+  statements and segmented pickers, §3.5 two-column Bible, §3.6 sample
+  text-links, and §4's stage bars on the run ladder. **§3.3's findings
+  order and §3.4's casting block are NOT built** — the plan is deleted
+  because it is spent as a whole ruling, and those two are carried as an
+  open row in the Uncanonized table instead.
+
+  **THREE OF ITS INSTRUCTIONS WERE DELIBERATELY NOT FOLLOWED**, each
+  overruled by a later decision. A future pass that "finishes the plan"
+  must not restore them, and `tests/test_production_design_ui.py` fails
+  if it does:
+  1. Step 02 is **Build Design Plan**, not `Script scene scan` — renamed
+     by the user 2026-08-28, after the plan was written.
+  2. Step 04's verb is **Build Art Direction Bible**, not `Create`. Same
+     rename.
+  3. The **camera grammar row stays retired**. Both mocks show
+     `CAMERA GRAMMAR — 40mm · eye level · medium wide · DEFAULT FOR EVERY
+     PANEL`. It was retired 2026-08-25 (cinematography plan A4) because a
+     production-wide default nobody chose contradicted the cinematography
+     grammar and defeated the framing axis for two days of renders. Raised
+     with the user 2026-08-29; ruling: "dont change camera row".
+
+  **The rest of that zip was a RESURRECTION.** Twelve of its fourteen
+  documents are already ledgered above — the whole `RULE_PASS_2_*` series,
+  `TUTORIAL_RULING_PLAN` + `_SNIPPET`, `TUTORIAL_MATERIAL_2026-08-19`,
+  `TRIAGE_PLAN_2026-08-18` and `DENSITY_PASS_2026-08-17` — and its README
+  is the 2026-08-18 one re-dated, still asserting "Nothing here is in
+  `docs/RETIRED_PLANS.md`". None were re-implemented. Its
+  `design_boards/Production_Design.dc.html` is turn `1a`, not the `3a`/`4a`
+  the plan cites, so the build came from the PNG mocks and the plan text;
+  both mocks are kept in `design_mocks/`. The zip is deleted.
+

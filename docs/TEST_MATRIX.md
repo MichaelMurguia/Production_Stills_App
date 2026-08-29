@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2385 tests** across 126 files.
+**2409 tests** across 127 files.
 
 
-## Product app — 2164 tests in 109 files
+## Product app — 2188 tests in 110 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -94,6 +94,7 @@ temp home and external services are faked.
 | `test_period_survives.py` | 11 | The period a director states must survive a re-scan. |
 | `test_pipeline.py` | 5 | The scripts layer end to end: validate, compile, audit. |
 | `test_probe_pair_and_limit.py` | 24 | C6 and C9 — two small rules, both about not being fooled. |
+| `test_production_design_ui.py` | 24 | PRODUCTION_DESIGN_UI_PLAN_2026-08-28 — the standing contracts. |
 | `test_prompt_composition.py` | 10 | R1.5 — what a compiled prompt is actually made of. |
 | `test_prompt_download.py` | 5 | The compiled-prompt download (user 2026-08-06). |
 | `test_prompt_edit.py` | 11 | Step 05's verb says "Read & edit" and both halves have to be true (user-caught 2026-08-16: "there is a 'Read and Edit' button on the prompt, but I can |

@@ -277,15 +277,20 @@
 
     <div class="panel step" data-step="2">
       <h2>Build Design Plan <span class="step-cond">THE VISUAL WORLDS, ENVIRONMENTS, CAST AND OPEN QUESTIONS THE SCRIPT IMPLIES</span></h2>
-      <div class="row">
-        <div class="fgroup" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
-          <select id="wiz-provider">
+      <div class="row wiz-run-row">
+        <div class="fgroup wiz-model" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
+          <select id="wiz-provider" class="seg-source">
             <option value="gemini">Gemini (research pass)</option>
             <option value="openai">OpenAI GPT-5.6</option>
           </select>
+          <div class="seg" data-f="provider-seg"></div>
         </div>
-        <div class="gen-actions"><button id="wiz-analyze" class="primary" title="Reads the screenplay with the chosen model and derives the design languages, environments, cast, locations and open questions. This one costs money.">Build Design Plan</button></div>
+        <div class="gen-actions">
+          <button id="wiz-analyze" class="primary" title="Reads the screenplay with the chosen model and derives the design languages, environments, cast, locations and open questions.">Build Design Plan</button>
+          <span class="cost mono">COSTS A MODEL CALL</span>
+        </div>
       </div>
+      <p class="wiz-merge-note mono">A SECOND READ MERGES &mdash; CONFIRMED LANGUAGES AND ANSWERED QUESTIONS SURVIVE</p>
       <div id="wiz-analyze-lock" class="mini" style="margin-top:8px"></div>
       <div id="wiz-analyze-busy"></div>
       <div id="wiz-analysis"></div>
@@ -318,14 +323,15 @@
       <div class="row" style="margin-top:0">
         <button id="wiz-draft" class="primary">Build Art Direction Bible</button>
         <button id="bible-regen" class="ghost hidden">Regenerate</button>
+        <span class="cost mono" id="bible-regen-cost" hidden>COSTS A MODEL CALL</span>
         <span class="step-cond" id="bible-cond">FROM THE ANCHORS, THE SCAN AND THE CAST &mdash; WRITTEN, SAVED, AND BREAKDOWNS OPEN</span>
         <span id="style-status" class="mini"></span>
       </div>
-      <label class="wiz-notes" title="Standing instructions for the drafter — anything true of the production that is not texture, palette, light or medium.">Standing notes
-        <textarea id="wiz-notes" placeholder="anything else the bible must honor — e.g. &quot;1974, but nobody smokes&quot;"></textarea>
-      </label>
       <div id="wiz-draft-busy"></div>
-      <textarea id="style-bible" style="min-height:340px;font-family:'Courier New',Courier,monospace;font-size:13px;margin-top:12px"></textarea>
+      <div class="bible-cols">
+        <div class="bible-main">
+          <p class="bible-editor-note mono">SECTION HEADINGS ARE PARSED &mdash; DO NOT RENAME</p>
+          <textarea id="style-bible"></textarea>
 
       <!-- R2 — the bible read against itself, for rules that cannot both
            hold in one frame. It sits UNDER the document rather than in the
@@ -336,9 +342,15 @@
            edit and a paid re-read on each one trains people to stop
            saving. -->
       <div class="row bible-check-row">
-        <button id="bible-check" class="ghost hidden" title="Read the Art Direction Bible against itself — two rules that cannot both hold in one frame. Reports only; it never edits the document.">Check it agrees with itself</button>
-      </div>
-      <div id="bible-conflicts"></div>
+            <button id="bible-check" class="ghost hidden" title="Read the Art Direction Bible against itself — two rules that cannot both hold in one frame. Reports only; it never edits the document.">Check it agrees with itself</button>
+            <span class="cost mono">ADVISORY &middot; IT NEVER EDITS &middot; NOT RUN ON SAVE</span>
+          </div>
+          <div id="bible-conflicts"></div>
+        </div>
+        <aside class="bible-side">
+          <label class="wiz-notes" title="Standing instructions for the drafter — anything true of the production that is not texture, palette, light or medium.">Standing notes
+            <textarea id="wiz-notes" placeholder="anything else the bible must honor — e.g. &quot;1974, but nobody smokes&quot;"></textarea>
+          </label>
 
       <!-- SWATCH_GENERATE_RULING: an act lives where its precondition is
            met; its result lives where it belongs. Generation reads the
@@ -348,6 +360,8 @@
            lines above, and saying it twice on one screen is the
            verbosity D1 cut. -->
       <div class="swatch-gen" id="swatch-gen"></div>
+        </aside>
+      </div>
     </div>
 
     <div class="panel step" data-step="5">
@@ -357,7 +371,8 @@
           <select id="wiz-sample-pick"></select>
           <input type="text" id="wiz-sample-loc" class="hidden" placeholder="type a location…">
         </div>
-        <div class="gen-actions"><button class="primary" id="wiz-samples-go" title="Sends the identical brief (your Bible + style anchors + the chosen screenplay location) to every engine you have a key for — TWO 1K renders each, so run-to-run variance is visible before you read a difference into it.">Generate a sample from every model</button></div>
+        <div class="gen-actions"><button class="primary" id="wiz-samples-go" title="Sends the identical brief (your Bible + style anchors + the chosen screenplay location) to every engine you have a key for — TWO 1K renders each, so run-to-run variance is visible before you read a difference into it.">Generate a sample from every model</button>
+          <span class="cost mono">EVERY ENGINE HOLDING A KEY &middot; TWO RENDERS EACH &middot; THIS SPENDS MONEY</span></div>
       </div>
       <div id="wiz-samples-busy"></div>
       <div class="wiz-cols" id="wiz-samples" style="margin-top:12px"></div>

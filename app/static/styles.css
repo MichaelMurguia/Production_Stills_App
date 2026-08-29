@@ -2100,6 +2100,21 @@ details.meta pre {
    width and read as three unrelated words. The Bible's panel never hit
    this because its host is narrow. */
 .rl { max-width: 92ch; }
+/* §4 — one bar per phase, and it is BINARY: empty, current, done. No
+   percentage and nothing creeping, because nothing here is measured
+   continuously. A bar easing toward a number nobody counted is the fake
+   progress the plan forbids by name. Green only where a phase is
+   genuinely complete (§2.3). */
+.rl-phase { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: 14px; margin: 10px 0 0; }
+.rl-phase span { display: block; color: var(--ink-faint); }
+.rl-phase span b { color: var(--ink-faint); font-weight: 700; }
+.rl-phase span.now, .rl-phase span.now b { color: var(--ink); }
+.rl-phase span.done b { color: var(--ok); }
+.rl-bar { display: block; height: 2px; margin-top: 7px; background: var(--line-soft); }
+.rl-phase span.now .rl-bar { background: var(--accent); }
+.rl-phase span.done .rl-bar { background: var(--ok); }
+.rl { max-width: 92ch; }
 .rl .rl-rows { margin-top: 10px; border-top: 1px solid var(--line-soft); }
 .rl-row { display: flex; justify-content: space-between; align-items: baseline;
   gap: 16px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
@@ -2107,6 +2122,20 @@ details.meta pre {
 .rl-row .rl-val { color: var(--ink-faint); font-size: 12px; }
 .rl-row.in .rl-val { color: var(--ink); }
 .rl-failed .rd-note { color: var(--bad); }
+/* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.5 */
+/* Two columns: the document and its self-check on the left, the things
+   you set beside it on the right. The verb row stays full width above
+   both, because it governs the whole step and belongs to neither. */
+.bible-cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px; align-items: start; margin-top: 12px; }
+@media (max-width: 1100px) { .bible-cols { grid-template-columns: 1fr; } }
+.bible-side { display: flex; flex-direction: column; gap: 14px; }
+#style-bible { min-height: 420px; font-family: var(--mono); font-size: 13px;
+  line-height: 1.7; background: var(--field); }
+/* The one thing a person editing this document must not do. Stated where
+   they are about to do it, not in a doc they will not open. */
+.bible-editor-note { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .12em; color: var(--ink-faint); margin: 0 0 6px; }
 .bible-check-row { margin-top: 10px; }
 .bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
 .bc-none { color: var(--ink-faint); max-width: 74ch; margin: 10px 0 0; }
@@ -2400,6 +2429,30 @@ details.meta pre {
    the six-step rail, Courier step headings and condition lines: a step
    states what it does to the movie, never what it is. */
 .wiz-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+/* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §2.4 / §3.3 */
+/* A segmented picker: bordered spans, the current one taking an amber
+   BORDER and never a fill. A fill would make a settled choice compete
+   with the primary verb beside it, and amber marks one primary action
+   per surface. The select behind it is still the value every reader
+   asks; these are its face. */
+.seg { display: flex; }
+.seg-source { display: none; }
+.seg-opt { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-dim); background: var(--field); cursor: pointer;
+  border: 1px solid var(--line-soft); border-left-width: 0; padding: 7px 12px; }
+.seg-opt:first-child { border-left-width: 1px; }
+.seg-opt.on { color: var(--ink); border-color: var(--accent); }
+.seg-opt.on + .seg-opt { border-left-color: var(--accent); }
+.seg.locked .seg-opt.on { border-color: var(--line); color: var(--ink-dim); }
+.seg.locked .seg-opt.on + .seg-opt { border-left-color: var(--line); }
+.seg-opt:disabled { cursor: default; opacity: .55; }
+/* §2.4 — a control that spends states the cost beside the verb, in
+   Courier, before it is pressed. A price found afterwards is a bill. */
+.cost { color: var(--ink-faint); font-size: 9.5px; letter-spacing: .12em;
+  align-self: center; margin-left: 10px; }
+.wiz-run-row { align-items: flex-end; }
+.wiz-merge-note { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; color: var(--ink-faint); margin: 8px 0 0; }
 /* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.1 */
 /* 24px Archivo, sentence case: the one thing on this row a person reads
    as prose. Everything else in the head is Courier, because everything
