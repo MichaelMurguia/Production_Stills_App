@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2373 tests** across 125 files.
+**2385 tests** across 126 files.
 
 
-## Product app — 2152 tests in 108 files
+## Product app — 2164 tests in 109 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -132,6 +132,7 @@ temp home and external services are faked.
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |
 | `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
+| `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorial_does_not_poll.py` | 9 | An idle tab must not talk to the server. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |
