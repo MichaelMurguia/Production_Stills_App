@@ -167,9 +167,9 @@
          movie, never what it is. The header strip carries the page's one
          sentence, the screenplay fact, and the six-step rail. -->
     <div class="panel wiz-head">
-      <span class="wiz-head-label">FIVE STEPS &rarr; ART DIRECTION BIBLE</span>
-      <div id="wiz-screenplay" class="wiz-head-file"></div>
+      <h1 class="wiz-stage-title">Production design</h1>
       <div class="step-rail" id="wiz-rail"></div>
+      <div id="wiz-screenplay" class="wiz-head-file"></div>
     </div>
 
     <!-- The look interview LEADS (user 2026-08-07): what the director
@@ -183,26 +183,36 @@
         <p class="wiz-group-label wiz-span3">THE MOVIE</p>
         <p class="wiz-group-label wiz-label-boards">THE BOARDS</p>
         <div class="wiz-col" data-role="WORLD_TEXTURE">
-          <div class="wiz-col-head">
-            <span class="f-label" title="The world's condition — how worn, patched, dusty, or pristine everything is allowed to look. Pristine is a texture philosophy too.">World Texture</span>
-            <span class="badge LOCKED" data-f="state">NONE</span>
-          </div>
-          <p class="hint">SETS wear, patina, entropy<br>NOT subjects &middot; palette &middot; light</p>
+          <button type="button" class="anchor-hero" data-f="hero"
+            title="World Texture — click to choose or change it">
+            <span class="ah-shot" data-f="hero-shot"></span>
+            <span class="ah-role mono">WORLD TEXTURE</span>
+            <span class="ah-state mono" data-f="state">NONE</span>
+            <span class="ah-scrim">
+              <span class="ah-name" data-f="hero-name">Not set</span>
+              <span class="ah-line" data-f="hero-line"></span>
+            </span>
+          </button>
           <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
-          <label class="wiz-words" title="The world&rsquo;s condition — wear, patina, entropy.">
+          <label class="wiz-words wiz-offpage" title="The world&rsquo;s condition — wear, patina, entropy.">
             <input type="text" data-f="words" id="wiz-texture" hidden>
-            <button type="button" class="ghost pick-btn" id="wiz-texture-pick">Choose a world texture</button>
+            <button type="button" class="ghost pick-btn wiz-offpage" id="wiz-texture-pick" tabindex="-1">Choose a world texture</button>
           </label>
           <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="COLOR_PALETTE">
-          <div class="wiz-col-head">
-            <span class="f-label" title="The film's color language — a palette board or color-script frames: permitted hues, how dark it keys, how far saturation travels.">Color Palette</span>
-            <span class="badge LOCKED" data-f="state">NONE</span>
-          </div>
-          <p class="hint">SETS hue, value key, saturation<br>NOT framing &middot; light source &middot; medium</p>
-          <button class="ghost wiz-add-btn" data-f="addbtn">Add images</button>
+          <button type="button" class="anchor-hero" data-f="hero"
+            title="Color Palette — click to choose or change it">
+            <span class="ah-shot" data-f="hero-shot"></span>
+            <span class="ah-role mono">COLOR PALETTE</span>
+            <span class="ah-state mono" data-f="state">NONE</span>
+            <span class="ah-scrim">
+              <span class="ah-name" data-f="hero-name">Not set</span>
+              <span class="ah-line" data-f="hero-line"></span>
+            </span>
+          </button>
+          <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
           <!-- The adder is a BUTTON, not a live row (user-hit 2026-08-22:
                "I am still getting the odd Oxide color swatch that shows up
@@ -212,40 +222,50 @@
                sitting in the column of a production that had none. The form
                it opens is the one that already existed for editing a
                swatch. -->
-          <div class="swatch-add">
+          <div class="swatch-add wiz-offpage">
             <button class="ghost" data-f="sw-add">Add swatch</button>
           </div>
-          <label class="wiz-words" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words
+          <label class="wiz-words wiz-offpage" title="The film&rsquo;s color language in words — hue, value key, saturation.">In words
             <input type="text" data-f="words" id="wiz-palette" placeholder="e.g. oxide and bone, low key, saturation held back">
           </label>
-          <div class="wiz-thumbs" data-f="list"></div>
-          <div id="swatch-strip"></div>
+          <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
+          <div id="swatch-strip" class="wiz-offpage"></div>
         </div>
         <div class="wiz-col" data-role="CINEMATOGRAPHY_STYLE">
-          <div class="wiz-col-head">
-            <span class="f-label" title="How the film is photographed — stills whose light behaviour and framing you want. If a still's grade is loud, use it in black and white; palette belongs to the Color Palette anchor.">Cinematography</span>
-            <span class="badge LOCKED" data-f="state">NONE</span>
-          </div>
-          <p class="hint">SETS light behaviour, contrast, source, the framings it allows<br>NOT palette &middot; a panel's hour</p>
+          <button type="button" class="anchor-hero" data-f="hero"
+            title="Cinematography — click to choose or change it">
+            <span class="ah-shot" data-f="hero-shot"></span>
+            <span class="ah-role mono">CINEMATOGRAPHY</span>
+            <span class="ah-state mono" data-f="state">NONE</span>
+            <span class="ah-scrim">
+              <span class="ah-name" data-f="hero-name">Not set</span>
+              <span class="ah-line" data-f="hero-line"></span>
+            </span>
+          </button>
           <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
-          <label class="wiz-words" title="Light behaviour, lens and framing — becomes the Lighting Language and Composition Rules sections.">In words
+          <label class="wiz-words wiz-offpage" title="Light behaviour, lens and framing — becomes the Lighting Language and Composition Rules sections.">In words
             <input type="text" data-f="words" id="wiz-light" hidden>
-            <button type="button" class="ghost pick-btn" id="wiz-light-pick">Choose a cinematography look</button>
+            <button type="button" class="ghost pick-btn wiz-offpage" id="wiz-light-pick" tabindex="-1">Choose a cinematography look</button>
           </label>
           <div class="wiz-thumbs wiz-offpage" data-f="list"></div>
         </div>
         <div class="wiz-col" data-role="BOARD_RENDERING_STYLE">
-          <div class="wiz-col-head">
-            <span class="f-label" title="How panels are painted — an artwork whose medium, brushwork, and finish you want. Presentation only: nothing about the film.">Board Rendering</span>
-            <span class="badge LOCKED" data-f="state">NONE</span>
-          </div>
-          <p class="hint">SETS medium, brushwork, finish<br>NOT content &middot; palette &middot; the world</p>
+          <button type="button" class="anchor-hero" data-f="hero"
+            title="Board Rendering — click to choose or change it">
+            <span class="ah-shot" data-f="hero-shot"></span>
+            <span class="ah-role mono">BOARD RENDERING</span>
+            <span class="ah-state mono" data-f="state">NONE</span>
+            <span class="ah-scrim">
+              <span class="ah-name" data-f="hero-name">Not set</span>
+              <span class="ah-line" data-f="hero-line"></span>
+            </span>
+          </button>
           <button class="ghost wiz-add-btn wiz-offpage" data-f="addbtn" tabindex="-1">Add images</button>
           <input type="file" accept="image/*" multiple data-f="files" hidden>
-          <label class="wiz-words" title="The rendering medium and finish — becomes the Rendering Language section.">In words
+          <label class="wiz-words wiz-offpage" title="The rendering medium and finish — becomes the Rendering Language section.">In words
             <input type="text" data-f="words" id="wiz-medium" hidden>
-            <button type="button" class="ghost pick-btn" id="wiz-medium-pick">Choose a rendering style</button>
+            <button type="button" class="ghost pick-btn wiz-offpage" id="wiz-medium-pick" tabindex="-1">Choose a rendering style</button>
           </label>
           <label class="wiz-words wiz-offpage" id="wiz-never-row" title="Hard exclusions — translated item for item into the Rendering Language Avoid list.">Never looks like
             <input type="text" id="wiz-never" placeholder="e.g. glossy promotional key art, anime, photobash collage">

@@ -228,8 +228,11 @@ class SourceImplementsTheRule(unittest.TestCase):
         body = self.column_fn()
         self.assertIn("Review all ${groups.length} palettes", body,
                       "palettes, not colours (2026-08-23)")
-        self.assertIn("[data-f=state]", body, "anchored to the column's count badge")
-        self.assertIn("badge.after(act)", body)
+        # The count moved INSIDE the hero button (§3.2, 2026-08-28) and a
+        # button cannot contain a button, so this act sits in the column
+        # right after the hero instead of beside the count.
+        self.assertIn('$("[data-f=hero]", col)', body)
+        self.assertIn(".after(act)", body)
         self.assertIn("approved: true", body)
         self.assertIn("groups.length > 1", body,
                       "one group is already one click — no act needed")

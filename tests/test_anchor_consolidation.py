@@ -55,17 +55,21 @@ class TheInterviewIsGone(unittest.TestCase):
     def test_every_anchor_carries_its_own_words(self):
         for role, fid in ANCHORS.items():
             seg = card(role)
-            self.assertIn('class="wiz-words"', seg, f"{role} has no words half")
+            self.assertIn('class="wiz-words', seg, f"{role} has no words half")
             self.assertIn(f'id="{fid}"', seg, f"{role} lost {fid}")
 
     def test_the_step_is_gone_rather_than_emptied(self):
         self.assertNotIn('<div class="grid-form">', HTML,
                          "the interview's form is not left standing empty")
         self.assertNotIn("wiz-touchstones", HTML)
-        self.assertIn("FIVE STEPS", HTML)
+        # The head's label was "FIVE STEPS -> ART DIRECTION BIBLE" until
+        # PRODUCTION_DESIGN_UI_PLAN §3.1 gave the row to the stage title
+        # and the rail. The rail states the five steps; a sentence saying
+        # there are five was the restatement.
+        self.assertIn("Production design", HTML)
         i = JS.index("const RAIL = [")
         seg = JS[i:i + 200]
-        self.assertIn('[1, "Anchors"]', seg)
+        self.assertIn('[1, "ANCHORS"]', seg)
         self.assertNotIn("Interview", seg)
 
     def test_the_camera_card_no_longer_sits_here_because_it_no_longer_exists(self):
@@ -144,11 +148,18 @@ class AnAnchorIsAnsweredByEither(unittest.TestCase):
         self.assertIn("?.value.trim()).length", seg)
 
     def test_the_card_badge_never_reads_none_over_its_own_answer(self):
+        # Bounded by the next landmark, not a character count: the block
+        # grew when §3.2 put the state on the hero, and a fixed window
+        # stopped covering its own assertions. Fifth time; the window is
+        # never the right bound.
         i = JS.index("const inWords =")
-        seg = JS[i - 400:i + 1400]
+        seg = JS[i:JS.index("const hero = ", i)]
         self.assertIn('"IN WORDS"', seg)
         # a palette counts GROUPS (2026-08-23); other anchors count refs
-        self.assertIn("nMine ? `${nMine}`", seg)
+        # The count reads "3 PICTURES" / "2 PALETTES" since §3.2 put it
+        # on the hero; a bare number over an image says nothing.
+        self.assertIn("PICTURES", seg)
+        self.assertIn("PALETTES", seg)
         self.assertIn('`${nProp} PROPOSED`', seg,
                       "a column full of proposed colour never reads NONE")
 
@@ -157,7 +168,10 @@ class AnAnchorIsAnsweredByEither(unittest.TestCase):
         render time is read too early."""
         self.assertIn("const syncAnchorBadges =", JS)
         i = JS.index("const syncAnchorBadges =")
-        self.assertIn(r"/^\d+$/.test", JS[i:i + 400],
+        # The count reads "3 PICTURES" since §3.2 moved it onto the
+        # hero, so the guard reads the leading digit, not the whole
+        # string. Same rule: a card with pictures keeps its count.
+        self.assertIn(r"/^\d/.test", JS[i:i + 500],
                       "a card with pictures keeps its count")
         self.assertGreaterEqual(JS.count("syncAnchorBadges()"), 3,
                                 "called on load, on change, and on a pick")

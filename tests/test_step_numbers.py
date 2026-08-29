@@ -64,7 +64,7 @@ class TheRailAgreesWithThePanels(unittest.TestCase):
         self.assertEqual(step_of("<h2>Build Design Plan"), rail()["design plan"])
 
     def test_the_model_test_is_last(self):
-        self.assertEqual(rail()["model test"], max(rail().values()))
+        self.assertEqual(rail()["test"], max(rail().values()))
 
 
 class CopyPointsAtTheRightStep(unittest.TestCase):

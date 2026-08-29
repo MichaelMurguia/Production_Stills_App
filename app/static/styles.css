@@ -826,6 +826,46 @@ label.check {
   padding: 15px 16px; display: flex; flex-direction: column; gap: 10px;
 }
 .wiz-col-head { display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+/* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §2.6 / §3.2 */
+/* The image is the hero. An anchor is a LOOK, and the old card led with
+   its name and buried the picture in a thumbnail strip below three
+   controls — so four cards side by side read as four forms rather than
+   four looks. The picture is the card now, at 1.586:1, with the role in
+   the top-left, the state in the top-right and the chosen style's name
+   and line over a bottom scrim.
+
+   The whole card is the button: there is one thing to do here, which is
+   change it. */
+/* The boundary, stated where it is being decided (§3.2). Courier,
+   because it is the machine asserting a scope, not prose. */
+.rs-juris { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-faint); line-height: 1.7; margin: -4px 0 12px; }
+.anchor-hero { position: relative; display: block; width: 100%; padding: 0;
+  aspect-ratio: 1.586; background: var(--field);
+  border: 1px solid var(--line-soft); cursor: pointer; overflow: hidden;
+  text-align: left; }
+.anchor-hero:hover { border-color: var(--line); }
+.anchor-hero:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ah-shot { position: absolute; inset: 0; display: block; background-size: cover;
+  background-position: center; }
+.ah-shot.none { background: repeating-linear-gradient(135deg,
+  var(--field) 0 6px, var(--bg) 6px 12px); }
+.ah-role, .ah-state { position: absolute; top: 9px; font-size: 9.5px;
+  letter-spacing: .12em; z-index: 2; }
+.ah-role { left: 10px; color: var(--ink-dim); }
+/* Amber: this is the one thing on the card that may need attention. */
+.ah-state { right: 10px; color: var(--accent); }
+.ah-state.set { color: var(--ink-dim); }
+.ah-scrim { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 26px 12px 11px; display: flex; flex-direction: column; gap: 3px;
+  background: linear-gradient(to top, rgba(8, 9, 10, .93), rgba(8, 9, 10, 0)); }
+.ah-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
+  color: var(--ink); }
+.ah-line { font-family: var(--sans); font-size: 12px; color: var(--ink-dim);
+  line-height: 1.35; }
+/* A card with no picture states the gap in its own scrim rather than
+   showing a hatched rectangle that says nothing. */
+.anchor-hero.empty .ah-name { color: var(--ink-dim); }
 .wiz-col-head .f-label { font-size: 12.5px; color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 600; }
 /* A role's jurisdiction, stated in Courier — this is the concept users miss. */
 .wiz-col .hint { margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; }
@@ -2360,12 +2400,20 @@ details.meta pre {
    the six-step rail, Courier step headings and condition lines: a step
    states what it does to the movie, never what it is. */
 .wiz-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+/* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.1 */
+/* 24px Archivo, sentence case: the one thing on this row a person reads
+   as prose. Everything else in the head is Courier, because everything
+   else is the machine stating a fact — which file, how many pages, which
+   step is done. */
+.wiz-stage-title { font-family: var(--sans); font-size: 24px; font-weight: 700;
+  color: var(--ink); margin: 0; letter-spacing: -.01em; }
 .wiz-head-label { font-family: var(--mono); font-size: 11px; font-weight: 700;
   letter-spacing: .12em; color: var(--ink); white-space: nowrap; }
-.wiz-head-file { flex: 1; min-width: 0; font-family: var(--mono); font-size: 10px;
+.wiz-head-file { margin-left: auto; text-align: right; min-width: 0;
+  font-family: var(--mono); font-size: 10px;
   letter-spacing: .04em; color: var(--ink-dim); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
-.step-rail { display: flex; margin-left: auto; }
+.step-rail { display: flex; }
 .rail-chip { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
   color: var(--ink-dim); background: none; border: 1px solid transparent;
   border-left: 1px solid var(--line-soft); padding: 6px 12px; cursor: pointer;
@@ -2497,7 +2545,11 @@ details.meta pre {
 .sw-bar { display: flex; gap: 14px; align-items: center;
   border: 1px solid var(--line); padding: 8px 10px; margin-top: 12px; }
 
-.wiz-cols-anchors { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.wiz-cols-anchors { grid-template-columns: repeat(4, minmax(0,1fr)); align-items: start; }
+/* The card is the hero and nothing else, so it has no padding, no ground
+   and no border of its own — four looks side by side, not four forms
+   (§2.6). */
+.wiz-cols-anchors .wiz-col { background: none; border: 0; padding: 0; gap: 8px; }
 .wiz-cols-anchors .wiz-group-label { margin: 0; align-self: end; }
 .wiz-span3 { grid-column: span 3; }
 @media (max-width: 980px) {
@@ -3293,7 +3345,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    anchor owns — its uploads, its attached plates, its camera, its
    exclusions — is reached THROUGH the button, so it stays in the DOM
    (bindings intact) and off the page until the panel borrows it. */
-.wiz-offpage, button.wiz-offpage { display: none; }
+.wiz-offpage, button.wiz-offpage, label.wiz-offpage { display: none; }
+/* A travelling control's LABEL travels with it. Hiding only the input
+   left "IN WORDS" standing under two anchor cards, labelling nothing
+   (2026-08-28). */
+.rs-extra > label.wiz-offpage { display: flex; }
+.rs-extra > .swatch-add, .rs-extra > #swatch-strip,
+.rs-extra > .wiz-thumbs { display: block; }
 .rs-extra > .wiz-offpage { display: flex; }
 .rs-extra { margin-top: 14px; }
 .rs-extra .cam-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }

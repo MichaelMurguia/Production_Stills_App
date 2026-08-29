@@ -277,7 +277,7 @@ class ASwatchCanBeRenamedWhereItIsRepainted(unittest.TestCase):
             self.assertNotIn(gone, HTML, gone)
             self.assertNotIn(gone, JS, gone)
         # nothing coloured is left on the page that is not a swatch
-        i = HTML.index('<div class="swatch-add">')
+        i = HTML.index('<div class="swatch-add')
         self.assertNotIn("<input", HTML[i:HTML.index("</div>", i)])
 
     def test_a_hand_added_swatch_can_state_its_value_key_pair(self):

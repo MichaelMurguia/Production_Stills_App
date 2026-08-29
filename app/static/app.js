@@ -4691,9 +4691,14 @@ async function renderWizard() {
         true));
   }
   if (wizAnalysis) wizACacheSet(wizAnalysis);
+  const spChars = state.screenplay?.text_chars;
   $("#wiz-screenplay").innerHTML = state.screenplay
-    ? `<span class="badge APPROVED">SCREENPLAY</span> ${esc(state.screenplay.file)} — uploaded ${esc(state.screenplay.uploaded_at || "")}`
-    : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on the Dashboard first — analysis and drafting need it`;
+    ? `${esc(state.screenplay.file)}${spChars ? ` &middot; ${spChars.toLocaleString()} CHARACTERS` : ""}
+       <button type="button" class="text-act" data-f="open-screenplay"
+         title="Open the original upload in a new tab — yours to read, never sent to a model">Open screenplay</button>`
+    : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on Stage 01 first — every step here needs it`;
+  $("[data-f=open-screenplay]", $("#wiz-screenplay"))
+    ?.addEventListener("click", () => window.open("/api/screenplay/file", "_blank"));
 
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
@@ -5070,8 +5075,8 @@ async function renderWizard() {
   // director states the look before the machine reads anything, and the
   // anchor cards ARE that statement now — a picture, words, or both. The
   // separate interview asked the same four questions a second time.
-  const RAIL = [[1, "Anchors"], [2, "Design Plan"], [3, "Cast"],
-                [4, "Bible"], [5, "Model Test"]];
+  const RAIL = [[1, "ANCHORS"], [2, "DESIGN PLAN"], [3, "CAST"],
+                [4, "BIBLE"], [5, "TEST"]];
   const rail = $("#wiz-rail");
   rail.innerHTML = RAIL.map(([n, l]) =>
     `<button class="rail-chip" data-goto-step="${n}"><span class="rail-num">${n}</span> ${esc(l)}</button>`).join("");
@@ -5275,6 +5280,57 @@ async function renderWizard() {
 
   let wizAnchorIds = [];
   // One ramp row per design language, drawn from notes rather than images.
+  /* The colour palette's own modal (§3.2).
+
+     Every other anchor picks from a catalogue; this one cannot, because
+     a palette is proposed FROM the Bible rather than chosen before it.
+     So its card opens this instead: the words, the ramp, Add swatch and
+     Add images — the same controls that used to sit on the page, moved
+     rather than rebuilt, so every behaviour and every reader survives.
+
+     The same travel mechanism the never-list already uses. */
+  const openPaletteModal = () => {
+    const col = $('.wiz-col[data-role="COLOR_PALETTE"]');
+    if (!col) return;
+    const ov = document.createElement("div");
+    ov.className = "modal-scrim";
+    ov.innerHTML = `
+      <div class="modal rs-modal" role="dialog" aria-modal="true">
+        <div class="modal-title">Color Palette</div>
+        <p class="rs-def">The film's colour language — the hues it owns, how dark
+          it keys, and how far saturation travels.</p>
+        <p class="wiz-group-label">SETS hue &middot; value key &middot; saturation<br>
+          NOT framing &middot; light source &middot; medium</p>
+        <p class="mini">A swatch is an ordinary palette reference whose PIXELS are
+          the colour — engines study the image, so the name and hex live in its
+          notes and never in what the model sees.</p>
+        <div class="rs-extra" data-f="extra"></div>
+        <div class="modal-actions">
+          <button class="primary" data-f="done">Done</button>
+        </div>
+      </div>`;
+    document.body.append(ov);
+    const home = [];
+    for (const el of [$("[data-f=addbtn]", col), $(".swatch-add", col),
+                      $(".wiz-words", col), $("#swatch-strip"), $("[data-f=list]", col)]) {
+      if (el) { home.push([el, el.parentElement, el.nextElementSibling]); }
+    }
+    const extra = $("[data-f=extra]", ov);
+    home.forEach(([el]) => extra.append(el));
+    const close = () => {
+      // Home, in the order and place they left from — a control that
+      // travels and does not come back is a control the page lost.
+      home.forEach(([el, parent, next]) => parent.insertBefore(el, next));
+      ov.remove();
+      document.removeEventListener("keydown", esc);
+      refreshRefs();
+    };
+    const esc = e => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", esc);
+    $("[data-f=done]", ov).onclick = close;
+    ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  };
+
   const renderPaletteRows = (list, refs) => {
     const rows = [];
     const byLang = new Map();
@@ -5338,16 +5394,16 @@ async function renderWizard() {
     const total = groups.reduce((n, g) => n + g.swatches.length, 0);
     // R4 — Review all sits beside the column's COUNT, not under the rows:
     // the count is what the verb acts on, so they belong together.
-    const badge = list.closest(".wiz-col")?.querySelector("[data-f=state]");
-    badge?.parentElement?.querySelector(".pal-review")?.remove();
-    if (groups.length > 1 && badge) {
+    const col = list.closest(".wiz-col");
+    col?.querySelector(".pal-review")?.remove();
+    if (groups.length > 1 && col) {
       const act = document.createElement("button");
       act.className = "text-act pal-review";
       act.textContent = `Review all ${groups.length} palettes`;
       act.onclick = () => openSwatchViewer(groups,
         { approved: true, refresh: refreshRefs, onChange: () => {} })
         .then(refreshRefs);
-      badge.after(act);
+      ($("[data-f=hero]", col) || col.firstElementChild)?.after(act);
     }
   };
 
@@ -5391,11 +5447,55 @@ async function renderWizard() {
       const isPal = role === "COLOR_PALETTE";
       const nMine = isPal ? palGroups(mine) : mine.length;
       const nProp = isPal ? palGroups(pendingPal) : 0;
-      badge.className = `badge ${nMine || inWords ? "APPROVED"
-        : nProp ? "PROVISIONAL" : "LOCKED"}`;  // audit #4: unmet is a gate, not a failure
-      badge.textContent = nMine ? `${nMine}`
+      /* PRODUCTION_DESIGN_UI_PLAN §3.2 — the state sits on the image's
+         top-right corner in Courier, amber while the anchor is unset and
+         dim once it is. Same three answers it always gave: a picture
+         count, IN WORDS, or NONE. The badge element is the same node
+         under a new class, so every reader that found it still does. */
+      const words = $("[data-f=words]", col)?.value.trim() || "";
+      badge.className = "ah-state mono" + (nMine || inWords ? " set" : "");
+      badge.textContent = nMine
+        ? `${nMine} ${isPal ? (nMine === 1 ? "PALETTE" : "PALETTES")
+                            : (nMine === 1 ? "PICTURE" : "PICTURES")}`
         : nProp ? `${nProp} PROPOSED`
         : inWords ? "IN WORDS" : "NONE";
+
+      /* The hero: the first attached picture, or the chosen catalogue
+         style's own frame, or a stated blank. A card with neither shows
+         hatching and says "Not set" in its scrim rather than reserving a
+         shape that explains nothing (B3). */
+      const hero = $("[data-f=hero]", col);
+      if (hero) {
+        const shot = $("[data-f=hero-shot]", hero);
+        const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
+                      CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
+                      BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
+        const chosen = lib.find(x => x.value === words)
+                    || lib.find(x => words && x.name && words.startsWith(x.name));
+        const plate = chosen ? (plateShots(chosen.key) || [])[0] : null;
+        const src = mine.length
+          ? `/api/references/${encodeURIComponent(mine[0].id)}/image?size=md`
+          : plate || null;
+        shot.style.backgroundImage = src ? `url("${src}")` : "";
+        shot.classList.toggle("none", !src);
+        const name = chosen ? chosen.name
+          : words ? words.split(/[.;·]/)[0].trim()
+          : "Not set";
+        $("[data-f=hero-name]", hero).textContent = name.slice(0, 60);
+        $("[data-f=hero-line]", hero).textContent = chosen
+          ? String(chosen.description || chosen.desc || "").slice(0, 90)
+          : words && words !== name ? words.slice(0, 90)
+          : nMine ? `${nMine} attached — no words yet`
+          : "Choose a look, or describe one in your own words";
+        hero.classList.toggle("empty", !nMine && !inWords);
+        // One thing to do on this card: change it. The picker is the same
+        // one the off-page button opens, so there is still one path.
+        hero.onclick = () => {
+          if (role === "COLOR_PALETTE") return openPaletteModal();
+          const btn = $(".pick-btn", col) || $("[data-f=addbtn]", col);
+          if (btn) btn.click();
+        };
+      }
       const list = $("[data-f=list]", col);
       list.innerHTML = "";
       // PALETTE_GROUPS_PLAN §3 — the same rule above the review strip: a
@@ -6908,10 +7008,16 @@ async function renderWizard() {
   const syncAnchorBadges = () => {
     for (const col of $$(".wiz-col[data-role]")) {
       const badge = $("[data-f=state]", col);
-      if (!badge || /^\d+$/.test(badge.textContent.trim())) continue;
+      // A card showing a picture count keeps it whatever the words say;
+      // only the NONE <-> IN WORDS half moves. The count now reads
+      // "3 PICTURES" rather than "3", so the guard reads the leading
+      // digit instead of the whole string (§3.2).
+      if (!badge || /^\d/.test(badge.textContent.trim())) continue;
       const inWords = !!$("[data-f=words]", col)?.value.trim();
-      badge.className = `badge ${inWords ? "APPROVED" : "LOCKED"}`;
+      badge.className = "ah-state mono" + (inWords ? " set" : "");
       badge.textContent = inWords ? "IN WORDS" : "NONE";
+      const hero = $("[data-f=hero]", col);
+      if (hero) hero.classList.toggle("empty", !inWords);
     }
   };
   syncAnchorBadges();
@@ -7005,6 +7111,7 @@ async function renderWizard() {
     if ($(sel)) $(sel).dataset.home = role;
 
   bindPicker("wiz-texture", TEXTURE_STYLES, {
+    sets: "wear · patina · entropy", not_: "subjects · palette · light",
     empty: "Choose a world texture",
     title: "World texture",
     definition: `World texture is <b>how far the world has travelled from
@@ -7014,6 +7121,7 @@ async function renderWizard() {
     ownPlaceholder: "Describe how worn the world is",
   });
   bindPicker("wiz-medium", RENDER_STYLES, {
+    sets: "medium · brushwork · finish", not_: "content · palette · the world",
     empty: "Choose a rendering style",
     title: "Rendering style",
     definition: `A rendering style is <b>how a panel is drawn</b> — the medium,
@@ -7025,6 +7133,7 @@ async function renderWizard() {
     ...travels("#wiz-never-row"),
   });
   bindPicker("wiz-light", CINEMA_STYLES, {
+    sets: "light behaviour · contrast · source · the framings it allows", not_: "palette · a panel's hour",
     empty: "Choose a cinematography look",
     title: "Cinematography",
     definition: `A cinematography grammar is <b>how the camera tells the
@@ -10642,7 +10751,7 @@ function plateShots(key) {
   return (Array.isArray(m) ? m : [m]).map(f => `/style-plates/${f}`);
 }
 
-function openStylePicker({ title, definition, styles, current, onPick,
+function openStylePicker({ title, definition, sets = "", not_ = "", styles, current, onPick,
                           uploadRole, uploadLabel, extra = "", onOpen, onClose,
                           onPicked, footer,
                           ownPlaceholder = "describe it in your own words" }) {
@@ -10656,6 +10765,7 @@ function openStylePicker({ title, definition, styles, current, onPick,
     <div class="modal rs-modal" role="dialog" aria-modal="true">
       <div class="modal-title">${esc(title)}</div>
       <p class="rs-def">${definition}</p>
+      ${sets ? `<p class="rs-juris mono">SETS ${esc(sets)}<br>NOT ${esc(not_)}</p>` : ""}
       ${/* Only while something in THIS picker is actually showing a diagram.
              The note used to key off "has a plate", which stayed true after
              a library gained photographed frames — so cinematography and
