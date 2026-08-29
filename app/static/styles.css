@@ -840,6 +840,86 @@ label.check {
    because it is the machine asserting a scope, not prose. */
 .rs-juris { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
   color: var(--ink-faint); line-height: 1.7; margin: -4px 0 12px; }
+/* UNCANONIZED — 2026-08-29 — PRODUCTION_DESIGN_UI_PLAN §3.4, the cast */
+/* The picture is the screen. A subject card led with its name and a row
+   of chrome and put the photograph in a strip below — but the
+   photograph IS the reference, the thing every prompt of that subject is
+   held to, and it was the smallest element on its own card.
+
+   Characters are 1:1.25; a vehicle or a prop is 1.85:1 and is never
+   letterboxed into the other shape. */
+.cast-kick { display: flex; align-items: baseline; gap: 10px;
+  margin: 18px 0 8px; }
+.cast-kick b { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--ink-dim); font-weight: 400; }
+.cast-kick span { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; color: var(--ink-faint); }
+.cast-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px; }
+@media (max-width: 1200px) { .cast-grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+@media (max-width: 780px) { .cast-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.cast-card { background: none; border: 0; padding: 0; cursor: pointer;
+  text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.cast-shot { display: block; width: 100%; aspect-ratio: .8;
+  background: var(--field); border: 1px solid var(--line-soft);
+  background-size: cover; background-position: center; }
+.cast-card[data-kind="VEHICLE"] .cast-shot,
+.cast-card[data-kind="PROP"] .cast-shot { aspect-ratio: 1.85; }
+.cast-shot.none { background: repeating-linear-gradient(135deg,
+  var(--field) 0 6px, var(--bg) 6px 12px); }
+.cast-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
+  color: var(--ink); }
+.cast-sub { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); }
+.cast-scenes { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); }
+/* Uncast have no picture, so a list is the honest shape for them. */
+.cast-uncast { margin-top: 22px; padding-top: 14px;
+  border-top: 1px solid var(--line-soft); }
+.cast-unrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
+.cast-unrow > b { font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; color: var(--ink-faint); font-weight: 400;
+  min-width: 78px; }
+.cast-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim);
+  border: 1px dashed var(--line); background: none; padding: 5px 10px;
+  cursor: pointer; }
+.cast-chip:hover { color: var(--ink); border-color: var(--ink-faint); }
+/* The detail screen. */
+.cast-detail { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+  gap: 26px; align-items: start; }
+@media (max-width: 1000px) { .cast-detail { grid-template-columns: 1fr; } }
+.cd-hero { display: flex; align-items: center; justify-content: center;
+  width: 100%; aspect-ratio: .8; background: var(--field);
+  border: 1px solid var(--line-soft); background-size: cover;
+  background-position: center; padding: 24px; }
+.cd-hero.none { background: repeating-linear-gradient(135deg,
+  var(--field) 0 6px, var(--bg) 6px 12px); }
+.cd-empty { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  line-height: 1.8; color: var(--ink-faint); text-align: center; max-width: 34ch; }
+.cast-detail[data-kind="VEHICLE"] .cd-hero,
+.cast-detail[data-kind="PROP"] .cd-hero { aspect-ratio: 1.85; }
+.cd-strip { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.cd-alt { width: 76px; aspect-ratio: .8; border: 1px solid var(--line-soft);
+  background-size: cover; background-position: center; cursor: pointer;
+  background-color: var(--field); }
+.cd-alt.on { border-color: var(--accent); }
+.cd-more { width: 76px; aspect-ratio: .8; border: 1px dashed var(--line);
+  background: none; color: var(--ink-faint); font-family: var(--mono);
+  font-size: 9px; letter-spacing: .1em; cursor: pointer; }
+.cd-lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  color: var(--ink-faint); margin: 0 0 4px; }
+.cd-who { font-family: var(--sans); font-size: 15.5px; line-height: 1.6;
+  color: var(--ink); margin: 0 0 18px; }
+.cd-trait { font-family: var(--sans); font-size: 13.5px; color: var(--ink-dim);
+  border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 5px 0; }
+.cd-facts { margin: 18px 0 0; padding-top: 14px;
+  border-top: 1px solid var(--line-soft); }
+.cd-fact { display: flex; gap: 20px; margin: 5px 0; }
+.cd-fact > b { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  color: var(--ink-faint); font-weight: 400; min-width: 120px; }
+.cd-fact > span { font-family: var(--mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--ink-dim); }
+.cd-acts { display: flex; gap: 10px; margin-top: 18px; }
+.cast-back { margin-right: 12px; }
 /* UNCANONIZED — 2026-08-29 — a proposed anchor */
 /* A proposal is not an answer. It sits over the card it is about, states
    its reason, and offers the two verbs that resolve it. Dashed, because

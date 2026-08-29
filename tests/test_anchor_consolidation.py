@@ -1563,11 +1563,18 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
         i = JS.index("chip.onclick")
         self.assertIn("castModal(r, refreshAll)", JS[i:i + 200])
 
-    def test_all_four_doors_reach_one_component(self):
-        self.assertEqual(JS.count("castModal("), 4,
-                         "one definition, three callers")
-        self.assertEqual(JS.count("photoTrayModal("), 2,
-                         "one definition, one caller")
+    def test_every_door_reaches_one_component(self):
+        """One way to cast, whichever door you came in by (2026-08-16).
+
+        Six callers since the cast screen landed (§3.4, 2026-08-29): the
+        screen's uncast chips and its manual field are two more doors, and
+        both go through the same modal rather than writing a card
+        themselves. Its photograph button goes to the same chooser the
+        subject card already opens."""
+        self.assertEqual(JS.count("castModal("), 6,
+                         "one definition, five callers")
+        self.assertEqual(JS.count("photoTrayModal("), 3,
+                         "one definition, two callers")
 
 
 if __name__ == "__main__":

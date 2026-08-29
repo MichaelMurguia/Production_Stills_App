@@ -5653,6 +5653,179 @@ async function renderWizard() {
 
   // The card component lives with the SUBJECTS shelf (buildSubjectCard) —
   // this grid is just its second host (one component, two hosts; plan D3).
+  /* The cast screen (PRODUCTION_DESIGN_UI_PLAN §3.4).
+
+     Two states in one host. The ROSTER groups by kind under Courier
+     kickers, six up, each card led by its picture at the subject's own
+     ratio — 1:1.25 for a character, 1.85:1 for a vehicle or a prop, and
+     never letterboxed into the other shape. The uncast sit under a
+     hairline as a list, because they have no picture and a list is the
+     honest shape for a thing with nothing to show.
+
+     The DETAIL is a screen, not a modal: the subject's photograph is the
+     largest thing on it, and a modal would put a scrim between a
+     director and the one image every prompt of that subject is held to.
+
+     Every card here is a card on Reference / Subjects. This screen owns
+     no data — it is a second view of that shelf, and it says so. */
+  let castOpen = null;                 // subject id, or null for the roster
+  const refreshCast = () => {
+    renderCastScreen();
+    renderSubjectTags();
+    wizardStepBadges();
+  };
+
+  const castRefsOf = (s, refs) =>
+    (s.ref_ids || []).map(id => refs.find(r => r.id === id))
+      .filter(r => r && r.status !== "REJECTED");
+
+  const castShot = r => r
+    ? `background-image:url("/api/references/${encodeURIComponent(r.id)}/image?size=md")`
+    : "";
+
+  const renderCastRoster = (subjects, refs, uncast) => {
+    const host = $("#cast-screen");
+    const KINDS = [["CHARACTER", "CHARACTERS"], ["VEHICLE", "VEHICLES"],
+                   ["PROP", "PROPS"]];
+    const out = [`<div class="row" style="margin:0 0 4px">
+        <span class="wiz-group-label">${subjects.length} CAST &middot; ${uncast.length} UNCAST</span>
+        <span class="cost mono">EVERY CARD HERE IS A CARD ON REFERENCE / SUBJECTS</span>
+      </div>`];
+    for (const [kind, label] of KINDS) {
+      const mine = subjects.filter(s => s.kind === kind);
+      if (!mine.length) continue;
+      out.push(`<div class="cast-kick"><b>${label}</b><span>${mine.length} CAST</span></div>
+        <div class="cast-grid">${mine.map(s => {
+          const rs = castRefsOf(s, refs);
+          return `<button type="button" class="cast-card" data-sid="${esc(s.id)}"
+                    data-kind="${esc(s.kind)}" title="Open ${esc(s.name)}">
+            <span class="cast-shot${rs.length ? "" : " none"}" style="${castShot(rs[0])}"></span>
+            <span class="cast-name">${esc(s.name)}</span>
+            ${s.subtitle ? `<span class="cast-sub">${esc(s.subtitle)}</span>` : ""}
+            <span class="cast-scenes">${rs.length} PHOTO${rs.length === 1 ? "" : "S"}</span>
+          </button>`;
+        }).join("")}</div>`);
+    }
+    if (!subjects.length)
+      out.push(`<p class="mini">Nobody cast yet. The scan finds them; casting one makes its card.</p>`);
+    // The uncast, as a list, with the manual door inside the same block.
+    const byKind = {};
+    for (const u of uncast) (byKind[u.kind] ||= []).push(u);
+    out.push(`<div class="cast-uncast">
+      <p class="wiz-group-label">UNCAST &mdash; FOUND IN THE SCREENPLAY, NO CARD YET &middot;
+        THESE HAVE NO PICTURE, SO THEY ARE A LIST</p>
+      ${Object.entries(byKind).map(([k, rows]) => `<div class="cast-unrow">
+          <b>${esc(k)}</b>${rows.map(u =>
+            `<button type="button" class="cast-chip" data-uncast="${esc(u.name)}"
+               data-kind="${esc(u.kind)}" title="Cast ${esc(u.name)} — makes its card and opens the photo chooser">${esc(u.name)}</button>`).join("")}
+        </div>`).join("") || `<p class="mini">Nothing uncast — the whole read is on a card.</p>`}
+      <div class="cast-unrow" style="margin-top:12px">
+        <b>OR</b>
+        <input type="text" id="cast-add-name" placeholder="name one the scan missed" style="max-width:260px">
+        <select id="cast-add-kind" style="max-width:130px">
+          <option>CHARACTER</option><option>VEHICLE</option><option>PROP</option>
+        </select>
+        <button type="button" class="ghost" id="cast-add">+ Cast</button>
+      </div>
+    </div>`);
+    host.innerHTML = out.join("");
+
+    $$(".cast-card", host).forEach(b => b.onclick = () => {
+      castOpen = b.dataset.sid;
+      renderCastScreen();
+    });
+    // One path, not two: a chip and the manual field open the same modal
+    // the shelf already uses.
+    $$("[data-uncast]", host).forEach(b => b.onclick = () =>
+      castModal({ name: b.dataset.uncast, kind: b.dataset.kind,
+                  subtitle: "", traits: [] }, refreshCast));
+    $("#cast-add", host).onclick = () => {
+      const name = $("#cast-add-name", host).value.trim();
+      if (!name) return toast("Give it a name first.", true);
+      castModal({ name, kind: $("#cast-add-kind", host).value,
+                  subtitle: "", traits: [] }, refreshCast);
+    };
+  };
+
+  const renderCastDetail = (s, refs) => {
+    const host = $("#cast-screen");
+    const rs = castRefsOf(s, refs);
+    const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
+    host.innerHTML = `
+      <div class="row" style="margin:0 0 12px">
+        <button type="button" class="text-act cast-back" data-f="back">&larr; Cast</button>
+        <span class="wiz-stage-title" style="font-size:20px">${esc(s.name)}</span>
+        <span class="cost mono">${esc(s.kind)} &middot; ${rs.length} PHOTO${
+          rs.length === 1 ? "" : "S"} &middot; ${esc(role.replaceAll("_", " "))}</span>
+      </div>
+      <div class="cast-detail" data-kind="${esc(s.kind)}">
+        <div>
+          <span class="cd-hero${rs.length ? "" : " none"}" data-f="hero"
+            style="${castShot(rs[0])}">${rs.length ? "" :
+            `<span class="cd-empty">NO PHOTOGRAPH YET &mdash; THIS SUBJECT RIDES ON
+             ITS WORDS ALONE UNTIL ONE IS ATTACHED</span>`}</span>
+          <div class="cd-strip">
+            ${rs.map((r, i) => `<button type="button" class="cd-alt${i ? "" : " on"}"
+                data-i="${i}" style="${castShot(r)}" title="${esc(r.id)}"></button>`).join("")}
+            <button type="button" class="cd-more" data-f="more"
+              title="Attach another photograph to this subject">ADD<br>ANOTHER</button>
+          </div>
+        </div>
+        <div>
+          <p class="cd-lab">WHO THIS IS</p>
+          <p class="cd-who">${s.subtitle ? esc(s.subtitle)
+            : `<span class="mini">No identity text yet — it rides in every prompt this subject appears in.</span>`}</p>
+          <p class="cd-lab">WHAT RIDES EVERY PROMPT</p>
+          ${(s.traits || []).length
+            ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
+            : `<p class="mini">No traits yet.</p>`}
+          <div class="cd-facts">
+            <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
+            <div class="cd-fact"><b>RIDES AS</b><span>${esc(role)} &mdash; ${esc(s.name.toUpperCase())}</span></div>
+          </div>
+          <div class="cd-acts">
+            <button type="button" class="ghost" data-f="photo">Attach a photograph</button>
+            <button type="button" class="ghost" data-f="edit">Edit the description</button>
+          </div>
+        </div>
+      </div>`;
+    $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
+    $$(".cd-alt", host).forEach(b => b.onclick = () => {
+      $$(".cd-alt", host).forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+      $("[data-f=hero]", host).style.cssText = castShot(rs[+b.dataset.i]);
+    });
+    // Attaching to an existing subject goes through the same chooser the
+    // shelf uses; the card already exists, so this only adds photographs.
+    const addPhoto = () => photoTrayModal(s, refreshCast);
+    $("[data-f=photo]", host).onclick = addPhoto;
+    $("[data-f=more]", host).onclick = addPhoto;
+    $("[data-f=edit]", host).onclick = async () => {
+      const v = await askText("Identity text", "Who this is", {
+        value: s.subtitle || "",
+        body: "It rides in every prompt this subject appears in.",
+      });
+      if (v === null) return;
+      try {
+        await api(`/api/subjects/${s.id}`, { method: "PUT", json: { subtitle: v.trim() } });
+        renderCastScreen();
+      } catch (err) { toast(err.message, true); }
+    };
+  };
+
+  const renderCastScreen = async () => {
+    const host = $("#cast-screen");
+    if (!host) return;
+    const [subjects, refs] = await Promise.all([
+      api("/api/subjects").catch(() => []),
+      api("/api/references").catch(() => []),
+    ]);
+    const uncast = uncastRecommendations(subjects);
+    const open = castOpen && subjects.find(x => x.id === castOpen);
+    if (open) renderCastDetail(open, refs);
+    else renderCastRoster(subjects, refs, uncast);
+  };
+
   const renderSubjectGrid = async () => {
     const grid = $("#wiz-subj-grid");
     const [subjects, refs] = await Promise.all([api("/api/subjects"), api("/api/references")]);
@@ -5681,6 +5854,7 @@ async function renderWizard() {
   };
   renderSubjectTags();
   renderSubjectGrid();
+  renderCastScreen();
 
   // ---- Step 2: screenplay analysis ----
   // The stored analysis is the source of truth for design languages; cards
