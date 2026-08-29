@@ -6837,6 +6837,11 @@ async function renderWizard() {
   $("#style-bible").addEventListener("input", () => {
     syncBibleSave();
     renderBibleConflicts(null);
+    syncBibleView();
+  });
+  $$("#bible-views .seg-opt").forEach(b => b.onclick = () => {
+    uiSet(BIBLE_VIEW_KEY, b.dataset.v);
+    syncBibleView();
   });
   // Escape is the way out of an edit, so Edit is never a trap.
   $("#style-bible").addEventListener("keydown", e => {
@@ -6847,6 +6852,163 @@ async function renderWizard() {
     syncBibleSave();
     $("#style-status").innerHTML = "";
   });
+  /* The Bible, read as a document (PRODUCTION_DESIGN_UI_PLAN §3.5).
+
+     "Storage and display are two different things, and this is the
+     ruling that matters most in this section."
+
+     The file stays exactly what it is: markdown at
+     context/01_ART_DIRECTION_BIBLE.md, written by draft_bible, parsed by
+     heading, read by generate.py and bible.infer_selection. Nothing here
+     touches it. What changes is that a document about how a film looks
+     stops being shown as a monospace textarea by default.
+
+     Three views over ONE file: READING renders it, MARKDOWN shows the
+     literal bytes so you can verify what the model will read, and Edit
+     writes it back verbatim.
+
+     The renderer supports exactly what draft_bible emits — #, ##, ###,
+     paragraphs, `**bold**` leads and `-` lists — and nothing else. A
+     table or a code fence renders as plain text rather than growing the
+     vocabulary, because every feature added here is a feature the
+     drafter may then be tempted to use, and the file has to stay
+     parseable by a heading walk. */
+  const BIBLE_VIEW_KEY = "bibleView";
+
+  const bibleInline = t => {
+    // `**Design language:** …` is a LABEL, not emphasis. Rendered as the
+    // grey inline lead the mock shows rather than as bold ink, because
+    // it names the field and the sentence after it is the answer.
+    let out = esc(t);
+    out = out.replace(/\*\*(.+?):\*\*/g, '<span class="bd-lead">$1 —</span>');
+    out = out.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    return out;
+  };
+
+  /* Pictures and colour, from what the production actually has.
+
+     A design language's frame is an approved reference scoped to it; its
+     colour chips are that language's swatch ramp. Where a language has
+     neither, it renders as prose alone — never a placeholder, because a
+     reserved shape that states nothing is the thing B3 forbids. */
+  const bibleArt = (refs, name) => {
+    const want = String(name || "").trim().toUpperCase();
+    const mine = refs.filter(r =>
+      String(r.language || "").trim().toUpperCase() === want);
+    const shot = mine.find(r => roleHead(r.role) !== "COLOR_PALETTE");
+    const sw = mine.filter(r => roleHead(r.role) === "COLOR_PALETTE")
+      .map(r => swatchNotes(r.notes)).filter(x => x && x.hex);
+    return { shot, swatches: rampOrder(sw).slice(0, 8) };
+  };
+
+  const renderBibleDoc = (text, refs) => {
+    const host = $("#bible-doc");
+    if (!host) return;
+    const lines = String(text || "").split("\n");
+    const out = [];
+    let para = [], list = [], chips = [], inAvoid = false, section = "";
+    const flushPara = () => {
+      if (para.length) out.push(`<p class="bd-p">${bibleInline(para.join(" "))}</p>`);
+      para = [];
+    };
+    const flushList = () => {
+      if (!list.length) return;
+      // An Avoid list is a set of exclusions, and a set reads as chips.
+      out.push(inAvoid
+        ? `<div class="bd-chips">${list.map(x =>
+            `<span class="bd-chip">${esc(x)}</span>`).join("")}</div>`
+        : `<ul class="bd-ul">${list.map(x =>
+            `<li>${bibleInline(x)}</li>`).join("")}</ul>`);
+      list = [];
+    };
+    const flush = () => { flushPara(); flushList(); };
+
+    for (const raw of lines) {
+      const t = raw.trim();
+      if (!t) { flush(); continue; }
+      let m;
+      if ((m = t.match(/^#\s+(.+)$/))) {
+        flush(); inAvoid = false;
+        out.push(`<h1 class="bd-title">${esc(m[1])}</h1>`);
+      } else if ((m = t.match(/^##\s+(.+)$/))) {
+        flush();
+        section = m[1];
+        inAvoid = false;
+        out.push(`<h2 class="bd-h2" id="bd-${slugify(section)}">${esc(section)}</h2>`);
+        const { shot, swatches } = bibleArt(refs, section);
+        if (shot || swatches.length) {
+          out.push(`<div class="bd-art">${shot
+            ? `<img class="bd-shot" src="/api/references/${esc(shot.id)}/image?size=md" alt="">`
+            : ""}${swatches.length
+            ? `<div class="bd-ramp">${swatches.map(w =>
+                `<i style="${bandStyle(w)}" title="${esc(w.name || "")} ${esc(w.hex)}"></i>`).join("")}</div>`
+            : ""}</div>`);
+        }
+      } else if ((m = t.match(/^###\s+(.+)$/))) {
+        flush();
+        inAvoid = /^avoid/i.test(m[1]);
+        out.push(`<p class="bd-kick">${esc(m[1])}</p>`);
+      } else if ((m = t.match(/^[-*]\s+(.+)$/))) {
+        flushPara();
+        list.push(m[1]);
+      } else {
+        flushList();
+        para.push(t);
+      }
+    }
+    flush();
+    host.innerHTML = out.join("") ||
+      `<p class="bd-p bd-none">Nothing written yet. Build the Art Direction
+       Bible above and it reads here.</p>`;
+  };
+
+  const slugify = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  /* The section index, the anchors that wrote it, and the self-check —
+     the right rail (§3.5). The index is built from the SAME headings the
+     server parses, so a section the app cannot see is a section the
+     index cannot list, which is the honest failure. */
+  const renderBibleRail = (text, refs) => {
+    const rail = $("#bible-rail");
+    if (!rail) return;
+    const secs = String(text || "").split("\n")
+      .map(l => l.trim().match(/^##\s+(.+)$/)).filter(Boolean).map(m => m[1]);
+    const anchors = AUTO_ATTACH_HEADS.map(role => {
+      const r = refs.find(x => roleHead(x.role) === role && x.status === "APPROVED");
+      return r ? { role, r } : null;
+    }).filter(Boolean);
+    $("[data-f=bd-index]", rail).innerHTML = secs.length
+      ? secs.map(x => `<button type="button" class="bd-idx" data-to="bd-${slugify(x)}">${esc(x)}</button>`).join("")
+      : `<span class="mini">no sections yet</span>`;
+    $("[data-f=bd-wrote]", rail).innerHTML = anchors.length
+      ? anchors.map(({ role, r }) => `<figure class="bd-wrote">
+           <img src="/api/references/${esc(r.id)}/image?size=thumb" alt="">
+           <figcaption>${esc(role.replaceAll("_", " ").toLowerCase())}</figcaption>
+         </figure>`).join("")
+      : `<span class="mini">no anchor has a picture yet</span>`;
+    $$(".bd-idx", rail).forEach(b => b.onclick = () => {
+      const el = document.getElementById(b.dataset.to);
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 80,
+                                behavior: "smooth" });
+    });
+  };
+
+  /* Which of the three views is showing. READING is the default and the
+     one a director lands on; MARKDOWN is for verifying what the model
+     will actually read, so it is the literal file and never a
+     re-render. */
+  const syncBibleView = () => {
+    const editing = bibleEditing || bibleState() === "unsaved" || bibleState() === "empty";
+    const v = editing ? "edit" : (uiGet(BIBLE_VIEW_KEY, "reading") || "reading");
+    $("#bible-doc")?.classList.toggle("hidden", v !== "reading");
+    $("#style-bible")?.classList.toggle("hidden", v === "reading");
+    $("#bible-views")?.classList.toggle("hidden", editing);
+    $$("#bible-views .seg-opt").forEach(b =>
+      b.classList.toggle("on", b.dataset.v === v));
+    const note = $("#bible-md-note");
+    if (note) note.hidden = v === "reading";
+  };
+
   /* R2 — the Bible read against itself (2026-08-25).
 
      The production this was built from carried, in three different
@@ -6929,6 +7091,12 @@ async function renderWizard() {
     // all-clear is worse than no report.
     renderBibleConflicts(null);
     syncBibleSave();
+    // The reader is a VIEW of the file, so it is rebuilt whenever the
+    // file is loaded and never the other way round.
+    const refs = await api("/api/references").catch(() => []);
+    renderBibleDoc(bible.text, refs);
+    renderBibleRail(bible.text, refs);
+    syncBibleView();
     return bible;
   };
   /* A4 — the production camera card is retired (2026-08-25).

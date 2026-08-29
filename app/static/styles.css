@@ -2139,13 +2139,62 @@ details.meta pre {
 .rl-row .rl-val { color: var(--ink-faint); font-size: 12px; }
 .rl-row.in .rl-val { color: var(--ink); }
 .rl-failed .rd-note { color: var(--bad); }
+/* UNCANONIZED — 2026-08-29 — PRODUCTION_DESIGN_UI_PLAN §3.5, the reader */
+/* The Bible rendered as the document it is. Storage is unchanged — the
+   file is still markdown parsed by heading — and this renders it without
+   ever writing to it. Prose at a 68ch measure, because 15.5px across a
+   full workbench is a line nobody finishes. */
+.bible-doc { max-width: 68ch; }
+.bible-doc .bd-title { font-family: var(--sans); font-size: 30px; font-weight: 700;
+  color: var(--ink); margin: 0 0 2px; letter-spacing: -.01em; }
+.bible-doc .bd-h2 { font-family: var(--sans); font-size: 19px; font-weight: 600;
+  color: var(--ink); margin: 26px 0 0; padding-bottom: 7px;
+  text-transform: none; letter-spacing: normal;
+  border-bottom: 1px solid var(--hairline); }
+.bible-doc .bd-kick { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--ink-faint); margin: 14px 0 2px; }
+.bible-doc .bd-p { font-family: var(--sans); font-size: 15.5px; line-height: 1.7;
+  color: var(--ink-dim); margin: 12px 0 0; }
+.bible-doc .bd-ul { margin: 10px 0 0; padding-left: 18px; }
+.bible-doc .bd-ul li { font-family: var(--sans); font-size: 15.5px; line-height: 1.7;
+  color: var(--ink-dim); margin-bottom: 4px; }
+/* An Avoid list is a SET of exclusions, and a set reads as chips. */
+.bible-doc .bd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.bible-doc .bd-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim);
+  border: 1px solid var(--line-soft); padding: 5px 9px; }
+/* `**Design language:**` names a field; the sentence after it is the
+   answer. A grey lead, not bold ink. */
+.bible-doc .bd-lead { color: var(--ink-faint); }
+.bible-doc .bd-art { display: flex; align-items: flex-start; gap: 12px; margin: 12px 0 0;
+  flex-wrap: wrap; }
+.bible-doc .bd-shot { width: 280px; max-width: 100%; display: block;
+  border: 1px solid var(--line-soft); }
+.bible-doc .bd-ramp { display: flex; height: 26px; }
+.bible-doc .bd-ramp i { display: block; width: 34px; }
+.bible-doc .bd-none { color: var(--ink-faint); }
+/* The right rail: where you are, what wrote it, and the one act on it. */
+.bible-rail { display: flex; flex-direction: column; gap: 4px; }
+.bd-index { display: flex; flex-direction: column; margin-bottom: 8px; }
+.bd-idx { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim);
+  background: none; border: 0; text-align: left; padding: 3px 0; cursor: pointer; }
+.bd-idx:hover { color: var(--ink); }
+.bd-wrote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  margin-bottom: 8px; }
+.bd-wrote { margin: 0; }
+.bd-wrote img { width: 100%; display: block; border: 1px solid var(--line-soft); }
+.bd-wrote figcaption { font-family: var(--mono); font-size: 9px;
+  letter-spacing: .1em; color: var(--ink-faint); margin-top: 3px;
+  text-transform: uppercase; }
+.bible-viewrow { margin: 0 0 8px; align-items: center; }
+.bible-path { color: var(--ink-faint); font-size: 10px; letter-spacing: .06em;
+  margin-left: 10px; }
 /* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.5 */
 /* Two columns: the document and its self-check on the left, the things
    you set beside it on the right. The verb row stays full width above
    both, because it governs the whole step and belongs to neither. */
-.bible-cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+.bible-cols { display: grid; grid-template-columns: minmax(0, 1fr) 260px 300px;
   gap: 18px; align-items: start; margin-top: 12px; }
-@media (max-width: 1100px) { .bible-cols { grid-template-columns: 1fr; } }
+@media (max-width: 1300px) { .bible-cols { grid-template-columns: 1fr; } }
 .bible-side { display: flex; flex-direction: column; gap: 14px; }
 #style-bible { min-height: 420px; font-family: var(--mono); font-size: 13px;
   line-height: 1.7; background: var(--field); }

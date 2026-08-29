@@ -915,6 +915,12 @@ def api_list_references() -> list[dict]:
     usage = insights.reference_usage()
     for r in refs:
         r["used_in"] = usage.get(r["id"], 0)
+        # Which design language this anchor belongs to, decided HERE and
+        # not again in the client. Two places carry it — a titled role
+        # (`WORLD_TEXTURE — SALT PANS`) and a swatch's notes — and a
+        # second implementation of that rule in JS would be a twin free
+        # to drift from the one the renders actually use.
+        r["language"] = store.reference_language(r)
     return refs
 
 
