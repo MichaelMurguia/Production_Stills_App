@@ -594,7 +594,7 @@ class TheUploadStartsTheRead(unittest.TestCase):
 
     def test_the_upload_fires_it(self):
         i = self.JS.index('const rec = await api("/api/screenplay"')
-        self.assertIn("startTheRead();", self.JS[i:i + 700])
+        self.assertIn("startTheRead();", self.JS[i:self.JS.index("} catch (err) {", i)])
 
     def test_it_never_re_scans_a_curated_production(self):
         """A re-run overwrites curated design languages, environments and

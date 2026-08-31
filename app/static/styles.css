@@ -2196,6 +2196,7 @@ details.meta pre {
 /* Capped, or the phase chips space themselves across the full workbench
    width and read as three unrelated words. The Bible's panel never hit
    this because its host is narrow. */
+.up-busy:not(:empty) { margin-top: 12px; }
 .rl { max-width: 92ch; }
 /* §4 — one bar per phase, and it is BINARY: empty, current, done. No
    percentage and nothing creeping, because nothing here is measured
@@ -2211,6 +2212,7 @@ details.meta pre {
 .rl-bar { display: block; height: 2px; margin-top: 7px; background: var(--line-soft); }
 .rl-phase span.now .rl-bar { background: var(--accent); }
 .rl-phase span.done .rl-bar { background: var(--ok); }
+.up-busy:not(:empty) { margin-top: 12px; }
 .rl { max-width: 92ch; }
 .rl .rl-rows { margin-top: 10px; border-top: 1px solid var(--line-soft); }
 .rl-row { display: flex; justify-content: space-between; align-items: baseline;

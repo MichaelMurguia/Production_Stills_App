@@ -2467,16 +2467,9 @@ async function renderScreenplay() {
       <div class="fact" data-f="read"><span>READ</span><b>—</b></div>
       <div class="row" style="margin-top:10px">
         <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — yours to read, never sent to a model">Read the screenplay</button>
-        <button class="ghost" data-f="read-extract" title="Open the extracted text — this is the copy every model reads, and the only one they are ever sent. Two copies exist deliberately: sending the raw upload would cost tokens on every pass.">Read what the models read</button>
       </div>`;
     $("[data-f=read-script]").onclick = () =>
       window.open("/api/screenplay/file", "_blank");
-    // The two-copies rule is the app's biggest standing token saving, and
-    // until now the copy it saves on had no reader in the product — the
-    // endpoint existed and nothing called it (adversarial review F9). A
-    // rule the user cannot see is a rule they cannot trust.
-    $("[data-f=read-extract]").onclick = () =>
-      window.open("/api/screenplay/text", "_blank", "noopener");
   } else {
     $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
   }
@@ -2514,68 +2507,6 @@ async function renderScreenplay() {
         </div>`).join("")}`;
     $$("[data-spec]", cit).forEach(btn => { btn.onclick = () => openSheet(btn.dataset.spec); });
   }
-
-  /* Inventory Script — the deterministic read, made visible.
-
-     Every phase here is real and every number is one the parse actually
-     returned. That matters more than usual on this button: the whole act
-     takes a few hundred milliseconds, so a progress bar would be pure
-     theatre. What it shows instead is the inventory BUILDING — scenes,
-     then locations, then how many are thin, then broken citations — which
-     is worth reading after it finishes as well as during. */
-  const inventoryBtn = $("#scr-inventory");
-  if (inventoryBtn) inventoryBtn.onclick = async () => {
-    inventoryBtn.disabled = true;
-    const lad = runLadder.create($("#scr-inventory-busy"), {
-      title: "Inventorying the script",
-      phases: [{ key: "read", label: "READ" }, { key: "scenes", label: "SCENES" },
-               { key: "places", label: "LOCATIONS" }, { key: "cites", label: "CITATIONS" }],
-      rows: [{ key: "chars", label: "Characters of extracted text" },
-             { key: "scenes", label: "Scene headings" },
-             { key: "locs", label: "Locations" },
-             { key: "thin", label: "Thin coverage — leans on inference" },
-             { key: "broken", label: "Broken citations" }],
-    });
-    try {
-      lad.phase("read", "Reading the extracted text — the copy every model reads.");
-      // Already on the screenplay record; a second endpoint to re-count
-      // characters the app has known since upload would be a new route
-      // answering a question already answered.
-      lad.set("chars", (sp?.text_chars || 0).toLocaleString());
-
-      lad.phase("scenes", "Finding scene headings by slugline. No model involved.");
-      const locs = await api("/api/screenplay/locations");
-      const rows = locs.locations || [];
-      lad.set("scenes", rows.reduce((n, r) => n + (r.scenes || 0), 0));
-
-      lad.phase("places", "Grouping locations and scoring how much the script says about each.");
-      lad.set("locs", rows.length);
-      lad.set("thin", rows.filter(r => (r.detail ?? 4) <= 1).length);
-
-      lad.phase("cites", "Re-checking every quote the breakdowns cite against this draft.");
-      const cr = await api("/api/screenplay/citation-report").catch(() => ({ missing: [] }));
-      lad.set("broken", (cr.missing || []).length);
-
-      lad.done(rows.length
-        ? `Inventory complete — ${rows.length} location${rows.length === 1 ? "" : "s"} below.`
-        : "No scene headings found — is this an image-only PDF?");
-      /* The ladder STAYS. The Bible's panel dismisses itself when it
-         finishes, and that is right for a minute-long act you watched —
-         "once nothing is happening it is a spent receipt on the stage".
-         This act takes a few hundred milliseconds, so the same rule
-         inverts: nobody watches it, and the ladder is not a progress
-         display but the inventory itself. Re-rendering the whole stage
-         here wiped it before it could be read.
-
-         So only the locations table below is redrawn. */
-      const fresh = await api("/api/state").catch(() => null);
-      if (fresh) renderLocations(fresh, langs);
-      inventoryBtn.disabled = false;
-    } catch (err) {
-      lad.fail(err.message);
-      inventoryBtn.disabled = false;
-    }
-  };
 
   bindScreenplayUpload($("#screenplay-form"), state.capability);
 
@@ -3098,9 +3029,7 @@ const theRead = {
         // `wrap` is required, not decorative: .busy-bar is flex-basis 100%
         // and without wrapping it squeezes the label to one word per line.
         ? '<div class="busy wrap"><span class="spinner"></span>'
-          + '<span class="busy-label">Scoping production needs — '
-          + esc(this.engine) + " is reading the whole draft in one call. "
-          + "It reports nothing until it is done.</span>"
+          + '<span class="busy-label">Scoping production needs</span>'
           + '<span class="busy-bar"></span></div>'
         : "";
     }
@@ -3250,21 +3179,71 @@ function bindScreenplayUpload(form, cap = null) {
   };
   input.addEventListener("change", sync);
   sync();
+  /* The upload takes seconds — the file goes up, the server extracts its
+     text, and every quote the breakdowns cite is re-checked against the
+     new draft — and it used to do all of that behind a button that did
+     not change (user, 2026-08-30: "it should have a progress indicator
+     as soon as I click"). A control that takes a press and then says
+     nothing is a control people press twice.
+
+     The ladder appears on the CLICK, before anything is awaited. The
+     send is one opaque call, so it shows a clock and says so rather than
+     a bar creeping toward a number nobody measured; the rows fill from
+     the answer when it lands. */
+  let upBusy = form.parentElement.querySelector(".up-busy");
+  if (!upBusy) {
+    upBusy = document.createElement("div");
+    upBusy.className = "up-busy";
+    form.after(upBusy);
+  }
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const file = $('input[type="file"]', form).files[0];
     if (!file) return;
+    submit.disabled = true;
+    input.disabled = true;
+    const mb = (file.size / 1048576).toFixed(2);
+    const lad = runLadder.create(upBusy, {
+      title: "Reading the screenplay",
+      phases: [{ key: "send", label: "SEND" }, { key: "read", label: "EXTRACT" },
+               { key: "check", label: "CHECK CITATIONS" }],
+      rows: [{ key: "file", label: "File" },
+             { key: "chars", label: "Characters of text extracted" },
+             { key: "checked", label: "Cited quotes re-checked" },
+             { key: "missing", label: "Quotes the new draft no longer has" }],
+    });
+    lad.set("file", `${file.name} · ${mb} MB`);
+    lad.phase("send", `Sending ${mb} MB. The text is extracted on arrival — `
+                    + `the original is never sent to a model.`);
     const fd = new FormData();
     fd.append("file", file);
     try {
+      lad.phase("read", "One call: the upload, the text extraction and the "
+                      + "citation re-check happen together, and there is no way "
+                      + "to see inside it. The clock is the only honest progress.");
       const rec = await api("/api/screenplay", { method: "POST", body: fd });
       const cc = rec.citation_check;
+      lad.phase("check", "");
+      lad.set("chars", (rec.text_chars || 0).toLocaleString());
+      lad.set("checked", cc ? cc.quotes_checked : null);
+      lad.set("missing", cc ? cc.missing : null);
+      lad.done(cc && cc.missing
+        ? `${cc.missing} of ${cc.quotes_checked} cited quotes are no longer in this draft — review them below.`
+        : "Uploaded and read. Inventory Script below, then Production Design.");
       toast(cc && cc.missing
         ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
         : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
       showView("screenplay");
       startTheRead();
-    } catch (err) { toast(err.message, true); }
+    } catch (err) {
+      // The ladder keeps its rows and states the failure in place — a
+      // gate ("connect a model first") is the commonest answer here and
+      // it must not vanish with the panel.
+      lad.fail(err.message);
+      toast(err.message, true);
+      submit.disabled = false;
+      input.disabled = false;
+    }
   });
 }
 

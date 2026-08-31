@@ -863,13 +863,6 @@ def api_screenplay_locations() -> dict:
     return insights.locations()
 
 
-@app.get("/api/screenplay/text")
-def api_screenplay_text() -> dict:
-    """The current draft's extracted text, for the in-app reading view."""
-    text = insights.screenplay_text()
-    return {"available": bool(text.strip()), "text": text}
-
-
 @app.get("/api/screenplay/file")
 def api_screenplay_file():
     """The original uploaded file, served inline for the user to read.
