@@ -170,5 +170,65 @@ class TheLoglineLeads(unittest.TestCase):
         self.assertIn("border: 0", b)
 
 
+
+
+class TheModelPhaseIsMeasuredNotPaced(unittest.TestCase):
+    """User, 2026-08-31: "Is the time real time it actually takes? No
+    manufactured 'process' time?"
+
+    For this half, yes — and these are the facts that make it so."""
+
+    def test_nothing_in_the_read_schedules_the_model_phase(self):
+        """Three timers exist and none of them touch it: the wall clock,
+        the parse walk (which returns unless phase is "parse"), and the
+        auto-dismiss after the answer is already in."""
+        import re
+        timers = [m.group(0) for m in
+                  re.finditer(r"set(?:Timeout|Interval)\([^;]{0,90}", READ)]
+        self.assertEqual(len(timers), 3, timers)
+        self.assertIn('if (!this.on || this.phase !== "parse") return;', READ)
+
+    def test_the_phase_ends_when_the_answer_lands_and_not_before(self):
+        i = JS.index("async function startTheRead() {")
+        seg = JS[i:JS.index("theRead.fail(err.message)", i)]
+        self.assertIn('const a = await api("/api/wizard/analyze"', seg)
+        self.assertIn("theRead.finish(a);", seg)
+
+    def test_the_bar_measures_nothing_and_says_so_by_sweeping(self):
+        """An indeterminate CSS sweep, never a width. A percentage here
+        would be a picture of a number nobody has."""
+        b = CSS.split(NL + ".busy .busy-bar {")[1].split("}")[0]
+        self.assertIn("animation: busy-sweep", b)
+        self.assertIn("infinite", b)
+        self.assertNotIn("width:", b)
+        # Nothing anywhere writes to it — no width, no style, no dataset.
+        import re
+        for m in re.finditer(r"busy-bar", JS):
+            line = JS[JS.rindex(chr(10), 0, m.start()) + 1:
+                      JS.index(chr(10), m.start())]
+            self.assertNotIn("style", line, line.strip())
+            self.assertNotIn("width", line, line.strip())
+
+    def test_the_clock_is_never_paced(self):
+        self.assertIn("this.clock = setInterval(() => this.tickClock(), 1000)", READ)
+        self.assertIn("Math.round((Date.now() - this.t0) / 1000)", READ)
+
+    def test_it_does_not_claim_one_call_when_the_server_makes_two(self):
+        """`/api/wizard/analyze` runs the read AND a cheaper faction
+        self-check. A surface whose job is being exact about spend may not
+        undercount it."""
+        main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        i = main.index("async def api_wizard_analyze(")
+        seg = main[i:main.index("return analysis", i)]
+        self.assertIn("wizard.analyze_screenplay", seg)
+        self.assertIn("wizard.faction_self_check", seg)
+        i = READ.index('else if (this.phase === "model")')
+        note = READ[i:READ.index('else if (this.phase === "previewed")', i)]
+        said = note[note.index("note.textContent ="):]
+        self.assertNotIn("ONE CALL", said)
+        self.assertIn("THE READ AND ", said)
+        self.assertIn("A SHORTER CHECK PASS", said)
+
+
 if __name__ == "__main__":
     unittest.main()

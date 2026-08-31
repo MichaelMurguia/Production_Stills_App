@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2549 tests** across 133 files.
+**2554 tests** across 133 files.
 
 
-## Product app — 2328 tests in 116 files
+## Product app — 2333 tests in 116 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -139,7 +139,7 @@ temp home and external services are faked.
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
 | `test_the_anchor_row_shows_what_was_chosen.py` | 31 | The anchor cards wear the look they were set to. |
 | `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |
-| `test_the_read_is_paced_and_the_logline_leads.py` | 21 | The read stops pretending to take a minute, and the logline leads. |
+| `test_the_read_is_paced_and_the_logline_leads.py` | 26 | The read stops pretending to take a minute, and the logline leads. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorial_does_not_poll.py` | 9 | An idle tab must not talk to the server. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |

@@ -3129,8 +3129,14 @@ const theRead = {
         note.textContent = "PARSED HERE — " + this.scenes.length
           + " SCENES OFF THE PAGE, NOTHING SENT ANYWHERE YET";
       else if (this.phase === "model")
-        note.textContent = this.engine.toUpperCase() + " IS READING — ONE CALL, NO "
-          + "PER-SCENE PROGRESS TO REPORT. THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
+        // "ONE CALL" was not true and this surface exists to be exact
+        // about spend: `/api/wizard/analyze` makes the read AND a cheaper
+        // faction self-check pass whose failure degrades silently. Two.
+        // Either way the point stands — neither reports progress from
+        // inside, which is why there is a sweep here and not a bar.
+        note.textContent = this.engine.toUpperCase() + " IS READING — THE READ AND "
+          + "A SHORTER CHECK PASS, NEITHER REPORTING PROGRESS FROM INSIDE. "
+          + "THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
       else if (this.phase === "previewed")
         note.textContent = "PREVIEW ONLY — THE PARSE IS COMPLETE AND REAL. "
           + "NO MODEL WAS CALLED, SO THE READ'S OWN FINDINGS ARE NOT HERE.";

@@ -216,8 +216,13 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         self.css = (STATIC / "styles.css").read_text(encoding="utf-8")
 
     def test_the_model_phase_states_it_has_no_per_scene_progress(self):
-        self.assertIn("NO ", self.js)
-        self.assertIn("PER-SCENE PROGRESS TO REPORT", self.js)
+        """Reworded 2026-08-31 — it used to say "ONE CALL", and the server
+        makes two (the read, then a shorter faction self-check). The rule
+        it was written for is unchanged: this phase must say that nothing
+        inside it can be reported, which is why a sweep stands here and
+        not a bar."""
+        self.assertIn("NEITHER REPORTING PROGRESS FROM INSIDE", self.js)
+        self.assertNotIn("ONE CALL, NO ", self.js)
 
     def test_the_parse_phase_says_nothing_has_been_sent(self):
         self.assertIn("NOTHING SENT ANYWHERE YET", self.js)
