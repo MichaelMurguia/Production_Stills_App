@@ -79,10 +79,26 @@ class TheFinishPanelKeepsNothing(unittest.TestCase):
         self.assertNotIn("rd-go", seg)
         self.assertNotIn("DESIGN LANGUAGE(S)", seg)
 
-    def test_it_still_leaves(self):
+    def test_it_leaves_at_once_with_no_hold(self):
+        """The seven-second pause went too (user-directed 2026-08-31: "it
+        still has a 7 second display before final state transition. That
+        needs to go away"). Once the summary and the route had both moved
+        somewhere permanent, the pause had nothing in it."""
         i = READ.index("finish(analysis) {")
         seg = READ[i:READ.index(NL + "  fail(msg) {", i)]
-        self.assertIn("this.dismiss()", seg)
+        self.assertNotIn("setTimeout", seg)
+        self.assertIn("this.on = false;", seg)
+        self.assertIn('$("#read-live")?.remove();', seg)
+
+    def test_it_does_not_repaint_a_stage_the_user_has_left(self):
+        """renderScreenplay replaces #main, and a read can finish while
+        the user is on another stage. Unguarded it painted the screenplay
+        template over whatever they had navigated to."""
+        i = READ.index("finish(analysis) {")
+        seg = READ[i:READ.index(NL + "  fail(msg) {", i)]
+        self.assertIn('if (activeView === "screenplay") {', seg)
+        self.assertLess(seg.index('if (activeView === "screenplay")'),
+                        seg.index("renderScreenplay()"))
 
     def test_the_result_still_survives_the_panel(self):
         """The toast carries the counts durably — the finding must outlive
@@ -179,13 +195,14 @@ class TheModelPhaseIsMeasuredNotPaced(unittest.TestCase):
     For this half, yes — and these are the facts that make it so."""
 
     def test_nothing_in_the_read_schedules_the_model_phase(self):
-        """Three timers exist and none of them touch it: the wall clock,
-        the parse walk (which returns unless phase is "parse"), and the
-        auto-dismiss after the answer is already in."""
+        """Two timers exist and neither touches it: the wall clock, and
+        the parse walk, which returns unless the phase is "parse"."""
         import re
+        # Two, since the finish hold was removed: the wall clock and the
+        # parse walk. Neither can extend the model phase.
         timers = [m.group(0) for m in
                   re.finditer(r"set(?:Timeout|Interval)\([^;]{0,90}", READ)]
-        self.assertEqual(len(timers), 3, timers)
+        self.assertEqual(len(timers), 2, timers)
         self.assertIn('if (!this.on || this.phase !== "parse") return;', READ)
 
     def test_the_phase_ends_when_the_answer_lands_and_not_before(self):

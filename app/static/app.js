@@ -2968,30 +2968,41 @@ const theRead = {
   finish(analysis) {
     this.stopTimers();
     this.phase = "found"; this.found = analysis || {};
-    // The stage comes back with the read's answers already in it.
-    renderScreenplay().then(revealScreenplayStage).catch(() => {});
-    this.said = this.obs.slice();      // the rest of what the parse saw
-    this.at = this.scenes.length - 1;
-    this.paint();
-    /* And then it leaves (user, 2026-08-21: "at the end of reading and
-       processing, the read-is-in section should go away"). The panel is
-       an account of something happening; once nothing is happening it is
-       a spent receipt sitting on the stage.
-
-       It used to spend those seven seconds showing a count and a route to
-       Production Design — a primary action on a timer, gone if you looked
-       away. Both are now elsewhere and permanent: the counts are on the
-       stage the read filled, and the route sits in the side rail for as
-       long as a read exists (user-directed 2026-08-31: "leave the Prod
-       Design route permanent. Also, don't show the rest at all"). So this
-       just goes. */
     const langs = (this.found.design_worlds || []).length;
     const subj = (this.found.subjects || []).length;
     toast(`The read found ${langs} design language(s) and ${subj} subject(s) `
           + "— review them on Prod. Design.");
-    clearTimeout(this.bye);
-    this.bye = setTimeout(() => { if (this.phase === "found") this.dismiss(); },
-                          7000);
+
+    /* Straight to the end state (user-directed 2026-08-31: "it still has
+       a 7 second display before final state transition. That needs to go
+       away").
+
+       The panel used to hold for seven seconds after the answer landed,
+       first showing a summary and a route, then — once both moved
+       somewhere permanent — showing nothing at all. A pause with nothing
+       in it is just a pause. The work is done; the stage that holds the
+       result is what should be on screen.
+
+       Order matters twice here. `on` goes false BEFORE the repaint, or
+       renderScreenplay remounts the very panel this is removing. And the
+       stage is repainted BEFORE it is revealed, because underneath a
+       read the stage still holds the pre-read view — on a first upload,
+       the upload form — and unhiding that for a frame would show the
+       user the thing they just finished doing. */
+    this.on = false;
+    document.body.dataset.readBusy = "0";
+    if (activeView === "screenplay") {
+      // Guarded: this replaces #main, and a read can finish while the
+      // user is on another stage. Unguarded it painted the screenplay
+      // template over whatever they had navigated to.
+      renderScreenplay().then(revealScreenplayStage).catch(() => {
+        $("#read-live")?.remove();
+        revealScreenplayStage();
+      });
+    } else {
+      $("#read-live")?.remove();
+      revealScreenplayStage();
+    }
   },
 
   fail(msg) {
@@ -3038,7 +3049,7 @@ const theRead = {
   },
 
   dismiss() {
-    this.stopTimers(); clearTimeout(this.bye); this.on = false;
+    this.stopTimers(); this.on = false;
     document.body.dataset.readBusy = "0";
     const h = $("#read-live"); if (h) h.remove();
     revealScreenplayStage();

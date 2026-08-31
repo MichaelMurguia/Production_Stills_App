@@ -320,11 +320,15 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         # Bounded on the next method, not on a character count — a fixed
         # window stops meaning what it meant the moment the block grows.
         seg = block[i:block.index(chr(10) + "  fail(msg) {", i)]
-        self.assertIn("this.dismiss()", seg)
+        # It no longer holds for seven seconds first (user-directed
+        # 2026-08-31). Once the summary and the route had both moved
+        # somewhere permanent, that pause had nothing in it — so the panel
+        # goes the moment the answer lands. The toast still carries the
+        # result, which is the part of this rule that never changed.
         self.assertIn("toast(", seg)
-        self.assertIn('if (this.phase === "found")', seg)
-        j = block.index("dismiss() {")
-        self.assertIn("clearTimeout(this.bye)", block[j:j + 200])
+        self.assertIn("this.on = false;", seg)
+        self.assertNotIn("setTimeout", seg)
+        self.assertNotIn("7000", seg)
     def test_a_preview_never_claims_a_model_ran(self):
         """The preview exists so the animation and the copy can be checked
         without spending anything. It walks the SAME parse — so it must
@@ -474,9 +478,14 @@ class TheStageWaitsForTheRead(unittest.TestCase):
         """The panel's own × can fire at any point. If the flag survived
         it, the stage would stay hidden with nothing left to explain
         why."""
-        i = self.JS.index("  dismiss() {" + chr(10)
-                          + "    this.stopTimers(); clearTimeout(this.bye)")
-        self.assertIn("revealScreenplayStage()", self.JS[i:i + 400])
+        # Inside theRead's own block. Two ladders in this file now share
+        # the shape of a dismiss(), and the Bible one sits first — a
+        # file-wide search reads the wrong component.
+        block = self.JS.split("const theRead")[1].split("async function startTheRead")[0]
+        i = block.index("dismiss() {")
+        seg = block[i:block.index(chr(10) + "  },", i)]
+        self.assertIn("this.on = false;", seg)
+        self.assertIn("revealScreenplayStage()", seg)
 
     def test_a_finished_or_failed_read_is_not_still_running(self):
         i = self.JS.index("function syncScreenplayStage()")
@@ -492,8 +501,14 @@ class TheStageWaitsForTheRead(unittest.TestCase):
 
     def test_the_stage_returns_with_the_answers_already_in_it(self):
         i = self.JS.index("  finish(analysis) {")
-        self.assertIn("renderScreenplay().then(revealScreenplayStage)",
-                      self.JS[i:i + 400])
+        seg = self.JS[i:self.JS.index(chr(10) + "  fail(msg) {", i)]
+        self.assertIn("renderScreenplay().then(revealScreenplayStage)", seg)
+        # And the repaint comes BEFORE the reveal: underneath a read the
+        # stage still holds the pre-read view — on a first upload, the
+        # upload form — so unhiding that first would show the user the
+        # thing they just finished doing.
+        self.assertLess(seg.index("renderScreenplay()"),
+                        seg.index("revealScreenplayStage"))
 
     def test_the_fade_is_a_layer_opening_not_an_entrance(self):
         """§2.5 forbids entrance animations on load. This never runs on
