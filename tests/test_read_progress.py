@@ -410,8 +410,21 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         for fn in ("stopTimers() {", "dismiss() {"):
             i = block.index(fn)          # the definition, not a call site
             self.assertIn('readBusy = "0"', block[i:i + 400], fn)
-        # …and the nav is never locked, so nobody is trapped
-        self.assertNotIn('body[data-read-busy="1"] #nav', self.css)
+        # The nav IS locked now (user-directed 2026-08-31, reversing the
+        # 2026-08-21 ruling that left it live) — so the thing that keeps
+        # nobody trapped is no longer "the nav stays open", it is that the
+        # model phase carries its own way out.
+        self.assertIn('body[data-read-busy="1"] #nav button', self.css)
+        self.assertIn('body[data-read-busy="1"] #tools-nav button', self.css)
+        # On the busy row, not the ticker: that list runs to hundreds of
+        # scene rows and an escape under the fold is not an escape.
+        i = block.index("busy.innerHTML = ")
+        seg = block[i:block.index('document.body.dataset.readBusy', i)]
+        self.assertIn("busy-cancel", seg)
+        self.assertIn("Stop waiting", seg)
+        self.assertIn('data-f="rd-dismiss"', seg)
+        # …and it says what survives it, because the read does.
+        self.assertIn("answers still save", seg)
 
     def test_screenplay_grammar_is_never_a_finding(self):
         """"INT appears in 20 scenes" is true of every script ever

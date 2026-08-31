@@ -3122,11 +3122,28 @@ const theRead = {
        component, not a new one. */
     const busy = $("#rd-busy", host);
     if (busy) {
+      /* The way out of the hold, beside the thing it stops. Navigation is
+         locked while the model runs (user-directed 2026-08-31), and a
+         hold with no exit is a trap — a model call can run for minutes
+         and the app is not entitled to the whole of that.
+
+         It rides the busy row rather than the ticker below, which is
+         hundreds of scene rows long: an escape under the fold is not an
+         escape. `.busy-cancel` is the app's existing vocabulary for
+         exactly this, down to the "stops waiting for the result" phrasing.
+
+         And it stops the APP waiting, not the read: the answer saves
+         server-side whether anything is watching, and finish() still
+         toasts when it lands. */
       busy.innerHTML = this.phase === "model"
         // `wrap` is required, not decorative: .busy-bar is flex-basis 100%
         // and without wrapping it squeezes the label to one word per line.
         ? '<div class="busy wrap"><span class="spinner"></span>'
           + '<span class="busy-label">Scoping production needs</span>'
+          + '<button type="button" class="ghost busy-cancel" data-f="rd-dismiss"'
+          + ' title="Stops the app waiting, and gives the stages back. The read'
+          + ' itself keeps going and its answers still save — you are told when'
+          + ' they land.">Stop waiting</button>'
           + '<span class="busy-bar"></span></div>'
         : "";
     }
@@ -3147,7 +3164,8 @@ const theRead = {
         // inside, which is why there is a sweep here and not a bar.
         note.textContent = this.engine.toUpperCase() + " IS READING — THE READ AND "
           + "A SHORTER CHECK PASS, NEITHER REPORTING PROGRESS FROM INSIDE. "
-          + "THE PARSE ABOVE IS COMPLETE, AND LOCAL.";
+          + "THE PARSE ABOVE IS COMPLETE, AND LOCAL. EVERY STAGE IS HELD "
+          + "UNTIL IT LANDS — ALL OF THEM ARE ABOUT TO CHANGE.";
       else if (this.phase === "previewed")
         note.textContent = "PREVIEW ONLY — THE PARSE IS COMPLETE AND REAL. "
           + "NO MODEL WAS CALLED, SO THE READ'S OWN FINDINGS ARE NOT HERE.";
@@ -3213,8 +3231,8 @@ const theRead = {
         const go = $("[data-f=rd-settings]", host);
         if (go) go.onclick = () => { this.dismiss(); showView("settings"); };
       }
-      const x = $("[data-f=rd-dismiss]", host);
-      if (x) x.onclick = () => this.dismiss();
+      // All of them: the busy row's now, as well as the ticker's.
+      $$("[data-f=rd-dismiss]", host).forEach(x => { x.onclick = () => this.dismiss(); });
     }
   },
 };

@@ -4839,15 +4839,30 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 
 /* While the model half of a read is running, the app stops offering to
    start more work (user, 2026-08-21: "no other button can be active
-   during this time"). Navigation stays live — locking someone out of
-   their own app for the length of a model call would be worse than the
-   double-spend this prevents. */
+   during this time").
+
+   Navigation is held too, as of 2026-08-31 — user-directed, and a
+   REVERSAL of this block's own earlier ruling that "navigation stays live
+   — locking someone out of their own app for the length of a model call
+   would be worse than the double-spend this prevents." The user, watching
+   a real read: "the app allows me to switch tabs while it is 'scoping
+   production'. I shouldn't be able to switch until it is done."
+
+   What made the earlier call wrong in practice: every stage downstream is
+   about to be rewritten by the answer in flight, so a stage reached
+   mid-read shows numbers with a shelf life of seconds. That is the same
+   reasoning the Production Design takeover already ran on. The read panel
+   states the hold rather than leaving dead buttons to be discovered. */
 body[data-read-busy="1"] .view button:not(.rd-done-row button):not([data-f^="rd-"]) {
   pointer-events: none; opacity: .4;
 }
 body[data-read-busy="1"] .view input,
 body[data-read-busy="1"] .view select,
 body[data-read-busy="1"] .view textarea { pointer-events: none; opacity: .4; }
+body[data-read-busy="1"] #nav button,
+body[data-read-busy="1"] #tools-nav button { pointer-events: none; opacity: .4; }
+/* The read's own controls stay live throughout — including the × that
+   ends it. A hold you cannot leave is a trap, not a gate. */
 body[data-read-busy="1"] #read-live button,
 body[data-read-busy="1"] #read-live input { pointer-events: auto; opacity: 1; }
 .rd .busy { margin-top: 0; }
