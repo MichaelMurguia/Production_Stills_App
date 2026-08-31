@@ -968,10 +968,25 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    its reason, and offers the two verbs that resolve it. Dashed, because
    the design languages already say PROPOSED that way and a second
    vocabulary for the same state is a second thing to learn. */
+/* A proposal is an argument about how the film should LOOK, so the look
+   has to be in it. This was a flat `--bg` panel and the card showed a
+   blank rectangle above the reason (user, 2026-08-30: "preview images
+   are still not showing on the anchor cards") — the one card in the app
+   whose whole job is "here is a look, do you want it" was the one card
+   showing no look.
+
+   Opaque was the right call at the time for the wrong cause: at 90% the
+   CARD's own scrim read through this one and the two collided. The
+   collision was two scrims, not translucency, so the card's own is
+   hidden while a proposal stands and this is the only one — the same
+   gradient `.ah-scrim` uses, a little stronger because it carries four
+   lines rather than two. */
 .ah-prop { position: absolute; inset: 0; z-index: 3; display: flex;
   flex-direction: column; justify-content: flex-end; gap: 6px;
-  padding: 12px; background: var(--bg);
-  border: 1px dashed var(--hold); }
+  padding: 12px; border: 1px dashed var(--hold);
+  background: linear-gradient(to top, rgba(8, 9, 10, .96) 0%,
+    rgba(8, 9, 10, .90) 46%, rgba(8, 9, 10, .38) 78%, rgba(8, 9, 10, .12) 100%); }
+.anchor-hero.proposed .ah-scrim { display: none; }
 .ah-prop-kick { font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
   color: var(--hold); }
 .ah-prop-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
@@ -1009,6 +1024,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 /* Amber: this is the one thing on the card that may need attention. */
 .ah-state { right: 10px; color: var(--accent); }
 .ah-state.set { color: var(--ink-dim); }
+.ah-state.prop { color: var(--hold); }
 .ah-scrim { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
   padding: 26px 12px 11px; display: flex; flex-direction: column; gap: 3px;
   background: linear-gradient(to top, rgba(8, 9, 10, .93), rgba(8, 9, 10, 0)); }

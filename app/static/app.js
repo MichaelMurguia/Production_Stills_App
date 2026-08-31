@@ -5434,6 +5434,13 @@ async function renderWizard() {
     }
   };
 
+  /* A standing proposal, by role. It has to be STATE the row reads, not
+     just a box appended to a card, because refreshRefs runs again on
+     every upload, approval and deletion — and a repaint that knew
+     nothing about the proposal would reset the picture and the badge
+     underneath a proposal box still sitting on top of them. */
+  let wizProposals = {};
+
   const refreshRefs = async () => {
     // Pending swatch proposals live in the review strip, not the anchor
     // rows (D8: they persist as PROVISIONAL refs so verdicts are records).
@@ -5494,11 +5501,18 @@ async function renderWizard() {
          count, IN WORDS, or NONE. The badge element is the same node
          under a new class, so every reader that found it still does. */
       const words = $("[data-f=words]", col)?.value.trim() || "";
-      badge.className = "ah-state mono" + (nMine || inWords ? " set" : "");
+      // A card showing a proposed look must not also report NONE.
+      const propped = !!(!nMine && !inWords && wizProposals[role]);
+      // A proposal speaks in --hold, the same vocabulary its own kicker
+      // uses two lines below. Amber would be the third colour on a card
+      // already carrying two, saying the word the kicker just said.
+      badge.className = "ah-state mono" + (nMine || inWords ? " set" : "")
+        + (propped ? " prop" : "");
       badge.textContent = nMine
         ? `${nMine} ${isPal ? (nMine === 1 ? "PALETTE" : "PALETTES")
                             : (nMine === 1 ? "PICTURE" : "PICTURES")}`
         : nProp ? `${nProp} PROPOSED`
+        : propped ? "PROPOSED"
         : inWords ? "IN WORDS" : "NONE";
 
       /* The hero: the first attached picture, or the chosen catalogue
@@ -5511,11 +5525,26 @@ async function renderWizard() {
         const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
                       CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
                       BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
-        const chosen = styleFor(lib, words);
+        /* A proposal names a style. Until this it named it in words only,
+           over an opaque panel — so the one card in the app whose whole
+           job is "here is a look, do you want it" was the one card that
+           showed no look at all (user, 2026-08-30: "preview images are
+           still not showing on the anchor cards").
+
+           The proposed style is resolved exactly the way a chosen one is,
+           through the same matcher, so a proposal cannot show a picture a
+           pick would not. */
+        const prop = wizProposals[role];
+        const chosen = styleFor(lib, words)
+          || (!words && prop ? styleFor(lib, prop.value) : null);
         const art = mine.length
           ? { src: `/api/references/${encodeURIComponent(mine[0].id)}/image?size=md`,
               drawn: false }
           : styleArt(chosen);
+        // The proposal's own kicker, name and reason ARE this card's
+        // scrim while it stands; the card's would be a second one saying
+        // nearly the same thing over the same picture.
+        hero.classList.toggle("proposed", !!prop);
         shot.style.backgroundImage = art ? `url("${art.src}")` : "";
         shot.classList.toggle("none", !art);
         shot.classList.toggle("drawn", !!art?.drawn);
@@ -7486,12 +7515,14 @@ async function renderWizard() {
 
   const showProposals = (proposals) => {
     $$(".ah-prop").forEach(e => e.remove());
+    wizProposals = {};
     let n = 0;
     for (const [field, p] of Object.entries(proposals || {})) {
       const col = $(`.wiz-col[data-role="${ANCHOR_ROLE[field]}"]`);
       const hero = col && $("[data-f=hero]", col);
       if (!hero || !p) continue;
       n += 1;
+      wizProposals[ANCHOR_ROLE[field]] = p;
       const box = document.createElement("div");
       box.className = "ah-prop";
       box.innerHTML = `
@@ -7509,12 +7540,23 @@ async function renderWizard() {
           fld.dispatchEvent(new Event("change", { bubbles: true }));
         }
         box.remove();
+        delete wizProposals[ANCHOR_ROLE[field]];
+        refreshRefs();
         toast(`${p.name} set — it rides every render from here.`);
       };
-      $("[data-f=drop]", box).onclick = () => box.remove();
+      // Dismissing gives the card back its empty state honestly — the
+      // picture went with the proposal, because it WAS the proposal.
+      $("[data-f=drop]", box).onclick = () => {
+        box.remove();
+        delete wizProposals[ANCHOR_ROLE[field]];
+        refreshRefs();
+      };
       hero.parentElement.style.position = "relative";
       hero.append(box);
     }
+    // The pictures and badges belong to the row, which paints them from
+    // `wizProposals` — one rule, in the place that already owns it.
+    if (n) refreshRefs();
     return n;
   };
 
@@ -11238,7 +11280,7 @@ function openGrammarReader(st) {
 // Provenance is the FIRST line with a hairline under it; position alone
 // does not disclose.
 function styleCard(st, { chosen = false } = {}) {
-  const shots = st.rich ? plateShots(st.key).slice(0, 3) : [];
+  const shots = st.rich ? plateShots(plateKey(st)).slice(0, 3) : [];
   // B3: never pad to three. A reserved shape is forbidden unless it states
   // the blocker that keeps it empty, and a dashed cell states nothing.
   const drawn = st.plate || st.shot
@@ -11312,7 +11354,7 @@ function styleFor(styles, value) {
    is what read as a wrong picture. */
 function styleArt(st) {
   if (!st) return null;
-  const shots = plateShots(st.key);
+  const shots = plateShots(plateKey(st));
   if (shots.length) return { src: shots[0], drawn: false };
   // The house card's picture is a panel this production approved, carried
   // on `shot` rather than in the manifest.
@@ -11323,6 +11365,17 @@ function styleArt(st) {
     + ` fill="none" stroke-width="1">${body}</svg>`;
   return { src: "data:image/svg+xml," + encodeURIComponent(svg), drawn: true };
 }
+
+/* A style's identity in the plate manifest.
+
+   Rendering slot 0 is the HOUSE slot: the client renames that style's
+   key to "house" and keeps the document's own key on `docKey`. The
+   manifest, written against the documents, still files its photographs
+   under the original — so asking for them by `key` returned nothing, and
+   the first rendering style in the catalogue was the one style that
+   could never show its photograph. In the picker cell as well as on the
+   anchor card. */
+const plateKey = st => st.docKey || st.key;
 
 function plateShots(key) {
   const m = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
@@ -11350,7 +11403,7 @@ function openStylePicker({ title, definition, sets = "", not_ = "", styles, curr
              a library gained photographed frames — so cinematography and
              then world texture kept apologising for diagrams they no longer
              showed (2026-08-22). */
-        styles.some(x => x.plate && !plateShots(x.key).length)
+        styles.some(x => x.plate && !plateShots(plateKey(x)).length)
           ? `<p class="rs-placeholder mono">PLATES ARE DIAGRAMS UNTIL THE REFERENCE LIBRARY LANDS</p>` : ""}
       <div class="rs-cards${styles.some(x => x.rich) ? " rs-cards-rich" : ""}">${styles.map((st, i) => `
         <div class="rs-card${st === hit ? " on" : ""}${

@@ -199,10 +199,15 @@ class AProposalIsNotAnAnswer(unittest.TestCase):
         self.assertIn("fld.value = p.value", seg)
         self.assertIn('new Event("change", { bubbles: true })', seg)
 
-    def test_dismissing_leaves_the_card_alone(self):
+    def test_dismissing_gives_the_card_back_its_empty_state(self):
+        """The proposal's picture went with it, because it WAS the
+        proposal — the card must not keep wearing a look nobody took."""
         i = JS.index("const showProposals =")
-        seg = JS[i:i + 2200]
-        self.assertIn('$("[data-f=drop]", box).onclick = () => box.remove()', seg)
+        seg = JS[i:JS.index("const showTakeover =", i)]
+        self.assertIn('$("[data-f=drop]", box).onclick = () => {', seg)
+        self.assertIn("delete wizProposals[ANCHOR_ROLE[field]];", seg)
+        self.assertEqual(seg.count("delete wizProposals[ANCHOR_ROLE[field]];"), 2,
+                         "accepting ends the proposal too")
 
     def test_a_proposal_is_hold_and_never_amber(self):
         """It is the thing needing attention and says so in `--hold`, the
@@ -213,12 +218,20 @@ class AProposalIsNotAnAnswer(unittest.TestCase):
         self.assertNotIn("--accent", b)
         self.assertIn("dashed", b)
 
-    def test_the_overlay_is_opaque(self):
-        """At 90% the card's own scrim read through it and the two
-        collided. A proposal has to be legible before it can be argued
-        with."""
-        b = CSS.split("\n.ah-prop {")[1].split("}")[0]
-        self.assertIn("background: var(--bg)", b)
+    def test_the_overlay_shows_the_look_it_is_proposing(self):
+        """It was flat `--bg`, so the card showed a blank rectangle above
+        the reason — the one card in the app whose whole job is "here is a
+        look, do you want it" was the one card showing no look (user,
+        2026-08-30: "preview images are still not showing").
+
+        Opaque had been the right call for the wrong cause: at 90% the
+        CARD's own scrim read through this one and the two collided. The
+        collision was two scrims, not translucency — so the card's own is
+        hidden while a proposal stands, and this is the only one."""
+        b = CSS.split(chr(10) + ".ah-prop {")[1].split("}")[0]
+        self.assertIn("linear-gradient(to top", b)
+        self.assertNotIn("background: var(--bg)", b)
+        self.assertIn(".anchor-hero.proposed .ah-scrim { display: none; }", CSS)
 
 
 class ColourLeftStepOne(unittest.TestCase):

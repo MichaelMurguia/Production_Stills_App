@@ -375,7 +375,7 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
         cinematography apologising for diagrams it no longer showed."""
         i = JS.index("PLATES ARE DIAGRAMS")
         seg = JS[max(0, i - 400):i]
-        self.assertIn("styles.some(x => x.plate && !plateShots(x.key).length)",
+        self.assertIn("styles.some(x => x.plate && !plateShots(plateKey(x)).length)",
                       seg)
 
     def test_a_row_is_as_wide_as_it_has_frames(self):
@@ -409,7 +409,10 @@ class ThePlatesAreTheUsersOwnRenders(unittest.TestCase):
         library gains photographed frames — so cinematography and then
         world texture kept apologising for diagrams they no longer
         showed."""
-        self.assertIn("styles.some(x => x.plate && !plateShots(x.key).length)", JS)
+        # By `plateKey`, not `key`: rendering slot 0 is renamed to "house"
+        # and the manifest still files its photographs under the document
+        # key, so asking by key made that one style apologise forever.
+        self.assertIn("styles.some(x => x.plate && !plateShots(plateKey(x)).length)", JS)
 
 
 

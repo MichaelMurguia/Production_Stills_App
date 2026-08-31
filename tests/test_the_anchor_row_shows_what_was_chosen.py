@@ -211,5 +211,95 @@ class TheTakeoverLetsThePageThrough(unittest.TestCase):
         self.assertIn("inset: 0", b)
 
 
+
+
+class AProposalShowsTheLookItProposes(unittest.TestCase):
+    """User, 2026-08-30, on a freshly read screenplay: *"preview images
+    are still not showing on the anchor cards."*
+
+    They were the PROPOSED cards. A proposal named a style in words over
+    an opaque panel, so the one card in the app whose whole job is "here
+    is a look, do you want it" was the one card showing no look."""
+
+    def test_a_standing_proposal_is_state_the_row_reads(self):
+        """Not just a box appended to a card. refreshRefs runs again on
+        every upload, approval and deletion, and a repaint that knew
+        nothing about the proposal would reset the picture and the badge
+        underneath a proposal box still sitting on top of them."""
+        self.assertLess(JS.index("let wizProposals = {};"),
+                        JS.index("const refreshRefs = async () => {"))
+        self.assertEqual(JS.count("let wizProposals"), 1)
+
+    def test_the_proposed_style_resolves_the_same_way_a_chosen_one_does(self):
+        """Through the same matcher — a proposal cannot show a picture a
+        pick would not."""
+        seg = between("A proposal names a style.", "hero.classList.toggle(\"proposed\"")
+        self.assertIn("styleFor(lib, prop.value)", seg)
+        # Never over a real choice: an anchor the director set wins.
+        self.assertIn("styleFor(lib, words)\n          || (!words && prop", seg)
+
+    def test_the_card_does_not_report_none_while_showing_a_proposal(self):
+        seg = between("A card showing a proposed look must not also report NONE.",
+                      "/* The hero: the first attached picture")
+        self.assertIn('propped ? "PROPOSED"', seg)
+
+    def test_the_proposal_speaks_in_hold_not_amber(self):
+        """Amber would be the third colour on a card already carrying two,
+        saying the word its own kicker says two lines below."""
+        self.assertIn(".ah-state.prop { color: var(--hold); }", CSS)
+        kick = CSS.split("\n.ah-prop-kick {")[1].split("}")[0]
+        self.assertIn("var(--hold)", kick)
+
+    def test_one_scrim_at_a_time(self):
+        """The proposal's kicker, name and reason ARE the card's scrim
+        while it stands; the card's own would be a second one saying
+        nearly the same thing over the same picture."""
+        self.assertIn(".anchor-hero.proposed .ah-scrim { display: none; }", CSS)
+        self.assertIn('hero.classList.toggle("proposed", !!prop);', JS)
+
+    def test_both_answers_end_the_proposal_and_repaint(self):
+        seg = between("const showProposals =", "const showTakeover =")
+        self.assertEqual(seg.count("delete wizProposals[ANCHOR_ROLE[field]];"), 2)
+        self.assertEqual(seg.count("refreshRefs();"), 3, "use, dismiss, and first paint")
+
+
+class TheHouseSlotKeepsItsPhotographs(unittest.TestCase):
+    """Rendering slot 0 is the HOUSE slot: the client renames that style's
+    key to "house" and keeps the document's own key on `docKey`. The plate
+    manifest is written against the documents, so it files that style's
+    photographs under the original key — and asking for them by `key`
+    returned nothing.
+
+    The first rendering style in the catalogue was therefore the one style
+    that could never show its photograph, in the picker cell as much as on
+    the anchor card. It is also the style the screenplay read proposed."""
+
+    def test_the_manifest_is_asked_by_the_documents_key(self):
+        self.assertIn("const plateKey = st => st.docKey || st.key;", JS)
+
+    def test_every_caller_asks_that_way(self):
+        self.assertEqual(JS.count("plateShots(st.key)"), 0)
+        self.assertEqual(JS.count("plateShots(x.key)"), 0)
+        for caller in ("plateShots(plateKey(st)).slice(0, 3)",
+                       "const shots = plateShots(plateKey(st));",
+                       "!plateShots(plateKey(x)).length"):
+            self.assertIn(caller, JS, caller)
+
+    def test_the_slot_still_carries_the_documents_key(self):
+        seg = between("const loadRenderStyles = async ()", "\n// UNCANONIZED")
+        self.assertIn("out[0].docKey = out[0].key;", seg)
+        self.assertIn('out[0].key = "house";', seg)
+
+    def test_the_style_it_stands_on_has_photographs_to_lose(self):
+        """If this ever stops being true the bug above stops being one,
+        and this test should be deleted rather than adjusted."""
+        import json
+        m = json.loads(
+            (ROOT / "app/static/style-plates/index.json").read_text(encoding="utf-8"))
+        from app import style_docs
+        first = style_docs.styles("rendering")[0]
+        self.assertIn(first["key"], m, first["key"])
+
+
 if __name__ == "__main__":
     unittest.main()
