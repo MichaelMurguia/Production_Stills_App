@@ -2603,6 +2603,31 @@ def api_get_wizard_analysis() -> dict:
 
 @app.put("/api/wizard/analysis")
 def api_put_wizard_analysis(body: dict) -> dict:
+    """Save an edited read — or restore one a browser is holding.
+
+    That second caller is why this refuses a read of a different draft.
+    A browser keeps its own copy so a read is never trapped on one
+    machine, and on finding the studio without one it uploads it back.
+    Unguarded, that path put a read of a DELETED screenplay into a
+    project that had none, two minutes before a new upload arrived — and
+    the stage then showed 17 locations and 4 design languages for a read
+    that never ran (user-caught 2026-08-31: "it did not go through the
+    reading process").
+
+    A read is about one draft. If it cannot name the draft in front of
+    it, it is not a read of that draft.
+    """
+    said = str(body.get("screenplay_sha256") or "")
+    if said:
+        here = str((store.load_app_state().get("screenplay") or {}).get("sha256") or "")
+        if not here:
+            raise HTTPException(409, "There is no screenplay here to have read. "
+                                     "Upload one and read it.")
+        if said != here:
+            raise HTTPException(409,
+                "That read is of a different draft — it names screenplay "
+                f"{said[:8]} and this project holds {here[:8]}. Read this "
+                "draft rather than carrying the other one's answers over.")
     store.save_wizard_analysis(body)
     return {"ok": True}
 
@@ -2641,7 +2666,12 @@ async def api_wizard_analyze(body: dict) -> dict:
     except Exception:
         pass
     analysis["analyzed_at"] = store.utcnow()
-    analysis["screenplay"] = (store.load_app_state().get("screenplay") or {}).get("file", "")
+    sp = store.load_app_state().get("screenplay") or {}
+    analysis["screenplay"] = sp.get("file", "")
+    # WHICH draft this read. The filename cannot answer that — a revised
+    # draft keeps its name — and without an answer a read can be attached
+    # to a screenplay nobody read (see the recovery guard in app.js).
+    analysis["screenplay_sha256"] = sp.get("sha256", "")
     store.save_wizard_analysis(analysis)
     return analysis
 

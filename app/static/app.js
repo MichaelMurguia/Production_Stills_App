@@ -2426,12 +2426,26 @@ function openSheet(specId) {
 }
 
 async function renderScreenplay() {
-  useTemplate("tpl-screenplay");
+  /* Ask first, paint once.
+
+     The template carries a side rail with a Current screenplay panel and
+     a Replace panel, and with no screenplay the Replace panel is removed
+     — nothing exists to replace. That removal used to happen AFTER these
+     three fetches, so arriving at the stage painted a full rail and then
+     took half of it away again (user, 2026-08-31: "this section on the
+     right flashes on then goes away. janky").
+
+     A stage cannot state a fact it is about to retract. The previous view
+     stays up for the ~80ms this takes, which is what every other tab
+     already does, and the screenplay stage arrives in its settled form.
+     A failed fetch now leaves the old view and an error rather than a
+     half-painted new one. */
   const [state, analysis, citations] = await Promise.all([
     api("/api/state"),
     api("/api/wizard/analysis").catch(() => ({})),
     api("/api/screenplay/citation-report").catch(() => ({ missing: [] })),
   ]);
+  useTemplate("tpl-screenplay");
 
   const sp = state.screenplay;
 
@@ -4705,12 +4719,28 @@ async function renderWizard() {
     wizAnalysis = srv && Object.keys(srv).length ? srv : null;
   } catch { /* server copy unavailable; fall back to local */ }
   const localAnalysis = wizACache();
-  if (!wizAnalysis && localAnalysis) {
+  /* The RECOVERY path: this browser holds a read the studio does not, so
+     it uploads it back rather than leaving it trapped in one tab's
+     localStorage — invisible to every other device and gone with the
+     cache (2026-08-23).
+
+     But a read is about ONE DRAFT, and this had no way to say which. The
+     cache is keyed by project slug, and a project that is emptied keeps
+     its slug — so a browser holding the old read put it straight back
+     into the reset project, two minutes before the new upload even
+     arrived. The stage then showed 17 locations and 4 design languages
+     for a read that never ran (user-caught 2026-08-31: "it did not go
+     through the reading process"). A resurrected read is worse than a
+     missing one: nothing on the page says it is second-hand.
+
+     So recovery now requires the read to name the draft that is here.
+     A read from before that field existed cannot prove what it read and
+     is not restored — it stays in the cache, and the honest answer is to
+     run the read. */
+  const here = state.screenplay?.sha256 || "";
+  const said = localAnalysis?.screenplay_sha256 || "";
+  if (!wizAnalysis && localAnalysis && here && said === here) {
     wizAnalysis = localAnalysis;
-    // The RECOVERY path: this browser holds a read the server does not. If
-    // it fails silently the analysis stays trapped in one tab's
-    // localStorage — invisible to every other device, and gone with the
-    // cache. Same defect as the interview save it sits beside (2026-08-23).
     api("/api/wizard/analysis", { method: "PUT", json: localAnalysis })
       .catch(err => toast(
         `This browser holds a screenplay read the studio does not, and it `

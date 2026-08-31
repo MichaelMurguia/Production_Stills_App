@@ -68,8 +68,12 @@ class AnAnswerIsNeverShownAsSavedUnlessItWas(unittest.TestCase):
         """B1.2. The migration of a browser-only analysis up to the server is
         the path that RECOVERS work; silent failure there strands the read in
         one tab's localStorage."""
-        i = JS.index("if (!wizAnalysis && localAnalysis) {")
-        seg = JS[i:i + 900]
+        # The condition gained a draft guard 2026-08-31 (an emptied
+        # project kept its slug, so a browser put the old read back into
+        # it); the rule under test is unchanged — this write still speaks
+        # when it fails.
+        i = JS.index("if (!wizAnalysis && localAnalysis && here && said === here) {")
+        seg = JS[i:JS.index("if (wizAnalysis) wizACacheSet(wizAnalysis);", i)]
         self.assertNotIn(".catch(() => {})", seg)
         self.assertIn("could not be uploaded", seg)
 
