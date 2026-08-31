@@ -163,10 +163,20 @@ delta as new instructions.
   appearance-only restandardisation of stage 02: §3.1 header, §3.2 anchor
   heroes and the jurisdiction ruling, the palette's own modal, §2.4 cost
   statements and segmented pickers, §3.5 two-column Bible, §3.6 sample
-  text-links, and §4's stage bars on the run ladder. **§3.3's findings
-  order and §3.4's casting block are NOT built** — the plan is deleted
-  because it is spent as a whole ruling, and those two are carried as an
-  open row in the Uncanonized table instead.
+  text-links, and §4's stage bars on the run ladder. §3.3's findings
+  order and §3.4's casting block were NOT built at the time and were
+  carried as an open row in the Uncanonized table; **both were finished
+  2026-08-31** (user: "Build Design Plan and Cast the film are not the
+  latest design from the latest handoff. Finish those"), from the copy of
+  the plan inside `design_handoff/ProdDes3.zip` — extracted to scratch,
+  never back into the tree.
+
+  **ONE ITEM OF §3.3 IS STILL OPEN, and it is not code:** the plan wants a
+  120px thumb on each environment row, and an environment has no picture
+  anywhere in this app. A slot that can never fill is worse than no slot,
+  so it is logged in the Uncanonized table as a question for the designer:
+  where should an environment's picture come from? Design languages had an
+  answer — references carry a language scope — and use it.
 
   **THREE OF ITS INSTRUCTIONS WERE DELIBERATELY NOT FOLLOWED**, each
   overruled by a later decision. A future pass that "finishes the plan"
