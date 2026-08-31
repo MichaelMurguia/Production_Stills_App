@@ -2527,13 +2527,12 @@ async function renderScreenplay() {
    which of it still holds. One thing is happening; the stage shows that
    thing. */
 function syncScreenplayStage() {
-  if (activeView !== "screenplay") return;
   const reading = theRead.on && theRead.phase !== "found"
                              && theRead.phase !== "failed";
-  for (const el of $$(".dash-main > .panel, .dash-side")) {
-    if (el.id === "read-live") continue;
-    el.classList.toggle("hidden", reading);
-  }
+  // On <body>, so it is already true when the stage renders. Hiding
+  // after the fact is what made the side rail flash.
+  if (reading) document.body.dataset.reading = "1";
+  else delete document.body.dataset.reading;
 }
 
 /* And back, once. A 220ms fade — the plan's duration for a layer opening
@@ -2541,10 +2540,10 @@ function syncScreenplayStage() {
    animations on load, which is a different thing: arriving at a stage
    that is already read shows it immediately, with no fade at all. */
 function revealScreenplayStage() {
+  delete document.body.dataset.reading;
   if (activeView !== "screenplay") return;
   for (const el of $$(".dash-main > .panel, .dash-side")) {
     if (el.id === "read-live") continue;
-    el.classList.remove("hidden");
     el.classList.add("stage-in");
     el.addEventListener("animationend", () => el.classList.remove("stage-in"),
                         { once: true });
@@ -3000,6 +2999,7 @@ const theRead = {
     this.stopTimers(); clearTimeout(this.bye); this.on = false;
     document.body.dataset.readBusy = "0";
     const h = $("#read-live"); if (h) h.remove();
+    revealScreenplayStage();
   },
 
   /* ---- markup ---------------------------------------------------- */
@@ -3277,6 +3277,9 @@ function bindScreenplayUpload(form, cap = null) {
       toast(cc && cc.missing
         ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
         : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
+      // Before the view renders, not after: the stage must never draw the
+      // panels a read is about to hide.
+      document.body.dataset.reading = "1";
       showView("screenplay");
       startTheRead();
     } catch (err) {
@@ -5446,6 +5449,20 @@ async function renderWizard() {
     // 2026-08-05: inclusion IS the selection — no per-row checkbox).
     wizAnchorIds = refs.filter(r =>
       $(`.wiz-col[data-role="${CSS.escape(roleHead(r.role))}"]`)).map(r => r.id);
+    /* The heroes below name a catalogue style, so the catalogues have to
+       be in hand before the row paints.
+
+       They were not. This ran on first render while the three libraries
+       were still in flight, every lookup missed an empty array, and the
+       row painted "nothing here" hatching over anchors that were
+       correctly set and correctly stored — which is what read as wrong
+       pictures (user, 2026-08-30). Nothing re-ran it once the libraries
+       landed, so the row stayed wrong until something else redrew it.
+
+       Every one of these is memoized: this costs one fetch each per
+       session, not one per refresh. */
+    await Promise.all([loadTextureStyles(), loadCinemaStyles(), loadPlateShots(),
+                       loadRenderStyles().then(adoptHouseStyle)]);
     for (const col of $$(".wiz-col[data-role]")) {
       const role = col.dataset.role;
       const mine = refs.filter(r => roleHead(r.role) === role);
@@ -5494,14 +5511,14 @@ async function renderWizard() {
         const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
                       CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
                       BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
-        const chosen = lib.find(x => x.value === words)
-                    || lib.find(x => words && x.name && words.startsWith(x.name));
-        const plate = chosen ? (plateShots(chosen.key) || [])[0] : null;
-        const src = mine.length
-          ? `/api/references/${encodeURIComponent(mine[0].id)}/image?size=md`
-          : plate || null;
-        shot.style.backgroundImage = src ? `url("${src}")` : "";
-        shot.classList.toggle("none", !src);
+        const chosen = styleFor(lib, words);
+        const art = mine.length
+          ? { src: `/api/references/${encodeURIComponent(mine[0].id)}/image?size=md`,
+              drawn: false }
+          : styleArt(chosen);
+        shot.style.backgroundImage = art ? `url("${art.src}")` : "";
+        shot.classList.toggle("none", !art);
+        shot.classList.toggle("drawn", !!art?.drawn);
         const name = chosen ? chosen.name
           : words ? words.split(/[.;·]/)[0].trim()
           : "Not set";
@@ -5559,6 +5576,25 @@ async function renderWizard() {
       });
     }
   };
+  /* The interview holds the anchors' own words, and the hero row below
+     reads them — so it has to land BEFORE the row paints, not two
+     thousand lines later where it used to.
+
+     It did not. Every load painted the row from empty fields, so a
+     correctly chosen and correctly stored anchor showed the "nothing
+     here" hatching, and only corrected itself if some later act — an
+     upload, an approval — happened to redraw the row (user, 2026-08-30:
+     "the anchors are not showing the correct preview images, which makes
+     me wonder if they are properly selected at all"). They were. */
+  const IV = { "#wiz-texture": "texture", "#wiz-palette": "palette",
+               "#wiz-light": "light", "#wiz-medium": "medium",
+               "#wiz-never": "never", "#wiz-notes": "notes" };
+  try {
+    const saved = await api("/api/wizard/interview");
+    for (const [sel, key] of Object.entries(IV))
+      if ($(sel) && !$(sel).value) $(sel).value = saved[key] || "";
+  } catch { /* first run — nothing saved yet */ }
+
   await refreshRefs();
 
   for (const col of $$(".wiz-col[data-role]")) {
@@ -7388,15 +7424,7 @@ async function renderWizard() {
   // 2026-08-16 — "we now have duplicative entries"). The per-axis fields
   // live ON their anchor card now; the selectors are unchanged so every
   // reader below still finds them by id.
-  const IV = { "#wiz-texture": "texture", "#wiz-palette": "palette",
-               "#wiz-light": "light", "#wiz-medium": "medium",
-               "#wiz-never": "never", "#wiz-notes": "notes" };
-  try {
-    const saved = await api("/api/wizard/interview");
-    for (const [sel, key] of Object.entries(IV))
-      if ($(sel) && !$(sel).value) $(sel).value = saved[key] || "";
-    wizardStepBadges();
-  } catch { /* first run — nothing saved yet */ }
+  try { wizardStepBadges(); } catch { /* first run — nothing saved yet */ }
   const saveInterview = async () => {
     try {
       await api("/api/wizard/interview", { method: "PUT",
@@ -7551,10 +7579,7 @@ async function renderWizard() {
       // its value is re-derived from the bible on every open and a bible
       // that gained a line would otherwise stop recognising its own answer
       // and report it as "In your own words" (user-caught 2026-08-16).
-      const head = t => String(t).slice(0, 110);
-      const hit = styles.find(x => x.value === v)
-        || styles.find(x => x.key === "house" && x.value && v
-             && (v.startsWith(head(x.value)) || x.value.startsWith(head(v))));
+      const hit = styleFor(styles, v);
       btn.textContent = hit ? hit.name : (v ? "Change" : opts.empty);
       btn.classList.toggle("chosen", !!v);
       btn.title = v ? `Rides every render as: ${v}` : "";
@@ -11250,6 +11275,55 @@ function styleCard(st, { chosen = false } = {}) {
 
 // The manifest may name one picture for a key or several — a style plate
 // is one image, a cinematography grammar is three frames.
+/* Which catalogue entry a stored anchor value IS.
+
+   One rule, one place. The picker's own `sync()` had it and the anchor
+   hero grew a second copy that matched slightly differently — the
+   classic two-implementations drift, and it showed as cards wearing the
+   wrong picture (user, 2026-08-31: "the anchors are not showing the
+   correct preview images, which makes me wonder if they are properly
+   selected at all"). They were selected correctly; the card was looking
+   them up wrong.
+
+   Exact value first. Then the captured house entry by prefix, because
+   its value is re-derived from the bible on every open and a bible that
+   gained a line would otherwise stop recognising its own answer. */
+function styleFor(styles, value) {
+  const v = String(value || "").trim();
+  if (!v) return null;
+  const head = t => String(t).slice(0, 110);
+  return styles.find(x => x.value === v)
+    || styles.find(x => x.key === "house" && x.value
+         && (v.startsWith(head(x.value)) || x.value.startsWith(head(v))))
+    || null;
+}
+
+/* Its picture, in the order the catalogue card itself uses: a
+   photographed frame, else the drawn plate, else nothing.
+
+   The card inlines the plate as an <svg>; the hero paints a
+   background-image and needs a URL, so the same markup goes over as a
+   data URI rather than being drawn a second way. `drawn` says which came
+   back, because a 68x56 diagram cropped to `cover` is not the diagram.
+
+   Before this the hero looked at photographs only, so every style whose
+   plate is drawn rather than shot — five of the ten board renderings —
+   showed the "nothing here" hatching while being correctly chosen. That
+   is what read as a wrong picture. */
+function styleArt(st) {
+  if (!st) return null;
+  const shots = plateShots(st.key);
+  if (shots.length) return { src: shots[0], drawn: false };
+  // The house card's picture is a panel this production approved, carried
+  // on `shot` rather than in the manifest.
+  if (st.shot) return { src: st.shot, drawn: false };
+  const body = PLATE[st.plate];
+  if (!body) return null;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 56"`
+    + ` fill="none" stroke-width="1">${body}</svg>`;
+  return { src: "data:image/svg+xml," + encodeURIComponent(svg), drawn: true };
+}
+
 function plateShots(key) {
   const m = (PLATE_SHOTS && !PLATE_SHOTS.then) ? PLATE_SHOTS[key] : null;
   if (!m) return [];

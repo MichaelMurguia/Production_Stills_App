@@ -920,6 +920,21 @@ label.check {
   letter-spacing: .08em; color: var(--ink-dim); }
 .cd-acts { display: flex; gap: 10px; margin-top: 18px; }
 .cast-back { margin-right: 12px; }
+/* UNCANONIZED — 2026-08-31 — the stage while a read is running */
+/* Driven by an attribute on <body>, set BEFORE the view renders.
+
+   It was a class applied after: the stage painted in full, then hid
+   itself, and the side rail flashed up and vanished on every upload
+   (user, 2026-08-31: "something flashed and then went away — extremely
+   janky"). A thing that must never be seen cannot be hidden after it is
+   drawn; the rule has to be true at first paint.
+
+   And with the rail gone the read is the only thing on the stage, so it
+   takes the whole width rather than sitting in a 1.55fr column with a
+   column of nothing beside it. */
+body[data-reading="1"] .dash { grid-template-columns: 1fr; }
+body[data-reading="1"] .dash-side,
+body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 /* UNCANONIZED — 2026-08-31 — the stage arrives when the read is done */
 /* 220ms, the plan's duration for a layer opening. NOT an entrance
    animation on load — §2.5 forbids those and this never runs on one; it
@@ -940,7 +955,8 @@ label.check {
    cached answer never flashes it. */
 .sp-takeover { position: fixed; inset: 0; z-index: 900; display: flex;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: 14px; background: var(--bg); }
+  gap: 14px; background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(2px); }
 .sp-takeover .spinner { width: 26px; height: 26px; flex: none;
   border-radius: 50%; border: 2.5px solid var(--line);
   border-top-color: var(--accent); animation: spin .8s linear infinite; }
@@ -972,8 +988,21 @@ label.check {
 .anchor-hero:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ah-shot { position: absolute; inset: 0; display: block; background-size: cover;
   background-position: center; }
+/* A drawn plate is a diagram, not a frame: it is shown whole, on the
+   field it was drawn against. `cover` would crop the one thing it says. */
+.ah-shot.drawn { background-size: 62%; background-repeat: no-repeat;
+  background-color: var(--field); }
 .ah-shot.none { background: repeating-linear-gradient(135deg,
   var(--field) 0 6px, var(--bg) 6px 12px); }
+/* The mirror of `.ah-scrim`, and it exists for the same reason. The
+   bottom pair always had one; the top pair did not, because until the
+   heroes actually painted their pictures they sat on flat field. Now a
+   bright frame lands under them — the role label washed out over a sky
+   the moment the pictures started arriving. Weaker than the bottom
+   gradient: it carries two lines of 9.5px, not a name and a sentence. */
+.anchor-hero::before { content: ""; position: absolute; left: 0; right: 0;
+  top: 0; height: 44px; z-index: 1; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(8, 9, 10, .72), rgba(8, 9, 10, 0)); }
 .ah-role, .ah-state { position: absolute; top: 9px; font-size: 9.5px;
   letter-spacing: .12em; z-index: 2; }
 .ah-role { left: 10px; color: var(--ink-dim); }

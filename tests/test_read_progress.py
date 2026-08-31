@@ -446,11 +446,30 @@ class TheStageWaitsForTheRead(unittest.TestCase):
     JS = (STATIC / "app.js").read_text(encoding="utf-8")
     CSS = (STATIC / "styles.css").read_text(encoding="utf-8")
 
-    def test_every_panel_but_the_read_hides_while_it_runs(self):
-        i = self.JS.index("function syncScreenplayStage()")
-        seg = self.JS[i:i + 700]
-        self.assertIn(".dash-main > .panel, .dash-side", seg)
-        self.assertIn('el.id === "read-live"', seg)
+    def test_every_panel_but_the_read_hides_at_first_paint(self):
+        """It was a class applied AFTER the stage rendered, so the side
+        rail flashed up and vanished on every upload (user, 2026-08-31:
+        "extremely janky"). A thing that must never be seen cannot be
+        hidden after it is drawn — the rule lives on <body> and is true
+        before the view renders."""
+        self.assertIn('body[data-reading="1"] .dash-side,', self.CSS)
+        self.assertIn('.dash-main > .panel:not(#read-live) { display: none; }',
+                      self.CSS)
+        i = self.JS.index('document.body.dataset.reading = "1";'
+                          + chr(10) + '      showView')
+        self.assertGreater(i, 0, "the flag is set before the view renders")
+
+    def test_the_read_takes_the_whole_width_when_it_is_alone(self):
+        self.assertIn('body[data-reading="1"] .dash { grid-template-columns: 1fr; }',
+                      self.CSS)
+
+    def test_dismissing_mid_read_gives_the_stage_back(self):
+        """The panel's own × can fire at any point. If the flag survived
+        it, the stage would stay hidden with nothing left to explain
+        why."""
+        i = self.JS.index("  dismiss() {" + chr(10)
+                          + "    this.stopTimers(); clearTimeout(this.bye)")
+        self.assertIn("revealScreenplayStage()", self.JS[i:i + 400])
 
     def test_a_finished_or_failed_read_is_not_still_running(self):
         i = self.JS.index("function syncScreenplayStage()")
