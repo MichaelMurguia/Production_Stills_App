@@ -2473,7 +2473,8 @@ async def api_suggest_anchors(body: dict = Body(default={})) -> dict:
     try:
         return await run_in_threadpool(
             wizard.suggest_anchors,
-            str((body or {}).get("provider", "") or generate.DEFAULT_PROVIDER))
+            str((body or {}).get("provider", "") or generate.DEFAULT_PROVIDER),
+            bool((body or {}).get("force")))
     except (autofill.AutofillError, generate.GenerationError) as e:
         raise HTTPException(422, str(e))
 

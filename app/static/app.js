@@ -7446,9 +7446,19 @@ async function renderWizard() {
     return n;
   };
 
-  const suggestBtn = $("#wiz-suggest");
-  if (suggestBtn) suggestBtn.onclick = async () => {
-    suggestBtn.disabled = true;
+  /* Proposed on arrival, not on a press (user, 2026-08-29: "it did not
+     auto-populate the anchors and it should — guessing based on the
+     script").
+
+     It runs itself when a screenplay exists and no anchor is set. The
+     server caches the answer against that screenplay's hash, so a visit
+     to this tab costs a call once per draft rather than once per
+     navigation — a bill that grows by walking around is the worst shape
+     a cost can have. The button stays as "ask again", which forces a
+     fresh read of the same draft. */
+  const runSuggest = async (force) => {
+    const suggestBtn = $("#wiz-suggest");
+    if (suggestBtn) suggestBtn.disabled = true;
     const lad = runLadder.create($("#wiz-suggest-busy"), {
       title: "Reading the screenplay for its look",
       phases: [{ key: "read", label: "READ" }, { key: "propose", label: "PROPOSE" }],
@@ -7460,19 +7470,34 @@ async function renderWizard() {
       lad.phase("read", "One call, and no way to see inside it — the clock is "
                       + "the only honest progress there is.");
       const r = await api("/api/wizard/suggest-anchors", {
-        method: "POST", json: { provider: $("#wiz-provider")?.value || "" } });
+        method: "POST", json: { provider: $("#wiz-provider")?.value || "", force } });
       lad.phase("propose", "");
       for (const k of ["texture", "cinematography", "rendering"])
         lad.set(k, r.proposals?.[k]?.name || null);
       const n = showProposals(r.proposals);
       lad.done(n ? `${n} proposed — accept or dismiss each on its card. `
                  + "Nothing is set until you do."
+                 + (r.cached ? " Read once for this draft; Ask again re-reads it." : "")
                  : "It proposed nothing it could name from the catalogues.");
     } catch (err) {
+      // Silent on the automatic pass: arriving at a tab is not asking
+      // for a model call, so a gate ("no narrative model") must not
+      // shout. Pressing the button is asking, and that failure is loud.
       lad.fail(err.message);
-      toast(err.message, true);
-    } finally { suggestBtn.disabled = false; }
+      if (force) toast(err.message, true);
+    } finally {
+      const b = $("#wiz-suggest");
+      if (b) b.disabled = false;
+    }
   };
+  $("#wiz-suggest")?.addEventListener("click", () => runSuggest(true));
+  /* Only where there is something to read and nothing already chosen.
+     An anchor the director set is never overwritten by a guess. */
+  {
+    const anySet = ["#wiz-texture", "#wiz-light", "#wiz-medium"]
+      .some(id => $(id)?.value.trim());
+    if (state.screenplay && !anySet) runSuggest(false);
+  }
 
   const bindPicker = (id, styles, opts) => {
     const btn = $(`#${id}-pick`), field = $(`#${id}`);

@@ -84,7 +84,7 @@ class NothingUnverifiableSurvives(unittest.TestCase):
         try:
             store.screenplay_text_cached = lambda: "INT. HANGAR - NIGHT"
             autofill._draft = lambda *a, **k: (payload, "fake")
-            return wizard.suggest_anchors("gemini")["proposals"]
+            return wizard.suggest_anchors("gemini", force=True)["proposals"]
         finally:
             autofill._draft, store.screenplay_text_cached = was_draft, was_text
 
@@ -113,6 +113,27 @@ class NothingUnverifiableSurvives(unittest.TestCase):
     def test_junk_does_not_crash_it(self):
         self.assertEqual(self.suggest({"texture": "a string", "rendering": None}), {})
 
+    def test_it_is_read_once_per_script_and_then_cached(self):
+        """This runs on arrival at Production Design, so without a cache
+        every visit to the tab would spend — a bill that grows by
+        navigation rather than by work."""
+        from app import autofill, store
+        calls = []
+        was_draft, was_text = autofill._draft, store.screenplay_text_cached
+        try:
+            store.screenplay_text_cached = lambda: "INT. HANGAR - NIGHT"
+            autofill._draft = lambda *a, **k: (
+                calls.append(1) or ({"texture": {"key": self.real_key("texture"),
+                                                 "why": "the salt eats everything"}}, "fake"))
+            first = wizard.suggest_anchors("gemini", force=True)
+            second = wizard.suggest_anchors("gemini")
+        finally:
+            autofill._draft, store.screenplay_text_cached = was_draft, was_text
+        self.assertEqual(len(calls), 1, "the second visit must not spend")
+        self.assertFalse(first["cached"])
+        self.assertTrue(second["cached"])
+        self.assertEqual(first["proposals"], second["proposals"])
+
     def test_no_screenplay_text_refuses_and_says_why(self):
         from app import store
         was = store.screenplay_text_cached
@@ -127,7 +148,26 @@ class NothingUnverifiableSurvives(unittest.TestCase):
 
 class AProposalIsNotAnAnswer(unittest.TestCase):
     def test_it_states_that_it_proposes_and_never_sets(self):
-        self.assertIn("COSTS A MODEL CALL &middot; PROPOSES, NEVER SETS", HTML)
+        self.assertIn("PROPOSES, NEVER SETS", HTML)
+        # It runs itself on arrival, so the cost line says what actually
+        # costs: asking again, not being here.
+        self.assertIn("READ ONCE PER DRAFT", HTML)
+        self.assertIn("ASKING AGAIN COSTS A MODEL CALL", HTML)
+
+    def test_it_runs_on_arrival_but_only_with_nothing_chosen(self):
+        """User-directed 2026-08-29: "it did not auto-populate the anchors
+        and it should". An anchor the director set is never overwritten by
+        a guess, so it runs only when all three are empty."""
+        i = JS.index("const anySet =")
+        seg = JS[i:i + 400]
+        self.assertIn("state.screenplay && !anySet", seg)
+        self.assertIn("runSuggest(false)", seg)
+
+    def test_the_automatic_pass_does_not_shout_a_gate(self):
+        """Arriving at a tab is not asking for a model call. Pressing the
+        button is, and that failure is loud."""
+        i = JS.index("if (force) toast(err.message, true)")
+        self.assertGreater(i, 0)
 
     def test_accepting_takes_the_same_path_a_manual_pick_takes(self):
         """One path into an anchor, not two: it writes the style's own

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from . import autofill, generate, store
+from . import autofill, generate, paths, store
 
 ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
 {
@@ -261,7 +261,11 @@ THE SCREENPLAY FOLLOWS.
 {text}"""
 
 
-def suggest_anchors(provider: str = "gemini") -> dict:
+def _proposal_cache_path():
+    return paths.DATA / "anchor_proposals.json"
+
+
+def suggest_anchors(provider: str = "gemini", force: bool = False) -> dict:
     """Three proposed look anchors, read from the screenplay.
 
     Proposals, never assignments: the caller renders them for a director
@@ -279,6 +283,18 @@ def suggest_anchors(provider: str = "gemini") -> dict:
             "No screenplay text to read. The original upload is never sent to "
             "a model, so a screenplay that yielded no text cannot be read "
             "here either — re-export it with selectable text.")
+
+    # Proposed ONCE PER SCRIPT, and cached against that script's hash.
+    #
+    # This runs on arrival at Production Design now, so without a cache
+    # every visit to the tab would spend — a bill that grows by
+    # navigation rather than by work, which is the worst shape a cost can
+    # have. A new draft has a new hash and is read again; `force` is the
+    # user asking for another opinion on the same one.
+    sha = str((store.load_app_state().get("screenplay") or {}).get("sha256", ""))
+    cache = store._read_json(_proposal_cache_path(), {}) or {}
+    if not force and sha and cache.get("sha256") == sha:
+        return {**cache["result"], "cached": True}
     if provider == "mock":
         return {"proposals": {}, "model": "mock"}
     result, model = autofill._draft(
@@ -301,7 +317,11 @@ def suggest_anchors(provider: str = "gemini") -> dict:
         out[field] = {"key": st["key"], "name": st["name"],
                       "subtitle": st["subtitle"], "value": st["value"],
                       "why": why[:400]}
-    return {"proposals": out, "model": model}
+    result = {"proposals": out, "model": model}
+    if sha:
+        store._atomic_write_json(_proposal_cache_path(),
+                                 {"sha256": sha, "result": result})
+    return {**result, "cached": False}
 
 
 # R2 — does the Bible agree with itself? (2026-08-25)
