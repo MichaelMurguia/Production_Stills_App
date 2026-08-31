@@ -2648,6 +2648,40 @@ details.meta pre {
 /* UNCANONIZED — 2026-08-31 — the read's route on stage 01 */
 .ds-go { width: 100%; margin-top: 12px; }
 
+/* UNCANONIZED — 2026-08-31 — step 03 as a row, and the cast as a screen */
+/* PRODUCTION_DESIGN_UI_PLAN §3.4. The step used to render the whole
+   roster inline and the uncast list twice; it is one line now, and the
+   roster is a screen reached from it. */
+.cast-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 10px; }
+.cast-row-n { font-size: 11px; letter-spacing: .1em; color: var(--ink-dim); }
+.cast-row-thumbs { display: flex; gap: 6px; }
+.cast-row-shot { width: 40px; height: 50px; display: block; background: var(--field);
+  background-size: cover; background-position: center;
+  border: 1px solid var(--line-soft); }
+.cast-row-rule { width: 1px; height: 34px; background: var(--line-soft); }
+.cast-row-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* Dashed, because they are not cards yet — the same thing the roster's
+   own uncast list says at length. */
+.cast-row-chip { display: inline-flex; align-items: baseline; gap: 6px;
+  border: 1px dashed var(--line); padding: 4px 9px;
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); }
+.cast-row-chip i { font-family: var(--mono); font-style: normal; font-size: 9px;
+  letter-spacing: .1em; color: var(--ink-faint); }
+.cast-row-more { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); }
+.cast-row-gap { flex: 1; }
+
+/* The screen replaces the stage rather than floating over it. Driven by
+   an attribute on <body>, like stage 01's read — set before the screen
+   renders, so the stage it replaces is never drawn and then hidden. */
+#cast-screen { display: none; }
+body[data-cast="1"] #cast-screen { display: block; }
+body[data-cast="1"] .panel.step,
+body[data-cast="1"] .wiz-logline,
+body[data-cast="1"] .wiz-head { display: none; }
+.cast-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  margin: 0 0 14px; }
+
 /* UNCANONIZED — 2026-08-31 — the logline's own section */
 /* It rides above the whole stage, unnumbered (user-directed). A `.panel`
    like every step, but with no number and no heading — a numbered step

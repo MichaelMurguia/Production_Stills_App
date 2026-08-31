@@ -1548,20 +1548,28 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
     nothing at all."""
 
     def test_the_manual_row_opens_the_modal(self):
-        i = JS.index('$("#wiz-subj-add").onclick')
-        seg = JS[i:i + 700]
+        """The stage's own manual row is gone (§3.4, 2026-08-31): it was a
+        SECOND uncast list with a SECOND add row, on a different surface
+        from the one the mock puts them on. The surviving row is the cast
+        screen's, and the rule under test is unchanged — it opens the
+        modal rather than writing a card on click."""
+        i = JS.index('$("#cast-add", host).onclick')
+        seg = JS[i:i + 500]
         self.assertIn("castModal({ name", seg)
         self.assertNotIn('api("/api/subjects", { method: "POST"', seg,
                          "it no longer writes on click")
+        self.assertNotIn("wiz-subj-add", JS, "the duplicate door is gone")
 
     def test_the_stale_picker_selector_is_gone(self):
         self.assertNotIn("[data-f=up]", JS,
                          "the input it reached for no longer exists")
 
     def test_the_uncast_chip_opens_it_too(self):
-        """The fourth door, and the one most likely to be used."""
-        i = JS.index("chip.onclick")
-        self.assertIn("castModal(r, refreshAll)", JS[i:i + 200])
+        """The door most likely to be used. It is the cast screen's chip
+        now — the stage's copy of the same list retired with the block it
+        sat in."""
+        i = JS.index('$$("[data-uncast]", host).forEach')
+        self.assertIn("castModal({ name: b.dataset.uncast", JS[i:i + 300])
 
     def test_every_door_reaches_one_component(self):
         """One way to cast, whichever door you came in by (2026-08-16).
@@ -1571,8 +1579,12 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
         both go through the same modal rather than writing a card
         themselves. Its photograph button goes to the same chooser the
         subject card already opens."""
-        self.assertEqual(JS.count("castModal("), 6,
-                         "one definition, five callers")
+        # Five, not six: the stage's duplicate manual row retired with
+        # the uncast list it belonged to (§3.4, 2026-08-31). No way of
+        # casting was lost — bulk casting moved onto the surviving list.
+        self.assertEqual(JS.count("castModal("), 4,
+                         "one definition, three callers")
+        self.assertIn("castOne(u)", JS, "bulk casting survived the move")
         self.assertEqual(JS.count("photoTrayModal("), 3,
                          "one definition, two callers")
 

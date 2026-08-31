@@ -264,22 +264,22 @@
     </div>
 
     <!-- Cast the film (mock 5b): a door into the Reference SUBJECTS shelf. -->
+    <!-- PRODUCTION_DESIGN_UI_PLAN §3.4 — on the stage, step 03 is a ROW:
+         three cast thumbnails, a rule, three uncast chips, and Open the
+         cast. It used to render the entire roster inline, and the uncast
+         list twice with two manual-add rows under it — 1,546px of stage
+         for a step whose job is to say how casting stands. -->
     <div class="panel step" data-step="3">
       <h2>Cast the film <span class="step-cond">CASTING MAKES A CARD IN REFERENCE / SUBJECTS &middot; ITS SCREENPLAY IDENTITY RIDES EVERY PROMPT</span></h2>
-      <div class="uncast-block">
-        <div class="uncast-label">FOUND IN THE SCREENPLAY — UNCAST</div>
-        <div id="wiz-subj-tags"></div>
-        <div class="row" style="margin-top:10px">
-          <input type="text" id="wiz-subj-name" placeholder="add manually — name…" style="max-width:240px" title="Name of a character, vehicle, or prop the screenplay read missed.">
-          <select id="wiz-subj-kind" style="max-width:150px" title="CHARACTER → likeness reference; VEHICLE → geometry reference; PROP → prop reference.">
-            <option>CHARACTER</option><option>VEHICLE</option><option>PROP</option>
-          </select>
-          <button class="ghost" id="wiz-subj-add">+ Cast</button>
-        </div>
-      </div>
-      <div id="cast-screen" class="cast-screen"></div>
+      <div id="wiz-cast-row" class="cast-row"></div>
       <div id="wiz-subj-grid" class="subj-grid hidden"></div>
     </div>
+
+    <!-- §3.4: "a screen, not a modal". It replaces the stage rather than
+         floating over it — every card on it is a card on Reference /
+         Subjects, and looking at one of those is not a dialog. Shown by
+         `body[data-cast="1"]`, which hides the steps and the logline. -->
+    <div class="panel wiz-cast-screen" id="cast-screen"></div>
 
     <div class="panel step" data-step="4">
       <h2>Art Direction Bible <span class="step-cond">context/01_ART_DIRECTION_BIBLE.md &middot; EDITS REACH EVERY FUTURE PROMPT</span></h2>

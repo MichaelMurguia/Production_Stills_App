@@ -5736,91 +5736,53 @@ async function renderWizard() {
     });
   }
 
-  // ---- Cast the film (Step 3, mock 5b) ----
-  // A door into the Reference SUBJECTS shelf: the uncast block lists what
-  // the screenplay read found, grouped by kind. Casting a chip creates the
-  // library card and opens its photo chooser.
-  const uncastExpanded = new Set();
-  const renderSubjectTags = () => {
-    const host = $("#wiz-subj-tags");
-    api("/api/subjects").then(existing => {
-      const fresh = uncastRecommendations(existing);
-      // Scoped to the cast step — the step-2 section labels share the
-      // class now (D3), and a global query grabbed the wrong one.
-      const label = $('.panel.step[data-step="3"] .uncast-label');
-      if (label) label.textContent = fresh.length
-        ? `FOUND IN THE SCREENPLAY — ${fresh.length} UNCAST`
-        : "FOUND IN THE SCREENPLAY — UNCAST";
-      if (!fresh.length) {
-        const ran = !!wizACache();
-        host.innerHTML = `<span class="mini">${ran
-          ? "everything the read found is cast" : "run Step 2 to get casting proposals"}</span>`;
-        return;
-      }
-      host.innerHTML = "";
-      const CAP = 8;
-      const castOne = r => api("/api/subjects", { method: "POST", json: {
-        name: r.name, kind: r.kind || "CHARACTER",
-        subtitle: r.subtitle || "", traits: r.traits || [],
-        source: "screenplay analysis" } });
-      const refreshAll = async () => {
-        renderSubjectTags();
-        await renderSubjectGrid();
-        wizardStepBadges();
-      };
-      for (const kind of ["CHARACTER", "VEHICLE", "PROP"]) {
-        // TODO(prominence): when the extraction emits mention counts, split
-        // PRINCIPALS/SUPPORTING here. Until then rows keep payload order —
-        // the read lists principals first in practice; never re-sort.
-        const recs = fresh.filter(r => (r.kind || "CHARACTER").toUpperCase() === kind);
-        if (!recs.length) continue;
-        const open = uncastExpanded.has(kind);
-        const shown = open ? recs : recs.slice(0, CAP);
-        const row = document.createElement("div");
-        row.className = "uncast-row";
-        row.innerHTML = `<span class="uncast-kind">${kind}S</span><span class="chips" data-f="chips"></span>
-          <button class="ghost uncast-bulk" data-f="bulk"
-            title="Casts each of these with the single-cast path — cards appear in the library ready for photos.">${
-            recs.length <= CAP ? `Cast these ${recs.length}` : `Cast first ${CAP}`}</button>`;
-        const chips = $("[data-f=chips]", row);
-        for (const r of shown) {
-          const chip = document.createElement("span");
-          chip.className = "chip";
-          chip.title = `${r.subtitle ? r.subtitle + "\n" : ""}Cast this subject — creates its card in the library.`;
-          chip.style.cursor = "pointer";
-          const n = r.mentions ?? r.prominence;
-          chip.innerHTML = `+ ${esc(r.name)}${n ? ` <span class="suffix">·${n}</span>` : ""}`;
-          // The fourth and last door into casting, and the one most likely
-          // to be used: a chip in the uncast row. It wrote the card on
-          // click and then fired the file chooser at you — the jarring the
-          // user reported — through a selector that had since gone stale,
-          // so it silently did nothing instead. One modal, like the rest.
-          chip.onclick = () => castModal(r, refreshAll);
-          chips.append(chip);
-        }
-        if (recs.length > CAP || open) {
-          const more = document.createElement("span");
-          more.className = "chip more";
-          more.style.cursor = "pointer";
-          more.textContent = open ? "▴ fewer" : `▾ ${recs.length - CAP} more`;
-          more.onclick = () => {
-            open ? uncastExpanded.delete(kind) : uncastExpanded.add(kind);
-            renderSubjectTags();
-          };
-          chips.append(more);
-        }
-        $("[data-f=bulk]", row).onclick = async e => {
-          e.target.disabled = true;
-          let ok = 0, failed = 0;
-          for (const r of recs.slice(0, CAP)) {
-            try { await castOne(r); ok++; } catch { failed++; }
-          }
-          toast(`${ok} cast${failed ? ` — ${failed} failed` : ""}.`, !!failed);
-          refreshAll();
-        };
-        host.append(row);
-      }
-    });
+  /* Step 03 on the stage is a ROW now (§3.4): three cast thumbnails,
+     the rule, three uncast chips, and Open the cast.
+
+     What stood here was a second uncast list with its own manual-add row
+     — two doors to one action on two surfaces, and 1,546px of stage for
+     a step whose job is to say how casting stands. Its bulk-cast moved
+     onto the list that survives, on the cast screen, so no way of
+     casting was lost with it. */
+  const renderCastRow = async () => {
+    const host = $("#wiz-cast-row");
+    if (!host) return;
+    const [subjects, refs] = await Promise.all([
+      api("/api/subjects").catch(() => []),
+      api("/api/references").catch(() => []),
+    ]);
+    const uncast = uncastRecommendations(subjects);
+    // Only subjects that HAVE a picture lead the rail: a row of hatched
+    // blanks says nothing the count beside it does not already say (B3).
+    const shown = subjects.filter(x => castRefsOf(x, refs).length).slice(0, 3);
+    host.innerHTML = `
+      ${shown.length ? `<span class="cast-row-thumbs">${shown.map(x =>
+        `<span class="cast-row-shot" style="${castShot(castRefsOf(x, refs)[0])}"
+           title="${esc(x.name)}"></span>`).join("")}</span>` : ""}
+      ${uncast.length ? `<span class="cast-row-rule"></span>
+        <span class="cast-row-chips">${uncast.slice(0, 3).map(u =>
+          `<span class="cast-row-chip">${esc(u.name)}<i>UNCAST</i></span>`).join("")}
+          ${uncast.length > 3
+            ? `<span class="cast-row-more mono">+${uncast.length - 3}</span>` : ""}</span>` : ""}
+      <span class="cast-row-gap"></span>
+      <button type="button" class="text-act" data-f="open-cast">Open the cast</button>`;
+    $("[data-f=open-cast]", host).onclick = openCast;
+  };
+
+  /* And the cast is a SCREEN, not a modal (§3.4) — it replaces the stage
+     rather than floating over it, because every card on it is a card on
+     Reference / Subjects and looking at one of those is not a dialog.
+     Same `data-` attribute pattern stage 01's read already uses. */
+  const openCast = () => {
+    document.body.dataset.cast = "1";
+    castOpen = null;
+    renderCastScreen();
+    window.scrollTo({ top: 0 });
+  };
+  const closeCast = () => {
+    delete document.body.dataset.cast;
+    castOpen = null;
+    renderCastRow();
   };
 
   // The card component lives with the SUBJECTS shelf (buildSubjectCard) —
@@ -5843,9 +5805,16 @@ async function renderWizard() {
   let castOpen = null;                 // subject id, or null for the roster
   const refreshCast = () => {
     renderCastScreen();
-    renderSubjectTags();
+    renderCastRow();
     wizardStepBadges();
   };
+
+  // Casting one subject. Lifted out of the retired uncast block (§3.4)
+  // so the surviving list keeps the exact call it always made.
+  const castOne = r => api("/api/subjects", { method: "POST", json: {
+    name: r.name, kind: r.kind || "CHARACTER",
+    subtitle: r.subtitle || "", traits: r.traits || [],
+    source: "screenplay analysis" } });
 
   const castRefsOf = (s, refs) =>
     (s.ref_ids || []).map(id => refs.find(r => r.id === id))
@@ -5859,8 +5828,11 @@ async function renderWizard() {
     const host = $("#cast-screen");
     const KINDS = [["CHARACTER", "CHARACTERS"], ["VEHICLE", "VEHICLES"],
                    ["PROP", "PROPS"]];
-    const out = [`<div class="row" style="margin:0 0 4px">
+    const out = [`<div class="cast-head">
+        <button type="button" class="text-act" data-f="cast-back">&larr; Production design</button>
+        <h3 class="stage-headline">Cast</h3>
         <span class="wiz-group-label">${subjects.length} CAST &middot; ${uncast.length} UNCAST</span>
+        <span class="cast-row-gap"></span>
         <span class="cost mono">EVERY CARD HERE IS A CARD ON REFERENCE / SUBJECTS</span>
       </div>`];
     for (const [kind, label] of KINDS) {
@@ -5890,6 +5862,10 @@ async function renderWizard() {
           <b>${esc(k)}</b>${rows.map(u =>
             `<button type="button" class="cast-chip" data-uncast="${esc(u.name)}"
                data-kind="${esc(u.kind)}" title="Cast ${esc(u.name)} — makes its card and opens the photo chooser">${esc(u.name)}</button>`).join("")}
+          ${rows.length > 1 ? `<button type="button" class="ghost uncast-bulk"
+              data-bulk="${esc(k)}"
+              title="Casts each of these by the single-cast path — cards appear in the library ready for photos."
+              >Cast these ${rows.length}</button>` : ""}
         </div>`).join("") || `<p class="mini">Nothing uncast — the whole read is on a card.</p>`}
       <div class="cast-unrow" style="margin-top:12px">
         <b>OR</b>
@@ -5902,6 +5878,7 @@ async function renderWizard() {
     </div>`);
     host.innerHTML = out.join("");
 
+    $("[data-f=cast-back]", host).onclick = closeCast;
     $$(".cast-card", host).forEach(b => b.onclick = () => {
       castOpen = b.dataset.sid;
       renderCastScreen();
@@ -5911,6 +5888,21 @@ async function renderWizard() {
     $$("[data-uncast]", host).forEach(b => b.onclick = () =>
       castModal({ name: b.dataset.uncast, kind: b.dataset.kind,
                   subtitle: "", traits: [] }, refreshCast));
+    /* Bulk casting came here with the uncast list (§3.4 puts ONE list on
+       this screen; there were two, on two surfaces, with two manual-add
+       rows under them). The behaviour is the retired block's, unchanged:
+       the same single-cast path per row, so nothing is created by a route
+       the single button does not also take. */
+    $$("[data-bulk]", host).forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      const rows = byKind[b.dataset.bulk] || [];
+      let ok = 0, failed = 0;
+      for (const u of rows) {
+        try { await castOne(u); ok++; } catch { failed++; }
+      }
+      toast(`${ok} cast${failed ? ` — ${failed} failed` : ""}.`, !!failed);
+      refreshCast();
+    });
     $("#cast-add", host).onclick = () => {
       const name = $("#cast-add-name", host).value.trim();
       if (!name) return toast("Give it a name first.", true);
@@ -6005,26 +5997,13 @@ async function renderWizard() {
       `<p class="mini" style="grid-column:1/-1">No subjects yet — click a recommended tag above or add one manually.</p>`;
     for (const s of subjects)
       grid.append(buildSubjectCard(s, refs,
-        () => { renderSubjectTags(); renderSubjectGrid(); wizardStepBadges(); },
+        () => { renderCastRow(); renderSubjectGrid(); wizardStepBadges(); },
         { viewLink: true }));
   };
 
-  // The manual door goes through the same modal (user 2026-08-16). It was
-  // the last path that wrote the card on click and then fired the file
-  // picker at you — and its picker selector had already gone stale, so it
-  // silently did nothing. One way to cast, whichever door you came in by.
-  $("#wiz-subj-add").onclick = () => {
-    const name = $("#wiz-subj-name").value.trim();
-    if (!name) return toast("Give the subject a name first.", true);
-    castModal({ name, kind: $("#wiz-subj-kind").value, subtitle: "", traits: [] },
-      () => {
-        $("#wiz-subj-name").value = "";
-        renderSubjectTags();
-        renderSubjectGrid();
-        wizardStepBadges();
-      });
-  };
-  renderSubjectTags();
+  // The manual door lives on the cast screen now, inside the one uncast
+  // block, exactly as the mock puts it — one path, not two surfaces.
+  renderCastRow();
   renderSubjectGrid();
   renderCastScreen();
 
@@ -6988,7 +6967,7 @@ async function renderWizard() {
       expandedWorlds.clear();
       renderWorlds();
       renderAnalyzeLock();
-      renderSubjectTags();
+      renderCastRow();
       toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s) — review below.`);
     } catch (err) {
       // The ladder keeps its rows and states the failure in place. It
