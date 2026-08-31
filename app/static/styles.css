@@ -1414,10 +1414,51 @@ details.meta pre {
 /* Environment cards (mock 6a) — plan P7/Gap 6. Registry-card family:
    Courier bold name, sans notes, Courier facts line; dashed --hold border
    while PROPOSED (the not-yet-real vocabulary). */
-.env-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 6px; }
-.env-card { border: 1px solid var(--line); background: var(--panel); padding: 10px 12px; }
-.env-card.proposed { border-style: dashed; border-color: var(--hold); }
-.env-card.proposed .env-name { color: var(--hold); }
+/* UNCANONIZED — 2026-08-31 — the subjects rail (§3.3) */
+/* The SUBJECTS counter always pointed at step 03; what it counted was
+   never shown in the findings, so the number was the whole of what the
+   read said about the cast. Chips, and the one act they lead to. */
+.subj-rail { display: flex; flex-wrap: wrap; gap: 5px; }
+.subj-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim);
+  border: 1px dashed var(--line); padding: 3px 8px; }
+/* Solid once it has a card — the same dashed/solid distinction the cast
+   row and the uncast list already use. */
+.subj-chip.cast { border-style: solid; color: var(--ink); }
+
+/* UNCANONIZED — 2026-08-31 — design languages as image-led cards (§3.3) */
+/* A design language is what a panel is ALLOWED to look like, and a row of
+   Courier words showed none of it. The picture is a reference actually
+   scoped to that language, never a decoration. */
+.lang-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;
+  align-items: flex-start; }
+.lang-card { display: flex; flex-direction: column; width: 190px;
+  border: 1px solid var(--line-soft); background: var(--panel);
+  overflow: hidden; }
+.lang-card.proposed { border: 1px dashed var(--hold); }
+.lang-shot { display: block; width: 100%; aspect-ratio: 1.586;
+  background: var(--field); background-size: cover; background-position: center; }
+/* B3: a shape with nothing in it states the blocker, or it does not exist. */
+.lang-shot.none { display: flex; align-items: center; justify-content: center;
+  padding: 8px; background: repeating-linear-gradient(135deg,
+    var(--field) 0 6px, var(--bg) 6px 12px); }
+.lang-shot.none i { font-style: normal; font-size: 9px; letter-spacing: .1em;
+  line-height: 1.5; text-align: center; color: var(--ink-faint); }
+.lang-body { display: block; padding: 9px 11px 11px;
+  font-family: var(--sans); font-size: 13px; color: var(--ink); }
+.lang-card.open { border-color: var(--line); }
+
+/* UNCANONIZED — 2026-08-31 — environments as rows (§3.3) */
+/* One per line, each naming its locations in Courier. They were a grid
+   of cards stating a COUNT of locations, which is the one thing about an
+   environment you cannot act on. */
+.env-rows { display: flex; flex-direction: column; gap: 1px;
+  background: var(--line-soft); border: 1px solid var(--line-soft); }
+.env-row { background: var(--panel); padding: 12px 14px; }
+.env-row.proposed { border-left: 2px solid var(--hold); }
+.env-locs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 7px 0 0;
+  font-size: 11px; letter-spacing: .06em; color: var(--ink-dim); }
+.env-noloc { color: var(--ink-faint); letter-spacing: .1em; font-size: 10px; }
+
 .env-name { font-family: var(--mono); font-weight: 700; font-size: 12.5px; letter-spacing: .05em; }
 .env-notes { margin: 4px 0 8px; font-size: 12px; color: var(--ink-dim); }
 .env-facts { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); }

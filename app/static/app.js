@@ -5523,6 +5523,20 @@ async function renderWizard() {
      every upload, approval and deletion — and a repaint that knew
      nothing about the proposal would reset the picture and the badge
      underneath a proposal box still sitting on top of them. */
+/* The reference shelf, for the readers that only need to LOOK at it —
+   the design-language cards ask which references are scoped to them
+   (§3.3). refreshRefs owns the fetch and keeps this current; the flag
+   below is only so a reader arriving before that first fetch can pull it
+   once rather than render a wrong answer and stay wrong. */
+  let wizRefs = [];
+  let wizRefsAsked = false;
+  const loadWizRefs = () => {
+    wizRefsAsked = true;
+    return api("/api/references")
+      .then(rs => (wizRefs = rs.filter(r => r.status !== "REJECTED")))
+      .catch(() => wizRefs);
+  };
+
   let wizProposals = {};
 
   const refreshRefs = async () => {
@@ -5538,6 +5552,8 @@ async function renderWizard() {
       !(r.source === "swatch-proposal" && r.status === "PROVISIONAL"));
     // Every anchor in a column rides the bible draft (user ruling
     // 2026-08-05: inclusion IS the selection — no per-row checkbox).
+    wizRefs = refs;
+    wizRefsAsked = true;
     wizAnchorIds = refs.filter(r =>
       $(`.wiz-col[data-role="${CSS.escape(roleHead(r.role))}"]`)).map(r => r.id);
     /* The heroes below name a catalogue style, so the catalogues have to
@@ -6495,6 +6511,10 @@ async function renderWizard() {
     const host = $("#wiz-analysis");
     if (!analysis) { host.innerHTML = ""; return; }
     const worlds = analysis.design_worlds || [];
+    // Once, and only if nothing has fetched the shelf yet — otherwise a
+    // language that HAS a reference would paint its stated blank and
+    // never correct itself.
+    if (!wizRefsAsked) loadWizRefs().then(renderWorlds);
     // The reveal strip (plan P1 / R1): the read presents as a summary, not a
     // wall. Counts link to their sections; segments render only when their
     // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
@@ -6549,7 +6569,7 @@ async function renderWizard() {
       <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
         <span class="uncast-label">DESIGN LANGUAGES — WHAT A PANEL IS ALLOWED TO LOOK LIKE
           <button type="button" class="q-help" data-help="langs" aria-label="What is a design language?">?</button></span>
-        <div id="wiz-world-tags" class="chips" style="margin-bottom:8px"></div>
+        <div id="wiz-world-tags" class="lang-cards"></div>
         <div id="wiz-worlds"></div>
       </div>
       <div id="wiz-envs-sec" style="margin-top:16px">
@@ -6558,6 +6578,14 @@ async function renderWizard() {
         <div id="wiz-envs"></div>
       </div>
       ${(analysis.key_locations || []).length || (analysis.environments || []).length ? `<div id="wiz-locs-sec" style="margin-top:16px"></div>` : ""}
+      <!-- §3.3 — subjects as chips in the right rail, with Cast what is
+           uncast beneath them. The SUBJECTS counter has always pointed at
+           step 03; what it counted was never shown here, so the number
+           was the only thing the read said about the cast. -->
+      ${(analysis.subjects || []).length ? `<div id="wiz-subj-sec" style="margin-top:16px">
+        <div class="uncast-label">SUBJECTS &mdash; WHAT THE READ FOUND TO CAST</div>
+        <div id="wiz-subj-rail"></div>
+      </div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
         <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED · ANSWERS RIDE THE BIBLE DRAFT
           <span class="q-optional">OPTIONAL — YOU CAN DO THIS OVER TIME</span></div>
@@ -6607,18 +6635,44 @@ async function renderWizard() {
     worlds.forEach((w, i) => {
       const open = expandedWorlds.has(i);
       const proposed = w.status === "PROPOSED";
+      /* §3.3 — image-led cards, not chips. A design language is what a
+         panel is ALLOWED to look like, and a row of Courier words is the
+         one presentation that shows none of it.
+
+         The picture is real, not decorative: references carry a design
+         language scope (store.reference_language), so a card leads with
+         the newest approved reference actually scoped to it. A language
+         with none says so rather than reserving a shape (B3) — this is
+         the same rule the anchor heroes follow.
+
+         Everything the chip did, it still does: click to expand, CONFIRM
+         / DROP in place, the same title, the same delete. */
       const chip = document.createElement("span");
-      chip.className = "chip" + (open ? " open" : "") + (proposed ? " proposed" : "");
+      chip.className = "lang-card" + (open ? " open" : "") + (proposed ? " proposed" : "");
       chip.style.cursor = "pointer";
+      const mine = (wizRefs || []).filter(r =>
+        (r.language || "").toUpperCase() === String(w.name || "").toUpperCase()
+        && r.status !== "REJECTED");
+      const art = document.createElement("span");
+      art.className = "lang-shot" + (mine.length ? "" : " none");
+      if (mine.length)
+        art.style.backgroundImage =
+          `url("/api/references/${encodeURIComponent(mine[0].id)}/image?size=md")`;
+      else
+        art.innerHTML = `<i class="mono">NO REFERENCE SCOPED TO THIS LANGUAGE YET</i>`;
+      chip.append(art);
       // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
       // CONFIRM / DROP in place. Confirmation is the default state — a
       // confirmed chip is exactly the plain chip, no badge.
+      const body = document.createElement("span");
+      body.className = "lang-body";
+      chip.append(body);
       if (proposed) {
-        chip.innerHTML = `${esc(w.name || "(unnamed)")}<span class="prop-tail"> · PROPOSED — </span>` +
+        body.innerHTML = `${esc(w.name || "(unnamed)")}<span class="prop-tail"> · PROPOSED — </span>` +
           `<button class="prop-act" data-f="confirm" title="Keep this design language — it becomes a Bible section on the next draft.">CONFIRM</button>` +
           `<span class="prop-tail"> / </span>` +
           `<button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button>`;
-        $("[data-f=confirm]", chip).onclick = e => {
+        $("[data-f=confirm]", body).onclick = e => {
           e.stopPropagation();
           const a = getAnalysis();
           delete a.design_worlds[i].status;
@@ -6626,7 +6680,7 @@ async function renderWizard() {
           renderWorlds();
           toast(`${w.name} confirmed — it becomes a Bible section on the next draft.`);
         };
-        $("[data-f=drop]", chip).onclick = e => {
+        $("[data-f=drop]", body).onclick = e => {
           e.stopPropagation();
           const a = getAnalysis();
           a.design_worlds.splice(i, 1);
@@ -6636,7 +6690,7 @@ async function renderWizard() {
           toast(`"${w.name}" dropped — re-running the read can propose it again.`);
         };
       } else {
-        chip.textContent = w.name || "(unnamed)";
+        body.textContent = w.name || "(unnamed)";
       }
       chip.title = `${w.description || ""}\nClick to ${open ? "collapse" : "expand"}.`;
       chip.onclick = e => {
@@ -6863,6 +6917,28 @@ async function renderWizard() {
       }
     }
 
+    /* The subjects the read found, as chips, with the one act they lead
+       to underneath. Uncast is derived from the same helper the cast
+       screen uses, so the two surfaces can never disagree about who has
+       a card. */
+    const subjRail = $("#wiz-subj-rail", host);
+    if (subjRail) {
+      const named = (analysis.subjects || [])
+        .map(x => (typeof x === "string" ? x : x?.name) || "").filter(Boolean);
+      api("/api/subjects").then(existing => {
+        const have = new Set(existing.map(e => e.name.toUpperCase()));
+        const uncastN = named.filter(n => !have.has(n.toUpperCase())).length;
+        subjRail.innerHTML = `<div class="subj-rail">${named.map(n =>
+            `<span class="subj-chip${have.has(n.toUpperCase()) ? " cast" : ""}"
+               >${esc(n)}</span>`).join("")}</div>
+          ${uncastN ? `<button type="button" class="text-act" data-f="go-cast"
+             style="margin-top:9px">Cast what is uncast &mdash; ${uncastN}</button>`
+           : `<p class="mini">Every subject the read found is on a card.</p>`}`;
+        const go = $("[data-f=go-cast]", subjRail);
+        if (go) go.onclick = openCast;
+      }).catch(() => { subjRail.innerHTML = ""; });
+    }
+
     // ---- environment cards (mock 6a) — plan P7 / Gap 6 ----
     // Same governance as languages: PROPOSED until confirmed, edit-and-save
     // implicitly confirms, and a manual + Environment door.
@@ -6870,7 +6946,7 @@ async function renderWizard() {
     if (envHost) {
       const envs = analysis.environments || [];
       envHost.innerHTML = `
-        ${envs.length ? `<div class="env-grid"></div>`
+        ${envs.length ? `<div class="env-rows"></div>`
           : `<div class="env-empty">NO ENVIRONMENTS IN THIS READ — RE-RUN TO EXTRACT THEM</div>`}
         <div class="row" style="margin-top:8px">
           <input type="text" data-f="env-name" placeholder="add manually — name…" style="max-width:200px" title="An environment the read missed — the biome or world panels live in, e.g. FOREST.">
@@ -6884,15 +6960,29 @@ async function renderWizard() {
         saveAnalysis(a);
         renderWorlds();
       };
-      const grid = $(".env-grid", envHost);
+      const grid = $(".env-rows", envHost);
       if (grid) envs.forEach((env, i) => {
         const proposed = env.status === "PROPOSED";
         const card = document.createElement("div");
-        card.className = "env-card" + (proposed ? " proposed" : "");
+        /* §3.3 asks for ROWS, not a grid of cards, and for each one to
+           name the locations assigned to it in Courier. A card said "4
+           LOCATIONS" — a count you had to open the row to spend, when
+           the whole question an environment answers is WHICH places live
+           under it.
+
+           The plan also asks for a 120px thumb on each row. There is
+           nothing to put in it: an environment has no picture anywhere in
+           this app, and a slot that can never fill is worse than no slot
+           (B3). Logged for the designer rather than faked. */
+        card.className = "env-row" + (proposed ? " proposed" : "");
+        const locs = (env.locations || []);
         card.innerHTML = `
           <div class="env-name">${esc(env.name || "(unnamed)")}</div>
           <p class="env-notes">${esc(env.notes || "")}</p>
-          <div class="env-facts">${(env.locations || []).length} LOCATIONS
+          <div class="env-locs mono">${locs.length
+            ? locs.map(l => `<span>${esc(l)}</span>`).join("")
+            : `<span class="env-noloc">NO LOCATION ASSIGNED &mdash; THIS ENVIRONMENT RIDES NOTHING YET</span>`}</div>
+          <div class="env-facts">${locs.length} LOCATION${locs.length === 1 ? "" : "S"}
             <button class="text-act" data-f="edit" style="float:right">Edit</button></div>
           ${proposed ? `<div class="env-facts prop-tail" style="margin-top:4px">· PROPOSED —
             <button class="prop-act" data-f="confirm" title="Keep this environment — it becomes a Bible entry on the next draft.">CONFIRM</button> /
