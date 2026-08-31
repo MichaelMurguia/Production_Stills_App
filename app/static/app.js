@@ -2514,6 +2514,41 @@ async function renderScreenplay() {
   // the longest thing the app does, and losing sight of it is the whole
   // complaint this surface answers.
   if (theRead.on) theRead.mount();
+  syncScreenplayStage();
+}
+
+/* Stage 01 shows NOTHING but the read while the read is running (user,
+   2026-08-31: "do not show this panel until the script is read", and the
+   same of the side panels).
+
+   Every number on this stage is about to change — 17 locations, 0
+   languages, 0 breakdowns — and a page of counts that are true for the
+   next forty seconds is a page that has to be re-read afterwards to know
+   which of it still holds. One thing is happening; the stage shows that
+   thing. */
+function syncScreenplayStage() {
+  if (activeView !== "screenplay") return;
+  const reading = theRead.on && theRead.phase !== "found"
+                             && theRead.phase !== "failed";
+  for (const el of $$(".dash-main > .panel, .dash-side")) {
+    if (el.id === "read-live") continue;
+    el.classList.toggle("hidden", reading);
+  }
+}
+
+/* And back, once. A 220ms fade — the plan's duration for a layer opening
+   — and ONLY on the transition out of a read. §2.5 forbids entrance
+   animations on load, which is a different thing: arriving at a stage
+   that is already read shows it immediately, with no fade at all. */
+function revealScreenplayStage() {
+  if (activeView !== "screenplay") return;
+  for (const el of $$(".dash-main > .panel, .dash-side")) {
+    if (el.id === "read-live") continue;
+    el.classList.remove("hidden");
+    el.classList.add("stage-in");
+    el.addEventListener("animationend", () => el.classList.remove("stage-in"),
+                        { once: true });
+  }
 }
 
 // One upload path for every screenplay form (Status lead, the stage's
@@ -2861,7 +2896,7 @@ const theRead = {
     // Spread the walk over about a minute — the shape of a read — but
     // never so fast it cannot be read, nor so slow it feels stuck.
     this.dwell = Math.max(420, Math.min(1700, 60000 / Math.max(1, this.scenes.length)));
-    if (activeView === "screenplay") this.mount();
+    if (activeView === "screenplay") { this.mount(); syncScreenplayStage(); }
     this.clock = setInterval(() => this.tickClock(), 1000);
     this.step();
   },
@@ -2897,6 +2932,8 @@ const theRead = {
   finish(analysis) {
     this.stopTimers();
     this.phase = "found"; this.found = analysis || {};
+    // The stage comes back with the read's answers already in it.
+    renderScreenplay().then(revealScreenplayStage).catch(() => {});
     this.said = this.obs.slice();      // the rest of what the parse saw
     this.at = this.scenes.length - 1;
     this.paint();
@@ -2916,7 +2953,14 @@ const theRead = {
                           7000);
   },
 
-  fail(msg) { this.stopTimers(); this.phase = "failed"; this.error = msg || ""; this.paint(); },
+  fail(msg) {
+    this.stopTimers(); this.phase = "failed"; this.error = msg || "";
+    this.paint();
+    // A failed read must not leave the stage empty behind its own error
+    // panel — the inventory is still true, and it is the only thing left
+    // to act on.
+    revealScreenplayStage();
+  },
 
   /* An engine failure is never just "the read failed" — canon says a
      blocker states its condition and links to where it is resolved, and

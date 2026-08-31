@@ -920,6 +920,14 @@ label.check {
   letter-spacing: .08em; color: var(--ink-dim); }
 .cd-acts { display: flex; gap: 10px; margin-top: 18px; }
 .cast-back { margin-right: 12px; }
+/* UNCANONIZED — 2026-08-31 — the stage arrives when the read is done */
+/* 220ms, the plan's duration for a layer opening. NOT an entrance
+   animation on load — §2.5 forbids those and this never runs on one; it
+   fires only on the transition out of a read, where the alternative is a
+   page of counts appearing under a panel that just vanished. */
+@keyframes stage-in { from { opacity: 0; } to { opacity: 1; } }
+.stage-in { animation: stage-in 220ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .stage-in { animation: none; } }
 /* UNCANONIZED — 2026-08-30 — the screenplay read takeover */
 /* The stage is not usable until the read lands: every card on it is
    about to change. So the page is locked rather than left half-true —

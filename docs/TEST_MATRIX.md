@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2477 tests** across 130 files.
+**2483 tests** across 130 files.
 
 
-## Product app — 2256 tests in 113 files
+## Product app — 2262 tests in 113 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -100,7 +100,7 @@ temp home and external services are faked.
 | `test_prompt_composition.py` | 10 | R1.5 — what a compiled prompt is actually made of. |
 | `test_prompt_download.py` | 5 | The compiled-prompt download (user 2026-08-06). |
 | `test_prompt_edit.py` | 11 | Step 05's verb says "Read & edit" and both halves have to be true (user-caught 2026-08-16: "there is a 'Read and Edit' button on the prompt, but I can |
-| `test_read_progress.py` | 37 | The read, as it happens. |
+| `test_read_progress.py` | 43 | The read, as it happens. |
 | `test_reference_locations.py` | 11 | The screenplay's places reach the Reference library (user 2026-08-08). |
 | `test_reference_roles.py` | 6 | Reference role jurisdiction — what each role tells the model it controls. |
 | `test_rejection_notes.py` | 13 | Rejection notes survive their takes (user ruling 2026-08-13). |

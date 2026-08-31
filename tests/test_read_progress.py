@@ -432,5 +432,54 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         self.assertEqual(re.findall(r"#[0-9a-fA-F]{3,8}\b", block), [])
 
 
+
+class TheStageWaitsForTheRead(unittest.TestCase):
+    """User-directed 2026-08-31: "do not show this panel until the script
+    is read", and the same of the side panels.
+
+    Every number on stage 01 is about to change — 17 locations, 0 design
+    languages, 0 breakdowns — and a page of counts that hold for the next
+    forty seconds is a page you must re-read afterwards to know which of
+    it still stands. One thing is happening; the stage shows that thing.
+    """
+
+    JS = (STATIC / "app.js").read_text(encoding="utf-8")
+    CSS = (STATIC / "styles.css").read_text(encoding="utf-8")
+
+    def test_every_panel_but_the_read_hides_while_it_runs(self):
+        i = self.JS.index("function syncScreenplayStage()")
+        seg = self.JS[i:i + 700]
+        self.assertIn(".dash-main > .panel, .dash-side", seg)
+        self.assertIn('el.id === "read-live"', seg)
+
+    def test_a_finished_or_failed_read_is_not_still_running(self):
+        i = self.JS.index("function syncScreenplayStage()")
+        seg = self.JS[i:i + 700]
+        self.assertIn('theRead.phase !== "found"', seg)
+        self.assertIn('theRead.phase !== "failed"', seg)
+
+    def test_a_failed_read_gives_the_stage_back(self):
+        """The inventory is still true, and it is the only thing left to
+        act on."""
+        i = self.JS.index("  fail(msg) {\n    this.stopTimers(); this.phase = \"failed\"")
+        self.assertIn("revealScreenplayStage()", self.JS[i:i + 500])
+
+    def test_the_stage_returns_with_the_answers_already_in_it(self):
+        i = self.JS.index("  finish(analysis) {")
+        self.assertIn("renderScreenplay().then(revealScreenplayStage)",
+                      self.JS[i:i + 400])
+
+    def test_the_fade_is_a_layer_opening_not_an_entrance(self):
+        """§2.5 forbids entrance animations on load. This never runs on
+        one — only on the transition out of a read — and takes the plan's
+        220ms for a layer opening."""
+        block = self.CSS.split("\n.stage-in {")[1].split("}")[0]
+        self.assertIn("220ms", block)
+        i = self.JS.index("function revealScreenplayStage()")
+        self.assertIn('classList.add("stage-in")', self.JS[i:i + 700])
+
+    def test_it_honours_reduced_motion(self):
+        self.assertIn(".stage-in { animation: none; }", self.CSS)
+
 if __name__ == "__main__":
     unittest.main()
