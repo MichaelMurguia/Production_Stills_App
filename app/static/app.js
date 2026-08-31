@@ -2501,7 +2501,21 @@ async function renderScreenplay() {
     <div class="dsrow"><span>Design languages</span><b>${langs}</b></div>
     <div class="dsrow"><span>Breakdowns</span><b>${specMetas.length}</b></div>
     <div class="dsrow"><span>Cited evidence rows</span><b>${citedRows}</b></div>
-    <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>` : "";
+    <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>
+    ${analysis.analyzed_at ? `<button type="button" class="ghost ds-go"
+        data-f="go-wizard">Review the read on Prod. Design</button>` : ""}` : "";
+
+  /* The read's permanent route (user-directed 2026-08-31). It used to be
+     a button on the read panel that removed itself after seven seconds,
+     which put a primary action on a timer — look away and it was gone,
+     with no way back to it.
+
+     Here it is on the stage, under the counts the read produced, for as
+     long as a read exists. Ghost rather than primary: stage 01's one
+     primary act is uploading a draft, and a second amber button would be
+     two claims on the same eye. */
+  const goWiz = $("[data-f=go-wizard]");
+  if (goWiz) goWiz.onclick = () => showView("wizard");
 
   if (sp) renderLocations(state, langs);
 
@@ -2906,9 +2920,12 @@ const theRead = {
     const d = await api("/api/screenplay/digest").catch(() => null);
     this.scenes = (d && d.scenes) || [];
     this.obs = (d && d.observations) || [];
-    // Spread the walk over about a minute — the shape of a read — but
-    // never so fast it cannot be read, nor so slow it feels stuck.
-    this.dwell = Math.max(420, Math.min(1700, 60000 / Math.max(1, this.scenes.length)));
+    /* Ten seconds, not sixty (user-directed 2026-08-31).
+       The walk is a replay: the parse is local, deterministic and already
+       finished before the first row appears, so its pace was always a
+       choice. A minute made the surface the slow part of a read whose
+       real cost is the model call running behind it. */
+    this.dwell = Math.max(160, Math.min(700, 10000 / Math.max(1, this.scenes.length)));
     if (activeView === "screenplay") { this.mount(); syncScreenplayStage(); }
     this.clock = setInterval(() => this.tickClock(), 1000);
     this.step();
@@ -2931,7 +2948,13 @@ const theRead = {
     while (this.said.length < Math.min(due, this.obs.length))
       this.said.push(this.obs[this.said.length]);
     this.paint();
-    this.walk = setTimeout(() => this.step(), this.dwell);
+    /* And no two rows the same length (user-directed 2026-08-31: "vary
+       the timing of each row"). Every scene sitting for an identical
+       interval is the tell that made this read as manufactured — a real
+       pass over a script does not tick. ±45%, so the rhythm is uneven
+       without any row being too quick to read. */
+    const jitter = this.dwell * (0.55 + Math.random() * 0.9);
+    this.walk = setTimeout(() => this.step(), Math.round(jitter));
   },
 
   tickClock() { const el = $("#rd-clock"); if (el) el.textContent = this.elapsed(); },
@@ -2953,10 +2976,15 @@ const theRead = {
     /* And then it leaves (user, 2026-08-21: "at the end of reading and
        processing, the read-is-in section should go away"). The panel is
        an account of something happening; once nothing is happening it is
-       a spent receipt sitting on the stage. It holds long enough to read
-       the count, and the toast carries the result durably — so the
-       finding survives the panel that announced it. Dismiss still works
-       immediately. */
+       a spent receipt sitting on the stage.
+
+       It used to spend those seven seconds showing a count and a route to
+       Production Design — a primary action on a timer, gone if you looked
+       away. Both are now elsewhere and permanent: the counts are on the
+       stage the read filled, and the route sits in the side rail for as
+       long as a read exists (user-directed 2026-08-31: "leave the Prod
+       Design route permanent. Also, don't show the rest at all"). So this
+       just goes. */
     const langs = (this.found.design_worlds || []).length;
     const subj = (this.found.subjects || []).length;
     toast(`The read found ${langs} design language(s) and ${subj} subject(s) `
@@ -3149,19 +3177,10 @@ const theRead = {
     if (tick) {
       tick.innerHTML = this.said.slice(-4).map(o =>
         '<p class="rd-obs mono">' + esc(o) + "</p>").join("");
-      if (this.phase === "found" && this.found) {
-        const langs = (this.found.design_worlds || [])
-          .map(w => w.name || w.title || "").filter(Boolean);
-        const subj = (this.found.subjects || []).length;
-        tick.insertAdjacentHTML("beforeend",
-          '<p class="rd-found mono">' + langs.length + " DESIGN LANGUAGE(S)"
-          + (langs.length ? " — " + esc(langs.slice(0, 4).join(" · ")).toUpperCase() : "")
-          + " · " + subj + " SUBJECT(S)</p>"
-          + '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Dismiss</button>'
-          + '<button class="primary" data-f="rd-go">Review on Prod. Design</button></p>');
-        const go = $("[data-f=rd-go]", host);
-        if (go) go.onclick = () => { this.dismiss(); showView("wizard"); };
-      }
+      // Nothing on finish. The summary and its route both moved to the
+      // stage, where they persist; repeating them here for seven seconds
+      // was the version that put a primary action on a timer.
+
       if (this.phase === "previewed") {
         tick.insertAdjacentHTML("beforeend",
           '<p class="rd-done-row"><button class="ghost" data-f="rd-dismiss">Close preview</button></p>');
@@ -6485,11 +6504,23 @@ async function renderWizard() {
       tile("subjects", (analysis.subjects || []).length, "SUBJECTS"),
       tile("questions", qN, "OPEN QUESTIONS", qN - answeredN > 0 ? "attn" : ""),
     ].join("");
+    /* The logline has left this strip for its own unnumbered section at
+       the top of the stage (user, 2026-08-31: "it rides above the entire
+       production design"). Intact — same markup, same classes, same
+       words; only its place changed. It was never a tally like the tiles
+       beside it: it is what the read understood the film to BE, and
+       every step below answers to it. */
+    const logHost = $("#wiz-logline");
+    if (logHost) {
+      logHost.classList.toggle("hidden", !analysis.logline);
+      logHost.innerHTML = analysis.logline
+        ? `<div class="read-logline">
+             <span class="read-log-kicker">LOGLINE</span>
+             <p>${esc(analysis.logline)}</p></div>`
+        : "";
+    }
     host.innerHTML = `
       <div class="read-strip">
-        ${analysis.logline ? `<div class="read-logline">
-          <span class="read-log-kicker">LOGLINE</span>
-          <p>${esc(analysis.logline)}</p></div>` : ""}
         <div class="read-period">
           <span class="read-log-kicker">PERIOD</span>
           <p><span class="rp-val mono">${esc(analysis.period || "UNSTATED")}</span>

@@ -312,7 +312,9 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         toast carries the result, so the finding survives the panel."""
         block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
         i = block.index("finish(analysis) {")
-        seg = block[i:i + 1200]
+        # Bounded on the next method, not on a character count — a fixed
+        # window stops meaning what it meant the moment the block grows.
+        seg = block[i:block.index(chr(10) + "  fail(msg) {", i)]
         self.assertIn("this.dismiss()", seg)
         self.assertIn("toast(", seg)
         self.assertIn('if (this.phase === "found")', seg)

@@ -2645,6 +2645,17 @@ details.meta pre {
   .read-tiles { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* UNCANONIZED — 2026-08-31 — the read's route on stage 01 */
+.ds-go { width: 100%; margin-top: 12px; }
+
+/* UNCANONIZED — 2026-08-31 — the logline's own section */
+/* It rides above the whole stage, unnumbered (user-directed). A `.panel`
+   like every step, but with no number and no heading — a numbered step
+   promises something is done to it here, and nothing is. Its own padding
+   is zero: `.read-logline` inside already carries the amber rule, the
+   kicker and the measure it had in step 2, unchanged. */
+.wiz-logline { padding: 0; border: 0; background: transparent; }
+
 /* PRODUCTION_DESIGN_V3 (designer-ruled 2026-08-06) — the header strip,
    the six-step rail, Courier step headings and condition lines: a step
    states what it does to the movie, never what it is. */
