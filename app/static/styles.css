@@ -920,6 +920,25 @@ label.check {
   letter-spacing: .08em; color: var(--ink-dim); }
 .cd-acts { display: flex; gap: 10px; margin-top: 18px; }
 .cast-back { margin-right: 12px; }
+/* UNCANONIZED — 2026-08-30 — the screenplay read takeover */
+/* The stage is not usable until the read lands: every card on it is
+   about to change. So the page is locked rather than left half-true —
+   a director choosing an anchor that a returning read then proposes over
+   is a decision taken twice.
+
+   No progress bar. The read is one model call with nothing to see
+   inside, so this is a spinner and a sentence; a bar would be a picture
+   of a number nobody measured. It appears only after a real wait, so a
+   cached answer never flashes it. */
+.sp-takeover { position: fixed; inset: 0; z-index: 900; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; background: var(--bg); }
+.sp-takeover .spinner { width: 26px; height: 26px; flex: none;
+  border-radius: 50%; border: 2.5px solid var(--line);
+  border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.sp-take-label { font-family: var(--sans); font-size: 17px; color: var(--ink); }
+.sp-take-note { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--ink-faint); }
 /* UNCANONIZED — 2026-08-29 — a proposed anchor */
 /* A proposal is not an answer. It sits over the card it is about, states
    its reason, and offers the two verbs that resolve it. Dashed, because
@@ -1763,7 +1782,7 @@ details.meta pre {
 
 /* ================================================================= motion */
 @media (prefers-reduced-motion: reduce) {
-  .busy .busy-bar, .busy .spinner { animation: none; }
+  .busy .busy-bar, .busy .spinner, .sp-takeover .spinner { animation: none; }
   * { transition: none !important; }
 }
 

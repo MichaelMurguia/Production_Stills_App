@@ -147,12 +147,34 @@ class NothingUnverifiableSurvives(unittest.TestCase):
 
 
 class AProposalIsNotAnAnswer(unittest.TestCase):
-    def test_it_states_that_it_proposes_and_never_sets(self):
-        self.assertIn("PROPOSES, NEVER SETS", HTML)
-        # It runs itself on arrival, so the cost line says what actually
-        # costs: asking again, not being here.
-        self.assertIn("READ ONCE PER DRAFT", HTML)
-        self.assertIn("ASKING AGAIN COSTS A MODEL CALL", HTML)
+    def test_the_read_locks_the_stage_rather_than_narrating_itself(self):
+        """The button, its cost line and its ladder all left the page
+        2026-08-30. None of it was a decision the director makes — the
+        read either has an answer or it is still running — so the stage
+        is LOCKED while it works and says nothing when it is done.
+
+        Every anchor card here is about to change; a director who picks
+        one mid-read has made a decision the returning proposal argues
+        with."""
+        self.assertNotIn('id="wiz-suggest"', HTML)
+        self.assertNotIn("wiz-suggest-busy", JS)
+        i = JS.index("const showTakeover =")
+        seg = JS[i:i + 700]
+        self.assertIn("Processing screenplay", seg)
+        self.assertIn("spinner", seg)
+
+    def test_the_takeover_shows_no_progress_bar(self):
+        """One model call, nothing to see inside it. A bar would be a
+        picture of a number nobody measured."""
+        i = JS.index("const showTakeover =")
+        seg = JS[i:i + 700]
+        for gone in ("style.width", "busy-bar", "%"):
+            self.assertNotIn(gone, seg, gone)
+
+    def test_it_never_flashes_on_a_cached_answer(self):
+        """One read per draft, so most arrivals resolve in milliseconds."""
+        i = JS.index("const runSuggest =")
+        self.assertIn("setTimeout(showTakeover, 400)", JS[i:i + 400])
 
     def test_it_runs_on_arrival_but_only_with_nothing_chosen(self):
         """User-directed 2026-08-29: "it did not auto-populate the anchors

@@ -7446,51 +7446,45 @@ async function renderWizard() {
     return n;
   };
 
-  /* Proposed on arrival, not on a press (user, 2026-08-29: "it did not
-     auto-populate the anchors and it should — guessing based on the
-     script").
+  /* The screenplay read, behind a takeover (user, 2026-08-30).
 
-     It runs itself when a screenplay exists and no anchor is set. The
-     server caches the answer against that screenplay's hash, so a visit
-     to this tab costs a call once per draft rather than once per
-     navigation — a bill that grows by walking around is the worst shape
-     a cost can have. The button stays as "ask again", which forces a
-     fresh read of the same draft. */
+     It runs on arrival and the stage is LOCKED while it does. Not out of
+     ceremony: every anchor card on this page is about to change, and a
+     director who picks one while the read is still coming back has made
+     a decision the returning proposal then argues with. Half a page is
+     worse than no page for the second it takes.
+
+     The takeover shows a spinner and a sentence, never a bar — the read
+     is one model call with nothing to see inside it. And it appears only
+     after a real wait, so the cached answer (one read per draft) never
+     flashes it. */
+  const showTakeover = () => {
+    if ($(".sp-takeover")) return;
+    const el = document.createElement("div");
+    el.className = "sp-takeover";
+    el.innerHTML = `<span class="spinner"></span>
+      <span class="sp-take-label">Processing screenplay</span>
+      <span class="sp-take-note">READING IT FOR THE LOOK &middot; ONCE PER DRAFT</span>`;
+    document.body.append(el);
+  };
+  const hideTakeover = () => $(".sp-takeover")?.remove();
+
   const runSuggest = async (force) => {
-    const suggestBtn = $("#wiz-suggest");
-    if (suggestBtn) suggestBtn.disabled = true;
-    const lad = runLadder.create($("#wiz-suggest-busy"), {
-      title: "Reading the screenplay for its look",
-      phases: [{ key: "read", label: "READ" }, { key: "propose", label: "PROPOSE" }],
-      rows: [{ key: "texture", label: "World texture" },
-             { key: "cinematography", label: "Cinematography" },
-             { key: "rendering", label: "Board rendering" }],
-    });
+    let slow = setTimeout(showTakeover, 400);
     try {
-      lad.phase("read", "One call, and no way to see inside it — the clock is "
-                      + "the only honest progress there is.");
       const r = await api("/api/wizard/suggest-anchors", {
         method: "POST", json: { provider: $("#wiz-provider")?.value || "", force } });
-      lad.phase("propose", "");
-      for (const k of ["texture", "cinematography", "rendering"])
-        lad.set(k, r.proposals?.[k]?.name || null);
-      const n = showProposals(r.proposals);
-      lad.done(n ? `${n} proposed — accept or dismiss each on its card. `
-                 + "Nothing is set until you do."
-                 + (r.cached ? " Read once for this draft; Ask again re-reads it." : "")
-                 : "It proposed nothing it could name from the catalogues.");
+      showProposals(r.proposals);
     } catch (err) {
-      // Silent on the automatic pass: arriving at a tab is not asking
-      // for a model call, so a gate ("no narrative model") must not
-      // shout. Pressing the button is asking, and that failure is loud.
-      lad.fail(err.message);
+      // Arriving at a tab is not asking for a model call, so a stated
+      // gate ("no narrative model") must not shout here. The anchors are
+      // simply un-proposed, which the cards already say.
       if (force) toast(err.message, true);
     } finally {
-      const b = $("#wiz-suggest");
-      if (b) b.disabled = false;
+      clearTimeout(slow);
+      hideTakeover();
     }
   };
-  $("#wiz-suggest")?.addEventListener("click", () => runSuggest(true));
   /* Only where there is something to read and nothing already chosen.
      An anchor the director set is never overwritten by a guess. */
   {
