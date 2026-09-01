@@ -1156,9 +1156,13 @@ class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
 
     def test_a_partial_failure_says_which_half_got_through(self):
         b = self.body()
-        i = b.index("} catch (err) {")
-        self.assertIn("say(err.message", b[i:i + 300])
-        self.assertIn("card may already exist", b)
+        # The OUTER catch — the one that owns the card. A generate step
+        # was added inside the try 2026-09-01 with a catch of its own, so
+        # "the first catch" stopped meaning "the one that failed to cast".
+        i = b.index("card may already exist")
+        self.assertIn('say(err.message, "bad")', b[i:i + 300])
+        # …and the render's own failure says which half got through too.
+        self.assertIn("is cast, but the render did not run", b)
 
 
 class OneTrayForBothWaysIn(unittest.TestCase):
@@ -1200,10 +1204,11 @@ class OneTrayForBothWaysIn(unittest.TestCase):
         self.assertIn("grouped under this exact name", seg)
 
     def test_a_partial_failure_is_stated_in_both_modals(self):
-        for fn in ("function castModal(rec, onDone)", "async function photoTrayModal"):
+        for fn, mark in (("function castModal(rec, onDone)", "card may already exist"),
+                         ("async function photoTrayModal", "} catch (err) {")):
             i = JS.index(fn)
             seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-            j = seg.index("} catch (err) {")
+            j = seg.index(mark)
             self.assertIn('say(err.message, "bad")', seg[j:j + 300], fn)
 
 

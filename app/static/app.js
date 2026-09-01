@@ -8390,11 +8390,30 @@ function castModal(rec, onDone) {
       <div class="cast-photos">
         <span class="f-label">Reference photos <span class="hint">optional — each becomes an approved reference under this name</span></span>
         <div class="cast-thumbs" data-f="thumbs"></div>
+        <!-- Both doors, in the one place a subject's picture is first
+             asked for. Generating happens AFTER the card exists — there
+             is nothing to render from until the words below are saved —
+             so this states that rather than offering a button that would
+             have to invent them. -->
+        <label class="cast-gen"><input type="checkbox" data-f="gen">
+          <span>Render one from the words below once it is cast
+            <i class="mono">SPENDS A RENDER &middot; NEEDS A SAVED BIBLE</i></span></label>
       </div>
 
       <label class="modal-field">Identity${rec.subtitle ? READ_MARK : ""}
         <input type="text" data-f="subtitle" value="${esc(rec.subtitle || "")}"
                placeholder="e.g. DRIVER. COWBOY. LOYAL FRIEND.">
+      </label>
+      <!-- The profile. It was only on the detail screen, which is the
+           surface you reach AFTER casting — so the first place anyone
+           writes a subject's words did not have the field the rest of the
+           app renders from (user-caught 2026-09-01). Identity is the role;
+           this is what they look like. -->
+      <label class="modal-field">Who this is
+        <span class="hint">what they look like — a generated reference is rendered from it</span>
+        <textarea data-f="description" rows="2"
+          placeholder="Dark hair, mid-thirties, weather on the face. Reads the same at wide as at close."
+          >${esc(rec.description || "")}</textarea>
       </label>
       <label class="modal-field">Traits <span class="hint">one per line</span>${
         (rec.traits || []).length ? READ_MARK : ""}
@@ -8450,6 +8469,7 @@ function castModal(rec, onDone) {
         name: rec.name,
         kind: $("[data-f=kind]", ov).value,
         subtitle: $("[data-f=subtitle]", ov).value.trim(),
+        description: $("[data-f=description]", ov).value.trim(),
         traits: $("[data-f=traits]", ov).value.split(String.fromCharCode(10))
           .map(t => t.trim()).filter(Boolean),
         source: "screenplay analysis" } });
@@ -8460,8 +8480,23 @@ function castModal(rec, onDone) {
         fd.append("file", picked[i]);
         await api(`/api/subjects/${created.id}/reference`, { method: "POST", body: fd });
       }
+      let rendered = "";
+      if ($("[data-f=gen]", ov)?.checked) {
+        say(`Rendering ${rec.name}…`, "work");
+        try {
+          await api(`/api/subjects/${created.id}/generate`,
+                    { method: "POST", json: {} });
+          rendered = " and one rendered";
+        } catch (err) {
+          // The card exists and the photos landed. A failed render is the
+          // smallest half of this, and saying nothing would imply the
+          // whole thing failed.
+          toast(`${rec.name} is cast, but the render did not run — ${err.message}`,
+                true);
+        }
+      }
       toast(`${rec.name} cast${picked.length
-        ? ` with ${picked.length} photo${picked.length === 1 ? "" : "s"}` : ""} — its card is in the library.`);
+        ? ` with ${picked.length} photo${picked.length === 1 ? "" : "s"}` : ""}${rendered} — its card is in the library.`);
       close();
       onDone?.();
     } catch (err) {

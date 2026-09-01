@@ -266,5 +266,93 @@ class AppearsInSaysWhatItCannotKnow(unittest.TestCase):
         self.assertIn("<b>APPEARS IN</b>", JS)
 
 
+
+
+class TheCastingModalAsksForBoth(unittest.TestCase):
+    """User, 2026-09-01, looking at the casting modal: "None of your
+    changes seem to be in."
+
+    They were in — on the cast DETAIL, which is the surface you reach
+    AFTER casting. The modal is where a subject's words are written for
+    the first time, and it had neither the profile field nor the second
+    door. Both were built one screen too late."""
+
+    def body(self):
+        i = JS.index("function castModal(rec, onDone) {")
+        return JS[i:JS.index(NL + "}" + NL, i)]
+
+    def test_the_profile_is_asked_for_where_the_words_are_first_written(self):
+        b = self.body()
+        self.assertIn('data-f="description"', b)
+        self.assertIn("Who this is", b)
+
+    def test_it_is_a_separate_question_from_the_role(self):
+        b = self.body()
+        self.assertIn('data-f="subtitle"', b)
+        self.assertLess(b.index('data-f="subtitle"'), b.index('data-f="description"'))
+
+    def test_casting_saves_it(self):
+        b = self.body()
+        self.assertIn('description: $("[data-f=description]", ov).value.trim()', b)
+
+    def test_the_second_door_is_offered_beside_the_first(self):
+        b = self.body()
+        i = b.index('class="cast-photos"')
+        seg = b[i:i + 1200]
+        self.assertIn("Reference photos", seg)
+        self.assertIn('data-f="gen"', seg)
+
+    def test_the_render_runs_after_the_card_exists(self):
+        """There is nothing to render from until the words are saved."""
+        b = self.body()
+        self.assertLess(b.index('api("/api/subjects", { method: "POST"'),
+                        b.index("/generate"))
+
+    def test_the_spend_rides_with_the_option(self):
+        b = self.body()
+        self.assertIn("SPENDS A RENDER", b)
+
+    def test_a_failed_render_does_not_claim_the_casting_failed(self):
+        """The card exists and the photos landed — that is the larger half
+        and it says so."""
+        b = self.body()
+        self.assertIn("is cast, but the render did not run", b)
+
+
+class TheModalIsReadable(unittest.TestCase):
+    """User, same sitting: "the font is 7 pixels high — a person can't
+    read that — is that a design decision?"
+
+    It was not a decision, it was drift. §1.3 allows THREE sizes per
+    surface and its smallest is 11.5px; this modal had four — 9, 10, 10.5
+    and 12.5 — three of them under the floor. The rule exists for exactly
+    this: "the measured fault this replaced was nine sizes between 9.5px
+    and 15px."
+    """
+
+    def test_nothing_in_this_modal_is_under_the_floor(self):
+        import re
+        i = CSS.index(".cast-kind {")
+        seg = CSS[i:CSS.index(".photos-modal", i)]
+        for m in re.finditer(r"font-size:\s*([\d.]+)px", seg):
+            self.assertGreaterEqual(float(m.group(1)), 11.5, m.group(0))
+
+    def test_the_read_mark_came_up_with_it(self):
+        b = CSS.split(NL + ".read-mark {")[1].split("}")[0]
+        self.assertIn("font-size: 11.5px", b)
+
+    def test_the_surface_keeps_three_sizes_and_the_largest_anchors(self):
+        for rule in (".cast-modal .modal-title { font-size: 15px; }",
+                     ".cast-modal .modal-actions button { font-size: 15px; }",
+                     ".cast-modal .f-label { font-size: 11.5px;"):
+            self.assertIn(rule, CSS, rule)
+
+    def test_the_fix_did_not_raise_those_classes_app_wide(self):
+        """The same drift is everywhere and deserves one deliberate pass,
+        not a side effect of a casting fix."""
+        b = CSS.split(NL + ".f-label {")[1].split("}")[0]
+        self.assertIn("font-size: 10.5px", b)
+
+
 if __name__ == "__main__":
     unittest.main()
