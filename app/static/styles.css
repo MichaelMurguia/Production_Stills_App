@@ -884,7 +884,7 @@ label.check {
   cursor: pointer; }
 .cast-chip:hover { color: var(--ink); border-color: var(--ink-faint); }
 /* The detail screen. */
-.cast-detail { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+.cast-detail { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   gap: 26px; align-items: start; }
 @media (max-width: 1000px) { .cast-detail { grid-template-columns: 1fr; } }
 .cd-hero { display: flex; align-items: center; justify-content: center;
@@ -1414,6 +1414,20 @@ details.meta pre {
 /* Environment cards (mock 6a) — plan P7/Gap 6. Registry-card family:
    Courier bold name, sans notes, Courier facts line; dashed --hold border
    while PROPOSED (the not-yet-real vocabulary). */
+/* UNCANONIZED — 2026-08-31 — the cast detail's two doors (§3.4) */
+/* GENERATE ANOTHER closes the filmstrip, dashed, because it is the one
+   slot that has no picture in it yet. */
+.cd-more { border: 1px dashed var(--line); background: none;
+  color: var(--ink-faint); font-family: var(--mono); font-size: 8.5px;
+  letter-spacing: .1em; line-height: 1.5; cursor: pointer; }
+.cd-more:hover { border-color: var(--ink-dim); color: var(--ink-dim); }
+/* A render is money, so the cost is stated beside the button, never
+   discovered after it. */
+.cd-spend { margin-top: 7px; color: var(--ink-faint); }
+/* A fact that is not knowable yet says what would make it knowable. */
+.cd-none { font-style: normal; font-size: 9.5px; letter-spacing: .1em;
+  color: var(--ink-faint); }
+
 /* UNCANONIZED — 2026-08-31 — the subjects rail (§3.3) */
 /* The SUBJECTS counter always pointed at step 03; what it counted was
    never shown in the findings, so the number was the whole of what the

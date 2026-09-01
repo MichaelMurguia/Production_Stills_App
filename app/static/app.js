@@ -5927,6 +5927,21 @@ async function renderWizard() {
     };
   };
 
+  /* §3.4 asks the detail for APPEARS IN, in Courier. Nothing in this app
+     maps a subject to an act: the read returns acts and it returns
+     subjects, and no edge between them. Locations carry acts and
+     breakdowns carry locations, so the answer arrives once a subject is
+     on a breakdown — and not before.
+
+     So it states that, rather than either guessing from a name match or
+     showing a blank row (B3). A fact that says "not yet, and here is
+     what would produce it" is worth more than a fact that is wrong. */
+  const appearsIn = (s) => {
+    const acts = (getAnalysis()?.acts || []).length;
+    return (s.ref_ids || []).length && acts
+      ? "" : `<i class="cd-none">NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN</i>`;
+  };
+
   const renderCastDetail = (s, refs) => {
     const host = $("#cast-screen");
     const rs = castRefsOf(s, refs);
@@ -5944,29 +5959,44 @@ async function renderWizard() {
             style="${castShot(rs[0])}">${rs.length ? "" :
             `<span class="cd-empty">NO PHOTOGRAPH YET &mdash; THIS SUBJECT RIDES ON
              ITS WORDS ALONE UNTIL ONE IS ATTACHED</span>`}</span>
+          <!-- §3.4: "Alternates are a filmstrip directly beneath the
+               picture, ending in a dashed GENERATE ANOTHER slot." -->
           <div class="cd-strip">
             ${rs.map((r, i) => `<button type="button" class="cd-alt${i ? "" : " on"}"
                 data-i="${i}" style="${castShot(r)}" title="${esc(r.id)}"></button>`).join("")}
-            <button type="button" class="cd-more" data-f="more"
-              title="Attach another photograph to this subject">ADD<br>ANOTHER</button>
+            <button type="button" class="cd-more" data-f="gen"
+              title="Renders one reference for this subject from its own words, under the Bible and the approved anchors. Spends a render.">GENERATE<br>ANOTHER</button>
           </div>
         </div>
         <div>
+          <!-- The profile, not the role line. They are two different
+               sentences and the mock shows both: "Fugitive pilot" on the
+               roster card, and here "Dark hair, mid-thirties, weather on
+               the face." One field was doing both jobs, so the profile
+               had nowhere to live (user, 2026-08-31). -->
           <p class="cd-lab">WHO THIS IS</p>
-          <p class="cd-who">${s.subtitle ? esc(s.subtitle)
-            : `<span class="mini">No identity text yet — it rides in every prompt this subject appears in.</span>`}</p>
+          <p class="cd-who">${s.description ? esc(s.description)
+            : s.subtitle ? esc(s.subtitle)
+            : `<span class="mini">No profile yet — write one, or a generated reference would be the engine's invention rather than this production's.</span>`}</p>
           <p class="cd-lab">WHAT RIDES EVERY PROMPT</p>
           ${(s.traits || []).length
             ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
             : `<p class="mini">No traits yet.</p>`}
           <div class="cd-facts">
+            <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn(s)}</span></div>
             <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
             <div class="cd-fact"><b>RIDES AS</b><span>${esc(role)} &mdash; ${esc(s.name.toUpperCase())}</span></div>
           </div>
+          <!-- Two doors to a picture, both stated (user, 2026-08-31).
+               They land in the same place: an approved reference carrying
+               this subject's role, linked to its card. -->
           <div class="cd-acts">
             <button type="button" class="ghost" data-f="photo">Attach a photograph</button>
+            <button type="button" class="ghost" data-f="gen2">Generate one</button>
             <button type="button" class="ghost" data-f="edit">Edit the description</button>
           </div>
+          <p class="mini cd-spend">Generating renders from the words above, under
+            the Bible and the approved anchors &mdash; it spends a render.</p>
         </div>
       </div>`;
     $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
@@ -5979,15 +6009,30 @@ async function renderWizard() {
     // shelf uses; the card already exists, so this only adds photographs.
     const addPhoto = () => photoTrayModal(s, refreshCast);
     $("[data-f=photo]", host).onclick = addPhoto;
-    $("[data-f=more]", host).onclick = addPhoto;
+    /* The generate door. Both slots go through it, and both state the
+       spend before they are pressed — a render is money. */
+    const generate = async (btn) => {
+      const stop = startBusy(btn.closest("div"), `Rendering ${s.name}`,
+                             "one image, from the words on this card");
+      try {
+        await api(`/api/subjects/${s.id}/generate`, { method: "POST", json: {} });
+        toast(`${s.name} rendered — it is on the card and in Reference.`);
+        refreshCast();
+      } catch (err) {
+        toast(err.message, true);
+      } finally { stop?.(); }
+    };
+    $("[data-f=gen]", host).onclick = e => generate(e.currentTarget);
+    $("[data-f=gen2]", host).onclick = e => generate(e.currentTarget);
     $("[data-f=edit]", host).onclick = async () => {
-      const v = await askText("Identity text", "Who this is", {
-        value: s.subtitle || "",
-        body: "It rides in every prompt this subject appears in.",
+      const v = await askText("The profile", "Who this is", {
+        value: s.description || s.subtitle || "",
+        body: "It rides in every prompt this subject appears in, and it is "
+            + "what a generated reference is rendered from.",
       });
       if (v === null) return;
       try {
-        await api(`/api/subjects/${s.id}`, { method: "PUT", json: { subtitle: v.trim() } });
+        await api(`/api/subjects/${s.id}`, { method: "PUT", json: { description: v.trim() } });
         renderCastScreen();
       } catch (err) { toast(err.message, true); }
     };

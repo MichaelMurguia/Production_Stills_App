@@ -2483,6 +2483,122 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
     return meta
 
 
+# ------------------------------------------------- a subject's own portrait
+
+# The subject's own shape, per PRODUCTION_DESIGN_UI_PLAN §3.4: "at the
+# subject's own ratio — 1:1.25 for a character, 1.85:1 for a vehicle or a
+# prop, and never letterboxed into the other shape." A portrait rendered
+# at 16:9 and shown in a 1:1.25 frame is letterboxing by another route, so
+# it is rendered in the shape it will be seen in.
+SUBJECT_ASPECT = {"CHARACTER": "4:5", "VEHICLE": "16:9", "PROP": "16:9"}
+
+
+def subject_portrait(sid: str, provider: str = "") -> dict:
+    """Render one reference image FOR a subject, from its own words.
+
+    The upload door already existed; this is the other one the user asked
+    for (2026-08-31: "the option to upload or generate an image"). It ends
+    exactly where the upload ends — an approved reference carrying the
+    subject's role, linked to its card — so nothing downstream can tell
+    the two apart, and Reject in Reference is the recourse for both.
+
+    It renders under the SAME conditions a panel does: the Bible's
+    rendering language and the approved style anchors. A portrait made
+    outside the art direction would be a picture of a person rather than
+    a reference for this production.
+    """
+    subj = store.get_subject(sid)
+    if subj is None:
+        raise GenerationError(f"unknown subject: {sid}")
+    provider = provider or (load_settings().get("image_provider")
+                            or DEFAULT_PROVIDER)
+    if provider not in all_providers():
+        raise GenerationError(f"provider must be one of {sorted(all_providers())}")
+
+    language = bible.render_context("") or load_style_bible().strip()
+    if not language:
+        raise GenerationError(
+            "no rendering language — save the Art Direction Bible before "
+            "generating a subject reference, or the render would invent one.")
+    # Same refusal the probe makes, for the same reason: a bible that
+    # contradicts the rendering anchor would spend a render proving it.
+    clash = bible.anchor_conflicts()
+    if clash:
+        raise GenerationError(
+            "; ".join(clash) + ". Re-draft the Bible, or set the anchor back "
+            "— this renders FROM the Bible.")
+
+    words = [w for w in (subj.get("description", ""), subj.get("subtitle", ""))
+             if str(w).strip()]
+    traits = [str(t).strip() for t in (subj.get("traits") or []) if str(t).strip()]
+    if not words and not traits:
+        raise GenerationError(
+            f"{subj['name']} has no description and no traits. A reference "
+            "rendered from a name alone is the engine's invention, not this "
+            "production's — write who this is first.")
+
+    kind = subj.get("kind", "CHARACTER")
+    style_refs = store.auto_style_references()
+    parts = [
+        f"REFERENCE PLATE — {kind} — {subj['name'].upper()}",
+        "",
+        "Render ONE reference image of this subject, under the art direction "
+        "below. This is a production's own reference plate: the subject "
+        "isolated and legible, not a scene and not a story moment.",
+        "",
+        language,
+        "",
+        "THE SUBJECT",
+        f"{subj['name']} — {kind.lower()}.",
+    ]
+    if words:
+        parts.append(" ".join(str(w).strip() for w in words))
+    if traits:
+        parts += ["", "EVERY ONE OF THESE MUST BE TRUE AND VISIBLE:"]
+        parts += [f"- {t}" for t in traits]
+    period = production_period()
+    if period:
+        parts += ["", f"PERIOD: {period}. Nothing in frame may postdate it."]
+    parts += ["", "Show only what the words above support. Invent no clothing, "
+                  "marking, era or equipment they do not state."]
+    if style_refs:
+        parts += ["", "APPROVED REFERENCE ROLES",
+                  "Each attached reference image controls ONLY its assigned scope. "
+                  "Match it closely within that scope; it controls nothing else."]
+        parts += _reference_role_lines(style_refs)
+    parts += ["", "Render a single full-bleed image. No text, labels, or borders."]
+    prompt = chr(10).join(parts)
+    _require_prompt_fits(provider, prompt)
+
+    aspect = SUBJECT_ASPECT.get(kind, "4:5")
+    ref_paths = _reference_image_paths(style_refs)
+    out = paths.DATA / "subject_render.png"
+    try:
+        if provider == "mock":
+            mockflow.render(prompt, ref_paths, "1K", aspect, out)
+        elif provider == "openai-chat":
+            _render_openai_chat(prompt, ref_paths, "1K", aspect, out, verbatim=True)
+        elif provider == "openai":
+            _render_openai(prompt, ref_paths, "1K", aspect, out)
+        else:
+            _render_gemini(prompt, ref_paths, "1K", aspect, out)
+        data = out.read_bytes()
+    finally:
+        out.unlink(missing_ok=True)
+
+    role = f"{store.SUBJECT_ROLE_PREFIX[kind]} — {subj['name'].upper()}"
+    ref = store.add_reference(
+        f"{subj['name']}.png", data, role, [], [],
+        notes=f"generated reference for subject {subj['name']} ({sid}) "
+              f"by {provider}")
+    # Same standing as a supplied plate — the user asked for it, which IS
+    # the review, and Reject in Reference is the recourse (E2, 2026-08-18).
+    store.set_reference_status(ref["id"], "APPROVED", "ON SUPPLY")
+    store.link_subject_ref(sid, ref["id"])
+    return {"subject": sid, "reference": ref["id"], "provider": provider,
+            "aspect_ratio": aspect}
+
+
 def list_samples() -> list[dict]:
     out = []
     for provider, cfg in PROVIDERS.items():

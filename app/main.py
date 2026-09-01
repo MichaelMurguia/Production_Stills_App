@@ -2520,10 +2520,14 @@ def api_list_subjects() -> list[dict]:
 @app.post("/api/subjects")
 async def api_add_subject(body: dict) -> dict:
     try:
-        return store.add_subject(
+        rec = store.add_subject(
             str(body.get("name", "")), str(body.get("kind", "CHARACTER")),
             str(body.get("subtitle", "")), body.get("traits") or [],
             str(body.get("source", "")))
+        if str(body.get("description", "")).strip():
+            rec = store.update_subject(
+                rec["id"], {"description": str(body["description"])})
+        return rec
     except (ValueError, FileExistsError) as e:
         raise _err(e)
 
@@ -2542,6 +2546,23 @@ def api_delete_subject(sid: str) -> dict:
         return store.delete_subject(sid)
     except KeyError as e:
         raise _err(e)
+
+
+@app.post("/api/subjects/{sid}/generate")
+async def api_subject_generate(sid: str, body: dict) -> dict:
+    """The second door to a subject's picture (user, 2026-08-31: "the
+    option to upload or generate an image").
+
+    It lands where the upload lands — an approved reference carrying the
+    subject's role, linked to its card — so nothing downstream can tell
+    them apart. It spends a render, which the caller states before it is
+    pressed.
+    """
+    try:
+        return await run_in_threadpool(
+            generate.subject_portrait, sid, str(body.get("provider", "")))
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/subjects/{sid}/reference")

@@ -97,8 +97,18 @@ class TheDetailIsAScreen(unittest.TestCase):
         self.assertIn('data-f="back"', seg)
 
     def test_the_picture_is_the_largest_thing_on_it(self):
+        """§3.4: "The subject's picture is the largest thing on it, at the
+        subject's own ratio." The rule is that it LEADS its own column and
+        keeps its ratio — not a particular pixel width. It was 560px,
+        which was a number of my own choosing rather than the mock's: a
+        1:1.25 portrait at 560 is 700px tall, and the specification beside
+        it ended a third of the way down, which makes the page a picture
+        with a caption. 380 is the mock's proportion."""
         b = block(".cast-detail {")
-        self.assertIn("minmax(0, 560px)", b)
+        self.assertIn("grid-template-columns: minmax(0, 380px)", b)
+        hero = block(".cd-hero {")
+        self.assertIn("aspect-ratio: .8", hero)
+        self.assertIn('.cast-detail[data-kind="VEHICLE"] .cd-hero', CSS)
 
     def test_it_states_what_rides_every_prompt(self):
         i = JS.index("const renderCastDetail =")
@@ -106,11 +116,15 @@ class TheDetailIsAScreen(unittest.TestCase):
         for lab in ("WHO THIS IS", "WHAT RIDES EVERY PROMPT", "LIVES ON", "RIDES AS"):
             self.assertIn(lab, seg, lab)
 
-    def test_alternates_are_a_filmstrip_ending_in_add_another(self):
+    def test_alternates_are_a_filmstrip_ending_in_generate_another(self):
+        """The slot said ADD ANOTHER and opened the upload — a second copy
+        of the button already beside it. §3.4 calls for GENERATE ANOTHER,
+        and 2026-08-31 built the door that makes that true."""
         i = JS.index("const renderCastDetail =")
         seg = JS[i:JS.index("const renderCastScreen =", i)]
         self.assertIn('class="cd-alt', seg)
         self.assertIn('class="cd-more"', seg)
+        self.assertIn("GENERATE<br>ANOTHER", seg)
 
     def test_a_subject_with_no_photograph_states_the_blocker(self):
         """B3, and the most consequential empty state in the app: this

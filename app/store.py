@@ -358,6 +358,13 @@ def add_subject(name: str, kind: str, subtitle: str = "",
         "name": name,
         "kind": kind,
         "subtitle": subtitle.strip(),
+        # The role line and the profile are two different sentences and the
+        # mocks show both: "Fugitive pilot" on the roster card, and on the
+        # detail "Dark hair, mid-thirties, weather on the face. Reads the
+        # same at wide as at close." One field was doing both jobs, so the
+        # profile had nowhere to live (user, 2026-08-31: "you need to
+        # include the character profile description").
+        "description": "",
         "traits": [str(t).strip() for t in (traits or []) if str(t).strip()],
         "ref_ids": [],
         "source": source,
@@ -373,7 +380,7 @@ def update_subject(sid: str, fields: dict) -> dict:
     rec = next((s for s in subjects if s["id"] == sid), None)
     if rec is None:
         raise KeyError(sid)
-    for k in ("subtitle", "name"):
+    for k in ("subtitle", "name", "description"):
         if k in fields:
             rec[k] = str(fields[k]).strip()
     if "traits" in fields:
