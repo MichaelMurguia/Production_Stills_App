@@ -1587,8 +1587,10 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
         # Five, not six: the stage's duplicate manual row retired with
         # the uncast list it belonged to (§3.4, 2026-08-31). No way of
         # casting was lost — bulk casting moved onto the surviving list.
-        self.assertEqual(JS.count("castModal("), 4,
-                         "one definition, three callers")
+        # Five: the ribbon's uncast tile became a fourth caller when step
+        # 03 stopped being a preview and started acting (2026-09-01).
+        self.assertEqual(JS.count("castModal("), 5,
+                         "one definition, four callers")
         self.assertIn("castOne(u)", JS, "bulk casting survived the move")
         self.assertEqual(JS.count("photoTrayModal("), 3,
                          "one definition, two callers")

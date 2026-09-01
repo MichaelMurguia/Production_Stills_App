@@ -2712,28 +2712,39 @@ details.meta pre {
 /* UNCANONIZED — 2026-08-31 — the read's route on stage 01 */
 .ds-go { width: 100%; margin-top: 12px; }
 
-/* UNCANONIZED — 2026-08-31 — step 03 as a row, and the cast as a screen */
-/* PRODUCTION_DESIGN_UI_PLAN §3.4. The step used to render the whole
-   roster inline and the uncast list twice; it is one line now, and the
-   roster is a screen reached from it. */
-.cast-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  margin-top: 10px; }
-.cast-row-n { font-size: 11px; letter-spacing: .1em; color: var(--ink-dim); }
-.cast-row-thumbs { display: flex; gap: 6px; }
-.cast-row-shot { width: 40px; height: 50px; display: block; background: var(--field);
-  background-size: cover; background-position: center;
+/* UNCANONIZED — 2026-09-01 — step 03 as an interactive ribbon */
+/* PRODUCTION_DESIGN_UI_PLAN §3.4, corrected by the user 2026-09-01. The
+   step is still one row, but every tile in it now acts: an uncast tile
+   casts in place, a cast one opens its own card. Opening the full cast is
+   optional, so it is a button rather than a text link — the plan's row
+   ends in a control, and a link read as a caption. */
+.cast-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.cast-ribbon { display: flex; gap: 8px; overflow-x: auto; flex: 1;
+  padding-bottom: 4px; scrollbar-width: thin; cursor: grab;
+  /* The drag owns the horizontal axis; without this the browser's own
+     pan cancels the pointermove halfway through. */
+  touch-action: pan-y; }
+.cast-ribbon.dragging { cursor: grabbing; user-select: none; }
+.cast-tile { flex: 0 0 auto; width: 62px; background: none; border: 0;
+  padding: 0; cursor: pointer; display: flex; flex-direction: column; gap: 4px;
+  text-align: left; }
+.cast-tile-shot { display: block; width: 62px; aspect-ratio: .8;
+  background: var(--field); background-size: cover; background-position: center;
   border: 1px solid var(--line-soft); }
-.cast-row-rule { width: 1px; height: 34px; background: var(--line-soft); }
-.cast-row-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-/* Dashed, because they are not cards yet — the same thing the roster's
-   own uncast list says at length. */
-.cast-row-chip { display: inline-flex; align-items: baseline; gap: 6px;
-  border: 1px dashed var(--line); padding: 4px 9px;
-  font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); }
-.cast-row-chip i { font-family: var(--mono); font-style: normal; font-size: 9px;
-  letter-spacing: .1em; color: var(--ink-faint); }
-.cast-row-more { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); }
-.cast-row-gap { flex: 1; }
+/* An uncast tile is dashed and says so — it is not a card yet, and the
+   click is what makes it one. */
+.cast-tile.uncast .cast-tile-shot { border-style: dashed; }
+.cast-tile-shot.none { display: flex; align-items: center; justify-content: center;
+  background-image: repeating-linear-gradient(135deg,
+    var(--field) 0 6px, var(--bg) 6px 12px); }
+.cast-tile-shot.none i { font-style: normal; font-size: 11.5px;
+  letter-spacing: .08em; color: var(--ink-faint); }
+.cast-tile-name { font-family: var(--sans); font-size: 11.5px; line-height: 1.3;
+  color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.cast-tile:hover .cast-tile-shot { border-color: var(--ink-dim); }
+.cast-tile:hover .cast-tile-name { color: var(--ink); }
+.cast-open { flex: none; }
 
 /* The screen replaces the stage rather than floating over it. Driven by
    an attribute on <body>, like stage 01's read — set before the screen
@@ -2745,6 +2756,7 @@ body[data-cast="1"] .wiz-logline,
 body[data-cast="1"] .wiz-head { display: none; }
 .cast-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
   margin: 0 0 14px; }
+.cast-head-gap { flex: 1; }
 
 /* UNCANONIZED — 2026-08-31 — the logline's own section */
 /* It rides above the whole stage, unnumbered (user-directed). A `.panel`

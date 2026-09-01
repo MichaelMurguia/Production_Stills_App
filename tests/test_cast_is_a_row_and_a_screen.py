@@ -43,45 +43,80 @@ def step(n: str) -> str:
     return seg[a:nxt if nxt > 0 else len(seg)]
 
 
-class TheStepIsARow(unittest.TestCase):
-    def test_the_step_holds_a_row_and_nothing_else(self):
+class TheStepIsAnInteractiveRibbon(unittest.TestCase):
+    """Corrected by the user 2026-09-01: "each thumb is clickable, and
+    brings up the casting modal — you don't have to open the full cast.
+    Opening the full cast should be optional. That ribbon of characters
+    should be mouse draggable. 'Open the cast' should be a button, like
+    the attached, not a text link."
+
+    The first build made the row a PREVIEW — three photographed thumbs, a
+    rule, three dashed chips, a text link. Nothing in it did anything, so
+    every act still meant opening the roster. It is a working surface
+    now."""
+
+    def test_the_step_holds_the_ribbon_and_nothing_else(self):
         s = step("3")
         self.assertIn('id="wiz-cast-row"', s)
-        # The wall that was here is gone: no roster, no uncast block, no
-        # second manual-add row.
         self.assertNotIn('id="cast-screen"', s)
         self.assertNotIn("uncast-block", s)
         self.assertNotIn('id="wiz-subj-name"', s)
 
-    def test_the_row_carries_what_the_plan_names(self):
-        """Thumbnails, a rule, uncast chips, and Open the cast."""
+    def test_every_tile_acts(self):
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        for part in ("cast-row-thumbs", "cast-row-rule", "cast-row-chip",
-                     "Open the cast"):
-            self.assertIn(part, seg, part)
+        self.assertIn('$$("[data-uncast]", rib).forEach(b => b.onclick', seg)
+        self.assertIn('$$("[data-sid]", rib).forEach(b => b.onclick', seg)
 
-    def test_only_a_subject_with_a_picture_leads_the_rail(self):
-        """B3: a row of hatched blanks says nothing the count beside it
-        does not already say."""
+    def test_an_uncast_tile_casts_in_place(self):
+        """Without opening the roster — that is the whole point."""
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertIn("subjects.filter(x => castRefsOf(x, refs).length).slice(0, 3)", seg)
+        self.assertIn("castModal({ name: b.dataset.uncast", seg)
 
-    def test_it_does_not_repeat_the_count_the_badge_already_states(self):
+    def test_a_cast_tile_opens_its_own_card_not_the_roster(self):
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertNotIn("CAST &middot; ${uncast.length} UNCAST", seg)
+        self.assertIn("castOpen = b.dataset.sid;", seg)
+        self.assertIn('document.body.dataset.cast = "1";', seg)
 
-    def test_uncast_chips_are_dashed_because_they_are_not_cards_yet(self):
-        b = CSS.split(NL + ".cast-row-chip {")[1].split("}")[0]
-        self.assertIn("dashed", b)
-
-    def test_the_overflow_is_counted_rather_than_listed(self):
+    def test_it_shows_the_whole_cast_not_the_photographed_three(self):
+        """A hatched tile under a name is not the empty shape B3 forbids —
+        it is the state you would click to fix, and now the click is
+        there."""
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertIn("uncast.slice(0, 3)", seg)
-        self.assertIn("uncast.length - 3", seg)
+        self.assertIn("subjects.map(x => {", seg)
+        self.assertNotIn(".slice(0, 3)", seg)
+
+    def test_it_drags(self):
+        i = JS.index("const renderCastRow = async () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        for ev in ("pointerdown", "pointermove", "pointerup",
+                   "pointerleave", "pointercancel"):
+            self.assertIn(f'rib.addEventListener("{ev}"', seg, ev)
+        self.assertIn("rib.scrollLeft = down.left - dx;", seg)
+
+    def test_a_drag_that_ends_on_a_tile_does_not_also_click_it(self):
+        i = JS.index("const renderCastRow = async () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn("const acted = fn => e => { if (moved > 4)", seg)
+
+    def test_the_browser_does_not_steal_the_horizontal_drag(self):
+        b = CSS.split(NL + ".cast-ribbon {")[1].split("}")[0]
+        self.assertIn("touch-action: pan-y", b)
+        self.assertIn("overflow-x: auto", b)
+
+    def test_opening_the_full_cast_is_a_button(self):
+        """It was a text link, which read as a caption on a row of
+        pictures."""
+        i = JS.index("const renderCastRow = async () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn('class="ghost cast-open" data-f="open-cast"', seg)
+        self.assertNotIn('class="text-act" data-f="open-cast"', seg)
+
+    def test_an_uncast_tile_is_dashed_because_it_is_not_a_card_yet(self):
+        self.assertIn(".cast-tile.uncast .cast-tile-shot { border-style: dashed; }", CSS)
 
 
 class TheCastIsAScreen(unittest.TestCase):

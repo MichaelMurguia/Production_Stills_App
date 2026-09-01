@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2625 tests** across 136 files.
+**2629 tests** across 136 files.
 
 
-## Product app — 2404 tests in 119 files
+## Product app — 2408 tests in 119 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -53,7 +53,7 @@ temp home and external services are faked.
 | `test_camera.py` | 37 | Camera & composition language (user 2026-08-09). |
 | `test_camera_recipes.py` | 14 | A1 — the camera recipes, read as a fourth style library. |
 | `test_canon_2026_08_07.py` | 22 | NON_CANON_REVIEW_2026-08-07 — the seven rulings, held. |
-| `test_cast_is_a_row_and_a_screen.py` | 16 | Step 03 is a row on the stage, and the cast is a screen. |
+| `test_cast_is_a_row_and_a_screen.py` | 20 | Step 03 is a row on the stage, and the cast is a screen. |
 | `test_cast_screen.py` | 18 | The cast screen — a roster, and a detail that is a screen. |
 | `test_cinematography_grammar.py` | 39 | The cinematography grammar that rides a render — and the ability to take it back (user 2026-08-16: "the doc provides a prompt — shouldn't we apply the |
 | `test_citation_is_verified.py` | 18 | No route may file SCRIPT_EXPLICIT for a line the screenplay does not contain. |

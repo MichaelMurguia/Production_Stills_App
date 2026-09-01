@@ -5768,20 +5768,69 @@ async function renderWizard() {
       api("/api/references").catch(() => []),
     ]);
     const uncast = uncastRecommendations(subjects);
-    // Only subjects that HAVE a picture lead the rail: a row of hatched
-    // blanks says nothing the count beside it does not already say (B3).
-    const shown = subjects.filter(x => castRefsOf(x, refs).length).slice(0, 3);
+    /* One ribbon, and every tile in it acts (user-directed 2026-09-01:
+       "each thumb is clickable, and brings up the casting modal — you
+       don't have to open the full cast. Opening the full cast should be
+       optional").
+
+       So it shows the whole cast, not the three that happen to have a
+       photograph. A hatched tile under a name is not the empty shape B3
+       forbids — it is the state you would click to fix, and the click is
+       right there. It scrolls, and it drags, because a cast is longer
+       than a row. */
     host.innerHTML = `
-      ${shown.length ? `<span class="cast-row-thumbs">${shown.map(x =>
-        `<span class="cast-row-shot" style="${castShot(castRefsOf(x, refs)[0])}"
-           title="${esc(x.name)}"></span>`).join("")}</span>` : ""}
-      ${uncast.length ? `<span class="cast-row-rule"></span>
-        <span class="cast-row-chips">${uncast.slice(0, 3).map(u =>
-          `<span class="cast-row-chip">${esc(u.name)}<i>UNCAST</i></span>`).join("")}
-          ${uncast.length > 3
-            ? `<span class="cast-row-more mono">+${uncast.length - 3}</span>` : ""}</span>` : ""}
-      <span class="cast-row-gap"></span>
-      <button type="button" class="text-act" data-f="open-cast">Open the cast</button>`;
+      <div class="cast-ribbon" data-f="ribbon">
+        ${subjects.map(x => {
+          const r = castRefsOf(x, refs)[0];
+          return `<button type="button" class="cast-tile" data-sid="${esc(x.id)}"
+              title="${esc(x.name)} — open this card">
+            <span class="cast-tile-shot${r ? "" : " none"}" style="${castShot(r)}"></span>
+            <span class="cast-tile-name">${esc(x.name)}</span>
+          </button>`;
+        }).join("")}
+        ${uncast.map(u => `<button type="button" class="cast-tile uncast"
+            data-uncast="${esc(u.name)}" data-kind="${esc(u.kind || "CHARACTER")}"
+            title="Cast ${esc(u.name)}">
+          <span class="cast-tile-shot none"><i class="mono">UNCAST</i></span>
+          <span class="cast-tile-name">${esc(u.name)}</span>
+        </button>`).join("")}
+      </div>
+      <button type="button" class="ghost cast-open" data-f="open-cast">Open the cast</button>`;
+
+    /* Drag to scroll. The guard matters: a drag that ends on a tile must
+       not also cast it, so a click is only a click if the pointer barely
+       moved. */
+    const rib = $("[data-f=ribbon]", host);
+    let down = null, moved = 0;
+    rib.addEventListener("pointerdown", e => {
+      down = { x: e.clientX, left: rib.scrollLeft };
+      moved = 0;
+      rib.classList.add("dragging");
+    });
+    const end = () => { down = null; rib.classList.remove("dragging"); };
+    rib.addEventListener("pointermove", e => {
+      if (!down) return;
+      const dx = e.clientX - down.x;
+      moved = Math.max(moved, Math.abs(dx));
+      rib.scrollLeft = down.left - dx;
+    });
+    rib.addEventListener("pointerup", end);
+    rib.addEventListener("pointerleave", end);
+    rib.addEventListener("pointercancel", end);
+
+    const acted = fn => e => { if (moved > 4) { e.preventDefault(); return; } fn(); };
+    // An uncast tile casts, in place. A cast one opens its own card —
+    // which is the detail, not the roster: skipping the full cast is the
+    // point of the ribbon.
+    $$("[data-uncast]", rib).forEach(b => b.onclick = acted(() =>
+      castModal({ name: b.dataset.uncast, kind: b.dataset.kind,
+                  subtitle: "", traits: [] }, refreshCast)));
+    $$("[data-sid]", rib).forEach(b => b.onclick = acted(() => {
+      castOpen = b.dataset.sid;
+      document.body.dataset.cast = "1";
+      renderCastScreen();
+      window.scrollTo({ top: 0 });
+    }));
     $("[data-f=open-cast]", host).onclick = openCast;
   };
 
@@ -5848,7 +5897,7 @@ async function renderWizard() {
         <button type="button" class="text-act" data-f="cast-back">&larr; Production design</button>
         <h3 class="stage-headline">Cast</h3>
         <span class="wiz-group-label">${subjects.length} CAST &middot; ${uncast.length} UNCAST</span>
-        <span class="cast-row-gap"></span>
+        <span class="cast-head-gap"></span>
         <span class="cost mono">EVERY CARD HERE IS A CARD ON REFERENCE / SUBJECTS</span>
       </div>`];
     for (const [kind, label] of KINDS) {
