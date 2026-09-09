@@ -1414,6 +1414,13 @@ details.meta pre {
 /* Environment cards (mock 6a) — plan P7/Gap 6. Registry-card family:
    Courier bold name, sans notes, Courier facts line; dashed --hold border
    while PROPOSED (the not-yet-real vocabulary). */
+/* UNCANONIZED — 2026-09-01 — a credential the process is refusing to see */
+/* Courier, because it is a machine fact and a command to type. It sits
+   where Authenticate would, since offering that button is the error. */
+.cred-fix { font-size: 11.5px; letter-spacing: .08em; color: var(--ink-faint);
+  white-space: nowrap; }
+.cred-fix b { color: var(--ink-dim); font-weight: 500; }
+
 /* UNCANONIZED — 2026-09-01 — the generate option on the cast modal */
 .cast-gen { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px;
   font-family: var(--sans); font-size: 11.5px; color: var(--ink-dim);

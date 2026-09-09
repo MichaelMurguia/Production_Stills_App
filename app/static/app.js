@@ -4137,6 +4137,25 @@ async function renderSettings(openTab = "") {
       : r.icon
         ? `<span class="cred-tile"><img class="prov-ico" src="/provider-icons/${r.icon}.png" alt="" onerror="this.parentNode.textContent='${esc(r.tile)}'"></span>`
         : `<span class="cred-tile">${esc(r.tile)}</span>`;
+    /* A row whose key IS on disk but which this process is refusing to
+       look at must not offer Authenticate. The dev loop blanks stored
+       credentials so a mis-click cannot spend, and it does it by making
+       the process unable to see them rather than by editing the file —
+       so this row rendered exactly like an install with no key, and the
+       user added theirs again and again (2026-09-01: "my api key is not
+       saving. If I add the key and save it — everything still says NO
+       ENGINE"). It was saving every time. */
+    const supp = (engAll[r.key] || {}).suppressed;
+    if (supp && !r.connected && !r.custom) return `
+    <div class="cred-row bare" data-cred="${esc(r.key)}">
+      ${tileHtml}
+      <span class="cred-id"><span class="cred-name">${esc(r.name)}</span></span>
+      <span class="cred-state">${mark("hold")}<span class="cred-stat mono"
+        >KEY SAVED &mdash; HIDDEN BY THIS DEV SESSION</span></span>
+      <span class="cred-acts"><span class="cred-fix mono"
+        >RESTART WITH <b>.\\dev.bat --keys</b></span></span>
+    </div>
+    <div class="cred-expand hidden" data-expand="${esc(r.key)}"></div>`;
     if (!r.connected && !r.custom) return `
     <div class="cred-row bare" data-cred="${esc(r.key)}">
       ${tileHtml}

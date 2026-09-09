@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -129,16 +130,47 @@ def utcnow() -> str:
 
 
 def _atomic_write_json(path: Path, data: Any) -> None:
+    """Write-then-rename, with the rename retried.
+
+    On Windows `os.replace` fails with PermissionError [WinError 5] if any
+    other handle has the DESTINATION open — including a reader merely
+    part-way through `read_text`. So a concurrent read did not return
+    stale data, which is the race everyone expects; it made the WRITE
+    fail, and the caller lost its save.
+
+    Found 2026-09-01 from an intermittent failure of the concurrency test
+    (about one full-suite run in five), then reproduced deterministically
+    at 8 threads: `next_counter` raised PermissionError three times in
+    2,400 allocations. Every one of those is a lost ID allocation or a
+    lost app-state save in a running studio.
+
+    A reader's handle lives for microseconds, so a bounded retry is the
+    whole fix — POSIX never enters the loop. It stays bounded: something
+    holding the file open for good must reach the caller as an error
+    rather than spin.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-        os.replace(tmp, path)
+            f.write(chr(10))
+        for attempt in range(_REPLACE_TRIES):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                if attempt == _REPLACE_TRIES - 1:
+                    raise
+                time.sleep(0.004 * (attempt + 1))
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+
+
+# ~140ms of retries in total: long enough to outlast any reader on this
+# machine, short enough that a genuinely locked file is still an error.
+_REPLACE_TRIES = 8
 
 
 def _read_json(path: Path, default: Any) -> Any:

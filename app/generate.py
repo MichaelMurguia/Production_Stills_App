@@ -185,6 +185,22 @@ def engine_credentials() -> dict:
     import os
     s = load_settings()
     tests = s.get("engine_tests", {})
+    # WHICH engines have a key on disk that this process is refusing to
+    # look at. `load_settings()` has already blanked them, so every reader
+    # downstream sees an install with no credential and says so — and the
+    # user is sent to Settings to add a key that is sitting there saved
+    # (2026-08-16 as a stale PASS badge; again 2026-09-01 as "my api key
+    # is not saving"). Reported per engine, so a row can say what is
+    # actually true of it rather than "Authenticate".
+    suppressed = set()
+    if os.environ.get("SCREENBOARD_NO_KEYS"):
+        raw = _raw_settings()
+        for pid, field in (("gemini", "gemini_api_key"),
+                           ("openai", "openai_api_key"),
+                           ("openai-chat", "openai_api_key"),
+                           ("anthropic", "anthropic_api_key")):
+            if str(raw.get(field, "")).strip():
+                suppressed.add(pid)
 
     def test_of(pid: str, configured: bool):
         t = tests.get(pid)
@@ -206,11 +222,14 @@ def engine_credentials() -> dict:
 
     eng = {
         "gemini": {"configured": bool(gemini_src), "source": gemini_src,
-                   "last_test": test_of("gemini", bool(gemini_src))},
+                   "last_test": test_of("gemini", bool(gemini_src)),
+                   "suppressed": "gemini" in suppressed},
         "openai": {"configured": bool(openai_src), "source": openai_src,
-                   "last_test": test_of("openai", bool(openai_src))},
+                   "last_test": test_of("openai", bool(openai_src)),
+                   "suppressed": "openai" in suppressed},
         "openai-chat": {"configured": bool(openai_src), "source": openai_src,
-                        "last_test": test_of("openai-chat", bool(openai_src))},
+                        "last_test": test_of("openai-chat", bool(openai_src)),
+                        "suppressed": "openai-chat" in suppressed},
     }
     if mock_enabled():
         # The debug dry-run engine: always "configured" while the toggle is
@@ -224,7 +243,12 @@ def engine_credentials() -> dict:
         # A narrative credential, carried in the same block and the same
         # honest-status grammar as the image engines.
         eng["anthropic"] = {"configured": True, "source": "settings",
-                            "last_test": tests.get("anthropic")}
+                            "last_test": tests.get("anthropic"),
+                            "suppressed": False}
+    elif "anthropic" in suppressed:
+        eng["anthropic"] = {"configured": False, "source": None,
+                            "last_test": test_of("anthropic", False),
+                            "suppressed": True}
     return eng
 
 
@@ -503,6 +527,22 @@ def _no_keys(settings: dict) -> dict:
     if not os.environ.get("SCREENBOARD_NO_KEYS"):
         return settings
     return _map_secrets(copy.deepcopy(settings), lambda _v: "")
+
+
+def _raw_settings() -> dict:
+    """Settings as stored, guard and decryption bypassed.
+
+    ONLY for asking "is there a key on disk that this process is hiding".
+    It must never be a way to read a credential the guard is refusing —
+    callers get the KEYS, never the values.
+    """
+    for p in (paths.SETTINGS, paths.HOME / "data" / "settings.json"):
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return {}
+    return {}
 
 
 def load_settings() -> dict:
