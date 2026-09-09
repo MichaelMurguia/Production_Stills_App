@@ -298,6 +298,14 @@ def capability() -> dict:
         },
         "any_credential": bool(
             [p for p in eng if p != "mock" and eng[p]["configured"]] or connected),
+        # The dev loop blanks stored credentials so a mis-click cannot
+        # spend (SCREENBOARD_NO_KEYS). Without this flag the app reports
+        # the same shape as a genuinely un-configured install, and every
+        # surface then tells the user to go and add the key they can see
+        # already saved in Settings — which is what happened
+        # (user, 2026-09-01: "I added key and cant access the screenplay
+        # tab"). A gate must name the condition it is actually enforcing.
+        "keys_suppressed": bool(os.environ.get("SCREENBOARD_NO_KEYS")),
     }
 
 

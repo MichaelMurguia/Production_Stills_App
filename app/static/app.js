@@ -1587,8 +1587,19 @@ const UNLOCK_NEED = { specs: 6, boards: 7, assembly: 8 };
 const UNLOCK_LINE = { specs: "THE MOMENT THE BIBLE IS SAVED",
                      boards: "THE MOMENT A SHEET LOCKS",
                      assembly: "THE MOMENT A PANEL IS APPROVED" };
-const NO_MODEL_SENTENCE = "Every stage runs on an AI model, and none is "
-  + "connected yet.";
+const NO_MODEL_SENTENCE = "Everything past the screenplay runs on an AI "
+  + "model, and none is connected yet.";
+/* The dev loop blanks stored credentials so a mis-click cannot spend, and
+   the app then looked exactly like an install with no key — so it sent
+   the user to Settings to add the key already sitting there saved (user,
+   2026-09-01: "I added key and cant access the screenplay tab"). A gate
+   names the condition it is ACTUALLY enforcing. */
+const KEYS_SUPPRESSED_SENTENCE = "Your key is saved, but this dev session "
+  + "is hiding it so a mis-click cannot spend. Restart with "
+  + "`.\\dev.bat --keys` to let renders through.";
+const noModelSentence = () =>
+  _bandState?.capability?.keys_suppressed
+    ? KEYS_SUPPRESSED_SENTENCE : NO_MODEL_SENTENCE;
 const NEED_SENTENCE = { specs: "Breakdowns need the Art Direction Bible.",
                        boards: "Panels need a locked breakdown.",
                        assembly: "Boards need approved panels." };
@@ -1618,7 +1629,7 @@ function lockPopover(stage) {
       <button class="bp-x" title="Dismiss (Esc)">×</button>
     </div>
     <p class="bp-sent">${esc(
-      required[0]?.stage === "settings" ? NO_MODEL_SENTENCE
+      required[0]?.stage === "settings" ? noModelSentence()
         : NEED_SENTENCE[stage] || "This stage's gate is upstream.")}
       <b>${COUNT_WORDS[n] || n} step${n === 1 ? "" : "s"} first.</b></p>
     <div class="bp-steps mono">
@@ -2220,12 +2231,24 @@ async function updateBand() {
   _bandState = state;
   const frontierIdx = STAGE_ORDER.indexOf(frontier);
   lockedStages = new Set(STAGE_ORDER.filter((s, i) => i > frontierIdx));
-  // User ruling 2026-08-18: with no model connected the whole pipeline
-  // waits. This is the APP's gate, not the walkthrough's — someone who
-  // skips the tour meets exactly the same wall, and the lock popover
-  // already explains itself and points at the remedy.
+  /* With no model connected the pipeline waits — EXCEPT stage 01
+     (user ruling 2026-08-18, amended by the user 2026-09-01).
+
+     The original rule locked every stage including the screenplay, and
+     that is a stage no engine is needed for: uploading a draft costs
+     nothing and spends nothing. The read costs a call, and the read has
+     its own gate. Locking the tab meant the app refused the one thing it
+     could have done for free, and refused it with a message about
+     something else.
+
+     What made that visible was the dev loop, which blanks stored
+     credentials so a mis-click cannot spend. The app then reported the
+     exact shape of an un-configured install and sent the user to Settings
+     — where their key was sitting, saved ("I added key and cant access
+     the screenplay tab"). */
   if (state.capability && !state.capability.any_credential) {
-    STAGE_ORDER.forEach(s2 => lockedStages.add(s2));
+    STAGE_ORDER.filter(s2 => s2 !== "screenplay")
+      .forEach(s2 => lockedStages.add(s2));
   }
 
   for (const stage of STAGE_ORDER) {
