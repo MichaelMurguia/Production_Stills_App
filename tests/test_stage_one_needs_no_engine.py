@@ -238,5 +238,73 @@ class AConcurrentReadNoLongerFailsTheWrite(unittest.TestCase):
         self.assertIn("except PermissionError:", src[i:i + 400])
 
 
+
+
+class ASuppressedInstallIsNotAFirstRunInstall(unittest.TestCase):
+    """User, 2026-09-01, after the row fix shipped: "same issues as
+    yesterday... the Authenticate section in settings does not indicate
+    that I am authenticated."
+
+    They were right and the row fix was in the wrong place. Settings has
+    TWO renderers: `renderFirstRun` (the "Connect to many models" setup
+    form) and the steady-state control panel, chosen by `anyCred`. The
+    guard makes `any_credential` false, so the page went to the setup form
+    — and the row taught to say "key saved, hidden" lives on the panel,
+    which never rendered.
+
+    Verified from the DOM rather than the source this time. That is how
+    the miss happened: the branch was present in the served file and I
+    read that as it being on screen."""
+
+    def test_the_page_asks_configured_or_suppressed(self):
+        i = JS.index("const engSupp = Object.values(settings.engines || {})")
+        seg = JS[i:i + 300]
+        self.assertIn("e && e.suppressed", seg)
+        self.assertIn("!!settings.capability?.any_credential || engSupp", seg)
+
+    def test_the_reason_is_recorded_at_the_flag(self):
+        """A later pass simplifying this back to `any_credential` puts the
+        setup form in front of a configured install again."""
+        i = JS.index("const engSupp = Object.values(settings.engines || {})")
+        seg = JS[max(0, i - 1000):i]
+        self.assertIn("not a first-run install", seg)
+
+    def test_a_genuinely_empty_install_still_gets_the_setup_form(self):
+        """`engSupp` is false when nothing is stored, so the first-run
+        branch is unchanged for the case it was built for."""
+        i = JS.index("const engSupp = Object.values(settings.engines || {})")
+        self.assertIn(".some(e => e && e.suppressed)", JS[i:i + 200])
+
+    def test_the_setup_form_and_the_panel_are_still_the_two_branches(self):
+        self.assertIn('$("#settings-firstrun").classList.toggle("hidden", anyCred)', JS)
+        self.assertIn('$("#settings-steady").classList.toggle("hidden", !anyCred)', JS)
+
+
+class TheBandSaysWhatIsMissingInTheUsersWords(unittest.TestCase):
+    """User, 2026-09-01: "tabs still say 'no engine' — that should be
+    'No AI Model'."
+
+    "Engine" is this codebase's word for a provider. What the reader has
+    to go and get is an AI model, which is what Settings calls it and what
+    the store sells."""
+
+    def test_the_band_chip_says_it(self):
+        i = JS.index('why.className = "no-engine-chip mono"')
+        self.assertIn('why.textContent = "NO AI MODEL"', JS[i:i + 400])
+
+    def test_nothing_user_facing_still_says_engine_configured(self):
+        self.assertNotIn("NO ENGINE", JS)
+
+    def test_every_place_that_said_it_says_the_same_thing_now(self):
+        """Four other sites carried the same sentence, and a fifth said
+        NO AI MODEL CONNECTED already. A band and a dropdown disagreeing
+        about the name of the missing thing is how one missing thing
+        reads as two."""
+        self.assertEqual(JS.count("NO AI MODEL"), 6)
+        for phrasing in ("NO AI MODEL — ADD A KEY IN SETTINGS",
+                         "NO AI MODEL — ADD A GEMINI OR OPENAI KEY IN SETTINGS"):
+            self.assertIn(phrasing, JS, phrasing)
+
+
 if __name__ == "__main__":
     unittest.main()

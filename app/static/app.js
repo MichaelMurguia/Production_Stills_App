@@ -1835,7 +1835,7 @@ async function fillProviderSelect(sel, labels) {
   if (!usable.length) {
     sel.innerHTML = failed.length
       ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
-      : `<option value="">NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS</option>`;
+      : `<option value="">NO AI MODEL — ADD A KEY IN SETTINGS</option>`;
     sel.disabled = true;
     sel.title = failed.length
       ? "Every configured key failed its last test — retest or replace it in Settings."
@@ -2271,7 +2271,11 @@ async function updateBand() {
       if (!why) {
         why = document.createElement("span");
         why.className = "no-engine-chip mono";
-        why.textContent = "NO ENGINE";
+        // "ENGINE" is our word, not the user's (2026-09-01). What is
+        // missing is an AI MODEL, which is what Settings calls it, what
+        // the store sells, and what the person reading the band actually
+        // has to go and get.
+        why.textContent = "NO AI MODEL";
         $(".stage-top", btn)?.append(why);
       }
     } else why?.remove();
@@ -3944,7 +3948,21 @@ async function renderSettings(openTab = "") {
   // copy of "does this install have a credential", and a copy of that
   // question is how a keyless studio showed a control panel here and a
   // setup form elsewhere.
-  const anyCred = !!settings.capability?.any_credential;
+  /* An install whose keys this process is merely REFUSING TO LOOK AT is
+     not a first-run install. The dev loop blanks stored credentials so a
+     mis-click cannot spend, `any_credential` goes false, and this page
+     flipped to the setup form — so the user met "Connect to many models"
+     and a row of Authenticate buttons for an account they had already
+     connected, and connected it again (2026-09-01, twice).
+
+     Yesterday's fix taught the CONTROL PANEL's rows to say a key is
+     hidden. It never showed, because this flag sends the whole page to
+     the other branch first. Configured-or-suppressed is the honest
+     question: has this install got credentials, whatever this process
+     can see of them. */
+  const engSupp = Object.values(settings.engines || {})
+    .some(e => e && e.suppressed);
+  const anyCred = !!settings.capability?.any_credential || engSupp;
   $("#settings-firstrun").classList.toggle("hidden", anyCred);
   $("#settings-steady").classList.toggle("hidden", !anyCred);
   if (!anyCred) renderFirstRun();
@@ -4863,7 +4881,7 @@ async function renderWizard() {
     $("#wiz-draft").disabled = true;
     $("#wiz-draft").title = "Add a Gemini or OpenAI key in Settings first.";
     $("#wiz-analyze-lock").textContent =
-      "NO ENGINE CONFIGURED — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
+      "NO AI MODEL — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
   }
 
   // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
@@ -5326,7 +5344,7 @@ async function renderWizard() {
       host.innerHTML = [1, 2, 3].map(() => `
         <div class="wiz-col">
           <div class="wiz-col-head"><span class="f-label">&mdash;</span></div>
-          <p class="mini">NO ENGINE CONFIGURED &mdash; add a Gemini or
+          <p class="mini">NO AI MODEL &mdash; add a Gemini or
           OpenAI key in Settings and this slot names itself.</p>
         </div>`).join("");
       return;
@@ -12199,7 +12217,7 @@ const providerOptions = (settings, selected) => {
   if (!usable.length) {
     return `<option value="">${failed.length
       ? "KEY FAILED ITS TEST — RETEST IN SETTINGS"
-      : "NO ENGINE CONFIGURED — ADD A KEY IN SETTINGS"}</option>`;
+      : "NO AI MODEL — ADD A KEY IN SETTINGS"}</option>`;
   }
   const sel = (selected === "mock" && settings.engines?.mock?.configured) ? "mock"
     : usable.some(([v]) => v === selected) ? selected : usable[0][0];
