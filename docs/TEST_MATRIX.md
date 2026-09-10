@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2654 tests** across 137 files.
+**2660 tests** across 137 files.
 
 
-## Product app — 2433 tests in 120 files
+## Product app — 2439 tests in 120 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -122,7 +122,7 @@ temp home and external services are faked.
 | `test_screenplay_two_copies.py` | 6 | Two copies of the screenplay, and only one of them costs money (user rule, 2026-08-16). |
 | `test_secrets_at_rest.py` | 30 | Credentials are wrapped on disk, and the app never lies about whether. |
 | `test_sheet.py` | 70 | The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7, amended by the Lookbook rollback 2026-08-12): the size ladder with the R1 elastic/fixed rulin |
-| `test_stage_one_needs_no_engine.py` | 25 | Uploading a screenplay costs nothing, so it does not wait for a key. |
+| `test_stage_one_needs_no_engine.py` | 31 | Uploading a screenplay costs nothing, so it does not wait for a key. |
 | `test_stamp_reports_what_was_sent.py` | 11 | A take's framing badge must describe the text that was SENT. |
 | `test_step_numbers.py` | 9 | Copy that names a wizard step names the right one. |
 | `test_step_sequence.py` | 60 | The step sequence — STEP_SEQUENCE_SPEC_2026-08-14, mock hier-4a. |

@@ -2245,7 +2245,13 @@ async function updateBand() {
      credentials so a mis-click cannot spend. The app then reported the
      exact shape of an un-configured install and sent the user to Settings
      — where their key was sitting, saved ("I added key and cant access
-     the screenplay tab"). */
+     the screenplay tab").
+
+     THIS UNLOCKED THE TAB AND NOTHING ELSE. Three surfaces still refuse
+     the upload itself on the same fact — the Status lead, the screenplay
+     form's file input, and POST /api/screenplay's 423 — so stage 01 is
+     reachable and inert until someone rules on whether a draft may land
+     un-read. Listed in CLAUDE.md → "The dev key-guard", Known open. */
   if (state.capability && !state.capability.any_credential) {
     STAGE_ORDER.filter(s2 => s2 !== "screenplay")
       .forEach(s2 => lockedStages.add(s2));
@@ -2271,10 +2277,17 @@ async function updateBand() {
       if (!why) {
         why = document.createElement("span");
         why.className = "no-engine-chip mono";
-        // "ENGINE" is our word, not the user's (2026-09-01). What is
-        // missing is an AI MODEL, which is what Settings calls it, what
-        // the store sells, and what the person reading the band actually
-        // has to go and get.
+        /* "ENGINE" is our word, not the user's (2026-09-01). What is
+           missing is an AI MODEL, which is what Settings calls it, what
+           the store sells, and what the person reading the band actually
+           has to go and get.
+
+           This chip is TRUE while the dev key-guard is on, even with a
+           key saved — no model can run in that process. It reading NO AI
+           MODEL beside a Settings row reading KEY SAVED is not a
+           contradiction; it is two halves of one fact, and the remedy is
+           `.\dev.bat --keys`. Four sessions were spent on that
+           confusion; CLAUDE.md → "The dev key-guard" holds the map. */
         why.textContent = "NO AI MODEL";
         $(".stage-top", btn)?.append(why);
       }
@@ -2338,11 +2351,18 @@ async function renderStatus() {
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
-  // The verb IS the form — but only where the form can be used. Since the
-  // user's 2026-08-18 ruling the upload is locked until a model is
-  // connected, so a lead reading "Upload the screenplay" above a disabled
-  // control would be naming an act the studio refuses. With no engine the
-  // lead falls through to the promoted blocker, which is the credential.
+  /* The verb IS the form — but only where the form can be used. Since the
+     user's 2026-08-18 ruling the upload is locked until a model is
+     connected, so a lead reading "Upload the screenplay" above a disabled
+     control would be naming an act the studio refuses. With no engine the
+     lead falls through to the promoted blocker, which is the credential.
+
+     ONE OF THREE PLACES that refuse the upload without a credential; the
+     others are the screenplay form (`noEngine`, look for the up-gate) and
+     `POST /api/screenplay`, which answers 423. Change one and the app
+     disagrees with itself. The 2026-09-01 amendment unlocked stage 01's
+     TAB and stopped there, so the stage is reachable and these three
+     still refuse — see CLAUDE.md → "The dev key-guard", Known open. */
   const canUpload = state.capability ? !!state.capability.any_credential : true;
   if (!state.screenplay && canUpload) {
     // The verb IS the form (user ruling 2026-08-01): never a button whose
@@ -3295,9 +3315,16 @@ async function startTheRead() {
 function bindScreenplayUpload(form, cap = null) {
   // Gate readable as state: the verb stays disabled, with the condition
   // stated, until a file is actually chosen — and, since the user's
-  // 2026-08-18 ruling, until an AI model is connected. The read starts
-  // the moment the draft lands and the read needs an engine, so taking
-  // the file first would be accepting work the studio cannot begin.
+  /* 2026-08-18 ruling, until an AI model is connected. The read starts
+     the moment the draft lands and the read needs an engine, so taking
+     the file first would be accepting work the studio cannot begin.
+
+     TWO of three — the Status lead gates on the same fact, and
+     `POST /api/screenplay` answers 423. The server is the one that
+     matters; these two exist so the refusal reads as state before it is
+     hit rather than as an error after. See CLAUDE.md → "The dev
+     key-guard" for the full map and for what the 2026-09-01 amendment
+     left unfinished. */
   const input = $('input[type="file"]', form);
   const submit = $('button[type="submit"]', form);
   const noEngine = cap ? !cap.any_credential : false;

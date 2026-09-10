@@ -516,6 +516,25 @@ def _map_secrets(settings: dict, fn) -> dict:
 def _no_keys(settings: dict) -> dict:
     """Honour SCREENBOARD_NO_KEYS by blanking every stored credential.
 
+    ┌─ READ THIS BEFORE DIAGNOSING A CREDENTIAL ─────────────────────────┐
+    │ This is the single most misleading thing in the codebase. It makes │
+    │ a FULLY CONFIGURED install indistinguishable from an empty one,    │
+    │ and has produced the same false diagnosis on three separate days:  │
+    │ 2026-08-16 ("not connecting to GPT auth even though tests ok"),    │
+    │ 2026-08-31, 2026-09-01 ("my api key is not saving"). The key was   │
+    │ saved every time.                                                  │
+    │                                                                    │
+    │ Ask the app, do not read the file and do not guess:                │
+    │   curl -s localhost:8080/api/state | grep -o '"keys_suppressed":[a-z]*'
+    │                                                                    │
+    │ Every surface this changes is listed in CLAUDE.md → "The dev       │
+    │ key-guard". Fixing one of them is not fixing the symptom — that    │
+    │ mistake was made on 2026-09-01, when a credential row was taught   │
+    │ to say "key saved, hidden" and never rendered because `anyCred`    │
+    │ sends the page to a different renderer first.                      │
+    └────────────────────────────────────────────────────────────────────┘
+
+
     The dev loop promises "it blanks the API keys — a dev loop that can
     spend money on a mis-click is not a dev loop", and it kept that promise
     only for the ENVIRONMENT. Stored settings win over the environment

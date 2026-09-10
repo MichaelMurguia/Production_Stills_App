@@ -834,6 +834,17 @@ async def api_upload_screenplay(file: UploadFile = File(...)) -> dict:
     # be taking work the studio cannot start. 423 is the app's gate status
     # (the same one the production-design gate uses), and the UI states
     # this as state before anyone reaches it.
+    #
+    # THE authority of the three: the Status lead and the screenplay
+    # form's file input mirror this refusal so it reads as state, but this
+    # is the one that enforces it.
+    #
+    # NOT YET AMENDED. On 2026-09-01 the user ruled that stage 01 no
+    # longer waits for a credential — uploading spends nothing, the READ
+    # spends. That unlocked the TAB. Finishing it means accepting a draft
+    # that then sits un-read, which is a product decision nobody has made,
+    # so this still refuses. Raise it rather than quietly relaxing it.
+    # CLAUDE.md → "The dev key-guard" carries the full map.
     if not generate.capability()["any_credential"]:
         raise HTTPException(423, "Connect an AI model first — Settings → AI "
                                  "& engines. The screenplay is read the "

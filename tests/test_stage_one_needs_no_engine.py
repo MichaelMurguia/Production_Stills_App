@@ -290,7 +290,10 @@ class TheBandSaysWhatIsMissingInTheUsersWords(unittest.TestCase):
 
     def test_the_band_chip_says_it(self):
         i = JS.index('why.className = "no-engine-chip mono"')
-        self.assertIn('why.textContent = "NO AI MODEL"', JS[i:i + 400])
+        # Bounded on the assignment, not a character count — the comment
+        # above it grew when the guard was documented (2026-09-10).
+        self.assertIn('why.textContent = "NO AI MODEL"',
+                      JS[i:JS.index('$(".stage-top", btn)', i)])
 
     def test_nothing_user_facing_still_says_engine_configured(self):
         self.assertNotIn("NO ENGINE", JS)
@@ -304,6 +307,80 @@ class TheBandSaysWhatIsMissingInTheUsersWords(unittest.TestCase):
         for phrasing in ("NO AI MODEL — ADD A KEY IN SETTINGS",
                          "NO AI MODEL — ADD A GEMINI OR OPENAI KEY IN SETTINGS"):
             self.assertIn(phrasing, JS, phrasing)
+
+
+
+
+class TheGuardsMapStaysTrue(unittest.TestCase):
+    """CLAUDE.md → "The dev key-guard" carries a table of every surface
+    the guard changes. It exists because fixing ONE of them is not fixing
+    the symptom — that mistake was made twice — so a row naming a reader
+    that no longer exists is worse than no table at all.
+
+    Written 2026-09-10, after the same false diagnosis on three separate
+    days."""
+
+    DOC = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+
+    READERS = {
+        "Nav band stage locks": 'STAGE_ORDER.filter(s2 => s2 !== "screenplay")',
+        "Lock popover sentence": "_bandState?.capability?.keys_suppressed",
+        "Band stage chip": 'why.textContent = "NO AI MODEL"',
+        "Settings page branch": "|| engSupp",
+        "A credential row": "KEY SAVED &mdash; HIDDEN BY THIS DEV SESSION",
+        "Engine test badge": "NO KEY HERE — LAST TEST",
+        'Status "do this next"': "const canUpload = state.capability",
+        "Screenplay upload form": "const noEngine = cap ? !cap.any_credential : false",
+    }
+
+    def table(self):
+        i = self.DOC.index("### Every surface the guard changes")
+        body = self.DOC[i:self.DOC.index("**Known open", i)]
+        return [r.split("|")[1].strip() for r in body.splitlines()
+                if r.startswith("| ") and "---" not in r][1:]
+
+    def test_every_documented_surface_still_exists(self):
+        for name in self.table():
+            if name == "`POST /api/screenplay`":
+                py = (ROOT / "app/main.py").read_text(encoding="utf-8")
+                self.assertIn('if not generate.capability()["any_credential"]', py)
+                continue
+            needle = self.READERS.get(name)
+            self.assertIsNotNone(needle, f"undocumented row: {name}")
+            self.assertIn(needle, JS, name)
+
+    def test_no_surface_is_missing_from_the_table(self):
+        """The other direction: a new reader of the guard that nobody
+        listed is exactly how this went wrong."""
+        self.assertEqual(len(self.table()), 9)
+
+    def test_the_one_command_it_tells_you_to_run_returns_the_field(self):
+        self.assertIn("keys_suppressed", self.DOC)
+        i = generate.capability()
+        self.assertIn("keys_suppressed", i)
+
+    def test_the_origin_carries_the_warning(self):
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        i = gen.index("def _no_keys(")
+        seg = gen[i:i + 2000]
+        self.assertIn("READ THIS BEFORE DIAGNOSING A CREDENTIAL", seg)
+        self.assertIn("keys_suppressed", seg)
+
+    def test_the_three_upload_gates_point_at_each_other(self):
+        """They enforce one rule across two files. Changing one alone
+        makes the app disagree with itself."""
+        py = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn("ONE OF THREE PLACES that refuse the upload", JS)
+        self.assertIn("TWO of three", JS)
+        self.assertIn("THE authority of the three", py)
+
+    def test_the_unfinished_amendment_is_recorded_in_both_places(self):
+        """Stage 01's tab was unlocked and the upload was not. A later
+        pass must find that stated, not rediscover it."""
+        py = (ROOT / "app/main.py").read_text(encoding="utf-8")
+        self.assertIn("Known open, ruled but not finished", self.DOC)
+        self.assertIn("NOT YET AMENDED", py)
+        self.assertIn("THIS UNLOCKED THE TAB AND NOTHING ELSE", JS)
 
 
 if __name__ == "__main__":

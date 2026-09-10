@@ -175,6 +175,64 @@ live-tenant fix, anything touching `storefront/` or billing. Those get
 top of the pending list, with one line on what a deploy would settle.
 The user decides when. If a push feels urgent, say so and wait.
 
+## The dev key-guard — check this BEFORE diagnosing a credential
+
+`.\dev.bat` sets `SCREENBOARD_NO_KEYS=1`, and `generate._no_keys()` honours
+it by blanking every stored credential **for that process**. The file is
+never touched. A dev loop that can spend money on a mis-click is not a dev
+loop, and `--keys` opts back in.
+
+**The cost of this guard is that a fully configured install becomes
+indistinguishable from an empty one**, and it has now produced the same
+false diagnosis on three separate days (2026-08-16, 2026-08-31,
+2026-09-01) — "my key is not saving", "it is not connecting to GPT auth
+even though tests ok before". The key was saved every time.
+
+**First move when a credential looks wrong — one command, no guessing:**
+
+```bash
+curl -s localhost:8080/api/state | grep -o '"keys_suppressed":[a-z]*'
+```
+
+`true` means the key is fine and this process is refusing to look at it.
+Do not read the settings file, do not re-add the key, do not conclude the
+save path is broken. Say so and offer `.\dev.bat --keys`.
+
+### Every surface the guard changes
+
+Fixing one of these is not fixing the symptom. The whole list:
+
+| Surface | Reads | Shows when suppressed |
+|---|---|---|
+| Nav band stage locks | `any_credential` | 02–05 locked; 01 stays open (2026-09-01) |
+| Lock popover sentence | `keys_suppressed` | "Your key is saved, but this dev session is hiding it" |
+| Band stage chip | `any_credential` | `NO AI MODEL` |
+| Settings page branch | `any_credential` **or** any `engines[*].suppressed` | the control panel, NOT the setup form |
+| A credential row | `engines[pid].suppressed` | `KEY SAVED — HIDDEN BY THIS DEV SESSION` |
+| Engine test badge | `last_test.stale` | `NO KEY HERE — LAST TEST <date>` |
+| Status "do this next" | `any_credential` | falls through to the credential blocker |
+| Screenplay upload form | `any_credential` | **file input disabled** |
+| `POST /api/screenplay` | `any_credential` | **423** |
+
+**Known open, ruled but not finished** (2026-09-01): the user amended the
+2026-08-18 "whole pipeline waits" rule so stage 01 no longer locks —
+uploading spends nothing, the READ spends. The tab opens; the last three
+rows above still refuse the upload, so the stage is reachable and inert.
+Finishing it means letting a draft land un-read, which is a product
+decision the user has not made. Raise it; do not quietly change the 423.
+
+### Verifying a fix to any of these
+
+**Read the DOM, not the source.** A branch present in the served file is
+not a branch that renders. On 2026-09-01 a row fix was reported as done on
+the strength of `grep` finding it in `app.js` — and it never appeared,
+because `anyCred` sends the whole page to a different renderer first.
+`/design-verify` exists for this; at minimum, attach to the page and print
+what the element actually says.
+
+(And when attaching over CDP on this machine, pick the target whose URL
+is the app — Edge's first `page` target is a sync dialog.)
+
 ## Testing — you own this
 
 Two suites, both green before any push:
