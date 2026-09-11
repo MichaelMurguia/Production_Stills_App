@@ -2527,7 +2527,7 @@ async function renderScreenplay() {
       <div class="fact"><span>UPLOADED</span><b>${esc(up)}</b></div>
       <div class="fact" data-f="read"><span>READ</span><b>—</b></div>
       <div class="row" style="margin-top:10px">
-        <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — yours to read, never sent to a model">Read the screenplay</button>
+        <button class="ghost" data-f="read-script" title="Open the original uploaded file in a new tab — yours to read, never sent to a model">Open screenplay</button>
       </div>`;
     $("[data-f=read-script]").onclick = () =>
       window.open("/api/screenplay/file", "_blank");

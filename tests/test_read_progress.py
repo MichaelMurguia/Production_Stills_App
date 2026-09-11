@@ -535,5 +535,44 @@ class TheStageWaitsForTheRead(unittest.TestCase):
     def test_it_honours_reduced_motion(self):
         self.assertIn(".stage-in { animation: none; }", self.CSS)
 
+
+
+class ReadIsWhatTheModelDoes(unittest.TestCase):
+    """User, 2026-09-11, pointing at the stage-01 button: "Open
+    Screenplay".
+
+    "Read" is this app's word for what a MODEL does to a draft — the pass
+    that spends money and produces the findings, and the thing the whole
+    reading surface is named after. The button beside it opens the file
+    for the director, which costs nothing and involves no model. One verb
+    for two acts, and the expensive one loses by being the less obvious
+    reading."""
+
+    JS = (STATIC / "app.js").read_text(encoding="utf-8")
+
+    def test_the_file_opens_rather_than_being_read(self):
+        i = self.JS.index('data-f="read-script"')
+        seg = self.JS[i:i + 400]
+        self.assertIn(">Open screenplay<", seg)
+        self.assertNotIn(">Read the screenplay<", seg)
+
+    def test_every_door_to_the_file_says_the_same_thing(self):
+        """Three buttons open the upload. They disagreed."""
+        self.assertEqual(self.JS.count("Open screenplay"), 3)
+        self.assertNotIn("Read the screenplay<", self.JS)
+
+    def test_it_still_says_the_file_never_reaches_a_model(self):
+        """The title is the one place the token-cost rule is stated on
+        this control."""
+        i = self.JS.index('data-f="read-script"')
+        self.assertIn("never sent to a model", self.JS[i:i + 400])
+
+    def test_the_model_pass_keeps_the_word(self):
+        """Nothing else may take it: the stage-01 surface is still the
+        read, and its phases still say so."""
+        self.assertIn("Reading the draft", self.JS)
+        self.assertIn('IS READING —', self.JS)
+
+
 if __name__ == "__main__":
     unittest.main()
