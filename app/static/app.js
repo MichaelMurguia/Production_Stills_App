@@ -7942,6 +7942,10 @@ async function renderWizard() {
       const col = $(`.wiz-col[data-role="${ANCHOR_ROLE[field]}"]`);
       const hero = col && $("[data-f=hero]", col);
       if (!hero || !p) continue;
+      // Never over an anchor that is already answered. This is the rule
+      // `anySet` was reaching for, in the one place that can apply it to
+      // the right card.
+      if ($(ANCHOR_FIELD[field])?.value.trim()) continue;
       n += 1;
       wizProposals[ANCHOR_ROLE[field]] = p;
       const box = document.createElement("div");
@@ -8020,12 +8024,25 @@ async function renderWizard() {
       hideTakeover();
     }
   };
-  /* Only where there is something to read and nothing already chosen.
-     An anchor the director set is never overwritten by a guess. */
-  {
-    const anySet = ["#wiz-texture", "#wiz-light", "#wiz-medium"]
-      .some(id => $(id)?.value.trim());
-    if (state.screenplay && !anySet) runSuggest(false);
+  /* An anchor the director set is never overwritten by a guess — but
+     that was enforced with `anySet`, and ANY was the bug (user,
+     2026-09-11: "why did cinematography and Board Rendering get
+     unset?").
+
+     They were never set. Accepting the texture proposal made `anySet`
+     true, so the next render skipped the suggestion entirely and the
+     other two proposals — already paid for, sitting in the server's cache
+     — simply stopped being offered. Their cards fell back to "Not set",
+     which reads as something having been taken away.
+
+     Per anchor now: propose while ANY of the three is still empty, and
+     showProposals skips the ones that are not. Same rule, applied where
+     it belongs. The call is cached per screenplay, so this re-offers
+     without spending. */
+  if (state.screenplay
+      && ["#wiz-texture", "#wiz-light", "#wiz-medium"]
+           .some(id => !$(id)?.value.trim())) {
+    runSuggest(false);
   }
 
   const bindPicker = (id, styles, opts) => {

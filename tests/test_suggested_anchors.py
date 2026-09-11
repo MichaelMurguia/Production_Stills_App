@@ -176,14 +176,20 @@ class AProposalIsNotAnAnswer(unittest.TestCase):
         i = JS.index("const runSuggest =")
         self.assertIn("setTimeout(showTakeover, 400)", JS[i:i + 400])
 
-    def test_it_runs_on_arrival_but_only_with_nothing_chosen(self):
+    def test_it_runs_on_arrival_while_any_anchor_is_unanswered(self):
         """User-directed 2026-08-29: "it did not auto-populate the anchors
-        and it should". An anchor the director set is never overwritten by
-        a guess, so it runs only when all three are empty."""
-        i = JS.index("const anySet =")
-        seg = JS[i:i + 400]
-        self.assertIn("state.screenplay && !anySet", seg)
+        and it should".
+
+        It ran only when ALL THREE were empty, which meant accepting one
+        proposal discarded the other two (amended 2026-09-11). The rule it
+        was protecting — never overwrite an anchor the director set — now
+        lives in showProposals, per card."""
+        i = JS.index("An anchor the director set is never overwritten")
+        seg = JS[i:JS.index("const bindPicker", i)]
+        self.assertIn("state.screenplay", seg)
+        self.assertIn(".some(id => !$(id)?.value.trim())", seg)
         self.assertIn("runSuggest(false)", seg)
+        self.assertIn("if ($(ANCHOR_FIELD[field])?.value.trim()) continue;", JS)
 
     def test_the_automatic_pass_does_not_shout_a_gate(self):
         """Arriving at a tab is not asking for a model call. Pressing the
@@ -268,6 +274,53 @@ class ColourLeftStepOne(unittest.TestCase):
     def test_the_step_badge_counts_what_the_step_shows(self):
         i = JS.index("const roles = AUTO_ATTACH_HEADS")
         self.assertIn('filter(r => r !== "COLOR_PALETTE")', JS[i:i + 200])
+
+
+
+
+class AcceptingOneDoesNotDiscardTheRest(unittest.TestCase):
+    """User, 2026-09-11: "Why did cinematography and Board Rendering get
+    unset?"
+
+    They were never set. The activity log holds exactly ONE interview
+    write, and it wrote texture alone.
+
+    Accepting the texture proposal made `anySet` true, so the next render
+    skipped the suggestion entirely — and the other two proposals, already
+    paid for and sitting in the server's cache, stopped being offered.
+    Their cards fell back to "Not set", which reads as something having
+    been taken away.
+
+    "An anchor the director set is never overwritten by a guess" was the
+    right rule applied at the wrong grain: ANY, where it needed to be
+    EACH."""
+
+    def test_it_proposes_while_any_anchor_is_still_empty(self):
+        i = JS.index("An anchor the director set is never overwritten")
+        seg = JS[i:JS.index("const bindPicker", i)]
+        self.assertIn('.some(id => !$(id)?.value.trim())', seg)
+        self.assertNotIn("const anySet =", seg)
+
+    def test_a_set_anchor_is_still_never_proposed_over(self):
+        """The rule the old guard was reaching for, applied to the card it
+        is actually about."""
+        i = JS.index("const showProposals =")
+        seg = JS[i:i + 1400]
+        self.assertIn("if ($(ANCHOR_FIELD[field])?.value.trim()) continue;", seg)
+
+    def test_re_offering_does_not_spend(self):
+        """It is the same cached call — one read per draft, keyed on the
+        screenplay's sha."""
+        src = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        i = src.index("def suggest_anchors(")
+        seg = src[i:i + 2200]
+        self.assertIn('if not force and sha and cache.get("sha256") == sha:', seg)
+        self.assertIn('return {**cache["result"], "cached": True}', seg)
+
+    def test_the_reason_is_recorded_where_the_guard_was(self):
+        i = JS.index("An anchor the director set is never overwritten")
+        seg = JS[i:i + 1200]
+        self.assertIn("ANY was the bug", seg)
 
 
 if __name__ == "__main__":
