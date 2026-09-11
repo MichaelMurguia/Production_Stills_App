@@ -5648,6 +5648,21 @@ async function renderWizard() {
 
   let wizProposals = {};
 
+  /* An anchor has been answered — end any proposal standing on it.
+
+     Accepting a proposal did this; picking from the CATALOGUE did not, so
+     the overlay stayed on top of the card at z-index 3 and the pick was
+     invisible underneath it. The card looked untouched and still offered
+     "Use this" for a different style (user, 2026-09-11: "selected
+     cinematography style and said use this and nothing changed").
+
+     Two doors answer an anchor. Both end the proposal. */
+  const anchorAnswered = (role) => {
+    delete wizProposals[role];
+    $(`.wiz-col[data-role="${CSS.escape(role)}"] .ah-prop`)?.remove();
+    refreshRefs();
+  };
+
   const refreshRefs = async () => {
     // Pending swatch proposals live in the review strip, not the anchor
     // rows (D8: they persist as PROVISIONAL refs so verdicts are records).
@@ -7965,16 +7980,14 @@ async function renderWizard() {
           fld.dispatchEvent(new Event("change", { bubbles: true }));
         }
         box.remove();
-        delete wizProposals[ANCHOR_ROLE[field]];
-        refreshRefs();
+        anchorAnswered(ANCHOR_ROLE[field]);
         toast(`${p.name} set — it rides every render from here.`);
       };
       // Dismissing gives the card back its empty state honestly — the
       // picture went with the proposal, because it WAS the proposal.
       $("[data-f=drop]", box).onclick = () => {
         box.remove();
-        delete wizProposals[ANCHOR_ROLE[field]];
-        refreshRefs();
+        anchorAnswered(ANCHOR_ROLE[field]);
       };
       hero.parentElement.style.position = "relative";
       hero.append(box);
@@ -8101,6 +8114,9 @@ async function renderWizard() {
       onPick: v => {
         field.value = v; sync();
         saveInterview(); wizardStepBadges(); syncAnchorBadges();
+        // The other door. Without this the proposal kept covering the
+        // card the pick had just changed.
+        if (opts.uploadRole) anchorAnswered(opts.uploadRole);
       },
       });
     };

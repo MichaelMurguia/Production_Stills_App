@@ -266,8 +266,11 @@ class AProposalShowsTheLookItProposes(unittest.TestCase):
 
     def test_both_answers_end_the_proposal_and_repaint(self):
         seg = between("const showProposals =", "const showTakeover =")
-        self.assertEqual(seg.count("delete wizProposals[ANCHOR_ROLE[field]];"), 2)
-        self.assertEqual(seg.count("refreshRefs();"), 3, "use, dismiss, and first paint")
+        # Both go through `anchorAnswered`, which deletes the proposal,
+        # removes the overlay and repaints — one function, since a
+        # catalogue pick has to do exactly the same thing (2026-09-11).
+        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 2)
+        self.assertEqual(seg.count("refreshRefs();"), 1, "the first paint")
 
 
 class TheHouseSlotKeepsItsPhotographs(unittest.TestCase):

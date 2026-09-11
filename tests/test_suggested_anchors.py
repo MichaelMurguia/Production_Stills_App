@@ -211,8 +211,9 @@ class AProposalIsNotAnAnswer(unittest.TestCase):
         i = JS.index("const showProposals =")
         seg = JS[i:JS.index("const showTakeover =", i)]
         self.assertIn('$("[data-f=drop]", box).onclick = () => {', seg)
-        self.assertIn("delete wizProposals[ANCHOR_ROLE[field]];", seg)
-        self.assertEqual(seg.count("delete wizProposals[ANCHOR_ROLE[field]];"), 2,
+        # Both doors call the one function that ends a proposal — the
+        # catalogue pick is a third caller, outside this block (2026-09-11).
+        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 2,
                          "accepting ends the proposal too")
 
     def test_a_proposal_is_hold_and_never_amber(self):
@@ -321,6 +322,57 @@ class AcceptingOneDoesNotDiscardTheRest(unittest.TestCase):
         i = JS.index("An anchor the director set is never overwritten")
         seg = JS[i:i + 1200]
         self.assertIn("ANY was the bug", seg)
+
+
+
+
+class EitherDoorEndsTheProposal(unittest.TestCase):
+    """User, 2026-09-11: "selected cinematography style and said 'use
+    this' and nothing changed."
+
+    Two doors answer an anchor: accepting the proposal, and picking from
+    the catalogue. Only the first ended the proposal. So a catalogue pick
+    saved correctly and then stayed INVISIBLE — `.ah-prop` sits at
+    z-index 3 and went on covering the card, still offering "Use this" for
+    a different style than the one just chosen.
+
+    (The picker's own confirm button is also labelled "Use this", which is
+    what makes the report read as the proposal's button failing.)"""
+
+    def test_one_function_ends_a_proposal(self):
+        self.assertEqual(JS.count("const anchorAnswered = (role) => {"), 1)
+        i = JS.index("const anchorAnswered = (role) => {")
+        seg = JS[i:i + 400]
+        self.assertIn("delete wizProposals[role];", seg)
+        self.assertIn(".ah-prop`)?.remove();", seg)
+        self.assertIn("refreshRefs();", seg)
+
+    def test_accepting_uses_it(self):
+        i = JS.index('$("[data-f=use]", box).onclick')
+        self.assertIn("anchorAnswered(ANCHOR_ROLE[field]);", JS[i:i + 600])
+
+    def test_dismissing_uses_it(self):
+        i = JS.index('$("[data-f=drop]", box).onclick')
+        self.assertIn("anchorAnswered(ANCHOR_ROLE[field]);", JS[i:i + 400])
+
+    def test_the_catalogue_pick_uses_it_too(self):
+        """The door that did not, and the whole of this bug."""
+        i = JS.index("      onPick: v => {")
+        seg = JS[i:i + 600]
+        self.assertIn("if (opts.uploadRole) anchorAnswered(opts.uploadRole);", seg)
+
+    def test_a_pick_still_saves_and_repaints_as_it_did(self):
+        i = JS.index("      onPick: v => {")
+        seg = JS[i:i + 600]
+        for kept in ("field.value = v; sync();", "saveInterview()",
+                     "wizardStepBadges()", "syncAnchorBadges()"):
+            self.assertIn(kept, seg, kept)
+
+    def test_the_overlay_is_what_made_it_invisible(self):
+        """It is the reason a saved pick looked like nothing happening."""
+        b = CSS.split(chr(10) + ".ah-prop {")[1].split("}")[0]
+        self.assertIn("z-index: 3", b)
+        self.assertIn("position: absolute", b)
 
 
 if __name__ == "__main__":
