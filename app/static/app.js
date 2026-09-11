@@ -5657,6 +5657,25 @@ async function renderWizard() {
      cinematography style and said use this and nothing changed").
 
      Two doors answer an anchor. Both end the proposal. */
+  /* The recommendation the READ produced for this name.
+
+     The read returns a subtitle and a page of traits for every subject it
+     finds — "WARRANTY. STRIKE LEAD. RULE-BREAKER." and four observed
+     details, for 24 subjects on this draft. Both casting doors were
+     rebuilding a bare {name, kind} from the tile's data attributes and
+     throwing all of it away, so the modal opened blank and the card was
+     cast with nothing on it (user, 2026-09-11: "the screenplay read
+     should get all these character profiles — why is the character
+     information not populated?"). It had them. We dropped them.
+
+     By name, because that is what a tile can carry and what the read
+     keys on; `uncastRecommendations` is the same list the tiles were
+     built from moments earlier. */
+  const recFor = (name, kind, subjects) =>
+    uncastRecommendations(subjects)
+      .find(r => String(r.name).toLowerCase() === String(name).toLowerCase())
+    || { name, kind: kind || "CHARACTER", subtitle: "", traits: [] };
+
   const anchorAnswered = (role) => {
     delete wizProposals[role];
     $(`.wiz-col[data-role="${CSS.escape(role)}"] .ah-prop`)?.remove();
@@ -5941,8 +5960,7 @@ async function renderWizard() {
     // point of the row.
     const rib = $("[data-f=ribbon]", host);
     $$("[data-uncast]", rib).forEach(b => b.onclick = () =>
-      castModal({ name: b.dataset.uncast, kind: b.dataset.kind,
-                  subtitle: "", traits: [] }, refreshCast));
+      castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast));
     $$("[data-sid]", rib).forEach(b => b.onclick = () => {
       castOpen = b.dataset.sid;
       document.body.dataset.cast = "1";
@@ -6069,8 +6087,7 @@ async function renderWizard() {
     // One path, not two: a chip and the manual field open the same modal
     // the shelf already uses.
     $$("[data-uncast]", host).forEach(b => b.onclick = () =>
-      castModal({ name: b.dataset.uncast, kind: b.dataset.kind,
-                  subtitle: "", traits: [] }, refreshCast));
+      castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast));
     /* Bulk casting came here with the uncast list (§3.4 puts ONE list on
        this screen; there were two, on two surfaces, with two manual-add
        rows under them). The behaviour is the retired block's, unchanged:

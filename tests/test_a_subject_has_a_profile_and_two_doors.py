@@ -454,5 +454,65 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
         self.assertIn("bible.anchor_conflicts()", seg)
 
 
+
+
+class CastingCarriesWhatTheReadFound(unittest.TestCase):
+    """User, 2026-09-11: "for Cast the film, the screenplay read should
+    get all these character profiles — why is the character information
+    not populated?"
+
+    It had them. We dropped them. The read returns a subtitle and a page
+    of traits for every subject — for this draft, 24 subjects, and HARLOW
+    DECKER alone carries "WARRANTY. STRIKE LEAD. RULE-BREAKER." and six
+    observed details. Both casting doors rebuilt a bare {name, kind} from
+    the tile's data attributes, so the modal opened blank and the card was
+    cast with nothing on it.
+
+    Introduced 2026-08-31 and 2026-09-10 when the uncast list and then the
+    ribbon were rewritten: the retired block had passed the recommendation
+    object itself."""
+
+    def test_one_helper_finds_the_reads_record(self):
+        self.assertEqual(JS.count("const recFor = (name, kind, subjects) =>"), 1)
+        i = JS.index("const recFor = (name, kind, subjects) =>")
+        seg = JS[i:i + 400]
+        self.assertIn("uncastRecommendations(subjects)", seg)
+        self.assertIn("String(r.name).toLowerCase() === String(name).toLowerCase()", seg)
+
+    def test_it_falls_back_rather_than_failing(self):
+        """A name typed by hand has no record, and must still cast."""
+        i = JS.index("const recFor = (name, kind, subjects) =>")
+        seg = JS[i:i + 400]
+        self.assertIn('|| { name, kind: kind || "CHARACTER", subtitle: "", traits: [] }', seg)
+
+    def test_both_casting_doors_use_it(self):
+        self.assertEqual(
+            JS.count("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast)"),
+            2, "the ribbon tile and the cast screen's chip")
+
+    def test_neither_rebuilds_a_blank_subject(self):
+        self.assertNotIn('castModal({ name: b.dataset.uncast', JS)
+
+    def test_the_modal_renders_what_it_is_handed(self):
+        i = JS.index('data-f="subtitle" value=')
+        self.assertIn('esc(rec.subtitle || "")', JS[i:i + 200])
+        i2 = JS.index('data-f="traits" rows="4"')
+        self.assertIn("(rec.traits || []).join", JS[i2:i2 + 300])
+        i3 = JS.index('data-f="description" rows="2"')
+        self.assertIn('esc(rec.description || "")', JS[i3:i3 + 260])
+
+    def test_the_read_is_asked_for_the_look_as_well_as_the_traits(self):
+        """The traits are fragments; `description` is the sentence an art
+        department hands an illustrator, and it is what a generated
+        reference renders from. A read from before 2026-09-11 has none —
+        the field simply stays empty for the author to write."""
+        w = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        i = w.index('"subjects": [')
+        seg = w[i:i + 900]
+        self.assertIn('"description"', seg)
+        self.assertIn("Physical, not biographical", seg)
+        self.assertIn("Say nothing the draft does not support", seg)
+
+
 if __name__ == "__main__":
     unittest.main()

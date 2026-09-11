@@ -29,6 +29,7 @@ ANALYZE_SCHEMA_NOTE = """Return ONLY a JSON object with exactly this shape:
     {"name": "character or object name as the screenplay uses it",
      "kind": "CHARACTER | VEHICLE | PROP",
      "subtitle": "2-4 punchy role epithets separated by periods, e.g. BUILDER. PROTECTOR. FATHER.",
+     "description": "One or two sentences on what this subject LOOKS like, from what the screenplay shows - the sentence an art department would hand an illustrator. Physical, not biographical. Say nothing the draft does not support.",
      "traits": ["terse production-note fragments, e.g.", "40s. Lean. Hard-edged.",
                 "Former pilot.", "Carries a rifle.", "Lives simply."]}
   ],

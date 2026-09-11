@@ -72,7 +72,9 @@ class TheStepIsAnInteractiveRibbon(unittest.TestCase):
         """Without opening the roster — that is the whole point."""
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertIn("castModal({ name: b.dataset.uncast", seg)
+        # With the read's own record — subtitle and traits — rather than
+        # a blank rebuilt from the tile (2026-09-11).
+        self.assertIn("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects)", seg)
 
     def test_a_cast_tile_opens_its_own_card_not_the_roster(self):
         i = JS.index("const renderCastRow = async () => {")

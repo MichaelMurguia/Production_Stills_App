@@ -1574,7 +1574,11 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
         now — the stage's copy of the same list retired with the block it
         sat in."""
         i = JS.index('$$("[data-uncast]", host).forEach')
-        self.assertIn("castModal({ name: b.dataset.uncast", JS[i:i + 300])
+        # It hands over the READ's record now, not a blank rebuilt from
+        # the chip's data attributes (2026-09-11) — the modal opened empty
+        # and cast cards with nothing on them.
+        self.assertIn("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects)",
+                      JS[i:i + 300])
 
     def test_every_door_reaches_one_component(self):
         """One way to cast, whichever door you came in by (2026-08-16).
