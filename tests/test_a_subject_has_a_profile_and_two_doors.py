@@ -235,15 +235,37 @@ class BothDoorsAreOnTheScreen(unittest.TestCase):
         self.assertIn("Spends a render", JS[i:i + 400])
 
     def test_both_slots_go_through_one_call(self):
+        """Both are bound in one place now (2026-09-10) — and only when
+        the act is available, since a disabled button with a handler is a
+        gate you can still trip."""
         self.assertEqual(JS.count("/api/subjects/${s.id}/generate"), 1)
-        for slot in ('$("[data-f=gen]", host).onclick', '$("[data-f=gen2]", host).onclick'):
-            self.assertIn(slot, JS, slot)
+        self.assertIn('const genBtns = [$("[data-f=gen]", host), '
+                      '$("[data-f=gen2]", host)].filter(Boolean);', JS)
+        self.assertIn("genBtns.forEach(b => { b.onclick = e => generate(e.currentTarget); });",
+                      JS)
 
-    def test_a_failure_is_stated_and_the_button_comes_back(self):
+    def test_a_failure_is_stated_and_the_spinner_actually_stops(self):
+        """`startBusy` returns an OBJECT with .done(), not a stop
+        function. This called `stop?.()`, which throws inside the
+        `finally` — so the real error was swallowed, the spinner never
+        cleared, and its elapsed clock kept counting on a request that had
+        already failed. The user read that as a three-minute render; the
+        server had answered 422 in milliseconds (2026-09-10)."""
         i = JS.index("const generate = async (btn) => {")
         seg = JS[i:JS.index(NL + "    };", i)]
         self.assertIn("toast(err.message, true)", seg)
-        self.assertIn("finally { stop?.(); }", seg)
+        self.assertIn("finally { stop.done(); }", seg)
+        self.assertNotIn("stop?.()", seg)
+
+    def test_every_startBusy_caller_disposes_of_it(self):
+        """The same mistake anywhere else leaves a stopwatch running on a
+        finished request."""
+        import re
+        for m in re.finditer(r"(?:const|let|var)\s+(\w+)\s*=\s*startBusy\(", JS):
+            name = m.group(1)
+            seg = JS[m.end():m.end() + 4000]
+            self.assertTrue(f"{name}.done()" in seg or f"{name}?.done()" in seg,
+                            f"{name} at line {JS[:m.start()].count(NL) + 1}")
 
 
 class AppearsInSaysWhatItCannotKnow(unittest.TestCase):
@@ -352,6 +374,84 @@ class TheModalIsReadable(unittest.TestCase):
         not a side effect of a casting fix."""
         b = CSS.split(NL + ".f-label {")[1].split("}")[0]
         self.assertIn("font-size: 10.5px", b)
+
+
+
+
+class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
+    """User, 2026-09-10: "Im trying to render a character and its taking
+    over 3 minutes?" then, having found it in the activity log himself:
+    "it should not just spin forever. Need a meaningful warning prompt."
+
+    The server had refused in milliseconds — no saved Art Direction Bible,
+    so there is no rendering language and a reference would invent one.
+    Canon: a gate reads as state BEFORE it is hit, never as an error
+    after. Both conditions the server refuses on are knowable on the card,
+    so refusing after a press was the app declining to say what it already
+    knew."""
+
+    def seg(self):
+        i = JS.index("const hasWords = !!(String(s.description")
+        return JS[i:JS.index("host.innerHTML = `", i)]
+
+    def test_it_knows_whether_there_is_anything_to_render_from(self):
+        s = self.seg()
+        self.assertIn("String(s.description", s)
+        self.assertIn("String(s.subtitle", s)
+        self.assertIn("(s.traits || []).length", s)
+
+    def test_it_knows_whether_the_bible_is_saved(self):
+        self.assertIn(
+            "const bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;",
+            self.seg())
+
+    def test_the_bible_is_the_first_thing_it_names(self):
+        """Words with no Bible still cannot render, so naming the words
+        first would send someone to fix the wrong thing."""
+        s = self.seg()
+        self.assertLess(s.index("!bibleSaved ?"), s.index(": !hasWords ?"))
+
+    def test_the_buttons_are_disabled_rather_than_left_to_fail(self):
+        i = JS.index("if (genBlock) {")
+        seg = JS[i:i + 500]
+        self.assertIn("b.disabled = true", seg)
+        self.assertIn("b.title = genBlock.why", seg)
+
+    def test_the_reason_is_on_the_card_not_only_in_a_tooltip(self):
+        self.assertIn("cd-blocked", JS)
+        self.assertIn("esc(genBlock.why)", JS)
+
+    def test_it_links_to_where_the_condition_is_resolved(self):
+        """Canon: state the unmet condition beside the control AND link to
+        where it gets resolved."""
+        self.assertIn('data-f="gen-go"', JS)
+        i = JS.index('const goFix = $("[data-f=gen-go]", host);')
+        seg = JS[i:i + 400]
+        self.assertIn("closeCast()", seg)
+        self.assertIn('data-step="4"', seg)
+
+    def test_a_blocked_card_does_not_advertise_a_spend(self):
+        """The cost line is replaced by the reason, not shown beside it —
+        a price for something you cannot buy is noise."""
+        i = JS.index("${genBlock")
+        seg = JS[i:i + 700]
+        self.assertLess(seg.index("cd-blocked"), seg.index("it spends a render"))
+
+    def test_the_gate_is_hold_not_bad(self):
+        b = CSS.split(NL + ".cd-blocked {")[1].split("}")[0]
+        self.assertIn("var(--hold)", b)
+        self.assertNotIn("--bad", b)
+
+    def test_the_server_still_refuses_on_its_own(self):
+        """The client gate is a courtesy; the server is the rule. A third
+        condition — a Bible contradicting the rendering anchor — needs the
+        server and stays a refusal."""
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        i = gen.index("def subject_portrait(")
+        seg = gen[i:i + 3000]
+        self.assertIn("no rendering language", seg)
+        self.assertIn("write who this is first", seg)
+        self.assertIn("bible.anchor_conflicts()", seg)
 
 
 if __name__ == "__main__":

@@ -6073,6 +6073,24 @@ async function renderWizard() {
     const host = $("#cast-screen");
     const rs = castRefsOf(s, refs);
     const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
+    /* The two conditions the server refuses a render on, asked here so
+       the button can state them instead of discovering them.
+
+       Both are cheap and local. The third — a Bible that contradicts the
+       rendering anchor — needs the server, so it stays a refusal; that
+       one is rare and already says what to do. */
+    const hasWords = !!(String(s.description || "").trim()
+                     || String(s.subtitle || "").trim()
+                     || (s.traits || []).length);
+    const bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;
+    const genBlock =
+      !bibleSaved ? { why: "The Art Direction Bible is not saved yet, and a "
+                         + "reference renders FROM it.",
+                      act: "Save the Bible in step 04", go: "bible" }
+      : !hasWords ? { why: "Nothing to render from — write who this is, or "
+                         + "give it a trait.",
+                      act: "Edit the description", go: null }
+      : null;
     host.innerHTML = `
       <div class="row" style="margin:0 0 12px">
         <button type="button" class="text-act cast-back" data-f="back">&larr; Cast</button>
@@ -6122,8 +6140,12 @@ async function renderWizard() {
             <button type="button" class="ghost" data-f="gen2">Generate one</button>
             <button type="button" class="ghost" data-f="edit">Edit the description</button>
           </div>
-          <p class="mini cd-spend">Generating renders from the words above, under
-            the Bible and the approved anchors &mdash; it spends a render.</p>
+          ${genBlock
+            ? `<p class="mini cd-spend cd-blocked">${esc(genBlock.why)}
+                 ${genBlock.go ? `<button type="button" class="text-act"
+                   data-f="gen-go">${esc(genBlock.act)} &nearr;</button>` : ""}</p>`
+            : `<p class="mini cd-spend">Generating renders from the words above, under
+               the Bible and the approved anchors &mdash; it spends a render.</p>`}
         </div>
       </div>`;
     $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
@@ -6137,7 +6159,14 @@ async function renderWizard() {
     const addPhoto = () => photoTrayModal(s, refreshCast);
     $("[data-f=photo]", host).onclick = addPhoto;
     /* The generate door. Both slots go through it, and both state the
-       spend before they are pressed — a render is money. */
+       spend before they are pressed — a render is money.
+
+       `startBusy` returns an OBJECT with .done(), not a stop function.
+       This called `stop?.()`, which throws inside the `finally` — so the
+       real error was swallowed, the spinner never cleared, and its
+       elapsed clock kept counting on a request that had already failed.
+       The user read that as a render taking three minutes; the server had
+       answered 422 in milliseconds (2026-09-10). */
     const generate = async (btn) => {
       const stop = startBusy(btn.closest("div"), `Rendering ${s.name}`,
                              "one image, from the words on this card");
@@ -6147,10 +6176,25 @@ async function renderWizard() {
         refreshCast();
       } catch (err) {
         toast(err.message, true);
-      } finally { stop?.(); }
+      } finally { stop.done(); }
     };
-    $("[data-f=gen]", host).onclick = e => generate(e.currentTarget);
-    $("[data-f=gen2]", host).onclick = e => generate(e.currentTarget);
+    const genBtns = [$("[data-f=gen]", host), $("[data-f=gen2]", host)].filter(Boolean);
+    if (genBlock) {
+      // Canon: a gate reads as state BEFORE it is hit, never as an error
+      // after. Both of these are knowable here, and the server refuses on
+      // exactly them — so refusing after a press was the app declining to
+      // say what it already knew.
+      genBtns.forEach(b => { b.disabled = true; b.title = genBlock.why; });
+    } else {
+      genBtns.forEach(b => { b.onclick = e => generate(e.currentTarget); });
+    }
+    // A stated gate links to where it is resolved.
+    const goFix = $("[data-f=gen-go]", host);
+    if (goFix) goFix.onclick = () => {
+      closeCast();
+      $('.panel.step[data-step="4"]')?.scrollIntoView({ behavior: "smooth",
+                                                        block: "start" });
+    };
     $("[data-f=edit]", host).onclick = async () => {
       const v = await askText("The profile", "Who this is", {
         value: s.description || s.subtitle || "",

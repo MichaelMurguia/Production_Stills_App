@@ -1440,6 +1440,11 @@ details.meta pre {
 /* A render is money, so the cost is stated beside the button, never
    discovered after it. */
 .cd-spend { margin-top: 7px; color: var(--ink-faint); }
+/* A stated gate, where the cost line sits when the act is available. It
+   is --hold, not --bad: nothing has failed, something is not ready. */
+.cd-blocked { color: var(--ink-dim); border-left: 2px solid var(--hold);
+  padding-left: 10px; }
+.cd-blocked .text-act { margin-left: 6px; }
 /* A fact that is not knowable yet says what would make it knowable. */
 .cd-none { font-style: normal; font-size: 9.5px; letter-spacing: .1em;
   color: var(--ink-faint); }
