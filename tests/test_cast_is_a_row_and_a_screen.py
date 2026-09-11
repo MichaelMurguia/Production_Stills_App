@@ -89,23 +89,40 @@ class TheStepIsAnInteractiveRibbon(unittest.TestCase):
         self.assertIn("subjects.map(x => {", seg)
         self.assertNotIn(".slice(0, 3)", seg)
 
-    def test_it_drags(self):
+    def test_it_shows_twelve_and_does_not_scroll(self):
+        """REVERSES the drag-to-scroll built 2026-09-01 (user-directed
+        2026-09-10: "no scrolling for cast. Have those thumbnails larger,
+        say 12 fills horizontally + Open Cast button").
+
+        A row you have to drag hides most of a cast behind a gesture with
+        no affordance, and pays for the hiding by making every tile too
+        small to read."""
+        self.assertIn("const CAST_ROW_N = 12;", JS)
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        for ev in ("pointerdown", "pointermove", "pointerup",
-                   "pointerleave", "pointercancel"):
-            self.assertIn(f'rib.addEventListener("{ev}"', seg, ev)
-        self.assertIn("rib.scrollLeft = down.left - dx;", seg)
+        self.assertIn("tiles.slice(0, CAST_ROW_N)", seg)
+        for gone in ("pointerdown", "pointermove", "scrollLeft", "dragging"):
+            self.assertNotIn(gone, seg, gone)
 
-    def test_a_drag_that_ends_on_a_tile_does_not_also_click_it(self):
-        i = JS.index("const renderCastRow = async () => {")
-        seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertIn("const acted = fn => e => { if (moved > 4)", seg)
-
-    def test_the_browser_does_not_steal_the_horizontal_drag(self):
+    def test_the_twelve_fill_the_width(self):
         b = CSS.split(NL + ".cast-ribbon {")[1].split("}")[0]
-        self.assertIn("touch-action: pan-y", b)
-        self.assertIn("overflow-x: auto", b)
+        self.assertIn("grid-template-columns: repeat(12, minmax(0, 1fr))", b)
+        self.assertNotIn("overflow-x", b)
+        self.assertNotIn("touch-action", b)
+
+    def test_what_the_twelve_do_not_show_is_counted_on_the_act(self):
+        """Not hidden off-screen — counted, on the button that reaches
+        it."""
+        i = JS.index("const renderCastRow = async () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn("const hidden = Math.max(0, tiles.length - CAST_ROW_N);", seg)
+        self.assertIn("hidden ? ` <i class=\"mono\">+${hidden}</i>` : \"\"", seg)
+
+    def test_a_cast_that_fits_says_nothing_extra(self):
+        i = JS.index("const renderCastRow = async () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn('hidden ?', seg)
+        self.assertIn('Math.max(0,', seg)
 
     def test_opening_the_full_cast_is_a_button(self):
         """It was a text link, which read as a caption on a row of

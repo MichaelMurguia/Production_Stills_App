@@ -2719,23 +2719,24 @@ details.meta pre {
 /* UNCANONIZED — 2026-08-31 — the read's route on stage 01 */
 .ds-go { width: 100%; margin-top: 12px; }
 
-/* UNCANONIZED — 2026-09-01 — step 03 as an interactive ribbon */
-/* PRODUCTION_DESIGN_UI_PLAN §3.4, corrected by the user 2026-09-01. The
-   step is still one row, but every tile in it now acts: an uncast tile
-   casts in place, a cast one opens its own card. Opening the full cast is
-   optional, so it is a button rather than a text link — the plan's row
-   ends in a control, and a link read as a caption. */
-.cast-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
-.cast-ribbon { display: flex; gap: 8px; overflow-x: auto; flex: 1;
-  padding-bottom: 4px; scrollbar-width: thin; cursor: grab;
-  /* The drag owns the horizontal axis; without this the browser's own
-     pan cancels the pointermove halfway through. */
-  touch-action: pan-y; }
-.cast-ribbon.dragging { cursor: grabbing; user-select: none; }
-.cast-tile { flex: 0 0 auto; width: 62px; background: none; border: 0;
-  padding: 0; cursor: pointer; display: flex; flex-direction: column; gap: 4px;
-  text-align: left; }
-.cast-tile-shot { display: block; width: 62px; aspect-ratio: .8;
+/* UNCANONIZED — 2026-09-10 — step 03 as a row of twelve */
+/* PRODUCTION_DESIGN_UI_PLAN §3.4, corrected twice by the user. Every tile
+   acts: an uncast one casts in place, a cast one opens its own card.
+
+   It scrolled and dragged for a day (2026-09-01) and that is REVERSED:
+   twelve tiles fill the width and the rest are behind the button. A row
+   you drag hides most of a cast behind a gesture with no affordance, and
+   pays for the hiding by making every tile too small to read. */
+.cast-row { display: flex; align-items: flex-start; gap: 16px; margin-top: 10px; }
+/* Twelve equal columns, and they share whatever the button leaves. No
+   overflow: what does not fit is not hidden off-screen, it is counted on
+   the button. */
+.cast-ribbon { flex: 1; min-width: 0; display: grid; gap: 8px;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.cast-tile { background: none; border: 0; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px; text-align: left;
+  min-width: 0; }
+.cast-tile-shot { display: block; width: 100%; aspect-ratio: .8;
   background: var(--field); background-size: cover; background-position: center;
   border: 1px solid var(--line-soft); }
 /* An uncast tile is dashed and says so — it is not a card yet, and the
@@ -2751,7 +2752,10 @@ details.meta pre {
   white-space: nowrap; }
 .cast-tile:hover .cast-tile-shot { border-color: var(--ink-dim); }
 .cast-tile:hover .cast-tile-name { color: var(--ink); }
+/* The count of what the twelve do not show rides the act that shows it. */
 .cast-open { flex: none; }
+.cast-open i { font-style: normal; font-size: 11.5px; letter-spacing: .08em;
+  color: var(--ink-faint); margin-left: 4px; }
 
 /* The screen replaces the stage rather than floating over it. Driven by
    an attribute on <body>, like stage 01's read — set before the screen
