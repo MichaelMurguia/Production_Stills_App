@@ -38,6 +38,7 @@ sys.path.insert(0, str(ROOT))
 
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
 CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+NL = chr(10)
 
 
 def between(start: str, end: str) -> str:
@@ -59,9 +60,13 @@ class OneMatcherNotTwo(unittest.TestCase):
         self.assertNotIn("styles.find(x => x.value === v)", seg)
 
     def test_the_hero_asks_the_same_one(self):
+        """It asks `anchorWords` now (2026-09-11) — that lookup moved when
+        the BADGE turned out to need the same answer, and to have been
+        getting a different one from a second implementation."""
         seg = between("The hero: the first attached picture", "hero.onclick")
-        self.assertIn("styleFor(lib, words)", seg)
+        self.assertIn("const chosen = picked", seg)
         self.assertNotIn("lib.find(", seg)
+        self.assertIn("const picked = anchorWords(col).picked;", JS)
 
     def test_it_still_recognises_the_captured_house_card(self):
         """Its value is re-derived from the bible on every open, so a
@@ -232,11 +237,13 @@ class AProposalShowsTheLookItProposes(unittest.TestCase):
 
     def test_the_proposed_style_resolves_the_same_way_a_chosen_one_does(self):
         """Through the same matcher — a proposal cannot show a picture a
-        pick would not."""
-        seg = between("A proposal names a style.", "hero.classList.toggle(\"proposed\"")
+        pick would not. The chosen half moved into `anchorWords`
+        (2026-09-11) when the badge turned out to need it too."""
+        seg = between("A proposal names a style.", 'hero.classList.toggle("proposed"')
         self.assertIn("styleFor(lib, prop.value)", seg)
         # Never over a real choice: an anchor the director set wins.
-        self.assertIn("styleFor(lib, words)\n          || (!words && prop", seg)
+        self.assertIn("const chosen = picked", seg)
+        self.assertIn("|| (!words && prop", seg)
 
     def test_the_card_does_not_report_none_while_showing_a_proposal(self):
         seg = between("A card showing a proposed look must not also report NONE.",
@@ -299,6 +306,110 @@ class TheHouseSlotKeepsItsPhotographs(unittest.TestCase):
         from app import style_docs
         first = style_docs.styles("rendering")[0]
         self.assertIn(first["key"], m, first["key"])
+
+
+
+
+class AChosenStyleReadsAsChosen(unittest.TestCase):
+    """User, 2026-09-11: "when I confirm Weathered it does not change
+    'Proposed from the screenplay'. Isn't there a normal selected mode
+    based on designs?"
+
+    The accept worked — the interview held the Weathered value. What did
+    not change was the BADGE, which said IN WORDS, the label for a
+    sentence somebody typed. Choosing from the catalogue and describing a
+    look in your own words are different acts.
+
+    And the reason it never showed SELECTED even once the badge learned
+    the word: `syncAnchorBadges` runs after `refreshRefs` and on every
+    change, and it only knew NONE <-> IN WORDS. It set the badge correctly
+    and then overwrote it a tick later. One question, two answers."""
+
+    def words_fn(self):
+        i = JS.index("const anchorWords = (col) => {")
+        return JS[i:JS.index(NL + "  };", i)]
+
+    def test_one_rule_answers_what_the_words_amount_to(self):
+        self.assertEqual(JS.count("const anchorWords = (col) => {"), 1)
+        s = self.words_fn()
+        self.assertIn('return { label: "NONE", set: false };', s)
+        self.assertIn('label: picked ? "SELECTED" : "IN WORDS"', s)
+
+    def test_both_readers_ask_it(self):
+        """The row's badge and the late syncer. They disagreed."""
+        self.assertIn("const picked = anchorWords(col).picked;", JS)
+        self.assertIn("const w = anchorWords(col);", JS)
+
+    def test_the_late_syncer_no_longer_has_its_own_answer(self):
+        i = JS.index("const syncAnchorBadges = () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn("badge.textContent = w.label;", seg)
+        self.assertNotIn('inWords ? "IN WORDS" : "NONE"', seg)
+
+    def test_it_leaves_a_standing_proposal_alone(self):
+        """It knows nothing about the references that decide the rest of
+        the card's states, so it must not overwrite them either."""
+        i = JS.index("const syncAnchorBadges = () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn('if (badge.textContent.trim() === "PROPOSED") continue;', seg)
+
+    def test_it_still_leaves_a_picture_count_alone(self):
+        i = JS.index("const syncAnchorBadges = () => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn("/^\\d/.test(badge.textContent.trim())", seg)
+
+    def test_the_row_reports_selected_above_in_words(self):
+        i = JS.index('badge.textContent = nMine')
+        seg = JS[i:i + 420]
+        self.assertLess(seg.index('picked ? "SELECTED"'), seg.index('inWords ? "IN WORDS"'))
+
+
+class ThePeriodSaysWhatTheReadFound(unittest.TestCase):
+    """User, 2026-09-11: "This is dumb: you can put text into the app based
+    on specific screenplays. That's a development note, not an app
+    message. Get rid of it. For period, auto fill from screenplay and
+    allow author to edit it."
+
+    The line named a failure from ONE production's screenplay. The read
+    already asks for the period and already yields to a hand-set one; what
+    was missing was the card saying so when the read came back empty."""
+
+    def seg(self):
+        i = JS.index('<span class="read-log-kicker">PERIOD</span>')
+        return JS[i:JS.index("read-tiles", i)]
+
+    def test_the_development_note_is_gone(self):
+        for gone in ("WW2 aircraft", "far-future salt pan"):
+            self.assertNotIn(gone, JS, gone)
+
+    def test_an_unset_period_says_the_read_looked(self):
+        self.assertIn("The read found no period stated in the screenplay",
+                      self.seg())
+
+    def test_a_set_period_states_the_rule_and_nothing_else(self):
+        self.assertIn("Every render is held to this — nothing in frame may postdate it.",
+                      self.seg())
+
+    def test_unstated_is_not_treated_as_a_value(self):
+        """The scan is TOLD to answer UNSTATED when the screenplay does not
+        fix a period, and that string is truthy — so the card offered
+        "Edit" and claimed every render was held to it."""
+        s = self.seg()
+        self.assertIn('wizNoPeriod(analysis.period) ? "State it" : "Edit"', s)
+        self.assertIn("wizNoPeriod(analysis.period)", s)
+        self.assertNotIn('analysis.period ? "Edit"', s)
+
+    def test_the_read_still_asks_the_screenplay_for_it(self):
+        w = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        self.assertIn('"period": "WHEN this story is set', w)
+        self.assertIn("Say UNSTATED if the screenplay genuinely does not fix a period", w)
+
+    def test_a_hand_set_period_survives_a_re_read(self):
+        """Auto-fill must never overrule the author — a scan that fails to
+        find one would otherwise erase what they typed."""
+        w = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        self.assertIn('if _no_period(out.get("period")) and not _no_period(prior.get("period")):',
+                      w)
 
 
 if __name__ == "__main__":

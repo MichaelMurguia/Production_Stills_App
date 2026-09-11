@@ -5624,6 +5624,28 @@ async function renderWizard() {
       .catch(() => wizRefs);
   };
 
+/* What an anchor's WORDS amount to. One rule: two readers ask it and they
+   used to answer differently.
+
+   `syncAnchorBadges` below runs after `refreshRefs` and on every change,
+   and it only knew NONE <-> IN WORDS — so accepting a proposal or picking
+   from the catalogue set the badge correctly and then had it overwritten
+   a tick later with IN WORDS (user, 2026-09-11: "when I confirm Weathered
+   it does not change... isn't there a normal selected mode?").
+
+   Choosing Weathered and describing a look in your own sentence are
+   different acts, and the card says which. */
+  const anchorWords = (col) => {
+    const role = col.dataset.role;
+    const words = $("[data-f=words]", col)?.value.trim() || "";
+    if (!words) return { label: "NONE", set: false };
+    const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
+                  CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
+                  BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
+    const picked = styleFor(lib, words);
+    return { label: picked ? "SELECTED" : "IN WORDS", set: true, picked };
+  };
+
   let wizProposals = {};
 
   const refreshRefs = async () => {
@@ -5688,6 +5710,11 @@ async function renderWizard() {
          count, IN WORDS, or NONE. The badge element is the same node
          under a new class, so every reader that found it still does. */
       const words = $("[data-f=words]", col)?.value.trim() || "";
+      // One rule, asked here and in syncAnchorBadges (see anchorWords).
+      const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
+                    CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
+                    BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
+      const picked = anchorWords(col).picked;
       // A card showing a proposed look must not also report NONE.
       const propped = !!(!nMine && !inWords && wizProposals[role]);
       // A proposal speaks in --hold, the same vocabulary its own kicker
@@ -5700,6 +5727,7 @@ async function renderWizard() {
                             : (nMine === 1 ? "PICTURE" : "PICTURES")}`
         : nProp ? `${nProp} PROPOSED`
         : propped ? "PROPOSED"
+        : picked ? "SELECTED"
         : inWords ? "IN WORDS" : "NONE";
 
       /* The hero: the first attached picture, or the chosen catalogue
@@ -5709,9 +5737,6 @@ async function renderWizard() {
       const hero = $("[data-f=hero]", col);
       if (hero) {
         const shot = $("[data-f=hero-shot]", hero);
-        const lib = { WORLD_TEXTURE: TEXTURE_STYLES,
-                      CINEMATOGRAPHY_STYLE: CINEMA_STYLES,
-                      BOARD_RENDERING_STYLE: RENDER_STYLES }[role] || [];
         /* A proposal names a style. Until this it named it in words only,
            over an opaque panel — so the one card in the app whose whole
            job is "here is a look, do you want it" was the one card that
@@ -5722,7 +5747,7 @@ async function renderWizard() {
            through the same matcher, so a proposal cannot show a picture a
            pick would not. */
         const prop = wizProposals[role];
-        const chosen = styleFor(lib, words)
+        const chosen = picked
           || (!words && prop ? styleFor(lib, prop.value) : null);
         const art = mine.length
           ? { src: `/api/references/${encodeURIComponent(mine[0].id)}/image?size=md`,
@@ -6773,12 +6798,24 @@ async function renderWizard() {
       <div class="read-strip">
         <div class="read-period">
           <span class="read-log-kicker">PERIOD</span>
+          <!-- wizNoPeriod, not truthiness: the scan is TOLD to answer
+               "UNSTATED" when the screenplay does not fix a period, and
+               that string is truthy — so the card offered "Edit" and
+               claimed every render was held to it (caught 2026-09-11). -->
           <p><span class="rp-val mono">${esc(analysis.period || "UNSTATED")}</span>
              <button type="button" class="text-act" data-f="edit-period">${
-               analysis.period ? "Edit" : "State it"}</button></p>
-          <span class="mini">Every render is held to this. An unstated period
-            constrains nothing — which is how a WW2 aircraft reached a
-            far-future salt pan.</span>
+               wizNoPeriod(analysis.period) ? "State it" : "Edit"}</button></p>
+          <!-- The line here named a failure from ONE production's
+               screenplay — a development note, not app copy (user,
+               2026-09-11: "you can put text into the app based on
+               specific screenplays. That's a development note, not an app
+               message"). What every reader needs is the rule and, when it
+               is unset, the consequence — neither of which is about
+               anyone's film. -->
+          <span class="mini">${wizNoPeriod(analysis.period)
+            ? "The read found no period stated in the screenplay. Until one is "
+              + "set, renders are not held to any era."
+            : "Every render is held to this — nothing in frame may postdate it."}</span>
         </div>
         <div class="read-tiles">${tiles}</div>
       </div>
@@ -7857,11 +7894,14 @@ async function renderWizard() {
       // "3 PICTURES" rather than "3", so the guard reads the leading
       // digit instead of the whole string (§3.2).
       if (!badge || /^\d/.test(badge.textContent.trim())) continue;
-      const inWords = !!$("[data-f=words]", col)?.value.trim();
-      badge.className = "ah-state mono" + (inWords ? " set" : "");
-      badge.textContent = inWords ? "IN WORDS" : "NONE";
+      // A standing proposal is the row's answer, not this one's — it
+      // knows nothing about the references that decide the rest.
+      if (badge.textContent.trim() === "PROPOSED") continue;
+      const w = anchorWords(col);
+      badge.className = "ah-state mono" + (w.set ? " set" : "");
+      badge.textContent = w.label;
       const hero = $("[data-f=hero]", col);
-      if (hero) hero.classList.toggle("empty", !inWords);
+      if (hero) hero.classList.toggle("empty", !w.set);
     }
   };
   syncAnchorBadges();
