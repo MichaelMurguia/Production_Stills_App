@@ -336,92 +336,68 @@ class AppearsInSaysWhatItCannotKnow(unittest.TestCase):
 
 
 
-class TheCastingModalAsksForBoth(unittest.TestCase):
+class TheWordsAreAskedForWhereTheyAreUsED(unittest.TestCase):
     """User, 2026-09-01, looking at the casting modal: "None of your
     changes seem to be in."
 
     They were in — on the cast DETAIL, which is the surface you reach
-    AFTER casting. The modal is where a subject's words are written for
+    AFTER casting. The modal was where a subject's words were written for
     the first time, and it had neither the profile field nor the second
-    door. Both were built one screen too late."""
+    door; both had been built one screen too late.
 
-    def body(self):
-        i = JS.index("function castModal(rec, onDone) {")
-        return JS[i:JS.index(NL + "}" + NL, i)]
+    THE MODAL IS RETIRED (user, 2026-09-12). The answer went the other
+    way in the end: the words are asked for on the SCREEN, where the
+    picture they produce is standing next to them, and casting no longer
+    stops to fill in a form first. What that sitting actually established
+    — a profile that is not the role line, and a second door to a picture
+    — is on the screen now."""
 
-    def test_the_profile_is_asked_for_where_the_words_are_first_written(self):
-        b = self.body()
-        self.assertIn('data-f="description"', b)
-        self.assertIn("Who this is", b)
+    def test_the_profile_is_its_own_question_on_the_screen(self):
+        i = JS.index("const castWords = (s, ev) => `")
+        seg = JS[i:i + 1400]
+        self.assertIn("s.description ? esc(s.description)", seg)
+        self.assertIn("s.subtitle ? esc(s.subtitle)", seg, "and falls back to the role")
 
-    def test_it_is_a_separate_question_from_the_role(self):
-        b = self.body()
-        self.assertIn('data-f="subtitle"', b)
-        self.assertLess(b.index('data-f="subtitle"'), b.index('data-f="description"'))
+    def test_both_doors_to_a_picture_are_on_it(self):
+        i = JS.index('<div class="cd-frame-acts">')
+        seg = JS[i:i + 400]
+        self.assertIn('data-f="gen">Generate<', seg)
+        self.assertIn('data-f="attach">Attach<', seg)
 
-    def test_casting_saves_it(self):
-        b = self.body()
-        self.assertIn('description: $("[data-f=description]", ov).value.trim()', b)
-
-    def test_the_second_door_is_offered_beside_the_first(self):
-        b = self.body()
-        i = b.index('class="cast-photos"')
-        seg = b[i:i + 1200]
-        self.assertIn("Reference photos", seg)
-        self.assertIn('data-f="gen"', seg)
-
-    def test_the_render_runs_after_the_card_exists(self):
-        """There is nothing to render from until the words are saved."""
-        b = self.body()
-        self.assertLess(b.index('api("/api/subjects", { method: "POST"'),
-                        b.index("/generate"))
+    def test_the_render_still_runs_only_after_the_card_exists(self):
+        """There is nothing to render from until the words are saved —
+        and now the words are saved by casting, which happens first by
+        construction: Generate lives on the subject's own screen."""
+        i = JS.index("const castGenerate = async (s, host) => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertIn("/api/subjects/${s.id}/generate", seg)
 
     def test_the_spend_rides_with_the_option(self):
-        b = self.body()
-        self.assertIn("SPENDS A RENDER", b)
-
-    def test_a_failed_render_does_not_claim_the_casting_failed(self):
-        """The card exists and the photos landed — that is the larger half
-        and it says so."""
-        b = self.body()
-        self.assertIn("is cast, but the render did not run", b)
+        self.assertIn("it spends a render", JS)
 
 
-class TheModalIsReadable(unittest.TestCase):
+class TheModalsTypeLessonSurvivedIt(unittest.TestCase):
     """User, same sitting: "the font is 7 pixels high — a person can't
     read that — is that a design decision?"
 
-    It was not a decision, it was drift. §1.3 allows THREE sizes per
-    surface and its smallest is 11.5px; this modal had four — 9, 10, 10.5
-    and 12.5 — three of them under the floor. The rule exists for exactly
-    this: "the measured fault this replaced was nine sizes between 9.5px
-    and 15px."
-    """
+    It was not a decision, it was drift. The modal is gone and its
+    scoped type block with it; the drift it was a patch over is not, and
+    this keeps saying so."""
 
-    def test_nothing_in_this_modal_is_under_the_floor(self):
-        import re
-        i = CSS.index(".cast-kind {")
-        seg = CSS[i:CSS.index(".photos-modal", i)]
-        for m in re.finditer(r"font-size:\s*([\d.]+)px", seg):
-            self.assertGreaterEqual(float(m.group(1)), 11.5, m.group(0))
+    def test_the_orphaned_modal_type_block_went_with_the_modal(self):
+        for gone in (".cast-modal", ".cast-kind {", ".read-mark {", ".cast-gen {"):
+            self.assertNotIn(gone, CSS, gone)
 
-    def test_the_read_mark_came_up_with_it(self):
-        b = CSS.split(NL + ".read-mark {")[1].split("}")[0]
-        self.assertIn("font-size: 11.5px", b)
-
-    def test_the_surface_keeps_three_sizes_and_the_largest_anchors(self):
-        for rule in (".cast-modal .modal-title { font-size: 15px; }",
-                     ".cast-modal .modal-actions button { font-size: 15px; }",
-                     ".cast-modal .f-label { font-size: 11.5px;"):
-            self.assertIn(rule, CSS, rule)
-
-    def test_the_fix_did_not_raise_those_classes_app_wide(self):
-        """The same drift is everywhere and deserves one deliberate pass,
-        not a side effect of a casting fix."""
+    def test_the_app_wide_drift_is_still_there_and_still_named(self):
+        """A patch removed is not a problem solved. `.f-label` and
+        `.hint` still want one deliberate pass."""
         b = CSS.split(NL + ".f-label {")[1].split("}")[0]
         self.assertIn("font-size: 10.5px", b)
+        self.assertIn("still wants one deliberate pass", CSS)
 
-
+    def test_the_character_screen_states_its_own_floor(self):
+        i = CSS.index("#cast-screen .wiz-group-label,")
+        self.assertIn("font-size: 12px", CSS[i:CSS.index("}", i)])
 
 
 class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
@@ -531,27 +507,24 @@ class CastingCarriesWhatTheReadFound(unittest.TestCase):
         self.assertIn('|| { name, kind: kind || "CHARACTER", subtitle: "", traits: [] }', seg)
 
     def test_both_casting_doors_use_it(self):
-        """They reach different components since CAST_CHARACTER_SCREEN —
-        the ribbon's tile opens the modal, the roster's chip casts in one
-        gesture — but both are handed the READ's record, which is what
-        this guards."""
-        self.assertEqual(
-            JS.count("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast)"),
-            1, "the ribbon tile")
+        """The ribbon's tile and the roster's chip. Since 2026-09-12 they
+        are the same call, which is the strongest form of this rule:
+        neither can drift from the other."""
         self.assertEqual(
             JS.count("castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects))"),
-            1, "the cast screen's chip")
+            2, "the ribbon tile and the cast screen's chip")
 
     def test_neither_rebuilds_a_blank_subject(self):
         self.assertNotIn('castModal({ name: b.dataset.uncast', JS)
 
-    def test_the_modal_renders_what_it_is_handed(self):
-        i = JS.index('data-f="subtitle" value=')
-        self.assertIn('esc(rec.subtitle || "")', JS[i:i + 200])
-        i2 = JS.index('data-f="traits" rows="4"')
-        self.assertIn("(rec.traits || []).join", JS[i2:i2 + 300])
-        i3 = JS.index('data-f="description" rows="2"')
-        self.assertIn('esc(rec.description || "")', JS[i3:i3 + 260])
+    def test_the_card_is_written_from_what_it_is_handed(self):
+        """The modal showed the record in fields and wrote what the user
+        left there. Casting now writes the record straight through, so
+        there is no step that can quietly drop half of it."""
+        i = JS.index("const castOne = r => api(")
+        seg = JS[i:i + 400]
+        for f in ("r.subtitle", "r.traits", "r.description", "r.kind"):
+            self.assertIn(f, seg, f)
 
     def test_the_read_is_asked_for_the_look_as_well_as_the_traits(self):
         """The traits are fragments; `description` is the sentence an art

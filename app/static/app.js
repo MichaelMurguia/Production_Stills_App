@@ -1224,7 +1224,11 @@ function roleDialog({ title, body = "", prefillHead = "SCENE_REFERENCE",
 const askText = async (title, label, opts = {}) => {
   const r = await modal({
     title, body: opts.body || "",
+    // `textarea` passes through: a description is a sentence or two and
+    // a trait list is one per line — both are unreadable in a one-line
+    // input, which is what they got until 2026-09-12.
     fields: [{ name: "v", label, value: opts.value || "",
+               textarea: !!opts.textarea,
                placeholder: opts.placeholder || "", hint: opts.hint || "" }],
     confirmLabel: opts.confirmLabel || "Confirm", danger: !!opts.danger,
   });
@@ -5955,12 +5959,12 @@ async function renderWizard() {
       <button type="button" class="ghost cast-open" data-f="open-cast">Open the cast${
         hidden ? ` <i class="mono">+${hidden}</i>` : ""}</button>`;
 
-    // An uncast tile casts, in place. A cast one opens its own card —
-    // which is the detail, not the roster: skipping the full cast is the
-    // point of the row.
+    // An uncast tile casts, in place, and lands on that subject's own
+    // screen. A cast one opens the same screen — the detail, not the
+    // roster: skipping the full cast is the point of the row.
     const rib = $("[data-f=ribbon]", host);
     $$("[data-uncast]", rib).forEach(b => b.onclick = () =>
-      castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast));
+      castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects)));
     $$("[data-sid]", rib).forEach(b => b.onclick = () => {
       castOpen = b.dataset.sid;
       document.body.dataset.cast = "1";
@@ -6003,7 +6007,8 @@ async function renderWizard() {
 
      Every card here is a card on Reference / Subjects. This screen owns
      no data — it is a second view of that shelf, and it says so. */
-  let castOpen = null;                 // subject id, or null for the roster
+  let castOpen = castArriving;         // subject id, or null for the roster
+  castArriving = null;                 // consumed — a reload opens the roster
   const refreshCast = () => {
     renderCastScreen();
     renderCastRow();
@@ -6015,7 +6020,30 @@ async function renderWizard() {
   const castOne = r => api("/api/subjects", { method: "POST", json: {
     name: r.name, kind: r.kind || "CHARACTER",
     subtitle: r.subtitle || "", traits: r.traits || [],
+    description: r.description || "",
     source: "screenplay analysis" } });
+
+  /* ONE gesture, from every door on this stage (CAST_CHARACTER_SCREEN §1,
+     extended to the ribbon by the user 2026-09-12: "character cards still
+     open this prior to generation — what you just implemented is a
+     replacement").
+
+     Casting makes the card and lands on the subject's own screen, where
+     the description is edited and the picture is made. The modal that
+     used to stand here asked again for a name, a kind, a role line, a
+     profile and traits that the read had already proposed — a form in
+     front of a screen built to hold the same words with a picture beside
+     them. */
+  const castInto = async (rec) => {
+    try {
+      const made = await castOne(rec);
+      castOpen = made.id;
+      document.body.dataset.cast = "1";
+      refreshCast();
+      window.scrollTo({ top: 0 });
+      return made;
+    } catch (err) { toast(err.message, true); }
+  };
 
   const castRefsOf = (s, refs) =>
     (s.ref_ids || []).map(id => refs.find(r => r.id === id))
@@ -6093,28 +6121,7 @@ async function renderWizard() {
       castOpen = b.dataset.sid;
       renderCastScreen();
     });
-    /* One gesture, not two (CAST_CHARACTER_SCREEN §1): a chip CASTS —
-       it makes the card and opens the detail screen in its empty state.
-
-       It used to open the casting modal, which asked for a name, a role
-       line and a profile that the read already supplied and that §2's
-       screen now edits in place. Asking again for words we have is a
-       form standing between a director and a picture. The recommendation
-       carries the subtitle and the traits, so nothing is lost by not
-       asking.
-
-       The ribbon's thumbs still open the modal — that is where the user
-       put them on 2026-09-10 ("you don't have to open the full cast"),
-       and this plan does not cover the ribbon. */
-    const castInto = async (rec) => {
-      try {
-        const made = await castOne(rec);
-        castOpen = made.id;
-        document.body.dataset.cast = "1";
-        refreshCast();
-        window.scrollTo({ top: 0 });
-      } catch (err) { toast(err.message, true); }
-    };
+    // The same one gesture the ribbon takes.
     $$("[data-uncast]", host).forEach(b => b.onclick = () =>
       castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects)));
     /* Bulk casting came here with the uncast list (§3.4 puts ONE list on
@@ -6271,6 +6278,7 @@ async function renderWizard() {
   const castEditWords = async (s) => {
     const v = await askText("The description", "What this looks like", {
       value: s.description || s.subtitle || "",
+      textarea: true,
       body: "Physical, not biographical. It is the whole of what a picture "
           + "is rendered from, over the Bible's rendering language.",
     });
@@ -6278,6 +6286,25 @@ async function renderWizard() {
     try {
       await api(`/api/subjects/${s.id}`, { method: "PUT",
                                            json: { description: v.trim() } });
+      refreshCast();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  // One per line, the shape the retired modal used — a trait is a
+  // sentence the render must make true, not a tag.
+  const castEditTraits = async (s) => {
+    const v = await askText("What rides every prompt", "One per line", {
+      value: (s.traits || []).join(String.fromCharCode(10)),
+      textarea: true,
+      body: "Each of these is stated to the engine as something that MUST "
+          + "be true and visible. A trait nothing can render is a trait "
+          + "every picture fails.",
+    });
+    if (v === null) return;
+    try {
+      await api(`/api/subjects/${s.id}`, { method: "PUT", json: {
+        traits: v.split(String.fromCharCode(10))
+                 .map(t => t.trim()).filter(Boolean) } });
       refreshCast();
     } catch (err) { toast(err.message, true); }
   };
@@ -6299,6 +6326,8 @@ async function renderWizard() {
   const castWire = (s, host) => {
     $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
     $("[data-f=edit]", host).onclick = () => castEditWords(s);
+    const traits = $("[data-f=traits]", host);
+    if (traits) traits.onclick = () => castEditTraits(s);
     const photo = $("[data-f=attach]", host);
     if (photo) photo.onclick = () => photoTrayModal(s, refreshCast);
   };
@@ -6414,6 +6443,11 @@ async function renderWizard() {
           <div class="cd-acts">
             <button type="button" class="ghost" data-f="attach">Attach a photograph</button>
             <button type="button" class="ghost" data-f="edit">Edit the description</button>
+            <!-- Traits were editable only in the retired casting modal.
+                 They ride every prompt this subject appears in, so a
+                 wrong one is expensive and it needs a door. §2 stays as
+                 the plan drew it; this is §3, where they are shown. -->
+            <button type="button" class="ghost" data-f="traits">Edit the traits</button>
           </div>
         </div>
       </div>`;
@@ -6460,6 +6494,7 @@ async function renderWizard() {
 
   // The manual door lives on the cast screen now, inside the one uncast
   // block, exactly as the mock puts it — one path, not two surfaces.
+  if (castOpen) document.body.dataset.cast = "1";   // arrived from another view
   renderCastRow();
   renderSubjectGrid();
   renderCastScreen();
@@ -8664,7 +8699,29 @@ function buildUnanchoredRegister(locs) {
   return reg;
 }
 
-function buildUncastCard(rec, onChange) {
+/* Casting from OUTSIDE stage 02 (the Reference / Subjects shelf).
+
+   The cast screen lives inside `renderWizard`'s closure, so the id to
+   open is left here and picked up when that stage renders. It is
+   consumed on read: a reload after casting opens the roster, not a card
+   the user has since moved on from. */
+let castArriving = null;
+
+async function castSubject(rec) {
+  try {
+    const made = await api("/api/subjects", { method: "POST", json: {
+      name: rec.name, kind: rec.kind || "CHARACTER",
+      subtitle: rec.subtitle || "", traits: rec.traits || [],
+      description: rec.description || "",
+      source: "screenplay analysis" } });
+    castArriving = made.id;
+    await showView("wizard");
+    window.scrollTo({ top: 0 });
+    return made;
+  } catch (err) { toast(err.message, true); }
+}
+
+function buildUncastCard(rec) {
   const card = document.createElement("div");
   card.className = "subj-card uncast";
   card.innerHTML = `
@@ -8676,7 +8733,9 @@ function buildUncastCard(rec, onChange) {
     <div class="subj-identity">${esc(rec.subtitle
       || "Found by the screenplay read — no card yet. Casting it creates the card and carries its screenplay identity into prompts.")}</div>
     <div><button type="button" class="ghost" data-f="cast">Cast this subject</button></div>`;
-  $("[data-f=cast]", card).onclick = () => castModal(rec, onChange);
+  // One gesture here too — it casts and opens that subject's own screen
+  // on stage 02, which is where its picture is made.
+  $("[data-f=cast]", card).onclick = () => castSubject(rec);
   return card;
 }
 
@@ -8772,171 +8831,22 @@ async function photoTrayModal(s, onDone) {
   };
 }
 
-// Casting opens a MODAL, not a file explorer (user 2026-08-16: "too
-// jarring... instead of adding that to the list, it should open in a
-// modal. Once you save it, the card goes where it is now").
-//
-// The old flow did two abrupt things: the button created the card with
-// no chance to look at what the read proposed, and the card's `+` tile
-// was a bare file input, so the OS picker came up over the app with
-// nothing having been confirmed. Both facts belong in one place before
-// anything is written: the identity the screenplay gave this subject,
-// editable, and the photos, attached deliberately.
-//
-// Nothing is created until Cast is pressed, and the photos ride the same
-// endpoint the card's own slot uses — one upload path, not a second.
-/* E5 (RULE_PASS_2 E, ruled 2026-08-18): once the fields are populated,
-   nothing distinguished a proposal from the user's own words — so someone
-   who edits Identity, comes back and finds Traits untouched cannot tell
-   whether they approved them or never looked. The same --ink-faint
-   Courier marker Part D gives a read act name, cleared on first edit. */
-const READ_MARK = ` <span class="read-mark mono">READ</span>`;
+/* THE CASTING MODAL IS RETIRED (2026-09-12).
 
-function castModal(rec, onDone) {
-  const KINDS = ["CHARACTER", "VEHICLE", "PROP"];
-  const kind = (rec.kind || "CHARACTER").toUpperCase();
-  const ov = document.createElement("div");
-  ov.className = "modal-scrim";
-  ov.innerHTML = `
-    <div class="modal cast-modal" role="dialog" aria-modal="true">
-      <div class="modal-title">Cast ${esc(rec.name)}</div>
-      <!-- E4 (RULE_PASS_2 E, ruled 2026-08-18): casting is deciding what
-           someone LOOKS LIKE. The photos are the decision and the traits
-           qualify it, so the tray leads and Kind — which came from the
-           read and is rarely wrong — states itself rather than opening
-           the modal with a dropdown. -->
-      <div class="cast-kind mono" data-f="kind-line">${esc(kind)} · PROPOSED BY THE READ
-        <button type="button" class="text-act" data-f="kind-change">Change</button></div>
-      <label class="modal-field hidden" data-f="kind-wrap">Kind
-        <select data-f="kind">${KINDS.map(k =>
-          `<option${k === kind ? " selected" : ""}>${k}</option>`).join("")}</select>
-      </label>
+   It existed because casting used to write the card on click with no
+   chance to look at what the read proposed (user, 2026-08-16: "it should
+   open in a modal"). CAST_CHARACTER_SCREEN answers that need better: the
+   subject's own SCREEN holds the same words with the picture beside
+   them, so the modal became a form standing in front of a screen built
+   for the same job — asking again for a name, a kind, a role line, a
+   profile and traits the read had already proposed.
 
-      <p class="hint">What the screenplay read proposed. Edit anything —
-        the identity and traits ride in every prompt this subject appears
-        in. Nothing is created until you cast it.</p>
+   User, 2026-09-12: "character cards still open this prior to
+   generation. What you just implemented is a replacement."
 
-      <div class="cast-photos">
-        <span class="f-label">Reference photos <span class="hint">optional — each becomes an approved reference under this name</span></span>
-        <div class="cast-thumbs" data-f="thumbs"></div>
-        <!-- Both doors, in the one place a subject's picture is first
-             asked for. Generating happens AFTER the card exists — there
-             is nothing to render from until the words below are saved —
-             so this states that rather than offering a button that would
-             have to invent them. -->
-        <label class="cast-gen"><input type="checkbox" data-f="gen">
-          <span>Render one from the words below once it is cast
-            <i class="mono">SPENDS A RENDER &middot; NEEDS A SAVED BIBLE</i></span></label>
-      </div>
-
-      <label class="modal-field">Identity${rec.subtitle ? READ_MARK : ""}
-        <input type="text" data-f="subtitle" value="${esc(rec.subtitle || "")}"
-               placeholder="e.g. DRIVER. COWBOY. LOYAL FRIEND.">
-      </label>
-      <!-- The profile. It was only on the detail screen, which is the
-           surface you reach AFTER casting — so the first place anyone
-           writes a subject's words did not have the field the rest of the
-           app renders from (user-caught 2026-09-01). Identity is the role;
-           this is what they look like. -->
-      <label class="modal-field">Who this is
-        <span class="hint">what they look like — a generated reference is rendered from it</span>
-        <textarea data-f="description" rows="2"
-          placeholder="Dark hair, mid-thirties, weather on the face. Reads the same at wide as at close."
-          >${esc(rec.description || "")}</textarea>
-      </label>
-      <label class="modal-field">Traits <span class="hint">one per line</span>${
-        (rec.traits || []).length ? READ_MARK : ""}
-        <textarea data-f="traits" rows="4"
-          placeholder="20s. Cheerful under pressure.&#10;Scarred since the crash.">${
-          esc((rec.traits || []).join(String.fromCharCode(10)))}</textarea>
-      </label>
-
-      <div class="busy busy-inline" data-f="state" aria-live="polite"></div>
-      <div class="modal-actions">
-        <button class="ghost" data-f="cancel">Cancel</button>
-        <button class="primary" data-f="ok">Cast ${esc(rec.name)}</button>
-      </div>
-    </div>`;
-  document.body.append(ov);
-
-  const ok = $("[data-f=ok]", ov), cancel = $("[data-f=cancel]", ov);
-  const stateEl = $("[data-f=state]", ov), thumbs = $("[data-f=thumbs]", ov);
-  // The marker is a claim about THIS value; editing it makes it yours.
-  for (const f of ["subtitle", "traits"]) {
-    $(`[data-f=${f}]`, ov)?.addEventListener("input", e =>
-      e.target.closest("label")?.querySelector(".read-mark")?.remove());
-  }
-  $("[data-f=kind-change]", ov).onclick = () => {
-    $("[data-f=kind-line]", ov).classList.add("hidden");
-    $("[data-f=kind-wrap]", ov).classList.remove("hidden");
-  };
-  let busy = false;
-  const say = (msg, kind2 = "") => {
-    stateEl.className = `busy busy-inline${kind2 ? " " + kind2 : ""}`;
-    stateEl.innerHTML = kind2 === "work"
-      ? `<span class="spinner"></span><span class="busy-label">${esc(msg)}</span>`
-      : `<span class="busy-label">${esc(msg)}</span>`;
-  };
-  const close = () => ov.remove();
-  cancel.onclick = close;
-  ov.addEventListener("mousedown", e => { if (e.target === ov && !busy) close(); });
-
-  // The same tray an existing card uses — one place where a photo is
-  // chosen and looked at before it is written.
-  const tray = photoTray(thumbs, {
-    onPicked: fs => say(fs.length
-      ? `${fs.length} photo${fs.length === 1 ? "" : "s"} ready — they upload when you cast.`
-      : ""),
-  });
-
-  ok.onclick = async () => {
-    if (busy) return;
-    busy = true; ok.disabled = true;
-    say("Creating the card…", "work");
-    try {
-      const created = await api("/api/subjects", { method: "POST", json: {
-        name: rec.name,
-        kind: $("[data-f=kind]", ov).value,
-        subtitle: $("[data-f=subtitle]", ov).value.trim(),
-        description: $("[data-f=description]", ov).value.trim(),
-        traits: $("[data-f=traits]", ov).value.split(String.fromCharCode(10))
-          .map(t => t.trim()).filter(Boolean),
-        source: "screenplay analysis" } });
-      const picked = tray.files();
-      for (let i = 0; i < picked.length; i++) {
-        say(`Attaching photo ${i + 1} of ${picked.length}…`, "work");
-        const fd = new FormData();
-        fd.append("file", picked[i]);
-        await api(`/api/subjects/${created.id}/reference`, { method: "POST", body: fd });
-      }
-      let rendered = "";
-      if ($("[data-f=gen]", ov)?.checked) {
-        say(`Rendering ${rec.name}…`, "work");
-        try {
-          await api(`/api/subjects/${created.id}/generate`,
-                    { method: "POST", json: {} });
-          rendered = " and one rendered";
-        } catch (err) {
-          // The card exists and the photos landed. A failed render is the
-          // smallest half of this, and saying nothing would imply the
-          // whole thing failed.
-          toast(`${rec.name} is cast, but the render did not run — ${err.message}`,
-                true);
-        }
-      }
-      toast(`${rec.name} cast${picked.length
-        ? ` with ${picked.length} photo${picked.length === 1 ? "" : "s"}` : ""}${rendered} — its card is in the library.`);
-      close();
-      onDone?.();
-    } catch (err) {
-      // The card may already exist while a photo failed — say which half
-      // got through rather than implying nothing happened.
-      busy = false; ok.disabled = false;
-      say(err.message, "bad");
-    }
-  };
-  $("[data-f=subtitle]", ov).focus();
-}
+   Every door now goes through `castInto` (on stage 02) or `castSubject`
+   (from the Reference shelf), both of which cast and open that subject's
+   screen. `photoTray` survives — `photoTrayModal` is the Attach door. */
 
 // Ask the screenplay something about ONE panel (user 2026-08-16: "a Scan
 // Screenplay button that will rescan for information. A modal will pop up
@@ -9364,7 +9274,7 @@ async function renderReferences() {
         fill = grid => {
           grid.classList.add("subj-grid");
           cast.forEach(s => grid.append(buildSubjectCard(s, refs, renderReferences)));
-          uncast.forEach(rec => grid.append(buildUncastCard(rec, renderReferences)));
+          uncast.forEach(rec => grid.append(buildUncastCard(rec)));
           const lb = loose.map(r => ({
             src: `/api/references/${r.id}/image`,
             caption: `${r.id} — ${r.role} (${r.status})` }));

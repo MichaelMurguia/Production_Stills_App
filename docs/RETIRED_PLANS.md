@@ -219,19 +219,26 @@ delta as new instructions.
   the 12px type floor across both screens. §3 kept its 2026-08-29
   proportions and gained the header's role suffix.
 
-  **Two items deliberately NOT built, both raised rather than decided:**
+  Same day, the user extended §1 past the roster: "character cards still
+  open this prior to generation. What you just implemented is a
+  replacement." So the **casting modal is retired** and all four doors —
+  the ribbon's uncast tile, the roster's chip, the manual `+ Cast` row,
+  and the Reference shelf's `Cast this subject` — cast and land on the
+  subject's own screen. Traits kept an editor on §3, since the modal was
+  the only place they could be changed and they ride every prompt.
 
-  1. §2 says the face crop and the card thumbnail are "derived from the
-     accepted full-body image server-side". They are not derived. The
-     roster card shows the same 9:16 plate in its 1:1.25 slot under
-     `background-size: cover`, which crops to the CENTRE of the body —
-     so a character's card is a torso, not a face. Deriving a face crop
-     needs a face detector or a second render, and the plan does not say
-     which.
-  2. §1 says a chip casts in one gesture; the ribbon's tiles still open
-     the casting modal, because the user put them there on 2026-09-10
-     ("you don't have to open the full cast") and this plan does not
-     cover the ribbon. Two casting doors now reach two components.
+  **One item deliberately NOT built, raised rather than decided:** §2
+  says the face crop and the card thumbnail are "derived from the
+  accepted full-body image server-side". They are not derived. The
+  roster card shows the same 9:16 plate in its 1:1.25 slot under
+  `background-size: cover`, which crops to the CENTRE of the body — so a
+  character's card is a torso, not a face. Deriving a face crop needs a
+  face detector or a second render, and the plan does not say which.
+
+  **And one thing the retirement took with it:** KIND is no longer
+  editable anywhere. The read proposes it and it is rarely wrong; when
+  it is, the path is deleting the card and re-adding it from the manual
+  row, which has a kind select. Named here rather than patched.
 
   §3's `1.85:1` for a vehicle or prop and §3.3's 120px environment thumb
   are unchanged by this plan; the environment question above is still

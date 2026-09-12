@@ -24,18 +24,18 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2745 tests** across 138 files.
+**2742 tests** across 138 files.
 
 
-## Product app — 2524 tests in 121 files
+## Product app — 2521 tests in 121 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_a_pass_does_not_outlive_its_key.py` | 9 | A stored test result must not outlive the credential it tested. |
 | `test_a_read_names_the_draft_it_read.py` | 12 | A read names the draft it read, and a stage does not retract itself. |
-| `test_a_subject_has_a_profile_and_two_doors.py` | 54 | A subject carries a profile, and two ways to get a picture. |
+| `test_a_subject_has_a_profile_and_two_doors.py` | 50 | A subject carries a profile, and two ways to get a picture. |
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
-| `test_anchor_consolidation.py` | 161 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
+| `test_anchor_consolidation.py` | 162 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
 | `test_anchors_stay_in_step.py` | 32 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |

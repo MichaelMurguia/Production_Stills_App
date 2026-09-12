@@ -1100,7 +1100,7 @@ class ALockedStageExplainsRatherThanRefuses(unittest.TestCase):
         self.assertIn("cursor: not-allowed", block(".made-gated"))
 
 
-class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
+class CastingIsOneGestureIntoTheSubjectsScreen(unittest.TestCase):
     """User 2026-08-16: "When you click a character to cast, currently it
     pops open a file explorer. Too jarring... instead of adding that to
     the list, it should open in a modal. Once you save it, the card goes
@@ -1109,60 +1109,75 @@ class CastingOpensAModalNotAFileExplorer(unittest.TestCase):
     Two abrupt things happened: the button wrote the card with no chance
     to look at what the read proposed, and the card's `+` tile was a bare
     file input, so the OS picker arrived over the app with nothing having
-    been confirmed."""
+    been confirmed. A modal answered both.
 
-    def body(self):
-        i = JS.index("function castModal(rec, onDone)")
-        return JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+    THE MODAL IS RETIRED (user, 2026-09-12: "character cards still open
+    this prior to generation. What you just implemented is a
+    replacement"). CAST_CHARACTER_SCREEN answers the same need better —
+    the subject's own SCREEN holds what the read proposed, editable, with
+    the picture beside it — so the modal had become a form standing in
+    front of a screen built for the same job. Neither abrupt thing came
+    back: no file explorer opens (Attach is a deliberate button on that
+    screen), and nothing is rendered until Generate is pressed."""
 
-    def test_the_cast_button_opens_the_modal(self):
-        self.assertIn('$("[data-f=cast]", card).onclick = () => castModal(rec, onChange)', JS)
+    def test_no_door_opens_a_modal_any_more(self):
+        self.assertNotIn("castModal", JS)
 
-    def test_nothing_is_created_until_it_is_cast(self):
-        b = self.body()
-        i = b.index('ok.onclick')
-        self.assertIn('api("/api/subjects", { method: "POST"', b[i:],
-                      "the write lives behind the button, not the open")
-        self.assertNotIn('api("/api/subjects", { method: "POST"', b[:i])
-        self.assertIn("Nothing is created until you cast it", b)
+    def test_the_shelfs_cast_button_casts_and_opens_the_screen(self):
+        self.assertIn('$("[data-f=cast]", card).onclick = () => castSubject(rec)', JS)
+        i = JS.index("async function castSubject(rec) {")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        self.assertIn('api("/api/subjects", { method: "POST"', seg)
+        self.assertIn("castArriving = made.id", seg)
+        self.assertIn('showView("wizard")', seg)
 
-    def test_it_carries_what_the_read_proposed_and_lets_it_be_edited(self):
-        b = self.body()
-        for f in ("[data-f=kind]", "[data-f=subtitle]", "[data-f=traits]"):
-            self.assertIn(f, b, f)
-        self.assertIn("rec.subtitle", b)
-        self.assertIn("rec.traits", b)
+    def test_the_stages_doors_cast_without_leaving_the_stage(self):
+        i = JS.index("const castInto = async (rec) => {")
+        seg = JS[i:JS.index(chr(10) + "  };", i)]
+        self.assertIn("castOne(rec)", seg)
+        self.assertIn("castOpen = made.id", seg)
+        self.assertNotIn("showView", seg)
 
-    def test_photos_are_chosen_here_and_uploaded_on_cast(self):
-        b = self.body()
-        # the picking moved into the shared tray; casting only reads it
-        self.assertIn("const tray = photoTray(thumbs,", b)
-        self.assertIn("const picked = tray.files()", b)
-        self.assertIn("they upload when you cast", b)
-        i = b.index("ok.onclick")
-        self.assertIn("/reference`, { method: \"POST\", body: fd }", b[i:],
-                      "and only then")
+    def test_the_arriving_id_is_consumed_on_read(self):
+        """A reload after casting should open the roster, not a card the
+        user moved on from an hour ago."""
+        self.assertIn("let castOpen = castArriving;", JS)
+        self.assertIn("castArriving = null;", JS)
+
+    def test_it_carries_what_the_read_proposed(self):
+        """The modal showed the read's words in fields. The screen shows
+        them as the description and the traits; either way the card is
+        made FROM the recommendation, never from a name alone."""
+        i = JS.index("const castOne = r => api(")
+        seg = JS[i:i + 400]
+        for f in ("r.kind", "r.subtitle", "r.traits", "r.description"):
+            self.assertIn(f, seg, f)
+        self.assertIn("castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects))", JS)
 
     def test_the_upload_path_is_the_cards_own_not_a_second_one(self):
-        b = self.body()
-        self.assertIn("/api/subjects/${created.id}/reference", b)
+        """Attach on the subject's screen goes to the tray the card
+        already uses — one upload path, as it was under the modal."""
+        self.assertIn("photoTrayModal(s, refreshCast)", JS)
 
-    def test_it_reports_while_it_writes(self):
-        b = self.body()
-        self.assertIn('say("Creating the card…", "work")', b)
-        self.assertIn("Attaching photo ${i + 1} of ${picked.length}", b)
-        self.assertIn('class="busy busy-inline"', b,
-                      "the one busy vocabulary, per A3")
+    def test_the_words_the_modal_owned_still_have_doors(self):
+        """The description and the traits ride every prompt this subject
+        appears in. The modal was the only place either could be edited;
+        retiring it without replacing them would have made the read's
+        guesses permanent."""
+        self.assertIn('await askText("The description"', JS)
+        self.assertIn('await askText("What rides every prompt"', JS)
+        self.assertIn('data-f="traits">Edit the traits<', JS)
 
-    def test_a_partial_failure_says_which_half_got_through(self):
-        b = self.body()
-        # The OUTER catch — the one that owns the card. A generate step
-        # was added inside the try 2026-09-01 with a catch of its own, so
-        # "the first catch" stopped meaning "the one that failed to cast".
-        i = b.index("card may already exist")
-        self.assertIn('say(err.message, "bad")', b[i:i + 300])
-        # …and the render's own failure says which half got through too.
-        self.assertIn("is cast, but the render did not run", b)
+    def test_both_are_textareas_not_one_line_inputs(self):
+        """A description is a sentence or two and a trait list is one per
+        line. Both were unreadable in the single-line input `askText`
+        gave them."""
+        i = JS.index("const askText = async (title, label, opts = {}) => {")
+        self.assertIn("textarea: !!opts.textarea", JS[i:i + 600])
+        for fn in ("const castEditWords = async (s) => {",
+                   "const castEditTraits = async (s) => {"):
+            j = JS.index(fn)
+            self.assertIn("textarea: true", JS[j:JS.index(chr(10) + "  };", j)], fn)
 
 
 class OneTrayForBothWaysIn(unittest.TestCase):
@@ -1179,9 +1194,10 @@ class OneTrayForBothWaysIn(unittest.TestCase):
         self.assertIn('photoTrayModal(s, onChange)', JS)
 
     def test_the_tray_is_one_function_not_two_copies(self):
+        """One caller since the casting modal retired (2026-09-12) — the
+        rule it guards is that nobody writes a second picker, and one
+        definition is still the whole of that."""
         self.assertEqual(JS.count("function photoTray(host,"), 1)
-        # both callers use it
-        self.assertIn("const tray = photoTray(thumbs,", JS)
         self.assertIn('const tray = photoTray($("[data-f=thumbs]", ov),', JS)
 
     def test_nothing_uploads_until_the_act(self):
@@ -1203,13 +1219,14 @@ class OneTrayForBothWaysIn(unittest.TestCase):
         self.assertIn("SUBJECT_ROLE_OF[s.kind]", seg)
         self.assertIn("grouped under this exact name", seg)
 
-    def test_a_partial_failure_is_stated_in_both_modals(self):
-        for fn, mark in (("function castModal(rec, onDone)", "card may already exist"),
-                         ("async function photoTrayModal", "} catch (err) {")):
-            i = JS.index(fn)
-            seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
-            j = seg.index(mark)
-            self.assertIn('say(err.message, "bad")', seg[j:j + 300], fn)
+    def test_a_partial_failure_is_stated(self):
+        """The casting modal wrote a card and then N photos and then
+        maybe a render, so it had to say which half got through. The
+        tray is the only multi-step write left."""
+        i = JS.index("async function photoTrayModal")
+        seg = JS[i:JS.index(chr(10) + "}" + chr(10), i)]
+        j = seg.index("} catch (err) {")
+        self.assertIn('say(err.message, "bad")', seg[j:j + 300])
 
 
 class TheBreakdownHasTwoDoors(unittest.TestCase):
@@ -1608,13 +1625,14 @@ class EveryDoorIntoCastingIsOneGesture(unittest.TestCase):
         both go through the same modal rather than writing a card
         themselves. Its photograph button goes to the same chooser the
         subject card already opens."""
-        # Three: the definition, the ribbon's uncast tile (2026-09-01)
-        # and the proposal card's Cast. The roster's two doors left for
-        # `castInto` with CAST_CHARACTER_SCREEN; no way of casting was
-        # lost, and all four still end at `castOne`.
-        self.assertEqual(JS.count("castModal("), 3,
-                         "one definition, two callers")
+        # Every door on stage 02 — the ribbon's uncast tile, the
+        # roster's chip, the manual row — is `castInto`, and the
+        # Reference shelf's is `castSubject`. Both write through ONE
+        # shape: the read's record in, a card and its own screen out.
         self.assertEqual(JS.count("const castInto = async (rec) => {"), 1)
+        self.assertEqual(JS.count("async function castSubject(rec) {"), 1)
+        self.assertEqual(JS.count("castInto("), 3, "the ribbon tile, the chip, the manual row")
+        self.assertEqual(JS.count("castSubject(rec)"), 2, "definition and the shelf")
         self.assertIn("castOne(u)", JS, "bulk casting survived the move")
         self.assertEqual(JS.count("photoTrayModal("), 3,
                          "one definition, two callers")

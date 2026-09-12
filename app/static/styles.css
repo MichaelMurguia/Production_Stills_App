@@ -1492,15 +1492,6 @@ details.meta pre {
   white-space: nowrap; }
 .cred-fix b { color: var(--ink-dim); font-weight: 500; }
 
-/* UNCANONIZED — 2026-09-01 — the generate option on the cast modal */
-.cast-gen { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px;
-  font-family: var(--sans); font-size: 11.5px; color: var(--ink-dim);
-  cursor: pointer; }
-.cast-gen input { margin: 2px 0 0; flex: none; }
-/* A render is money: the cost rides with the option, not after it. */
-.cast-gen i { display: block; font-style: normal; font-family: var(--mono);
-  font-size: 11.5px; letter-spacing: .1em; color: var(--ink-faint); margin-top: 3px; }
-
 /* UNCANONIZED — 2026-08-31 — the cast detail's two doors (§3.4) */
 /* GENERATE ANOTHER closes the filmstrip, dashed, because it is the one
    slot that has no picture in it yet. */
@@ -4345,27 +4336,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    should not be the first thing in a modal, so it states itself with a
    way in. The READ marker is Part D's, one vocabulary across the app for
    "we read this, check it"; it clears on first edit. */
-/* §1.3 is explicit: three sizes per surface, and the smallest is 11.5px.
-   "The measured fault this replaced was nine sizes between 9.5px and
-   15px." This modal had drifted to four — 9, 10, 10.5 and 12.5 — three of
-   them under the floor, and the user could not read them (2026-09-01: "the
-   font is 7 pixels high — a person can't read that — is that a design
-   decision?"). It was not a decision; it was drift. */
-.cast-kind { font-size: 11.5px; letter-spacing: .12em; color: var(--ink-dim);
-  display: flex; align-items: center; gap: 10px; }
-.read-mark { font-size: 11.5px; letter-spacing: .12em; color: var(--ink-faint); }
-/* Scoped to this modal rather than raising `.f-label` app-wide — the same
-   drift is everywhere and deserves one deliberate pass, not a side effect
-   of a casting fix. */
-.cast-modal .f-label { font-size: 11.5px; letter-spacing: .12em; }
-.cast-modal .hint { font-size: 11.5px; }
-.cast-modal .modal-field { font-size: 11.5px; }
-.cast-modal .text-act { font-size: 11.5px; }
-/* Three sizes, and the largest anchors them: 15px for the subject and the
-   two verbs that close the dialog, 11.5px for everything else. (The kind
-   <select> renders at the browser's own size and is not ours to set.) */
-.cast-modal .modal-title { font-size: 15px; }
-.cast-modal .modal-actions button { font-size: 15px; }
+/* The casting modal's type block retired with the modal (2026-09-12).
+   Its lesson did not: `.f-label` is still 10.5px and `.hint` 12.5px
+   app-wide, and that drift still wants one deliberate pass rather than
+   another per-surface patch. The character screen states its own floor
+   under `#cast-screen`. */
 .photos-modal .cast-thumbs { margin-top: 4px; }
 /* The plates a row will attach, named on demand. They sit behind a verb
    rather than always-on because a 19-row list of ids is a wall — but they

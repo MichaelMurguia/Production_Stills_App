@@ -69,12 +69,18 @@ class TheStepIsAnInteractiveRibbon(unittest.TestCase):
         self.assertIn('$$("[data-sid]", rib).forEach(b => b.onclick', seg)
 
     def test_an_uncast_tile_casts_in_place(self):
-        """Without opening the roster — that is the whole point."""
+        """Without opening the roster — that is the whole point.
+
+        It opened the casting modal until 2026-09-12; now it casts and
+        lands on that subject's own screen, which is where its picture
+        gets made (user: "character cards still open this prior to
+        generation. What you just implemented is a replacement")."""
         i = JS.index("const renderCastRow = async () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
         # With the read's own record — subtitle and traits — rather than
         # a blank rebuilt from the tile (2026-09-11).
-        self.assertIn("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects)", seg)
+        self.assertIn("castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects))", seg)
+        self.assertNotIn("castModal", seg)
 
     def test_a_cast_tile_opens_its_own_card_not_the_roster(self):
         i = JS.index("const renderCastRow = async () => {")
