@@ -243,3 +243,47 @@ delta as new instructions.
   §3's `1.85:1` for a vehicle or prop and §3.3's 120px environment thumb
   are unchanged by this plan; the environment question above is still
   open.
+
+- **LEGIBILITY_FLOOR_2026-09-12.md** + **README_2026-09-12.md** — delivered
+  in `design_handoff/font_updates.zip`, implemented 2026-09-12. Extracted
+  to scratch, never copied into the tree. The plan says "Fold it into
+  `app/static/DESIGN_SYSTEM.md` and delete it"; it is folded into §1.3
+  (the type scale) and the Tokens section (the ink tiers and the colour
+  floor), and both halves are asserted mechanically by
+  `tests/test_design_tokens.py::TheLegibilityFloor`.
+
+  499 of 549 `font-size` declarations moved; the body shorthand went from
+  14.5px to 14px; four inline sizes in `app.js` were raised. `--ink-dim`
+  and `--ink-faint` were redefined rather than rewritten at 476 call
+  sites — the audit's `#6b7278`-on-`#0b0c0e` finding WAS the faint tier,
+  so the fault was in the token. Their 41 non-text uses moved to new
+  `--line-strong` / `--line-bright` so no border changed value.
+
+  **Three consequences, all raised rather than smoothed over:**
+
+  1. A disabled button's label was `#4a4d52` (~2:1) and is now readable
+     ink. The plan leaves no colour for "inactive", and a disabled
+     control here usually carries the reason it is disabled.
+  2. The cast ribbon's twelve names no longer fit on one line at 14px, so
+     they wrap to two — the plan's own "give the label the room". One of
+     twelve (COLONEL BEATRIX OKORO) still ellipsises at the second line.
+  3. Surfaces that carried three or four label sizes now carry one,
+     because everything under 13px collapsed onto the floor.
+
+  **The rest of that zip was a RESURRECTION**, the third of this shape.
+  Twelve of its fifteen documents are already ledgered above — the whole
+  `RULE_PASS_2_*` series, `TUTORIAL_RULING_PLAN` + `_SNIPPET`,
+  `TUTORIAL_MATERIAL_2026-08-19`, `TRIAGE_PLAN_2026-08-18`,
+  `DENSITY_PASS_2026-08-17`, `PRODUCTION_DESIGN_UI_PLAN_2026-08-28` and
+  `CAST_CHARACTER_SCREEN_2026-09-12` (ledgered hours earlier the same
+  day). Its `README_2026-08-19.md` is the 2026-08-18 one re-dated, still
+  asserting "Nothing here is in `docs/RETIRED_PLANS.md`". None were
+  re-implemented.
+
+  **One passenger is genuinely unledgered and was NOT built:**
+  `V3_INSTRUMENT_RULING_PLAN.md` (2026-08-23, "the surface is an
+  instrument" — a third founding rule beside amber and Courier, deleting
+  every count and tally that exists to reassure rather than to be acted
+  on). It is marked `Status: FOR REVIEW`, the drop's own README does not
+  list it, and it would retire copy across every surface. Raised, not
+  implemented.

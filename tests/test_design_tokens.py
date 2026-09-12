@@ -27,6 +27,90 @@ def block(sel: str) -> str:
     return "\n".join(bodies)
 
 
+class TheLegibilityFloor(unittest.TestCase):
+    """LEGIBILITY_FLOOR_2026-09-12 — type and colour, app-wide.
+
+    An audit of the shipped stage found Courier labels at 8-9px cap
+    height and `#6b7278` glyphs on `#0b0c0e`, about 4:1. The result was a
+    screen that could not be read without leaning in. The earlier answer
+    was a per-surface patch — each new plan raised its own labels and
+    named the app-wide drift as somebody else's job — which is why this
+    is a MECHANICAL contract over the whole stylesheet rather than a list
+    of components. A floor that any one rule can slip under is not a
+    floor.
+
+    Both halves are the plan's §4 "done means", asserted directly."""
+
+    STEPS = {13, 14, 15, 16, 17, 19, 20, 24, 34}
+    # Retired as GLYPH colours. Still legal for a hairline, a dashed
+    # border, an underline or the edge of an inactive control — which is
+    # why they survive as --line-strong / --line-bright.
+    RETIRED_INK = ("#6b7278", "#9aa1a8", "#c8cdd2", "#3a4046", "#4a4d52")
+
+    @staticmethod
+    def _bare():
+        return re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+
+    def test_every_size_is_a_step_on_the_scale(self):
+        """No size between these steps, and none outside them."""
+        off = sorted({float(m.group(1))
+                      for m in re.finditer(r"font-size:\s*([\d.]+)px", self._bare())}
+                     - self.STEPS)
+        self.assertEqual(off, [], f"off the scale: {off}")
+
+    def test_the_shorthand_obeys_it_too(self):
+        """`font:` sets a size without saying `font-size`, and the body's
+        shorthand is what most of the app inherits. It was 14.5px."""
+        for m in re.finditer(r"font:\s*([\d.]+)px", self._bare()):
+            self.assertIn(float(m.group(1)), self.STEPS, m.group(0))
+
+    def test_nothing_in_the_markup_undercuts_it(self):
+        """An inline style bypasses every rule in this file."""
+        for f in ("app/static/app.js", "app/static/index.html"):
+            t = (ROOT / f).read_text(encoding="utf-8")
+            for m in re.finditer(r"font-size:\s*([\d.]+)px", t):
+                self.assertIn(float(m.group(1)), self.STEPS, f"{f}: {m.group(0)}")
+
+    def test_thirteen_is_reserved_for_courier(self):
+        """The plan: 13px is the floor for a Courier kicker, and
+        nothing else may be 13px. A rule that names Archivo cannot be."""
+        bad = []
+        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", self._bare()):
+            m = re.search(r"font-size:\s*([\d.]+)px", body)
+            if m and float(m.group(1)) == 13 and "var(--sans)" in body:
+                bad.append(" ".join(sel.split())[:60])
+        self.assertEqual(bad, [], f"Archivo at 13px: {bad}")
+
+    def test_no_retired_grey_is_used_as_a_glyph_colour(self):
+        """They stay legal as lines. `color:` is the one property that
+        makes them a glyph."""
+        bad = []
+        for m in re.finditer(r"(?:^|[;{])\s*color:\s*([^;}]+)", self._bare()):
+            v = m.group(1).strip().lower()
+            if any(h in v for h in self.RETIRED_INK):
+                bad.append(v)
+        self.assertEqual(bad, [], f"retired ink used as text: {bad}")
+
+    def test_the_ink_tiers_carry_the_floors_values(self):
+        """The fault was in the TOKENS, not in any one rule — which is
+        why raising these four fixed 476 declarations at once."""
+        for tok, hexv in (("--ink", "#eceef0"), ("--ink-body", "#dfe3e6"),
+                          ("--ink-dim", "#c3c9ce"), ("--ink-faint", "#a3aab1")):
+            self.assertIn(f"{tok}:", CSS, tok)
+            m = re.search(re.escape(tok) + r":\s*(#[0-9a-fA-F]{6})", CSS)
+            self.assertEqual(m.group(1).lower(), hexv, tok)
+
+    def test_the_old_greys_survive_as_lines_and_only_as_lines(self):
+        for tok, hexv in (("--line-strong", "#6b7278"), ("--line-bright", "#9aa1a8")):
+            m = re.search(re.escape(tok) + r":\s*(#[0-9a-fA-F]{6})", CSS)
+            self.assertIsNotNone(m, tok)
+            self.assertEqual(m.group(1).lower(), hexv, tok)
+        for tok in ("--line-strong", "--line-bright"):
+            for m in re.finditer(r"([a-z-]+)\s*:\s*([^;{}]*var\(" + tok + r"\)[^;{}]*)",
+                                 self._bare()):
+                self.assertNotEqual(m.group(1), "color", f"{tok} used as text")
+
+
 class TokenContractTests(unittest.TestCase):
     def assert_decls(self, sel, decls):
         b = block(sel)
@@ -69,7 +153,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".mq-tile", [
             "flex: none", "border: 1px solid var(--line-soft)",
             "background: var(--bg2)", "padding: 6px 12px 6px 6px",
-            "font-size: 11.5px", "color: var(--ink-dim)",
+            "font-size: 14px", "color: var(--ink-dim)",
             "white-space: nowrap"])
         self.assert_decls(".mq-tile img", ["width: 22px", "height: 22px"])
 
@@ -80,9 +164,9 @@ class TokenContractTests(unittest.TestCase):
             "border-left: 1px solid var(--line-soft)", "padding-left: 34px",
             "gap: 26px", "user-select: none", "caret-color: transparent"])
         self.assert_decls(".fr-notice h3", [
-            "font-size: 18px", "font-weight: 600", "color: var(--ink)"])
+            "font-size: 19px", "font-weight: 600", "color: var(--ink)"])
         self.assert_decls(".fr-notice p", [
-            "font-size: 13.5px", "line-height: 1.7", "color: var(--ink-dim)"])
+            "font-size: 14px", "line-height: 1.7", "color: var(--ink-dim)"])
         self.assert_decls(".fr-notice p strong", [
             "color: var(--ink)", "font-weight: 600"])
 
@@ -549,7 +633,7 @@ class TokenContractTests(unittest.TestCase):
         self.assertNotIn(".tut-ring", CSS)
         self.assert_decls(".tut-mount", [
             "border: 8px solid var(--field)",
-            "outline: 1px solid var(--ink-faint)",
+            "outline: 1px solid var(--line-strong)",
             "box-sizing: border-box"])
         # the mat is the BAND — a fill would put a lid on the hole
         self.assertIn("background: transparent", block(".tut-mount"))
@@ -827,7 +911,6 @@ class NoUndocumentedHex(unittest.TestCase):
         "#2a2723": "board-frame ground", "#232019": "board-frame slot",
         "#9a978f": "board-frame subtitle",
         # named rulings
-        "#4a4d52": "disabled ink, ruled",
         "#17191c": "locked cell, sanctioned in the plan",
         "#3a4048": "popover border, sanctioned in the plan",
         "#1c1f23": "popover ground, sanctioned in the plan",

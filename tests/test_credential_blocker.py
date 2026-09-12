@@ -282,7 +282,7 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
         block = self.CSS.split(".pal-gate {")[1].split(".wiz-thumb-note")[0]
         self.assertIn("var(--accent-line)", block)
         self.assertIn("var(--accent-soft)", block)
-        self.assertIn("font-size: 12px", block)
+        self.assertIn("font-size: 13px", block)   # Courier kicker floor
         self.assertNotIn("up-gate", self.body())
 
     def test_the_gate_invents_no_colours(self):

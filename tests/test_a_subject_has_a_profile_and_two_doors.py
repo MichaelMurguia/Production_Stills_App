@@ -388,16 +388,23 @@ class TheModalsTypeLessonSurvivedIt(unittest.TestCase):
         for gone in (".cast-modal", ".cast-kind {", ".read-mark {", ".cast-gen {"):
             self.assertNotIn(gone, CSS, gone)
 
-    def test_the_app_wide_drift_is_still_there_and_still_named(self):
-        """A patch removed is not a problem solved. `.f-label` and
-        `.hint` still want one deliberate pass."""
-        b = CSS.split(NL + ".f-label {")[1].split("}")[0]
-        self.assertIn("font-size: 10.5px", b)
-        self.assertIn("still wants one deliberate pass", CSS)
+    def test_the_app_wide_drift_was_finally_taken_out(self):
+        """It was named here for two days as a thing a patch could not
+        fix. LEGIBILITY_FLOOR (2026-09-12) fixed it at the source:
+        `.f-label` was 10.5px and `.hint` 12.5px, and both now clear the
+        floor at their own definitions."""
+        import re
+        for sel, floor in ((".f-label", 13), (".hint", 14)):
+            b = CSS.split(NL + sel + " {")[1].split("}")[0]
+            m = re.search(r"font-size:\s*([\d.]+)px", b)
+            self.assertIsNotNone(m, sel)
+            self.assertGreaterEqual(float(m.group(1)), floor, sel)
 
-    def test_the_character_screen_states_its_own_floor(self):
-        i = CSS.index("#cast-screen .wiz-group-label,")
-        self.assertIn("font-size: 12px", CSS[i:CSS.index("}", i)])
+    def test_the_character_screens_scoped_patch_went_with_it(self):
+        """A patch left behind after its fault is fixed pins a number
+        nothing else uses, and the next reader cannot tell which is the
+        rule."""
+        self.assertNotIn("#cast-screen .wiz-group-label", CSS)
 
 
 class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):

@@ -62,7 +62,13 @@ surfaces   --bg #121417  --bg2 #15181b  --panel #1a1d21  --panel2 #21252a
            --tile #181b1f    (a set member, one value ABOVE its ground)
 lines      --line #2b3037    --line-soft #23272c
            --hairline #1e2226 (section separation inside a sequence)
-ink        --ink #eceef0     --ink-dim #9aa1a8    --ink-faint #6b7278
+           --line-strong #6b7278  --line-bright #9aa1a8
+           (the retired TEXT greys — legal for a hairline, a dashed
+            border, an underline, an inactive control's edge. Never glyphs.)
+ink        --ink #eceef0      17:1   titles, button labels, primary text
+           --ink-body #dfe3e6 15:1   body prose, list items, quotes
+           --ink-dim #c3c9ce  11.5:1 secondary prose, explanatory lines
+           --ink-faint #a3aab1  8:1  every Courier kicker, count, state
 accent     --accent #e0a33f  --accent-ink #0b0c0e (text on amber)
 status     --ok #6fae7a  --bad #cd6155  --hold #7d8fd0   (--warn deleted R3:
            it aliased the accent; --hold IS the warning color, hotter = --bad)
@@ -86,12 +92,32 @@ rgba(224,163,63,·) may appear in a rule (R2).
 Status colors report state only. `--ok` is not a "success accent" for
 decoration; `--bad` is not a red you reach for because something is loud.
 
-### Three ink tiers, and only three
-`--ink` for primary content, `--ink-dim` for supporting, `--ink-faint` for
-labels and metadata. Do not invent a fourth grey — a mid-tone between
-`--ink-faint` and the surface will fail contrast on `--bg`. (This happened once
-already with `#4f5459`.) The single exception is `#4a4d52` on disabled buttons,
-where low contrast is the signal.
+### The ink tiers, and the colour floor (LEGIBILITY_FLOOR, 2026-09-12)
+`--ink` for primary content, `--ink-body` for prose, `--ink-dim` for
+supporting, `--ink-faint` for labels and metadata. Do not invent a fifth
+grey — a mid-tone below `--ink-faint` will fail contrast on `--bg`. (This
+happened twice: `#4f5459`, then the tiers themselves.)
+
+**Text on the app's darks (`#0b0c0e`, `#0f1114`, `#121417`, `#131619`,
+`#15181b`) measures 7:1 for body and label text and 4.5:1 for headline
+scale (19px+). Measured, not eyeballed.** The seven text colours are the
+four ink tiers plus `--accent` (8.6:1), `--ok` (7.4:1) and `--bad`
+(4.6:1 — headline scale or paired with a hairline, never a body
+paragraph). Nothing else may colour a glyph.
+
+**Retired as text colours:** `#6b7278`, `#9aa1a8`, `#c8cdd2`, `#3a4046`,
+`#4a4d52`, any `rgba(236,238,240,.7x)`. The first two survive as
+`--line-strong` / `--line-bright` for lines.
+
+`#4a4d52` on a disabled button is gone with them. A disabled control in
+this app usually carries the reason it is disabled — *"Save the Bible in
+step 04"* is the most important sentence on that card and it was the
+least legible. The disabled signal is the ground, the border and the
+cursor, not an unreadable label.
+
+The cost note inside an amber button is `#1c1406` on `#e0a33f` (13:1).
+Text over an image sits on a scrim — the gradient to `rgba(8,9,11,.97)` —
+and is `--ink`, never a translucent white.
 
 ---
 
@@ -111,20 +137,58 @@ Facts about an image ride on it (id, take number, state, pixel size). A
 rail holds only what has **no** picture. **A surface that could show
 imagery and does not is a defect**, not a layout to preserve.
 
+### The legibility floor (LEGIBILITY_FLOOR, ruled 2026-09-12)
+
+**14px is the floor for anything a person reads. 13px is the floor for a
+Courier kicker, and nothing else may be 13px.** Nothing on any surface is
+smaller than 13px, ever — not a badge, not a count, not a caption, not a
+legend, not a cost note inside a button.
+
+The scale, and the only sizes in use:
+
+| px | face | used for |
+|---|---|---|
+| 13 | Courier only | kickers, state marks, counts, badges, file paths, cost notes |
+| 14 | Archivo / Courier | sluglines, tertiary links, secondary prose, form fields |
+| 15 | Archivo | body prose, button labels, card captions, list items |
+| 16 | Archivo | step titles, modal titles, detail-screen description |
+| 17 | Archivo | bible section subjects |
+| 19 | Archivo | bible `##` headings |
+| 20 | Archivo | logline |
+| 24 | Archivo / Courier | screen titles; step numbers |
+| 34 | Archivo | the bible's production title |
+
+- No size between these steps and none outside them.
+- Courier is uppercase with `letter-spacing:.08em`–`.14em`. Letterspacing
+  makes small type harder to read, not easier — which is why Courier gets
+  a floor of its own and never goes below it.
+- **If a layout only fits because its labels are small, the layout is
+  wrong.** Give the label the room; do not shrink it.
+- Line-height never below 1.4 on anything that wraps.
+
+Why: an audit of the shipped stage found Courier labels rendering at 8–9px
+cap height. The app had been answering this one surface at a time — each
+plan raised its own labels and named the app-wide drift as a later job —
+and a floor that any one rule can slip under is not a floor.
+`tests/test_design_tokens.py::TheLegibilityFloor` asserts the whole
+stylesheet mechanically for that reason.
+
 **Three type sizes per surface, and the largest anchors the rest**
 (§1.2). `24px/600/-.015em` the subject, exactly one per surface · `15px`
-headings (600, `--ink`) and body (400, `--ink-dim`) · `11.5px` everything
+headings (600, `--ink`) and body (400, `--ink-dim`) · `13px` everything
 else. Two roles may share 15px separated by weight ONLY because 24px
-exists above them. At 11.5px the family carries the meaning: Courier is a
-machine fact, Archivo is a verb. The measured fault this replaced was nine
-sizes between 9.5px and 15px — nine steps inside five and a half pixels,
-which is not a weak hierarchy but a continuum, and a continuum reads as
-one size with noise. Gradations are not contrast.
+exists above them. At the smallest size the family carries the meaning:
+Courier is a machine fact, Archivo is a verb. The measured fault this
+replaced was nine sizes between 9.5px and 15px — nine steps inside five
+and a half pixels, which is not a weak hierarchy but a continuum, and a
+continuum reads as one size with noise. Gradations are not contrast.
+(The smallest of the three was 11.5px until the floor above raised it;
+the rule — three sizes, not a continuum — is unchanged.)
 
 **One 24px element per surface, per VOICE** (§1.2, amended by A5,
 2026-08-16). The subject is Archivo 600; a step spine is Courier, and the two
 never compete because §1.3 already makes the family carry the meaning at
-11.5px — it carries it at 24px too. A surface whose job is a sequence may set
+13px — it carries it at 24px too. A surface whose job is a sequence may set
 its step numbers at 24px in Courier beside its 24px Archivo subject; it may
 not set two Archivo elements there. A surface with no sequence has no second
 24px element.
@@ -145,10 +209,10 @@ above its ground. Alternating `--band` grounds are the one sanctioned
 exception — a ground is not a tile.
 
 **A verb is full ink and underlined, and every verb on a surface aligns to
-one right edge** (§1.4). At 11.5px colour alone fails: an `--ink-dim` verb
+one right edge** (§1.4). At label size colour alone fails: an `--ink-dim` verb
 sits at the same value as the fact beside it, so `Change camera` read as
 part of the camera string. `color: var(--ink)`, `text-decoration:
-underline`, `text-decoration-color: var(--ink-dim)`,
+underline`, `text-decoration-color: var(--line-bright)`,
 `text-underline-offset: 3px`, `white-space: nowrap`; hover raises the
 underline to `--ink`. Not each row's own right edge — ONE shared vertical
 line, so the eye finds actions by running down a single column.
@@ -157,7 +221,7 @@ line, so the eye finds actions by running down a single column.
 A7, 2026-08-16). A **verb** sits inline beside the single object it acts on:
 `--ink`, underlined, no box, on the surface's one right edge. A **tool** sits
 in a bar of peer tools acting on the REGION rather than on a row: `--line`
-border, 13.5px/600, no underline. A bar of underlined 11.5px verbs reads as a
+border, 14px/600, no underline. A bar of underlined 13px verbs reads as a
 row of footnotes — the measured fault that produced this rule. Facts about a
 picture ride on the picture, never in the bar beside it.
 
@@ -1780,6 +1844,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | 2026-09-01 | **"NO ENGINE" becomes "NO AI MODEL", and a suppressed install stops seeing the setup form** (user-directed): "engine" is this codebase's word for a provider — the band chip, two dropdowns and two gate lines now all say NO AI MODEL, which is what Settings calls it and what the store sells. And Settings picks between its setup form and its control panel on `any_credential`, which the dev key-guard makes false — so a CONFIGURED install met "Connect to many models" and a row of Authenticate buttons, and the row taught yesterday to say KEY SAVED — HIDDEN never rendered. The choice is configured-OR-suppressed now | The nav band; Settings / AI & engines | Built from canon — copy and a branch condition, no new tokens. Review (1) whether "AI model" should replace "engine" in the CODE's vocabulary too, not just the copy; (2) the suppressed row's remedy is a shell command in a GUI |
 | 2026-09-01 | **A credential the process is hiding says so, instead of offering Authenticate** (user-caught): the dev loop blanks stored keys so a mis-click cannot spend, and does it by making the process unable to SEE them rather than by editing the file — so the Settings row rendered identically to an install with no key and invited the user to add theirs again ("my api key is not saving"). It was saving every time. The row now carries a `--hold` mark, `KEY SAVED — HIDDEN BY THIS DEV SESSION`, and the command that lifts it in place of the button. New: `.cred-fix` | Settings / AI & engines | Built from canon — `--hold` and Courier for a machine fact. This is the THIRD surface this one guard has misreported (a stale PASS badge 2026-08-16, the nav band and this row 2026-09-01); review whether the suppression deserves one banner on the page rather than a per-row line |
 | 2026-09-01 | **Stage 01 stops waiting for an engine, and the gate names its real condition** (user-directed; AMENDS the ruling of 2026-08-18 that with no model connected the whole pipeline waits): uploading a screenplay spends nothing — the READ spends, and has its own gate — so stage 01 is no longer locked on a missing credential. Everything downstream still is. Separately, `capability` now reports `keys_suppressed`, and the lock popover distinguishes "no key" from "your key is saved, this dev session is hiding it so a mis-click cannot spend" | The nav band's lock popover | Built from canon — no new tokens. Found because the dev loop's spend guard made the app look un-configured and it sent the user to Settings to add a key already saved there ("I added key and cant access the screenplay tab"). Review whether the 01 sub-line should say anything while the rest of the band is locked |
+| 2026-09-12 | **The legibility floor, app-wide** (LEGIBILITY_FLOOR, delivered in `design_handoff/font_updates.zip`): 14px is the floor for anything a person reads, 13px for a Courier kicker and nothing else may be 13px; the scale is nine steps and no size sits between them. 499 of 549 declarations moved. Colour: the four ink tiers are redefined so body and label text measures 7:1 on the app's darks — the audit found `#6b7278` glyphs on `#0b0c0e` at about 4:1, and since that value WAS the FAINT tier the fault was in the token rather than in any one rule. The old greys survive as `--line-strong` / `--line-bright` for hairlines, dashed borders and underlines, which is all the plan ever allowed them. Both halves are now asserted mechanically over the whole stylesheet (`TheLegibilityFloor`), because the previous answer — each plan raising its own labels and naming the drift as a later job — is how it survived three passes | Every surface | RULED, not for review — the plan supersedes §2.2, §2.3's greys and the type scale table of PRODUCTION_DESIGN_UI_PLAN. Review only the consequences: (1) a disabled button's label is now readable ink, so a disabled control reads less dead than it did — the plan leaves no colour for "inactive"; (2) the cast ribbon's names wrap to two lines because they no longer fit on one, per "give the label the room"; (3) surfaces that had three or four label sizes now have one, since everything under 13px collapsed onto it |
 | 2026-09-12 | **The design-language card stops speaking in mechanism** (user-directed: "I have no idea what these blank spots are and neither will our users"): the header drops its subtitle to just `DESIGN LANGUAGES` — the explanation belongs behind the `?`, which is what the `?` is for. The card's picture now comes from an **approved panel rendered in that language** (`GET /api/design-languages/examples`, one walk of the sheets) instead of a reference plate scoped to it: a reference is an INPUT to a render, and "scoped" is a vocabulary nothing on this screen teaches. So the empty state can promise something the user will actually get — *Examples will appear here from your panels.* — in Archivo sentence case at 11.5px, where it was 9px uppercase Courier and read as an error code on a broken image. The `?` copy loses a third of its length and the three example names it opened with, which came from a different production's screenplay | Stage 02, the read's DESIGN LANGUAGES section | Built from canon — no new tokens. Review (1) the card is now empty for the whole of stages 01–03 by construction, since panels do not exist until stage 04 — whether a picture belongs on it at all this early is the open question; (2) a language scoped reference no longer has a surface that shows it |
 | 2026-09-12 | **The casting modal is retired; every door is one gesture** (user-directed: "character cards still open this prior to generation. What you just implemented is a replacement"): the modal existed because casting used to write the card on click and then throw an OS file picker over the app (2026-08-16). The subject's own screen answers that better — it holds the read's words with the picture beside them — so the modal had become a form standing in front of a screen built for the same job, asking again for a name, a kind, a role line, a profile and traits the read had already proposed. All four doors (the ribbon's uncast tile, the roster's chip, the manual `+ Cast` row, and the Reference shelf's `Cast this subject`) now cast and land on that subject's screen; the shelf's crosses a view boundary via `castArriving`, consumed on read so a reload opens the roster. Neither abrupt thing came back: no picker opens by itself, and nothing renders until Generate. **Traits kept a door** — they ride every prompt and the modal was the only place to edit them, so §3 gains *Edit the traits*; §2 is untouched, as the plan drew it. `askText` now passes `textarea` through, so a description and a trait list are no longer typed into a one-line input. `.cast-modal`, `.cast-kind`, `.cast-gen` and `.read-mark` are deleted with it | Every casting door | RETIREMENT — review (1) the READ marker went with the modal: the screen's `FROM THE SCREENPLAY` kicker is now the only thing saying whose words these are, and it does not distinguish an edited description from a proposed one; (2) *Edit the traits* is a third ghost on §3, which the mock shows with two; (3) KIND is no longer editable anywhere — a wrongly-read kind means deleting the card and re-adding it from the manual row, which has a kind select |
 | 2026-09-12 | **A character's screen asks for a verdict** (CAST_CHARACTER_SCREEN §2): before a picture exists the screen is a dashed 9:16 `.cd-frame` with a `FULL BODY` kicker and an expand glyph, holding **Generate** (the one amber primary) over **Attach**, with **Accept / Reject** beneath it inactive. A render now lands PROVISIONAL instead of approved — the 2026-08-18 reading that asking for a picture IS the review was true of a supplied plate, which the user had already seen, and false of a render, which nobody has seen when the call returns. Accepting it turns the screen into §3. A character renders FULL BODY at 9:16 and the card thumbnail is derived from that body shot, so one picture answers for a subject rather than a portrait and a body shot that disagree. The right column is the description at 16px/1.6 with a LARGE `Edit description` ghost — the only adjustment there is, since there is no adjust field — then the verbatim screenplay lines with their page refs (`SC nn` when the draft came in as text and has no page sidecar) | The cast detail, both states | New: `.cd-frame`, `.cd-verdict`, `.cd-expand`, `.cd-quote` / `.cd-page`, `.cd-head` / `.cd-name` / `.cd-meta` / `.cd-mark`, `.cd-kick` (replacing `.cd-lab`), `.cd-desc` (replacing `.cd-who`), `.cd-edit`. Review (1) amber on `NO PICTURE` **and** on Generate, two marks on one surface; (2) the empty column is 280px and the cast column 380px, so the screen re-proportions on Accept; (3) whether a pending picture should outrank an accepted one, which is what it does |
@@ -2972,6 +3037,7 @@ well — this log records what changed, it does not replace the rules.
   table is at the review threshold. Emoji stripped from Crop/Repair buttons
   (mock-sanctioned arrows on → Reference / → Light study kept).
 - **2026-09-10** — `.cd-blocked` (a stated gate where the cost line sits when the act is available).
+- **2026-09-12** — LEGIBILITY FLOOR, app-wide: nine type steps (13/14/15/16/17/19/20/24/34) and nothing between or outside them; `--ink-dim` → `#c3c9ce` and `--ink-faint` → `#a3aab1`; new `--ink-body #dfe3e6`; the old greys move to `--line-strong` / `--line-bright` and are never glyphs; `#4a4d52` deleted. `#cast-screen`'s scoped 12px patch retired — the fault it patched is fixed at the source.
 - **2026-09-12** — `.lang-shot.none i` becomes Archivo sentence case at 11.5px and resets the uppercase and tracking it inherits from `.fgroup` — it is a sentence to a reader, not a label.
 - **2026-09-12** — RETIRED: `.cast-modal`, `.cast-kind`, `.cast-gen`, `.read-mark` — the casting modal is replaced by the subject's own screen. Its scoped 11.5px type block went with it; the app-wide `.f-label` / `.hint` drift it patched over did not.
 - **2026-09-12** — `.cd-frame` / `.cd-verdict` / `.cd-expand` (a 9:16 slot that asks for a verdict), `.cd-quote` / `.cd-page` (a screenplay line with its page), `.cd-head` / `.cd-name` / `.cd-meta` / `.cd-mark`; `.cd-lab` → `.cd-kick` and `.cd-who` → `.cd-desc`; the cast screens raised to a 12px floor. `castShot()` quotes its URL so the `style` attribute survives — no picture on any cast surface had ever rendered.

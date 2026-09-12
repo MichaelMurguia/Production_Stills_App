@@ -108,7 +108,7 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         the edit button is large.\""""
         b = block(".cd-edit {")
         self.assertIn("font-size: 15px", b)
-        self.assertIn("border-color: var(--ink-faint)", b)   # the plan's #6b7278
+        self.assertIn("border-color: var(--line-strong)", b)   # the plan's #6b7278
         self.assertIn('class="ghost cd-edit" data-f="edit">Edit description<', JS)
 
     def test_the_description_is_16px_over_1_6(self):
@@ -397,20 +397,22 @@ class NothingOnEitherScreenIsUnderTwelvePixels(unittest.TestCase):
             self.assertIsNotNone(m, sel)
             self.assertGreaterEqual(float(m.group(1)), 12, sel)
 
-    def test_the_shared_courier_labels_are_raised_on_this_host(self):
-        """`.wiz-group-label`, `.cost` and `.text-act` are app-wide at
-        9.5-10.5px. Raising them everywhere is a type pass this plan does
-        not authorize, so the floor is scoped to this host and the
-        app-wide drift stays on the list.
+    def test_the_shared_courier_labels_clear_the_floor_everywhere(self):
+        """These three were 9.5-10.5px app-wide and this screen patched
+        them for itself, because raising them everywhere was not this
+        plan's to authorize. LEGIBILITY_FLOOR authorized it on the same
+        day, so the patch is gone and the rule is at the source.
 
         `.text-act` is why the floor is measured from the DOM and not
         from the markup: `<-- Cast` and the gate's link both render
         through it, and neither screen's own CSS mentions it."""
-        i = CSS.index("#cast-screen .wiz-group-label,")
-        seg = CSS[i:CSS.index("}", i)]
-        self.assertIn("font-size: 12px", seg)
-        for shared in ("#cast-screen .cost", "#cast-screen .text-act"):
-            self.assertIn(shared, seg, shared)
+        import re
+        self.assertNotIn("#cast-screen .wiz-group-label", CSS)
+        for sel in (".wiz-group-label", ".cost", ".text-act"):
+            b = CSS.split(NL + sel + " {")[1].split("}")[0]
+            m = re.search(r"font-size:\s*([\d.]+)px", b)
+            self.assertIsNotNone(m, sel)
+            self.assertGreaterEqual(float(m.group(1)), 13, sel)
 
 
 if __name__ == "__main__":

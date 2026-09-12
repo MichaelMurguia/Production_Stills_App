@@ -176,18 +176,23 @@ class TheImageIsTheHero(unittest.TestCase):
         b = block(".seq .act-bar .text-act")
         self.assertIn("border: 1px solid var(--line)", b)
         self.assertIn("text-decoration: none", b)
-        self.assertIn("font-size: 13.5px", b)
+        self.assertIn("font-size: 14px", b)
         self.assertIn("font-weight: 600", b)
 
 
 class TheVocabulary(unittest.TestCase):
     def test_three_type_sizes_and_the_largest_anchors_them(self):
-        """§1.2 — 24 / 15 / 11.5. The measured fault was nine sizes inside
-        five and a half pixels, which reads as one size with noise."""
+        """§1.2 — three sizes, the largest anchoring them. The measured
+        fault was nine sizes inside five and a half pixels, which reads
+        as one size with noise.
+
+        The smallest of the three is 13px since LEGIBILITY_FLOOR
+        (2026-09-12); it was 11.5, which the audit measured at 8–9px cap
+        height. The RULE is unchanged — three sizes, not a continuum."""
         self.assertIn("font-size: 24px", block(".seq .seq-subject"))
         self.assertIn("font-size: 15px", block(".step-prose, .seq .cam-sum"))
         for sel in (".step-label", ".step-meta", ".wb-facts"):
-            self.assertIn("font-size: 11.5px", block(sel))
+            self.assertIn("font-size: 13px", block(sel))
 
     def test_the_subject_beats_the_panel_h2_label(self):
         """.panel h2 sets 11px uppercase Courier; without the extra
@@ -214,12 +219,17 @@ class TheVocabulary(unittest.TestCase):
                          "--band sits below the ground and --tile one step above")
 
     def test_a_verb_is_ink_underlined_and_never_wraps(self):
-        """§1.4 — at 11.5px colour alone fails: an --ink-dim verb sits at
-        the same value as the fact beside it, so "Change camera" read as
-        part of the camera string."""
+        """§1.4 — at label size, colour alone fails: an --ink-dim verb
+        sits at the same value as the fact beside it, so "Change camera"
+        read as part of the camera string.
+
+        The underline is `--line-bright` since LEGIBILITY_FLOOR
+        (2026-09-12): that is the old `#9aa1a8`, which the floor retires
+        as a GLYPH colour and explicitly keeps for underlines. The verb
+        itself is `--ink`, which is the half that carries the meaning."""
         b = block(".seq .verb, .seq .text-act")
         for decl in ("color: var(--ink)", "text-decoration: underline",
-                     "text-decoration-color: var(--ink-dim)",
+                     "text-decoration-color: var(--line-bright)",
                      "text-underline-offset: 3px", "white-space: nowrap",
                      "font-family: var(--sans)"):
             self.assertIn(decl, b)
