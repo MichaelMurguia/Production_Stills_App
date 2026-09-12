@@ -52,11 +52,24 @@ class TheLegibilityFloor(unittest.TestCase):
         return re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
 
     def test_every_size_is_a_step_on_the_scale(self):
-        """No size between these steps, and none outside them."""
-        off = sorted({float(m.group(1))
-                      for m in re.finditer(r"font-size:\s*([\d.]+)px", self._bare())}
-                     - self.STEPS)
-        self.assertEqual(off, [], f"off the scale: {off}")
+        """No size between these steps, and none outside them.
+
+        EVERY length in the value, not just a bare `NNpx` — a
+        `clamp(8px, 1vw, 13px)` slipped through the first version of this
+        and rendered at 9px on a 900px viewport (user-caught,
+        2026-09-12). A fluid size cannot obey a nine-step scale by
+        construction, so any relative unit in a font-size is a failure
+        in itself."""
+        off, fluid = set(), []
+        for m in re.finditer(r"font-size:\s*([^;}]+)", self._bare()):
+            val = m.group(1)
+            for px in re.findall(r"([\d.]+)px", val):
+                if float(px) not in self.STEPS:
+                    off.add(float(px))
+            if re.search(r"[\d.]+(vw|vh|em|rem|%|ch|vmin|vmax)", val):
+                fluid.append(val.strip()[:48])
+        self.assertEqual(sorted(off), [], f"off the scale: {sorted(off)}")
+        self.assertEqual(fluid, [], f"fluid font-size cannot sit on the scale: {fluid}")
 
     def test_the_shorthand_obeys_it_too(self):
         """`font:` sets a size without saying `font-size`, and the body's
@@ -65,11 +78,18 @@ class TheLegibilityFloor(unittest.TestCase):
             self.assertIn(float(m.group(1)), self.STEPS, m.group(0))
 
     def test_nothing_in_the_markup_undercuts_it(self):
-        """An inline style bypasses every rule in this file."""
-        for f in ("app/static/app.js", "app/static/index.html"):
-            t = (ROOT / f).read_text(encoding="utf-8")
-            for m in re.finditer(r"font-size:\s*([\d.]+)px", t):
-                self.assertIn(float(m.group(1)), self.STEPS, f"{f}: {m.group(0)}")
+        """An inline style bypasses every rule in this file. Every file
+        the app serves, not just the two obvious ones — `recorder.js`
+        paints a chip with its styles inline, precisely so it can leave
+        styles.css untouched."""
+        served = sorted((ROOT / "app/static").glob("*.js")) +                  sorted((ROOT / "app/static").glob("*.html"))
+        self.assertGreaterEqual(len(served), 4, "did the static dir move?")
+        for f in served:
+            t = f.read_text(encoding="utf-8")
+            for m in re.finditer(r"font-size:\s*([^;\"'`]+)", t):
+                val = m.group(1)
+                for px in re.findall(r"([\d.]+)px", val):
+                    self.assertIn(float(px), self.STEPS, f"{f.name}: {m.group(0)[:40]}")
 
     def test_thirteen_is_reserved_for_courier(self):
         """The plan: 13px is the floor for a Courier kicker, and

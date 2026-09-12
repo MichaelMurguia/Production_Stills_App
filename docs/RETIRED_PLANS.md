@@ -321,3 +321,16 @@ delta as new instructions.
 
   The rest of the zip is the same resurrection as `font_updates.zip` a
   few hours earlier, minus nothing and plus this note.
+
+  **A miss in the first pass, user-caught the same day** ("you still have
+  9px fonts"): `.bf-sub` was `clamp(8px, 1vw, 13px)` and rendered at 9px
+  on a 900px viewport. Two faults behind one symptom. The lint matched
+  only a bare `NNpx` and never looked inside `clamp()`; and the board
+  frame's type had been exempted on the reasoning that the preview must
+  match the exported composite pixel-for-pixel — true of its PALETTE
+  (audit #15) and false of its type, because `assemble.assemble_board`
+  draws the 4K composite server-side with PIL and never reads this DOM.
+  Both are fixed: the preview's type is on the scale, the lint parses
+  every length in a font-size and rejects any relative unit outright, and
+  it now walks every file `app/static/` serves rather than the two
+  obvious ones (which is how `recorder.js`'s 12px chip surfaced).

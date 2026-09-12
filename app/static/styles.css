@@ -2260,8 +2260,22 @@ details.meta pre {
    UI tokens. Designer to ratify the exemption (audit #15). */
 .board-frame { position: relative; width: 100%; background: #2a2723; overflow: hidden; }
 .bf-head { position: absolute; left: 1.7%; top: 2.5%; right: 1.7%; z-index: 2; }
-.bf-title { color: #e8e5dd; font-weight: 700; font-size: clamp(14px, 2.4vw, 34px); letter-spacing: .02em; }
-.bf-sub { color: #9a978f; font-size: clamp(8px, 1vw, 13px); letter-spacing: .08em; margin-top: 4px; }
+/* TYPE HERE IS UI, NOT THE EXPORT (corrected 2026-09-12, user-caught:
+   "you still have 9px fonts").
+
+   The colours below follow the BOARD's palette on purpose — this is a
+   picture of a board and it should look like one (audit #15). The SIZES
+   were exempted on the same reasoning and that was wrong: the 4K
+   composite is drawn server-side by `assemble.assemble_board` with PIL
+   and never comes from this DOM, so nothing here has to match it. What
+   this markup actually is, is a caption a person reads on screen — and
+   `clamp(8px, 1vw, 13px)` rendered at 9px on a 900px viewport, which is
+   where the floor was being broken.
+
+   Fluid type cannot obey a nine-step scale by construction, so both are
+   steps now. */
+.bf-title { color: #e8e5dd; font-weight: 700; font-size: 24px; letter-spacing: .02em; }
+.bf-sub { color: #9a978f; font-size: 13px; letter-spacing: .08em; margin-top: 4px; }
 .bf-rule { border-top: 3px solid var(--accent); margin-top: 8px; }
 .bf-slot { position: absolute; background: #232019; border: 1px solid var(--line); }  /* R12: frames are containment */
 .bf-slot img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }

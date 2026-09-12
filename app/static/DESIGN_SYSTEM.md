@@ -183,7 +183,10 @@ The scale, and the only sizes in use:
 | 24 | Archivo / Courier | screen titles; step numbers |
 | 34 | Archivo | the bible's production title |
 
-- No size between these steps and none outside them.
+- No size between these steps and none outside them. **A fluid size
+  cannot sit on the scale** — `clamp()`, `vw`, `em`, `%` in a `font-size`
+  are failures in themselves. `.bf-sub` was `clamp(8px, 1vw, 13px)` and
+  rendered at 9px on a 900px viewport.
 - Courier is uppercase with `letter-spacing:.08em`–`.14em`. Letterspacing
   makes small type harder to read, not easier — which is why Courier gets
   a floor of its own and never goes below it.
@@ -3063,6 +3066,7 @@ well — this log records what changed, it does not replace the rules.
   table is at the review threshold. Emoji stripped from Crop/Repair buttons
   (mock-sanctioned arrows on → Reference / → Light study kept).
 - **2026-09-10** — `.cd-blocked` (a stated gate where the cost line sits when the act is available).
+- **2026-09-12** — The board PREVIEW's type joins the scale: `.bf-title` 24px, `.bf-sub` 13px, both were `clamp()`. Its COLOURS stay on the board's palette (audit #15) — the 4K composite is drawn server-side by PIL and never comes from this DOM, so only the palette ever needed to match. The harness chip in `recorder.js` goes 12px → 13px.
 - **2026-09-12** — COLOUR FLOOR, measured: `--hold` colours no glyph and `--bad` only at headline scale or beside a hairline; status moves to a 2px left rule with the words in `--ink-faint`. `.gen-warn`, `.gen-gate`, `.made-blocker`, `.req-mark.hold`, `.stor-line.*`, `.lb-fill-v.*`, `.prod-care.*`, `.rail-mark.*` gain that rule.
 - **2026-09-12** — LEGIBILITY FLOOR, app-wide: nine type steps (13/14/15/16/17/19/20/24/34) and nothing between or outside them; `--ink-dim` → `#c3c9ce` and `--ink-faint` → `#a3aab1`; new `--ink-body #dfe3e6`; the old greys move to `--line-strong` / `--line-bright` and are never glyphs; `#4a4d52` deleted. `#cast-screen`'s scoped 12px patch retired — the fault it patched is fixed at the source.
 - **2026-09-12** — `.lang-shot.none i` becomes Archivo sentence case at 11.5px and resets the uppercase and tracking it inherits from `.fgroup` — it is a sentence to a reader, not a label.
