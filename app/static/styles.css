@@ -99,7 +99,27 @@
   --focus-ring: 0 0 0 2px rgba(224, 163, 63, .35);
 
   --sans: Archivo, "Helvetica Neue", Helvetica, system-ui, sans-serif;
-  --mono: "Courier New", Courier, monospace;
+  /* THE MONO STACK, and why Courier New is no longer first
+     (user-caught 2026-09-12: "site still has 9px tall fonts").
+
+     LEGIBILITY_FLOOR's stated fault was "Courier labels rendering at
+     8-9px cap height". Its remedy was a 13px font-size floor. Measured
+     by pixel scan on this platform, Courier New's cap height is 8px at
+     11.5px, at 13px, at 14px AND at 15px -- it is hinted flat and its
+     cap-to-em ratio is tiny. Raising the floor from 11.5 to 13 changed
+     the rendered letter height by ZERO. The plan's remedy could not
+     reach the plan's goal through this typeface.
+
+         face            cap@13  cap@14  cap@15   width of one label
+         Courier New        8       8       8        133 / 143
+         Consolas           8       9      10        122 / 131
+         Cascadia Mono      9      10      10        129 / 139
+         Archivo @14       10                        155
+
+     Consolas is narrower than Courier New, so the label costs no more
+     room than it did. Courier New stays in the stack for anything
+     without these. */
+  --mono: Consolas, "Cascadia Mono", "DejaVu Sans Mono", "Courier New", Courier, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -117,9 +137,22 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { color: var(--accent-hover); text-decoration: underline; }
 
 /* Every machine value in the app renders in Courier. */
+/* Courier carries its own STEP as well as its own face. Both rules sit
+   early on purpose: a component that wants 24px Courier (a step number,
+   a screen title) sets it later and wins on source order. What this
+   catches is Courier that sets no size at all and would otherwise
+   inherit the 14px body — at which point it renders 9px caps, which is
+   the whole fault the floor exists for. */
 code, pre, .badge, .num, .pid, .pid-badge, .role, .subj-sub,
 .f-label, .grid-head span, .table th, .elapsed, .stage-n, .lb-zoomstate {
-  font-family: var(--mono);
+  font-family: var(--mono); font-size: 15px;
+}
+/* The stragglers: Courier by family, with no size of their own. */
+input[type=text]#spec-auto-id, input[type=text]#spec-new-id,
+.panel-card .head .alloc input, .cam-lens .cam-lens-mm,
+.ref-group .mini, .loc-env-blank, .dsrow b,
+.mf-color input[type=text], .sc-mark, option.opt-debug {
+  font-size: 15px;
 }
 /* .mini carries BOTH machine metadata and short prose, so it stays in sans —
    the machine values inside it get Courier from .badge / .role / code. */
@@ -146,7 +179,7 @@ header {
 .brand-title:hover { color: var(--ink); }
 .brand-sub {
   font-family: var(--mono); color: var(--ink-dim);
-  font-size: 13px; letter-spacing: .1em;
+  font-size: 15px; letter-spacing: .1em;
 }
 .brand-sub::before {
   content: ""; display: inline-block; width: 1px; height: 13px;
@@ -159,7 +192,7 @@ header {
 .engine-dots { display: flex; gap: 16px; }
 .edot {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
 /* C8 — one SQUARE per AI role (never a circle; --radius is 0 everywhere
@@ -199,7 +232,7 @@ nav#nav button {
 nav#nav button:hover { color: var(--ink); background: var(--panel); }
 nav#nav .stage-top { display: flex; align-items: center; gap: 9px; max-width: 100%; }
 nav#nav .stage-n {
-  flex: none; font-size: 13px; font-weight: 700;
+  flex: none; font-size: 15px; font-weight: 700;
   letter-spacing: .06em; color: var(--ink-faint);
 }
 nav#nav .stage-l {
@@ -209,13 +242,13 @@ nav#nav .stage-l {
 }
 nav#nav .here-chip {
   display: none; flex: none;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   background: var(--accent); color: var(--accent-ink);
   padding: 1px 6px; font-weight: 700;
 }
 nav#nav button.here .here-chip { display: inline-block; }
 nav#nav .stage-sub {
-  font-family: var(--mono); font-size: 13px; color: var(--ink-faint);
+  font-family: var(--mono); font-size: 15px; color: var(--ink-faint);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 nav#nav button.s-ok { border-top-color: var(--ok); }
@@ -236,7 +269,7 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 }
 .gate-row { display: flex; align-items: baseline; gap: 12px; }
 .gate-label {
-  flex: none; width: 96px; font-family: var(--mono); font-size: 13px;
+  flex: none; width: 96px; font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--accent); font-weight: 700;
 }
 .gate-text { flex: 1; font-size: 14px; color: var(--ink); min-width: 0; }
@@ -254,7 +287,7 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .14em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--ink-faint); margin-bottom: 8px;
 }
 .stage-headline { font-size: 24px; font-weight: 700; margin: 0 0 10px; color: var(--ink); }
@@ -271,7 +304,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
    They name a region; they are not competing for the eye. */
 .panel h2 {
   margin: 0 0 14px; font-family: var(--mono);
-  font-size: 13px; font-weight: 700; letter-spacing: .2em;
+  font-size: 15px; font-weight: 700; letter-spacing: .2em;
   text-transform: uppercase; color: var(--ink-dim);
 }
 .panel h2 .hint { letter-spacing: .02em; }
@@ -293,7 +326,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .panel.step::before {
   content: attr(data-step);
   position: absolute; left: 0; top: 19px; width: 46px; text-align: center;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   color: var(--ink-faint); letter-spacing: .04em;
 }
 .panel.step::after {
@@ -314,7 +347,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 }
 .card .lbl {
   color: var(--ink-dim); font-family: var(--mono);
-  font-size: 13px; letter-spacing: .13em; text-transform: uppercase;
+  font-size: 15px; letter-spacing: .13em; text-transform: uppercase;
 }
 
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
@@ -323,7 +356,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 18px; align-items: end; }
 .grid-form label, .fgroup {
   display: flex; flex-direction: column; gap: 6px;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim);
 }
 .grid-form .wide { grid-column: 1 / -1; }
@@ -332,7 +365,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
   font-size: 14px; font-family: var(--sans);
 }
 .f-label {
-  font-size: 13px; font-weight: 700; letter-spacing: .13em;
+  font-size: 15px; font-weight: 700; letter-spacing: .13em;
   text-transform: uppercase; color: var(--ink-dim);
 }
 label.setf { min-width: 0; }
@@ -349,7 +382,7 @@ input[type=text]#ref-role, input[type=text]#sp-location {
   font-family: var(--mono); letter-spacing: .04em;
 }
 input::placeholder, textarea::placeholder { color: var(--ink-faint); }
-input[type=file] { color: var(--ink-dim); font-size: 13px; font-family: var(--mono); }
+input[type=file] { color: var(--ink-dim); font-size: 15px; font-family: var(--mono); }
 input[type=file]::file-selector-button {
   background: none; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 6px 12px; margin-right: 10px; font: inherit; cursor: pointer;
@@ -361,7 +394,10 @@ input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--accent); box-shadow: var(--focus-ring);
 }
 input:disabled, select:disabled, textarea:disabled { opacity: .55; }
-input[type=checkbox] { accent-color: var(--accent); }
+/* A checkbox carries no text, but it inherits the UA's 13.3333px and
+   that is the one thing left on the page computing under the floor —
+   which makes every future sweep report a false positive. */
+input[type=checkbox], input[type=radio] { accent-color: var(--accent); font-size: 14px; }
 
 /* ================================================================= buttons */
 button { font: inherit; cursor: pointer; border-radius: var(--radius); }
@@ -403,7 +439,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 /* ================================================================== badges */
 .badge {
   display: inline-block; padding: 2px 8px;
-  font-size: 13px; font-weight: 700; letter-spacing: .09em;
+  font-size: 15px; font-weight: 700; letter-spacing: .09em;
   border: 1px solid; border-radius: var(--radius); vertical-align: 1px;
   white-space: nowrap;
 }
@@ -415,7 +451,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 
 .taglist { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 .taglist li {
-  font-family: var(--mono); font-size: 13px; color: var(--ink-dim);
+  font-family: var(--mono); font-size: 15px; color: var(--ink-dim);
   border: 1px solid var(--line); background: var(--field);
   border-radius: var(--radius); padding: 4px 9px;
 }
@@ -436,28 +472,28 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 }
 .ref-card .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .ref-card .role {
-  font-family: var(--mono); font-weight: 700; font-size: 13px;
+  font-family: var(--mono); font-weight: 700; font-size: 15px;
   letter-spacing: .04em; color: var(--ink); line-height: 1.4;
 }
-.ref-card .meta { color: var(--ink-dim); font-size: 13px; font-family: var(--mono); line-height: 1.5; }
+.ref-card .meta { color: var(--ink-dim); font-size: 15px; font-family: var(--mono); line-height: 1.5; }
 .ref-card .actions { display: flex; gap: 8px; padding: 0 14px 14px; margin-top: auto; }
 .ref-card .actions button { flex: 1; font-size: 14px; padding: 7px 4px; }
 
 /* ================================================================== tables */
-.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .table th {
   text-align: left; color: var(--ink-faint);
-  font-size: 13px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
+  font-size: 15px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
   padding: 9px 12px; border-bottom: 1px solid var(--line);
 }
 .table td { padding: 11px 12px; border-bottom: 1px solid var(--line-soft); }
-.table td:first-child { font-family: var(--mono); font-size: 13px; }
+.table td:first-child { font-family: var(--mono); font-size: 15px; }
 .table tr:last-child td { border-bottom: none; }
 .table tr:hover td { background: var(--bg2); }
 
 /* Conformance audit 2026-08-04 #1: the .mono utility the markup has
    used all along — machine data speaks Courier by CLASS, not by luck. */
-.mono { font-family: var(--mono); }
+.mono { font-family: var(--mono); font-size: 15px; }
 
 /* ============================================================ spec editor */
 .spec-editor { border-left: 3px solid var(--line); }  /* audit #5: one lead per screen */
@@ -468,7 +504,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .spec-section { margin-top: 24px; border-top: 1px solid var(--line-soft); padding-top: 18px; }
 .spec-section h4 {
   margin: 0 0 13px; font-family: var(--mono);
-  font-size: 13px; letter-spacing: .2em; text-transform: uppercase;
+  font-size: 15px; letter-spacing: .2em; text-transform: uppercase;
   color: var(--ink-dim); font-weight: 700;
 }
 .spec-section h4 .hint { letter-spacing: .02em; }
@@ -486,14 +522,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 /* Panel ID is an identifier — Courier, bordered, but not amber-filled. */
 .pid-badge, .pid {
   flex: none; color: var(--ink); border: 1px solid var(--line);
-  background: var(--field); font-weight: 700; font-size: 13px;
+  background: var(--field); font-weight: 700; font-size: 15px;
   letter-spacing: .06em; padding: 5px 11px; border-radius: var(--radius);
   white-space: nowrap;
 }
 .panel-card .head input[data-f=title] { flex: 1; font-weight: 600; }
 .panel-card .head .alloc { flex: none; width: 124px; display: flex; align-items: center; gap: 6px; }
 .panel-card .head .alloc input { width: 64px; text-align: right; font-family: var(--mono); }
-.panel-card .head .alloc .unit { color: var(--ink-dim); font-size: 13px; font-family: var(--mono); }
+.panel-card .head .alloc .unit { color: var(--ink-dim); font-size: 15px; font-family: var(--mono); }
 .panel-card .head .ptod-wrap { width: auto; }
 .panel-card .head button.danger { flex: none; width: 34px; padding: 8px 0; }
 /* UNCANONIZED — 2026-08-09 — camera & composition axes. A labelled row of
@@ -505,7 +541,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .cam-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; align-items: end; }
 .cam-field { display: flex; flex-direction: column; gap: 4px; }
 .cam-field > span { color: var(--ink-faint); font-family: var(--mono);
-  font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+  font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
 .cam-field select { min-width: 150px; }
 /* UNCANONIZED — 2026-08-25 — the framing field spans its row */
 /* Every other axis in this row is one word: LOW, WIDE, 24MM. A framing is
@@ -553,7 +589,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 }
 .grid-head { margin-bottom: 1px; }
 .grid-head span {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .13em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .13em;
   text-transform: uppercase; color: var(--ink-faint); font-weight: 700;
 }
 .grid-head.ledger-row { padding: 4px 9px 3px; }
@@ -586,7 +622,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 /* .mini defaults to sans (it carries short prose), but markup that ALSO
    says .mono means it — .mini alone won the order battle and silently
    rendered machine data proportional (found 2026-08-13, intake rail). */
-.mini.mono { font-family: var(--mono); }
+.mini.mono { font-family: var(--mono); font-size: 15px; }
 .stack { display: flex; flex-direction: column; gap: 6px; }
 
 /* ================================================================= reports */
@@ -626,7 +662,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .scan-detail { font-size: 14px; color: var(--ink); }
 .scan-quote {
   margin: 0; padding: 0 0 0 11px; border-left: 2px solid var(--line);
-  font-family: var(--mono); font-size: 13px; line-height: 1.5;
+  font-family: var(--mono); font-size: 15px; line-height: 1.5;
   color: var(--ink-dim); white-space: pre-wrap;
 }
 .scan-find button[disabled] { opacity: .55; }
@@ -635,7 +671,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
    approval); the designer's own direction reads dim ink — authority, but
    not a citation. Neither is amber: nothing here is a pipeline stage. */
 .scan-from {
-  font-size: 13px; letter-spacing: .13em; font-weight: 700;
+  font-size: 15px; letter-spacing: .13em; font-weight: 700;
 }
 .scan-from.sp { color: var(--ok); }
 .scan-from.dir { color: var(--ink-dim); }
@@ -660,9 +696,9 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   display: flex; flex-direction: column; text-align: left; cursor: pointer;
 }
 .ref-pick img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-.ref-pick-id { padding: 6px 8px 0; font-size: 13px; color: var(--ink); }
+.ref-pick-id { padding: 6px 8px 0; font-size: 15px; color: var(--ink); }
 .ref-pick-role {
-  padding: 0 8px 7px; font-size: 13px; color: var(--ink-dim);
+  padding: 0 8px 7px; font-size: 15px; color: var(--ink-dim);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ref-pick:hover { border-color: var(--line); }
@@ -701,12 +737,12 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .doc p b { color: var(--ink); font-weight: 600; }
 .doc code {
   background: var(--field); padding: 1px 6px; border: 1px solid var(--line-soft);
-  border-radius: var(--radius); font-size: 13px; color: var(--ink);
+  border-radius: var(--radius); font-size: 15px; color: var(--ink);
 }
 .doc .chain {
   background: var(--field); border-left: 3px solid var(--line);
   border-radius: var(--radius); padding: 12px 15px;
-  font-family: var(--mono); font-size: 13px; color: var(--ink-dim); letter-spacing: .02em;
+  font-family: var(--mono); font-size: 15px; color: var(--ink-dim); letter-spacing: .02em;
 }
 
 /* =============================================================== lightbox */
@@ -728,7 +764,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   padding: 0 18px; background: var(--bg2); border-top: 1px solid var(--line);
   font-size: 14px; color: var(--ink);
 }
-.lb-zoomstate { color: var(--ink-dim); font-size: 13px; letter-spacing: .04em; }
+.lb-zoomstate { color: var(--ink-dim); font-size: 15px; letter-spacing: .04em; }
 .lb-btn {
   position: absolute; z-index: 101;
   background: rgba(21, 24, 27, .9); border: 1px solid var(--line); color: var(--ink-dim);
@@ -776,7 +812,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .busy .busy-hint { color: var(--ink-dim); font-size: 14px; }
 .busy .elapsed {
   color: var(--ink); font-variant-numeric: tabular-nums;
-  font-weight: 700; min-width: 44px; text-align: right; font-size: 13px;
+  font-weight: 700; min-width: 44px; text-align: right; font-size: 15px;
 }
 .busy .busy-bar {
   flex-basis: 100%; height: 2px; margin-top: 3px;
@@ -797,7 +833,7 @@ input[title], select[title], textarea[title] { cursor: auto; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--field); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 4px 10px; font-family: var(--mono); font-size: 13px; color: var(--ink-dim);
+  padding: 4px 10px; font-family: var(--mono); font-size: 15px; color: var(--ink-dim);
 }
 .chip button { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 14px; padding: 0 1px; line-height: 1; }
 .chip button:hover { color: var(--ink); }
@@ -866,7 +902,7 @@ label.check {
    change it. */
 /* The boundary, stated where it is being decided (§3.2). Courier,
    because it is the machine asserting a scope, not prose. */
-.rs-juris { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.rs-juris { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); line-height: 1.7; margin: -4px 0 12px; }
 /* UNCANONIZED — 2026-08-29 — PRODUCTION_DESIGN_UI_PLAN §3.4, the cast */
 /* The picture is the screen. A subject card led with its name and a row
@@ -878,9 +914,9 @@ label.check {
    letterboxed into the other shape. */
 .cast-kick { display: flex; align-items: baseline; gap: 10px;
   margin: 18px 0 8px; }
-.cast-kick b { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.cast-kick b { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-dim); font-weight: 400; }
-.cast-kick span { font-family: var(--mono); font-size: 13px;
+.cast-kick span { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); }
 .cast-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px; }
@@ -898,13 +934,13 @@ label.check {
 .cast-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
   color: var(--ink); }
 .cast-sub { font-family: var(--sans); font-size: 14px; color: var(--ink-dim); }
-.cast-scenes { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.cast-scenes { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 /* Uncast have no picture, so a list is the honest shape for them. */
 .cast-uncast { margin-top: 22px; padding-top: 14px;
   border-top: 1px solid var(--line-soft); }
 .cast-unrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
-.cast-unrow > b { font-family: var(--mono); font-size: 13px;
+.cast-unrow > b { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); font-weight: 400;
   min-width: 78px; }
 .cast-chip { font-family: var(--sans); font-size: 14px; color: var(--ink-dim);
@@ -930,11 +966,11 @@ label.check {
   padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); }
 .cd-name { font-family: var(--sans); font-size: 24px; font-weight: 700;
   color: var(--ink); margin: 0; letter-spacing: -.01em; }
-.cd-meta { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.cd-meta { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); }
 .cd-head-gap { flex: 1; }
 /* The one amber thing on the empty screen: it is what the screen is for. */
-.cd-mark { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.cd-mark { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--accent); }
 .cast-detail { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   gap: 30px; align-items: start; }
@@ -972,7 +1008,7 @@ label.check {
   margin-top: 12px; }
 .cd-verdict > button { width: 100%; }
 /* Kickers on this surface, at the plan's 12px floor. */
-.cd-kick { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.cd-kick { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 0 0 10px; font-weight: 400; }
 .cd-kick2 { margin-top: 26px; }
 .cd-titlerow { display: flex; align-items: center; justify-content: space-between;
@@ -990,7 +1026,7 @@ label.check {
    rule marking it as quoted rather than written by this app. */
 .cd-quote { display: flex; gap: 22px; align-items: baseline;
   border-left: 1px solid var(--line); padding: 5px 0 5px 14px; margin: 8px 0; }
-.cd-quote > .cd-page { font-family: var(--mono); font-size: 13px;
+.cd-quote > .cd-page { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); flex: none; min-width: 5ch; }
 .cd-quote > i { font-family: var(--sans); font-size: 14px; line-height: 1.6;
   font-style: italic; color: var(--ink-dim); }
@@ -1006,15 +1042,15 @@ label.check {
 .cd-alt.on { border-color: var(--accent); }
 .cd-more { width: 76px; aspect-ratio: .8; border: 1px dashed var(--line);
   background: none; color: var(--ink-faint); font-family: var(--mono);
-  font-size: 13px; letter-spacing: .06em; cursor: pointer; }
+  font-size: 15px; letter-spacing: .06em; cursor: pointer; }
 .cd-trait { font-family: var(--sans); font-size: 14px; color: var(--ink-dim);
   border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 5px 0; }
 .cd-facts { margin: 22px 0 0; padding-top: 16px;
   border-top: 1px solid var(--line-soft); }
 .cd-fact { display: flex; gap: 20px; margin: 6px 0; }
-.cd-fact > b { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.cd-fact > b { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); font-weight: 400; min-width: 120px; }
-.cd-fact > span { font-family: var(--mono); font-size: 13px;
+.cd-fact > span { font-family: var(--mono); font-size: 15px;
   letter-spacing: .08em; color: var(--ink-dim); }
 .cd-acts { display: flex; gap: 10px; margin-top: 20px; }
 .cast-back { margin-right: 12px; }
@@ -1059,7 +1095,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
   border-radius: 50%; border: 2.5px solid var(--line);
   border-top-color: var(--accent); animation: spin .8s linear infinite; }
 .sp-take-label { font-family: var(--sans); font-size: 17px; color: var(--ink); }
-.sp-take-note { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.sp-take-note { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); }
 /* UNCANONIZED — 2026-08-29 — a proposed anchor */
 /* A proposal is not an answer. It sits over the card it is about, states
@@ -1085,7 +1121,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
   background: linear-gradient(to top, rgba(8, 9, 10, .96) 0%,
     rgba(8, 9, 10, .90) 46%, rgba(8, 9, 10, .38) 78%, rgba(8, 9, 10, .12) 100%); }
 .anchor-hero.proposed .ah-scrim { display: none; }
-.ah-prop-kick { font-family: var(--mono); font-size: 13px; letter-spacing: .14em;
+.ah-prop-kick { font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--ink-faint); }
 .ah-prop-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
   color: var(--ink); }
@@ -1116,7 +1152,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .anchor-hero::before { content: ""; position: absolute; left: 0; right: 0;
   top: 0; height: 44px; z-index: 1; pointer-events: none;
   background: linear-gradient(to bottom, rgba(8, 9, 10, .72), rgba(8, 9, 10, 0)); }
-.ah-role, .ah-state { position: absolute; top: 9px; font-size: 13px;
+.ah-role, .ah-state { position: absolute; top: 9px; font-size: 15px;
   letter-spacing: .12em; z-index: 2; }
 .ah-role { left: 10px; color: var(--ink-dim); }
 /* Amber: this is the one thing on the card that may need attention. */
@@ -1135,7 +1171,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .anchor-hero.empty .ah-name { color: var(--ink-dim); }
 .wiz-col-head .f-label { font-size: 14px; color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 600; }
 /* A role's jurisdiction, stated in Courier — this is the concept users miss. */
-.wiz-col .hint { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+.wiz-col .hint { margin: 0; font-family: var(--mono); font-size: 15px; line-height: 1.5; }
 .wiz-thumbs { display: flex; flex-direction: column; gap: 8px; }
 .wiz-thumb {
   display: flex; align-items: center; gap: 10px;
@@ -1154,8 +1190,8 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
   padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
 }
 .subj-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.subj-name { font-family: var(--mono); font-weight: 700; letter-spacing: .04em; font-size: 14px; }
-.subj-sub { color: var(--ink-dim); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.subj-name { font-family: var(--mono); font-weight: 700; letter-spacing: .04em; font-size: 15px; }
+.subj-sub { color: var(--ink-dim); font-size: 15px; letter-spacing: .1em; text-transform: uppercase; }
 .subj-head button.danger { width: 30px; padding: 5px 0; flex: none; }
 .subj-traits { line-height: 1.55; color: var(--ink-dim); font-family: var(--sans); font-size: 14px; }
 .subj-imgs { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); grid-auto-rows: 58px; grid-auto-flow: dense; gap: 5px; }
@@ -1188,7 +1224,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    --ok/--hold, never filled; identity text is editable prose; the + slot
    rides inside the mosaic; Courier facts line closes the card. */
 .kind-badge, .cast-badge {
-  flex: none; font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  flex: none; font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   padding: 2px 7px; border: 1px solid var(--line); color: var(--ink-dim);
 }
 .cast-badge { margin-left: auto; }
@@ -1205,12 +1241,12 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
   cursor: pointer; font-size: 14px;
 }
 .subj-slot:hover { border-color: var(--line-strong); color: var(--ink); }
-.subj-facts { font-family: var(--mono); font-size: 13px; letter-spacing: .05em; color: var(--ink-faint); }
+.subj-facts { font-family: var(--mono); font-size: 15px; letter-spacing: .05em; color: var(--ink-faint); }
 /* Text action — the canonical text link-button (Courier bold, ink, never
    amber). Was scoped to .subj-facts; global since plan P2 uses it broadly. */
 .text-act {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .05em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .05em;
   color: var(--ink-dim); font-weight: 700;
   white-space: nowrap; /* HARNESS_AUDIT U4 — verbs never wrap */
 }
@@ -1220,28 +1256,28 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    by kind, Courier faint row labels at fixed width; the manual cast row
    closes the block. */
 .uncast-block { border: 1px solid var(--line-soft); padding: 12px 14px; }
-.uncast-label { font-family: var(--mono); font-size: 13px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
+.uncast-label { font-family: var(--mono); font-size: 15px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
 /* Reassurance, highlighted (user, 2026-08-23): the questions read as a
    gate and they are not one. Green is a met/benign state, never amber —
    amber would mark the one thing this line exists to say it is NOT. */
 .uncast-label .q-optional { color: var(--ok); margin-left: 10px; }
 .uncast-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
-.uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 13px; letter-spacing: .09em; color: var(--ink-faint); }
+.uncast-kind { flex: none; width: 92px; font-family: var(--mono); font-size: 15px; letter-spacing: .09em; color: var(--ink-faint); }
 /* Uncast triage (mock 6b) — plan P3/R4: rows cap at 8 chips behind a dashed
    "more" expander; one ghost bulk-cast per row, right-aligned. */
 .uncast-row .chips { flex: 1 1 auto; min-width: 0; }
 .uncast-bulk { flex: none; margin-left: auto; font-size: 14px; padding: 4px 10px; white-space: nowrap; }
 .chip.more { border-style: dashed; color: var(--ink-faint); }
-.chip .suffix { color: var(--ink-faint); font-size: 13px; margin-left: 2px; }
+.chip .suffix { color: var(--ink-faint); font-size: 15px; margin-left: 2px; }
 
 /* PROPOSED chip state (mock 6a) — plan P5/Gap 5. Dashed = not yet real
    (the vocabulary-picker family); --hold carries awaiting-review. A
    confirmed chip is exactly the plain chip — no badge, no color. */
 .chip.proposed { border-style: dashed; border-color: var(--hold); color: var(--ink-faint); }
-.chip.proposed .prop-tail { color: var(--ink-faint); font-size: 13px; }
+.chip.proposed .prop-tail { color: var(--ink-faint); font-size: 15px; }
 .chip.proposed .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px;
 }
 .chip.proposed .prop-act:hover { color: var(--ink); }
@@ -1258,7 +1294,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .q-row:first-child { border-top: none; }
 .q-row.answered { border-left-color: var(--ok); }
 .q-row.deferred .q-text { color: var(--ink-faint); }
-.q-idx { flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-faint); padding-top: 2px; }
+.q-idx { flex: none; font-family: var(--mono); font-size: 15px; color: var(--ink-faint); padding-top: 2px; }
 .q-main { flex: 1; min-width: 0; }
 .q-main input { width: min(520px, 100%); margin-top: 6px; }
 /* UNCANONIZED — 2026-08-24 — why a step is frozen */
@@ -1298,7 +1334,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    full ink reads as a statement rather than a caption. Not amber: amber
    marks the action, and this is the reason the action cannot be taken. */
 .repair-gate {
-  font-size: 13px; letter-spacing: .09em; color: var(--ink);
+  font-size: 15px; letter-spacing: .09em; color: var(--ink);
   border: 1px solid var(--line); padding: 5px 9px; white-space: nowrap;
 }
 /* UNCANONIZED — 2026-08-23 — answer edit row */
@@ -1310,7 +1346,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .q-edit input { margin-top: 0; width: min(420px, 100%); }
 .q-edit-hint { color: var(--ink-faint); }
 .q-text { margin: 0; font-size: 14px; color: var(--ink-dim); max-width: 74ch; }
-.q-answer { margin: 4px 0 0; font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.q-answer { margin: 4px 0 0; font-family: var(--mono); font-size: 15px; color: var(--ink); }
 .q-actions { flex: none; display: flex; gap: 12px; align-items: center; padding-top: 1px; }
 
 /* D5 (PRODUCTION_DESIGN_V3) — open questions in two columns: bordered
@@ -1331,15 +1367,15 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .obj-suggest { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px; }
 .obj-suggest:empty { display: none; }
 .suggest-group .chips { margin-top: 4px; }
-.suggest-label { font-family: var(--mono); font-size: 13px; letter-spacing: .09em; color: var(--ink-faint); }
+.suggest-label { font-family: var(--mono); font-size: 15px; letter-spacing: .09em; color: var(--ink-faint); }
 .vchip.loose { border-style: dashed; }
-.vchip .suffix { color: var(--ink-faint); font-size: 13px; margin-left: 4px; }
+.vchip .suffix { color: var(--ink-faint); font-size: 15px; margin-left: 4px; }
 
 /* ============================================== boards: subject ref groups */
 .ref-groups { display: flex; flex-wrap: wrap; gap: 8px; }
 .ref-group {
   border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 12px;
-  background: var(--field); margin: 0; cursor: pointer; font-family: var(--mono); font-size: 13px;
+  background: var(--field); margin: 0; cursor: pointer; font-family: var(--mono); font-size: 15px;
 }
 .ref-group:hover { border-color: var(--line-strong); }
 .ref-group.has-ref { border-color: var(--ok); }
@@ -1359,7 +1395,7 @@ details.meta pre {
    Row grid: badge (fixed 52px, bordered status color, never filled) ·
    text · amber text action. The lead presents blocking[0], never a list. */
 .next-label {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .14em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--accent); margin-bottom: 6px;
 }
 .next-row { display: flex; align-items: center; gap: 18px; }
@@ -1372,7 +1408,7 @@ details.meta pre {
   padding: 8px 0; border-top: 1px solid var(--line-soft);
 }
 .block-kind {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   border: 1px solid var(--line); padding: 2px 0; flex: none;
   width: 52px; text-align: center;
 }
@@ -1387,24 +1423,24 @@ details.meta pre {
 /* The upload gate (user ruling 2026-08-18): stated beside the control it
    disables, with the way out attached — never sprung as an error after
    the file is chosen. */
-.up-gate { color: var(--ink-faint); font-size: 13px; letter-spacing: .1em;
+.up-gate { color: var(--ink-faint); font-size: 15px; letter-spacing: .1em;
   margin: 8px 0 0; display: flex; align-items: center; gap: 10px;
   flex-wrap: wrap; }
-.block-scope { font-size: 13px; letter-spacing: .14em; color: var(--ink-faint);
+.block-scope { font-size: 15px; letter-spacing: .14em; color: var(--ink-faint);
   padding: 12px 0 4px; }
 .block-scope:first-child { padding-top: 0; }
-.block-sub { display: block; font-size: 13px; letter-spacing: .1em;
+.block-sub { display: block; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); margin-top: 3px; }
-.no-engine-chip { font-size: 13px; letter-spacing: .12em; color: var(--bad);
+.no-engine-chip { font-size: 15px; letter-spacing: .12em; color: var(--bad);
   border: 1px solid var(--bad); padding: 1px 4px; margin-left: 8px; }
 .block-kind.CARE { color: var(--ink-faint); border-color: var(--line-strong); }  /* advisory is quieter than blocked */
 .advisory-label {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); border-top: 1px solid var(--line-soft);
   margin-top: 10px; padding-top: 8px;
 }
 .block-text { flex: 1; font-size: 14px; color: var(--ink); min-width: 0; }
-.block-text .mono-id { font-family: var(--mono); font-size: 13px; }
+.block-text .mono-id { font-family: var(--mono); font-size: 15px; }
 .block-act {
   flex: none; background: none; border: none; padding: 2px 4px;
   font: inherit; font-size: 14px; color: var(--accent); cursor: pointer;
@@ -1418,9 +1454,10 @@ details.meta pre {
   border-top: 1px solid var(--line-soft); font-size: 14px;
 }
 .recent-row:first-child { border-top: none; }
-.recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none; }
+.recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none;
+  font-size: 15px; }   /* Courier takes the 15px step, not the 14px body */
 .recent-text { color: var(--ink-dim); min-width: 0; }
-.recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 13px; }
+.recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 15px; }
 .recent-row.error {
   border-left: 2px solid var(--bad); padding-left: 10px;
   background: var(--panel2);
@@ -1437,11 +1474,11 @@ details.meta pre {
   border-top: 1px solid var(--line-soft);
 }
 .loc-headrow span {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint);
 }
-.loc-slug { font-family: var(--mono); font-size: 13px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loc-scenes { font-family: var(--mono); font-size: 13px; color: var(--ink-dim); text-align: right; }
+.loc-slug { font-family: var(--mono); font-size: 15px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loc-scenes { font-family: var(--mono); font-size: 15px; color: var(--ink-dim); text-align: right; }
 .loc-meter { display: inline-flex; gap: 3px; }
 .loc-meter i { width: 11px; height: 4px; background: var(--line-soft); }
 .loc-meter i.on { background: var(--ok); }
@@ -1449,12 +1486,12 @@ details.meta pre {
 .loc-sheet { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .loc-open {
   background: none; border: none; padding: 0; font-family: var(--mono);
-  font-size: 13px; color: var(--ink-faint); cursor: pointer;
+  font-size: 15px; color: var(--ink-faint); cursor: pointer;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .loc-open:hover { color: var(--ink); text-decoration: underline; }
 .loc-open.held { color: var(--ink-faint); }  /* audit #9 */
-.loc-draft { justify-self: start; font-family: var(--mono); font-size: 13px; }
+.loc-draft { justify-self: start; font-family: var(--mono); font-size: 15px; }
 /* Finder list — canonical (2026-07-30c): Courier search over a scrollable
    list, parent rows expand to children, every row ends in its one verb.
    For any >30-item findable list. */
@@ -1464,8 +1501,8 @@ details.meta pre {
   display: flex; align-items: center; gap: 12px; padding: 4px 0 4px 26px;
   border-top: 1px dashed var(--line-soft);
 }
-.scene-row .loc-slug { flex: 1; font-size: 13px; }
-.scene-row .loc-draft { flex: none; font-size: 13px; }
+.scene-row .loc-slug { flex: 1; font-size: 15px; }
+.scene-row .loc-draft { flex: none; font-size: 15px; }
 /* Wizard read-locations rows (plan P4/R2): name · sheet-match state · verb.
    Same finder vocabulary, three columns instead of four; grouped rows
    (plan P7) add the reassign select as a fourth. */
@@ -1475,7 +1512,7 @@ details.meta pre {
 .wiz-loc-row, .loc-thead { grid-template-columns: minmax(0,1fr) 240px 120px 190px; }
 .loc-thead { display: grid; gap: 10px; align-items: center; padding: 8px 0 6px;
   border-top: 1px solid var(--line); }
-.loc-thead span { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.loc-thead span { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .wiz-loc-row .loc-draft, .wiz-loc-row .loc-open,
 .wiz-loc-row .loc-gate { justify-self: end; }
@@ -1485,7 +1522,7 @@ details.meta pre {
 .wiz-v3 .loc-group { background: var(--field); padding: 8px 10px 6px; margin-top: 6px;
   border-top: none; }
 .wiz-v3 .loc-scroll { max-height: none; overflow-y: visible; }
-.wv-tag.loc-gate { margin: 0; font-size: 13px; padding: 3px 8px; }
+.wv-tag.loc-gate { margin: 0; font-size: 15px; padding: 3px 8px; }
 /* RULE_PASS_2 D (ruled 2026-08-18): the act heading is a HEADING — it was
    a `.text-act` that rendered identically to the column labels beside it,
    so the one remedy for a reading you disagree with gave no sign it could
@@ -1496,18 +1533,18 @@ details.meta pre {
 .loc-act-head { color: var(--ink-dim); }
 .loc-read { color: var(--ink-faint); letter-spacing: .14em; margin-left: 8px; }
 .loc-turn { display: block; color: var(--ink-dim); letter-spacing: .08em;
-  font-size: 13px; margin-top: 3px; text-transform: none; }
+  font-size: 15px; margin-top: 3px; text-transform: none; }
 .loc-group .loc-act-name { margin-left: 10px; }
 /* D4: the rows the read named that no slugline placed are a register
    below the acts, after a hairline — not a fourth act under a head that
    promises each row becomes a breakdown. */
 .loc-group.loc-register { margin-top: 18px; border-top: 1px solid var(--line); }
 .loc-group {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); padding: 10px 0 3px; margin-top: 2px;
   border-top: 1px solid var(--line-soft);
 }
-.loc-reassign { font-family: var(--mono); font-size: 13px; padding: 2px 4px; max-width: 150px; }
+.loc-reassign { font-family: var(--mono); font-size: 15px; padding: 2px 4px; max-width: 150px; }
 
 /* Environment cards (mock 6a) — plan P7/Gap 6. Registry-card family:
    Courier bold name, sans notes, Courier facts line; dashed --hold border
@@ -1515,7 +1552,7 @@ details.meta pre {
 /* UNCANONIZED — 2026-09-01 — a credential the process is refusing to see */
 /* Courier, because it is a machine fact and a command to type. It sits
    where Authenticate would, since offering that button is the error. */
-.cred-fix { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+.cred-fix { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint);
   white-space: nowrap; }
 .cred-fix b { color: var(--ink-dim); font-weight: 500; }
 
@@ -1523,7 +1560,7 @@ details.meta pre {
 /* GENERATE ANOTHER closes the filmstrip, dashed, because it is the one
    slot that has no picture in it yet. */
 .cd-more { border: 1px dashed var(--line); background: none;
-  color: var(--ink-faint); font-family: var(--mono); font-size: 13px;
+  color: var(--ink-faint); font-family: var(--mono); font-size: 15px;
   letter-spacing: .04em; line-height: 1.4; cursor: pointer; }
 .cd-more:hover { border-color: var(--line-bright); color: var(--ink-dim); }
 /* A render is money, so the cost is stated beside the button, never
@@ -1590,26 +1627,26 @@ details.meta pre {
 .env-row { background: var(--panel); padding: 12px 14px; }
 .env-row.proposed { border-left: 2px solid var(--hold); }
 .env-locs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 7px 0 0;
-  font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
+  font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); }
 .env-noloc { color: var(--ink-faint); letter-spacing: .1em; font-size: 14px; }
 
-.env-name { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .05em; }
+.env-name { font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .05em; }
 .env-notes { margin: 4px 0 8px; font-size: 14px; color: var(--ink-dim); }
-.env-facts { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.env-facts { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 .env-facts .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px;
 }
 .env-facts .prop-act:hover { color: var(--ink); }
 .env-facts.prop-tail { color: var(--ink-faint); }
-.env-empty { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); padding: 6px 0; }
+.env-empty { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); padding: 6px 0; }
 
 /* PROMPT WILL CARRY (mock 6c) — plan P8: the scope block's live receipt,
    quiet Courier on the inset field surface. */
 .scope-carry {
   margin-top: 10px; padding: 7px 11px; border: 1px solid var(--line-soft);
-  background: var(--field); font-family: var(--mono); font-size: 13px;
+  background: var(--field); font-family: var(--mono); font-size: 15px;
   letter-spacing: .06em; color: var(--ink-dim);
 }
 .scope-carry:empty { display: none; }
@@ -1618,9 +1655,9 @@ details.meta pre {
 .pscope { margin-top: 10px; display: flex; align-items: center; gap: 14px; }
 .pscope.ovr { display: block; }
 .pscope.ovr .fgroup { margin-top: 8px; }
-.pscope-line { font-family: var(--mono); font-size: 13px; letter-spacing: .05em; color: var(--ink-faint); }
+.pscope-line { font-family: var(--mono); font-size: 15px; letter-spacing: .05em; color: var(--ink-faint); }
 .scope-flag {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); border: 1px solid var(--hold); padding: 1px 7px; flex: none;
 }
 .pscope select { max-width: 260px; }
@@ -1630,22 +1667,22 @@ details.meta pre {
    replaces the grid — same card anatomy, contained image, never cropped. */
 .ref-card.board-solo img { height: auto; max-height: 72vh; object-fit: contain; }
 .loc-state {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .05em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .05em;
   color: var(--ink-faint); text-align: right; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* Fact rows — canonical (mocks 4a/4d): label faint Courier left, value
    Courier right; the vocabulary for any machine-facts card. */
-.scr-file { font-family: var(--mono); font-weight: 700; font-size: 14px; letter-spacing: .02em; margin: 4px 0 10px; }
+.scr-file { font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .02em; margin: 4px 0 10px; }
 .fact {
   display: flex; justify-content: space-between; gap: 12px; padding: 4px 0;
-  font-family: var(--mono); font-size: 13px;
+  font-family: var(--mono); font-size: 15px;
 }
 .fact span { color: var(--ink-faint); letter-spacing: .08em; }
 .fact b { color: var(--ink-dim); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fact-head {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); margin: 18px 0 4px; padding-top: 14px;
   border-top: 1px solid var(--line-soft);
 }
@@ -1661,7 +1698,7 @@ details.meta pre {
    bottom-right, status colors report state only, APP-DRAWN blocks labeled. */
 .slot-caption { margin: 4px 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .slot-alert {
-  font-family: var(--mono); font-size: 13px; color: var(--bad);
+  font-family: var(--mono); font-size: 15px; color: var(--bad);
   border: 1px solid var(--bad); border-left-width: 3px;
   background: rgba(205, 97, 85, .07); padding: 8px 12px; margin: 10px 0 12px;
 }
@@ -1684,22 +1721,22 @@ details.meta pre {
 .asm-head .primary { flex: none; }
 .variant-chips { display: inline-flex; gap: 6px; margin: 0 10px; }
 .vchip {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   background: none; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 3px 10px; cursor: pointer;
 }
 .vchip:hover { border-color: var(--line-strong); color: var(--ink); }
 .vchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
-.slot-id { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
+.slot-id { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); }
 .slot-verdict {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   border: 1px solid; padding: 1px 6px; align-self: flex-start;
 }
 .slot-verdict.OK { color: var(--ok); border-color: var(--ok); }
 .slot-verdict.UNAPPROVED { color: var(--ink-faint); border-color: var(--hold); }
 .slot-verdict.TOO_SMALL { color: var(--bad); border-color: var(--bad); }
 .slot-verdict.NO_CANDIDATE { color: var(--ink-faint); border-color: var(--line); }
-.slot-dims { font-family: var(--mono); font-size: 13px; color: var(--ink-faint); }
+.slot-dims { font-family: var(--mono); font-size: 15px; color: var(--ink-faint); }
 
 /* Judging room — canonical (plan v3 C6–C9, mock 3b): rail · stage ·
    provenance as one flex row inside #board-panels. */
@@ -1712,11 +1749,11 @@ details.meta pre {
   display: flex; flex-direction: column; gap: 7px;
 }
 .rail-label {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); display: flex; justify-content: space-between;
 }
-.rail-sheet { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .02em; word-break: break-all; }
-.rail-state { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ok); display: flex; align-items: center; gap: 6px; }
+.rail-sheet { font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .02em; word-break: break-all; }
+.rail-state { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ok); display: flex; align-items: center; gap: 6px; }
 .rail-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .rail-panel {
   display: flex; align-items: flex-start; gap: 10px; width: 100%;
@@ -1732,15 +1769,15 @@ details.meta pre {
 }
 .rail-thumb.empty { border-style: dashed; }
 .rail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rail-pid { flex: 1; font-family: var(--mono); font-size: 13px; letter-spacing: .04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rail-mark { flex: none; font-family: var(--mono); font-size: 13px; }
+.rail-pid { flex: 1; font-family: var(--mono); font-size: 15px; letter-spacing: .04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-mark { flex: none; font-family: var(--mono); font-size: 15px; }
 .rail-mark.okdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .rail-mark.warn { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 6px; }
 .rail-mark.bad { color: var(--ink-faint);
   border-left: 2px solid var(--bad); padding-left: 6px; }
 .rail-mark.none { color: var(--ink-faint); }
-.rail-note { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
+.rail-note { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
 
 /* stage: one big render, status left, actions right, ghost row beneath */
 .stage-shot {
@@ -1752,7 +1789,7 @@ details.meta pre {
 .stage-shot.empty { padding: 40px 20px; border-style: dashed; }
 .shot-under { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
 .shot-status {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   border: 1px solid; padding: 3px 9px; flex: none;
 }
 .shot-status.CANDIDATE { color: var(--ink-faint); border-color: var(--hold); }  /* audit #6 */
@@ -1786,7 +1823,7 @@ details.meta pre {
    one bit of state. */
 .take.shown { outline: 1px solid var(--ink); outline-offset: 1px; }
 .take-label {
-  display: block; font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
+  display: block; font-family: var(--mono); font-size: 15px; letter-spacing: .04em;
   color: var(--ink-faint); padding: 4px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .take.approved { border-color: var(--ok); }
@@ -1807,7 +1844,7 @@ details.meta pre {
 
 /* generation bench: deliberately not amber — Approve panel keeps the budget */
 .bench-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
-.bench-count { margin-left: auto; font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-faint); }
+.bench-count { margin-left: auto; font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-faint); }
 .gen-go {
   border-color: var(--line-strong); color: var(--ink); font-weight: 600;
   padding: 9px 18px;
@@ -1818,10 +1855,10 @@ details.meta pre {
 .rail-label.bad { color: var(--ink-faint); }
 .anchor-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .anchor-meta { display: flex; flex-direction: column; min-width: 0; }
-.anchor-meta b { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.anchor-meta i { font-family: var(--mono); font-style: normal; font-size: 13px; color: var(--ink-faint); }
+.anchor-meta b { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anchor-meta i { font-family: var(--mono); font-style: normal; font-size: 15px; color: var(--ink-faint); }
 .side-prompt {
-  font-family: var(--mono); font-size: 13px; line-height: 1.55;
+  font-family: var(--mono); font-size: 15px; line-height: 1.55;
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
   margin: 0; max-height: 300px; overflow-y: auto;
 }
@@ -1833,24 +1870,24 @@ details.meta pre {
    only the un-guessable field gets a ghost prefix; the submit is ghost —
    an intake row never spends the screen's amber. */
 .ref-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 13px; }
+.ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 15px; }
 .ref-add input[type="text"] { flex: 1 1 130px; min-width: 0; padding: 7px 10px; font-size: 14px; }
 .ref-add #ref-role { flex: 2 1 220px; }
 .ref-add button { flex: none; }
 .intake-prefix {
-  flex: none; font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  flex: none; font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); margin-right: -2px;
 }
 @media (max-width: 1100px) { .intake-prefix { display: none; } }
 .ref-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .ref-chips { display: inline-flex; gap: 6px; }
 .ref-counts { margin-left: auto; display: inline-flex; gap: 16px; }
-.stat { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-dim); display: inline-flex; align-items: center; gap: 6px; }
+.stat { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-dim); display: inline-flex; align-items: center; gap: 6px; }
 .stat i { width: 8px; height: 8px; display: inline-block; }
 .stat.ok i { background: var(--ok); }
 .stat.hold i { background: var(--hold); }
 .stat.bad i { background: var(--bad); }
-.juris { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; line-height: 1.6; }
+.juris { font-family: var(--mono); font-size: 15px; letter-spacing: .04em; line-height: 1.6; }
 /* E0 (RULE_PASS_2 E, ruled 2026-08-18): these borrowed the STATUS
    colours — `--ok` means APPROVED and `--bad` means REJECTED on every
    other surface, and here they meant "controls" and "does not control",
@@ -1860,7 +1897,7 @@ details.meta pre {
 .juris.ok, .juris.bad { color: var(--ink-dim); }
 /* A jurisdiction row with no jurisdiction is not drawn; a plate with
    neither states it once. */
-.juris-none { font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
+.juris-none { font-family: var(--mono); font-size: 15px; letter-spacing: .04em;
   color: var(--ink-faint); }
 
 /* Reference shelves — ONE library, three shelves ordered by when an image
@@ -1868,15 +1905,15 @@ details.meta pre {
    right-aligned Courier counts. Anatomy documented in DESIGN_SYSTEM.md. */
 .shelf { margin-top: 28px; }
 .shelf-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.shelf-name { font-family: var(--mono); font-weight: 700; font-size: 14px; letter-spacing: .1em; color: var(--ink); }
-.shelf-ride { font-family: var(--mono); font-size: 13px; letter-spacing: .09em; color: var(--ink-faint); }
+.shelf-name { font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .1em; color: var(--ink); }
+.shelf-ride { font-family: var(--mono); font-size: 15px; letter-spacing: .09em; color: var(--ink-faint); }
 .shelf-head .hint { margin: 0; }
-.shelf-count { margin-left: auto; font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-faint); white-space: nowrap; }
+.shelf-count { margin-left: auto; font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-faint); white-space: nowrap; }
 .shelf .ref-grid { margin-top: 12px; }
 
 /* settings: engine cards (mock 4d) */
-.eng-powers { margin: 4px 0; font-size: 14px; color: var(--ink-dim); }
-.eng-note { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
+.eng-powers { margin: 4px 0; font-size: 15px; color: var(--ink-dim); }
+.eng-note { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
 .eng-note.warn { color: var(--ink-faint); }
 .facts-row {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
@@ -1892,10 +1929,10 @@ details.meta pre {
 }
 .eng-row-name { font-weight: 600; flex: none; }
 .eng-row-meta {
-  flex: 1; min-width: 0; font-family: var(--mono); font-size: 13px;
+  flex: 1; min-width: 0; font-family: var(--mono); font-size: 15px;
   color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.eng-row-test { flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-faint); }
+.eng-row-test { flex: none; font-family: var(--mono); font-size: 15px; color: var(--ink-faint); }
 .eng-row-test .ok { color: var(--ok); }
 .eng-row-test .bad { color: var(--ink-faint); }
 .eng-row button { flex: none; font-size: 14px; padding: 4px 12px; }
@@ -1914,7 +1951,7 @@ details.meta pre {
   padding: 20px 22px; display: flex; flex-direction: column; gap: 12px;
 }
 .modal-title {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink); font-weight: 700;
 }
 .modal-body { margin: 0; font-size: 14px; color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
@@ -1950,29 +1987,29 @@ details.meta pre {
    never .on — amber selection fill is reserved for single-choice chips
    (variant, filter). */
 .role-suggest { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.role-suggest .vchip { font-size: 13px; }
+.role-suggest .vchip { font-size: 15px; }
 .vchip.set { background: var(--panel2); border-color: var(--line-strong); color: var(--ink); }
 /* Stored-as preview — canonical (2026-07-30b): passive fact line, label
    faint, value dim, no field chrome; rendered only when it differs from
    what the user typed. */
 .role-preview {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .06em;
   color: var(--ink-dim); padding: 2px 0;
 }
 .role-preview::before {
-  content: "WILL BE STORED AS  "; font-size: 13px; letter-spacing: .12em;
+  content: "WILL BE STORED AS  "; font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint);
 }
 /* Reading view — canonical (design review 2026-07-30): one scrollable
    Courier document with an identity line; prompts, logs, raw JSON. */
 .modal.prompt-full { width: min(900px, 94vw); }
 .reading-id {
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint);
 }
 .size-cap { display: block; margin: 5px 0 0; }
 .prompt-full-pre {
-  font-family: var(--mono); font-size: 13px; line-height: 1.6;
+  font-family: var(--mono); font-size: 15px; line-height: 1.6;
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
   margin: 0; max-height: 70vh; overflow-y: auto;
   background: var(--field); border: 1px solid var(--line-soft); padding: 14px 16px;
@@ -2023,7 +2060,7 @@ details.meta pre {
    accessibility tree — keyboard focus reveals it too. */
 .brand:hover .brand-rename, .brand-rename:focus-visible { opacity: 1; }
 .brand-rename:hover { color: var(--ink); }
-.brand-edit { background: var(--field); border: 1px solid var(--line); color: var(--ink); font-family: var(--mono); font-size: 13px; padding: 3px 8px; width: 220px; }
+.brand-edit { background: var(--field); border: 1px solid var(--line); color: var(--ink); font-family: var(--mono); font-size: 15px; padding: 3px 8px; width: 220px; }
 
 /* Entry gate (canonized 2026-08-01): the only vertically centered screen —
    wordmark, one field, one primary, one hint; errors are field state plus
@@ -2047,7 +2084,7 @@ details.meta pre {
 .proj-item {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
   background: none; border: none; cursor: pointer; padding: 8px 10px;
-  font-family: var(--mono); font-size: 13px; color: var(--ink);
+  font-family: var(--mono); font-size: 15px; color: var(--ink);
 }
 .proj-item:hover:not([disabled]) { background: var(--panel2); }
 .proj-item[disabled] { cursor: default; }
@@ -2060,15 +2097,22 @@ details.meta pre {
 .lib-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 18px; }
 .lib-title { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin: 6px 0 8px; }
 .lib-intro { color: var(--ink-dim); font-size: 14px; max-width: 64ch; }
-.lib-count { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); white-space: nowrap; }
+.lib-count { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); white-space: nowrap; }
 
-.prod-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-.prod-card { display: flex; flex-direction: column; gap: 12px; }
+/* `1fr` is max-content-floored, so a head row wider than its track
+   pushes the grid past the window instead of wrapping — it did, by 45px,
+   once the Courier labels took the room the floor gives them
+   (2026-09-12). `minmax(0, 1fr)` lets the track shrink and the head
+   wrap, which is "give the label the room" applied to the layout rather
+   than to the label. */
+.prod-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px; margin-bottom: 14px; }
+.prod-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .prod-card.open { border-left: 3px solid var(--accent); background: var(--panel2); }
-.prod-card-head { display: flex; align-items: baseline; gap: 10px; }
+.prod-card-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .prod-name { font-weight: 700; font-size: 16px; }
-.prod-open { color: var(--accent); font-size: 13px; letter-spacing: .14em; }
-.prod-slug { margin-left: auto; color: var(--ink-faint); font-size: 13px; letter-spacing: .06em; }
+.prod-open { color: var(--accent); font-size: 15px; letter-spacing: .14em; }
+.prod-slug { margin-left: auto; color: var(--ink-faint); font-size: 15px; letter-spacing: .06em; }
 
 /* The reach band: same four colors as the nav band, different question —
    has this production EVER completed a stage (--ok), is any of its sheets
@@ -2077,19 +2121,19 @@ details.meta pre {
 .prod-band { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; }
 .prod-band span {
   border-top: 2px solid var(--line); background: var(--bg2);
-  padding: 5px 8px 6px; font-family: var(--mono); font-size: 13px;
+  padding: 5px 8px 6px; font-family: var(--mono); font-size: 15px;
   letter-spacing: .08em; color: var(--ink-faint);
 }
 .prod-band span.r-ok { border-top-color: var(--ok); color: var(--ink-dim); }
 .prod-band span.r-bad { border-top-color: var(--bad); color: var(--ink-dim); }
 
-.prod-counts { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-dim); }
-.prod-next-k { font-family: var(--mono); font-size: 13px; letter-spacing: .16em; color: var(--accent); margin-bottom: 3px; }
+.prod-counts { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-dim); }
+.prod-next-k { font-family: var(--mono); font-size: 15px; letter-spacing: .16em; color: var(--accent); margin-bottom: 3px; }
 .prod-next-k.clear { color: var(--ink-faint); }
 .prod-next { font-size: 14px; color: var(--ink); }
 
 .prod-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-soft); }
-.prod-care { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.prod-care { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 /* A status that is only a colour disappears when the colour is lifted.
    `--hold` is not one of the floor's seven text colours and `--bad` is
    only sanctioned at headline scale or beside a hairline, so these marks
@@ -2133,19 +2177,19 @@ details.meta pre {
 }
 
 /* switcher menu anatomy (PRODUCTIONS_PLAN M4) */
-.pm-head { padding: 8px 10px; font-size: 13px; letter-spacing: .16em; color: var(--ink-faint); border-bottom: 1px solid var(--line-soft); }
+.pm-head { padding: 8px 10px; font-size: 15px; letter-spacing: .16em; color: var(--ink-faint); border-bottom: 1px solid var(--line-soft); }
 .proj-menu .proj-item { border-left: 2px solid transparent; }
 .proj-menu .proj-item.open { border-left-color: var(--ok); background: var(--panel2); }  /* audit #7 */
 .pm-row { display: flex; align-items: baseline; gap: 12px; }
 .pm-name { letter-spacing: .06em; }
 .proj-item.open .pm-name { color: var(--ink); }
-.pm-chip { margin-left: auto; font-size: 13px; letter-spacing: .1em; }
+.pm-chip { margin-left: auto; font-size: 15px; letter-spacing: .1em; }
 .pm-chip.open { color: var(--ok); }
 .pm-chip.stale { color: var(--ink-faint); }
-.pm-sub { display: block; margin-top: 2px; font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.pm-sub { display: block; margin-top: 2px; font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 .pm-div { border-top: 1px solid var(--line-soft); margin-top: 4px; }
 .proj-menu .pm-new { display: block; width: 100%; text-align: left; padding: 8px 10px; color: var(--ink); }  /* audit #8 */
-.pm-foot { padding: 8px 10px; border-top: 1px solid var(--line-soft); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); max-width: 30ch; }
+.pm-foot { padding: 8px 10px; border-top: 1px solid var(--line-soft); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); max-width: 30ch; }
 
 /* the two dead ends, closed (PRODUCTIONS_PLAN M6) */
 .firstrun { display: flex; justify-content: center; padding: 64px 24px; }
@@ -2163,7 +2207,7 @@ details.meta pre {
 /* production-design gate tag (user ruling 2026-08-01): the stated,
    de-emphasized stand-in where Create Breakdown will appear. */
 .pd-lock {
-  font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   border: 1px dashed var(--line); padding: 2px 8px; white-space: nowrap;
 }
 
@@ -2181,7 +2225,7 @@ details.meta pre {
 #nav button.s-locked { background: #17191c; cursor: help; }
 #nav button.s-locked:hover { background: #17191c; }
 .lock-chip {
-  display: none; font-family: var(--mono); font-size: 13px;
+  display: none; font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; border: 1px solid var(--hold); color: var(--ink-faint);
   padding: 0 5px; margin-left: 8px; vertical-align: 1px;
 }
@@ -2197,7 +2241,7 @@ details.meta pre {
   padding: 16px 18px 14px; min-width: 300px;
 }
 .bp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.bp-chip { border: 1px solid var(--hold); color: var(--ink-faint); font-size: 13px; letter-spacing: .1em; padding: 1px 8px; }
+.bp-chip { border: 1px solid var(--hold); color: var(--ink-faint); font-size: 15px; letter-spacing: .1em; padding: 1px 8px; }
 .bp-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 14px; padding: 0 2px; }
 .bp-x:hover { color: var(--ink); }
 .bp-sent { font-size: 14px; color: var(--ink-dim); margin-bottom: 14px; }
@@ -2211,7 +2255,7 @@ details.meta pre {
    statement of fact, not the live signal. */
 .bp-tally { display: inline-block; margin-top: 2px; color: var(--ink-faint); opacity: .8; }
 .bp-step.cur .bp-tally { color: var(--ink-dim); }
-.bp-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.bp-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 
 /* The stage checklist (LOCKED_STAGE_PLAN L4, mock 12c): the rows ARE the
    navigation — verb, subtitle, address per row; done rows collapse. */
@@ -2236,9 +2280,9 @@ details.meta pre {
 .sc-row.done .sc-label, .sc-row.info .sc-label { font-weight: 400; color: var(--ink-dim); }
 .sc-sub { font-size: 14px; color: var(--ink-dim); }
 .sc-row.todo .sc-sub { color: var(--ink-faint); }
-.sc-addr { flex: none; font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.sc-addr { flex: none; font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 .sc-row.cur .sc-addr { color: var(--accent); }
-.sc-foot { margin-top: 12px; font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.sc-foot { margin-top: 12px; font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 
 /* QA batch 2026-08-01 */
 .wiz-loc-row select { width: 100%; min-width: 0; }
@@ -2275,12 +2319,12 @@ details.meta pre {
    Fluid type cannot obey a nine-step scale by construction, so both are
    steps now. */
 .bf-title { color: #e8e5dd; font-weight: 700; font-size: 24px; letter-spacing: .02em; }
-.bf-sub { color: #9a978f; font-size: 13px; letter-spacing: .08em; margin-top: 4px; }
+.bf-sub { color: #9a978f; font-size: 15px; letter-spacing: .08em; margin-top: 4px; }
 .bf-rule { border-top: 3px solid var(--accent); margin-top: 8px; }
 .bf-slot { position: absolute; background: #232019; border: 1px solid var(--line); }  /* R12: frames are containment */
 .bf-slot img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
 .bf-pid {
-  position: absolute; left: 6px; top: 6px; font-size: 13px; letter-spacing: .1em;
+  position: absolute; left: 6px; top: 6px; font-size: 15px; letter-spacing: .1em;
   color: #e8e5dd; background: rgba(42, 39, 35, .75); padding: 1px 6px; pointer-events: none;
 }
 
@@ -2291,7 +2335,7 @@ details.meta pre {
   position: fixed; left: 14px; bottom: 14px; z-index: 60;
   background: var(--panel); color: var(--ink);
   border: 1px solid var(--accent); border-left-width: 4px;
-  padding: 7px 12px; font-size: 13px; letter-spacing: .08em;
+  padding: 7px 12px; font-size: 15px; letter-spacing: .08em;
 }
 
 /* Panel card, work-order state (PANEL_CARD_PLAN 2026-08-03). Required
@@ -2308,9 +2352,9 @@ details.meta pre {
   padding: 9px 12px; border-bottom: 1px solid var(--line); min-width: 0;
 }
 .req-row:nth-child(odd) { border-right: 1px solid var(--line); }
-.req-ord { font-family: var(--mono); font-size: 13px; color: var(--ink-faint); }
+.req-ord { font-family: var(--mono); font-size: 15px; color: var(--ink-faint); }
 .req-obj { flex: 1; min-width: 0; }
-.req-mark { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; white-space: nowrap; }
+.req-mark { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; white-space: nowrap; }
 .req-mark.ok { color: var(--ok); }
 .req-mark.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
@@ -2325,7 +2369,7 @@ details.meta pre {
    machine truth — Courier. (PANEL_CARD_PLAN P3) */
 .forbid-chip {
   border: 1px dashed var(--line); padding: 3px 10px;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .06em;
   color: var(--ink-faint); white-space: nowrap;
 }
 .scope-line { font-size: 14px; letter-spacing: .06em; color: var(--ink-dim); margin: 4px 0 12px; }
@@ -2335,7 +2379,7 @@ details.meta pre {
    (PANEL_CARD_PLAN P4) */
 .always-on {
   border: 1px solid var(--ok); color: var(--ok);
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   padding: 2px 8px; margin-left: 10px; vertical-align: 2px;
 }
 .anchor-sum { border: 1px solid var(--line); border-bottom: none; }
@@ -2343,7 +2387,7 @@ details.meta pre {
   display: flex; justify-content: space-between; align-items: baseline;
   padding: 8px 12px; border-bottom: 1px solid var(--line);
 }
-.anchor-sum-row .mono { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.anchor-sum-row .mono { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* The stated zero state (PANEL_CARD_PLAN P5): when the app decided and
    the answer was "nothing matched", say so — a quality warning before a
@@ -2360,7 +2404,7 @@ details.meta pre {
 /* Dispatch facts: what is about to be sent, at the moment of sending.
    (PANEL_CARD_PLAN P6) */
 .dispatch-facts {
-  font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .08em; color: var(--ink-faint);
   line-height: 1.7; align-self: center; margin-left: auto; text-align: right;
 }
 .gen-actions .text-act { align-self: center; }
@@ -2383,7 +2427,7 @@ details.meta pre {
 .act-spacer { flex: 1; }
 .act-right { padding-right: 0; }
 .act-items { display: inline-flex; align-items: center; gap: 14px; }
-.act-kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .14em;
+.act-kicker { font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--ink-faint); }
 /* Mock 17a draws these verbs in Archivo — a verb is a word, not machine
    data; the global .text-act (Courier) serves machine-flavoured acts and
@@ -2425,7 +2469,7 @@ details.meta pre {
 /* T1: the tags themselves — legible on any take, on their own ground. */
 .stage-shot { position: relative; }
 .shot-tag { position: absolute; background: rgba(11, 12, 14, .82);
-  border: 1px solid var(--line); font-family: var(--mono); font-size: 13px;
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 15px;
   letter-spacing: .06em; padding: 4px 8px; }
 .shot-tag-state { top: 10px; left: 10px; }
 /* Corrected mock 14a: identity rides the TOP right, opposite the
@@ -2490,7 +2534,7 @@ details.meta pre {
 .rl-row { display: flex; justify-content: space-between; align-items: baseline;
   gap: 16px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
 .rl-row .rl-lab { color: var(--ink-faint); font-size: 14px; }
-.rl-row .rl-val { color: var(--ink-faint); font-size: 13px; }
+.rl-row .rl-val { color: var(--ink-faint); font-size: 15px; }
 .rl-row.in .rl-val { color: var(--ink); }
 .rl-failed .rd-note { color: var(--ink-faint); }
 /* UNCANONIZED — 2026-08-29 — PRODUCTION_DESIGN_UI_PLAN §3.5, the reader */
@@ -2505,7 +2549,7 @@ details.meta pre {
   color: var(--ink); margin: 26px 0 0; padding-bottom: 7px;
   text-transform: none; letter-spacing: normal;
   border-bottom: 1px solid var(--hairline); }
-.bible-doc .bd-kick { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.bible-doc .bd-kick { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 14px 0 2px; }
 .bible-doc .bd-p { font-family: var(--sans); font-size: 15px; line-height: 1.7;
   color: var(--ink-dim); margin: 12px 0 0; }
@@ -2536,11 +2580,11 @@ details.meta pre {
   margin-bottom: 8px; }
 .bd-wrote { margin: 0; }
 .bd-wrote img { width: 100%; display: block; border: 1px solid var(--line-soft); }
-.bd-wrote figcaption { font-family: var(--mono); font-size: 13px;
+.bd-wrote figcaption { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); margin-top: 3px;
   text-transform: uppercase; }
 .bible-viewrow { margin: 0 0 8px; align-items: center; }
-.bible-path { color: var(--ink-faint); font-size: 13px; letter-spacing: .06em;
+.bible-path { color: var(--ink-faint); font-size: 15px; letter-spacing: .06em;
   margin-left: 10px; }
 /* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.5 */
 /* Two columns: the document and its self-check on the left, the things
@@ -2550,18 +2594,18 @@ details.meta pre {
   gap: 18px; align-items: start; margin-top: 12px; }
 @media (max-width: 1300px) { .bible-cols { grid-template-columns: 1fr; } }
 .bible-side { display: flex; flex-direction: column; gap: 14px; }
-#style-bible { min-height: 420px; font-family: var(--mono); font-size: 13px;
+#style-bible { min-height: 420px; font-family: var(--mono); font-size: 15px;
   line-height: 1.7; background: var(--field); }
 /* The one thing a person editing this document must not do. Stated where
    they are about to do it, not in a doc they will not open. */
-.bible-editor-note { font-family: var(--mono); font-size: 13px;
+.bible-editor-note { font-family: var(--mono); font-size: 15px;
   letter-spacing: .12em; color: var(--ink-faint); margin: 0 0 6px; }
 .bible-check-row { margin-top: 10px; }
 .bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
 .bc-none { color: var(--ink-faint); max-width: 74ch; margin: 10px 0 0; }
 .bc-row { border-left: 2px solid var(--line); padding: 2px 0 2px 10px;
   margin: 0 0 10px; max-width: 74ch; }
-.bc-secs { color: var(--ink-dim); font-size: 13px; letter-spacing: .04em; }
+.bc-secs { color: var(--ink-dim); font-size: 15px; letter-spacing: .04em; }
 .bc-q { color: var(--ink); margin-top: 4px; }
 .bc-why { color: var(--ink-faint); margin-top: 4px; }
 .prompt-comp { margin: 0 0 10px; max-width: 74ch; }
@@ -2607,7 +2651,7 @@ details.meta pre {
 .shot-tag-didnt { color: var(--ink-faint); }
 /* Take captions sit under the thumbnail, never overlaid or truncated mid-id. */
 .take-cap {
-  display: block; font-family: var(--mono); font-size: 13px; letter-spacing: .05em;
+  display: block; font-family: var(--mono); font-size: 15px; letter-spacing: .05em;
   color: var(--ink-faint); padding: 4px 6px; white-space: nowrap;
 }
 .take.shown .take-cap { color: var(--ink); }
@@ -2634,7 +2678,7 @@ details.meta pre {
 }
 .rail-legend {
   display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
-  font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .08em; color: var(--ink-faint);
 }
 .rail-legend .dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
@@ -2645,7 +2689,7 @@ details.meta pre {
 .rail-legend .dot.none { border: 1px solid var(--line-strong); }
 .rail-derived { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
 .rail-derived .drow { display: flex; justify-content: space-between; gap: 8px; }
-.rail-derived .drow .mono { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.rail-derived .drow .mono { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* ==================================================================
    CONNECTORS_UI_PLAN (designer-ruled 2026-08-03) — the two AI roles,
@@ -2658,15 +2702,15 @@ details.meta pre {
    selector, nothing else; a live role wears one --ok square inside the
    field; each section closes with at most one Courier footnote. */
 .sec-head { margin: 28px 0 12px; }
-.sec-foot { font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+.sec-foot { font-family: var(--mono); font-size: 15px; letter-spacing: .06em;
   color: var(--ink-faint); margin: 10px 2px 0; }
 .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .role-card { display: flex; flex-direction: column; }
-.role-kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.role-kicker { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); }
 .role-kicker b { font-family: var(--sans); font-size: 15px; font-weight: 600;
   letter-spacing: 0; color: var(--ink); margin-left: 8px; }
-.role-tag { float: right; font-family: var(--mono); font-size: 13px;
+.role-tag { float: right; font-family: var(--mono); font-size: 15px;
   letter-spacing: .12em; color: var(--ink-faint); }
 .role-sel { position: relative; margin-top: 10px; }
 .role-sel select { width: 100%; }
@@ -2683,12 +2727,12 @@ details.meta pre {
 .cred-row:first-child { border-top: none; }
 .cred-tile { width: 36px; height: 36px; background: var(--field); border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
-.cred-tile.plus { color: var(--ink-faint); font-size: 14px; }
+  font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); }
+.cred-tile.plus { color: var(--ink-faint); font-size: 15px; }
 .cred-name { font-weight: 600; font-size: 14px; display: block; }
-.cred-meta { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; color: var(--ink-faint);
+.cred-meta { font-family: var(--mono); font-size: 15px; letter-spacing: .04em; color: var(--ink-faint);
   display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cred-state { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
+.cred-state { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); }
 .cred-mark { display: inline-block; width: 8px; height: 8px; margin-right: 7px; }
 .cred-mark.ok { background: var(--ok); }
 .cred-mark.bad { background: var(--bad); }
@@ -2696,10 +2740,10 @@ details.meta pre {
 .cred-acts { text-align: right; white-space: nowrap; }
 .cred-acts .text-act + .text-act { margin-left: 16px; }
 .cchip { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em; padding: 2px 6px; cursor: pointer; }
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em; padding: 2px 6px; cursor: pointer; }
 .cchip:hover { border-color: var(--line-strong); }
 .cred-expand { border-top: 1px dashed var(--line-soft); background: var(--bg2); padding: 14px 16px 14px 66px; }
-.cred-form-kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; color: var(--ink-dim); margin-bottom: 4px; }
+.cred-form-kicker { font-family: var(--mono); font-size: 15px; letter-spacing: .1em; color: var(--ink-dim); margin-bottom: 4px; }
 @media (max-width: 980px) {
   .cred-row { grid-template-columns: 36px minmax(0,1fr); }
   .cred-state, .cred-acts { grid-column: 2; text-align: left; }
@@ -2707,7 +2751,7 @@ details.meta pre {
 
 /* C3 — the expand strip survives for your-own-endpoint chips; every
    other credential act goes through the Authenticate modal (P1). */
-.cred-form-foot { font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+.cred-form-foot { font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); margin-top: 10px; }
 .cred-form-foot a { color: var(--ink-dim); }
 
@@ -2717,9 +2761,9 @@ details.meta pre {
    --bad. */
 .models-line { display: flex; align-items: baseline; gap: 14px;
   border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 2px 0;
-  font-family: var(--mono); }
-.models-label { font-size: 13px; font-weight: 700; letter-spacing: .12em; }
-.models-facts { flex: 1; font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
+  font-family: var(--mono); font-size: 15px; }
+.models-label { font-size: 15px; font-weight: 700; letter-spacing: .12em; }
+.models-facts { flex: 1; font-size: 15px; letter-spacing: .06em; color: var(--ink-dim); }
 .models-facts .m-bad { color: var(--ink-faint); }
 
 /* C5 — the model browser: capability before vendor */
@@ -2730,9 +2774,9 @@ details.meta pre {
 .cat-f { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-dim);
   border: 1px solid var(--line); padding: 5px 10px; cursor: pointer; white-space: nowrap; }
 .cat-f.on { border-color: var(--ok); color: var(--ink); }
-.cat-showing { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.cat-showing { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 .cat-group-head { padding: 14px 16px 8px; }
-.cat-group-title { font-family: var(--mono); font-size: 13px; letter-spacing: .12em; color: var(--ink); }
+.cat-group-title { font-family: var(--mono); font-size: 15px; letter-spacing: .12em; color: var(--ink); }
 .cat-group-sub { font-size: 14px; color: var(--ink-dim); margin-left: 10px; }
 .cat-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 290px 104px;
   gap: 14px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line-soft);
@@ -2741,10 +2785,10 @@ details.meta pre {
 .cat-row.unsup .cat-name, .cat-row.unsup .cred-tile { color: var(--ink-faint); }
 .cat-row.unsup .cat-meta { color: var(--ink-faint); } /* never dimmer than its name */
 .cat-name { font-weight: 600; font-size: 14px; display: block; }
-.cat-meta { font-family: var(--mono); font-size: 13px; letter-spacing: .05em; color: var(--ink-faint);
+.cat-meta { font-family: var(--mono); font-size: 15px; letter-spacing: .05em; color: var(--ink-faint);
   display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cat-badges { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
-.cbadge { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; padding: 2px 6px;
+.cbadge { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; padding: 2px 6px;
   border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
 .cbadge.ok { border-color: var(--ok); color: var(--ok); }
 .cbadge.hold { border-color: var(--hold); color: var(--ink-faint); }
@@ -2754,10 +2798,10 @@ details.meta pre {
 .cbadge.dline { border-style: dashed; color: var(--ink-faint); }
 .cbadge.dhold { border-style: dashed; border-color: var(--hold); color: var(--ink-faint); }
 .cat-enable { text-align: right; }
-.cat-en { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; padding: 5px 10px;
+.cat-en { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; padding: 5px 10px;
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim); cursor: pointer; }
 .cat-en.on { border-color: var(--ok); color: var(--ok); }
-.cat-noten { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-faint); }
+.cat-noten { font-family: var(--mono); font-size: 15px; letter-spacing: .06em; color: var(--ink-faint); }
 
 /* C6 — witnessed test frames; tiles stay typographic until WE render */
 .cat-thumb { width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--line); display: block; }
@@ -2765,9 +2809,9 @@ details.meta pre {
 .cat-prevbtn:hover { border-color: var(--line-strong); }
 .cat-strip { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
   border-top: 1px solid var(--line-soft); }
-.cat-strip .cred-tile { font-size: 13px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
+.cat-strip .cred-tile { font-size: 15px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
 .cat-strip-txt { flex: 1; font-size: 14px; color: var(--ink-dim); }
-.cat-strip-cost { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
+.cat-strip-cost { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
 
 /* C7 — the engine picker: search first, capability on every row */
 .picker-open { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);
@@ -2779,29 +2823,29 @@ details.meta pre {
 .pick-search { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   border-bottom: 1px solid var(--line-soft); }
 .pick-search input { flex: 1; min-width: 0; }
-.pick-count { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
+.pick-count { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
 .pick-chips { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line-soft); }
-.pchip { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; padding: 4px 8px;
+.pchip { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; padding: 4px 8px;
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim); cursor: pointer; }
 .pchip.on { border-color: var(--ink); color: var(--ink); background: var(--panel2); }
 .pick-list { overflow-y: auto; flex: 1; }
-.pick-group { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.pick-group { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); padding: 10px 12px 4px; }
 .pick-row { display: block; width: 100%; text-align: left; background: transparent;
   border: none; border-left: 2px solid transparent; padding: 8px 12px; cursor: pointer; }
 .pick-row:hover { background: var(--panel2); }
 .pick-row.cur { border-left-color: var(--accent); background: var(--panel2); }
 .pick-name { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
-.pick-facts { display: block; font-family: var(--mono); font-size: 13px; letter-spacing: .05em;
+.pick-facts { display: block; font-family: var(--mono); font-size: 15px; letter-spacing: .05em;
   color: var(--ink-faint); margin-top: 2px; }
 .pick-facts .pf-amber { font-style: normal; color: var(--accent); }
 .pick-none { padding: 14px 12px; font-size: 14px; color: var(--ink-dim); }
 .pick-foot { display: flex; justify-content: space-between; align-items: center;
   padding: 9px 12px; border-top: 1px solid var(--line-soft); }
-.pick-scope { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.pick-scope { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* Four-anchor shelf (ruled 2026-08-03): movie group vs board group */
-.wiz-group-label { font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+.wiz-group-label { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 14px 0 8px; }
 /* UNCANONIZED — 2026-08-05 — four-anchor row (user-directed): the four
    style-anchor roles share one 4-track grid; the R18 group labels ride
@@ -2822,7 +2866,7 @@ details.meta pre {
 .read-num { font-size: 16px; font-weight: 700; line-height: 1.1;
   color: var(--ink); }
 .read-num.attn { color: var(--accent); }
-.read-lab { font-family: var(--mono); font-size: 13px;
+.read-lab { font-family: var(--mono); font-size: 15px;
   letter-spacing: .08em; color: var(--ink-faint); }
 /* The logline leads (user 2026-08-16: "needs to be more prominent"). It
    is the one sentence saying what the read understood, and it was set at
@@ -2832,7 +2876,7 @@ details.meta pre {
 .read-logline { border-left: 2px solid var(--accent);
   background: var(--panel); padding: 14px 18px 16px;
   display: flex; flex-direction: column; gap: 7px; }
-.read-log-kicker { font-family: var(--mono); font-size: 13px;
+.read-log-kicker { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--accent); }
 /* A6 (RULE_PASS 2026-08-16): 16.5px REFUSED — the scale is 24/15/11.5 and
    it holds because it is short. The promotion was ink tier and position,
@@ -2874,7 +2918,7 @@ details.meta pre {
 .cast-tile-shot.none { display: flex; align-items: center; justify-content: center;
   background-image: repeating-linear-gradient(135deg,
     var(--field) 0 6px, var(--bg) 6px 12px); }
-.cast-tile-shot.none i { font-style: normal; font-size: 13px;
+.cast-tile-shot.none i { font-style: normal; font-size: 15px;
   letter-spacing: .08em; color: var(--ink-faint); }
 /* The name WRAPS rather than truncating. At the old 11.5px it fitted a
    99px tile on one line; at the floor's 14px it did not, and six of the
@@ -2891,7 +2935,7 @@ details.meta pre {
 .cast-tile:hover .cast-tile-name { color: var(--ink); }
 /* The count of what the twelve do not show rides the act that shows it. */
 .cast-open { flex: none; }
-.cast-open i { font-style: normal; font-size: 13px; letter-spacing: .08em;
+.cast-open i { font-style: normal; font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); margin-left: 4px; }
 
 /* The screen replaces the stage rather than floating over it. Driven by
@@ -2926,7 +2970,7 @@ body[data-cast="1"] .wiz-head { display: none; }
    asks; these are its face. */
 .seg { display: flex; }
 .seg-source { display: none; }
-.seg-opt { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.seg-opt { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim); background: var(--field); cursor: pointer;
   border: 1px solid var(--line-soft); border-left-width: 0; padding: 7px 12px; }
 .seg-opt:first-child { border-left-width: 1px; }
@@ -2937,10 +2981,10 @@ body[data-cast="1"] .wiz-head { display: none; }
 .seg-opt:disabled { cursor: default; opacity: .55; }
 /* §2.4 — a control that spends states the cost beside the verb, in
    Courier, before it is pressed. A price found afterwards is a bill. */
-.cost { color: var(--ink-faint); font-size: 13px; letter-spacing: .12em;
+.cost { color: var(--ink-faint); font-size: 15px; letter-spacing: .12em;
   align-self: center; margin-left: 10px; }
 .wiz-run-row { align-items: flex-end; }
-.wiz-merge-note { font-family: var(--mono); font-size: 13px;
+.wiz-merge-note { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); margin: 8px 0 0; }
 /* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.1 */
 /* 24px Archivo, sentence case: the one thing on this row a person reads
@@ -2949,14 +2993,14 @@ body[data-cast="1"] .wiz-head { display: none; }
    step is done. */
 .wiz-stage-title { font-family: var(--sans); font-size: 24px; font-weight: 700;
   color: var(--ink); margin: 0; letter-spacing: -.01em; }
-.wiz-head-label { font-family: var(--mono); font-size: 13px; font-weight: 700;
+.wiz-head-label { font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: .12em; color: var(--ink); white-space: nowrap; }
 .wiz-head-file { margin-left: auto; text-align: right; min-width: 0;
-  font-family: var(--mono); font-size: 13px;
+  font-family: var(--mono); font-size: 15px;
   letter-spacing: .04em; color: var(--ink-dim); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
 .step-rail { display: flex; }
-.rail-chip { font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+.rail-chip { font-family: var(--mono); font-size: 15px; letter-spacing: .06em;
   color: var(--ink-dim); background: none; border: 1px solid transparent;
   border-left: 1px solid var(--line-soft); padding: 6px 12px; cursor: pointer;
   white-space: nowrap; }
@@ -2965,9 +3009,9 @@ body[data-cast="1"] .wiz-head { display: none; }
   background: var(--panel2); color: var(--ink); }
 .rail-chip.done .rail-num { color: var(--ok); }
 .rail-num { font-weight: 700; }
-.wiz-v3 h2 { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.wiz-v3 h2 { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   text-transform: uppercase; font-weight: 700; }
-.step-cond { font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+.step-cond { font-family: var(--mono); font-size: 15px; letter-spacing: .06em;
   color: var(--ink-faint); font-weight: 400; margin-left: 12px; }
 
 /* UNCANONIZED — 2026-08-05 — color swatches (user-directed, wireframe
@@ -2996,7 +3040,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   padding: 11px 13px; margin-top: 10px;
 }
 .pal-gate .k {
-  display: block; font-family: var(--mono); font-size: 13px;
+  display: block; font-family: var(--mono); font-size: 15px;
   letter-spacing: .14em; color: var(--accent); margin-bottom: 5px;
 }
 .pal-gate p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
@@ -3006,7 +3050,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 .wiz-words.is-locked input { cursor: not-allowed; }
 .wiz-words.is-locked { opacity: .4; }
 .wiz-add-btn.is-locked { opacity: .4; cursor: not-allowed; }
-.wiz-thumb-note { display: block; font-family: var(--mono); font-size: 13px;
+.wiz-thumb-note { display: block; font-family: var(--mono); font-size: 15px;
   letter-spacing: .04em; color: var(--ink-faint); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* SWATCH_GENERATE_RULING — the act sits under the saved Bible (step 5),
@@ -3015,10 +3059,10 @@ body[data-cast="1"] .wiz-head { display: none; }
 .swatch-gen:not(:empty) { display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap; border: 1px solid var(--line); background: var(--bg2);
   padding: 12px 14px; margin-top: 14px; }
-.swatch-note { font-family: var(--mono); font-size: 13px; letter-spacing: .05em;
+.swatch-note { font-family: var(--mono); font-size: 15px; letter-spacing: .05em;
   color: var(--ink-faint); line-height: 1.6; }
-.swatch-note .text-act { font-size: 13px; letter-spacing: .05em; }
-.prop-head { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.swatch-note .text-act { font-size: 15px; letter-spacing: .05em; }
+.prop-head { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
 /* PALETTE_GROUPS_PLAN (2026-08-06) — a design language is ONE swatch.
    The bands touch: no gap, no radius, no per-band margin, and an OUTLINE
@@ -3031,7 +3075,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 /* Edit / Approve on the proposal row itself (2026-08-23). */
 .sw-ramp-label .sw-row-acts { margin-left: auto; display: inline-flex; gap: 12px; }
 .sw-ramp-label { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em; }
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em; }
 .sw-ramp-label .lang { color: var(--ink); }
 .sw-ramp-label .n { color: var(--ink-faint); }
 .sw-ramp-label .hero { margin-left: auto; color: var(--ink-faint); }
@@ -3045,7 +3089,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 .sw-tile { border: 1px solid var(--line-soft); }
 .sw-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
 .sw-pair i { border: 1px solid var(--line-soft); }
-.sw-hero { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.sw-hero { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--accent); border: 1px solid var(--accent-line); padding: 1px 4px;
   margin-left: 6px; vertical-align: 1px; }
 
@@ -3054,7 +3098,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 .sv-head { display: flex; align-items: baseline; gap: 12px;
   padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
 .sv-title { font-size: 19px; font-weight: 700; color: var(--ink); }
-.sv-sub { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.sv-sub { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 .sv-x { margin-left: auto; background: none; border: 0; padding: 0 2px;
   font-size: 17px; line-height: 1; color: var(--ink-faint); cursor: pointer; }
 .sv-x:hover { color: var(--ink); }
@@ -3062,7 +3106,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 .sv-ramp { height: 92px; margin-top: 0; }
 .sv-ramp i { cursor: pointer; }
 .sv-ramp i.is-hero { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sv-note { margin: 8px 0 0; font-size: 13px; letter-spacing: .1em;
+.sv-note { margin: 8px 0 0; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .sv-rows { max-height: 46vh; overflow-y: auto; }
 .sv-many .sv-rows { max-height: none; overflow: visible; }
@@ -3074,12 +3118,12 @@ body[data-cast="1"] .wiz-head { display: none; }
 .sv-chip { flex: none; width: 44px; }
 .sv-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sv-name { font-size: 14px; font-weight: 700; color: var(--ink); }
-.sv-hex { font-size: 13px; color: var(--ink-faint); }
+.sv-hex { font-size: 15px; color: var(--ink-faint); }
 .sv-cite { font-size: 14px; color: var(--ink-dim); }
 .sv-acts { margin-left: auto; flex: none; display: flex; gap: 16px; }
 .sv-acts .ok-act { color: var(--ok); }
 .sv-foot { display: flex; align-items: center; gap: 16px; padding: 13px 18px; }
-.sv-footnote { margin-left: auto; font-size: 13px; letter-spacing: .1em;
+.sv-footnote { margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .swatch-gen [data-f="sw-busy"] { flex-basis: 100%; }
 .swatch-gen [data-f="sw-busy"]:empty { display: none; }
@@ -3116,16 +3160,16 @@ body[data-cast="1"] .wiz-head { display: none; }
 #settings-firstrun { background: var(--bg); border: 1px solid var(--line); padding: 30px; }
 #settings-firstrun .fact-head.sec-head { margin: 30px 0 12px; }
 .fr-top { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 26px; margin-bottom: 30px; }
-.fr-eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; color: var(--accent); }
+.fr-eyebrow { font-family: var(--mono); font-size: 15px; letter-spacing: .14em; color: var(--accent); }
 .fr-h { font-size: 24px; font-weight: 700; margin: 8px 0 20px; }
 .fr-connect-row { display: flex; align-items: center; gap: 16px; }
 .fr-connect { font-size: 15px; padding: 12px 22px; }
-.fr-oneclick { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.fr-oneclick { font-family: var(--mono); font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 .fr-chain { display: flex; align-items: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-.fr-chip { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-dim);
+.fr-chip { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-dim);
   border: 1px solid var(--line); padding: 3px 8px; }
 .fr-arrow { color: var(--ink-faint); font-size: 14px; }
-.fr-foot { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
+.fr-foot { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
 /* AI-models notice per the delivered reference snippet (2026-08-04),
    tokenized. Typewriter grammar: the rule draws itself once; the block
    caret SNAPS via steps(1) — a fading caret reads as a glitch. The
@@ -3155,7 +3199,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   margin-bottom: 10px; animation: rule-sweep 2.4s ease-out; }
 .fr-row { grid-template-columns: 36px minmax(0,1fr) 140px; }
 .prov-ico { width: 22px; height: 22px; object-fit: contain; display: block; }
-.wv-tag { display: inline-block; font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+.wv-tag { display: inline-block; font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); border: 1px dashed var(--line); padding: 8px 12px; }
 /* MOCK_PARITY D3: title left, dashed withheld-verb chip right-aligned and
    sized to its text — never a stacked full-width box. */
@@ -3177,13 +3221,13 @@ body[data-cast="1"] .wiz-head { display: none; }
    phase-as-a-sentence, same Courier progress, no ground of its own. */
 .busy.busy-inline {
   background: none; border-left: none; padding: 0; margin: 0 0 12px;
-  gap: 8px; font-family: var(--mono); font-size: 13px;
+  gap: 8px; font-family: var(--mono); font-size: 15px;
   letter-spacing: .06em; line-height: 1.5; color: var(--ink-dim);
 }
 .busy.busy-inline:empty { display: none; }
 .busy.busy-inline .spinner { width: 11px; height: 11px; border-width: 1px; }
 .busy.busy-inline .elapsed {
-  font-family: var(--mono); font-size: 13px; font-weight: 400;
+  font-family: var(--mono); font-size: 15px; font-weight: 400;
   color: var(--ink-faint); min-width: 0;
 }
 .busy.busy-inline.bad { color: var(--ink-faint); }
@@ -3258,10 +3302,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .update-bar {
   position: sticky; top: 0; z-index: 46; text-align: center;
   background: var(--panel2); border-bottom: 1px solid var(--line);
-  color: var(--ink-dim); font-size: 13px; letter-spacing: .1em;
+  color: var(--ink-dim); font-size: 15px; letter-spacing: .1em;
   padding: 6px 10px;
 }
-.update-bar .text-act { font-size: 13px; letter-spacing: .1em; }
+.update-bar .text-act { font-size: 15px; letter-spacing: .1em; }
 
 /* BREAKDOWN_INTAKE B1-B4 (designer-ruled 2026-08-06) — two doors, one
    section: auto breakdown and blank sheet perform the same act by
@@ -3279,13 +3323,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .door-auto { border-color: var(--accent-line); border-top: 2px solid var(--accent); }
 .door-head { font-size: 15px; font-weight: 600; color: var(--ink);
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.door-nature { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+.door-nature { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   border: 1px solid var(--line); padding: 2px 7px; }
 .door-auto .door-nature { color: var(--accent); border-color: var(--accent-line); }
 .door form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px;
   flex: 1; }
 .door label { display: flex; flex-direction: column; gap: 5px;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); text-transform: uppercase; }
 .door label input, .door label select, .door label textarea {
   font-family: var(--sans); font-size: 14px; letter-spacing: 0;
@@ -3298,7 +3342,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .door-run label { flex: 1; min-width: 0; }
 .door-run .primary, .door-run .ghost { flex: none; }
 .door-run-end { margin-top: auto; justify-content: flex-end; }
-.door-foot { font-size: 13px; letter-spacing: .06em; color: var(--ink-faint);
+.door-foot { font-size: 15px; letter-spacing: .06em; color: var(--ink-faint);
   line-height: 1.6; }
 @media (max-width: 980px) { .intake .intake-doors { grid-template-columns: 1fr; } }
 
@@ -3313,7 +3357,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .q-help { display: inline-flex; align-items: center; justify-content: center;
   width: 14px; height: 14px; padding: 0; margin-left: 6px; vertical-align: 1px;
   border: 1px solid var(--line); background: transparent; color: var(--ink-faint);
-  font-family: var(--mono); font-size: 13px; line-height: 1; cursor: pointer; }
+  font-family: var(--mono); font-size: 15px; line-height: 1; cursor: pointer; }
 .q-help:hover, .q-help[aria-expanded="true"] { color: var(--ink);
   border-color: var(--line-strong); }
 .q-card { position: absolute; z-index: 55; max-width: 320px;
@@ -3323,10 +3367,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .q-card b { color: var(--ink); font-weight: 600; }
 
 /* B4 — the sheets table is data only, with the labelled-table treatment. */
-.sheet-count { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+.sheet-count { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   font-weight: 400; margin-left: 8px; }
 .spec-table thead th { background: var(--field); font-family: var(--mono);
-  font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   font-weight: 400; }
 
 /* PALETTE_GROUPS_PLAN §3 — approved palette references as ramp rows in
@@ -3358,7 +3402,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sv-many .sv-group:last-child { border-bottom: 0; }
 .sv-grouphead { padding: 14px 18px 0; margin: 0; }
 .sv-note-top { padding: 10px 18px 0; margin: 0; }
-.sw-bar-note { margin-left: auto; font-size: 13px; letter-spacing: .1em;
+.sw-bar-note { margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 
 /* Reading the whole approved palette — sits under the rows it reviews,
@@ -3376,8 +3420,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* SCAN_CONSOLIDATION §3 — a long list shows its head and states its tail. */
 .loc-more { display: flex; align-items: baseline; gap: 10px;
   padding: 8px 12px; border-top: 1px solid var(--line-soft); }
-.loc-more-lab { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
-.loc-showing { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.loc-more-lab { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
+.loc-showing { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); margin-left: 6px; }
 
 /* SCAN_CONSOLIDATION §2 — edit a paragraph in a room, not in a cell. */
@@ -3389,7 +3433,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .envm-side { padding: 18px; border-left: 1px solid var(--line-soft);
   display: flex; flex-direction: column; }
 .envm-f { display: flex; flex-direction: column; gap: 6px; }
-.envm-lab { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.envm-lab { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim); }
 .envm-lab i { font-style: normal; color: var(--ink-faint); margin-left: 8px; }
 .envm-prose { min-height: 150px; line-height: 1.6; }
@@ -3398,23 +3442,23 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .envm-ramp { height: 22px; margin-top: 0; flex: 1; max-width: 320px; cursor: default; }
 .envm-nolang { color: var(--ink-faint); }
 .envm-locs { display: flex; flex-direction: column; }
-.envm-loc { font-size: 13px; color: var(--ink-dim); padding: 7px 0;
+.envm-loc { font-size: 15px; color: var(--ink-dim); padding: 7px 0;
   border-bottom: 1px solid var(--line-soft); }
 .envm-side .loc-more { padding: 8px 0; border-top: none; }
-.envm-blast { margin-top: auto; padding-top: 16px; font-size: 13px;
+.envm-blast { margin-top: auto; padding-top: 16px; font-size: 15px;
   letter-spacing: .08em; color: var(--ink-faint); line-height: 1.6; }
 .envm-foot { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
 .envm-del { margin-left: auto; }
 
 /* NON_CANON_REVIEW R1 — an in-card wait states its phase in sentence case
    and its progress in Courier beneath. Two facts, two voices. */
-.busy .busy-prog { flex-basis: 100%; font-size: 13px; letter-spacing: .1em;
+.busy .busy-prog { flex-basis: 100%; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 
 /* R3 — recall beneath a free-text field: the last three briefs, filling
    the field when clicked. Recall, never constraint. */
 .mf-recall { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
-.mf-recall .text-act { font-size: 13px; color: var(--ink-faint); text-align: left; }
+.mf-recall .text-act { font-size: 15px; color: var(--ink-faint); text-align: left; }
 .mf-recall .text-act:hover { color: var(--ink); }
 /* R4 — Review all stands beside the column's count, not under the rows. */
 .pal-review { margin-left: 8px; font-size: 14px; }
@@ -3430,7 +3474,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    with R6's deletion; its orphaned body survived as a headless rule until
    2026-08-14 — invalid CSS the parser skipped, and the reason a brace
    count over this file never balanced.) */
-.stor-line { font-size: 13px; letter-spacing: .1em; color: var(--ink-dim); }
+.stor-line { font-size: 15px; letter-spacing: .1em; color: var(--ink-dim); }
 /* R6: no bar — the line's colour carries the state. */
 .stor-line.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
@@ -3439,7 +3483,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .stor-rows { margin: 10px 0; }
 .stor-row { display: flex; justify-content: space-between; padding: 6px 0;
   border-bottom: 1px solid var(--line-soft); font-size: 14px; color: var(--ink-dim); }
-.stor-row .mono { color: var(--ink); font-size: 13px; }
+.stor-row .mono { color: var(--ink); font-size: 15px; }
 
 /* Reference STYLE shelf — swatches consolidate into the same ramps the
    Production Design column draws (2026-08-08). Rows sit in their own
@@ -3457,19 +3501,19 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .loc-reg-head { display: flex; align-items: baseline; gap: 14px;
   margin-bottom: 8px; }
 .loc-reg-head .hint { margin-left: auto; }
-.loc-reg-label { font-size: 13px; letter-spacing: .14em;
+.loc-reg-label { font-size: 15px; letter-spacing: .14em;
   color: var(--ink-dim); }
 .loc-reg-row { display: grid;
   grid-template-columns: minmax(0, 1fr) 130px 210px 170px;
   align-items: baseline; gap: 12px; padding: 9px 10px;
   border-top: 1px solid var(--line-soft); }
 .loc-reg-cols { background: var(--field); border: 1px solid var(--line-soft);
-  border-top: 0; font-size: 13px; letter-spacing: .12em;
+  border-top: 0; font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); }
 .loc-reg-place { font-weight: 600; font-size: 14px; }
-.loc-reg-row .mono { font-size: 13px; color: var(--ink-dim); }
+.loc-reg-row .mono { font-size: 15px; color: var(--ink-dim); }
 .loc-reg-act { text-align: right; }
-.loc-reg-foot { font-size: 13px; letter-spacing: .1em;
+.loc-reg-foot { font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); padding: 10px 0 0; }
 
 /* R5 (canon pass, mock au-ref-style-shelf): the ramps ARE the STYLE
@@ -3488,11 +3532,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    Archivo in the case it was typed; no status colour anywhere. A
    stopped note stays legible and stated — the verb goes quiet. */
 .carried { display: block; }
-.carried .text-act { flex: none; font-size: 13px; }
+.carried .text-act { flex: none; font-size: 15px; }
 .carried-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.carried-id { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-dim); }
+.carried-id { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-dim); }
 .carried-note { font-family: var(--sans); font-size: 14px; color: var(--ink); margin: 3px 0 2px; }
-.carried-state { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.carried-state { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 .carried.retired .carried-note { color: var(--ink-dim); }
 .carried.retired [data-retire] { color: var(--ink-faint); }
 .rail-label.carried-label { color: var(--ink-dim); }
@@ -3520,8 +3564,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .lb-intake { margin-top: 10px; }
 
 .lb-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
-.lb-title { font-size: 13px; letter-spacing: .08em; color: var(--ink); }
-.lb-saved { margin-left: auto; font-size: 13px; letter-spacing: .1em;
+.lb-title { font-size: 15px; letter-spacing: .08em; color: var(--ink); }
+.lb-saved { margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ok); }
 .lb-room { display: grid; grid-template-columns: 186px minmax(0, 1fr) 300px;
   gap: 14px; align-items: start; }
@@ -3543,7 +3587,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   margin-top: 10px; line-height: 1.7; }
 
 .sheet-stage { min-width: 0; }
-.stage-meta { font-size: 13px; letter-spacing: .08em; color: var(--ink-dim);
+.stage-meta { font-size: 15px; letter-spacing: .08em; color: var(--ink-dim);
   margin-bottom: 8px; display: flex; gap: 14px; align-items: baseline; }
 .stage-meta-note { display: block; text-align: left; margin-top: 4px;
   color: var(--ink-faint); letter-spacing: .04em;
@@ -3560,7 +3604,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    WHAT it is; one job each. */
 .ov-chip { position: absolute; top: -18px; left: -1px;
   background: rgba(11, 12, 14, .82); color: var(--ink);
-  border: 1px solid var(--line); font-family: var(--mono); font-size: 13px;
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; padding: 1px 7px; line-height: 1.4;
   white-space: nowrap; }
 .ov-slot { position: absolute; border: 1px dashed var(--line);
@@ -3583,7 +3627,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   white-space: nowrap; font-size: 14px; }
 .lb-slot-c.faint { color: var(--ink-faint); }
 .lb-slot-acts { display: flex; gap: 8px; flex: none; }
-.lb-slot-acts .text-act { font-size: 13px; }
+.lb-slot-acts .text-act { font-size: 15px; }
 .lb-dot { flex: none; width: 7px; height: 7px; border: 1px solid var(--line); }
 .lb-dot.ok { background: var(--ok); border-color: var(--ok); }
 .lb-dot.bad { background: var(--bad); border-color: var(--bad); }
@@ -3610,7 +3654,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .lb-not-ready { color: var(--ink-faint); font-size: 14px; letter-spacing: .1em; }
 
 .lb-blocked { margin-top: 12px; }
-.lb-blocked-k { color: var(--accent); font-size: 13px; letter-spacing: .14em;
+.lb-blocked-k { color: var(--accent); font-size: 15px; letter-spacing: .14em;
   margin-bottom: 6px; }
 .lb-blocked-rows { display: flex; flex-direction: column; gap: 4px;
   font-size: 14px; color: var(--ink-dim); }
@@ -3625,7 +3669,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   cursor: pointer; text-align: left; color: var(--ink-dim); }
 .lb-fill-cell:hover { border-color: var(--line-bright); }
 .lb-fill-cell img { width: 100%; height: 84px; object-fit: cover; }
-.lb-fill-cell .mono { font-size: 13px; letter-spacing: .06em; }
+.lb-fill-cell .mono { font-size: 15px; letter-spacing: .06em; }
 .lb-fill-v.ok { color: var(--ok); }
 .lb-fill-v.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
@@ -3635,7 +3679,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .lb-crop-modal { width: min(820px, 94vw); }
 .lb-crop-chips { display: flex; gap: 6px; align-items: center;
   margin-bottom: 10px; }
-.lb-rot { margin-left: auto; font-size: 13px; color: var(--ink-dim); }
+.lb-rot { margin-left: auto; font-size: 15px; color: var(--ink-dim); }
 .lb-rot input { width: 64px; }
 .lb-crop-stage { position: relative; background: var(--field);
   border: 1px solid var(--line); line-height: 0; cursor: crosshair;
@@ -3684,7 +3728,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .cam-sum .cam-src { color: var(--ink-faint); }
 .cam-stated .text-act { margin-left: auto; flex: none; }
 .cam-stated .ghost { margin-left: auto; flex: none; } /* HARNESS_AUDIT U4 */
-.cam-open-k { display: block; font-size: 13px; letter-spacing: .12em;
+.cam-open-k { display: block; font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); margin-bottom: 8px; }
 .cam-editor-acts { display: flex; gap: 10px; margin: 10px 0 6px; }
 
@@ -3715,19 +3759,19 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   pointer-events: none; background: repeating-linear-gradient(45deg,
   rgba(107, 114, 120, .25) 0 2px, transparent 2px 9px); }
 .arr-tag { position: absolute; left: 6px; top: 5px; z-index: 2;
-  font-size: 13px; letter-spacing: .08em; color: var(--ink);
+  font-size: 15px; letter-spacing: .08em; color: var(--ink);
   background: var(--field); padding: 2px 6px; pointer-events: none; }
 .arr-dim { position: absolute; right: 6px; bottom: 5px; z-index: 2;
-  font-size: 13px; letter-spacing: .06em; color: var(--ink-dim);
+  font-size: 15px; letter-spacing: .06em; color: var(--ink-dim);
   background: var(--field); padding: 2px 6px; pointer-events: none; }
 .arr-verdict { position: absolute; left: 6px; bottom: 5px; z-index: 2;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .08em;
   color: var(--ink); background: var(--field); padding: 2px 6px;
   pointer-events: none; }
 .arr-verdict:empty { display: none; }
 .arr-ghost { position: absolute; border: 1px dashed var(--accent);
   background: transparent; z-index: 20; pointer-events: none; display: none; }
-.arr-ghost-k { position: absolute; left: 6px; top: 5px; font-size: 13px;
+.arr-ghost-k { position: absolute; left: 6px; top: 5px; font-size: 15px;
   letter-spacing: .1em; color: var(--accent); background: var(--field);
   padding: 2px 6px; }
 .arr-arrows { position: absolute; inset: 0; z-index: 36; pointer-events: none; }
@@ -3771,7 +3815,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .arr-corner-add { display: flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 12px; color: var(--ink);
   background: var(--field); border: 1px solid var(--line-strong);
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   cursor: pointer; }
 .arr-corner-add svg { display: block; width: 18px; height: 18px; }
 .arr-corner-add:hover { border-color: var(--ink); }
@@ -3779,17 +3823,17 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border: 1px solid var(--line); display: none; flex-direction: column;
   min-width: 160px; }
 .arr-menu.open { display: flex; }
-.arr-menu button { font-family: var(--mono); font-size: 13px;
+.arr-menu button { font-family: var(--mono); font-size: 15px;
   letter-spacing: .06em; color: var(--ink-dim); background: transparent;
   border: 0; border-top: 1px solid var(--line-soft); padding: 8px 10px;
   text-align: left; cursor: pointer; }
 .arr-menu button:first-child { border-top: 0; }
 .arr-menu button:hover { color: var(--ink); background: var(--field); }
 .arr-chip { position: absolute; z-index: 50; pointer-events: none;
-  display: none; font-size: 13px; letter-spacing: .1em;
+  display: none; font-size: 15px; letter-spacing: .1em;
   color: var(--ink); background: var(--field);
   border: 1px solid var(--line); padding: 2px 7px; }
-.arr-hud { margin-top: 8px; font-size: 13px; letter-spacing: .06em;
+.arr-hud { margin-top: 8px; font-size: 15px; letter-spacing: .06em;
   color: var(--ink-dim); min-height: 18px; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
 .arr-hud b { color: var(--ink); font-weight: 400; }
@@ -3811,7 +3855,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   min-height: 34px; }
 .arr-ctls { display: flex; align-items: center; gap: 14px; margin: 6px 0 0;
   flex-wrap: wrap;
-  font-size: 13px; letter-spacing: .1em; color: var(--ink-dim); }
+  font-size: 15px; letter-spacing: .1em; color: var(--ink-dim); }
 .arr-ctls label { display: flex; align-items: center; gap: 8px; }
 .arr-ctls input[type="range"] { width: 140px; accent-color: var(--ink); }
 .arr-board.hide-dims .arr-dim { display: none; }
@@ -3846,11 +3890,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .arr-crop-box { position: absolute; border: 1px solid var(--ink);
   box-shadow: 0 0 0 9999px rgba(15, 17, 20, .62); cursor: move; }
 .arr-crop-box .bk { position: absolute; left: 4px; top: 3px;
-  font-size: 13px; letter-spacing: .1em; color: var(--ink);
+  font-size: 15px; letter-spacing: .1em; color: var(--ink);
   background: var(--field); padding: 1px 5px; pointer-events: none;
   white-space: nowrap; }
 .arr-crop-preview-wrap { width: 240px; flex: none; }
-.arr-crop-preview-k { font-size: 13px; letter-spacing: .14em;
+.arr-crop-preview-k { font-size: 15px; letter-spacing: .14em;
   color: var(--ink-faint); margin-bottom: 6px; }
 .arr-crop-preview { position: relative; overflow: hidden; width: 100%;
   background: var(--field); border: 1px solid var(--line); }
@@ -3870,12 +3914,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* The words half of an anchor card. Same label voice as the form labels
    it was folded out of, so the question reads the same wherever it sits. */
 .wiz-words { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 8px;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
 /* Standing notes keep the label voice they had in the interview they were
    folded out of — the question reads the same wherever it sits. */
 .wiz-notes { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim); }
 .wiz-notes textarea { min-height: 68px; }
 /* The camera default sits INSIDE the Cinematography card (2026-08-16), and
@@ -3927,18 +3971,18 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    text roles, never seven (B4). No italic anywhere (B5). */
 .rs-cards.rs-cards-rich { grid-template-columns: repeat(2, 1fr); }
 .rs-rich { gap: 8px; padding: 13px 14px; }
-.rs-placeholder { margin: -6px 0 12px; font-size: 13px; letter-spacing: .08em;
+.rs-placeholder { margin: -6px 0 12px; font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); }
 /* B6 — provenance leads, and a hairline separates what this production
    made from what we authored. */
 .rs-src { font-family: var(--mono); text-transform: uppercase;
-  font-size: 13px; letter-spacing: .07em; color: var(--ok); }
+  font-size: 15px; letter-spacing: .07em; color: var(--ok); }
 .rs-seam { display: block; height: 1px; background: var(--line-soft);
   margin: 2px 0 4px; }
 /* B5 — the films are proper nouns a human wrote, so Archivo, not Courier. */
-.rs-films { font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
+.rs-films { font-size: 15px; color: var(--ink-dim); line-height: 1.5; }
 /* B3 — no cell area at all when there are no frames, and one line saying so. */
-.rs-nof { display: block; font-size: 13px; letter-spacing: .08em;
+.rs-nof { display: block; font-size: 15px; letter-spacing: .08em;
   color: var(--ink-faint); }
 /* A drawn plate standing in for photographed frames takes THEIR shape,
    not its own. The rich card is two-up and therefore much wider than the
@@ -4001,17 +4045,17 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .scene-hit.is-act .scene-hit-label { color: var(--ink-dim); }
 .scene-hit.is-act + .scene-hit:not(.is-act) { border-top: 1px solid var(--line); }
 .scene-hit-label {
-  font-family: var(--mono); font-size: 13px; color: var(--ink);
+  font-family: var(--mono); font-size: 15px; color: var(--ink);
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap;
 }
 .scene-hit-sub {
-  font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); flex: none;
+  font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); flex: none;
 }
 /* A saved pointer is state worth seeing: it is what the scan will read. */
 .f-note.scene-ref { color: var(--ok); }
 .scene-ask {
-  margin: 0; padding: 8px 11px; font-size: 13px; letter-spacing: .09em;
+  margin: 0; padding: 8px 11px; font-size: 15px; letter-spacing: .09em;
   color: var(--ink-dim); border-bottom: 1px solid var(--line);
   background: var(--panel2);
 }
@@ -4058,25 +4102,25 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border: 1px solid var(--line-soft); overflow: hidden; }
 .rs-cell img { width: 100%; height: 100%; object-fit: cover; display: block;
   cursor: zoom-in; }
-.rs-prompt-link { align-self: start; font-size: 13px; }
+.rs-prompt-link { align-self: start; font-size: 15px; }
 /* the reading view behind the link (B4) */
-.rs-sub { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
+.rs-sub { font-family: var(--mono); font-size: 15px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-dim); margin: 0 0 10px; }
 .rs-q { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 10px;
   max-width: 720px; }
 .rs-principle { font-size: 15px; color: var(--ink-dim); line-height: 1.55;
   max-width: 720px; margin: 0 0 14px; }
-.rs-principle b { display: block; font-family: var(--mono); font-size: 13px;
+.rs-principle b { display: block; font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
   font-weight: 700; margin-bottom: 3px; }
-.rs-read-k { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+.rs-read-k { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   margin: 0 0 5px; }
 /* B7 — one escape hatch, below the grid, after a hairline, full width. Not
    a cell: a set-member tile classifies by fill (§1.3), and an escape hatch
    is not a member of the set it escapes. */
 .rs-own-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
-.rs-own-lab { flex: none; font-size: 13px; letter-spacing: .1em;
+.rs-own-lab { flex: none; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .rs-own-in { flex: 1 1 260px; min-width: 0; }
 .rs-own-row.on .rs-own-in { border-color: var(--ink); }
@@ -4087,7 +4131,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    (A1): the brief reads the screenplay, a pasted section wins over it,
    and the Spec ID leads with the reassurance because it changes nothing
    about the render. */
-.f-note { display: block; margin-top: 4px; font-size: 13px;
+.f-note { display: block; margin-top: 4px; font-size: 15px;
   letter-spacing: .07em; color: var(--ink-faint); }
 /* The switch at the foot of the panel, in the lock-strip vocabulary. It
    MUST override .lock-strip's `flex-direction: row` and `gate-text {
@@ -4104,10 +4148,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   display: flex; flex-direction: column; }
 .rs-prompt-text { flex: 0 1 auto; overflow: auto; margin: 6px 0 0;
   padding: 12px 14px; background: var(--field);
-  border: 1px solid var(--line-soft); font-size: 13px; line-height: 1.6;
+  border: 1px solid var(--line-soft); font-size: 15px; line-height: 1.6;
   color: var(--ink-dim); white-space: pre-wrap; }
 .rs-src { font-family: var(--mono); text-transform: uppercase;
-  font-size: 13px; letter-spacing: .07em; color: var(--ink-faint); }
+  font-size: 15px; letter-spacing: .07em; color: var(--ink-faint); }
 /* The chosen style, on the card, under its button — the plate small enough
    that the anchor row stays a row. Clicking it reopens the panel, because
    the thing you are looking at is the thing you would change. */
@@ -4130,8 +4174,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   gap: 4px; }
 .rs-chosen .rs-cell { aspect-ratio: 16 / 9; }
 .rs-chosen-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.rs-chosen .rs-name { font-size: 13px; font-weight: 600; color: var(--ink); }
-.rs-chosen .rs-desc { font-size: 13px; line-height: 1.45; }
+.rs-chosen .rs-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+.rs-chosen .rs-desc { font-size: 15px; line-height: 1.45; }
 /* The plate slot takes a REAL example image the moment one exists (user
    2026-08-16: "you and i will generate images for this UI"). Until then
    the diagram underneath is what shows — the manifest lists only the keys
@@ -4153,10 +4197,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-card.on { border-color: var(--ink); }
 .rs-name { font-size: 14px; font-weight: 600; color: var(--ink-dim); }
 .rs-card.on .rs-name { color: var(--ink); }
-.rs-desc { font-size: 13px; color: var(--ink-dim); }
-.rs-not { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.rs-desc { font-size: 15px; color: var(--ink-dim); }
+.rs-not { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 .rs-own { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 2px;
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim); }
 
 /* UNCANONIZED — 2026-08-13 — board look picker (arrange room Style…).
@@ -4176,13 +4220,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   overflow: hidden; }
 .arr-style-img img { width: 100%; height: 100%; object-fit: contain;
   display: block; }
-.arr-style-name { font-size: 13px; letter-spacing: .08em;
+.arr-style-name { font-size: 15px; letter-spacing: .08em;
   color: var(--ink-dim); }
 .arr-style-card.on .arr-style-name { color: var(--ink); }
 .arr-style-opts { display: flex; gap: 16px; flex-wrap: wrap;
   min-height: 22px; margin-bottom: 4px; }
 .arr-style-opts label { display: inline-flex; gap: 6px; align-items: center;
-  font-size: 13px; letter-spacing: .06em; color: var(--ink-dim);
+  font-size: 15px; letter-spacing: .06em; color: var(--ink-dim);
   cursor: pointer; }
 .lb-head [data-f=style].on { color: var(--ink);
   border-color: var(--line-strong); }
@@ -4214,9 +4258,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   letter-spacing: -.015em; text-transform: none; color: var(--ink);
   margin: 0; border: none; padding: 0;
 }
-.wb-facts { font-size: 13px; letter-spacing: .1em; color: var(--ink-faint); }
+.wb-facts { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
 .wb-progress {
-  margin-left: auto; font-size: 13px; letter-spacing: .1em;
+  margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
 
@@ -4268,9 +4312,9 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .step-done .step-num { color: var(--ok); }
 .step-main { flex: 1; min-width: 0; }
 .step-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.step-label { font-size: 13px; letter-spacing: .14em; color: var(--ink); }
+.step-label { font-size: 15px; letter-spacing: .14em; color: var(--ink); }
 .step-done .step-label { color: var(--ink-dim); }
-.step-meta { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
+.step-meta { font-size: 15px; letter-spacing: .08em; color: var(--ink-faint); }
 /* §1.4 — every verb on the surface right-aligns to ONE shared edge, so the
    eye finds actions by running down a single column. */
 .step-acts { margin-left: auto; display: flex; align-items: baseline; gap: 18px; flex: none; }
@@ -4281,7 +4325,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .step-settled { cursor: help; }
 .step-confirmed {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-size: 13px; letter-spacing: .1em; color: var(--ok);
+  font-size: 15px; letter-spacing: .1em; color: var(--ok);
 }
 .step-content { margin-top: 10px; }
 
@@ -4292,12 +4336,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   margin: 0; max-width: 720px;
 }
 .step-note {
-  font-size: 13px; letter-spacing: .06em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .06em; color: var(--ink-faint);
   max-width: 900px; margin-top: 8px; line-height: 1.7;
 }
 .step-forbid { color: var(--ink-faint); opacity: .8; }
 .step-prompt {
-  font-size: 13px; line-height: 1.7; color: var(--ink-faint);
+  font-size: 15px; line-height: 1.7; color: var(--ink-faint);
   max-width: 900px; margin: 0; white-space: pre-wrap;
   max-height: 132px; overflow: hidden;
 }
@@ -4335,7 +4379,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 }
 .obj-ref {
   background: none; border: none; padding: 0; cursor: pointer; flex: none;
-  font-family: var(--mono); font-size: 13px; letter-spacing: .1em; color: var(--ok);
+  font-family: var(--mono); font-size: 15px; letter-spacing: .1em; color: var(--ok);
 }
 .obj-ref-add { color: var(--ink-faint); }
 
@@ -4355,7 +4399,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   width: 16px; height: 16px; background: none; cursor: pointer;
   border: 1px solid var(--line); box-sizing: border-box;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 13px; line-height: 1;
+  font-family: var(--mono); font-size: 15px; line-height: 1;
 }
 .ref-row input[type="checkbox"]:checked { border-color: var(--ok); }
 .ref-row input[type="checkbox"]::before { content: ""; }
@@ -4394,7 +4438,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .vr-plate img { display: block; max-height: 60vh; max-width: 100%;
   width: auto; height: auto; border: 1px solid var(--line); cursor: zoom-in; }
 .vr-plate figcaption { display: flex; flex-direction: column; gap: 2px; }
-.vr-id { font-size: 13px; letter-spacing: .08em; color: var(--ink-dim); }
+.vr-id { font-size: 15px; letter-spacing: .08em; color: var(--ink-dim); }
 .vr-strip.vr-only .vr-plate.vr-off { display: none; }
 .vr-plate.vr-off { opacity: .38; }
 .vr-plate.vr-off img { filter: grayscale(1); }
@@ -4424,7 +4468,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ids-open .ref-row { gap: 10px; }
 .ref-off-head {
   display: flex; gap: 14px; margin: 12px 0 4px;
-  font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
 }
 .ref-off { columns: 2; column-gap: 28px; }
 .ref-off .ref-row { break-inside: avoid; }
@@ -4435,7 +4479,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    without a click (user 2026-08-14: "how can I see every one?"). It sits
    at the end of the step because it is the step's answer. */
 .attached {
-  margin-top: 12px; font-size: 13px; letter-spacing: .06em;
+  margin-top: 12px; font-size: 15px; letter-spacing: .06em;
   color: var(--ink-dim); line-height: 1.8; max-width: 900px;
 }
 .attached .attached-k {
@@ -4447,7 +4491,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    at the end of the step because it is the step's answer. */
 .attached {
   margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--hairline);
-  font-size: 13px; letter-spacing: .06em; color: var(--ink-dim);
+  font-size: 15px; letter-spacing: .06em; color: var(--ink-dim);
   line-height: 1.9; max-width: 900px;
 }
 .attached .attached-k {
@@ -4464,7 +4508,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* §2.4 — the step states its three values; the selects fold behind Change.
    The gate is honest: unconfirmed steps do not block a render, so it says
    so rather than greying the button. */
-.gen-stated { display: flex; gap: 28px; flex-wrap: wrap; font-size: 13px; }
+.gen-stated { display: flex; gap: 28px; flex-wrap: wrap; font-size: 15px; }
 .gen-stated i { font-style: normal; letter-spacing: .12em; color: var(--ink-faint); margin-right: 8px; }
 .gen-stated b { font-family: var(--sans); font-size: 15px; font-weight: 400; color: var(--ink); }
 .wb-card .gen-row { margin-top: 12px; }
@@ -4473,11 +4517,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    render, and here is why") and they were the least legible on it. The
    `.cd-blocked` idiom — --bad for a mismatch, --hold for not-ready. */
 .gen-warn {
-  margin-top: 10px; font-size: 13px; letter-spacing: .06em; color: var(--ink-faint);
+  margin-top: 10px; font-size: 15px; letter-spacing: .06em; color: var(--ink-faint);
   border-left: 2px solid var(--bad); padding-left: 9px;
 }
 .gen-gate {
-  margin-top: 8px; font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+  margin-top: 8px; font-size: 15px; letter-spacing: .08em; color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 9px;
 }
 .gen-gate.gate-clear { color: var(--ok); }
@@ -4527,7 +4571,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   padding: 18px 22px 14px;
 }
 .seq-progress {
-  margin-left: auto; font-size: 13px; letter-spacing: .1em;
+  margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
 .seq-autofill { margin: 0 22px 10px; }
@@ -4575,7 +4619,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .made-empty:not(.made-gated):hover .made-none { color: var(--ink-dim); }
 .made-gated { cursor: not-allowed; }
 .made-id {
-  position: absolute; left: 8px; top: 8px; font-size: 13px; letter-spacing: .1em;
+  position: absolute; left: 8px; top: 8px; font-size: 15px; letter-spacing: .1em;
   background: rgba(11, 12, 14, .82); color: var(--ink-dim); padding: 3px 7px;
 }
 .made-empty .made-id { position: absolute; background: none; }
@@ -4586,18 +4630,18 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
 }
 .made-state {
-  font-size: 13px; letter-spacing: .1em;
+  font-size: 15px; letter-spacing: .1em;
   background: rgba(11, 12, 14, .82); padding: 3px 7px; color: var(--ink-dim);
 }
 .made-state.ok { color: var(--ok); }
 .made-state.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
-.made-none { font-size: 13px; letter-spacing: .12em; color: var(--ink-faint); }
+.made-none { font-size: 15px; letter-spacing: .12em; color: var(--ink-faint); }
 /* The sanctioned exception to "never reserve the shape of the missing
    thing" — so the sentence stating the blocker has to be readable. The
    state is on the rule, the words are in ink. */
 .made-blocker {
-  font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+  font-size: 15px; letter-spacing: .08em; color: var(--ink-faint);
   background: rgba(11, 12, 14, .82); padding: 3px 7px;
   border-left: 2px solid var(--bad);
 }
@@ -4606,14 +4650,14 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   display: flex; justify-content: space-between; align-items: baseline;
   gap: 10px; margin-top: 7px; font-size: 14px; color: var(--ink-dim);
 }
-.made-cap .mono { font-size: 13px; color: var(--ink-faint); }
+.made-cap .mono { font-size: 15px; color: var(--ink-faint); }
 .made-stake { flex: 0 0 260px; }
 .made-stake .step-prose { margin: 8px 0 10px; font-size: 14px; }
 
 .q-list { margin: 8px 0 0; padding-left: 18px; }
 .q-list li { font-size: 15px; color: var(--ink-dim); margin: 3px 0; max-width: 720px; }
 .q-list li.answered { color: var(--ink-faint); }
-.q-list .q-ans { display: block; font-family: var(--mono); font-size: 13px;
+.q-list .q-ans { display: block; font-family: var(--mono); font-size: 15px;
   letter-spacing: .06em; color: var(--ok); }
 
 /* UNCANONIZED — 2026-08-14 — a TOOL is a button (user ruling).
@@ -4697,7 +4741,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .take.rejected .take-frame img { opacity: .45; }
 .wb-card .take-cap {
   padding: 6px 0 0; color: var(--ink-faint);
-  font-size: 13px; letter-spacing: .08em;
+  font-size: 15px; letter-spacing: .08em;
 }
 .filmstrip .take.shown .take-cap { color: var(--ink); }
 .filmstrip .take.rejected .take-cap { color: var(--ink-faint); }
@@ -4806,7 +4850,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .tut-body { display: flex; flex-direction: column; gap: 9px; }
 .tut-p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sheet-ink); }
-.tut-p code { font-size: 13px; color: var(--sheet-ink); }
+.tut-p code { font-size: 15px; color: var(--sheet-ink); }
 /* Q4 (ruled 2026-08-18): neither `.gen-warn` (nothing is wrong, nothing is
    being spent) nor `step-cond` (that sits beside a step the user is
    reading; this is addressed to them NOW). The step-cond typography at
@@ -4872,10 +4916,10 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   display: grid; grid-template-columns: var(--tut-cols); gap: 12px;
   min-width: 1010px; border-bottom: 1px solid var(--hairline);
 }
-.tut-adm-head { font-family: var(--mono); font-size: 13px; letter-spacing: .09em;
+.tut-adm-head { font-family: var(--mono); font-size: 15px; letter-spacing: .09em;
   color: var(--ink-faint); padding: 5px 0; }
 .tut-adm-row { padding: 7px 0; align-items: baseline; font-size: 14px; }
-.tut-adm-row .mono { font-size: 13px; letter-spacing: .06em; line-height: 1.4; }
+.tut-adm-row .mono { font-size: 15px; letter-spacing: .06em; line-height: 1.4; }
 .tut-adm-id { font-size: 14px; color: var(--ink); line-height: 1.4; }
 /* The board keeps this column terse — a trigger is scanned here and read
    in the editor. Two lines, then ellipsis; the full phrasing rides the
@@ -4887,7 +4931,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 /* Q7: --accent-soft said "current stage" about a broken document. */
 .tut-adm-bad { box-shadow: inset 2px 0 0 var(--bad); }
 .tut-adm-acts { display: flex; flex-wrap: wrap; gap: 6px 8px; }
-.tut-adm-acts .text-act { color: var(--ink); font-size: 13px; }
+.tut-adm-acts .text-act { color: var(--ink); font-size: 15px; }
 .tut-adm-empty { color: var(--ink-faint); font-size: 14px; padding: 18px 0; }
 .tut-adm-empty span { display: block; font-size: 14px; letter-spacing: .1em;
   margin-top: 6px; }
@@ -4923,7 +4967,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   font-size: 14px; letter-spacing: .07em; color: var(--ink-dim); }
 .tut-adm-sect { border-top: 1px solid var(--hairline); padding-top: 10px;
   margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
-.tut-adm-plain { font-family: var(--mono); font-size: 13px; line-height: 1.6;
+.tut-adm-plain { font-family: var(--mono); font-size: 15px; line-height: 1.6;
   letter-spacing: .06em; color: var(--ink-faint); margin: 6px 0 0; }
 
 .tut-adm-step { background: var(--bg2); border: 1px solid var(--line);
@@ -4950,13 +4994,13 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   padding-left: 10px; border-left: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 6px; }
 .tut-adm-addcond { align-self: flex-start; order: 2; font-family: var(--mono);
-  font-size: 13px; letter-spacing: .06em; color: var(--ink);
+  font-size: 15px; letter-spacing: .06em; color: var(--ink);
   background: none; border: 1px solid var(--line); padding: 5px 8px; }
 .tut-adm-addcond:hover { border-color: var(--line-strong); }
 /* The board's trailing note is Courier at the faint tier, not prose. The
    hints themselves come from the schema and are sentences, so they are
    not uppercased — a wall of caps is not what the board draws either. */
-.tut-adm-hint { flex-basis: 100%; font-family: var(--mono); font-size: 13px;
+.tut-adm-hint { flex-basis: 100%; font-family: var(--mono); font-size: 15px;
   line-height: 1.5; letter-spacing: .06em; color: var(--ink-faint); }
 .tut-adm-n { font-size: 14px; letter-spacing: .08em; color: var(--ink-faint);
   flex: none; }
@@ -4990,13 +5034,13 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .rd-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .rd-head .stage-headline { margin: 0; }
 .rd-meta {
-  margin-left: auto; font-size: 13px; letter-spacing: .1em;
+  margin-left: auto; font-size: 15px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
 .rd-meta b { color: var(--ink); font-weight: 400; }
 
 /* Phase as a sentence, not a bar — three words, the live one lit. */
-.rd-phase { display: flex; gap: 0; font-size: 13px; letter-spacing: .12em; }
+.rd-phase { display: flex; gap: 0; font-size: 15px; letter-spacing: .12em; }
 .rd-phase span {
   color: var(--ink-faint); padding: 4px 12px 4px 0;
   border-top: 1px solid var(--line-soft); flex: 1;
@@ -5008,7 +5052,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .rd-phase span.now  { color: var(--ink); border-top-color: var(--line); }
 
 .rd-note {
-  margin: 0; font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
+  margin: 0; font-size: 15px; letter-spacing: .1em; color: var(--ink-faint);
   line-height: 1.5;
 }
 .rd-note.bad { color: var(--ink-faint); }
@@ -5038,7 +5082,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) 110px;
   gap: 12px; align-items: center; padding: 5px 12px;
-  font-family: var(--mono); font-size: 13px; color: var(--ink-faint);
+  font-family: var(--mono); font-size: 15px; color: var(--ink-faint);
 }
 .rd-row.done, .rd-row.now { color: var(--ink-dim); }
 .rd-row.now { color: var(--ink); }
@@ -5053,7 +5097,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 /* the page — the script's own lines, set the way a script is set */
 .rd-page {
   background: var(--field); border: 1px solid var(--line-soft);
-  padding: 12px 14px; font-family: var(--mono); font-size: 13px;
+  padding: 12px 14px; font-family: var(--mono); font-size: 15px;
   line-height: 1.55; color: var(--ink-dim); height: 100%;
   overflow-y: auto; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 2px;
@@ -5106,7 +5150,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    is evidence: paraphrasing it loses the cause, and uppercasing it buries
    the one readable sentence inside. */
 .rd-raw {
-  margin: 6px 0 0; font-family: var(--mono); font-size: 13px;
+  margin: 6px 0 0; font-family: var(--mono); font-size: 15px;
   line-height: 1.5; color: var(--ink-faint); word-break: break-word;
   border-left: 1px solid var(--bad-line); padding: 4px 0 4px 10px;
 }

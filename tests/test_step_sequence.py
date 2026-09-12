@@ -186,13 +186,20 @@ class TheVocabulary(unittest.TestCase):
         fault was nine sizes inside five and a half pixels, which reads
         as one size with noise.
 
-        The smallest of the three is 13px since LEGIBILITY_FLOOR
-        (2026-09-12); it was 11.5, which the audit measured at 8–9px cap
-        height. The RULE is unchanged — three sizes, not a continuum."""
+        The smallest of the three is 15px Courier since 2026-09-12.
+        LEGIBILITY_FLOOR set it to 13; measured by pixel scan, Courier at
+        13px renders the same 8px cap height it did at 11.5 — the
+        floor's own stated fault. 15px on the current mono stack renders
+        10px caps, which is what Archivo gives at the 14px prose floor.
+
+        The RULE is unchanged: three sizes, not a continuum. Two of them
+        now coincide in NUMBER while differing in face, which this system
+        already sanctions — at the smallest size the family carries the
+        meaning."""
         self.assertIn("font-size: 24px", block(".seq .seq-subject"))
         self.assertIn("font-size: 15px", block(".step-prose, .seq .cam-sum"))
         for sel in (".step-label", ".step-meta", ".wb-facts"):
-            self.assertIn("font-size: 13px", block(sel))
+            self.assertIn("font-size: 15px", block(sel))
 
     def test_the_subject_beats_the_panel_h2_label(self):
         """.panel h2 sets 11px uppercase Courier; without the extra

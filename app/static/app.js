@@ -3499,7 +3499,7 @@ async function renderLocations(state = null, langs = 0) {
       <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>`,
     headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
     placeholder: "search locations and scenes…",
-    footer: `<p class="mini"><span class="f-label" style="font-size:13px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
+    footer: `<p class="mini"><span class="f-label" style="font-size:15px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
     rows: (needle, q) => {
       const list = data.locations.filter(l =>
         !needle || l.location.includes(needle) ||
@@ -7241,7 +7241,7 @@ async function renderWizard() {
           <input type="text" data-f="notes" value="${esc(w.description || "")}" disabled></div>
         <div class="fgroup" title="Lowercase trigger words used to auto-match this design language to board content.">
           <span class="f-label" style="display:flex;align-items:center;gap:10px">Keywords
-            <button class="ghost" data-f="derive" disabled style="margin-left:auto;font-size:13px;padding:4px 10px">Derive from screenplay</button>
+            <button class="ghost" data-f="derive" disabled style="margin-left:auto;font-size:15px;padding:4px 10px">Derive from screenplay</button>
           </span>
           <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled></div>`;
       const editBtn = $("[data-f=edit]", row);
@@ -12569,7 +12569,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
       <div><span class="badge ${c.status}">${esc(label)}</span> <b>${esc(c.candidate_id)}</b></div>
       <div class="meta">${meta}</div>
       ${(c.warnings || []).map(w => `<div class="meta" style="color:var(--hold)">⚠ ${esc(w)}</div>`).join("")}
-      ${c.model_notes || c.render_prompt ? `<details class="meta"><summary>${c.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:13px;max-height:200px;overflow:auto">${esc(c.render_prompt ? `RENDER PROMPT (user-edited):\n${c.render_prompt}${c.model_notes ? "\n\n" + c.model_notes : ""}` : c.model_notes)}</pre></details>` : ""}
+      ${c.model_notes || c.render_prompt ? `<details class="meta"><summary>${c.prompt_source === "edited" ? "edited render prompt" : "model notes / rewritten prompt"}</summary><pre style="white-space:pre-wrap;font-size:14px;max-height:200px;overflow:auto">${esc(c.render_prompt ? `RENDER PROMPT (user-edited):\n${c.render_prompt}${c.model_notes ? "\n\n" + c.model_notes : ""}` : c.model_notes)}</pre></details>` : ""}
       <div class="meta">${esc(c.created_at)}</div>
     </div>
     <div class="actions"></div>`;

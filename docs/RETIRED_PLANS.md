@@ -334,3 +334,30 @@ delta as new instructions.
   every length in a font-size and rejects any relative unit outright, and
   it now walks every file `app/static/` serves rather than the two
   obvious ones (which is how `recorder.js`'s 12px chip surfaced).
+
+  **The floor's own mechanism did not reach its own goal, user-caught
+  2026-09-12** ("site still has 9px tall fonts - bad. fix."). The plan
+  names its fault as "Courier labels rendering at 8–9px cap height" and
+  prescribes a 13px font-size floor. Those are two different quantities.
+  Measured by pixel scan, Courier New's cap height is 8px at 11.5px, at
+  13px, at 14px and at 15px — the face is hinted flat and its cap-to-em
+  ratio is tiny — so implementing the plan exactly moved the rendered
+  letter height by ZERO, and the fault it was written for survived it.
+
+  Two levers reach cap height, the size and the face, and both moved the
+  minimum needed: `--mono` leads with Consolas then Cascadia Mono
+  (Consolas is NARROWER than Courier New, so no label costs more room and
+  Courier New stays as a fallback), and the Courier step is 15px, which
+  renders the same 10px cap Archivo gives at the 14px prose floor. Every
+  Courier rule now carries an explicit size — one that inherited the 14px
+  body rendered 9px caps.
+
+  Measured after, across six views at 1100px and 1560px: smallest
+  rendered cap height 10px (was 8px), smallest font-size 14px, no
+  horizontal scroll. `.prod-grid` needed `minmax(0, 1fr)` on the way —
+  `1fr` is max-content-floored, so the wider labels pushed it 45px past a
+  1100px window.
+
+  **The face change needs a designer's ruling.** Rule 2 names Courier,
+  and this changes which mono actually renders; one line in `--mono`
+  reverts it, at the cost of going back to 8px caps.

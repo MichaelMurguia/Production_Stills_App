@@ -91,15 +91,39 @@ class TheLegibilityFloor(unittest.TestCase):
                 for px in re.findall(r"([\d.]+)px", val):
                     self.assertIn(float(px), self.STEPS, f"{f.name}: {m.group(0)[:40]}")
 
-    def test_thirteen_is_reserved_for_courier(self):
-        """The plan: 13px is the floor for a Courier kicker, and
-        nothing else may be 13px. A rule that names Archivo cannot be."""
-        bad = []
-        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", self._bare()):
-            m = re.search(r"font-size:\s*([\d.]+)px", body)
-            if m and float(m.group(1)) == 13 and "var(--sans)" in body:
-                bad.append(" ".join(sel.split())[:60])
-        self.assertEqual(bad, [], f"Archivo at 13px: {bad}")
+    def test_the_courier_floor_renders_the_cap_height_it_was_for(self):
+        """LEGIBILITY_FLOOR set the Courier floor at 13px to fix labels
+        "rendering at 8-9px cap height". Measured by pixel scan, Courier
+        New's cap is 8px at 11.5px, 13px, 14px AND 15px — hinted flat —
+        so the floor moved the rendered letter height by zero and the
+        fault the plan named survived it (user, 2026-09-12: "site still
+        has 9px tall fonts").
+
+        Two levers reach cap height: the size and the face. Both moved
+        the minimum necessary:
+
+            face            cap@13  cap@14  cap@15
+            Courier New        8       8       8
+            Consolas           8       9      10
+            Cascadia Mono      9      10      10
+            Archivo @14       10   <- the prose floor's cap height
+
+        So the mono stack leads with faces that have a normal cap ratio,
+        and the Courier step is 15px. Measured on the page after: every
+        kicker renders 10px caps, and Consolas is NARROWER than Courier
+        New, so no label costs more room than it did.
+
+        This asserts the two things that produce that result. The cap
+        height itself is a browser measurement — `/design-verify`."""
+        m = re.search(r"--mono:\s*([^;]+);", CSS)
+        self.assertIsNotNone(m)
+        stack = m.group(1)
+        self.assertTrue(stack.strip().startswith("Consolas"),
+                        f"a flat-hinted face leads the stack: {stack}")
+        self.assertIn("Courier New", stack, "it stays as a fallback")
+        # Nothing sits on the retired 13px step any more.
+        sizes = {float(x) for x in re.findall(r"font-size:\s*([\d.]+)px", self._bare())}
+        self.assertNotIn(13.0, sizes, "13px renders 8px caps; the step is unused")
 
     def test_no_retired_grey_is_used_as_a_glyph_colour(self):
         """They stay legal as lines. `color:` is the one property that
@@ -943,7 +967,7 @@ class MiniMonoTests(unittest.TestCase):
         .mono means it — .mini used to win the order battle and silently
         rendered machine data proportional (found 2026-08-13, the
         correction-intake checklist)."""
-        self.assertIn(".mini.mono { font-family: var(--mono); }", CSS)
+        self.assertIn(".mini.mono { font-family: var(--mono); font-size: 15px; }", CSS)
 
 
 class HarnessAuditTests(unittest.TestCase):
