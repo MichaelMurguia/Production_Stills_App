@@ -2528,6 +2528,20 @@ def api_list_subjects() -> list[dict]:
     return store.list_subjects()
 
 
+@app.get("/api/subjects/scenes")
+def api_subject_scene_counts() -> dict:
+    """`{subject id: scenes}` for every cast subject, in one screenplay walk.
+
+    The roster prints `n SCENES` under every card (CAST_CHARACTER_SCREEN
+    §1). Per-card evidence calls would re-read and re-split the whole
+    draft once per card; this reads it once. Declared BEFORE the
+    `{sid}`-shaped routes so `scenes` is never taken for a subject id.
+    """
+    subs = store.list_subjects()
+    counts = insights.subject_scene_counts([s["name"] for s in subs])
+    return {s["id"]: counts.get(s["name"], 0) for s in subs}
+
+
 @app.post("/api/subjects")
 async def api_add_subject(body: dict) -> dict:
     try:
@@ -2559,15 +2573,36 @@ def api_delete_subject(sid: str) -> dict:
         raise _err(e)
 
 
+@app.get("/api/subjects/{sid}/evidence")
+def api_subject_evidence(sid: str) -> dict:
+    """What the screenplay says about this subject, and where.
+
+    CAST_CHARACTER_SCREEN §2: the character screen shows the verbatim
+    lines the scan pulled the character from, each with its page, and the
+    header states how many scenes they are in. Both are DERIVED, locally
+    and deterministically — no model call, nothing inferred — so opening a
+    card costs nothing.
+    """
+    subj = store.get_subject(sid)
+    if subj is None:
+        raise HTTPException(404, f"unknown subject: {sid}")
+    return insights.subject_evidence(subj["name"])
+
+
 @app.post("/api/subjects/{sid}/generate")
 async def api_subject_generate(sid: str, body: dict) -> dict:
     """The second door to a subject's picture (user, 2026-08-31: "the
     option to upload or generate an image").
 
-    It lands where the upload lands — an approved reference carrying the
-    subject's role, linked to its card — so nothing downstream can tell
-    them apart. It spends a render, which the caller states before it is
-    pressed.
+    It lands where the upload lands EXCEPT for the verdict: a reference
+    carrying the subject's role, linked to its card, but PROVISIONAL
+    rather than approved (CAST_CHARACTER_SCREEN §2, 2026-09-12). Asking
+    for a render is not the same as accepting the one that came back —
+    nobody has seen it when this returns — so the screen puts Accept /
+    Reject under the frame. A supplied plate still lands approved,
+    because the user had already seen that picture.
+
+    It spends a render, which the caller states before it is pressed.
     """
     try:
         return await run_in_threadpool(

@@ -2557,7 +2557,12 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
 # prop, and never letterboxed into the other shape." A portrait rendered
 # at 16:9 and shown in a 1:1.25 frame is letterboxing by another route, so
 # it is rendered in the shape it will be seen in.
-SUBJECT_ASPECT = {"CHARACTER": "4:5", "VEHICLE": "16:9", "PROP": "16:9"}
+# A character is rendered FULL BODY, head to foot, at 9:16 — the
+# CAST_CHARACTER plan's generation contract (2026-09-12). The 1:1.25 card
+# thumbnail and the face crop are derived from that body shot, so there is
+# one picture per character rather than a portrait and a body shot that
+# disagree with each other. A vehicle or a prop keeps its landscape plate.
+SUBJECT_ASPECT = {"CHARACTER": "9:16", "VEHICLE": "16:9", "PROP": "16:9"}
 
 
 def subject_portrait(sid: str, provider: str = "") -> dict:
@@ -2628,6 +2633,11 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
         parts += ["", f"PERIOD: {period}. Nothing in frame may postdate it."]
     parts += ["", "Show only what the words above support. Invent no clothing, "
                   "marking, era or equipment they do not state."]
+    if kind == "CHARACTER":
+        parts += ["", "FRAMING", "Full body, head to foot, inside the frame with "
+                      "room above and below. Neutral standing pose, facing "
+                      "camera, arms at the sides. Flat grey ground, no set, no "
+                      "props the words do not state, no cast shadow."]
     if style_refs:
         parts += ["", "APPROVED REFERENCE ROLES",
                   "Each attached reference image controls ONLY its assigned scope. "
@@ -2658,12 +2668,16 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
         f"{subj['name']}.png", data, role, [], [],
         notes=f"generated reference for subject {subj['name']} ({sid}) "
               f"by {provider}")
-    # Same standing as a supplied plate — the user asked for it, which IS
-    # the review, and Reject in Reference is the recourse (E2, 2026-08-18).
-    store.set_reference_status(ref["id"], "APPROVED", "ON SUPPLY")
+    # It lands PROVISIONAL, not approved. Asking for a render is not the
+    # same as accepting the one that came back, and the plan puts Accept /
+    # Reject under the frame for exactly that (2026-09-12, replacing the
+    # 2026-08-18 "the ask IS the review" reading — which was true of a
+    # supplied plate, where the user had already SEEN the picture).
+    # add_reference already defaults to PROVISIONAL — the change here is
+    # the REMOVAL of the approve call that used to follow it.
     store.link_subject_ref(sid, ref["id"])
     return {"subject": sid, "reference": ref["id"], "provider": provider,
-            "aspect_ratio": aspect}
+            "aspect_ratio": aspect, "status": ref["status"]}
 
 
 def list_samples() -> list[dict]:

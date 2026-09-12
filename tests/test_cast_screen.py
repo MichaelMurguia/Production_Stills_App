@@ -80,12 +80,19 @@ class TheUncastAreAList(unittest.TestCase):
         i = JS.index("const renderCastRoster =")
         self.assertIn("Nothing uncast", JS[i:JS.index("const renderCastDetail =", i)])
 
-    def test_every_door_goes_through_the_one_modal(self):
+    def test_every_door_goes_through_the_one_path(self):
         """One way to cast, whichever door you came in by (2026-08-16).
-        The screen writes no card itself."""
+        The screen writes no card itself — it calls `castOne`, which is
+        the same call bulk casting makes.
+
+        The path changed on 2026-09-12 (CAST_CHARACTER_SCREEN §1): the
+        roster's chips and its manual field cast in ONE gesture into the
+        empty detail screen, rather than opening a modal to ask again for
+        words the read already supplied."""
         i = JS.index("const renderCastRoster =")
         seg = JS[i:JS.index("const renderCastDetail =", i)]
-        self.assertEqual(seg.count("castModal("), 2)
+        self.assertEqual(seg.count("castInto("), 2)   # the chip and the manual row
+        self.assertNotIn("castModal(", seg)
         self.assertNotIn('api("/api/subjects", { method: "POST"', seg)
 
 
@@ -111,9 +118,12 @@ class TheDetailIsAScreen(unittest.TestCase):
         self.assertIn('.cast-detail[data-kind="VEHICLE"] .cd-hero', CSS)
 
     def test_it_states_what_rides_every_prompt(self):
+        """RIDES AS left with CAST_CHARACTER_SCREEN (2026-09-12): it
+        restated the role line already in the header, and §3's mock shows
+        APPEARS IN / LIVES ON and nothing else."""
         i = JS.index("const renderCastDetail =")
         seg = JS[i:JS.index("const renderCastScreen =", i)]
-        for lab in ("WHO THIS IS", "WHAT RIDES EVERY PROMPT", "LIVES ON", "RIDES AS"):
+        for lab in ("WHO THIS IS", "WHAT RIDES EVERY PROMPT", "LIVES ON"):
             self.assertIn(lab, seg, lab)
 
     def test_alternates_are_a_filmstrip_ending_in_generate_another(self):
@@ -128,11 +138,18 @@ class TheDetailIsAScreen(unittest.TestCase):
 
     def test_a_subject_with_no_photograph_states_the_blocker(self):
         """B3, and the most consequential empty state in the app: this
-        picture is what every prompt of this subject is held to."""
+        picture is what every prompt of this subject is held to.
+
+        CAST_CHARACTER_SCREEN §2 replaced the hatched panel and its
+        paragraph with the frame itself: `NO PICTURE` in amber in the
+        header, a dashed 9:16 slot, and the two acts inside it. The slot
+        is not reserved-and-silent — it carries the only primary on the
+        screen."""
         i = JS.index("const renderCastDetail =")
         seg = JS[i:JS.index("const renderCastScreen =", i)]
-        self.assertIn("NO PHOTOGRAPH YET", seg)
-        self.assertIn("repeating-linear-gradient", block(".cd-hero.none {"))
+        self.assertIn("NO PICTURE", seg)
+        self.assertIn('<div class="cd-frame-acts">', seg)
+        self.assertIn("dashed", block(".cd-frame {"))
 
     def test_the_photograph_button_uses_the_shelf_s_own_chooser(self):
         i = JS.index("const renderCastDetail =")

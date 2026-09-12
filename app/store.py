@@ -231,6 +231,51 @@ def save_wizard_analysis(analysis: dict) -> None:
 _EXTRACTED_NAME = "_extracted.txt"
 
 
+_PAGES_NAME = "_pages.json"
+
+
+def _write_page_offsets(pdf: Path, pages: list[str]) -> None:
+    """Character offset of each page's first character in the joined text.
+
+    A sidecar, never a marker inside the text — see the caller. Written
+    beside the extraction so a lookup is a bisect rather than a re-parse.
+    """
+    off, out = 0, []
+    for text in pages:
+        out.append(off)
+        off += len(text) + 1          # the newline the join puts between pages
+    try:
+        _atomic_write_json(pdf.parent / _PAGES_NAME, {"offsets": out})
+    except Exception:
+        pass                          # no sidecar costs page refs, nothing else
+
+
+def page_offsets() -> list[int]:
+    """Where each page starts, backfilled from the stored PDF when the
+    extraction predates the sidecar."""
+    sc = paths.SCREENPLAY_DIR / _PAGES_NAME
+    if sc.exists():
+        return list((_read_json(sc, {}) or {}).get("offsets") or [])
+    rec = load_app_state().get("screenplay") or {}
+    pdf = paths.SCREENPLAY_DIR / str(rec.get("file", ""))
+    if pdf.suffix.lower() != ".pdf" or not pdf.exists():
+        return []
+    try:
+        from pypdf import PdfReader
+        _write_page_offsets(pdf, [(pg.extract_text() or "")
+                                  for pg in PdfReader(str(pdf)).pages])
+    except Exception:
+        return []
+    return list((_read_json(sc, {}) or {}).get("offsets") or [])
+
+
+def page_of(offset: int) -> int:
+    """1-based page for a character offset; 0 when it cannot be known."""
+    import bisect
+    offs = page_offsets()
+    return bisect.bisect_right(offs, offset) if offs else 0
+
+
 def _extract_screenplay_text(p: Path) -> str:
     """The screenplay's plain text — the model-efficient format. A PDF
     billed to a model costs per PAGE (image + text); the same script as
@@ -239,8 +284,16 @@ def _extract_screenplay_text(p: Path) -> str:
     if p.suffix.lower() == ".pdf":
         try:
             from pypdf import PdfReader
-            return "\n".join((page.extract_text() or "")
-                             for page in PdfReader(str(p)).pages)
+            pages = [(page.extract_text() or "") for page in PdfReader(str(p)).pages]
+            # The page boundaries are thrown away by this join, and a
+            # screenplay quote is worth nothing without the page it is
+            # on (CAST_CHARACTER_SCREEN §2 wants "P 41" beside each
+            # line). They are kept BESIDE the text, never in it: a
+            # marker inside would change what every parser sees and
+            # what every model is billed for, to carry a fact one
+            # reader wants.
+            _write_page_offsets(p, pages)
+            return "\n".join(pages)
         except Exception:
             return ""
     if p.suffix.lower() == ".fdx":

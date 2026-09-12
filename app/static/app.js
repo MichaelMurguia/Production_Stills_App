@@ -6021,11 +6021,19 @@ async function renderWizard() {
     (s.ref_ids || []).map(id => refs.find(r => r.id === id))
       .filter(r => r && r.status !== "REJECTED");
 
+  /* SINGLE quotes inside the url(), because this string is interpolated
+     into a `style="..."` ATTRIBUTE. With double quotes the attribute
+     ends at the first inner one: the browser parses
+     `style="background-image:url("` and throws the URL away as stray
+     markup. Every picture on the cast row, the roster and the detail was
+     missing for that reason, silently and everywhere at once, which is
+     why it read as "the pictures do not work" rather than as a bug in
+     one place (found from the DOM, 2026-09-12). */
   const castShot = r => r
-    ? `background-image:url("/api/references/${encodeURIComponent(r.id)}/image?size=md")`
+    ? `background-image:url('/api/references/${encodeURIComponent(r.id)}/image?size=md')`
     : "";
 
-  const renderCastRoster = (subjects, refs, uncast) => {
+  const renderCastRoster = (subjects, refs, uncast, scenes) => {
     const host = $("#cast-screen");
     const KINDS = [["CHARACTER", "CHARACTERS"], ["VEHICLE", "VEHICLES"],
                    ["PROP", "PROPS"]];
@@ -6047,7 +6055,8 @@ async function renderWizard() {
             <span class="cast-shot${rs.length ? "" : " none"}" style="${castShot(rs[0])}"></span>
             <span class="cast-name">${esc(s.name)}</span>
             ${s.subtitle ? `<span class="cast-sub">${esc(s.subtitle)}</span>` : ""}
-            <span class="cast-scenes">${rs.length} PHOTO${rs.length === 1 ? "" : "S"}</span>
+            <span class="cast-scenes">${scenes[s.id] ?? 0} SCENE${
+              scenes[s.id] === 1 ? "" : "S"}</span>
           </button>`;
         }).join("")}</div>`);
     }
@@ -6084,10 +6093,30 @@ async function renderWizard() {
       castOpen = b.dataset.sid;
       renderCastScreen();
     });
-    // One path, not two: a chip and the manual field open the same modal
-    // the shelf already uses.
+    /* One gesture, not two (CAST_CHARACTER_SCREEN §1): a chip CASTS —
+       it makes the card and opens the detail screen in its empty state.
+
+       It used to open the casting modal, which asked for a name, a role
+       line and a profile that the read already supplied and that §2's
+       screen now edits in place. Asking again for words we have is a
+       form standing between a director and a picture. The recommendation
+       carries the subtitle and the traits, so nothing is lost by not
+       asking.
+
+       The ribbon's thumbs still open the modal — that is where the user
+       put them on 2026-09-10 ("you don't have to open the full cast"),
+       and this plan does not cover the ribbon. */
+    const castInto = async (rec) => {
+      try {
+        const made = await castOne(rec);
+        castOpen = made.id;
+        document.body.dataset.cast = "1";
+        refreshCast();
+        window.scrollTo({ top: 0 });
+      } catch (err) { toast(err.message, true); }
+    };
     $$("[data-uncast]", host).forEach(b => b.onclick = () =>
-      castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast));
+      castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects)));
     /* Bulk casting came here with the uncast list (§3.4 puts ONE list on
        this screen; there were two, on two surfaces, with two manual-add
        rows under them). The behaviour is the retired block's, unchanged:
@@ -6103,11 +6132,13 @@ async function renderWizard() {
       toast(`${ok} cast${failed ? ` — ${failed} failed` : ""}.`, !!failed);
       refreshCast();
     });
+    // "The manual add sits in the same block and goes through the same
+    // path" — the same one gesture, into the same empty screen.
     $("#cast-add", host).onclick = () => {
       const name = $("#cast-add-name", host).value.trim();
       if (!name) return toast("Give it a name first.", true);
-      castModal({ name, kind: $("#cast-add-kind", host).value,
-                  subtitle: "", traits: [] }, refreshCast);
+      castInto({ name, kind: $("#cast-add-kind", host).value,
+                 subtitle: "", traits: [] });
     };
   };
 
@@ -6126,144 +6157,279 @@ async function renderWizard() {
       ? "" : `<i class="cd-none">NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN</i>`;
   };
 
-  const renderCastDetail = (s, refs) => {
-    const host = $("#cast-screen");
-    const rs = castRefsOf(s, refs);
-    const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
-    /* The two conditions the server refuses a render on, asked here so
-       the button can state them instead of discovering them.
+  /* The subject's own screen (CAST_CHARACTER_SCREEN_2026-09-12).
 
-       Both are cheap and local. The third — a Bible that contradicts the
-       rendering anchor — needs the server, so it stays a refusal; that
-       one is rare and already says what to do. */
+     THREE states, one host, chosen by the pictures the subject has:
+
+       pending  — a render came back and has not been ruled on. Accept /
+                  Reject is the only question on the screen, so it is the
+                  screen, whether or not an approved picture also exists.
+       accepted — §3. The picture is the largest thing on it.
+       empty    — §2. A dashed 9:16 frame, Generate over Attach, the
+                  description, and the lines the screenplay described this
+                  subject in.
+
+     Pending outranks accepted deliberately: a picture waiting on a
+     verdict is a question, and a question left behind a filmstrip is a
+     question nobody answers. */
+  const renderCastDetail = async (s, refs) => {
+    const all = castRefsOf(s, refs);
+    const pending = all.find(r => r.status === "PROVISIONAL");
+    const ok = all.filter(r => r.status === "APPROVED");
+    // Derived locally, no model call — see api_subject_evidence.
+    const ev = await api(`/api/subjects/${s.id}/evidence`)
+      .catch(() => ({ scenes: 0, quotes: [] }));
+    if (!pending && ok.length) return renderCastAccepted(s, ok, refs, ev);
+    return renderCastEmpty(s, pending, refs, ev);
+  };
+
+  /* The header both states share. `NO PICTURE` is the one amber thing on
+     the empty screen — §3 drops it, because by then nothing is asking. */
+  const castHead = (s, ev, mark, extra) => `
+    <div class="cd-head">
+      <button type="button" class="text-act cast-back" data-f="back">&larr; Cast</button>
+      <h3 class="cd-name">${esc(s.name)}</h3>
+      <span class="cd-meta">${esc(s.kind)} &middot; ${ev.scenes} SCENE${
+        ev.scenes === 1 ? "" : "S"}${extra ? ` &middot; ${esc(extra)}` : ""}</span>
+      <span class="cd-head-gap"></span>
+      ${mark ? `<span class="cd-mark">${esc(mark)}</span>` : ""}
+    </div>`;
+
+  /* The right-hand column: what the screenplay says, and where it says
+     it. Identical on both states — the plan cut the traits list, the
+     scene table, the design-language row and the "where this lives" line
+     as words the picture and the quotes already carry. */
+  const castWords = (s, ev) => `
+    <div class="cd-titlerow">
+      <p class="cd-kick">FROM THE SCREENPLAY</p>
+      <button type="button" class="ghost cd-edit" data-f="edit">Edit description</button>
+    </div>
+    <p class="cd-desc">${s.description ? esc(s.description)
+      : s.subtitle ? esc(s.subtitle)
+      : `<span class="cd-nodesc">The read wrote no description for this one.
+           Write what it LOOKS like &mdash; a render from a name alone is the
+           engine's invention rather than this production's.</span>`}</p>
+    ${ev.quotes.length ? `<p class="cd-kick cd-kick2">SCREENPLAY</p>
+      <!-- A page ref needs the page sidecar, which only a PDF has. A
+           draft uploaded as text is still located — by scene — rather
+           than printing "P 00", which would read as a broken citation. -->
+      ${ev.quotes.map(q => `<div class="cd-quote">
+          <span class="cd-page">${q.page
+            ? `P ${String(q.page).padStart(2, "0")}`
+            : `SC ${String(q.scene || 0).padStart(2, "0")}`}</span>
+          <i>&ldquo;${esc(q.line)}&rdquo;</i>
+        </div>`).join("")}`
+      : `<p class="cd-kick cd-kick2">SCREENPLAY</p>
+         <p class="cd-nodesc">No line in this draft names ${esc(s.name)} outside a
+            dialogue cue &mdash; there is nothing to quote.</p>`}`;
+
+  /* Both conditions the server refuses a render on, asked HERE so the
+     button states them instead of discovering them. The third — a Bible
+     that contradicts the rendering anchor — needs the server, so it stays
+     a refusal; it is rare and it already says what to do. */
+  const castGenBlock = (s) => {
     const hasWords = !!(String(s.description || "").trim()
                      || String(s.subtitle || "").trim()
                      || (s.traits || []).length);
     const bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;
-    const genBlock =
-      !bibleSaved ? { why: "The Art Direction Bible is not saved yet, and a "
-                         + "reference renders FROM it.",
-                      act: "Save the Bible in step 04", go: "bible" }
-      : !hasWords ? { why: "Nothing to render from — write who this is, or "
-                         + "give it a trait.",
-                      act: "Edit the description", go: null }
+    return !bibleSaved
+        ? { why: "The Art Direction Bible is not saved yet, and a picture "
+               + "renders FROM it.", act: "Save the Bible in step 04", go: "bible" }
+      : !hasWords
+        ? { why: "Nothing to render from &mdash; write what this looks like first.",
+            act: "", go: null }
       : null;
-    host.innerHTML = `
-      <div class="row" style="margin:0 0 12px">
-        <button type="button" class="text-act cast-back" data-f="back">&larr; Cast</button>
-        <span class="wiz-stage-title" style="font-size:20px">${esc(s.name)}</span>
-        <span class="cost mono">${esc(s.kind)} &middot; ${rs.length} PHOTO${
-          rs.length === 1 ? "" : "S"} &middot; ${esc(role.replaceAll("_", " "))}</span>
-      </div>
-      <div class="cast-detail" data-kind="${esc(s.kind)}">
-        <div>
-          <span class="cd-hero${rs.length ? "" : " none"}" data-f="hero"
-            style="${castShot(rs[0])}">${rs.length ? "" :
-            `<span class="cd-empty">NO PHOTOGRAPH YET &mdash; THIS SUBJECT RIDES ON
-             ITS WORDS ALONE UNTIL ONE IS ATTACHED</span>`}</span>
-          <!-- §3.4: "Alternates are a filmstrip directly beneath the
-               picture, ending in a dashed GENERATE ANOTHER slot." -->
-          <div class="cd-strip">
-            ${rs.map((r, i) => `<button type="button" class="cd-alt${i ? "" : " on"}"
-                data-i="${i}" style="${castShot(r)}" title="${esc(r.id)}"></button>`).join("")}
-            <button type="button" class="cd-more" data-f="gen"
-              title="Renders one reference for this subject from its own words, under the Bible and the approved anchors. Spends a render.">GENERATE<br>ANOTHER</button>
-          </div>
-        </div>
-        <div>
-          <!-- The profile, not the role line. They are two different
-               sentences and the mock shows both: "Fugitive pilot" on the
-               roster card, and here "Dark hair, mid-thirties, weather on
-               the face." One field was doing both jobs, so the profile
-               had nowhere to live (user, 2026-08-31). -->
-          <p class="cd-lab">WHO THIS IS</p>
-          <p class="cd-who">${s.description ? esc(s.description)
-            : s.subtitle ? esc(s.subtitle)
-            : `<span class="mini">No profile yet — write one, or a generated reference would be the engine's invention rather than this production's.</span>`}</p>
-          <p class="cd-lab">WHAT RIDES EVERY PROMPT</p>
-          ${(s.traits || []).length
-            ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
-            : `<p class="mini">No traits yet.</p>`}
-          <div class="cd-facts">
-            <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn(s)}</span></div>
-            <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
-            <div class="cd-fact"><b>RIDES AS</b><span>${esc(role)} &mdash; ${esc(s.name.toUpperCase())}</span></div>
-          </div>
-          <!-- Two doors to a picture, both stated (user, 2026-08-31).
-               They land in the same place: an approved reference carrying
-               this subject's role, linked to its card. -->
-          <div class="cd-acts">
-            <button type="button" class="ghost" data-f="photo">Attach a photograph</button>
-            <button type="button" class="ghost" data-f="gen2">Generate one</button>
-            <button type="button" class="ghost" data-f="edit">Edit the description</button>
-          </div>
-          ${genBlock
-            ? `<p class="mini cd-spend cd-blocked">${esc(genBlock.why)}
-                 ${genBlock.go ? `<button type="button" class="text-act"
-                   data-f="gen-go">${esc(genBlock.act)} &nearr;</button>` : ""}</p>`
-            : `<p class="mini cd-spend">Generating renders from the words above, under
-               the Bible and the approved anchors &mdash; it spends a render.</p>`}
-        </div>
-      </div>`;
-    $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
-    $$(".cd-alt", host).forEach(b => b.onclick = () => {
-      $$(".cd-alt", host).forEach(x => x.classList.remove("on"));
-      b.classList.add("on");
-      $("[data-f=hero]", host).style.cssText = castShot(rs[+b.dataset.i]);
-    });
-    // Attaching to an existing subject goes through the same chooser the
-    // shelf uses; the card already exists, so this only adds photographs.
-    const addPhoto = () => photoTrayModal(s, refreshCast);
-    $("[data-f=photo]", host).onclick = addPhoto;
-    /* The generate door. Both slots go through it, and both state the
-       spend before they are pressed — a render is money.
+  };
 
-       `startBusy` returns an OBJECT with .done(), not a stop function.
-       This called `stop?.()`, which throws inside the `finally` — so the
-       real error was swallowed, the spinner never cleared, and its
-       elapsed clock kept counting on a request that had already failed.
-       The user read that as a render taking three minutes; the server had
-       answered 422 in milliseconds (2026-09-10). */
-    const generate = async (btn) => {
-      const stop = startBusy(btn.closest("div"), `Rendering ${s.name}`,
-                             "one image, from the words on this card");
-      try {
-        await api(`/api/subjects/${s.id}/generate`, { method: "POST", json: {} });
-        toast(`${s.name} rendered — it is on the card and in Reference.`);
-        refreshCast();
-      } catch (err) {
-        toast(err.message, true);
-      } finally { stop.done(); }
-    };
-    const genBtns = [$("[data-f=gen]", host), $("[data-f=gen2]", host)].filter(Boolean);
-    if (genBlock) {
+  /* Generating. One picture per call — not three, not a grid. It lands
+     PROVISIONAL and the screen re-renders into the pending state, where
+     Accept / Reject is the whole question.
+
+     `startBusy` returns an OBJECT with .done(), not a stop function.
+     This called `stop?.()`, which throws inside the `finally` — so the
+     real error was swallowed, the spinner never cleared, and its elapsed
+     clock kept counting on a request that had already failed. The user
+     read that as a render taking three minutes; the server had answered
+     422 in milliseconds (2026-09-10). */
+  const castGenerate = async (s, host) => {
+    const stop = startBusy($(".cd-frame", host) || $(".cd-strip", host),
+                           `Rendering ${s.name}`,
+                           "one picture, full body, from the words on this screen");
+    try {
+      await api(`/api/subjects/${s.id}/generate`, { method: "POST", json: {} });
+      toast(`${s.name} rendered — accept it or reject it.`);
+      refreshCast();
+    } catch (err) {
+      toast(err.message, true);
+      stop.done();
+    }
+  };
+
+  // Editing the description is the ONLY adjust control the plan allows:
+  // a different result comes from different words, which is why the
+  // button is large rather than a text link.
+  const castEditWords = async (s) => {
+    const v = await askText("The description", "What this looks like", {
+      value: s.description || s.subtitle || "",
+      body: "Physical, not biographical. It is the whole of what a picture "
+          + "is rendered from, over the Bible's rendering language.",
+    });
+    if (v === null) return;
+    try {
+      await api(`/api/subjects/${s.id}`, { method: "PUT",
+                                           json: { description: v.trim() } });
+      refreshCast();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  // Accept locks the picture; Reject clears the frame and re-enables
+  // Generate. Rejected references are quarantined server-side, so no
+  // later stage can attach one to a generation call.
+  const castRule = async (ref, status) => {
+    try {
+      await api(`/api/references/${ref.id}/status`, { method: "POST",
+        json: { status, reason: "RULED ON THE CAST SCREEN" } });
+      toast(status === "APPROVED"
+        ? "Accepted — it is this subject's picture now."
+        : "Rejected. Edit the description and generate again.");
+      refreshCast();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  const castWire = (s, host) => {
+    $("[data-f=back]", host).onclick = () => { castOpen = null; renderCastScreen(); };
+    $("[data-f=edit]", host).onclick = () => castEditWords(s);
+    const photo = $("[data-f=attach]", host);
+    if (photo) photo.onclick = () => photoTrayModal(s, refreshCast);
+  };
+
+  /* §2 — before a picture is accepted. */
+  const renderCastEmpty = (s, pending, refs, ev) => {
+    const host = $("#cast-screen");
+    const block = castGenBlock(s);
+    const shot = pending
+      ? `/api/references/${encodeURIComponent(pending.id)}/image?size=md` : "";
+    host.innerHTML = `
+      ${castHead(s, ev, pending ? "AWAITING YOUR VERDICT" : "NO PICTURE")}
+      <div class="cast-detail" data-kind="${esc(s.kind)}" data-state="empty">
+        <div>
+          <div class="cd-frame${pending ? " has" : ""}"
+               style="${shot ? `background-image:url('${shot}')` : ""}">
+            <span class="cd-kick cd-frame-kick">FULL BODY</span>
+            <button type="button" class="cd-expand" data-f="expand"
+              ${pending ? "" : `disabled title="Nothing to expand yet"`}
+              aria-label="Expand">&#10530;</button>
+            ${pending ? "" : `<div class="cd-frame-acts">
+              <button type="button" class="primary" data-f="gen">Generate</button>
+              <button type="button" class="ghost" data-f="attach">Attach</button>
+            </div>`}
+          </div>
+          <div class="cd-verdict">
+            <button type="button" class="ghost" data-f="accept"
+              ${pending ? "" : "disabled"}>Accept</button>
+            <button type="button" class="ghost" data-f="reject"
+              ${pending ? "" : "disabled"}>Reject</button>
+          </div>
+          ${pending
+            ? `<p class="cd-spend">Accept locks this as the subject's picture.
+                 Reject clears the frame &mdash; edit the description and
+                 generate again.</p>`
+            : block
+              ? `<p class="cd-spend cd-blocked">${block.why}
+                   ${block.go ? `<button type="button" class="text-act"
+                     data-f="gen-go">${esc(block.act)} &nearr;</button>` : ""}</p>`
+              : `<p class="cd-spend">Generate makes ONE full-body picture from the
+                   description, under the Bible &mdash; it spends a render.</p>`}
+        </div>
+        <div>${castWords(s, ev)}</div>
+      </div>`;
+    castWire(s, host);
+    const gen = $("[data-f=gen]", host);
+    if (gen) {
       // Canon: a gate reads as state BEFORE it is hit, never as an error
       // after. Both of these are knowable here, and the server refuses on
-      // exactly them — so refusing after a press was the app declining to
-      // say what it already knew.
-      genBtns.forEach(b => { b.disabled = true; b.title = genBlock.why; });
-    } else {
-      genBtns.forEach(b => { b.onclick = e => generate(e.currentTarget); });
+      // exactly them.
+      if (block) { gen.disabled = true; gen.title = block.why.replace(/&mdash;/g, "—"); }
+      else gen.onclick = () => castGenerate(s, host);
     }
-    // A stated gate links to where it is resolved.
     const goFix = $("[data-f=gen-go]", host);
     if (goFix) goFix.onclick = () => {
       closeCast();
       $('.panel.step[data-step="4"]')?.scrollIntoView({ behavior: "smooth",
                                                         block: "start" });
     };
-    $("[data-f=edit]", host).onclick = async () => {
-      const v = await askText("The profile", "Who this is", {
-        value: s.description || s.subtitle || "",
-        body: "It rides in every prompt this subject appears in, and it is "
-            + "what a generated reference is rendered from.",
-      });
-      if (v === null) return;
-      try {
-        await api(`/api/subjects/${s.id}`, { method: "PUT", json: { description: v.trim() } });
-        renderCastScreen();
-      } catch (err) { toast(err.message, true); }
-    };
+    if (pending) {
+      $("[data-f=accept]", host).onclick = () => castRule(pending, "APPROVED");
+      $("[data-f=reject]", host).onclick = () => castRule(pending, "REJECTED");
+      $("[data-f=expand]", host).onclick = () => openLightbox([{
+        src: `/api/references/${encodeURIComponent(pending.id)}/image`,
+        caption: `${s.name.toUpperCase()} — AWAITING YOUR VERDICT` }]);
+      $(".cd-frame", host).onclick = e => {
+        if (e.target.closest("button")) return;
+        $("[data-f=expand]", host).click();
+      };
+    }
+  };
+
+  /* §3 — after a picture is accepted (`cast-5a-detail.png`). The picture
+     is the largest thing on the screen, at the subject's own ratio;
+     alternates are a filmstrip directly beneath it, ending in a dashed
+     GENERATE ANOTHER slot, and the specification sits beside and below
+     the image — never above it.
+
+     An alternate keeps the description and rerolls the frame only — the
+     strip says so, because "another" could otherwise read as another
+     character. */
+  const renderCastAccepted = (s, ok, refs, ev) => {
+    const host = $("#cast-screen");
+    const block = castGenBlock(s);
+    const role = SUBJECT_ROLE_OF[s.kind] || "REFERENCE";
+    host.innerHTML = `
+      ${castHead(s, ev, "", role.replaceAll("_", " "))}
+      <div class="cast-detail" data-kind="${esc(s.kind)}" data-state="cast">
+        <div>
+          <span class="cd-hero" data-f="hero" style="${castShot(ok[0])}"></span>
+          <div class="cd-strip">
+            ${ok.map((r, i) => `<button type="button" class="cd-alt${i ? "" : " on"}"
+                data-i="${i}" style="${castShot(r)}" title="${esc(r.id)}"></button>`).join("")}
+            <button type="button" class="cd-more" data-f="gen"
+              title="Rerolls the picture from the SAME description — it spends a render.">GENERATE<br>ANOTHER</button>
+          </div>
+          <p class="cd-spend">An alternate keeps the description and rerolls the
+            frame only.</p>
+        </div>
+        <div>
+          <p class="cd-kick">WHO THIS IS</p>
+          <p class="cd-desc">${s.description ? esc(s.description)
+            : s.subtitle ? esc(s.subtitle)
+            : `<span class="cd-nodesc">No description yet.</span>`}</p>
+          <p class="cd-kick cd-kick2">WHAT RIDES EVERY PROMPT</p>
+          ${(s.traits || []).length
+            ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
+            : `<p class="cd-nodesc">Nothing beyond the description above.</p>`}
+          <div class="cd-facts">
+            <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn(s)}</span></div>
+            <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
+          </div>
+          <div class="cd-acts">
+            <button type="button" class="ghost" data-f="attach">Attach a photograph</button>
+            <button type="button" class="ghost" data-f="edit">Edit the description</button>
+          </div>
+        </div>
+      </div>`;
+    castWire(s, host);
+    $$(".cd-alt", host).forEach(b => b.onclick = () => {
+      $$(".cd-alt", host).forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+      $("[data-f=hero]", host).style.cssText = castShot(ok[+b.dataset.i]);
+    });
+    $("[data-f=hero]", host).onclick = () => openLightbox(ok.map(r => ({
+      src: `/api/references/${encodeURIComponent(r.id)}/image`,
+      caption: `${s.name.toUpperCase()} — ${r.role}` })),
+      +($(".cd-alt.on", host)?.dataset.i || 0));
+    const more = $("[data-f=gen]", host);
+    if (block) { more.disabled = true; more.title = block.why.replace(/&mdash;/g, "—"); }
+    else more.onclick = () => castGenerate(s, host);
   };
 
   const renderCastScreen = async () => {
@@ -6275,8 +6441,10 @@ async function renderWizard() {
     ]);
     const uncast = uncastRecommendations(subjects);
     const open = castOpen && subjects.find(x => x.id === castOpen);
-    if (open) renderCastDetail(open, refs);
-    else renderCastRoster(subjects, refs, uncast);
+    if (open) return renderCastDetail(open, refs);
+    // One screenplay walk for the whole roster, not one per card.
+    const scenes = await api("/api/subjects/scenes").catch(() => ({}));
+    renderCastRoster(subjects, refs, uncast, scenes);
   };
 
   const renderSubjectGrid = async () => {

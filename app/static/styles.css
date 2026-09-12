@@ -850,9 +850,9 @@ label.check {
    letterboxed into the other shape. */
 .cast-kick { display: flex; align-items: baseline; gap: 10px;
   margin: 18px 0 8px; }
-.cast-kick b { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+.cast-kick b { font-family: var(--mono); font-size: 12px; letter-spacing: .12em;
   color: var(--ink-dim); font-weight: 400; }
-.cast-kick span { font-family: var(--mono); font-size: 9.5px;
+.cast-kick span { font-family: var(--mono); font-size: 12px;
   letter-spacing: .1em; color: var(--ink-faint); }
 .cast-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px; }
@@ -869,32 +869,107 @@ label.check {
   var(--field) 0 6px, var(--bg) 6px 12px); }
 .cast-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
   color: var(--ink); }
-.cast-sub { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); }
-.cast-scenes { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+.cast-sub { font-family: var(--sans); font-size: 13.5px; color: var(--ink-dim); }
+.cast-scenes { font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
   color: var(--ink-faint); }
 /* Uncast have no picture, so a list is the honest shape for them. */
 .cast-uncast { margin-top: 22px; padding-top: 14px;
   border-top: 1px solid var(--line-soft); }
 .cast-unrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
-.cast-unrow > b { font-family: var(--mono); font-size: 9.5px;
+.cast-unrow > b { font-family: var(--mono); font-size: 12px;
   letter-spacing: .1em; color: var(--ink-faint); font-weight: 400;
   min-width: 78px; }
 .cast-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim);
   border: 1px dashed var(--line); background: none; padding: 5px 10px;
   cursor: pointer; }
 .cast-chip:hover { color: var(--ink); border-color: var(--ink-faint); }
-/* The detail screen. */
+/* The plan's floor is 12px on BOTH cast screens. `.wiz-group-label` and
+   `.cost` are app-wide Courier labels at 9.5px; raising them everywhere
+   is a type pass this plan does not authorize, so the floor is stated
+   here, scoped to this host, and the app-wide drift stays on the list. */
+#cast-screen .wiz-group-label,
+#cast-screen .cost,
+#cast-screen .text-act { font-size: 12px; }
+
+/* UNCANONIZED — 2026-09-12 — the subject's own screen (CAST_CHARACTER plan)
+   Two states, one grid. EMPTY leads with a dashed 9:16 frame in a narrow
+   280px column, because the column is a placeholder and a placeholder
+   should not out-measure the words beside it. CAST widens the column
+   instead: once a picture exists it is the largest thing on the screen.
+   Nothing here goes below 12px — the plan's floor, and the reason every
+   kicker on this surface is one size rather than the 9.5px the rest of
+   the cast screen used. */
+.cd-head { display: flex; align-items: baseline; gap: 14px; margin: 0 0 20px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); }
+.cd-name { font-family: var(--sans); font-size: 24px; font-weight: 700;
+  color: var(--ink); margin: 0; letter-spacing: -.01em; }
+.cd-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .12em;
+  color: var(--ink-faint); }
+.cd-head-gap { flex: 1; }
+/* The one amber thing on the empty screen: it is what the screen is for. */
+.cd-mark { font-family: var(--mono); font-size: 12px; letter-spacing: .12em;
+  color: var(--accent); }
 .cast-detail { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
-  gap: 26px; align-items: start; }
-@media (max-width: 1000px) { .cast-detail { grid-template-columns: 1fr; } }
-.cd-hero { display: flex; align-items: center; justify-content: center;
-  width: 100%; aspect-ratio: .8; background: var(--field);
-  border: 1px solid var(--line-soft); background-size: cover;
-  background-position: center; padding: 24px; }
-.cd-hero.none { background: repeating-linear-gradient(135deg,
-  var(--field) 0 6px, var(--bg) 6px 12px); }
-.cd-empty { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  line-height: 1.8; color: var(--ink-faint); text-align: center; max-width: 34ch; }
+  gap: 30px; align-items: start; }
+/* EMPTY narrows to the plan's 280px: the column is a placeholder, and a
+   placeholder should not out-measure the words beside it. CAST keeps the
+   380px the designer ruled on 2026-08-29 — 560 was a number of my own
+   choosing, and a 1:1.25 portrait at 560 leaves the specification ending
+   a third of the way down the page. */
+.cast-detail[data-state="empty"] { grid-template-columns: 280px minmax(0, 1fr); }
+@media (max-width: 1000px) {
+  .cast-detail,
+  .cast-detail[data-state="empty"] { grid-template-columns: 1fr; }
+}
+/* The frame. 9:16 because a character renders full body, head to foot. */
+.cd-frame { position: relative; width: 100%; aspect-ratio: .5625;
+  border: 1px dashed var(--line); background: var(--field);
+  background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center; }
+.cd-frame.has { border-style: solid; cursor: zoom-in; }
+.cast-detail[data-kind="VEHICLE"] .cd-frame,
+.cast-detail[data-kind="PROP"] .cd-frame { aspect-ratio: 1.7778; }
+/* The kicker sits ON the picture once one exists, so it carries its own
+   ground rather than trusting the render to be dark behind it. */
+.cd-frame-kick { position: absolute; top: 10px; left: 12px;
+  text-shadow: 0 1px 3px var(--ground); }
+.cd-expand { position: absolute; top: 8px; right: 10px; background: none;
+  border: 0; color: var(--ink-faint); font-size: 15px; cursor: pointer;
+  line-height: 1; padding: 2px 4px; }
+.cd-expand:hover:not(:disabled) { color: var(--ink); }
+.cd-expand:disabled { opacity: .4; cursor: default; }
+.cd-frame-acts { display: flex; flex-direction: column; align-items: center;
+  gap: 10px; }
+.cd-frame-acts > button { min-width: 90px; }
+.cd-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-top: 12px; }
+.cd-verdict > button { width: 100%; }
+/* Kickers on this surface, at the plan's 12px floor. */
+.cd-kick { font-family: var(--mono); font-size: 12px; letter-spacing: .12em;
+  color: var(--ink-faint); margin: 0 0 10px; font-weight: 400; }
+.cd-kick2 { margin-top: 26px; }
+.cd-titlerow { display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; margin-bottom: 4px; }
+.cd-titlerow .cd-kick { margin: 0; }
+/* Large on purpose: editing the description is the ONLY way to change a
+   result, so it cannot read as a footnote. */
+.cd-edit { font-size: 15px; padding: 10px 16px; border-color: var(--ink-faint);
+  color: var(--ink); }
+.cd-desc { font-family: var(--sans); font-size: 16px; line-height: 1.6;
+  color: var(--ink); margin: 10px 0 0; max-width: 78ch; }
+.cd-nodesc { font-family: var(--sans); font-size: 13.5px; line-height: 1.6;
+  color: var(--ink-faint); }
+/* Provenance: the page ref in Courier, the line verbatim in italic, and a
+   rule marking it as quoted rather than written by this app. */
+.cd-quote { display: flex; gap: 22px; align-items: baseline;
+  border-left: 1px solid var(--line); padding: 5px 0 5px 14px; margin: 8px 0; }
+.cd-quote > .cd-page { font-family: var(--mono); font-size: 12px;
+  letter-spacing: .1em; color: var(--ink-faint); flex: none; min-width: 5ch; }
+.cd-quote > i { font-family: var(--sans); font-size: 14px; line-height: 1.6;
+  font-style: italic; color: var(--ink-dim); }
+.cd-hero { display: block; width: 100%; aspect-ratio: .8;
+  background: var(--field); border: 1px solid var(--line-soft);
+  background-size: cover; background-position: center; cursor: zoom-in; }
 .cast-detail[data-kind="VEHICLE"] .cd-hero,
 .cast-detail[data-kind="PROP"] .cd-hero { aspect-ratio: 1.85; }
 .cd-strip { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -904,21 +979,17 @@ label.check {
 .cd-alt.on { border-color: var(--accent); }
 .cd-more { width: 76px; aspect-ratio: .8; border: 1px dashed var(--line);
   background: none; color: var(--ink-faint); font-family: var(--mono);
-  font-size: 9px; letter-spacing: .1em; cursor: pointer; }
-.cd-lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
-  color: var(--ink-faint); margin: 0 0 4px; }
-.cd-who { font-family: var(--sans); font-size: 15.5px; line-height: 1.6;
-  color: var(--ink); margin: 0 0 18px; }
+  font-size: 12px; letter-spacing: .06em; cursor: pointer; }
 .cd-trait { font-family: var(--sans); font-size: 13.5px; color: var(--ink-dim);
   border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 5px 0; }
-.cd-facts { margin: 18px 0 0; padding-top: 14px;
+.cd-facts { margin: 22px 0 0; padding-top: 16px;
   border-top: 1px solid var(--line-soft); }
-.cd-fact { display: flex; gap: 20px; margin: 5px 0; }
-.cd-fact > b { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+.cd-fact { display: flex; gap: 20px; margin: 6px 0; }
+.cd-fact > b { font-family: var(--mono); font-size: 12px; letter-spacing: .12em;
   color: var(--ink-faint); font-weight: 400; min-width: 120px; }
-.cd-fact > span { font-family: var(--mono); font-size: 10px;
+.cd-fact > span { font-family: var(--mono); font-size: 12px;
   letter-spacing: .08em; color: var(--ink-dim); }
-.cd-acts { display: flex; gap: 10px; margin-top: 18px; }
+.cd-acts { display: flex; gap: 10px; margin-top: 20px; }
 .cast-back { margin-right: 12px; }
 /* UNCANONIZED — 2026-08-31 — the stage while a read is running */
 /* Driven by an attribute on <body>, set BEFORE the view renders.
@@ -1434,19 +1505,20 @@ details.meta pre {
 /* GENERATE ANOTHER closes the filmstrip, dashed, because it is the one
    slot that has no picture in it yet. */
 .cd-more { border: 1px dashed var(--line); background: none;
-  color: var(--ink-faint); font-family: var(--mono); font-size: 8.5px;
-  letter-spacing: .1em; line-height: 1.5; cursor: pointer; }
+  color: var(--ink-faint); font-family: var(--mono); font-size: 12px;
+  letter-spacing: .04em; line-height: 1.4; cursor: pointer; }
 .cd-more:hover { border-color: var(--ink-dim); color: var(--ink-dim); }
 /* A render is money, so the cost is stated beside the button, never
    discovered after it. */
-.cd-spend { margin-top: 7px; color: var(--ink-faint); }
+.cd-spend { margin: 10px 0 0; color: var(--ink-faint);
+  font-family: var(--sans); font-size: 12.5px; line-height: 1.55; }
 /* A stated gate, where the cost line sits when the act is available. It
    is --hold, not --bad: nothing has failed, something is not ready. */
 .cd-blocked { color: var(--ink-dim); border-left: 2px solid var(--hold);
   padding-left: 10px; }
 .cd-blocked .text-act { margin-left: 6px; }
 /* A fact that is not knowable yet says what would make it knowable. */
-.cd-none { font-style: normal; font-size: 9.5px; letter-spacing: .1em;
+.cd-none { font-style: normal; font-size: 12px; letter-spacing: .08em;
   color: var(--ink-faint); }
 
 /* UNCANONIZED — 2026-08-31 — the subjects rail (§3.3) */

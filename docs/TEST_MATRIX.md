@@ -24,18 +24,18 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2703 tests** across 137 files.
+**2745 tests** across 138 files.
 
 
-## Product app — 2482 tests in 120 files
+## Product app — 2524 tests in 121 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_a_pass_does_not_outlive_its_key.py` | 9 | A stored test result must not outlive the credential it tested. |
 | `test_a_read_names_the_draft_it_read.py` | 12 | A read names the draft it read, and a stage does not retract itself. |
-| `test_a_subject_has_a_profile_and_two_doors.py` | 51 | A subject carries a profile, and two ways to get a picture. |
+| `test_a_subject_has_a_profile_and_two_doors.py` | 54 | A subject carries a profile, and two ways to get a picture. |
 | `test_add_panel.py` | 8 | Add a panel from the panels workbench (user 2026-08-09). |
-| `test_anchor_consolidation.py` | 160 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
+| `test_anchor_consolidation.py` | 161 | One question per anchor (user 2026-08-16: "we now have duplicative entries and we should consolidate"). |
 | `test_anchors_stay_in_step.py` | 32 | Regression, user-hit 2026-08-22 and reproduced from the install. |
 | `test_app_api.py` | 28 | Functional pass over the app's API surface via TestClient: the cloud auth gate, the projects lifecycle, and healthz — all against a throwaway home so  |
 | `test_approval_snapshot.py` | 26 | One breakdown, per-panel gates — the foundation (user rulings 2026-08-16). |
@@ -141,6 +141,7 @@ temp home and external services are faked.
 | `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
 | `test_the_anchor_row_shows_what_was_chosen.py` | 43 | The anchor cards wear the look they were set to. |
+| `test_the_character_screen_asks_for_a_verdict.py` | 38 | A character's own screen, and the verdict it asks for. |
 | `test_the_findings_read_in_order.py` | 19 | The findings show what the read found, not just how much of it. |
 | `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |
 | `test_the_read_is_paced_and_the_logline_leads.py` | 27 | The read stops pretending to take a minute, and the logline leads. |

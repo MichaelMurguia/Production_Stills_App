@@ -203,3 +203,36 @@ delta as new instructions.
   the plan cites, so the build came from the PNG mocks and the plan text;
   both mocks are kept in `design_mocks/`. The zip is deleted.
 
+
+- **CAST_CHARACTER_SCREEN_2026-09-12.md** — delivered in
+  `design_handoff/Cast-character.zip`, implemented 2026-09-12. Extracted
+  to scratch and never copied into the tree, so there is no file to
+  delete; this row exists so a folder re-sync cannot resurrect it.
+
+  Built: §2 whole — the empty character screen, its 9:16 dashed frame,
+  `FULL BODY`, the expand glyph, Generate over Attach, Accept / Reject,
+  the description with its large edit button, and the verbatim screenplay
+  lines with page refs. The generation contract with it: one picture per
+  call, full body at 9:16, prompt = the Bible plus the description, the
+  result held PROVISIONAL until Accept. §1's deltas: `n SCENES` on the
+  roster card, casting in one gesture from a chip or the manual row, and
+  the 12px type floor across both screens. §3 kept its 2026-08-29
+  proportions and gained the header's role suffix.
+
+  **Two items deliberately NOT built, both raised rather than decided:**
+
+  1. §2 says the face crop and the card thumbnail are "derived from the
+     accepted full-body image server-side". They are not derived. The
+     roster card shows the same 9:16 plate in its 1:1.25 slot under
+     `background-size: cover`, which crops to the CENTRE of the body —
+     so a character's card is a torso, not a face. Deriving a face crop
+     needs a face detector or a second render, and the plan does not say
+     which.
+  2. §1 says a chip casts in one gesture; the ribbon's tiles still open
+     the casting modal, because the user put them there on 2026-09-10
+     ("you don't have to open the full cast") and this plan does not
+     cover the ribbon. Two casting doors now reach two components.
+
+  §3's `1.85:1` for a vehicle or prop and §3.3's 120px environment thumb
+  are unchanged by this plan; the environment question above is still
+  open.

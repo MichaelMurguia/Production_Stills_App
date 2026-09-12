@@ -1545,40 +1545,60 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         self.assertIn('persistForm("blankSpecDraft"', JS)
 
 
-class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
+class EveryDoorIntoCastingIsOneGesture(unittest.TestCase):
     """Finishing the casting modal. Three doors existed — the proposal
     card's `Cast`, a cast card's `+`, and the manual `+ Cast` row — and
     the manual one still wrote the card on click and then fired a file
     picker whose selector had already gone stale, so it silently did
-    nothing at all."""
+    nothing at all.
 
-    def test_the_manual_row_opens_the_modal(self):
+    CAST_CHARACTER_SCREEN (2026-09-12) changed which component the ROSTER
+    doors reach. The rule they were consolidated onto was "one way to
+    cast, whichever door you came in by"; the plan keeps that and moves
+    the way: a chip or the manual field CASTS and lands on the empty
+    detail screen, one gesture, because the modal asked for a name, a
+    role line and a profile that the read already supplied and that §2's
+    screen now edits in place.
+
+    The ribbon's tiles still open the modal. That is where the user put
+    them on 2026-09-10 — "you don't have to open the full cast" — and
+    this plan does not cover the ribbon."""
+
+    def test_the_manual_row_casts_and_opens_the_screen(self):
         """The stage's own manual row is gone (§3.4, 2026-08-31): it was a
         SECOND uncast list with a SECOND add row, on a different surface
         from the one the mock puts them on. The surviving row is the cast
-        screen's, and the rule under test is unchanged — it opens the
-        modal rather than writing a card on click."""
+        screen's, and it goes through the same path the chips do."""
         i = JS.index('$("#cast-add", host).onclick')
         seg = JS[i:i + 500]
-        self.assertIn("castModal({ name", seg)
+        self.assertIn("castInto({ name", seg)
         self.assertNotIn('api("/api/subjects", { method: "POST"', seg,
-                         "it no longer writes on click")
+                         "it does not write the card itself")
         self.assertNotIn("wiz-subj-add", JS, "the duplicate door is gone")
 
     def test_the_stale_picker_selector_is_gone(self):
         self.assertNotIn("[data-f=up]", JS,
                          "the input it reached for no longer exists")
 
-    def test_the_uncast_chip_opens_it_too(self):
+    def test_the_uncast_chip_takes_the_same_path(self):
         """The door most likely to be used. It is the cast screen's chip
         now — the stage's copy of the same list retired with the block it
         sat in."""
         i = JS.index('$$("[data-uncast]", host).forEach')
-        # It hands over the READ's record now, not a blank rebuilt from
-        # the chip's data attributes (2026-09-11) — the modal opened empty
-        # and cast cards with nothing on them.
-        self.assertIn("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects)",
+        # It hands over the READ's record, not a blank rebuilt from the
+        # chip's data attributes (2026-09-11) — that cast cards with
+        # nothing on them.
+        self.assertIn("castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects))",
                       JS[i:i + 300])
+
+    def test_one_gesture_means_the_screen_is_already_open(self):
+        """Casting and then hunting for the card is two gestures with a
+        search in the middle."""
+        i = JS.index("const castInto = async (rec) => {")
+        seg = JS[i:JS.index(chr(10) + "    };", i)]
+        self.assertIn("castOne(rec)", seg)
+        self.assertIn("castOpen = made.id", seg)
+        self.assertIn('document.body.dataset.cast = "1"', seg)
 
     def test_every_door_reaches_one_component(self):
         """One way to cast, whichever door you came in by (2026-08-16).
@@ -1588,13 +1608,13 @@ class EveryDoorIntoCastingIsTheModal(unittest.TestCase):
         both go through the same modal rather than writing a card
         themselves. Its photograph button goes to the same chooser the
         subject card already opens."""
-        # Five, not six: the stage's duplicate manual row retired with
-        # the uncast list it belonged to (§3.4, 2026-08-31). No way of
-        # casting was lost — bulk casting moved onto the surviving list.
-        # Five: the ribbon's uncast tile became a fourth caller when step
-        # 03 stopped being a preview and started acting (2026-09-01).
-        self.assertEqual(JS.count("castModal("), 5,
-                         "one definition, four callers")
+        # Three: the definition, the ribbon's uncast tile (2026-09-01)
+        # and the proposal card's Cast. The roster's two doors left for
+        # `castInto` with CAST_CHARACTER_SCREEN; no way of casting was
+        # lost, and all four still end at `castOne`.
+        self.assertEqual(JS.count("castModal("), 3,
+                         "one definition, two callers")
+        self.assertEqual(JS.count("const castInto = async (rec) => {"), 1)
         self.assertIn("castOne(u)", JS, "bulk casting survived the move")
         self.assertEqual(JS.count("photoTrayModal("), 3,
                          "one definition, two callers")

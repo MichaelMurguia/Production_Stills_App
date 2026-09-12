@@ -956,6 +956,167 @@ SCREENPLAY_GRAMMAR = frozenset({
 })
 
 
+# Cue lines and action lines read differently, and only one of them is
+# the character SAYING something. A cue is the name alone on its line.
+# A word boundary, built from a character code rather than written as
+# an escape.
+#
+# Written as backslash-b inside a NON-raw string it becomes the ASCII
+# backspace, 0x08. That compiles, matches nothing, and prints as an
+# invisible control character — it ate the r-prefix in every listing
+# I checked, so the source looked right while every subject came back
+# with zero scenes. tests/test_no_control_bytes.py catches the byte;
+# this spells it so the fix cannot reintroduce it.
+WORD_EDGE = chr(92) + "b"
+
+_CUE_RE = re.compile(r"^[A-Z0-9 .'\-]{2,38}(\s*\(.*\))?$")
+
+
+def subject_evidence(name: str, quotes: int = 3) -> dict:
+    """Where the screenplay puts this subject, and the lines it says it in.
+
+    CAST_CHARACTER_SCREEN §2 asks the character screen for the verbatim
+    lines the scan pulled the character from, each with its page. Nothing
+    here is inferred and nothing costs a model call: it is the same
+    slugline walk the coverage table uses, plus a word-boundary match on
+    the name, plus the page sidecar.
+
+    A quote is an ACTION line that names the subject — what the script
+    says it LOOKS like. A cue line is the character about to speak, which
+    is not a description of anything, so cues are counted for the scene
+    tally and never quoted.
+    """
+    text = screenplay_text()
+    nm = str(name or "").strip()
+    out = {"name": nm, "scenes": 0, "quotes": []}
+    if not text.strip() or len(nm) < 2:
+        return out
+
+    from . import bible, store
+    # A screenplay writes "Harlow", not "HARLOW DECKER", after the first
+    # introduction — and "COLONEL VANN OKAFOR" is Vann, never every
+    # colonel. `bible._name_tokens` already strips ranks for exactly this,
+    # so the same rule identifies a subject here as identifies them in a
+    # Bible line; a second one would drift.
+    toks = bible._name_tokens(nm) or [nm.lower()]
+    caps = re.compile(WORD_EDGE + "(" + "|".join(re.escape(t.upper()) for t in toks)
+                      + ")" + WORD_EDGE)
+    hit = re.compile(WORD_EDGE + "(" + "|".join(re.escape(t) for t in toks)
+                     + ")" + WORD_EDGE, re.I)
+    lines, offs, pos = text.splitlines(), [], 0
+    for ln in lines:
+        offs.append(pos)
+        pos += len(ln) + 1
+
+    # A quote is a WINDOW around the match, not a line and not a
+    # paragraph.
+    #
+    # A line is half a sentence: PDF extraction wraps prose at the page's
+    # column, so a character's introduction arrives as "...HARLOW" /
+    # "DECKER - late twenties, wiry". A paragraph would be right, except
+    # this extraction has ONE blank line in 1,399 — pypdf drops them — so
+    # "the paragraph" is the entire scene, and every subject came back
+    # quoting the same opening block.
+    #
+    # So: the matching line plus the next two, stopped at the next scene
+    # or cue, trimmed to where a sentence ends.
+    scene, seen_scenes, picked = 0, set(), []
+    scene_of = []
+    for raw in lines:
+        if _SLUG_RE.match(raw.strip()):
+            scene += 1
+        scene_of.append(scene)
+    scene = 0
+
+    def window(i2):
+        out2 = []
+        for j in range(i2, min(i2 + 3, len(lines))):
+            st = lines[j].strip()
+            if not st or (j > i2 and (_SLUG_RE.match(st)
+                                      or (len(st) <= 38 and _CUE_RE.match(st)))):
+                break
+            out2.append(st)
+        joined = re.sub(r"\s+", " ", " ".join(out2)).strip()
+        # End on a sentence if one ends in range; a quote cut mid-clause
+        # reads as a transcription error rather than a quotation.
+        cut = max(joined.rfind(". "), joined.rfind("! "), joined.rfind("? "))
+        return joined[:cut + 1] if cut > 60 else joined
+
+    for i2, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not stripped or _SLUG_RE.match(stripped) or not hit.search(stripped):
+            continue
+        seen_scenes.add(scene_of[i2])
+        # A cue is the name alone above dialogue — not a description of
+        # anything — so it counts for the scene and is never quoted.
+        if len(stripped) <= 38 and _CUE_RE.match(stripped):
+            continue
+        q = window(i2)
+        # A wrapped line matches again on its continuation, so the same
+        # sentence arrives twice starting one line later. One quote per
+        # sentence: skip a match that the previous window already covered.
+        if picked and offs[i2] < picked[-1]["_end"]:
+            continue
+        if len(q) > 40:
+            picked.append({"page": store.page_of(offs[i2]), "line": q[:240],
+                           "scene": scene_of[i2],
+                           # A screenplay introduces a character in CAPS,
+                           # and the introduction is the description.
+                           "_intro": bool(caps.search(q)), "_at": offs[i2],
+                           "_end": offs[i2] + len(q)})
+
+    out["scenes"] = len(seen_scenes)
+    # Introductions first, then in page order; the shape the screen wants
+    # is "who is this", and the script answers that where it names them.
+    picked.sort(key=lambda q: (not q["_intro"], q["_at"]))
+    out["quotes"] = [{k: v for k, v in q.items() if not k.startswith("_")}
+                     for q in picked[:quotes]]
+    return out
+
+
+def subject_scene_counts(names: list[str]) -> dict:
+    """How many scenes each of these names is in — one walk, not N.
+
+    The roster (CAST_CHARACTER_SCREEN §1) prints `n SCENES` under every
+    card. Asking `subject_evidence` per card would re-read and re-split
+    the whole screenplay once per subject; this splits it once and matches
+    every name against each line. Same tokens, same slugline walk, same
+    answer as the single-subject call's `scenes` — deliberately, so the
+    roster and the detail header can never disagree.
+    """
+    text = screenplay_text()
+    out = {str(n): 0 for n in names}
+    if not text.strip():
+        return out
+
+    from . import bible
+    pats = {}
+    for n in names:
+        nm = str(n).strip()
+        if len(nm) < 2:
+            continue
+        toks = bible._name_tokens(nm) or [nm.lower()]
+        pats[str(n)] = re.compile(
+            WORD_EDGE + "(" + "|".join(re.escape(t) for t in toks) + ")"
+            + WORD_EDGE, re.I)
+
+    seen = {k: set() for k in pats}
+    scene = 0
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        if _SLUG_RE.match(stripped):
+            scene += 1
+            continue
+        for k, rx in pats.items():
+            if rx.search(stripped):
+                seen[k].add(scene)
+    for k, v in seen.items():
+        out[k] = len(v)
+    return out
+
+
 def screenplay_digest(max_scenes: int = 400) -> dict:
     """The deterministic read, scene by scene, with what each scene gave
     up — for the reading surface that runs while the model works.

@@ -101,26 +101,35 @@ class TheProfileIsItsOwnField(_Home):
         self.assertIn('body.get("description", "")', seg)
 
     def test_the_detail_shows_the_profile_and_falls_back_to_the_role(self):
-        i = JS.index('<p class="cd-lab">WHO THIS IS</p>')
+        i = JS.index('<p class="cd-kick">WHO THIS IS</p>')
         seg = JS[i:i + 700]
         self.assertIn("s.description ? esc(s.description)", seg)
         self.assertIn("s.subtitle ? esc(s.subtitle)", seg)
 
     def test_editing_writes_the_profile_not_the_role(self):
-        i = JS.index('await askText("The profile"')
+        i = JS.index('await askText("The description"')
         seg = JS[i:i + 700]
         self.assertIn('json: { description: v.trim() }', seg)
         self.assertNotIn("subtitle: v.trim()", seg)
 
 
 class GeneratingLandsWhereUploadingLands(_Home):
-    def test_it_makes_an_approved_reference_with_the_subjects_role(self):
+    def test_it_makes_a_pending_reference_with_the_subjects_role(self):
+        """It lands where the upload lands EXCEPT for the verdict.
+
+        Until 2026-09-12 it was approved on arrival, on the 2026-08-18
+        reading that asking for it IS the review. That was true of a
+        supplied plate — the user had already seen the picture — and
+        false of a render, which nobody has seen when the call returns.
+        CAST_CHARACTER_SCREEN §2 puts Accept / Reject under the frame, so
+        it arrives PROVISIONAL and the screen asks."""
         self.bible()
         s = self.subject(description="Dark hair, mid-thirties.")
         out = generate.subject_portrait(s["id"], "mock")
         ref = next(r for r in store.list_references() if r["id"] == out["reference"])
         self.assertEqual(ref["role"], "CHARACTER_LIKENESS — RYNA SOKOL")
-        self.assertEqual(ref["status"], "APPROVED")
+        self.assertEqual(ref["status"], "PROVISIONAL")
+        self.assertEqual(out["status"], "PROVISIONAL")
 
     def test_it_links_the_reference_to_the_card(self):
         self.bible()
@@ -128,21 +137,40 @@ class GeneratingLandsWhereUploadingLands(_Home):
         out = generate.subject_portrait(s["id"], "mock")
         self.assertIn(out["reference"], store.get_subject(s["id"])["ref_ids"])
 
-    def test_it_renders_in_the_shape_the_subject_is_shown_in(self):
-        """§3.4: "at the subject's own ratio — 1:1.25 for a character,
-        1.85:1 for a vehicle or a prop, and never letterboxed into the
-        other shape." Rendering 16:9 into a 1:1.25 frame is letterboxing
-        by another route."""
+    def test_it_renders_in_the_shape_the_frame_draws(self):
+        """CAST_CHARACTER_SCREEN §2's generation contract: "Full body,
+        head to foot, neutral stance, flat grey ground, 9:16." The card
+        thumbnail and the face crop are derived from that body shot, so
+        there is ONE picture of a character rather than a portrait and a
+        body shot that disagree. A vehicle or a prop keeps 1.85:1 —
+        rendering 16:9 into a 1:1.25 frame is letterboxing by another
+        route."""
         self.bible()
         c = self.subject(name="A", description="x")
         v = self.subject(name="B", kind="VEHICLE", description="x")
-        self.assertEqual(generate.subject_portrait(c["id"], "mock")["aspect_ratio"], "4:5")
+        self.assertEqual(generate.subject_portrait(c["id"], "mock")["aspect_ratio"], "9:16")
         self.assertEqual(generate.subject_portrait(v["id"], "mock")["aspect_ratio"], "16:9")
 
+    def test_the_prompt_asks_for_the_whole_body(self):
+        """An aspect ratio alone gets a tall crop of a face."""
+        self.bible()
+        s = self.subject(description="Dark hair.")
+        seen = {}
+        was = generate.mockflow.render
+        try:
+            generate.mockflow.render = lambda p, r, sz, a, o: (
+                seen.setdefault("p", p), was(p, r, sz, a, o))[1]
+            generate.subject_portrait(s["id"], "mock")
+        finally:
+            generate.mockflow.render = was
+        self.assertIn("Full body, head to foot", seen["p"])
+
     def test_the_ratios_match_what_the_screen_draws(self):
-        self.assertEqual(generate.SUBJECT_ASPECT["CHARACTER"], "4:5")
-        b = CSS.split(NL + ".cd-hero {")[1].split("}")[0] if NL + ".cd-hero {" in CSS else ""
-        self.assertTrue(b or ".cast-shot" in CSS)
+        self.assertEqual(generate.SUBJECT_ASPECT["CHARACTER"], "9:16")
+        # 9:16 is 0.5625 as a CSS aspect-ratio, and the frame is the slot
+        # the render lands in — a mismatch here letterboxes on arrival.
+        b = CSS.split(NL + ".cd-frame {")[1].split("}")[0]
+        self.assertIn("aspect-ratio: .5625", b)
 
 
 class ItRefusesRatherThanInventing(_Home):
@@ -190,7 +218,7 @@ class ItRefusesRatherThanInventing(_Home):
         self.assertIn("Dark hair, mid-thirties.", p)
         self.assertIn("Invent no clothing, marking, era or equipment they do "
                       "not state.", p)
-        self.assertEqual(seen["aspect"], "4:5")
+        self.assertEqual(seen["aspect"], "9:16")
 
     def test_the_prompt_renders_under_the_bible_not_beside_it(self):
         """A portrait made outside the art direction is a picture of a
@@ -220,29 +248,47 @@ class BothDoorsAreOnTheScreen(unittest.TestCase):
         b = CSS.split(NL + ".cd-more {")[1].split("}")[0]
         self.assertIn("dashed", b)
 
-    def test_both_acts_are_offered_side_by_side(self):
+    def test_both_acts_are_offered_inside_the_empty_frame(self):
+        """§2 moves them into the frame itself: Generate — the single
+        amber primary on the screen — over Attach as a ghost. They are
+        the only thing in an empty slot, which is what the slot is for."""
+        i = JS.index('<div class="cd-frame-acts">')
+        seg = JS[i:i + 400]
+        self.assertIn('class="primary" data-f="gen">Generate<', seg)
+        self.assertIn('class="ghost" data-f="attach">Attach<', seg)
+
+    def test_the_cast_screen_keeps_both_ghosts(self):
+        """§3 still offers a photograph and the words, as ghosts — by
+        then a picture exists, so neither is the primary act."""
         i = JS.index('<div class="cd-acts">')
         seg = JS[i:i + 600]
         self.assertIn("Attach a photograph", seg)
-        self.assertIn("Generate one", seg)
         self.assertIn("Edit the description", seg)
 
     def test_the_spend_is_stated_before_it_is_pressed(self):
         """A render is money, and canon says a gate reads as state before
         it is hit."""
         self.assertIn("it spends a render", JS)
-        i = JS.index('data-f="gen"')
-        self.assertIn("Spends a render", JS[i:i + 400])
+        self.assertIn("Rerolls the picture from the SAME description "
+                      "— it spends a render.", JS)
 
     def test_both_slots_go_through_one_call(self):
-        """Both are bound in one place now (2026-09-10) — and only when
-        the act is available, since a disabled button with a handler is a
-        gate you can still trip."""
+        """§2's Generate and §3's GENERATE ANOTHER are the same act, so
+        they are one function — and it is bound only when the act is
+        available, since a disabled button with a handler is a gate you
+        can still trip."""
         self.assertEqual(JS.count("/api/subjects/${s.id}/generate"), 1)
-        self.assertIn('const genBtns = [$("[data-f=gen]", host), '
-                      '$("[data-f=gen2]", host)].filter(Boolean);', JS)
-        self.assertIn("genBtns.forEach(b => { b.onclick = e => generate(e.currentTarget); });",
-                      JS)
+        self.assertEqual(JS.count("const castGenerate = async (s, host) => {"), 1)
+        self.assertEqual(JS.count("castGenerate(s, host)"), 2)
+
+    def test_one_call_makes_one_picture(self):
+        """"One picture per call. Not three, not a grid." A loop or a
+        count here would be a grid by another name."""
+        i = JS.index("const castGenerate = async (s, host) => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
+        self.assertEqual(seg.count("/api/subjects/${s.id}/generate"), 1)
+        for loop in ("for (", "while (", "Promise.all"):
+            self.assertNotIn(loop, seg, loop)
 
     def test_a_failure_is_stated_and_the_spinner_actually_stops(self):
         """`startBusy` returns an OBJECT with .done(), not a stop
@@ -251,10 +297,10 @@ class BothDoorsAreOnTheScreen(unittest.TestCase):
         cleared, and its elapsed clock kept counting on a request that had
         already failed. The user read that as a three-minute render; the
         server had answered 422 in milliseconds (2026-09-10)."""
-        i = JS.index("const generate = async (btn) => {")
-        seg = JS[i:JS.index(NL + "    };", i)]
+        i = JS.index("const castGenerate = async (s, host) => {")
+        seg = JS[i:JS.index(NL + "  };", i)]
         self.assertIn("toast(err.message, true)", seg)
-        self.assertIn("finally { stop.done(); }", seg)
+        self.assertIn("stop.done();", seg)
         self.assertNotIn("stop?.()", seg)
 
     def test_every_startBusy_caller_disposes_of_it(self):
@@ -391,8 +437,8 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
     knew."""
 
     def seg(self):
-        i = JS.index("const hasWords = !!(String(s.description")
-        return JS[i:JS.index("host.innerHTML = `", i)]
+        i = JS.index("const castGenBlock = (s) => {")
+        return JS[i:JS.index(NL + "  };", i)]
 
     def test_it_knows_whether_there_is_anything_to_render_from(self):
         s = self.seg()
@@ -409,17 +455,16 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
         """Words with no Bible still cannot render, so naming the words
         first would send someone to fix the wrong thing."""
         s = self.seg()
-        self.assertLess(s.index("!bibleSaved ?"), s.index(": !hasWords ?"))
+        self.assertLess(s.index("!bibleSaved"), s.index(": !hasWords"))
 
     def test_the_buttons_are_disabled_rather_than_left_to_fail(self):
-        i = JS.index("if (genBlock) {")
-        seg = JS[i:i + 500]
-        self.assertIn("b.disabled = true", seg)
-        self.assertIn("b.title = genBlock.why", seg)
+        """Both screens' generate controls, not one of them."""
+        self.assertEqual(JS.count("gen.disabled = true; gen.title = block.why"), 1)
+        self.assertEqual(JS.count("more.disabled = true; more.title = block.why"), 1)
 
     def test_the_reason_is_on_the_card_not_only_in_a_tooltip(self):
         self.assertIn("cd-blocked", JS)
-        self.assertIn("esc(genBlock.why)", JS)
+        self.assertIn("${block.why}", JS)
 
     def test_it_links_to_where_the_condition_is_resolved(self):
         """Canon: state the unmet condition beside the control AND link to
@@ -433,8 +478,8 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
     def test_a_blocked_card_does_not_advertise_a_spend(self):
         """The cost line is replaced by the reason, not shown beside it —
         a price for something you cannot buy is noise."""
-        i = JS.index("${genBlock")
-        seg = JS[i:i + 700]
+        i = JS.index("${pending" + NL + "            ? `<p class=\"cd-spend\">Accept locks")
+        seg = JS[i:i + 900]
         self.assertLess(seg.index("cd-blocked"), seg.index("it spends a render"))
 
     def test_the_gate_is_hold_not_bad(self):
@@ -486,9 +531,16 @@ class CastingCarriesWhatTheReadFound(unittest.TestCase):
         self.assertIn('|| { name, kind: kind || "CHARACTER", subtitle: "", traits: [] }', seg)
 
     def test_both_casting_doors_use_it(self):
+        """They reach different components since CAST_CHARACTER_SCREEN —
+        the ribbon's tile opens the modal, the roster's chip casts in one
+        gesture — but both are handed the READ's record, which is what
+        this guards."""
         self.assertEqual(
             JS.count("castModal(recFor(b.dataset.uncast, b.dataset.kind, subjects), refreshCast)"),
-            2, "the ribbon tile and the cast screen's chip")
+            1, "the ribbon tile")
+        self.assertEqual(
+            JS.count("castInto(recFor(b.dataset.uncast, b.dataset.kind, subjects))"),
+            1, "the cast screen's chip")
 
     def test_neither_rebuilds_a_blank_subject(self):
         self.assertNotIn('castModal({ name: b.dataset.uncast', JS)
