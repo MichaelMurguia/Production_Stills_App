@@ -2528,6 +2528,42 @@ def api_list_subjects() -> list[dict]:
     return store.list_subjects()
 
 
+@app.get("/api/design-languages/examples")
+def api_design_language_examples() -> dict:
+    """`{LANGUAGE: image url}` — one approved panel per design language.
+
+    The card under DESIGN LANGUAGES says "Examples will appear here from
+    your panels", so its picture must come from a PANEL. It used to come
+    from a reference plate scoped to the language, which is an input
+    rather than an example and required a scoping vocabulary nothing on
+    that screen teaches (user, 2026-09-12: "I have no idea what these
+    blank spots are and neither will our users").
+
+    A panel's languages are its own, or its sheet's when it states none —
+    the same fallback `generate.build_panel_prompt` renders under, so the
+    example is literally a panel that was rendered in that language.
+    Newest approved wins; nothing is inferred and nothing is generated.
+    """
+    out: dict[str, str] = {}
+    for meta in store.list_specs():
+        sid = meta["specification_id"]
+        spec = store.get_spec(sid) or {}
+        by_panel = {str(p.get("id")): p for p in (spec.get("panels") or [])}
+        sheet = [str(x) for x in (spec.get("design_languages") or [])]
+        for cand in generate.list_candidates(sid):
+            if cand.get("status") != "APPROVED":
+                continue
+            panel = by_panel.get(str(cand.get("panel_id", ""))) or {}
+            langs = [str(x) for x in (panel.get("design_languages") or [])] or sheet
+            cid = str(cand.get("candidate_id", ""))
+            for name in langs:
+                key = name.strip().upper()
+                if key:
+                    # Later files sort later, so the last write is newest.
+                    out[key] = f"/api/specs/{sid}/candidates/{cid}/image"
+    return out
+
+
 @app.get("/api/subjects/scenes")
 def api_subject_scene_counts() -> dict:
     """`{subject id: scenes}` for every cast subject, in one screenplay walk.

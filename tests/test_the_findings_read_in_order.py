@@ -49,27 +49,78 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         self.assertIn('chip.className = "lang-card"', seg)
         self.assertNotIn('"chip" + (open', seg)
 
-    def test_the_picture_is_a_reference_scoped_to_that_language(self):
-        """Real linkage, not decoration — the same scope
-        `store.reference_language` derives and `/api/references` returns."""
-        i = JS.index("const mine = (wizRefs || []).filter(r =>")
+    def test_the_picture_is_an_approved_panel_in_that_language(self):
+        """Real linkage, not decoration.
+
+        It was a REFERENCE plate scoped to the language until 2026-09-12
+        (user: "I have no idea what these blank spots are and neither
+        will our users"). A reference is an input to a render and being
+        scoped to a language is a vocabulary nothing on this screen
+        teaches; a panel is what the language actually produced, and
+        every production gets panels."""
+        i = JS.index("const shot = wizLangArt[")
         seg = JS[i:i + 400]
-        self.assertIn('(r.language || "").toUpperCase()', seg)
-        self.assertIn('String(w.name || "").toUpperCase()', seg)
-        self.assertIn('r.status !== "REJECTED"', seg)
+        self.assertIn('String(w.name || "").trim().toUpperCase()', seg)
+        self.assertIn('art.style.backgroundImage = `url("${shot}")`', seg)
+        self.assertNotIn("wizRefs", seg)
 
-    def test_the_server_still_supplies_that_scope(self):
+    def test_the_server_derives_it_from_approved_panels(self):
         main = (ROOT / "app/main.py").read_text(encoding="utf-8")
-        self.assertIn('r["language"] = store.reference_language(r)', main)
+        i = main.index('@app.get("/api/design-languages/examples")')
+        seg = main[i:main.index('@app.get("/api/subjects/scenes")', i)]
+        self.assertIn('cand.get("status") != "APPROVED"', seg)
+        # A panel's own languages, or its sheet's when it states none —
+        # the same fallback the render itself uses.
+        self.assertIn('panel.get("design_languages")', seg)
+        self.assertIn("or sheet", seg)
+        self.assertIn("/api/specs/{sid}/candidates/{cid}/image", seg)
 
-    def test_a_language_with_no_reference_states_the_blank(self):
+    def test_it_is_asked_for_once_and_repaints(self):
+        """A language that HAS a panel must not paint its blank and stay
+        wrong — the same rule the reference fetch already followed."""
+        self.assertIn("if (!wizLangArtAsked) loadWizLangArt().then(renderWorlds);", JS)
+
+    def test_a_language_with_no_panel_says_what_will_fill_it(self):
         """B3: a reserved shape is forbidden unless it says what keeps it
-        empty."""
+        empty. The old sentence named a mechanism ("no reference SCOPED
+        to this language") instead of a next step, in a word the user had
+        never been shown."""
         i = JS.index('art.className = "lang-shot"')
         seg = JS[i:i + 500]
-        self.assertIn("NO REFERENCE SCOPED TO THIS LANGUAGE YET", seg)
+        self.assertIn("Examples will appear here from your panels.", seg)
+        self.assertNotIn("SCOPED", seg)
         b = CSS.split(NL + ".lang-shot.none {")[1].split("}")[0]
         self.assertIn("repeating-linear-gradient", b)
+
+    def test_that_sentence_is_prose_and_readable(self):
+        """Rule 2 — Archivo carries prose; Courier is for machine data.
+        It was 9px uppercase Courier, which reads as an error code on a
+        broken image."""
+        b = CSS.split(NL + ".lang-shot.none i {")[1].split("}")[0]
+        self.assertIn("font-family: var(--sans)", b)
+        self.assertIn("font-size: 11.5px", b)
+        # The section sets uppercase + tracking on `.fgroup` and it
+        # INHERITS all the way down, so a sentence rendered as a wide
+        # caps label until both were reset here (measured from the DOM,
+        # 2026-09-12 — the stylesheet alone looked correct).
+        self.assertIn("text-transform: none", b)
+        self.assertIn("letter-spacing: 0", b)
+
+    def test_the_header_names_the_thing_and_stops(self):
+        """User, 2026-09-12. The explanation lives behind the `?`, which
+        is what the `?` is for."""
+        i = JS.index('<span class="uncast-label">DESIGN LANGUAGES')
+        self.assertIn('DESIGN LANGUAGES' + NL, JS[i:i + 80])
+        self.assertNotIn("WHAT A PANEL IS ALLOWED TO LOOK LIKE", JS)
+
+    def test_the_help_names_no_other_productions_screenplay(self):
+        """A development note, not app copy — the same fault the user cut
+        from the period card on 2026-09-11."""
+        i = JS.index("  langs: \"<b>A named visual world")
+        seg = JS[i:JS.index("  envs:", i)]
+        for leak in ("GRM", "Resistance", "Terra Nova"):
+            self.assertNotIn(leak, seg, leak)
+        self.assertLess(len(seg), 900, "it was three paragraphs; it is two")
 
     def test_confirm_and_drop_still_sit_on_the_card(self):
         """The chip's whole behaviour survives the shape change."""

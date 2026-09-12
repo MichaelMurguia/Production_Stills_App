@@ -5628,6 +5628,18 @@ async function renderWizard() {
       .catch(() => wizRefs);
   };
 
+  // One approved panel per design language, for the cards under DESIGN
+  // LANGUAGES. Derived server-side in one walk; empty until a panel has
+  // been approved, which is exactly what the card says.
+  let wizLangArt = {};
+  let wizLangArtAsked = false;
+  const loadWizLangArt = () => {
+    wizLangArtAsked = true;
+    return api("/api/design-languages/examples")
+      .then(m => (wizLangArt = m || {}))
+      .catch(() => wizLangArt);
+  };
+
 /* What an anchor's WORDS amount to. One rule: two readers ask it and they
    used to answer differently.
 
@@ -6987,10 +6999,11 @@ async function renderWizard() {
     const host = $("#wiz-analysis");
     if (!analysis) { host.innerHTML = ""; return; }
     const worlds = analysis.design_worlds || [];
-    // Once, and only if nothing has fetched the shelf yet — otherwise a
-    // language that HAS a reference would paint its stated blank and
-    // never correct itself.
+    // Once, and only if nothing has fetched them yet — otherwise a
+    // language that HAS a panel would paint its stated blank and never
+    // correct itself.
     if (!wizRefsAsked) loadWizRefs().then(renderWorlds);
+    if (!wizLangArtAsked) loadWizLangArt().then(renderWorlds);
     // The reveal strip (plan P1 / R1): the read presents as a summary, not a
     // wall. Counts link to their sections; segments render only when their
     // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
@@ -7055,7 +7068,7 @@ async function renderWizard() {
         <div class="read-tiles">${tiles}</div>
       </div>
       <div class="fgroup" id="wiz-langs-sec" style="margin-top:16px">
-        <span class="uncast-label">DESIGN LANGUAGES — WHAT A PANEL IS ALLOWED TO LOOK LIKE
+        <span class="uncast-label">DESIGN LANGUAGES
           <button type="button" class="q-help" data-help="langs" aria-label="What is a design language?">?</button></span>
         <div id="wiz-world-tags" class="lang-cards"></div>
         <div id="wiz-worlds"></div>
@@ -7127,27 +7140,31 @@ async function renderWizard() {
          panel is ALLOWED to look like, and a row of Courier words is the
          one presentation that shows none of it.
 
-         The picture is real, not decorative: references carry a design
-         language scope (store.reference_language), so a card leads with
-         the newest approved reference actually scoped to it. A language
-         with none says so rather than reserving a shape (B3) — this is
-         the same rule the anchor heroes follow.
+         The picture is real, not decorative: it is an APPROVED PANEL
+         rendered in this language, newest first.
+
+         It used to be a reference plate scoped to the language, and the
+         empty state said "NO REFERENCE SCOPED TO THIS LANGUAGE YET" —
+         a sentence in vocabulary nothing on this screen teaches, on a
+         card that explains nothing about itself, at the one moment when
+         every language is necessarily empty. User, 2026-09-12: "I have
+         no idea what these blank spots are and neither will our users."
+         A reference is an INPUT to a render; a panel is what the
+         language actually produced, and every production gets panels
+         without learning how a role is scoped.
 
          Everything the chip did, it still does: click to expand, CONFIRM
          / DROP in place, the same title, the same delete. */
       const chip = document.createElement("span");
       chip.className = "lang-card" + (open ? " open" : "") + (proposed ? " proposed" : "");
       chip.style.cursor = "pointer";
-      const mine = (wizRefs || []).filter(r =>
-        (r.language || "").toUpperCase() === String(w.name || "").toUpperCase()
-        && r.status !== "REJECTED");
+      const shot = wizLangArt[String(w.name || "").trim().toUpperCase()];
       const art = document.createElement("span");
-      art.className = "lang-shot" + (mine.length ? "" : " none");
-      if (mine.length)
-        art.style.backgroundImage =
-          `url("/api/references/${encodeURIComponent(mine[0].id)}/image?size=md")`;
+      art.className = "lang-shot" + (shot ? "" : " none");
+      if (shot)
+        art.style.backgroundImage = `url("${shot}")`;
       else
-        art.innerHTML = `<i class="mono">NO REFERENCE SCOPED TO THIS LANGUAGE YET</i>`;
+        art.innerHTML = `<i>Examples will appear here from your panels.</i>`;
       chip.append(art);
       // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
       // CONFIRM / DROP in place. Confirmation is the default state — a
@@ -9437,16 +9454,18 @@ const WIZ_HELP = {
   // does it affect in panel generation?" So both answer that, from what
   // the code actually does: bible.render_context() selects these
   // sections and generate._style_context() puts them in the prompt.
+  // No example names here. The three that used to lead this card came
+  // from a different production's screenplay — a development note, not
+  // app copy (the same fault the user cut from the period card,
+  // 2026-09-11) — and they made a short answer long.
   langs: "<b>A named visual world, and the rules for drawing it.</b> "
-    + "GRM Order, the Resistance, Terra Nova — each one collects the "
-    + "materials, shapes, wear and design intent that belong to it.<br><br>"
+    + "Each one collects the materials, shapes, wear and design intent "
+    + "that belong to it.<br><br>"
     + "<b>What it does to a render:</b> a breakdown ticks the languages "
-    + "that apply to it, and those sections are pasted into the prompt of "
-    + "every panel on that sheet. A panel can override the sheet and take "
-    + "a different one. Nothing else in the bible rides — an unticked "
-    + "language is invisible to the render.<br><br>"
-    + "That is why they are worth naming carefully: a panel can only look "
-    + "like the languages it was given.",
+    + "that apply to it, and those sections ride into every panel on that "
+    + "sheet. A panel can override its sheet. An unticked language is "
+    + "invisible to the render &mdash; a panel can only look like the "
+    + "languages it was given.",
   envs: "<b>The palette, light and atmosphere a place carries</b> — and "
     + "only those. Not its culture, not its props: those are the design "
     + "language's job.<br><br>"
