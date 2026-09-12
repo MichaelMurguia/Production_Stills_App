@@ -107,13 +107,13 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         result they edit the description and generate again, which is why
         the edit button is large.\""""
         b = block(".cd-edit {")
-        self.assertIn("font-size: 15px", b)
+        self.assertIn("font-size: 18px", b)
         self.assertIn("border-color: var(--line-strong)", b)   # the plan's #6b7278
         self.assertIn('class="ghost cd-edit" data-f="edit">Edit description<', JS)
 
     def test_the_description_is_16px_over_1_6(self):
         b = block(".cd-desc {")
-        self.assertIn("font-size: 16px", b)
+        self.assertIn("font-size: 18px", b)
         self.assertIn("line-height: 1.6", b)
 
     def test_the_quotes_carry_their_page_in_courier_beside_italic_prose(self):

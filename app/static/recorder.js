@@ -68,7 +68,7 @@
   chip.title = "Recording API fixtures — click to download the bundle";
   chip.style.cssText = [
     "position:fixed", "left:14px", "bottom:14px", "z-index:99999",
-    "font-family:var(--mono)", "font-size:15px", "letter-spacing:.4px",
+    "font-family:var(--mono)", "font-size:20px", "letter-spacing:.4px",
     "color:var(--ink)", "background:var(--panel)",
     "border:1px solid var(--hold)", "border-radius:0",
     "padding:7px 12px", "cursor:pointer",

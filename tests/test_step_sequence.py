@@ -176,7 +176,7 @@ class TheImageIsTheHero(unittest.TestCase):
         b = block(".seq .act-bar .text-act")
         self.assertIn("border: 1px solid var(--line)", b)
         self.assertIn("text-decoration: none", b)
-        self.assertIn("font-size: 14px", b)
+        self.assertIn("font-size: 18px", b)
         self.assertIn("font-weight: 600", b)
 
 
@@ -197,9 +197,9 @@ class TheVocabulary(unittest.TestCase):
         already sanctions — at the smallest size the family carries the
         meaning."""
         self.assertIn("font-size: 24px", block(".seq .seq-subject"))
-        self.assertIn("font-size: 15px", block(".step-prose, .seq .cam-sum"))
+        self.assertIn("font-size: 18px", block(".step-prose, .seq .cam-sum"))
         for sel in (".step-label", ".step-meta", ".wb-facts"):
-            self.assertIn("font-size: 15px", block(sel))
+            self.assertIn("font-size: 20px", block(sel))
 
     def test_the_subject_beats_the_panel_h2_label(self):
         """.panel h2 sets 11px uppercase Courier; without the extra

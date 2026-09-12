@@ -173,14 +173,10 @@ The scale, and the only sizes in use:
 
 | px | face | used for |
 |---|---|---|
-| 13 | *(retired — see below)* | |
-| 14 | Archivo | sluglines, tertiary links, secondary prose, form fields |
-| 15 | **Courier** | kickers, state marks, counts, badges, file paths, cost notes |
-| 15 | Archivo | body prose, button labels, card captions, list items |
-| 16 | Archivo | step titles, modal titles, detail-screen description |
-| 17 | Archivo | bible section subjects |
-| 19 | Archivo | bible `##` headings |
-| 20 | Archivo | logline |
+| 18 | Archivo | body prose, labels, buttons, form fields, list items |
+| 19 | Archivo | step titles, card captions |
+| 20 | **Courier** | every kicker, state mark, count, badge, path, cost note |
+| 22 | Archivo | the logline |
 | 24 | Archivo / Courier | screen titles; step numbers |
 | 34 | Archivo | the bible's production title |
 
@@ -194,6 +190,33 @@ The scale, and the only sizes in use:
 - **If a layout only fits because its labels are small, the layout is
   wrong.** Give the label the room; do not shrink it.
 - Line-height never below 1.4 on anything that wraps.
+
+### The 10px glyph floor (user ruling, 2026-09-12)
+
+**No letter, upper or lower case, renders smaller than 10px. Ever.**
+
+That is a measurement of INK, not of `font-size`, and the two do not
+track each other — not across faces, and not between cases of the same
+face. Measured by pixel scan:
+
+| face | size | cap | x-height |
+|---|---|---|---|
+| Archivo | 14px | 10 | 8 |
+| Archivo | **18px** | 13 | **10** |
+| Consolas | 15px | 10 | 7 |
+| Consolas | **20px** | 13 | **10** |
+| Courier New | 15px | 8 | 6 |
+
+So the live scale is **Archivo 18 / Courier 20**, with 19, 20, 24 and 34
+above them. Everything below 18px is retired: at those sizes a lowercase
+letter is 6–9px of ink whatever the font-size says.
+
+Courier is 20px rather than 15 even though most of it is uppercase,
+where 15px already clears the cap floor. One size, no exceptions: the
+per-rule version of this needed a list of which classes render lowercase,
+and that list was wrong three times in a row because CSS cannot select on
+case and a more specific rule kept winning. A floor with exceptions is a
+floor someone has to maintain.
 
 **The Courier step is 15px, not 13** (user-caught 2026-09-12: "site still
 has 9px tall fonts"). The floor is written in font-size; what a person
@@ -1895,6 +1918,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | 2026-09-01 | **"NO ENGINE" becomes "NO AI MODEL", and a suppressed install stops seeing the setup form** (user-directed): "engine" is this codebase's word for a provider — the band chip, two dropdowns and two gate lines now all say NO AI MODEL, which is what Settings calls it and what the store sells. And Settings picks between its setup form and its control panel on `any_credential`, which the dev key-guard makes false — so a CONFIGURED install met "Connect to many models" and a row of Authenticate buttons, and the row taught yesterday to say KEY SAVED — HIDDEN never rendered. The choice is configured-OR-suppressed now | The nav band; Settings / AI & engines | Built from canon — copy and a branch condition, no new tokens. Review (1) whether "AI model" should replace "engine" in the CODE's vocabulary too, not just the copy; (2) the suppressed row's remedy is a shell command in a GUI |
 | 2026-09-01 | **A credential the process is hiding says so, instead of offering Authenticate** (user-caught): the dev loop blanks stored keys so a mis-click cannot spend, and does it by making the process unable to SEE them rather than by editing the file — so the Settings row rendered identically to an install with no key and invited the user to add theirs again ("my api key is not saving"). It was saving every time. The row now carries a `--hold` mark, `KEY SAVED — HIDDEN BY THIS DEV SESSION`, and the command that lifts it in place of the button. New: `.cred-fix` | Settings / AI & engines | Built from canon — `--hold` and Courier for a machine fact. This is the THIRD surface this one guard has misreported (a stale PASS badge 2026-08-16, the nav band and this row 2026-09-01); review whether the suppression deserves one banner on the page rather than a per-row line |
 | 2026-09-01 | **Stage 01 stops waiting for an engine, and the gate names its real condition** (user-directed; AMENDS the ruling of 2026-08-18 that with no model connected the whole pipeline waits): uploading a screenplay spends nothing — the READ spends, and has its own gate — so stage 01 is no longer locked on a missing credential. Everything downstream still is. Separately, `capability` now reports `keys_suppressed`, and the lock popover distinguishes "no key" from "your key is saved, this dev session is hiding it so a mis-click cannot spend" | The nav band's lock popover | Built from canon — no new tokens. Found because the dev loop's spend guard made the app look un-configured and it sent the user to Settings to add a key already saved there ("I added key and cant access the screenplay tab"). Review whether the 01 sub-line should say anything while the rest of the band is locked |
+| 2026-09-12 | **The 10px glyph floor** (user ruling: "no case - upper or lower should be smaller than 10 px ever"): a floor on INK, not on font-size, and it binds on x-height rather than cap height because lowercase is the smaller of the two. Measured, Archivo needs 18px and Consolas 20px to put a lowercase letter at 10px — so body prose is 18px and ALL Courier is 20px. Everything below is retired. Courier is one size rather than 15px-for-caps / 20px-for-lowercase because CSS cannot select on case: the per-rule version was wrong three times running as more specific rules kept winning. The cast ribbon's names wrap to three lines, `.lang-card` widened to 240px, `.prod-grid` took `minmax(0,1fr)` | Every surface | RULED by the user, and it is a large change: type is ~30% larger everywhere and the app is much less dense. Review (1) whether 18/19/20/22/24/34 is the scale you want or whether the upper steps should stretch with it; (2) `-webkit-line-clamp` truncations (the anchor cards' descriptions) now cut mid-word, because the same box holds a third less text; (3) the storefront still has the OLD floor entirely — 9px and 9.5px throughout |
 | 2026-09-12 | **The type floor is measured in CAP HEIGHT, and the Courier step is 15px** (user-caught: "site still has 9px tall fonts"): LEGIBILITY_FLOOR names its fault as "Courier labels rendering at 8–9px cap height" and prescribes a 13px font-size. Measured by pixel scan, Courier New's cap is 8px at 11.5, 13, 14 AND 15px — it is hinted flat — so implementing the plan exactly moved the rendered letter height by zero and left the fault it was written for. Both levers that reach cap height moved the minimum needed: `--mono` leads with Consolas / Cascadia Mono (Consolas is NARROWER than Courier New, so no label costs more room), and the Courier step is 15px, which renders the 10px cap Archivo gives at the 14px prose floor. Every Courier rule now carries a size, because one inheriting the 14px body rendered 9px caps | Every surface | **Needs a ruling on the FACE.** Rule 2 names Courier and this changes which mono actually renders — one line in `--mono` reverts it, at the cost of 8px caps. Also review (1) the 13px step is now unused, so the live scale is 14/15/16/17/19/20/24/34; (2) `.prod-grid` went to `minmax(0,1fr)` because 15px Courier pushed it 45px past a 1100px window |
 | 2026-09-12 | **The colour floor is measured, not listed** (LEGIBILITY_FLOOR_DELTA_2026-09-12b): the first pass ported a LIST of greys; the delta rules that the implementation must port the RULE — every text colour measures ≥ 7:1 against the surface it sits on — and says "a lint that walks computed styles is the right shape". It is one now, and it found what a list could not: `--hold` (#7d8fd0, 5.70:1) colouring 29 glyphs and `--bad` (4.61:1) colouring 44. Both move to the RULE beside the words, which is where the delta already put red: a held or failed thing carries a 2px left rule or its own border and reads in `--ink-faint`. Ten marks whose state was ONLY a colour (`.stor-line.hold`, `.req-mark.hold`, `.gen-warn`, `.made-blocker`, the `.rail-mark` and `.prod-care` families) would otherwise have become three identical greys; they gained the rule instead | Every surface | RULED. Review (1) `--panel2` is the one ground where the plan's own inks land under 7:1 — 6.56 for `--ink-faint`, 6.96 for `--accent` — and fixing it means darkening a surface token the floor does not mention; (2) `--hold` now colours nothing anywhere, so "proposed" reads as a dashed border rather than a blue word; (3) a danger button's label is ink and its border carries the red |
 | 2026-09-12 | **The legibility floor, app-wide** (LEGIBILITY_FLOOR, delivered in `design_handoff/font_updates.zip`): 14px is the floor for anything a person reads, 13px for a Courier kicker and nothing else may be 13px; the scale is nine steps and no size sits between them. 499 of 549 declarations moved. Colour: the four ink tiers are redefined so body and label text measures 7:1 on the app's darks — the audit found `#6b7278` glyphs on `#0b0c0e` at about 4:1, and since that value WAS the FAINT tier the fault was in the token rather than in any one rule. The old greys survive as `--line-strong` / `--line-bright` for hairlines, dashed borders and underlines, which is all the plan ever allowed them. Both halves are now asserted mechanically over the whole stylesheet (`TheLegibilityFloor`), because the previous answer — each plan raising its own labels and naming the drift as a later job — is how it survived three passes | Every surface | RULED, not for review — the plan supersedes §2.2, §2.3's greys and the type scale table of PRODUCTION_DESIGN_UI_PLAN. Review only the consequences: (1) a disabled button's label is now readable ink, so a disabled control reads less dead than it did — the plan leaves no colour for "inactive"; (2) the cast ribbon's names wrap to two lines because they no longer fit on one, per "give the label the room"; (3) surfaces that had three or four label sizes now have one, since everything under 13px collapsed onto it |
@@ -3091,6 +3115,7 @@ well — this log records what changed, it does not replace the rules.
   (mock-sanctioned arrows on → Reference / → Light study kept).
 - **2026-09-10** — `.cd-blocked` (a stated gate where the cost line sits when the act is available).
 - **2026-09-12** — The board PREVIEW's type joins the scale: `.bf-title` 24px, `.bf-sub` 13px, both were `clamp()`. Its COLOURS stay on the board's palette (audit #15) — the 4K composite is drawn server-side by PIL and never comes from this DOM, so only the palette ever needed to match. The harness chip in `recorder.js` goes 12px → 13px.
+- **2026-09-12** — 10px GLYPH FLOOR (user ruling): no letter of either case renders under 10px. Archivo 18px, all Courier 20px; 13/14/15/16/17 retired. Smallest rendered glyph app-wide is 10px, measured at 1280 and 1560px.
 - **2026-09-12** — TYPE FLOOR measured in cap height: `--mono` leads with Consolas; the Courier step is 15px (13px retired); every Courier rule carries a size. Smallest rendered cap height app-wide goes 8px → 10px, measured at 1100 and 1560px.
 - **2026-09-12** — COLOUR FLOOR, measured: `--hold` colours no glyph and `--bad` only at headline scale or beside a hairline; status moves to a 2px left rule with the words in `--ink-faint`. `.gen-warn`, `.gen-gate`, `.made-blocker`, `.req-mark.hold`, `.stor-line.*`, `.lb-fill-v.*`, `.prod-care.*`, `.rail-mark.*` gain that rule.
 - **2026-09-12** — LEGIBILITY FLOOR, app-wide: nine type steps (13/14/15/16/17/19/20/24/34) and nothing between or outside them; `--ink-dim` → `#c3c9ce` and `--ink-faint` → `#a3aab1`; new `--ink-body #dfe3e6`; the old greys move to `--line-strong` / `--line-bright` and are never glyphs; `#4a4d52` deleted. `#cast-screen`'s scoped 12px patch retired — the fault it patched is fixed at the source.

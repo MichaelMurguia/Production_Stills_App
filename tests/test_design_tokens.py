@@ -41,7 +41,12 @@ class TheLegibilityFloor(unittest.TestCase):
 
     Both halves are the plan's §4 "done means", asserted directly."""
 
-    STEPS = {13, 14, 15, 16, 17, 19, 20, 24, 34}
+    # The scale after the 10px glyph floor (user, 2026-09-12: "no case -
+    # upper or lower should be smaller than 10 px ever"). 13/14/16/17 are
+    # retired: measured, they render x-heights of 6-9px.
+    #   Archivo 18px -> cap 13, x 10      Consolas 15px -> cap 10 (CAPS only)
+    #   Archivo 20px -> cap 14, x 11      Consolas 20px -> cap 13, x 10
+    STEPS = {18, 19, 20, 24, 34}
     # Retired as GLYPH colours. Still legal for a hairline, a dashed
     # border, an underline or the edge of an inactive control — which is
     # why they survive as --line-strong / --line-bright.
@@ -331,7 +336,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".mq-tile", [
             "flex: none", "border: 1px solid var(--line-soft)",
             "background: var(--bg2)", "padding: 6px 12px 6px 6px",
-            "font-size: 14px", "color: var(--ink-dim)",
+            "font-size: 18px", "color: var(--ink-dim)",
             "white-space: nowrap"])
         self.assert_decls(".mq-tile img", ["width: 22px", "height: 22px"])
 
@@ -344,7 +349,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".fr-notice h3", [
             "font-size: 19px", "font-weight: 600", "color: var(--ink)"])
         self.assert_decls(".fr-notice p", [
-            "font-size: 14px", "line-height: 1.7", "color: var(--ink-dim)"])
+            "font-size: 18px", "line-height: 1.7", "color: var(--ink-dim)"])
         self.assert_decls(".fr-notice p strong", [
             "color: var(--ink)", "font-weight: 600"])
 
@@ -570,7 +575,7 @@ class TokenContractTests(unittest.TestCase):
         b = block(".read-tile")
         self.assert_decls(".read-tile", ["padding: 8px 14px", "align-items: baseline"])
         self.assertIn("display: flex", b)
-        self.assert_decls(".read-num", ["font-size: 16px"])
+        self.assert_decls(".read-num", ["font-size: 18px"])
         self.assertNotIn("display: block", block(".read-num"),
                          "number and label share a line now")
 
@@ -967,7 +972,7 @@ class MiniMonoTests(unittest.TestCase):
         .mono means it — .mini used to win the order battle and silently
         rendered machine data proportional (found 2026-08-13, the
         correction-intake checklist)."""
-        self.assertIn(".mini.mono { font-family: var(--mono); font-size: 15px; }", CSS)
+        self.assertIn(".mini.mono { font-family: var(--mono); font-size: 20px; }", CSS)
 
 
 class HarnessAuditTests(unittest.TestCase):

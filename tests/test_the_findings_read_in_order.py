@@ -98,7 +98,7 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         broken image."""
         b = CSS.split(NL + ".lang-shot.none i {")[1].split("}")[0]
         self.assertIn("font-family: var(--sans)", b)
-        self.assertIn("font-size: 14px", b)
+        self.assertIn("font-size: 18px", b)
         # The section sets uppercase + tracking on `.fgroup` and it
         # INHERITS all the way down, so a sentence rendered as a wide
         # caps label until both were reset here (measured from the DOM,
