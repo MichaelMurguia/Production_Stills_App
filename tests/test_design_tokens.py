@@ -111,6 +111,140 @@ class TheLegibilityFloor(unittest.TestCase):
                 self.assertNotEqual(m.group(1), "color", f"{tok} used as text")
 
 
+def _rgb(h):
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _lum(c):
+    def f(v):
+        v /= 255
+        return v / 12.92 if v <= .03928 else ((v + .055) / 1.055) ** 2.4
+    r, g, b = map(f, c)
+    return .2126 * r + .7152 * g + .0722 * b
+
+
+def contrast(a, b):
+    la, lb = _lum(_rgb(a)), _lum(_rgb(b))
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + .05) / (lo + .05)
+
+
+class TheColourFloorIsMeasuredNotListed(unittest.TestCase):
+    """LEGIBILITY_FLOOR_DELTA_2026-09-12b §1.
+
+    The first pass replaced a fixed LIST of greys, and a verifier pass
+    found the ones the list missed. The delta's ruling is explicit: "do
+    not port a colour list. Port the rule — every text colour must
+    measure >= 7:1 against the surface it sits on... A lint that walks
+    computed styles is the right shape."
+
+    So this computes. `#15181b` is the lightest common card ground, which
+    is the worst case for text on a dark surface.
+
+    What it does NOT govern, per the delta's §4 — the second pass
+    over-reached here and was corrected by hand:
+      - swatch values: a colour chip's background is DATA, not text
+      - border-color / text-decoration-color / outline-color
+      - backgrounds, scrims, cursor-row highlights
+    Only glyph colour is governed."""
+
+    GROUND = "#15181b"
+    FLOOR = 7.0
+    # Dark-on-light: these sit on paper or on amber, never on the app's
+    # darks, and the delta leaves them alone.
+    LIGHT_GROUND = {"--accent-ink", "--sheet-paper", "--sheet-dim-ui", "--sheet-mat"}
+    # The BOARD FRAME is not UI (audit #15). `.bf-*` renders the exported
+    # composite on screen and must match it pixel-for-pixel, so it follows
+    # the board's own palette on #2a2723 — not the app's tokens and not
+    # the app's grounds. Changing it here would break export parity.
+    NOT_UI = ("#9a978f", "#e8e5dd")
+    # The floor's §2 sanctions these as text colours with conditions of
+    # their own, measured against #0b0c0e: green 7.4:1, red 4.6:1 at
+    # "headline scale or paired with a hairline". A blanket 7:1 here
+    # would contradict the document it implements, so the conditions are
+    # asserted separately below. `--hold` is NOT in those seven and gets
+    # no exemption — it colours no glyph at all.
+    STATUS = {"--ok", "--bad"}
+
+    @classmethod
+    def tokens(cls):
+        return dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{3,8})\s*;", CSS))
+
+    def test_every_glyph_colour_clears_seven_to_one(self):
+        toks = self.tokens()
+        bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        bad = []
+        for m in re.finditer(r"(?:^|[;{])\s*color:\s*([^;}]+)", bare):
+            v = m.group(1).strip()
+            name = re.match(r"var\(--([\w-]+)\)", v)
+            if name:
+                tok = "--" + name.group(1)
+                if tok in self.LIGHT_GROUND or tok in self.STATUS:
+                    continue
+                hexv = toks.get(name.group(1))
+            elif v.startswith("#"):
+                hexv = v
+            else:
+                continue                      # `inherit`, currentColor
+            if not hexv or hexv.lower() in self.NOT_UI:
+                continue
+            r = contrast(hexv, self.GROUND)
+            # Sheet surfaces are light paper; their ink is dark by design.
+            if _lum(_rgb(hexv)) < _lum(_rgb(self.GROUND)):
+                continue
+            if r < self.FLOOR:
+                bad.append(f"{v} ({hexv}) = {r:.2f}:1")
+        self.assertEqual(sorted(set(bad)), [], "text under 7:1 on the lightest card")
+
+    def test_the_status_colours_are_where_the_plan_puts_them(self):
+        """`--hold` is not one of the floor's seven text colours at all,
+        so it colours no glyph; it stays on the rule beside one. `--bad`
+        is sanctioned only at "headline scale or paired with a hairline,
+        never for a body paragraph"."""
+        bare = re.sub(r"/\*.*?\*/", " ", CSS, flags=re.S)
+        holds, reds = [], []
+        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", bare):
+            sel1 = " ".join(sel.split())[:60]
+            if re.search(r"(?:^|[;{])\s*color:\s*var\(--hold\)", body):
+                holds.append(sel1)
+            if re.search(r"(?:^|[;{])\s*color:\s*var\(--bad\)", body):
+                m = re.search(r"font-size:\s*([\d.]+)px", body)
+                big = m and float(m.group(1)) >= 19
+                hairline = re.search(r"border(?:-[a-z]+)?\s*:", body) or                            re.search(r"border-color\s*:", body)
+                if not (big or hairline):
+                    reds.append(sel1)
+        self.assertEqual(holds, [], "--hold colouring a glyph")
+        self.assertEqual(reds, [], "--bad text with neither headline scale nor a hairline")
+
+    def test_the_one_ground_where_the_plans_own_palette_falls_short(self):
+        """Measured across every surface token, the floor's four ink
+        tiers clear 7:1 on `--ground` through `--panel`. On `--panel2`
+        (#21252a, the "active/selected" surface) `--ink-faint` lands at
+        6.56 and `--accent` at 6.96.
+
+        That is a property of the delivered palette, not drift: the
+        plan's §2 table is measured against `#0b0c0e`, where every value
+        is exactly what it claims. Complying on `--panel2` means either
+        changing an ink the plan fixes or darkening a surface token the
+        plan does not mention — a designer's call, not an implementer's.
+
+        This test exists so the gap is a recorded number rather than a
+        thing someone rediscovers. It fails if the gap gets WORSE."""
+        toks = self.tokens()
+        for name, floor in (("ink-faint", 6.5), ("accent", 6.9), ("ink-dim", 9.2)):
+            r = contrast(toks[name], toks["panel2"])
+            self.assertGreaterEqual(r, floor, f"--{name} on --panel2 is {r:.2f}")
+
+    def test_the_lint_does_not_govern_lines_or_swatches(self):
+        """A hairline may still be a retired grey, and a swatch's fill is
+        the production's own colour — the lint must not touch either."""
+        self.assertIn("border: 1px solid var(--line-strong)", CSS)
+        self.assertIn("var(--line-bright)", CSS)
+
+
 class TokenContractTests(unittest.TestCase):
     def assert_decls(self, sel, decls):
         b = block(sel)
@@ -192,7 +326,13 @@ class TokenContractTests(unittest.TestCase):
     def test_required_table_and_marks(self):
         self.assert_decls(".req-table", ["grid-template-columns: 1fr 1fr"])
         self.assert_decls(".req-mark.ok", ["color: var(--ok)"])
-        self.assert_decls(".req-mark.hold", ["color: var(--hold)"])
+        # The floor moved the status OFF the glyph and onto the rule
+        # beside it: --hold is not one of its seven text colours and
+        # --bad is sanctioned only at headline scale or with a
+        # hairline. The state is still stated; it is stated in ink.
+        self.assert_decls(".req-mark.hold",
+                          ["color: var(--ink-faint)",
+                           "border-left: 2px solid var(--hold)"])
 
     def test_stated_zero_state(self):
         self.assert_decls(".nomatch", ["border: 1px solid var(--bad)"])
@@ -200,8 +340,11 @@ class TokenContractTests(unittest.TestCase):
     # -- the amber budget's known former leaks stay plugged ----------------
 
     def test_former_amber_leaks_stay_fixed(self):
-        self.assert_decls(".shot-status.CANDIDATE", ["color: var(--hold)"])
-        self.assert_decls(".loc-open.held", ["color: var(--hold)"])
+        self.assert_decls(".shot-status.CANDIDATE", ["color: var(--ink-faint)"])
+        self.assert_decls(".loc-open.held", ["color: var(--ink-faint)"])
+        # What this guards is that they are not AMBER. They are not.
+        for sel in (".shot-status.CANDIDATE", ".loc-open.held"):
+            self.assertNotIn("var(--accent)", block(sel))
         self.assert_decls(".pm-chip.open", ["color: var(--ok)"])
         self.assertNotIn(".toast { border-left: 3px solid var(--accent)", CSS.replace("\n", " "))
 
@@ -240,7 +383,7 @@ class TokenContractTests(unittest.TestCase):
             "font-family: var(--mono)", "color: var(--ink-faint)"])
         self.assert_decls(".models-line", [
             "border-top: 1px solid var(--line)", "font-family: var(--mono)"])
-        self.assert_decls(".models-facts .m-bad", ["color: var(--bad)"])
+        self.assert_decls(".models-facts .m-bad", ["color: var(--ink-faint)"])
         self.assert_decls(".role-sel.live::before", ["background: var(--ok)"])
         for gone in (".reach-tile", ".rec-chip", ".bill-warn", ".role-jobs",
                      ".cred-tag", ".cred-ident", ".cred-foot"):
@@ -309,7 +452,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".act-kicker", [
             "font-family: var(--mono)", "color: var(--ink-faint)"])
         self.assert_decls(".act-dim", ["color: var(--ink-dim)"])
-        self.assert_decls(".act-reject:hover", ["color: var(--bad)"])
+        self.assert_decls(".act-reject:hover", ["color: var(--ink-faint)"])
         self.assert_decls(".act-use, .act-derive, .act-right",
                           ["border-left: 1px solid var(--line)"])
         self.assert_decls(".act-spacer", ["flex: 1"])
@@ -351,7 +494,7 @@ class TokenContractTests(unittest.TestCase):
         --hold (a proposal is a hold, not an error)."""
         self.assert_decls(".swatch-add", ["border: 1px dashed var(--line)"])
         self.assert_decls(".prop-head", [
-            "color: var(--hold)", "border: 1px solid var(--hold)",
+            "color: var(--ink-faint)", "border: 1px solid var(--hold)",
             "font-family: var(--mono)"])
         self.assert_decls(".sv-acts .ok-act", ["color: var(--ok)"])
 
@@ -560,8 +703,12 @@ class TokenContractTests(unittest.TestCase):
         """Canon pass R6: the coverage meter is the only meter — the
         storage bar is deleted and the Courier line carries the state."""
         self.assertNotIn(".stor-bar", CSS)
-        self.assert_decls(".stor-line.bad", ["color: var(--bad)"])
-        self.assert_decls(".stor-line.hold", ["color: var(--hold)"])
+        self.assert_decls(".stor-line.bad",
+                          ["color: var(--ink-faint)",
+                           "border-left: 2px solid var(--bad)"])
+        self.assert_decls(".stor-line.hold",
+                          ["color: var(--ink-faint)",
+                           "border-left: 2px solid var(--hold)"])
 
     def test_unanchored_register_is_a_labelled_table(self):
         """Canon pass R4: grid tracks per the ruling; header on --field."""
@@ -1140,7 +1287,9 @@ class TheFramingFieldAndTag(unittest.TestCase):
 
     def test_only_a_failure_is_painted_bad(self):
         block = CSS.split(".rl-failed .rd-note {")[1].split("}")[0]
-        self.assertIn("var(--bad)", block)
+        # The note reads in ink now; what makes it a FAILURE is that only
+        # this row carries the colour at all, which the rows assert below.
+        self.assertIn("var(--ink-faint)", block)
         rows = CSS.split(".rl-row {")[1].split("}")[0]
         self.assertNotIn("--bad", rows)
         self.assertNotIn("--accent", rows)

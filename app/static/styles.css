@@ -408,7 +408,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   white-space: nowrap;
 }
 .badge.APPROVED { color: var(--ok); border-color: var(--ok); background: rgba(111, 174, 122, .08); }
-.badge.PROVISIONAL, .badge.DRAFT, .badge.REVIEWED { color: var(--hold); border-color: var(--hold); background: rgba(125, 143, 208, .08); }
+.badge.PROVISIONAL, .badge.DRAFT, .badge.REVIEWED { color: var(--ink-faint); border-color: var(--hold); background: rgba(125, 143, 208, .08); }
 .badge.REJECTED, .badge.FAIL { color: var(--bad); border-color: var(--bad); background: rgba(205, 97, 85, .08); }
 /* LOCKED is a fact, not an action — it stays grey. */
 .badge.LOCKED { color: var(--ink-dim); border-color: var(--line); background: var(--field); }
@@ -1086,7 +1086,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
     rgba(8, 9, 10, .90) 46%, rgba(8, 9, 10, .38) 78%, rgba(8, 9, 10, .12) 100%); }
 .anchor-hero.proposed .ah-scrim { display: none; }
 .ah-prop-kick { font-family: var(--mono); font-size: 13px; letter-spacing: .14em;
-  color: var(--hold); }
+  color: var(--ink-faint); }
 .ah-prop-name { font-family: var(--sans); font-size: 14px; font-weight: 600;
   color: var(--ink); }
 .ah-prop-why { font-family: var(--sans); font-size: 14px; color: var(--ink-dim);
@@ -1122,7 +1122,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 /* Amber: this is the one thing on the card that may need attention. */
 .ah-state { right: 10px; color: var(--accent); }
 .ah-state.set { color: var(--ink-dim); }
-.ah-state.prop { color: var(--hold); }
+.ah-state.prop { color: var(--ink-faint); }
 .ah-scrim { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
   padding: 26px 12px 11px; display: flex; flex-direction: column; gap: 3px;
   background: linear-gradient(to top, rgba(8, 9, 10, .93), rgba(8, 9, 10, 0)); }
@@ -1193,7 +1193,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 }
 .cast-badge { margin-left: auto; }
 .cast-badge.cast { border-color: var(--ok); color: var(--ok); }
-.cast-badge.uncast { border-color: var(--hold); color: var(--hold); }
+.cast-badge.uncast { border-color: var(--hold); color: var(--ink-faint); }
 .subj-card.uncast { border-style: dashed; }
 .subj-identity { font-family: var(--sans); font-size: 14px; color: var(--ink-dim); line-height: 1.5; cursor: pointer; }
 .subj-identity:hover { color: var(--ink); }
@@ -1237,12 +1237,12 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 /* PROPOSED chip state (mock 6a) — plan P5/Gap 5. Dashed = not yet real
    (the vocabulary-picker family); --hold carries awaiting-review. A
    confirmed chip is exactly the plain chip — no badge, no color. */
-.chip.proposed { border-style: dashed; border-color: var(--hold); color: var(--hold); }
-.chip.proposed .prop-tail { color: var(--hold); font-size: 13px; }
+.chip.proposed { border-style: dashed; border-color: var(--hold); color: var(--ink-faint); }
+.chip.proposed .prop-tail { color: var(--ink-faint); font-size: 13px; }
 .chip.proposed .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--mono); font-size: 13px; font-weight: 700;
-  color: var(--hold); text-decoration: underline; text-underline-offset: 2px;
+  color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px;
 }
 .chip.proposed .prop-act:hover { color: var(--ink); }
 
@@ -1376,7 +1376,7 @@ details.meta pre {
   border: 1px solid var(--line); padding: 2px 0; flex: none;
   width: 52px; text-align: center;
 }
-.block-kind.HOLD { color: var(--hold); border-color: var(--hold); }
+.block-kind.HOLD { color: var(--ink-faint); border-color: var(--hold); }
 .block-kind.GAP, .block-kind.SIZE, .block-kind.CITE,
 .block-kind.KEY { color: var(--bad); border-color: var(--bad); }
 /* TRIAGE §2 (ruled 2026-08-18): a list may mix scopes if it names them.
@@ -1425,8 +1425,8 @@ details.meta pre {
   border-left: 2px solid var(--bad); padding-left: 10px;
   background: var(--panel2);
 }
-.recent-row.error .recent-text { color: var(--bad); font-weight: 600; }
-.recent-row.error .recent-ts { color: var(--bad); }
+.recent-row.error .recent-text { color: var(--ink-faint); font-weight: 600; }
+.recent-row.error .recent-ts { color: var(--ink-faint); }
 
 /* Location coverage table + canonical meter (plan v3 Part A.3): 4 segments
    11×4px, 3px gap; filled = --ok; a single amber first segment = thin. */
@@ -1453,7 +1453,7 @@ details.meta pre {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .loc-open:hover { color: var(--ink); text-decoration: underline; }
-.loc-open.held { color: var(--hold); }  /* audit #9 */
+.loc-open.held { color: var(--ink-faint); }  /* audit #9 */
 .loc-draft { justify-self: start; font-family: var(--mono); font-size: 13px; }
 /* Finder list — canonical (2026-07-30c): Courier search over a scrollable
    list, parent rows expand to children, every row ends in its one verb.
@@ -1599,10 +1599,10 @@ details.meta pre {
 .env-facts .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--mono); font-size: 13px; font-weight: 700;
-  color: var(--hold); text-decoration: underline; text-underline-offset: 2px;
+  color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px;
 }
 .env-facts .prop-act:hover { color: var(--ink); }
-.env-facts.prop-tail { color: var(--hold); }
+.env-facts.prop-tail { color: var(--ink-faint); }
 .env-empty { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); padding: 6px 0; }
 
 /* PROMPT WILL CARRY (mock 6c) — plan P8: the scope block's live receipt,
@@ -1621,7 +1621,7 @@ details.meta pre {
 .pscope-line { font-family: var(--mono); font-size: 13px; letter-spacing: .05em; color: var(--ink-faint); }
 .scope-flag {
   font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
-  color: var(--hold); border: 1px solid var(--hold); padding: 1px 7px; flex: none;
+  color: var(--ink-faint); border: 1px solid var(--hold); padding: 1px 7px; flex: none;
 }
 .pscope select { max-width: 260px; }
 .carry-ovr { color: var(--ink-dim); margin-top: 3px; }
@@ -1677,7 +1677,7 @@ details.meta pre {
 }
 .slot .slot-verdict { align-self: flex-end; }
 .slot.TOO_SMALL { border-color: var(--bad); background: rgba(205, 97, 85, .07); }
-.slot.TOO_SMALL .slot-id { color: var(--bad); }
+.slot.TOO_SMALL .slot-id { color: var(--ink-faint); }
 .slot.NO_CANDIDATE { border-style: dashed; background: transparent; }
 .slot.apdrawn { border-style: solid; flex-direction: row; align-items: center; justify-content: space-between; }
 .asm-head { display: flex; align-items: flex-start; gap: 18px; }
@@ -1696,10 +1696,10 @@ details.meta pre {
   border: 1px solid; padding: 1px 6px; align-self: flex-start;
 }
 .slot-verdict.OK { color: var(--ok); border-color: var(--ok); }
-.slot-verdict.UNAPPROVED { color: var(--hold); border-color: var(--hold); }
+.slot-verdict.UNAPPROVED { color: var(--ink-faint); border-color: var(--hold); }
 .slot-verdict.TOO_SMALL { color: var(--bad); border-color: var(--bad); }
 .slot-verdict.NO_CANDIDATE { color: var(--ink-faint); border-color: var(--line); }
-.slot-dims { font-family: var(--mono); font-size: 13px; color: var(--bad); }
+.slot-dims { font-family: var(--mono); font-size: 13px; color: var(--ink-faint); }
 
 /* Judging room — canonical (plan v3 C6–C9, mock 3b): rail · stage ·
    provenance as one flex row inside #board-panels. */
@@ -1735,8 +1735,10 @@ details.meta pre {
 .rail-pid { flex: 1; font-family: var(--mono); font-size: 13px; letter-spacing: .04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rail-mark { flex: none; font-family: var(--mono); font-size: 13px; }
 .rail-mark.okdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
-.rail-mark.warn { color: var(--hold); }
-.rail-mark.bad { color: var(--bad); }
+.rail-mark.warn { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 6px; }
+.rail-mark.bad { color: var(--ink-faint);
+  border-left: 2px solid var(--bad); padding-left: 6px; }
 .rail-mark.none { color: var(--ink-faint); }
 .rail-note { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 4px; }
 
@@ -1753,7 +1755,7 @@ details.meta pre {
   font-family: var(--mono); font-size: 13px; letter-spacing: .08em;
   border: 1px solid; padding: 3px 9px; flex: none;
 }
-.shot-status.CANDIDATE { color: var(--hold); border-color: var(--hold); }  /* audit #6 */
+.shot-status.CANDIDATE { color: var(--ink-faint); border-color: var(--hold); }  /* audit #6 */
 .shot-status.APPROVED { color: var(--ok); border-color: var(--ok); }
 .shot-status.REJECTED { color: var(--bad); border-color: var(--bad); }
 .shot-actions { flex: 1; display: flex; justify-content: flex-end; gap: 9px; }
@@ -1813,7 +1815,7 @@ details.meta pre {
 .gen-go:hover { border-color: var(--ink); }
 
 /* provenance rail */
-.rail-label.bad { color: var(--bad); }
+.rail-label.bad { color: var(--ink-faint); }
 .anchor-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .anchor-meta { display: flex; flex-direction: column; min-width: 0; }
 .anchor-meta b { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1875,7 +1877,7 @@ details.meta pre {
 /* settings: engine cards (mock 4d) */
 .eng-powers { margin: 4px 0; font-size: 14px; color: var(--ink-dim); }
 .eng-note { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
-.eng-note.warn { color: var(--hold); }
+.eng-note.warn { color: var(--ink-faint); }
 .facts-row {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
   background: var(--line-soft); border: 1px solid var(--line-soft); margin-top: 20px;
@@ -1895,7 +1897,7 @@ details.meta pre {
 }
 .eng-row-test { flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-faint); }
 .eng-row-test .ok { color: var(--ok); }
-.eng-row-test .bad { color: var(--bad); }
+.eng-row-test .bad { color: var(--ink-faint); }
 .eng-row button { flex: none; font-size: 14px; padding: 4px 12px; }
 
 /* App dialog — canonical (plan v3 C15): --panel2 on a --bg scrim, quiet
@@ -2088,8 +2090,16 @@ details.meta pre {
 
 .prod-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .prod-care { font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
-.prod-care.care-hold { color: var(--hold); }
-.prod-care.care-bad { color: var(--bad); }
+/* A status that is only a colour disappears when the colour is lifted.
+   `--hold` is not one of the floor's seven text colours and `--bad` is
+   only sanctioned at headline scale or beside a hairline, so these marks
+   keep the state on a LEFT RULE and read their words in ink — the same
+   move the delta makes for red, and the idiom `.cd-blocked` already
+   uses. Without it HOLD, BAD and neutral were three identical greys. */
+.prod-care.care-hold { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 7px; }
+.prod-care.care-bad { color: var(--ink-faint);
+  border-left: 2px solid var(--bad); padding-left: 7px; }
 .prod-actions { margin-left: auto; display: flex; gap: 8px; }
 .prod-actions .ghost.urgent { border-color: var(--bad-line); }
 
@@ -2131,7 +2141,7 @@ details.meta pre {
 .proj-item.open .pm-name { color: var(--ink); }
 .pm-chip { margin-left: auto; font-size: 13px; letter-spacing: .1em; }
 .pm-chip.open { color: var(--ok); }
-.pm-chip.stale { color: var(--bad); }
+.pm-chip.stale { color: var(--ink-faint); }
 .pm-sub { display: block; margin-top: 2px; font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); }
 .pm-div { border-top: 1px solid var(--line-soft); margin-top: 4px; }
 .proj-menu .pm-new { display: block; width: 100%; text-align: left; padding: 8px 10px; color: var(--ink); }  /* audit #8 */
@@ -2172,7 +2182,7 @@ details.meta pre {
 #nav button.s-locked:hover { background: #17191c; }
 .lock-chip {
   display: none; font-family: var(--mono); font-size: 13px;
-  letter-spacing: .1em; border: 1px solid var(--hold); color: var(--hold);
+  letter-spacing: .1em; border: 1px solid var(--hold); color: var(--ink-faint);
   padding: 0 5px; margin-left: 8px; vertical-align: 1px;
 }
 #nav button.s-locked .lock-chip { display: inline-block; }
@@ -2187,7 +2197,7 @@ details.meta pre {
   padding: 16px 18px 14px; min-width: 300px;
 }
 .bp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.bp-chip { border: 1px solid var(--hold); color: var(--hold); font-size: 13px; letter-spacing: .1em; padding: 1px 8px; }
+.bp-chip { border: 1px solid var(--hold); color: var(--ink-faint); font-size: 13px; letter-spacing: .1em; padding: 1px 8px; }
 .bp-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 14px; padding: 0 2px; }
 .bp-x:hover { color: var(--ink); }
 .bp-sent { font-size: 14px; color: var(--ink-dim); margin-bottom: 14px; }
@@ -2288,7 +2298,8 @@ details.meta pre {
 .req-obj { flex: 1; min-width: 0; }
 .req-mark { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; white-space: nowrap; }
 .req-mark.ok { color: var(--ok); }
-.req-mark.hold { color: var(--hold); }
+.req-mark.hold { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 7px; }
 /* Light-table state: the spec is context — compact bordered chips. */
 .spec-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
 .req-chip {
@@ -2326,7 +2337,7 @@ details.meta pre {
 .nomatch {
   border: 1px solid var(--bad); padding: 10px 14px; margin: 8px 0 10px;
 }
-.nomatch b { color: var(--bad); font-size: 14px; letter-spacing: .1em; }
+.nomatch b { color: var(--ink-faint); font-size: 14px; letter-spacing: .1em; }
 .nomatch p { margin: 5px 0 0; font-size: 14px; color: var(--ink-dim); }
 /* A pre-checked match is the app's decision — distinguishable from a box
    the user ticked. */
@@ -2370,7 +2381,7 @@ details.meta pre {
 .act-dim { color: var(--ink-dim); }
 .act-dim:hover:not(:disabled) { color: var(--ink); }
 .act-reject { color: var(--ink-dim); }
-.act-reject:hover { color: var(--bad); }
+.act-reject:hover { color: var(--ink-faint); }
 /* Delete forever (rejected takes only) keeps .danger — destruction is
    not restyled by a hierarchy pass. */
 .act-bar .danger { border: 1px solid var(--line); background: transparent;
@@ -2467,7 +2478,7 @@ details.meta pre {
 .rl-row .rl-lab { color: var(--ink-faint); font-size: 14px; }
 .rl-row .rl-val { color: var(--ink-faint); font-size: 13px; }
 .rl-row.in .rl-val { color: var(--ink); }
-.rl-failed .rd-note { color: var(--bad); }
+.rl-failed .rd-note { color: var(--ink-faint); }
 /* UNCANONIZED — 2026-08-29 — PRODUCTION_DESIGN_UI_PLAN §3.5, the reader */
 /* The Bible rendered as the document it is. Storage is unchanged — the
    file is still markdown parsed by heading — and this renders it without
@@ -2587,7 +2598,7 @@ details.meta pre {
 }
 .take.shown .take-cap { color: var(--ink); }
 .take.approved .take-cap { color: var(--ok); }
-.take.rejected .take-cap { color: var(--bad); }
+.take.rejected .take-cap { color: var(--ink-faint); }
 
 /* The render dossier is ONE panel (PANEL_CARD_PLAN P8): rules between
    sections, and the prompt gets the height the rail already occupied. */
@@ -2695,7 +2706,7 @@ details.meta pre {
   font-family: var(--mono); }
 .models-label { font-size: 13px; font-weight: 700; letter-spacing: .12em; }
 .models-facts { flex: 1; font-size: 13px; letter-spacing: .06em; color: var(--ink-dim); }
-.models-facts .m-bad { color: var(--bad); }
+.models-facts .m-bad { color: var(--ink-faint); }
 
 /* C5 — the model browser: capability before vendor */
 .cat-wrap { border: 1px solid var(--line); background: var(--panel); margin-top: 16px; }
@@ -2722,12 +2733,12 @@ details.meta pre {
 .cbadge { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; padding: 2px 6px;
   border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
 .cbadge.ok { border-color: var(--ok); color: var(--ok); }
-.cbadge.hold { border-color: var(--hold); color: var(--hold); }
+.cbadge.hold { border-color: var(--hold); color: var(--ink-faint); }
 .cbadge.dim { border-color: var(--line); color: var(--ink-dim); }
 .cbadge.accent { border-color: var(--accent); color: var(--accent); }
 .cbadge.bad { border-color: var(--bad); color: var(--bad); }
 .cbadge.dline { border-style: dashed; color: var(--ink-faint); }
-.cbadge.dhold { border-style: dashed; border-color: var(--hold); color: var(--hold); }
+.cbadge.dhold { border-style: dashed; border-color: var(--hold); color: var(--ink-faint); }
 .cat-enable { text-align: right; }
 .cat-en { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; padding: 5px 10px;
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim); cursor: pointer; }
@@ -2742,7 +2753,7 @@ details.meta pre {
   border-top: 1px solid var(--line-soft); }
 .cat-strip .cred-tile { font-size: 13px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
 .cat-strip-txt { flex: 1; font-size: 14px; color: var(--ink-dim); }
-.cat-strip-cost { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--hold); white-space: nowrap; }
+.cat-strip-cost { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
 
 /* C7 — the engine picker: search first, capability on every row */
 .picker-open { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);
@@ -2994,7 +3005,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   color: var(--ink-faint); line-height: 1.6; }
 .swatch-note .text-act { font-size: 13px; letter-spacing: .05em; }
 .prop-head { font-family: var(--mono); font-size: 13px; letter-spacing: .1em;
-  color: var(--hold); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
+  color: var(--ink-faint); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
 /* PALETTE_GROUPS_PLAN (2026-08-06) — a design language is ONE swatch.
    The bands touch: no gap, no radius, no per-band margin, and an OUTLINE
    rather than a border so nothing insets them from the ramp's edge. The
@@ -3161,7 +3172,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   font-family: var(--mono); font-size: 13px; font-weight: 400;
   color: var(--ink-faint); min-width: 0;
 }
-.busy.busy-inline.bad { color: var(--bad); }
+.busy.busy-inline.bad { color: var(--ink-faint); }
 .busy.busy-inline.ok { color: var(--ok); }
 /* The key modal RESERVES the progress line's space (user 2026-08-20: the
    element is right, the modal changing shape under it is not). Elsewhere
@@ -3397,7 +3408,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .sv-rescan { margin-left: auto; }
 .sv-head .sv-x { margin-left: 12px; }
 /* R4 — removal lives in the footer, where the whole group can be read. */
-.sv-remove { margin-left: 16px; color: var(--bad); }
+.sv-remove { margin-left: 16px; color: var(--ink-faint); }
 
 /* Storage readout (user 2026-08-07). A healthy disk is not news, so the
    line carries no colour until it matters: --hold when it is getting
@@ -3407,8 +3418,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    count over this file never balanced.) */
 .stor-line { font-size: 13px; letter-spacing: .1em; color: var(--ink-dim); }
 /* R6: no bar — the line's colour carries the state. */
-.stor-line.hold { color: var(--hold); }
-.stor-line.bad { color: var(--bad); }
+.stor-line.hold { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 7px; }
+.stor-line.bad { color: var(--ink-faint);
+  border-left: 2px solid var(--bad); padding-left: 7px; }
 .stor-rows { margin: 10px 0; }
 .stor-row { display: flex; justify-content: space-between; padding: 6px 0;
   border-bottom: 1px solid var(--line-soft); font-size: 14px; color: var(--ink-dim); }
@@ -3451,7 +3464,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .pal-shelf-is-shelf .pal-row { display: flex; flex-direction: column; }
 .pal-shelf-is-shelf .sw-ramp { height: 34px; }
 .pal-shelf-is-shelf .sw-ramp-label { order: -1; margin-bottom: 6px; }
-.pal-shelf-is-shelf .sw-ramp-label .hero.prov { color: var(--bad); }
+.pal-shelf-is-shelf .sw-ramp-label .hero.prov { color: var(--ink-faint); }
 .pal-open { align-self: flex-start; margin-top: 6px; font-size: 14px; }
 .shelf-quarantine { margin-top: 18px; }
 .shelf-quarantine .ref-grid { margin-top: 10px; }
@@ -3580,7 +3593,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .lb-ladder { display: flex; flex-wrap: wrap; gap: 6px; }
 .lb-rail-foot { margin-top: auto; }
 .lb-ready { color: var(--ok); font-size: 14px; letter-spacing: .1em; }
-.lb-not-ready { color: var(--bad); font-size: 14px; letter-spacing: .1em; }
+.lb-not-ready { color: var(--ink-faint); font-size: 14px; letter-spacing: .1em; }
 
 .lb-blocked { margin-top: 12px; }
 .lb-blocked-k { color: var(--accent); font-size: 13px; letter-spacing: .14em;
@@ -3600,8 +3613,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .lb-fill-cell img { width: 100%; height: 84px; object-fit: cover; }
 .lb-fill-cell .mono { font-size: 13px; letter-spacing: .06em; }
 .lb-fill-v.ok { color: var(--ok); }
-.lb-fill-v.hold { color: var(--hold); }
-.lb-fill-v.bad { color: var(--bad); }
+.lb-fill-v.hold { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 7px; }
+.lb-fill-v.bad { color: var(--ink-faint);
+  border-left: 2px solid var(--bad); padding-left: 7px; }
 
 .lb-crop-modal { width: min(820px, 94vw); }
 .lb-crop-chips { display: flex; gap: 6px; align-items: center;
@@ -4000,7 +4015,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   padding: 9px 12px; margin: 8px 0 10px; display: grid; gap: 4px;
 }
 .sw-collide p { margin: 0; font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
-.sw-collide b { color: var(--bad); font-weight: 400; letter-spacing: .08em; }
+.sw-collide b { color: var(--ink-faint); font-weight: 400; letter-spacing: .08em; }
 .sw-collide .mini { color: var(--ink-faint); font-size: 14px; letter-spacing: .1em; }
 .sw-collide { position: relative; }
 .sw-collide-x {
@@ -4342,7 +4357,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ref-kind { font-size: 14px; color: var(--ink-faint); flex: 1; }
 .ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
 /* a change YOU just made reads as your decision, not as the app's */
-.ref-why-user { color: var(--hold); }
+.ref-why-user { color: var(--ink-faint); }
 /* The verb that opens a group's photos is always visible: a control that
    appears only under the pointer is a control you have to already know
    about, which is the same fault as the act bar's vanished tools. */
@@ -4412,7 +4427,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .attached .attached-k {
   color: var(--ink-faint); letter-spacing: .14em; margin-right: 12px;
 }
-.attached.over .attached-k { color: var(--bad); }
+.attached.over .attached-k { color: var(--ink-faint); }
 /* The manifest: every plate that will ride the next render, named,
    without a click (user 2026-08-14: "how can I see every one?"). It sits
    at the end of the step because it is the step's answer. */
@@ -4424,7 +4439,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .attached .attached-k {
   color: var(--ink-faint); letter-spacing: .14em; margin-right: 12px;
 }
-.attached.over .attached-k { color: var(--bad); }
+.attached.over .attached-k { color: var(--ink-faint); }
 .pal-group { position: relative; margin-top: 14px; }
 .dropdown-panel {
   position: absolute; top: 100%; left: 0; z-index: 30;
@@ -4439,11 +4454,17 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .gen-stated i { font-style: normal; letter-spacing: .12em; color: var(--ink-faint); margin-right: 8px; }
 .gen-stated b { font-family: var(--sans); font-size: 15px; font-weight: 400; color: var(--ink); }
 .wb-card .gen-row { margin-top: 12px; }
+/* A stated blocker keeps its state on a rule, not on its glyphs: these
+   two are the most consequential sentences on the card ("this will not
+   render, and here is why") and they were the least legible on it. The
+   `.cd-blocked` idiom — --bad for a mismatch, --hold for not-ready. */
 .gen-warn {
-  margin-top: 10px; font-size: 13px; letter-spacing: .06em; color: var(--bad);
+  margin-top: 10px; font-size: 13px; letter-spacing: .06em; color: var(--ink-faint);
+  border-left: 2px solid var(--bad); padding-left: 9px;
 }
 .gen-gate {
-  margin-top: 8px; font-size: 13px; letter-spacing: .08em; color: var(--hold);
+  margin-top: 8px; font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 9px;
 }
 .gen-gate.gate-clear { color: var(--ok); }
 
@@ -4555,11 +4576,16 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   background: rgba(11, 12, 14, .82); padding: 3px 7px; color: var(--ink-dim);
 }
 .made-state.ok { color: var(--ok); }
-.made-state.hold { color: var(--hold); }
+.made-state.hold { color: var(--ink-faint);
+  border-left: 2px solid var(--hold); padding-left: 7px; }
 .made-none { font-size: 13px; letter-spacing: .12em; color: var(--ink-faint); }
+/* The sanctioned exception to "never reserve the shape of the missing
+   thing" — so the sentence stating the blocker has to be readable. The
+   state is on the rule, the words are in ink. */
 .made-blocker {
-  font-size: 13px; letter-spacing: .08em; color: var(--bad);
+  font-size: 13px; letter-spacing: .08em; color: var(--ink-faint);
   background: rgba(11, 12, 14, .82); padding: 3px 7px;
+  border-left: 2px solid var(--bad);
 }
 
 .made-cap {
@@ -4660,7 +4686,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   font-size: 13px; letter-spacing: .08em;
 }
 .filmstrip .take.shown .take-cap { color: var(--ink); }
-.filmstrip .take.rejected .take-cap { color: var(--bad); }
+.filmstrip .take.rejected .take-cap { color: var(--ink-faint); }
 
 /* the board strip — the same roll, one frame per panel */
 .made-grid.filmroll { gap: 0; }
@@ -4843,7 +4869,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .tut-adm-trig { display: -webkit-box; -webkit-line-clamp: 2;
   -webkit-box-orient: vertical; overflow: hidden; }
 .tut-adm-title .wv-tag { margin-left: 6px; }
-.tut-adm-err { display: block; color: var(--bad); margin-top: 3px; }
+.tut-adm-err { display: block; color: var(--ink-faint); margin-top: 3px; }
 /* Q7: --accent-soft said "current stage" about a broken document. */
 .tut-adm-bad { box-shadow: inset 2px 0 0 var(--bad); }
 .tut-adm-acts { display: flex; flex-wrap: wrap; gap: 6px 8px; }
@@ -4925,7 +4951,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .tut-adm-errors { border: 1px solid var(--line); background: var(--field);
   border-left: 3px solid var(--bad); padding: 11px 12px; margin-top: 14px;
   display: flex; flex-direction: column; gap: 5px; }
-.tut-adm-ehead { font-size: 14px; letter-spacing: .1em; color: var(--bad); }
+.tut-adm-ehead { font-size: 14px; letter-spacing: .1em; color: var(--ink-faint); }
 .tut-adm-ereason { font-size: 14px; line-height: 1.6; letter-spacing: .05em;
   text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
 .tut-adm-back { display: block; margin-bottom: 14px; }
@@ -4971,7 +4997,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   margin: 0; font-size: 13px; letter-spacing: .1em; color: var(--ink-faint);
   line-height: 1.5;
 }
-.rd-note.bad { color: var(--bad); }
+.rd-note.bad { color: var(--ink-faint); }
 
 /* Fixed height, both columns (user, 2026-08-21). The snapshot re-flows on
    every scene — two lines here, six there — and the panel was resizing

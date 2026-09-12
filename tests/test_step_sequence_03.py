@@ -110,7 +110,10 @@ class TheBoardOpensOnWhatItMade(unittest.TestCase):
         empty."""
         self.assertIn("NO TAKE YET", JS)
         self.assertIn("made-blocker", JS)
-        self.assertIn("color: var(--bad)", block(".made-blocker"))
+        # The floor moved --bad off small glyphs (2026-09-12): the
+        # blocker keeps its state on the rule and reads in ink.
+        self.assertIn("color: var(--ink-faint)", block(".made-blocker"))
+        self.assertIn("border-left: 2px solid var(--bad)", block(".made-blocker"))
 
     def test_every_frame_is_the_same_window(self):
         """User 2026-08-15: frames that took each take's own ratio made a

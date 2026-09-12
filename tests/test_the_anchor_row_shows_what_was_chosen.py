@@ -252,10 +252,17 @@ class AProposalShowsTheLookItProposes(unittest.TestCase):
 
     def test_the_proposal_speaks_in_hold_not_amber(self):
         """Amber would be the third colour on a card already carrying two,
-        saying the word its own kicker says two lines below."""
-        self.assertIn(".ah-state.prop { color: var(--hold); }", CSS)
-        kick = CSS.split("\n.ah-prop-kick {")[1].split("}")[0]
-        self.assertIn("var(--hold)", kick)
+        saying the word its own kicker says two lines below.
+
+        Since LEGIBILITY_FLOOR (2026-09-12) the hold is on the overlay's
+        own dashed border rather than on its words — `--hold` is not one
+        of the floor's seven text colours. What this guards is unchanged:
+        a proposal is a HOLD, and it is never amber."""
+        self.assertIn(".ah-state.prop { color: var(--ink-faint); }", CSS)
+        self.assertNotIn("var(--accent)",
+                         CSS.split(".ah-state.prop {")[1].split("}")[0])
+        prop = CSS.split(chr(10) + ".ah-prop {")[1].split("}")[0]
+        self.assertIn("border: 1px dashed var(--hold)", prop)
 
     def test_one_scrim_at_a_time(self):
         """The proposal's kicker, name and reason ARE the card's scrim

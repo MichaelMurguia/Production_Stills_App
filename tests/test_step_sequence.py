@@ -485,7 +485,10 @@ class TheAspectRegression(unittest.TestCase):
         b = JS[max(0, i - 600):i + 400]
         self.assertIn("aspectWarn", b)
         self.assertIn("THE LAST TAKE RENDERED", b)
-        self.assertIn("color: var(--bad)", block(".gen-warn"))
+        # The floor moved --bad off small glyphs; the warning keeps
+        # its state on the rule beside it and reads in ink.
+        self.assertIn("color: var(--ink-faint)", block(".gen-warn"))
+        self.assertIn("border-left: 2px solid var(--bad)", block(".gen-warn"))
 
 
 class TheVocabularyStaysInsideItsSurface(unittest.TestCase):

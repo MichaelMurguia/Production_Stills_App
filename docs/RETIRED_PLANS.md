@@ -287,3 +287,37 @@ delta as new instructions.
   on). It is marked `Status: FOR REVIEW`, the drop's own README does not
   list it, and it would retire copy across every surface. Raised, not
   implemented.
+
+- **LEGIBILITY_FLOOR_DELTA_2026-09-12b.md** — delivered in
+  `design_handoff/Delta_Update.zip`, implemented 2026-09-12, same day as
+  the floor it amends. Extracted to scratch, never copied into the tree.
+
+  Its ruling is the interesting half: **"do not port a colour list. Port
+  the rule."** The first pass had replaced a fixed list of greys, and a
+  verifier pass found the ones the list missed. So the implementation is
+  a lint that computes contrast over every `color:` value
+  (`TheColourFloorIsMeasuredNotListed`), and it found what a list could
+  not — `--hold` at 5.70:1 colouring 29 glyphs and `--bad` at 4.61:1
+  colouring 44.
+
+  Both moved to the rule beside the words, which is where the delta
+  already put red ("the red stays on the hairline beside them"). Ten
+  marks whose state was ONLY a colour would otherwise have collapsed into
+  three identical greys — `.gen-warn`, `.gen-gate`, `.made-blocker`,
+  `.req-mark.hold`, the `.stor-line`, `.lb-fill-v`, `.prod-care` and
+  `.rail-mark` families — and gained a 2px left rule instead. §4's
+  exclusions are honoured: borders, underlines, outlines, backgrounds,
+  scrims and swatch values are out of the lint's scope.
+
+  §5 (13.5px gone) and §3 (withheld buttons readable) were already true
+  from the floor commit.
+
+  **One thing measured and raised rather than fixed:** `--panel2`
+  (#21252a) is the single ground where the floor's OWN inks fall short —
+  `--ink-faint` 6.56:1, `--accent` 6.96:1, against 8.33 and 8.83 on
+  `--ground`. Complying there means changing an ink the floor fixes or
+  darkening a surface token it does not mention. Recorded as a number in
+  the token tests so it stays visible.
+
+  The rest of the zip is the same resurrection as `font_updates.zip` a
+  few hours earlier, minus nothing and plus this note.
