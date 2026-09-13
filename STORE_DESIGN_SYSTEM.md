@@ -20,9 +20,16 @@ Add to the storefront's notes: *store UI must follow
   gradients except a hero scrim.
 - Tokens: `--bg #0b0c0e` (store base, one step darker than the app),
   `--panel #15181b`, `--panel2 #21252a`, `--line #2b3037`,
-  `--line-soft #23272c`, `--ink #eceef0`, `--ink-dim #9aa1a8`,
-  `--ink-faint #6b7278`, `--accent #e0a33f`, `--ok #6fae7a`,
-  `--hold #7d8fd0`, `--bad #cd6155`.
+  `--line-soft #23272c`, `--ink #eceef0`, `--ink-body #dfe3e6`,
+  `--ink-dim #c3c9ce`, `--ink-faint #a3aab1`, `--accent #e0a33f`,
+  `--ok #6fae7a`, `--hold #7d8fd0`, `--bad #cd6155`; and for lines only,
+  `--line-strong #6b7278` / `--line-bright #9aa1a8` — the retired text
+  greys (LEGIBILITY_FLOOR, 2026-09-12).
+- **The legibility floor.** No letter of either case renders under 10px;
+  the ladder is 15/17/18/20/22/24/27/30/33/36/48 plus the store's own
+  60px hero, and 15/17 are Courier-uppercase-only. `--mono` leads with
+  Consolas. `--hold` colours no glyph and `--bad` only beside a hairline.
+  Asserted mechanically in `tests/test_store_tokens.py`.
 
 ## Store-only rules
 
@@ -216,6 +223,7 @@ here and recorded as a dated `RULED (...)` changelog entry below.
 
 | Date | What it is | Where | What the designer should rule on |
 |---|---|---|---|
+| 2026-09-12 | **The legibility floor reaches the store** (app ruling 2026-09-12 + user ruling "no case — upper or lower — should be smaller than 10 px ever"): this system's first line is that the store inherits the app's tokens and type scale without change, so it inherits their correction. Measured on the booted store BEFORE: smallest rendered glyph **4px**, 54 elements under 10px, `.kicker` at 10px rendering 6px caps, a 13px body link rendering 7px of lowercase — worse than the app ever was, because the store had never had a legibility pass. Now: `--ink-dim` → `#c3c9ce`, `--ink-faint` → `#a3aab1`, new `--ink-body`, the old greys survive as `--line-strong` / `--line-bright` for lines only; `--mono` leads with Consolas because Courier New's cap height is hinted flat; the ladder is the app's 15/17/18/20/22/24/27/30/33/36/48 plus the store's own **60px hero**. `--hold` and `--bad` move off glyphs onto the rule beside them. 123 rules retiered | Every store surface | Review (1) the 60px hero is the one step the store keeps that the app does not — a sales headline is store-only and this system allows it, but it should be ruled rather than assumed; (2) the coming-soon hero was `clamp(34px, 5.5vw, 58px)` and is now a fixed 60px, because a fluid size cannot sit on a fixed ladder; (3) `.bd-row`'s three fixed column widths were measured against 9.5px type and are content-sized now; (4) the Google button's label is 20px, which departs from Google's own 14px spec — the floor governs a glyph a person reads, but that is a brand-compliance call |
 
 
 ---

@@ -37,6 +37,106 @@ def block(sel: str) -> str:
     return "\n".join(bodies)
 
 
+# NB: the module already binds TEMPLATES to the directory itself.
+FLOOR_TEMPLATES = sorted((ROOT / "app/templates").glob("*.html"))
+
+
+class TheLegibilityFloorAppliesHereToo(unittest.TestCase):
+    """The store inherits the app's tokens and type scale "without
+    change" — this system's own first section says so — so it inherits
+    their correction. Both floors were ruled for the app on 2026-09-12
+    and applied here the same day.
+
+    Measured before the pass, on the booted store: the smallest rendered
+    glyph was **4px**, with 54 elements under 10px. `.kicker` at 10px
+    rendered 6px caps; a 13px body link rendered 7px of lowercase. That
+    is worse than the app ever was, because the store had never had a
+    legibility pass at all.
+
+    The rules are the app's, and they are mechanical for the same reason:
+    a floor with exceptions is a floor somebody has to maintain."""
+
+    STEPS = {15, 17, 18, 20, 22, 24, 27, 30, 33, 36, 48, 60}
+    RETIRED_INK = ("#6b7278", "#9aa1a8", "#c8cdd2", "#3a4046", "#4a4d52")
+
+    @staticmethod
+    def _bare(t):
+        return re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+
+    def _sources(self):
+        return [("store.css", CSS)] + [(f.name, f.read_text(encoding="utf-8"))
+                                       for f in FLOOR_TEMPLATES]
+
+    def test_every_size_is_a_step_on_the_scale(self):
+        """The store keeps one step the app does not: 60px, its hero.
+        A sales headline is a store-only surface and its own system
+        allows it; everything below the hero is the shared ladder."""
+        for name, t in self._sources():
+            for m in re.finditer(r"font-size:\s*([^;}\"']+)", self._bare(t)):
+                for px in re.findall(r"([\d.]+)px", m.group(1)):
+                    self.assertIn(float(px), self.STEPS, f"{name}: {m.group(0)[:40]}")
+
+    def test_no_fluid_size_anywhere(self):
+        """A `clamp()` cannot sit on a fixed ladder, and it is how a 9px
+        label survived the app's first pass."""
+        for name, t in self._sources():
+            for m in re.finditer(r"font-size:\s*([^;}]+)", self._bare(t)):
+                self.assertNotRegex(m.group(1), r"[\d.]+(vw|vh|em|rem|%)",
+                                    f"{name}: {m.group(0)[:44]}")
+
+    def test_the_tight_tiers_are_uppercase_only(self):
+        """15px and 17px clear 10px on CAP height and fail it on
+        x-height, so they are legal only where the text renders
+        uppercase. Earned by measurement on the booted store, never
+        assumed."""
+        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", self._bare(CSS)):
+            if re.search(r"font-size:\s*(1[57])px", body):
+                s1 = " ".join(sel.split())
+                for lower in ("foot-links", "-desc", "prose", "para", "mono"):
+                    self.assertNotIn(lower, s1, f"{s1} can render lowercase")
+
+    def test_no_retired_grey_is_used_as_a_glyph_colour(self):
+        bad = []
+        for m in re.finditer(r"(?:^|[;{])\s*color:\s*([^;}]+)", self._bare(CSS)):
+            v = m.group(1).strip().lower()
+            if any(h in v for h in self.RETIRED_INK):
+                bad.append(v)
+        self.assertEqual(bad, [], f"retired ink used as text: {bad}")
+
+    def test_the_ink_tiers_carry_the_floors_values(self):
+        for tok, hexv in (("--ink", "#eceef0"), ("--ink-body", "#dfe3e6"),
+                          ("--ink-dim", "#c3c9ce"), ("--ink-faint", "#a3aab1")):
+            m = re.search(re.escape(tok) + r":\s*(#[0-9a-fA-F]{6})", CSS)
+            self.assertIsNotNone(m, tok)
+            self.assertEqual(m.group(1).lower(), hexv, tok)
+
+    def test_the_old_greys_survive_only_as_lines(self):
+        for tok, hexv in (("--line-strong", "#6b7278"), ("--line-bright", "#9aa1a8")):
+            m = re.search(re.escape(tok) + r":\s*(#[0-9a-fA-F]{6})", CSS)
+            self.assertIsNotNone(m, tok)
+            self.assertEqual(m.group(1).lower(), hexv, tok)
+        for m in re.finditer(r"([a-z-]+)\s*:\s*([^;{}]*var\(--line-(?:strong|bright)\)[^;{}]*)",
+                             self._bare(CSS)):
+            self.assertNotEqual(m.group(1), "color", "a line token colouring a glyph")
+
+    def test_status_colour_sits_on_the_rule_not_the_glyph(self):
+        """`--hold` is not one of the floor's seven text colours and
+        `--bad` is sanctioned only at headline scale or beside a
+        hairline. Both keep their meaning on a border; the words read in
+        `--ink-faint`."""
+        for m in re.finditer(r"(?:^|[;{])\s*color:\s*var\(--(hold|bad)[^)]*\)",
+                             self._bare(CSS)):
+            self.fail(f"status colouring a glyph: {m.group(0).strip()}")
+
+    def test_the_mono_stack_leads_with_a_face_that_has_cap_height(self):
+        """Courier New's cap is hinted flat at 8px from 11.5px through
+        15px, so a size floor alone cannot make a label legible in it."""
+        m = re.search(r"--mono:\s*([^;]+);", CSS)
+        self.assertIsNotNone(m)
+        self.assertTrue(m.group(1).strip().startswith("Consolas"), m.group(1))
+        self.assertIn("Courier New", m.group(1), "it stays as a fallback")
+
+
 class StoreTokenTests(unittest.TestCase):
     def test_every_token_used_is_defined(self):
         """A var(--x) with no --x renders as inherited ink and silently
@@ -55,7 +155,7 @@ class StoreTokenTests(unittest.TestCase):
         band's one condition row, setup notices, the router's status
         blocks. Inherited unchanged from the app system."""
         self.assertIn("--hold: #7d8fd0", CSS)
-        self.assert_decl(".eb-hold", "color: var(--hold)")
+        self.assert_decl(".eb-hold", "border-left: 2px solid var(--hold)")
 
     def test_warn_stays_deleted(self):
         """It aliased the accent — the same defect the app deleted in R3.
@@ -94,14 +194,14 @@ class StoreTokenTests(unittest.TestCase):
         """The operator console (NON-CANON 2026-08-06): machine tables in
         Courier, one-word states in status colors, never amber."""
         self.assert_decl(".admin-table .st-live", "color: var(--ok)")
-        self.assert_decl(".admin-table .st-held", "color: var(--hold)")
+        self.assert_decl(".admin-table .st-held", "color: var(--ink-faint)")
         # X4: row acts are verbs, not machine values.
         self.assert_decl(".admin-act", "font-family: var(--sans)")
         self.assert_decl(".admin-table", "table-layout: fixed")
         # X1: the link into the console is styled exactly like the public
         # links beside it — access is not a visual style.
         self.assert_decl(".head-admin", "color: var(--ink-dim)")
-        self.assert_decl(".head-admin", "font-size: 13px")
+        self.assert_decl(".head-admin", "font-size: 20px")
         self.assertNotIn("var(--mono)", block(".head-admin"))
         self.assertNotIn("var(--accent)", block(".head-admin"))
 
@@ -250,7 +350,7 @@ class GoogleButtonTests(unittest.TestCase):
     def test_the_branding_values_are_exact(self):
         b = block(".btn-google")
         for decl in ("background: #131314", "border: 1px solid #8E918F",
-                     "color: #E3E3E3", "font-size: 14px", "font-weight: 500",
+                     "color: #E3E3E3", "font-size: 20px", "font-weight: 500",
                      "gap: 12px", "min-height: 40px",
                      "font-family: 'Roboto', 'Archivo', sans-serif"):
             self.assertIn(decl, b, f".btn-google: missing '{decl}'")

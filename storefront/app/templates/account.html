@@ -32,7 +32,7 @@
     {% if p.on_trial %}
     {# The end of a trial is a date, not a vibe: state it, and state what
        happens on it, because those are two different facts. #}
-    <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint);margin-top:0">
+    <p class="hero-sub mono" style="font-size:20px;letter-spacing:.06em;color:var(--ink-faint);margin-top:0">
       {% if p.trial_kind == "card" %}
       CONVERTS {{ p.trial_ends_at.strftime("%d %b %Y") }} &middot; YOUR CARD IS CHARGED THEN AND THE STUDIO KEEPS RUNNING &middot; CANCEL ANY TIME BEFORE
       {% else %}
@@ -130,7 +130,7 @@
 {% if request.state.is_owner %}
   {# Debug tools live on /admin now — this page is the customer's view of
      their own purchases, and an owner is a customer here too. #}
-  <p class="hero-sub mono" style="font-size:11px;letter-spacing:.06em;color:var(--ink-faint)">
+  <p class="hero-sub mono" style="font-size:20px;letter-spacing:.06em;color:var(--ink-faint)">
     OWNER &middot; DEBUG TOOLS AND TRIAL CODES MOVED TO <a href="/admin">/ADMIN</a>
   </p>
   {% endif %}
