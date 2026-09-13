@@ -384,7 +384,7 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         self.assertIn("background: var(--field)", ticker)
         self.assertIn("var(--ok)", ticker)
         obs = self.css.split(".rd-obs, .rd-found {")[1].split("}")[0]
-        self.assertIn("font-size: 20px", obs)   # prose floor
+        self.assertIn("font-size: var(--t-body)", obs)   # prose floor
 
     def test_the_model_phase_spins_and_says_what_it_is_doing(self):
         """A surface whose whole job is to look alive went static at the

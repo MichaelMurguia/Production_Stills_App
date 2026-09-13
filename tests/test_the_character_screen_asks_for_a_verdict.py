@@ -65,7 +65,7 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         """24px in the plan; 33px since TYPE_SCALE_R2 was scaled x1.5 to
         put its floor at 10px of ink (2026-09-12). The ROLE is what the
         plan fixed — a screen title — and that has not changed."""
-        self.assertIn("font-size: 33px", block(".cd-name {"))
+        self.assertIn("font-size: var(--t-screen)", block(".cd-name {"))
 
     def test_no_picture_is_the_one_amber_thing_on_it(self):
         """Amber marks the one thing asking for attention. §3 drops the
@@ -110,13 +110,13 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         result they edit the description and generate again, which is why
         the edit button is large.\""""
         b = block(".cd-edit {")
-        self.assertIn("font-size: 20px", b)
+        self.assertIn("font-size: var(--t-body)", b)
         self.assertIn("border-color: var(--line-strong)", b)   # the plan's #6b7278
         self.assertIn('class="ghost cd-edit" data-f="edit">Edit description<', JS)
 
     def test_the_description_is_16px_over_1_6(self):
         b = block(".cd-desc {")
-        self.assertIn("font-size: 20px", b)
+        self.assertIn("font-size: var(--t-body)", b)
         self.assertIn("line-height: 1.6", b)
 
     def test_the_quotes_carry_their_page_in_courier_beside_italic_prose(self):
@@ -394,11 +394,13 @@ class NothingOnEitherScreenIsUnderTwelvePixels(unittest.TestCase):
                  ".cd-fact > b {", ".cd-fact > span {"]
 
     def test_every_size_on_the_cast_screens(self):
+        """Every one of them names a role token. The floor is a property
+        of the table now (2026-09-13), not of each rule — which is the
+        whole reason the table exists."""
         import re
         for sel in self.SELECTORS:
-            m = re.search(r"font-size:\s*([\d.]+)px", block(sel))
-            self.assertIsNotNone(m, sel)
-            self.assertGreaterEqual(float(m.group(1)), 12, sel)
+            m = re.search(r"font-size:\s*var\(--t-[a-z]+\)", block(sel))
+            self.assertIsNotNone(m, f"{sel} does not name a role token")
 
     def test_the_shared_courier_labels_clear_the_floor_everywhere(self):
         """These three were 9.5-10.5px app-wide and this screen patched
@@ -413,9 +415,8 @@ class NothingOnEitherScreenIsUnderTwelvePixels(unittest.TestCase):
         self.assertNotIn("#cast-screen .wiz-group-label", CSS)
         for sel in (".wiz-group-label", ".cost", ".text-act"):
             b = CSS.split(NL + sel + " {")[1].split("}")[0]
-            m = re.search(r"font-size:\s*([\d.]+)px", b)
-            self.assertIsNotNone(m, sel)
-            self.assertGreaterEqual(float(m.group(1)), 13, sel)
+            m = re.search(r"font-size:\s*var\(--t-[a-z]+\)", b)
+            self.assertIsNotNone(m, f"{sel} does not name a role token")
 
 
 if __name__ == "__main__":

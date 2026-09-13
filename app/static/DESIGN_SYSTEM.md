@@ -196,7 +196,44 @@ The scale, and the only sizes in use:
   wrong.** Give the label the room; do not shrink it.
 - Line-height never below 1.4 on anything that wraps.
 
-### The scale: TYPE_SCALE_R2 × 1.5 (2026-09-12)
+### The type scale is ONE table (2026-09-13)
+
+**Every font-size in the app is one of eleven role tokens, declared at the
+top of `styles.css` under `THE TYPE SCALE`. There are no literal px sizes
+anywhere else — not in the stylesheet, not in `app.js`, not inline.**
+
+| token | base | role |
+|---|---|---|
+| `--t-kicker` | 15 | Courier CAPS — section kickers, step labels |
+| `--t-mark` | 17 | Courier CAPS — states, counts, badges, cost notes |
+| `--t-minor` | 18 | Archivo — tertiary links, secondary prose |
+| `--t-body` | 20 | Archivo body; Courier slugs, paths, refs |
+| `--t-title` | 22 | step titles, modal titles, detail description |
+| `--t-subject` | 24 | bible section subjects |
+| `--t-head` | 27 | bible `##` headings |
+| `--t-logline` | 30 | the logline |
+| `--t-screen` | 33 | screen titles |
+| `--t-step` | 36 | Courier step numbers |
+| `--t-prod` | 48 | the bible's production title |
+
+Each is `calc(<base>px * var(--t-scale))`. **Resizing the whole app is one
+line**: `--t-scale`. Resizing one role is one line. The store has the same
+table plus `--t-hero` for its sales headline.
+
+Why it exists: four plans and two user rulings moved this scale in a single
+day, and each move meant rewriting 300–550 literal declarations and then
+chasing every test that pinned a number. That is an architecture fault, not
+bad luck (user, 2026-09-13: *"You should have a table of strings and font
+sizes and be able to change like 5 lines in settings"*). Tests pin the
+ROLE now, never the number, so a scale change touches nothing but the
+table. `tests/test_design_tokens.py::TheTypeScaleIsOneTable` fails the
+build if a literal size reappears.
+
+**`--t-scale` is currently `.8`** — 20% below the ruled ladder, by the
+user's instruction on 2026-09-13. At `1` the smallest rendered glyph is
+10px; at `.8` it is 7px. The ladder's ratios are unchanged.
+
+### The ratios: TYPE_SCALE_R2 × 1.5 (2026-09-12)
 
 `TYPE_SCALE_R2_2026-09-12.md` supersedes the floor's own §1 table and
 restores range — its complaint, correctly, was that a flat floor made
@@ -1941,6 +1978,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 | 2026-09-01 | **"NO ENGINE" becomes "NO AI MODEL", and a suppressed install stops seeing the setup form** (user-directed): "engine" is this codebase's word for a provider — the band chip, two dropdowns and two gate lines now all say NO AI MODEL, which is what Settings calls it and what the store sells. And Settings picks between its setup form and its control panel on `any_credential`, which the dev key-guard makes false — so a CONFIGURED install met "Connect to many models" and a row of Authenticate buttons, and the row taught yesterday to say KEY SAVED — HIDDEN never rendered. The choice is configured-OR-suppressed now | The nav band; Settings / AI & engines | Built from canon — copy and a branch condition, no new tokens. Review (1) whether "AI model" should replace "engine" in the CODE's vocabulary too, not just the copy; (2) the suppressed row's remedy is a shell command in a GUI |
 | 2026-09-01 | **A credential the process is hiding says so, instead of offering Authenticate** (user-caught): the dev loop blanks stored keys so a mis-click cannot spend, and does it by making the process unable to SEE them rather than by editing the file — so the Settings row rendered identically to an install with no key and invited the user to add theirs again ("my api key is not saving"). It was saving every time. The row now carries a `--hold` mark, `KEY SAVED — HIDDEN BY THIS DEV SESSION`, and the command that lifts it in place of the button. New: `.cred-fix` | Settings / AI & engines | Built from canon — `--hold` and Courier for a machine fact. This is the THIRD surface this one guard has misreported (a stale PASS badge 2026-08-16, the nav band and this row 2026-09-01); review whether the suppression deserves one banner on the page rather than a per-row line |
 | 2026-09-01 | **Stage 01 stops waiting for an engine, and the gate names its real condition** (user-directed; AMENDS the ruling of 2026-08-18 that with no model connected the whole pipeline waits): uploading a screenplay spends nothing — the READ spends, and has its own gate — so stage 01 is no longer locked on a missing credential. Everything downstream still is. Separately, `capability` now reports `keys_suppressed`, and the lock popover distinguishes "no key" from "your key is saved, this dev session is hiding it so a mis-click cannot spend" | The nav band's lock popover | Built from canon — no new tokens. Found because the dev loop's spend guard made the app look un-configured and it sent the user to Settings to add a key already saved there ("I added key and cant access the screenplay tab"). Review whether the 01 sub-line should say anything while the rest of the band is locked |
+| 2026-09-13 | **The type scale is one table, and the app is 20% smaller** (user-directed: "everything should be reduced by 20%... You should have a table of strings and font sizes and be able to change like 5 lines in settings. If its not set up that way - fix that"): four plans and two rulings moved this scale in one day, and each move meant rewriting 300–550 literal declarations and then chasing every test that pinned a number. Every font-size is now one of eleven ROLE tokens — `--t-kicker` … `--t-prod` — each `calc(<base>px * var(--t-scale))`, declared once at the top of `styles.css`. 675 literals across both stylesheets and all the markup became token references; zero literals remain, and a test fails the build if one returns. Tests pin the ROLE, never the number. The 20% is then `--t-scale: .8`, a single line | Every surface, both apps | Built from canon — no new visual pattern, the same ladder scaled. Review (1) at `.8` the smallest rendered glyph is 7px against 10px at `1` — the 10px ink floor ruled on 09-12 no longer holds, by the same user's later instruction, and the knob makes it one edit either way; (2) the scale yields fractional sizes (13.6px, 17.6px, 26.4px) which render fine but read oddly in devtools — whether the bases should be re-chosen so `.8` lands on integers is a designer's call |
 | 2026-09-12 | **The scale is TYPE_SCALE_R2 × 1.5** (designer plan + user ruling): R2 supersedes the floor's type table and is right that a flat floor made kickers, captions and body read as one size — but its ladder is font-size, and its floor tier measures 7px caps / 5px x-height here, under the same day's ruling. The user ruled proportional: R2's ratios, the user's floor, so the ladder is multiplied by 1.5 and its floor tier lands at 10px of ink. Live tiers are 15/17/20/22/33/36 against two before. **15px and 17px Courier are conditional** — they clear the floor on cap height and fail it on x-height, so a rule earns one only by declaring `text-transform: uppercase` or by being MEASURED rendering uppercase on the page; 291 Courier rules were classified that way and 10 were held back at 20px for rendering lowercase | Every surface | Review (1) only 90 of 320 Courier selectors are reachable on this project's unlocked stages, so the tight tiers are populated for stages 01–02, Settings and Projects and conservative elsewhere — they grow as breakdowns/panels/boards become reachable; (2) the top of the ladder is now 48px, which is large for a production title; (3) `.prod-actions` and `.prod-card-head` gained `flex-wrap` to survive 1280px |
 | 2026-09-12 | **The 10px glyph floor** (user ruling: "no case - upper or lower should be smaller than 10 px ever"): a floor on INK, not on font-size, and it binds on x-height rather than cap height because lowercase is the smaller of the two. Measured, Archivo needs 18px and Consolas 20px to put a lowercase letter at 10px — so body prose is 18px and ALL Courier is 20px. Everything below is retired. Courier is one size rather than 15px-for-caps / 20px-for-lowercase because CSS cannot select on case: the per-rule version was wrong three times running as more specific rules kept winning. The cast ribbon's names wrap to three lines, `.lang-card` widened to 240px, `.prod-grid` took `minmax(0,1fr)` | Every surface | RULED by the user, and it is a large change: type is ~30% larger everywhere and the app is much less dense. Review (1) whether 18/19/20/22/24/34 is the scale you want or whether the upper steps should stretch with it; (2) `-webkit-line-clamp` truncations (the anchor cards' descriptions) now cut mid-word, because the same box holds a third less text; (3) the storefront still has the OLD floor entirely — 9px and 9.5px throughout |
 | 2026-09-12 | **The type floor is measured in CAP HEIGHT, and the Courier step is 15px** (user-caught: "site still has 9px tall fonts"): LEGIBILITY_FLOOR names its fault as "Courier labels rendering at 8–9px cap height" and prescribes a 13px font-size. Measured by pixel scan, Courier New's cap is 8px at 11.5, 13, 14 AND 15px — it is hinted flat — so implementing the plan exactly moved the rendered letter height by zero and left the fault it was written for. Both levers that reach cap height moved the minimum needed: `--mono` leads with Consolas / Cascadia Mono (Consolas is NARROWER than Courier New, so no label costs more room), and the Courier step is 15px, which renders the 10px cap Archivo gives at the 14px prose floor. Every Courier rule now carries a size, because one inheriting the 14px body rendered 9px caps | Every surface | **Needs a ruling on the FACE.** Rule 2 names Courier and this changes which mono actually renders — one line in `--mono` reverts it, at the cost of 8px caps. Also review (1) the 13px step is now unused, so the live scale is 14/15/16/17/19/20/24/34; (2) `.prod-grid` went to `minmax(0,1fr)` because 15px Courier pushed it 45px past a 1100px window |
@@ -3139,6 +3177,7 @@ well — this log records what changed, it does not replace the rules.
   (mock-sanctioned arrows on → Reference / → Light study kept).
 - **2026-09-10** — `.cd-blocked` (a stated gate where the cost line sits when the act is available).
 - **2026-09-12** — The board PREVIEW's type joins the scale: `.bf-title` 24px, `.bf-sub` 13px, both were `clamp()`. Its COLOURS stay on the board's palette (audit #15) — the 4K composite is drawn server-side by PIL and never comes from this DOM, so only the palette ever needed to match. The harness chip in `recorder.js` goes 12px → 13px.
+- **2026-09-13** — THE TYPE SCALE IS ONE TABLE: eleven role tokens at the top of `styles.css`, each `calc(<base>px * var(--t-scale))`; 675 literal sizes across both apps replaced; tests pin roles, not numbers. `--t-scale: .8` makes the app 20% smaller in one line.
 - **2026-09-12** — SCALE = TYPE_SCALE_R2 × 1.5: 15/17/18/20/22/24/27/30/33/36/48. The two tight Courier tiers (15, 17) are uppercase-only and earned by measurement. Live tiers went from 2 to 6; smallest rendered glyph stays 10px.
 - **2026-09-12** — 10px GLYPH FLOOR (user ruling): no letter of either case renders under 10px. Archivo 18px, all Courier 20px; 13/14/15/16/17 retired. Smallest rendered glyph app-wide is 10px, measured at 1280 and 1560px.
 - **2026-09-12** — TYPE FLOOR measured in cap height: `--mono` leads with Consolas; the Courier step is 15px (13px retired); every Courier rule carries a size. Smallest rendered cap height app-wide goes 8px → 10px, measured at 1100 and 1560px.

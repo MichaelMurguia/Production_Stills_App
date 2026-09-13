@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2766 tests** across 138 files.
+**2772 tests** across 138 files.
 
 
-## Product app — 2537 tests in 121 files
+## Product app — 2542 tests in 121 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -66,7 +66,7 @@ temp home and external services are faked.
 | `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
-| `test_design_tokens.py` | 119 | Mechanical token assertions (design-verify step 4, standing suite). |
+| `test_design_tokens.py` | 124 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |
 | `test_every_route_is_reachable.py` | 6 | Every route a user needs must be reachable from the UI. |
@@ -154,7 +154,7 @@ temp home and external services are faked.
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
 
 
-## Storefront — 229 tests in 17 files
+## Storefront — 230 tests in 17 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -172,7 +172,7 @@ temp home and external services are faked.
 | `test_seo.py` | 6 | SEO pass (user request 2026-08-03): public pages carry full head metadata and structured data; private/transactional pages and every tenant host say n |
 | `test_site_text.py` | 11 | Owner page-text rewrites (debug tool 2026-08-03): public reads — the overrides ARE the page copy — but writes exist only for signed-in OWNER_EMAILS ac |
 | `test_store_images.py` | 4 | Responsive marketing imagery — the storefront must not serve raw stills. |
-| `test_store_tokens.py` | 30 | Store token contracts (design-verify step 4 for `storefront/`). |
+| `test_store_tokens.py` | 31 | Store token contracts (design-verify step 4 for `storefront/`). |
 | `test_tenant_proxy.py` | 12 | The wildcard tenant router: studio hosts proxy to their tenant's railway service, storefront hosts pass through, unknown studios get a stated 404, and |
 | `test_trials.py` | 48 | Trials, both kinds. |
 

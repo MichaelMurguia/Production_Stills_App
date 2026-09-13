@@ -25,7 +25,13 @@ Add to the storefront's notes: *store UI must follow
   `--ok #6fae7a`, `--hold #7d8fd0`, `--bad #cd6155`; and for lines only,
   `--line-strong #6b7278` / `--line-bright #9aa1a8` — the retired text
   greys (LEGIBILITY_FLOOR, 2026-09-12).
-- **The legibility floor.** No letter of either case renders under 10px;
+- **The type scale is one table.** Every font-size is a role token at the
+  top of `store.css` — `--t-kicker` … `--t-prod`, plus `--t-hero` for the
+  sales headline — each `calc(<base>px * var(--t-scale))`. Resizing the
+  store is one line. No literal px size exists anywhere else, and
+  `tests/test_store_tokens.py` fails the build if one appears.
+- **The legibility floor.** Ratios sized so that at `--t-scale: 1` no
+  letter of either case renders under 10px;
   the ladder is 15/17/18/20/22/24/27/30/33/36/48 plus the store's own
   60px hero, and 15/17 are Courier-uppercase-only. `--mono` leads with
   Consolas. `--hold` colours no glyph and `--bad` only beside a hairline.

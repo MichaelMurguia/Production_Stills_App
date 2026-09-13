@@ -394,11 +394,15 @@ class TheModalsTypeLessonSurvivedIt(unittest.TestCase):
         `.f-label` was 10.5px and `.hint` 12.5px, and both now clear the
         floor at their own definitions."""
         import re
-        for sel, floor in ((".f-label", 13), (".hint", 14)):
+        # Since the type table landed (2026-09-13) a rule names a ROLE,
+        # not a number, and the floor is a property of the table. Both of
+        # these carry a role that clears it.
+        for sel, roles in ((".f-label", ("kicker", "mark", "body")),
+                           (".hint", ("minor", "body"))):
             b = CSS.split(NL + sel + " {")[1].split("}")[0]
-            m = re.search(r"font-size:\s*([\d.]+)px", b)
+            m = re.search(r"font-size:\s*var\(--t-([a-z]+)\)", b)
             self.assertIsNotNone(m, sel)
-            self.assertGreaterEqual(float(m.group(1)), floor, sel)
+            self.assertIn(m.group(1), roles, sel)
 
     def test_the_character_screens_scoped_patch_went_with_it(self):
         """A patch left behind after its fault is fixed pins a number

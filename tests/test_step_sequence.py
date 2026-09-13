@@ -176,7 +176,7 @@ class TheImageIsTheHero(unittest.TestCase):
         b = block(".seq .act-bar .text-act")
         self.assertIn("border: 1px solid var(--line)", b)
         self.assertIn("text-decoration: none", b)
-        self.assertIn("font-size: 20px", b)
+        self.assertIn("font-size: var(--t-body)", b)
         self.assertIn("font-weight: 600", b)
 
 
@@ -196,10 +196,10 @@ class TheVocabulary(unittest.TestCase):
         now coincide in NUMBER while differing in face, which this system
         already sanctions — at the smallest size the family carries the
         meaning."""
-        self.assertIn("font-size: 33px", block(".seq .seq-subject"))
-        self.assertIn("font-size: 20px", block(".step-prose, .seq .cam-sum"))
+        self.assertIn("font-size: var(--t-screen)", block(".seq .seq-subject"))
+        self.assertIn("font-size: var(--t-body)", block(".step-prose, .seq .cam-sum"))
         for sel in (".step-label", ".step-meta", ".wb-facts"):
-            self.assertIn("font-size: 20px", block(sel))
+            self.assertIn("font-size: var(--t-body)", block(sel))
 
     def test_the_subject_beats_the_panel_h2_label(self):
         """.panel h2 sets 11px uppercase Courier; without the extra
@@ -251,7 +251,7 @@ class TheVocabulary(unittest.TestCase):
         beside the subject."""
         b = block(".step-num")
         self.assertIn("flex: 0 0 58px", b)
-        self.assertIn("font-size: 36px", b)
+        self.assertIn("font-size: var(--t-step)", b)
         self.assertIn("font-family: var(--mono)", b,
                       "a step number is a machine fact")
         self.assertIn("color: var(--ok)", block(".step-done .step-num"))

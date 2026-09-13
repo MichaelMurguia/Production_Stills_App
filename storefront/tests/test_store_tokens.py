@@ -67,14 +67,33 @@ class TheLegibilityFloorAppliesHereToo(unittest.TestCase):
         return [("store.css", CSS)] + [(f.name, f.read_text(encoding="utf-8"))
                                        for f in FLOOR_TEMPLATES]
 
+    def test_the_scale_is_one_table(self):
+        """One knob, eleven roles, no literal sizes. Same rule as the
+        app's — the store had the same fault and the same cost."""
+        i = CSS.index(":root {")
+        root = CSS[i:CSS.index(chr(10) + "}", i)]
+        self.assertRegex(root, r"--t-scale:\s*[\d.]+\s*;")
+        for r in ("kicker","mark","minor","body","title","subject","head",
+                  "logline","screen","step","prod","hero"):
+            self.assertRegex(root, rf"--t-{r}:\s*calc\([\d.]+px \* var\(--t-scale\)\)",
+                             f"--t-{r}")
+        outside = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        outside = outside[outside.index(chr(10) + "}", outside.index(":root {")):]
+        self.assertEqual(re.findall(r"font-size:\s*[\d.]+px", outside), [],
+                         "a literal font-size outside the token table")
+        for f in FLOOR_TEMPLATES:
+            t = f.read_text(encoding="utf-8")
+            self.assertEqual(re.findall(r"font-size:\s*[\d.]+px", t), [],
+                             f"{f.name}: an inline size bypasses the table")
+
     def test_every_size_is_a_step_on_the_scale(self):
         """The store keeps one step the app does not: 60px, its hero.
         A sales headline is a store-only surface and its own system
         allows it; everything below the hero is the shared ladder."""
         for name, t in self._sources():
             for m in re.finditer(r"font-size:\s*([^;}\"']+)", self._bare(t)):
-                for px in re.findall(r"([\d.]+)px", m.group(1)):
-                    self.assertIn(float(px), self.STEPS, f"{name}: {m.group(0)[:40]}")
+                self.assertRegex(m.group(1), r"var\(--t-[a-z]+\)",
+                                 f"{name}: {m.group(0)[:44]} is not a role token")
 
     def test_no_fluid_size_anywhere(self):
         """A `clamp()` cannot sit on a fixed ladder, and it is how a 9px
@@ -201,7 +220,7 @@ class StoreTokenTests(unittest.TestCase):
         # X1: the link into the console is styled exactly like the public
         # links beside it — access is not a visual style.
         self.assert_decl(".head-admin", "color: var(--ink-dim)")
-        self.assert_decl(".head-admin", "font-size: 20px")
+        self.assert_decl(".head-admin", "font-size: var(--t-body)")
         self.assertNotIn("var(--mono)", block(".head-admin"))
         self.assertNotIn("var(--accent)", block(".head-admin"))
 
@@ -350,7 +369,7 @@ class GoogleButtonTests(unittest.TestCase):
     def test_the_branding_values_are_exact(self):
         b = block(".btn-google")
         for decl in ("background: #131314", "border: 1px solid #8E918F",
-                     "color: #E3E3E3", "font-size: 20px", "font-weight: 500",
+                     "color: #E3E3E3", "font-size: var(--t-body)", "font-weight: 500",
                      "gap: 12px", "min-height: 40px",
                      "font-family: 'Roboto', 'Archivo', sans-serif"):
             self.assertIn(decl, b, f".btn-google: missing '{decl}'")

@@ -27,6 +27,80 @@ def block(sel: str) -> str:
     return "\n".join(bodies)
 
 
+class TheTypeScaleIsOneTable(unittest.TestCase):
+    """LEGIBILITY_FLOOR, its delta, TYPE_SCALE_R2 and two user rulings all
+    landed in one day, and each one meant rewriting 300-550 literal
+    `font-size` declarations and then chasing every test that pinned a
+    number. That is an architecture fault, not a run of bad luck: a scale
+    that lives in 550 places cannot be changed, only swept.
+
+    User, 2026-09-13: "You should have a table of strings and font sizes
+    and be able to change like 5 lines in settings. If its not set up
+    that way - fix that."
+
+    So: every font-size in the app is one of eleven role tokens, the
+    tokens are the only place a number appears, and `--t-scale`
+    multiplies the whole ladder. Resizing the app is ONE line. These
+    tests are what keep it that way."""
+
+    ROLES = ("kicker", "mark", "minor", "body", "title", "subject",
+             "head", "logline", "screen", "step", "prod")
+
+    @staticmethod
+    def _root():
+        i = CSS.index(":root {")
+        return CSS[i:CSS.index(chr(10) + "}", i)]
+
+    def test_every_role_has_a_token(self):
+        root = self._root()
+        for r in self.ROLES:
+            self.assertIn(f"--t-{r}:", root, f"--t-{r} is missing")
+
+    def test_one_knob_resizes_everything(self):
+        """The whole point. Every role is the base times --t-scale, so a
+        resize is a single edit and cannot go half-applied."""
+        root = self._root()
+        self.assertRegex(root, r"--t-scale:\s*[\d.]+\s*;")
+        for r in self.ROLES:
+            m = re.search(rf"--t-{r}:\s*calc\(([\d.]+)px \* var\(--t-scale\)\)", root)
+            self.assertIsNotNone(m, f"--t-{r} must be calc(<base>px * var(--t-scale))")
+
+    def test_the_bases_are_the_ruled_ladder(self):
+        """TYPE_SCALE_R2 x 1.5. The ratios are the designer's; the
+        multiplier is what put the floor tier at 10px of ink."""
+        want = dict(kicker=15, mark=17, minor=18, body=20, title=22, subject=24,
+                    head=27, logline=30, screen=33, step=36, prod=48)
+        root = self._root()
+        for r, base in want.items():
+            m = re.search(rf"--t-{r}:\s*calc\(([\d.]+)px", root)
+            self.assertEqual(float(m.group(1)), float(base), f"--t-{r}")
+
+    def test_no_literal_size_survives_anywhere(self):
+        """The one rule that makes the table true. A single stray
+        `font-size: 13px` is how the scale starts living in 550 places
+        again — and it is also how a 9px label hid through three passes."""
+        bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        root_end = bare.index(chr(10) + "}", bare.index(":root {"))
+        outside = bare[root_end:]
+        self.assertEqual(re.findall(r"font-size:\s*[\d.]+px", outside), [],
+                         "a literal font-size outside the token table")
+        self.assertEqual(re.findall(r"font:\s*[\d.]+px", outside), [],
+                         "a literal size in a `font:` shorthand")
+        for f in sorted((ROOT / "app/static").glob("*.js")) +                  sorted((ROOT / "app/static").glob("*.html")):
+            t = f.read_text(encoding="utf-8")
+            self.assertEqual(re.findall(r"font-size:\s*[\d.]+px", t), [],
+                             f"{f.name}: an inline size bypasses the table")
+
+    def test_nothing_fluid_sneaks_in(self):
+        """`calc(<px> * <number>)` is deterministic; a vw/em/% is not, and
+        a fluid size cannot sit on a fixed ladder — it is how
+        `clamp(8px, 1vw, 13px)` rendered at 9px through a whole pass."""
+        bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        for m in re.finditer(r"font-size:\s*([^;}]+)", bare):
+            self.assertNotRegex(m.group(1), r"[\d.]+(vw|vh|em|rem|%|ch)",
+                                m.group(0)[:50])
+
+
 class TheLegibilityFloor(unittest.TestCase):
     """LEGIBILITY_FLOOR_2026-09-12 — type and colour, app-wide.
 
@@ -115,8 +189,7 @@ class TheLegibilityFloor(unittest.TestCase):
         bare = self._bare()
         tight = []
         for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", bare):
-            m = re.search(r"font-size:\s*(1[57])px", body)
-            if m:
+            if re.search(r"font-size:\s*var\(--t-(kicker|mark)\)", body):
                 tight.append(" ".join(sel.split())[:50])
         self.assertTrue(tight, "the hierarchy collapsed back to one Courier size")
         # Nothing that renders a lowercase letter may sit here. The
@@ -365,7 +438,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".mq-tile", [
             "flex: none", "border: 1px solid var(--line-soft)",
             "background: var(--bg2)", "padding: 6px 12px 6px 6px",
-            "font-size: 20px", "color: var(--ink-dim)",
+            "font-size: var(--t-body)", "color: var(--ink-dim)",
             "white-space: nowrap"])
         self.assert_decls(".mq-tile img", ["width: 22px", "height: 22px"])
 
@@ -376,9 +449,9 @@ class TokenContractTests(unittest.TestCase):
             "border-left: 1px solid var(--line-soft)", "padding-left: 34px",
             "gap: 26px", "user-select: none", "caret-color: transparent"])
         self.assert_decls(".fr-notice h3", [
-            "font-size: 22px", "font-weight: 600", "color: var(--ink)"])
+            "font-size: var(--t-title)", "font-weight: 600", "color: var(--ink)"])
         self.assert_decls(".fr-notice p", [
-            "font-size: 20px", "line-height: 1.7", "color: var(--ink-dim)"])
+            "font-size: var(--t-body)", "line-height: 1.7", "color: var(--ink-dim)"])
         self.assert_decls(".fr-notice p strong", [
             "color: var(--ink)", "font-weight: 600"])
 
@@ -604,7 +677,7 @@ class TokenContractTests(unittest.TestCase):
         b = block(".read-tile")
         self.assert_decls(".read-tile", ["padding: 8px 14px", "align-items: baseline"])
         self.assertIn("display: flex", b)
-        self.assert_decls(".read-num", ["font-size: 20px"])
+        self.assert_decls(".read-num", ["font-size: var(--t-body)"])
         self.assertNotIn("display: block", block(".read-num"),
                          "number and label share a line now")
 
@@ -1001,7 +1074,7 @@ class MiniMonoTests(unittest.TestCase):
         .mono means it — .mini used to win the order battle and silently
         rendered machine data proportional (found 2026-08-13, the
         correction-intake checklist)."""
-        self.assertIn(".mini.mono { font-family: var(--mono); font-size: 20px; }", CSS)
+        self.assertIn(".mini.mono { font-family: var(--mono); font-size: var(--t-body); }", CSS)
 
 
 class HarnessAuditTests(unittest.TestCase):

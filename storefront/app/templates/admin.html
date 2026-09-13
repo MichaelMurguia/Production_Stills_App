@@ -6,7 +6,7 @@
 <section class="order" style="max-width:1000px">
   {# X2 — one title per page: the kicker IS the heading. #}
   <p class="admin-kicker mono">ADMIN</p>
-  <p class="hero-sub mono" style="font-size:20px;letter-spacing:.06em;color:var(--ink-faint)">
+  <p class="hero-sub mono" style="font-size:var(--t-body);letter-spacing:.06em;color:var(--ink-faint)">
     {{ counts.purchases }} PURCHASE{{ "" if counts.purchases == 1 else "S" }} &middot;
     {{ counts.studios }} LIVE STUDIO{{ "" if counts.studios == 1 else "S" }} &middot;
     {{ counts.rewrites }} TEXT REWRITE{{ "" if counts.rewrites == 1 else "S" }} &middot;
@@ -26,7 +26,7 @@
     </label>
     <p style="margin-top:12px">
       <button class="btn btn-secondary" id="owner-text-clear">Clear all rewrites</button>
-      <span class="mono" id="owner-text-count" style="font-size:20px;letter-spacing:.08em;color:var(--ink-faint);margin-left:10px"></span>
+      <span class="mono" id="owner-text-count" style="font-size:var(--t-body);letter-spacing:.08em;color:var(--ink-faint);margin-left:10px"></span>
     </p>
     <p class="admin-note mono">REWRITES APPLY FOR EVERY VISITOR AND SURVIVE DEPLOYS &middot; CLEARING RESTORES THE AUTHORED COPY</p>
   </div>
