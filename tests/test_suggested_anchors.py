@@ -258,8 +258,14 @@ class ColourLeftStepOne(unittest.TestCase):
         j = HTML.index('data-step="5"')
         self.assertIn('data-role="COLOR_PALETTE"', HTML[i:j])
 
-    def test_it_says_why_it_is_there(self):
-        self.assertIn("PROPOSED FROM THE BIBLE, NOT CHOSEN BEFORE IT", HTML)
+    def test_it_is_named_and_not_explained(self):
+        """The legend was "COLOUR — PROPOSED FROM THE BIBLE, NOT CHOSEN
+        BEFORE IT". The first word names the set; the rest argued for the
+        ordering, which is a rule about behaviour and belongs in the
+        documentation (COPY_DISCIPLINE test 3, 2026-09-13). The ordering
+        itself is unchanged and asserted by the gate tests."""
+        self.assertIn('<p class="wiz-group-label">COLOUR</p>', HTML)
+        self.assertNotIn("NOT CHOSEN BEFORE IT", HTML)
 
     def test_the_swatch_result_no_longer_points_away(self):
         """The act and its result are one step apart no more."""

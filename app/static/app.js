@@ -6082,7 +6082,6 @@ async function renderWizard() {
         <h3 class="stage-headline">Cast</h3>
         <span class="wiz-group-label">${subjects.length} CAST &middot; ${uncast.length} UNCAST</span>
         <span class="cast-head-gap"></span>
-        <span class="cost mono">EVERY CARD HERE IS A CARD ON REFERENCE / SUBJECTS</span>
       </div>`];
     for (const [kind, label] of KINDS) {
       const mine = subjects.filter(s => s.kind === kind);
@@ -6106,8 +6105,7 @@ async function renderWizard() {
     const byKind = {};
     for (const u of uncast) (byKind[u.kind] ||= []).push(u);
     out.push(`<div class="cast-uncast">
-      <p class="wiz-group-label">UNCAST &mdash; FOUND IN THE SCREENPLAY, NO CARD YET &middot;
-        THESE HAVE NO PICTURE, SO THEY ARE A LIST</p>
+      <p class="wiz-group-label">UNCAST &mdash; NO CARD YET</p>
       ${Object.entries(byKind).map(([k, rows]) => `<div class="cast-unrow">
           <b>${esc(k)}</b>${rows.map(u =>
             `<button type="button" class="cast-chip" data-uncast="${esc(u.name)}"
@@ -6372,15 +6370,14 @@ async function renderWizard() {
               ${pending ? "" : "disabled"}>Reject</button>
           </div>
           ${pending
-            ? `<p class="cd-spend">Accept locks this as the subject's picture.
-                 Reject clears the frame &mdash; edit the description and
-                 generate again.</p>`
+            ? ""   /* Accept and Reject are verbs on a picture; a
+                        sentence explaining them is the aside the copy
+                        discipline removes (2026-09-13). */
             : block
               ? `<p class="cd-spend cd-blocked">${block.why}
                    ${block.go ? `<button type="button" class="text-act"
                      data-f="gen-go">${esc(block.act)} &nearr;</button>` : ""}</p>`
-              : `<p class="cd-spend">Generate makes ONE full-body picture from the
-                   description, under the Bible &mdash; it spends a render.</p>`}
+              : `<p class="cd-spend mono">1 RENDER</p>`}
         </div>
         <div>${castWords(s, ev)}</div>
       </div>`;
@@ -6436,8 +6433,7 @@ async function renderWizard() {
             <button type="button" class="cd-more" data-f="gen"
               title="Rerolls the picture from the SAME description — it spends a render.">GENERATE<br>ANOTHER</button>
           </div>
-          <p class="cd-spend">An alternate keeps the description and rerolls the
-            frame only.</p>
+          <p class="cd-spend mono">SAME DESCRIPTION &middot; 1 RENDER</p>
         </div>
         <div>
           <p class="cd-kick">WHO THIS IS</p>
@@ -6865,7 +6861,7 @@ async function renderWizard() {
         // D1: the provenance moved to the headings it applies to — a
         // string three groups above the thing it describes discloses less
         // than position, and position alone does not disclose.
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} · EACH BECOMES ONE BREAKDOWN <span class="loc-showing">FIVE SHOWN PER ACT</span>${
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} <span class="loc-showing">FIVE SHOWN PER ACT</span>${
           wizCov?.acts_derived || acts.some(a => a.title) ? "" :
           ` <button type="button" class="text-act" data-f="name-acts"
               title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
@@ -6977,7 +6973,7 @@ async function renderWizard() {
       }) || null;
     };
     buildLocFinder(secHost, {
-      head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${keyLocs.length} · EACH BECOMES ONE BREAKDOWN</span></div>`,
+      head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${keyLocs.length}</span></div>`,
       headRow: WIZ_LOC_THEAD,
       placeholder: "find a location…",
       rows: (needle, q) => keyLocs
@@ -7074,7 +7070,7 @@ async function renderWizard() {
         <div id="wiz-worlds"></div>
       </div>
       <div id="wiz-envs-sec" style="margin-top:16px">
-        <div class="uncast-label">ENVIRONMENTS — THE LIGHT AND PALETTE OF A PLACE
+        <div class="uncast-label">ENVIRONMENTS
           <button type="button" class="q-help" data-help="envs" aria-label="How are environments used?">?</button></div>
         <div id="wiz-envs"></div>
       </div>
@@ -7084,12 +7080,12 @@ async function renderWizard() {
            step 03; what it counted was never shown here, so the number
            was the only thing the read said about the cast. -->
       ${(analysis.subjects || []).length ? `<div id="wiz-subj-sec" style="margin-top:16px">
-        <div class="uncast-label">SUBJECTS &mdash; WHAT THE READ FOUND TO CAST</div>
+        <div class="uncast-label">SUBJECTS</div>
         <div id="wiz-subj-rail"></div>
       </div>` : ""}
       ${qN ? `<div id="wiz-questions-sec" style="margin-top:16px">
-        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED · ANSWERS RIDE THE BIBLE DRAFT
-          <span class="q-optional">OPTIONAL — YOU CAN DO THIS OVER TIME</span></div>
+        <div class="uncast-label">OPEN QUESTIONS — ${answeredN} OF ${qN} ANSWERED
+          <span class="q-optional">OPTIONAL</span></div>
         <div id="wiz-questions" class="q-grid"></div>
       </div>` : ""}`;
     const GOTO = {
@@ -7756,14 +7752,21 @@ async function renderWizard() {
     // Same condition as Regenerate: there has to BE a saved document to
     // read against itself, and an unsaved edit is not one yet.
     $("#bible-check")?.classList.toggle("hidden", st !== "saved");
+    /* COPY_DISCIPLINE (2026-09-13): each of these is a MARK naming the
+       state of the document, never a sentence about what the button
+       does. `empty` said "FROM THE ANCHORS, THE SCAN AND THE CAST —
+       WRITTEN, SAVED, AND BREAKDOWNS OPEN", which is what the panel
+       title and the button label already say between them. ESC survives
+       because it is a control with no visible label — removing it would
+       hide a capability rather than a sentence. */
     cond.textContent = {
-      empty: "FROM THE ANCHORS, THE SCAN AND THE CAST — WRITTEN, SAVED, AND BREAKDOWNS OPEN",
-      unsaved: "YOUR OWN TEXT — SAVING IT OPENS BREAKDOWNS",
+      empty: "",
+      unsaved: "YOUR OWN TEXT",
       // Nothing: the panel heading already carries this fact, and the
       // status chip beside it carries the revision. Saying it a third
       // time on one row is the verbosity the design system cuts.
       saved: "",
-      editing: "ESC DISCARDS — NOTHING CHANGES UNTIL YOU SAVE",
+      editing: "ESC DISCARDS",
     }[st];
   };
   $("#style-bible").addEventListener("input", () => {

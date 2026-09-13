@@ -53,10 +53,16 @@ class ThePictureIsTheCard(unittest.TestCase):
         self.assertIn('[["CHARACTER", "CHARACTERS"], ["VEHICLE", "VEHICLES"]', seg)
         self.assertIn("CAST", seg)
 
-    def test_it_says_the_cards_are_not_its_own(self):
+    def test_it_does_not_narrate_that_the_cards_are_shared(self):
+        """It used to say EVERY CARD HERE IS A CARD ON REFERENCE /
+        SUBJECTS on the header. True, and a rule about how the system is
+        wired — documentation, not a line beside a roster
+        (COPY_DISCIPLINE test 3, 2026-09-13). The screen still owns no
+        data, which is the fact that mattered and is asserted below."""
         i = JS.index("const renderCastRoster =")
-        self.assertIn("EVERY CARD HERE IS A CARD ON REFERENCE / SUBJECTS",
-                      JS[i:i + 1200])
+        seg = JS[i:JS.index("const renderCastDetail =", i)]
+        self.assertNotIn("EVERY CARD HERE IS A CARD", seg)
+        self.assertNotIn('api("/api/subjects", { method: "POST"', seg)
 
 
 class TheUncastAreAList(unittest.TestCase):
@@ -64,11 +70,16 @@ class TheUncastAreAList(unittest.TestCase):
     with nothing to show."""
 
     def test_they_are_chips_and_not_cards(self):
+        """The dashed chip IS the statement. The sentence that used to
+        follow it — "THESE HAVE NO PICTURE, SO THEY ARE A LIST" —
+        explained the shape to a reader who could already see it
+        (COPY_DISCIPLINE test 1, 2026-09-13)."""
         b = block(".cast-chip {")
         self.assertIn("dashed", b)
         i = JS.index("const renderCastRoster =")
-        self.assertIn("THESE HAVE NO PICTURE, SO THEY ARE A LIST",
-                      JS[i:JS.index("const renderCastDetail =", i)])
+        seg = JS[i:JS.index("const renderCastDetail =", i)]
+        self.assertIn("UNCAST &mdash; NO CARD YET", seg)
+        self.assertNotIn("SO THEY ARE A LIST", seg)
 
     def test_the_manual_door_sits_in_the_same_block(self):
         i = JS.index('<div class="cast-uncast">')

@@ -410,3 +410,43 @@ delta as new instructions.
   survive the narrower window.
 
   The rest of the zip is the same resurrection as the two before it.
+
+- **COPY_DISCIPLINE_2026-09-13.md** — delivered in
+  `design_handoff/Copy discapline.zip`, implemented 2026-09-13. Extracted
+  to scratch, never copied into the tree. Folded into
+  `app/static/DESIGN_SYSTEM.md` under `## Copy`, as the plan asks.
+
+  The rule: a control explains itself by how it looks and what it is
+  called, not by a sentence beside it. Three tests — does the label
+  already say it (cut), is it a state the user must know (make it a
+  mark), is it a rule about behaviour (it belongs in the documentation).
+
+  Found by measuring the rendered page rather than grepping: every
+  all-caps Courier run of five words or more inside the stage, then
+  classified by hand against the plan's "what stays" list. Eleven cut or
+  shortened; the cost notes became tokens; the locked segment is shown
+  rather than narrated.
+
+  **Four kept that a mechanical pass would have cut**, each a deliberate
+  call and each logged in the Uncanonized table for review:
+
+  1. `SECTION HEADINGS ARE PARSED — DO NOT RENAME`. Not a state and not
+     a refusal, so the tests say cut it. It sits on a free-text editor
+     where renaming a heading silently breaks the parse — a footgun
+     warning, and removing it would be net harm.
+  2. `ESC DISCARDS`. Trimmed from `ESC DISCARDS — NOTHING CHANGES UNTIL
+     YOU SAVE`, but not removed: ESC is a control with NO visible label,
+     so this line is the only place the capability exists.
+  3. `SAME LOCATION · SAME BIBLE · SAME ANCHORS`. A `·`-separated run of
+     values is data by the plan's own test.
+  4. `LOCKED — NO ART DIRECTION BIBLE`. A refusal, which the plan keeps
+     explicitly, and which canon separately requires (a gate states its
+     blocker).
+
+  **The plan's own caveat applies to the boards, not to this.** It warns
+  that its mechanical pass over the 30 design boards also caught lines
+  that are data — Hierarchy's slugline and ledger rows, `Production_Boards`'
+  sheet spec, the IconStudy legend — and that those want restoring by
+  hand ON THE BOARDS. Nothing was restored here because nothing of that
+  kind was cut here: sluglines, act headings, `TURNS ON` provenance,
+  cast tallies and subject facts were all verified present after the pass.

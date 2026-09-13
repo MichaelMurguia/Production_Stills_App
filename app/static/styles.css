@@ -465,9 +465,13 @@ button:disabled {
      card and it was the least legible. The disabled cue is the ground,
      the border and the cursor, not an unreadable label (LEGIBILITY_FLOOR
      §2: no text colour outside the seven). */
-  opacity: 1; cursor: not-allowed;
-  background: #1c1f23; border-color: var(--line-soft); color: var(--ink-faint);
+  /* COPY_DISCIPLINE (2026-09-13): `default`, not `not-allowed` — the
+     barred cursor is a second narration of a state the border already
+     carries. The border drops to --hairline; the label stays legible. */
+  opacity: 1; cursor: default; transition: none;
+  background: #1c1f23; border-color: var(--hairline); color: var(--ink-faint);
 }
+button:disabled:hover { border-color: var(--hairline); color: var(--ink-faint); }
 button.ghost:disabled, button.danger:disabled { background: none; color: var(--ink-faint); border-color: var(--line-soft); }
 
 /* ================================================================== badges */
@@ -1598,9 +1602,13 @@ details.meta pre {
   letter-spacing: .04em; line-height: 1.4; cursor: pointer; }
 .cd-more:hover { border-color: var(--line-bright); color: var(--ink-dim); }
 /* A render is money, so the cost is stated beside the button, never
-   discovered after it. */
+   discovered after it — as a MARK now, not a warning (COPY_DISCIPLINE
+   §Cost, 2026-09-13). The block still hosts the one thing that stays a
+   sentence: a refusal, which is the app accounting for itself. */
 .cd-spend { margin: 10px 0 0; color: var(--ink-faint);
   font-family: var(--sans); font-size: var(--t-body); line-height: 1.55; }
+.cd-spend.mono { font-family: var(--mono); font-size: var(--t-mark);
+  letter-spacing: .1em; }
 /* A stated gate, where the cost line sits when the act is available. It
    is --hold, not --bad: nothing has failed, something is not ready. */
 .cd-blocked { color: var(--ink-dim); border-left: 2px solid var(--hold);
@@ -3017,9 +3025,18 @@ body[data-cast="1"] .wiz-head { display: none; }
 .seg-opt:first-child { border-left-width: 1px; }
 .seg-opt.on { color: var(--ink); border-color: var(--accent); }
 .seg-opt.on + .seg-opt { border-left-color: var(--accent); }
-.seg.locked .seg-opt.on { border-color: var(--line); color: var(--ink-dim); }
-.seg.locked .seg-opt.on + .seg-opt { border-left-color: var(--line); }
-.seg-opt:disabled { cursor: default; opacity: .55; }
+/* COPY_DISCIPLINE §"Show the state, don't narrate it" (2026-09-13):
+   a locked group is carried by its APPEARANCE and named by ONE mark. The
+   current segment's amber border dims to --accent-line rather than going
+   grey, so which one is selected is still readable; the group's borders
+   drop to --hairline to say "not selectable". The label never dims below
+   --ink-faint — an unreadable label is not a disabled state, it is a bug.
+   This replaced two sentences: "GEMINI · LOCKED AFTER THE READ" and a
+   second one explaining re-runs. */
+.seg.locked .seg-opt { border-color: var(--hairline); cursor: default; }
+.seg.locked .seg-opt.on { border-color: var(--accent-line); color: var(--ink-faint); }
+.seg.locked .seg-opt.on + .seg-opt { border-left-color: var(--accent-line); }
+.seg-opt:disabled { cursor: default; color: var(--ink-faint); }
 /* §2.4 — a control that spends states the cost beside the verb, in
    Courier, before it is pressed. A price found afterwards is a bill. */
 .cost { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .12em;

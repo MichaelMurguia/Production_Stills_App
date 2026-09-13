@@ -463,11 +463,16 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
         self.assertIn('data-step="4"', seg)
 
     def test_a_blocked_card_does_not_advertise_a_spend(self):
-        """The cost line is replaced by the reason, not shown beside it —
-        a price for something you cannot buy is noise."""
-        i = JS.index("${pending" + NL + "            ? `<p class=\"cd-spend\">Accept locks")
-        seg = JS[i:i + 900]
-        self.assertLess(seg.index("cd-blocked"), seg.index("it spends a render"))
+        """The cost is replaced by the REASON, not shown beside it — a
+        price for something you cannot buy is noise.
+
+        The cost is a token since COPY_DISCIPLINE (2026-09-13): the card
+        reads `1 RENDER`, or the refusal, never both. A refusal stays a
+        sentence — that is the app accounting for itself, which the same
+        plan explicitly keeps."""
+        i = JS.index('cd-spend cd-blocked')
+        seg = JS[max(0, i - 400):i + 600]
+        self.assertLess(seg.index("cd-blocked"), seg.index("1 RENDER"))
 
     def test_the_gate_is_hold_not_bad(self):
         b = CSS.split(NL + ".cd-blocked {")[1].split("}")[0]

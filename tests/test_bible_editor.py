@@ -178,7 +178,7 @@ class ThereIsOneWriter(unittest.TestCase):
         """The heading, the condition line and the status line all said
         "every future prompt uses this"."""
         i = JS.index("const syncBibleSave =")
-        self.assertIn('saved: "",', JS[i:i + 1800])
+        self.assertIn('saved: "",', JS[i:i + 2600])
         self.assertNotIn("saved — every future prompt uses this", JS)
 
 

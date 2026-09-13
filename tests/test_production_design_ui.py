@@ -91,16 +91,24 @@ class TheThingsThatSpendSayThatTheyDo(unittest.TestCase):
     """§2.4 — a price found afterwards is a bill."""
 
     def test_every_spending_verb_has_its_cost_beside_it(self):
-        for phrase in ("COSTS A MODEL CALL", "THIS SPENDS MONEY"):
+        """Still stated before it is pressed — as a TOKEN since
+        COPY_DISCIPLINE (2026-09-13), not a warning sentence. The rule
+        did not change; the number of words did."""
+        for phrase in ("COSTS A MODEL CALL", "SPENDS MONEY"):
             self.assertIn(phrase, HTML, phrase)
+        self.assertNotIn("THIS SPENDS MONEY", HTML, "a token, not a sentence")
 
     def test_the_cost_is_courier_and_never_amber(self):
         b = block(".cost {")
         self.assertIn("var(--ink-faint)", b)
         self.assertNotIn("--accent", b)
 
-    def test_the_self_check_states_that_it_costs_and_never_edits(self):
-        self.assertIn("ADVISORY &middot; IT NEVER EDITS &middot; NOT RUN ON SAVE", HTML)
+    def test_the_self_check_names_its_state_in_one_word(self):
+        """It read "ADVISORY · IT NEVER EDITS · NOT RUN ON SAVE". The
+        first word is the state; the other two narrate behaviour that
+        belongs in documentation (COPY_DISCIPLINE tests 2 and 3)."""
+        self.assertIn('<span class="cost mono">ADVISORY</span>', HTML)
+        self.assertNotIn("IT NEVER EDITS", HTML)
 
 
 class OneChoiceOneControl(unittest.TestCase):
@@ -116,7 +124,12 @@ class OneChoiceOneControl(unittest.TestCase):
         """A read that has already run, and a stated "no model" gate, are
         neither a primary action nor something needing attention."""
         b = block(".seg.locked .seg-opt.on {")
-        self.assertIn("var(--line)", b)
+        # Since COPY_DISCIPLINE (2026-09-13) the current segment DIMS to
+        # --accent-line rather than going grey: which one is selected has
+        # to stay readable while the group is locked. What this guards is
+        # unchanged — it is not the live accent.
+        self.assertIn("var(--accent-line)", b)
+        self.assertNotIn("border-color: var(--accent);", b)
         i = JS.index("const paintProviderSeg =")
         self.assertIn('sel.disabled ? " locked" : ""', JS[i:i + 900])
 
