@@ -46,7 +46,11 @@ class TheLegibilityFloor(unittest.TestCase):
     # retired: measured, they render x-heights of 6-9px.
     #   Archivo 18px -> cap 13, x 10      Consolas 15px -> cap 10 (CAPS only)
     #   Archivo 20px -> cap 14, x 11      Consolas 20px -> cap 13, x 10
-    STEPS = {18, 19, 20, 24, 34}
+    # TYPE_SCALE_R2 x1.5 — the designer's ladder, scaled so its floor
+    # tier lands at 10px of INK (user ruling, 2026-09-12). R2's own
+    # numbers are half-steps of these: 10->15, 11->17, 12->18/20,
+    # 13->20, 15->22, 16->24, 18->27, 20->30, 22->33, 24->36, 32->48.
+    STEPS = {15, 17, 18, 20, 22, 24, 27, 30, 33, 36, 48}
     # Retired as GLYPH colours. Still legal for a hairline, a dashed
     # border, an underline or the edge of an inactive control — which is
     # why they survive as --line-strong / --line-bright.
@@ -95,6 +99,31 @@ class TheLegibilityFloor(unittest.TestCase):
                 val = m.group(1)
                 for px in re.findall(r"([\d.]+)px", val):
                     self.assertIn(float(px), self.STEPS, f"{f.name}: {m.group(0)[:40]}")
+
+    def test_the_tight_tiers_are_uppercase_only(self):
+        """15px and 17px Courier clear the 10px floor on CAP height and
+        fail it on x-height (7px and 8px). They are legal only where the
+        text is uppercase — which is TYPE_SCALE_R2's own rule for its
+        equivalent tier: "a 10px label that is not uppercase, not tracked
+        and not #a3aab1 or brighter is a defect."
+
+        A rule earns one of these two tiers by declaring the transform,
+        or by being MEASURED rendering uppercase on the page. Anything
+        unproven stays at 20px, where both cases clear the floor. That is
+        why this asserts a ceiling on the count rather than a list: the
+        tiers grow only as surfaces are measured."""
+        bare = self._bare()
+        tight = []
+        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", bare):
+            m = re.search(r"font-size:\s*(1[57])px", body)
+            if m:
+                tight.append(" ".join(sel.split())[:50])
+        self.assertTrue(tight, "the hierarchy collapsed back to one Courier size")
+        # Nothing that renders a lowercase letter may sit here. The
+        # measured list lives in the commit; this guards the shape.
+        for sel in tight:
+            for word in ("slug", "path", "file", "-desc", "-films", "prose"):
+                self.assertNotIn(word, sel, f"{sel} can render lowercase")
 
     def test_the_courier_floor_renders_the_cap_height_it_was_for(self):
         """LEGIBILITY_FLOOR set the Courier floor at 13px to fix labels
@@ -336,7 +365,7 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".mq-tile", [
             "flex: none", "border: 1px solid var(--line-soft)",
             "background: var(--bg2)", "padding: 6px 12px 6px 6px",
-            "font-size: 18px", "color: var(--ink-dim)",
+            "font-size: 20px", "color: var(--ink-dim)",
             "white-space: nowrap"])
         self.assert_decls(".mq-tile img", ["width: 22px", "height: 22px"])
 
@@ -347,9 +376,9 @@ class TokenContractTests(unittest.TestCase):
             "border-left: 1px solid var(--line-soft)", "padding-left: 34px",
             "gap: 26px", "user-select: none", "caret-color: transparent"])
         self.assert_decls(".fr-notice h3", [
-            "font-size: 19px", "font-weight: 600", "color: var(--ink)"])
+            "font-size: 22px", "font-weight: 600", "color: var(--ink)"])
         self.assert_decls(".fr-notice p", [
-            "font-size: 18px", "line-height: 1.7", "color: var(--ink-dim)"])
+            "font-size: 20px", "line-height: 1.7", "color: var(--ink-dim)"])
         self.assert_decls(".fr-notice p strong", [
             "color: var(--ink)", "font-weight: 600"])
 
@@ -575,7 +604,7 @@ class TokenContractTests(unittest.TestCase):
         b = block(".read-tile")
         self.assert_decls(".read-tile", ["padding: 8px 14px", "align-items: baseline"])
         self.assertIn("display: flex", b)
-        self.assert_decls(".read-num", ["font-size: 18px"])
+        self.assert_decls(".read-num", ["font-size: 20px"])
         self.assertNotIn("display: block", block(".read-num"),
                          "number and label share a line now")
 

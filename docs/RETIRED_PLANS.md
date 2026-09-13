@@ -361,3 +361,52 @@ delta as new instructions.
   **The face change needs a designer's ruling.** Rule 2 names Courier,
   and this changes which mono actually renders; one line in `--mono`
   reverts it, at the cost of going back to 8px caps.
+
+- **TYPE_SCALE_R2_2026-09-12.md** — delivered in
+  `design_handoff/font_phase_3.zip`, implemented 2026-09-12 **as a scaled
+  ladder, not as written**. Extracted to scratch, never copied into the
+  tree. It supersedes §1 (type) of `LEGIBILITY_FLOOR_2026-09-12.md`; that
+  document's §2 (colour) still stands, and the zip's own copy now says so
+  in a banner.
+
+  **Its criticism was right and its remedy conflicted with a user
+  ruling.** R2 opens: "The 13/14 floor flattened the hierarchy: kickers,
+  captions and body all read at nearly one size." True — the same
+  consequence was logged in the Uncanonized table hours earlier. But R2's
+  remedy is a ladder of 10/11/12/13/15/16/18/20/22/24/32 in FONT-SIZE,
+  and the same morning the user had ruled: "no case - upper or lower
+  should be smaller than 10 px ever," which is a floor on INK. Measured
+  here, R2's floor tier renders 7px caps and 5px x-height, and its body
+  prose tier 9px caps / 7px x-height — below the ruling, and below the
+  8px caps that started the complaint.
+
+  Raised rather than implemented. **The user ruled: proportional — R2's
+  ratios, the user's floor.** The ladder is multiplied by 1.5, which puts
+  its floor tier at 10px of ink:
+
+      R2   10  11  12  13  15  16  18  20  22  24  32
+      here 15  17  18  20  22  24  27  30  33  36  48
+
+  The 12 tier splits by face: Archivo clears at 18px, Courier needs 20px
+  because its x-height is 9px at 18.
+
+  **15px and 17px Courier are conditional tiers.** They clear the floor on
+  cap height and fail it on x-height (7px and 8px), so they are legal only
+  where the text renders uppercase — which is R2's own rule for its
+  equivalent tier ("a 10px label that is not uppercase, not tracked and
+  not `#a3aab1` or brighter is a defect"). A rule earns one by declaring
+  the transform or by being MEASURED rendering uppercase on the page. Of
+  291 Courier rules, 68 earned a tight tier and 10 were held back at 20px
+  for rendering lowercase.
+
+  **Coverage is honest and partial:** only 90 of 320 Courier selectors are
+  reachable on this project's unlocked stages, so the tight tiers are
+  populated for stages 01–02, Settings and Projects and conservative
+  everywhere else. They grow as breakdowns, panels and boards become
+  reachable — never by assumption.
+
+  Live tiers went from 2 to 6. Smallest rendered glyph stays 10px,
+  measured at 1280px and 1560px; `.prod-actions` gained `flex-wrap` to
+  survive the narrower window.
+
+  The rest of the zip is the same resurrection as the two before it.

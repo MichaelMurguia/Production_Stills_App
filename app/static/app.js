@@ -3499,7 +3499,7 @@ async function renderLocations(state = null, langs = 0) {
       <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>`,
     headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
     placeholder: "search locations and scenes…",
-    footer: `<p class="mini"><span class="f-label" style="font-size:20px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
+    footer: `<p class="mini"><span class="f-label" style="font-size:17px">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
     rows: (needle, q) => {
       const list = data.locations.filter(l =>
         !needle || l.location.includes(needle) ||
@@ -7241,7 +7241,7 @@ async function renderWizard() {
           <input type="text" data-f="notes" value="${esc(w.description || "")}" disabled></div>
         <div class="fgroup" title="Lowercase trigger words used to auto-match this design language to board content.">
           <span class="f-label" style="display:flex;align-items:center;gap:10px">Keywords
-            <button class="ghost" data-f="derive" disabled style="margin-left:auto;font-size:18px;padding:6px 12px">Derive from screenplay</button>
+            <button class="ghost" data-f="derive" disabled style="margin-left:auto;font-size:20px;padding:6px 12px">Derive from screenplay</button>
           </span>
           <input type="text" data-f="keywords" value="${esc((w.keywords || []).join(", "))}" disabled></div>`;
       const editBtn = $("[data-f=edit]", row);
@@ -15668,7 +15668,7 @@ async function renderAssemblyFor(specId) {
       <div style="flex:1;min-width:0">
         <p style="margin:0 0 6px"><span class="badge ${boardsCount ? "PROVISIONAL" : "LOCKED"}">${boardsCount ? `${boardsCount} BOARD${boardsCount > 1 ? "S" : ""} ASSEMBLED` : "NOT ASSEMBLED"}</span>
           <span class="badge LOCKED" data-f="canvas-chip">3840 × 2160</span></p>
-        <div class="rail-sheet" style="font-size:19px">${esc(specId)}</div>
+        <div class="rail-sheet" style="font-size:20px">${esc(specId)}</div>
         <p class="mini" style="margin:4px 0 0">${esc(spec.subject || "")} · ${spec.panels.length} slot${spec.panels.length > 1 ? "s" : ""}</p>
       </div>
       <button class="ghost" id="asm-arrange" title="Open the arrange room right here — this scene's BOARD sheet, slots already made from this slot map. Readiness travels with it and is not recomputed.">Arrange this board</button>

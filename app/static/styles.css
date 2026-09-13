@@ -130,7 +130,7 @@ body {
   /* 14px is the floor for anything a person reads, and the body sets
      what most of the app inherits. It was 14.5, which is not a step on
      the scale (LEGIBILITY_FLOOR §1). */
-  font: 18px/1.55 var(--sans);
+  font: 20px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); text-decoration: none; }
@@ -145,14 +145,14 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
    the whole fault the floor exists for. */
 code, pre, .badge, .num, .pid, .pid-badge, .role, .subj-sub,
 .f-label, .grid-head span, .table th, .elapsed, .stage-n, .lb-zoomstate {
-  font-family: var(--mono); font-size: 20px;
+  font-family: var(--mono); font-size: 15px;
 }
 /* The stragglers: Courier by family, with no size of their own. */
 input[type=text]#spec-auto-id, input[type=text]#spec-new-id,
 .panel-card .head .alloc input, .cam-lens .cam-lens-mm,
 .ref-group .mini, .loc-env-blank, .dsrow b,
 .mf-color input[type=text], .sc-mark, option.opt-debug {
-  font-size: 18px;
+  font-size: 20px;
 }
 /* .mini carries BOTH machine metadata and short prose, so it stays in sans —
    the machine values inside it get Courier from .badge / .role / code. */
@@ -174,12 +174,12 @@ header {
    render can be in flight — leaving the studio must never be a side
    effect of clicking the logo. Stripped of link chrome so it reads
    exactly as the wordmark did. */
-.brand-title { font-weight: 700; letter-spacing: .2em; font-size: 18px;
+.brand-title { font-weight: 700; letter-spacing: .2em; font-size: 20px;
   color: inherit; text-decoration: none; cursor: pointer; }
 .brand-title:hover { color: var(--ink); }
 .brand-sub {
   font-family: var(--mono); color: var(--ink-dim);
-  font-size: 20px; letter-spacing: .1em;
+  font-size: 17px; letter-spacing: .1em;
 }
 .brand-sub::before {
   content: ""; display: inline-block; width: 1px; height: 13px;
@@ -192,7 +192,7 @@ header {
 .engine-dots { display: flex; gap: 16px; }
 .edot {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-dim);
 }
 /* C8 — one SQUARE per AI role (never a circle; --radius is 0 everywhere
@@ -207,7 +207,7 @@ header {
 nav.tools { display: flex; gap: 18px; }
 nav.tools button {
   background: none; border: none; padding: 4px 0; cursor: pointer;
-  font: inherit; font-size: 18px; color: var(--ink-dim);
+  font: inherit; font-size: 20px; color: var(--ink-dim);
   border-bottom: 2px solid transparent;
 }
 nav.tools button:hover { color: var(--ink); }
@@ -232,17 +232,17 @@ nav#nav button {
 nav#nav button:hover { color: var(--ink); background: var(--panel); }
 nav#nav .stage-top { display: flex; align-items: center; gap: 9px; max-width: 100%; }
 nav#nav .stage-n {
-  flex: none; font-size: 20px; font-weight: 700;
+  flex: none; font-size: 17px; font-weight: 700;
   letter-spacing: .06em; color: var(--ink-faint);
 }
 nav#nav .stage-l {
   flex: none; white-space: nowrap;
-  font-size: 18px; font-weight: 600; letter-spacing: .08em;
+  font-size: 20px; font-weight: 600; letter-spacing: .08em;
   text-transform: uppercase;
 }
 nav#nav .here-chip {
   display: none; flex: none;
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   background: var(--accent); color: var(--accent-ink);
   padding: 1px 6px; font-weight: 700;
 }
@@ -272,7 +272,7 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   flex: none; width: 96px; font-family: var(--mono); font-size: 20px;
   letter-spacing: .1em; color: var(--accent); font-weight: 700;
 }
-.gate-text { flex: 1; font-size: 18px; color: var(--ink); min-width: 0; }
+.gate-text { flex: 1; font-size: 20px; color: var(--ink); min-width: 0; }
 .gate-row .block-act { flex: none; }
 /* Lock strip — canonical (2026-07-30c): the gate strip vocabulary in grey.
    Amber gate = "cannot proceed forward"; grey lock = "cannot edit backward."
@@ -287,10 +287,10 @@ nav#nav button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* Stage headline block (screenplay stage and siblings) */
 .stage-kicker {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .14em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--ink-faint); margin-bottom: 8px;
 }
-.stage-headline { font-size: 24px; font-weight: 700; margin: 0 0 10px; color: var(--ink); }
+.stage-headline { font-size: 33px; font-weight: 700; margin: 0 0 10px; color: var(--ink); }
 
 main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .view { display: flex; flex-direction: column; gap: 20px; }
@@ -304,7 +304,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
    They name a region; they are not competing for the eye. */
 .panel h2 {
   margin: 0 0 14px; font-family: var(--mono);
-  font-size: 20px; font-weight: 700; letter-spacing: .2em;
+  font-size: 17px; font-weight: 700; letter-spacing: .2em;
   text-transform: uppercase; color: var(--ink-dim);
 }
 .panel h2 .hint { letter-spacing: .02em; }
@@ -314,7 +314,7 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .panel.panel-lead h2 { color: var(--accent); }
 
 .hint {
-  color: var(--ink-dim); font-size: 18px; letter-spacing: .01em;
+  color: var(--ink-dim); font-size: 20px; letter-spacing: .01em;
   text-transform: none; font-weight: 400; font-family: var(--sans);
 }
 /* Long explanations get a measure. Unbounded prose was half the clutter. */
@@ -342,12 +342,12 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }
 .card { background: var(--panel); padding: 15px 17px; display: flex; flex-direction: column; gap: 3px; }
 .card .num {
-  font-size: 24px; font-weight: 700; color: var(--ink);
+  font-size: 36px; font-weight: 700; color: var(--ink);
   line-height: 1.15; font-variant-numeric: tabular-nums;
 }
 .card .lbl {
   color: var(--ink-dim); font-family: var(--mono);
-  font-size: 20px; letter-spacing: .13em; text-transform: uppercase;
+  font-size: 17px; letter-spacing: .13em; text-transform: uppercase;
 }
 
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
@@ -356,23 +356,23 @@ main { max-width: 1560px; margin: 0 auto; padding: 26px 24px 64px; }
 .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 18px; align-items: end; }
 .grid-form label, .fgroup {
   display: flex; flex-direction: column; gap: 6px;
-  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  font-family: var(--mono); font-size: 17px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim);
 }
 .grid-form .wide { grid-column: 1 / -1; }
 .grid-form label > .hint {
   text-transform: none; letter-spacing: .01em; font-weight: 400;
-  font-size: 18px; font-family: var(--sans);
+  font-size: 20px; font-family: var(--sans);
 }
 .f-label {
-  font-size: 20px; font-weight: 700; letter-spacing: .13em;
+  font-size: 15px; font-weight: 700; letter-spacing: .13em;
   text-transform: uppercase; color: var(--ink-dim);
 }
 label.setf { min-width: 0; }
 
 input[type=text], input[type=number], input[type=password], select, textarea {
   background: var(--field); color: var(--ink); border: 1px solid var(--line);
-  padding: 9px 11px; font: 18px/1.45 var(--sans);
+  padding: 9px 11px; font: 20px/1.45 var(--sans);
   width: 100%; border-radius: var(--radius);
   text-transform: none; letter-spacing: normal; font-weight: 400;
 }
@@ -397,7 +397,7 @@ input:disabled, select:disabled, textarea:disabled { opacity: .55; }
 /* A checkbox carries no text, but it inherits the UA's 13.3333px and
    that is the one thing left on the page computing under the floor —
    which makes every future sweep report a false positive. */
-input[type=checkbox], input[type=radio] { accent-color: var(--accent); font-size: 18px; }
+input[type=checkbox], input[type=radio] { accent-color: var(--accent); font-size: 20px; }
 
 /* ================================================================= buttons */
 button { font: inherit; cursor: pointer; border-radius: var(--radius); }
@@ -439,7 +439,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 /* ================================================================== badges */
 .badge {
   display: inline-block; padding: 2px 8px;
-  font-size: 20px; font-weight: 700; letter-spacing: .09em;
+  font-size: 17px; font-weight: 700; letter-spacing: .09em;
   border: 1px solid; border-radius: var(--radius); vertical-align: 1px;
   white-space: nowrap;
 }
@@ -470,20 +470,20 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   width: 100%; height: 168px; object-fit: cover;
   background: var(--field); display: block; cursor: zoom-in;
 }
-.ref-card .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 18px; }
+.ref-card .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 20px; }
 .ref-card .role {
   font-family: var(--mono); font-weight: 700; font-size: 20px;
   letter-spacing: .04em; color: var(--ink); line-height: 1.4;
 }
 .ref-card .meta { color: var(--ink-dim); font-size: 20px; font-family: var(--mono); line-height: 1.5; }
 .ref-card .actions { display: flex; gap: 8px; padding: 0 14px 14px; margin-top: auto; }
-.ref-card .actions button { flex: 1; font-size: 18px; padding: 7px 4px; }
+.ref-card .actions button { flex: 1; font-size: 20px; padding: 7px 4px; }
 
 /* ================================================================== tables */
 .table { width: 100%; border-collapse: collapse; font-size: 20px; }
 .table th {
   text-align: left; color: var(--ink-faint);
-  font-size: 20px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
+  font-size: 17px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
   padding: 9px 12px; border-bottom: 1px solid var(--line);
 }
 .table td { padding: 11px 12px; border-bottom: 1px solid var(--line-soft); }
@@ -493,7 +493,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 
 /* Conformance audit 2026-08-04 #1: the .mono utility the markup has
    used all along — machine data speaks Courier by CLASS, not by luck. */
-.mono { font-family: var(--mono); font-size: 20px; }
+.mono { font-family: var(--mono); font-size: 17px; }
 
 /* ============================================================ spec editor */
 .spec-editor { border-left: 3px solid var(--line); }  /* audit #5: one lead per screen */
@@ -504,7 +504,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .spec-section { margin-top: 24px; border-top: 1px solid var(--line-soft); padding-top: 18px; }
 .spec-section h4 {
   margin: 0 0 13px; font-family: var(--mono);
-  font-size: 20px; letter-spacing: .2em; text-transform: uppercase;
+  font-size: 17px; letter-spacing: .2em; text-transform: uppercase;
   color: var(--ink-dim); font-weight: 700;
 }
 .spec-section h4 .hint { letter-spacing: .02em; }
@@ -541,7 +541,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .cam-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; align-items: end; }
 .cam-field { display: flex; flex-direction: column; gap: 4px; }
 .cam-field > span { color: var(--ink-faint); font-family: var(--mono);
-  font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
+  font-size: 17px; letter-spacing: .06em; text-transform: uppercase; }
 .cam-field select { min-width: 150px; }
 /* UNCANONIZED — 2026-08-25 — the framing field spans its row */
 /* Every other axis in this row is one word: LOW, WIDE, 24MM. A framing is
@@ -568,7 +568,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
    case. Rule 2 of the design system, and it read as a machine warning
    until it was fixed. */
 .cam-field > .cam-note { color: var(--ink-faint); max-width: 92ch;
-  font-family: var(--sans); font-size: 18px; letter-spacing: normal;
+  font-family: var(--sans); font-size: 20px; letter-spacing: normal;
   text-transform: none; line-height: 1.45; margin-top: 2px; }
 .cam-field > .cam-note:empty { display: none; }
 @media (max-width: 1000px) { .cam-row { grid-template-columns: repeat(3, minmax(150px, 1fr)); } }
@@ -589,12 +589,12 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 }
 .grid-head { margin-bottom: 1px; }
 .grid-head span {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .13em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .13em;
   text-transform: uppercase; color: var(--ink-faint); font-weight: 700;
 }
 .grid-head.ledger-row { padding: 4px 9px 3px; }
 #sp-ledger .ledger-row:nth-child(odd) { background: var(--bg2); }
-#sp-ledger .ledger-row input[type=text] { font-size: 18px; }
+#sp-ledger .ledger-row input[type=text] { font-size: 20px; }
 /* UNCANONIZED — 2026-08-13 — a locked sheet reads as a DOCUMENT, not a
    form: disabled controls drop their dropdown/field affordance and read
    as plain values (a greyed dropdown invites a click it will not honor,
@@ -617,7 +617,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
    prose, and §Copy says sentence case in prose, uppercase only for
    Courier labels and badges. This is the full reset that makes .mini
    prose again wherever it sits. */
-.mini { font-size: 18px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans);
+.mini { font-size: 20px; color: var(--ink-dim); line-height: 1.5; font-family: var(--sans);
         text-transform: none; letter-spacing: normal; font-weight: 400; }
 /* .mini defaults to sans (it carries short prose), but markup that ALSO
    says .mono means it — .mini alone won the order battle and silently
@@ -629,14 +629,14 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .report {
   margin-top: 12px; padding: 13px 16px; background: var(--field);
   border: 1px solid var(--line); border-left-width: 3px;
-  border-radius: var(--radius); font-size: 18px;
+  border-radius: var(--radius); font-size: 20px;
 }
 .report.pass { border-left-color: var(--ok); }
 .report.fail { border-left-color: var(--bad); }
 .report ul { margin: 7px 0 0; padding-left: 20px; }
 .report li { margin: 3px 0; }
 .report-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.report-head button { font-size: 18px; padding: 5px 12px; }
+.report-head button { font-size: 20px; padding: 5px 12px; }
 /* UNCANONIZED — 2026-08-16 — the compiled prompt is editable.
    Amber marks a state the render will actually be made under, which is
    the "current stage" role, not decoration: while this reads EDITED the
@@ -659,7 +659,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   border-top: 1px solid var(--line-soft); padding-top: 10px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
 }
-.scan-detail { font-size: 18px; color: var(--ink); }
+.scan-detail { font-size: 20px; color: var(--ink); }
 .scan-quote {
   margin: 0; padding: 0 0 0 11px; border-left: 2px solid var(--line);
   font-family: var(--mono); font-size: 20px; line-height: 1.5;
@@ -719,7 +719,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .subnav button {
   background: var(--bg2); border: none; border-bottom: 2px solid transparent;
   color: var(--ink-dim); padding: 10px 20px; cursor: pointer;
-  font: inherit; font-size: 18px; letter-spacing: .02em;
+  font: inherit; font-size: 20px; letter-spacing: .02em;
 }
 .subnav button:hover { color: var(--ink); background: var(--panel); }
 /* MOCK_PARITY D5: the active marker is a 2px --accent BOTTOM border on a
@@ -729,7 +729,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 
 /* ============================================================== doc panels */
 .doc h3 {
-  margin: 22px 0 7px; font-size: 18px; color: var(--ink);
+  margin: 22px 0 7px; font-size: 20px; color: var(--ink);
   letter-spacing: -.005em; font-weight: 600;
 }
 .doc h3:first-of-type { margin-top: 6px; }
@@ -762,13 +762,13 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
 .lb-bar {
   height: 46px; display: flex; align-items: center; justify-content: space-between;
   padding: 0 18px; background: var(--bg2); border-top: 1px solid var(--line);
-  font-size: 18px; color: var(--ink);
+  font-size: 20px; color: var(--ink);
 }
 .lb-zoomstate { color: var(--ink-dim); font-size: 20px; letter-spacing: .04em; }
 .lb-btn {
   position: absolute; z-index: 101;
   background: rgba(21, 24, 27, .9); border: 1px solid var(--line); color: var(--ink-dim);
-  font-size: 24px; line-height: 1; width: 44px; height: 44px; cursor: pointer;
+  font-size: 33px; line-height: 1; width: 44px; height: 44px; cursor: pointer;
   border-radius: var(--radius);
 }
 .lb-btn:hover { border-color: var(--line-strong); color: var(--ink); }
@@ -781,7 +781,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--panel2); border: 1px solid var(--line);
   border-left: 3px solid var(--line); color: var(--ink);  /* audit #18 */
-  padding: 11px 22px; font-size: 18px; z-index: 50; max-width: 80vw;
+  padding: 11px 22px; font-size: 20px; z-index: 50; max-width: 80vw;
   border-radius: var(--radius); box-shadow: 0 8px 28px rgba(0, 0, 0, .5);
 }
 .toast.error { border-left-color: var(--bad); }
@@ -801,7 +801,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   display: flex; align-items: center; gap: 12px;
   background: var(--panel2); border-left: 3px solid var(--accent);
   padding: 12px 15px; margin-top: 11px; border-radius: var(--radius);
-  font-size: 18px; color: var(--ink);
+  font-size: 20px; color: var(--ink);
 }
 .busy .spinner {
   width: 17px; height: 17px; flex: none; border-radius: 50%;
@@ -809,7 +809,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   animation: spin .8s linear infinite;
 }
 .busy .busy-label { flex: 1; }
-.busy .busy-hint { color: var(--ink-dim); font-size: 18px; }
+.busy .busy-hint { color: var(--ink-dim); font-size: 20px; }
 .busy .elapsed {
   color: var(--ink); font-variant-numeric: tabular-nums;
   font-weight: 700; min-width: 44px; text-align: right; font-size: 20px;
@@ -820,7 +820,7 @@ button.ghost:disabled, button.danger:disabled { background: none; color: var(--i
   background-size: 200px 100%; animation: busy-sweep 1.6s linear infinite;
 }
 .busy.wrap { flex-wrap: wrap; }
-.busy .busy-cancel { font-size: 18px; padding: 5px 12px; flex: none; }
+.busy .busy-cancel { font-size: 20px; padding: 5px 12px; flex: none; }
 
 /* --------------------------------------------------- tooltip affordance */
 label[title] { cursor: help; }
@@ -833,9 +833,9 @@ input[title], select[title], textarea[title] { cursor: auto; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--field); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 4px 10px; font-family: var(--mono); font-size: 20px; color: var(--ink-dim);
+  padding: 4px 10px; font-family: var(--mono); font-size: 17px; color: var(--ink-dim);
 }
-.chip button { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 18px; padding: 0 1px; line-height: 1; }
+.chip button { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 20px; padding: 0 1px; line-height: 1; }
 .chip button:hover { color: var(--ink); }
 /* Object intake row — per intake-row canon (2026-07-30c): an intake row is
    always a full-width row of its own, never inside a column of a wider grid
@@ -843,7 +843,7 @@ input[title], select[title], textarea[title] { cursor: auto; }
 .chip-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .chip-add input { flex: 2 1 280px; min-width: 240px; }
 .chip-add select { flex: 1 1 200px; min-width: 0; max-width: 340px; }
-.chip-add button { flex: none; white-space: nowrap; font-size: 18px; padding: 7px 12px; }
+.chip-add button { flex: none; white-space: nowrap; font-size: 20px; padding: 7px 12px; }
 .chip.open { color: var(--ink); border-color: var(--line-strong); background: var(--panel2); }
 .chip.has-ref { border-color: var(--ok); color: var(--ink); }
 .chip.has-ref::before { content: "\2713"; color: var(--ok); font-weight: 700; margin-right: 1px; }
@@ -865,7 +865,7 @@ input[title], select[title], textarea[title] { cursor: auto; }
 label.check {
   display: inline-flex; align-items: center; gap: 7px;
   margin: 0 16px 6px 0; cursor: pointer; text-transform: none;
-  letter-spacing: normal; font-weight: 400; font-size: 18px; color: var(--ink);
+  letter-spacing: normal; font-weight: 400; font-size: 20px; color: var(--ink);
   font-family: var(--sans);
 }
 
@@ -874,7 +874,7 @@ label.check {
 .crop-head {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   padding: 12px 18px; background: var(--bg2); border-bottom: 1px solid var(--line);
-  font-size: 18px;
+  font-size: 20px;
 }
 .crop-stage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 20px; }
 .crop-wrap { position: relative; cursor: crosshair; }
@@ -914,9 +914,9 @@ label.check {
    letterboxed into the other shape. */
 .cast-kick { display: flex; align-items: baseline; gap: 10px;
   margin: 18px 0 8px; }
-.cast-kick b { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
+.cast-kick b { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-dim); font-weight: 400; }
-.cast-kick span { font-family: var(--mono); font-size: 20px;
+.cast-kick span { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--ink-faint); }
 .cast-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px; }
@@ -931,19 +931,19 @@ label.check {
 .cast-card[data-kind="PROP"] .cast-shot { aspect-ratio: 1.85; }
 .cast-shot.none { background: repeating-linear-gradient(135deg,
   var(--field) 0 6px, var(--bg) 6px 12px); }
-.cast-name { font-family: var(--sans); font-size: 18px; font-weight: 600;
+.cast-name { font-family: var(--sans); font-size: 20px; font-weight: 600;
   color: var(--ink); }
-.cast-sub { font-family: var(--sans); font-size: 18px; color: var(--ink-dim); }
-.cast-scenes { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.cast-sub { font-family: var(--sans); font-size: 20px; color: var(--ink-dim); }
+.cast-scenes { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); }
 /* Uncast have no picture, so a list is the honest shape for them. */
 .cast-uncast { margin-top: 22px; padding-top: 14px;
   border-top: 1px solid var(--line-soft); }
 .cast-unrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
-.cast-unrow > b { font-family: var(--mono); font-size: 20px;
+.cast-unrow > b { font-family: var(--mono); font-size: 17px;
   letter-spacing: .1em; color: var(--ink-faint); font-weight: 400;
   min-width: 78px; }
-.cast-chip { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.cast-chip { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   border: 1px dashed var(--line); background: none; padding: 5px 10px;
   cursor: pointer; }
 .cast-chip:hover { color: var(--ink); border-color: var(--line-strong); }
@@ -964,7 +964,7 @@ label.check {
    the cast screen used. */
 .cd-head { display: flex; align-items: baseline; gap: 14px; margin: 0 0 20px;
   padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); }
-.cd-name { font-family: var(--sans); font-size: 24px; font-weight: 700;
+.cd-name { font-family: var(--sans); font-size: 33px; font-weight: 700;
   color: var(--ink); margin: 0; letter-spacing: -.01em; }
 .cd-meta { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint); }
@@ -997,7 +997,7 @@ label.check {
 .cd-frame-kick { position: absolute; top: 10px; left: 12px;
   text-shadow: 0 1px 3px var(--ground); }
 .cd-expand { position: absolute; top: 8px; right: 10px; background: none;
-  border: 0; color: var(--ink-faint); font-size: 18px; cursor: pointer;
+  border: 0; color: var(--ink-faint); font-size: 20px; cursor: pointer;
   line-height: 1; padding: 2px 4px; }
 .cd-expand:hover:not(:disabled) { color: var(--ink); }
 .cd-expand:disabled { opacity: .4; cursor: default; }
@@ -1016,11 +1016,11 @@ label.check {
 .cd-titlerow .cd-kick { margin: 0; }
 /* Large on purpose: editing the description is the ONLY way to change a
    result, so it cannot read as a footnote. */
-.cd-edit { font-size: 18px; padding: 10px 16px; border-color: var(--line-strong);
+.cd-edit { font-size: 20px; padding: 10px 16px; border-color: var(--line-strong);
   color: var(--ink); }
-.cd-desc { font-family: var(--sans); font-size: 18px; line-height: 1.6;
+.cd-desc { font-family: var(--sans); font-size: 20px; line-height: 1.6;
   color: var(--ink); margin: 10px 0 0; max-width: 78ch; }
-.cd-nodesc { font-family: var(--sans); font-size: 18px; line-height: 1.6;
+.cd-nodesc { font-family: var(--sans); font-size: 20px; line-height: 1.6;
   color: var(--ink-faint); }
 /* Provenance: the page ref in Courier, the line verbatim in italic, and a
    rule marking it as quoted rather than written by this app. */
@@ -1028,7 +1028,7 @@ label.check {
   border-left: 1px solid var(--line); padding: 5px 0 5px 14px; margin: 8px 0; }
 .cd-quote > .cd-page { font-family: var(--mono); font-size: 20px;
   letter-spacing: .1em; color: var(--ink-faint); flex: none; min-width: 5ch; }
-.cd-quote > i { font-family: var(--sans); font-size: 18px; line-height: 1.6;
+.cd-quote > i { font-family: var(--sans); font-size: 20px; line-height: 1.6;
   font-style: italic; color: var(--ink-dim); }
 .cd-hero { display: block; width: 100%; aspect-ratio: .8;
   background: var(--field); border: 1px solid var(--line-soft);
@@ -1043,7 +1043,7 @@ label.check {
 .cd-more { width: 76px; aspect-ratio: .8; border: 1px dashed var(--line);
   background: none; color: var(--ink-faint); font-family: var(--mono);
   font-size: 20px; letter-spacing: .06em; cursor: pointer; }
-.cd-trait { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.cd-trait { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 5px 0; }
 .cd-facts { margin: 22px 0 0; padding-top: 16px;
   border-top: 1px solid var(--line-soft); }
@@ -1094,7 +1094,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .sp-takeover .spinner { width: 26px; height: 26px; flex: none;
   border-radius: 50%; border: 2.5px solid var(--line);
   border-top-color: var(--accent); animation: spin .8s linear infinite; }
-.sp-take-label { font-family: var(--sans); font-size: 18px; color: var(--ink); }
+.sp-take-label { font-family: var(--sans); font-size: 20px; color: var(--ink); }
 .sp-take-note { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint); }
 /* UNCANONIZED — 2026-08-29 — a proposed anchor */
@@ -1123,9 +1123,9 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .anchor-hero.proposed .ah-scrim { display: none; }
 .ah-prop-kick { font-family: var(--mono); font-size: 20px; letter-spacing: .14em;
   color: var(--ink-faint); }
-.ah-prop-name { font-family: var(--sans); font-size: 18px; font-weight: 600;
+.ah-prop-name { font-family: var(--sans); font-size: 20px; font-weight: 600;
   color: var(--ink); }
-.ah-prop-why { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.ah-prop-why { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   line-height: 1.4; }
 .ah-prop-acts { display: flex; gap: 12px; margin-top: 2px; }
 .wiz-suggest-row { margin: 0 0 12px; }
@@ -1152,7 +1152,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .anchor-hero::before { content: ""; position: absolute; left: 0; right: 0;
   top: 0; height: 44px; z-index: 1; pointer-events: none;
   background: linear-gradient(to bottom, rgba(8, 9, 10, .72), rgba(8, 9, 10, 0)); }
-.ah-role, .ah-state { position: absolute; top: 9px; font-size: 20px;
+.ah-role, .ah-state { position: absolute; top: 9px; font-size: 17px;
   letter-spacing: .12em; z-index: 2; }
 .ah-role { left: 10px; color: var(--ink-dim); }
 /* Amber: this is the one thing on the card that may need attention. */
@@ -1162,14 +1162,14 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .ah-scrim { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
   padding: 26px 12px 11px; display: flex; flex-direction: column; gap: 3px;
   background: linear-gradient(to top, rgba(8, 9, 10, .93), rgba(8, 9, 10, 0)); }
-.ah-name { font-family: var(--sans); font-size: 18px; font-weight: 600;
+.ah-name { font-family: var(--sans); font-size: 20px; font-weight: 600;
   color: var(--ink); }
-.ah-line { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.ah-line { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   line-height: 1.35; }
 /* A card with no picture states the gap in its own scrim rather than
    showing a hatched rectangle that says nothing. */
 .anchor-hero.empty .ah-name { color: var(--ink-dim); }
-.wiz-col-head .f-label { font-size: 18px; color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 600; }
+.wiz-col-head .f-label { font-size: 20px; color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 600; }
 /* A role's jurisdiction, stated in Courier — this is the concept users miss. */
 .wiz-col .hint { margin: 0; font-family: var(--mono); font-size: 20px; line-height: 1.5; }
 .wiz-thumbs { display: flex; flex-direction: column; gap: 8px; }
@@ -1190,10 +1190,10 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
   padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
 }
 .subj-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.subj-name { font-family: var(--mono); font-weight: 700; letter-spacing: .04em; font-size: 20px; }
-.subj-sub { color: var(--ink-dim); font-size: 20px; letter-spacing: .1em; text-transform: uppercase; }
+.subj-name { font-family: var(--mono); font-weight: 700; letter-spacing: .04em; font-size: 17px; }
+.subj-sub { color: var(--ink-dim); font-size: 17px; letter-spacing: .1em; text-transform: uppercase; }
 .subj-head button.danger { width: 30px; padding: 5px 0; flex: none; }
-.subj-traits { line-height: 1.55; color: var(--ink-dim); font-family: var(--sans); font-size: 18px; }
+.subj-traits { line-height: 1.55; color: var(--ink-dim); font-family: var(--sans); font-size: 20px; }
 .subj-imgs { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); grid-auto-rows: 58px; grid-auto-flow: dense; gap: 5px; }
 .subj-imgs:empty { display: none; }
 .subj-img { position: relative; overflow: hidden; background: var(--field); }
@@ -1207,7 +1207,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .subj-img:nth-child(7n) { grid-row: span 1; }
 .subj-img button {
   position: absolute; top: 4px; right: 4px; width: 22px; height: 22px;
-  padding: 0; line-height: 1; font-size: 18px;
+  padding: 0; line-height: 1; font-size: 20px;
   background: rgba(15, 17, 20, .85); border: 1px solid var(--bad); color: var(--bad);
   opacity: 0; transition: opacity .15s; cursor: pointer;
 }
@@ -1215,7 +1215,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .subj-add {
   display: inline-flex; align-self: flex-start; align-items: center; gap: 6px;
   border: 1px dashed var(--line); border-radius: var(--radius);
-  padding: 8px 14px; cursor: pointer; color: var(--ink-dim); font-size: 18px;
+  padding: 8px 14px; cursor: pointer; color: var(--ink-dim); font-size: 20px;
 }
 .subj-add:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -1224,24 +1224,24 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    --ok/--hold, never filled; identity text is editable prose; the + slot
    rides inside the mosaic; Courier facts line closes the card. */
 .kind-badge, .cast-badge {
-  flex: none; font-family: var(--mono); font-size: 20px; letter-spacing: .08em;
+  flex: none; font-family: var(--mono); font-size: 17px; letter-spacing: .08em;
   padding: 2px 7px; border: 1px solid var(--line); color: var(--ink-dim);
 }
 .cast-badge { margin-left: auto; }
 .cast-badge.cast { border-color: var(--ok); color: var(--ok); }
 .cast-badge.uncast { border-color: var(--hold); color: var(--ink-faint); }
 .subj-card.uncast { border-style: dashed; }
-.subj-identity { font-family: var(--sans); font-size: 18px; color: var(--ink-dim); line-height: 1.5; cursor: pointer; }
+.subj-identity { font-family: var(--sans); font-size: 20px; color: var(--ink-dim); line-height: 1.5; cursor: pointer; }
 .subj-identity:hover { color: var(--ink); }
 .subj-card.uncast .subj-identity { cursor: default; }
 .subj-card.uncast .subj-identity:hover { color: var(--ink-dim); }
 .subj-slot {
   display: flex; align-items: center; justify-content: center;
   border: 1px dashed var(--line); color: var(--ink-dim);
-  cursor: pointer; font-size: 18px;
+  cursor: pointer; font-size: 20px;
 }
 .subj-slot:hover { border-color: var(--line-strong); color: var(--ink); }
-.subj-facts { font-family: var(--mono); font-size: 20px; letter-spacing: .05em; color: var(--ink-faint); }
+.subj-facts { font-family: var(--mono); font-size: 17px; letter-spacing: .05em; color: var(--ink-faint); }
 /* Text action — the canonical text link-button (Courier bold, ink, never
    amber). Was scoped to .subj-facts; global since plan P2 uses it broadly. */
 .text-act {
@@ -1256,7 +1256,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
    by kind, Courier faint row labels at fixed width; the manual cast row
    closes the block. */
 .uncast-block { border: 1px solid var(--line-soft); padding: 12px 14px; }
-.uncast-label { font-family: var(--mono); font-size: 20px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
+.uncast-label { font-family: var(--mono); font-size: 15px; letter-spacing: .09em; color: var(--ink-faint); margin-bottom: 4px; }
 /* Reassurance, highlighted (user, 2026-08-23): the questions read as a
    gate and they are not one. Green is a met/benign state, never amber —
    amber would mark the one thing this line exists to say it is NOT. */
@@ -1266,15 +1266,15 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 /* Uncast triage (mock 6b) — plan P3/R4: rows cap at 8 chips behind a dashed
    "more" expander; one ghost bulk-cast per row, right-aligned. */
 .uncast-row .chips { flex: 1 1 auto; min-width: 0; }
-.uncast-bulk { flex: none; margin-left: auto; font-size: 18px; padding: 4px 10px; white-space: nowrap; }
+.uncast-bulk { flex: none; margin-left: auto; font-size: 20px; padding: 4px 10px; white-space: nowrap; }
 .chip.more { border-style: dashed; color: var(--ink-faint); }
-.chip .suffix { color: var(--ink-faint); font-size: 18px; margin-left: 2px; }
+.chip .suffix { color: var(--ink-faint); font-size: 20px; margin-left: 2px; }
 
 /* PROPOSED chip state (mock 6a) — plan P5/Gap 5. Dashed = not yet real
    (the vocabulary-picker family); --hold carries awaiting-review. A
    confirmed chip is exactly the plain chip — no badge, no color. */
 .chip.proposed { border-style: dashed; border-color: var(--hold); color: var(--ink-faint); }
-.chip.proposed .prop-tail { color: var(--ink-faint); font-size: 18px; }
+.chip.proposed .prop-tail { color: var(--ink-faint); font-size: 20px; }
 .chip.proposed .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--mono); font-size: 20px; font-weight: 700;
@@ -1294,7 +1294,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .q-row:first-child { border-top: none; }
 .q-row.answered { border-left-color: var(--ok); }
 .q-row.deferred .q-text { color: var(--ink-faint); }
-.q-idx { flex: none; font-family: var(--mono); font-size: 20px; color: var(--ink-faint); padding-top: 2px; }
+.q-idx { flex: none; font-family: var(--mono); font-size: 17px; color: var(--ink-faint); padding-top: 2px; }
 .q-main { flex: 1; min-width: 0; }
 .q-main input { width: min(520px, 100%); margin-top: 6px; }
 /* UNCANONIZED — 2026-08-24 — why a step is frozen */
@@ -1345,7 +1345,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .q-edit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .q-edit input { margin-top: 0; width: min(420px, 100%); }
 .q-edit-hint { color: var(--ink-faint); }
-.q-text { margin: 0; font-size: 18px; color: var(--ink-dim); max-width: 74ch; }
+.q-text { margin: 0; font-size: 20px; color: var(--ink-dim); max-width: 74ch; }
 .q-answer { margin: 4px 0 0; font-family: var(--mono); font-size: 20px; color: var(--ink); }
 .q-actions { flex: none; display: flex; gap: 12px; align-items: center; padding-top: 1px; }
 
@@ -1369,7 +1369,7 @@ body[data-reading="1"] .dash-main > .panel:not(#read-live) { display: none; }
 .suggest-group .chips { margin-top: 4px; }
 .suggest-label { font-family: var(--mono); font-size: 20px; letter-spacing: .09em; color: var(--ink-faint); }
 .vchip.loose { border-style: dashed; }
-.vchip .suffix { color: var(--ink-faint); font-size: 18px; margin-left: 4px; }
+.vchip .suffix { color: var(--ink-faint); font-size: 20px; margin-left: 4px; }
 
 /* ============================================== boards: subject ref groups */
 .ref-groups { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1395,20 +1395,20 @@ details.meta pre {
    Row grid: badge (fixed 52px, bordered status color, never filled) ·
    text · amber text action. The lead presents blocking[0], never a list. */
 .next-label {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .14em;
+  font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
   color: var(--accent); margin-bottom: 6px;
 }
 .next-row { display: flex; align-items: center; gap: 18px; }
 .next-text { font-size: 20px; font-weight: 600; color: var(--ink); min-width: 0; }
-.next-text .mono-id { font-family: var(--mono); font-size: 19px; letter-spacing: .02em; }
-.next-support { margin: 6px 0 0; font-size: 18px; color: var(--ink-dim); max-width: 74ch; }
+.next-text .mono-id { font-family: var(--mono); font-size: 20px; letter-spacing: .02em; }
+.next-support { margin: 6px 0 0; font-size: 20px; color: var(--ink-dim); max-width: 74ch; }
 .next-row .primary { flex: none; }
 .block-row {
   display: flex; align-items: center; gap: 12px;
   padding: 8px 0; border-top: 1px solid var(--line-soft);
 }
 .block-kind {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .08em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .08em;
   border: 1px solid var(--line); padding: 2px 0; flex: none;
   width: 52px; text-align: center;
 }
@@ -1439,11 +1439,11 @@ details.meta pre {
   color: var(--ink-faint); border-top: 1px solid var(--line-soft);
   margin-top: 10px; padding-top: 8px;
 }
-.block-text { flex: 1; font-size: 18px; color: var(--ink); min-width: 0; }
+.block-text { flex: 1; font-size: 20px; color: var(--ink); min-width: 0; }
 .block-text .mono-id { font-family: var(--mono); font-size: 20px; }
 .block-act {
   flex: none; background: none; border: none; padding: 2px 4px;
-  font: inherit; font-size: 18px; color: var(--accent); cursor: pointer;
+  font: inherit; font-size: 20px; color: var(--accent); cursor: pointer;
 }
 .block-act:hover { text-decoration: underline; }
 
@@ -1451,11 +1451,11 @@ details.meta pre {
    the rhythm; no icons, no dots. IDs inside the text carry Courier. */
 .recent-row {
   display: flex; gap: 10px; padding: 5px 0;
-  border-top: 1px solid var(--line-soft); font-size: 18px;
+  border-top: 1px solid var(--line-soft); font-size: 20px;
 }
 .recent-row:first-child { border-top: none; }
 .recent-ts { font-family: var(--mono); color: var(--ink-faint); flex: none;
-  font-size: 20px; }   /* Courier takes the 15px step, not the 14px body */
+  font-size: 17px; }   /* Courier takes the 15px step, not the 14px body */
 .recent-text { color: var(--ink-dim); min-width: 0; }
 .recent-text .mono-id { font-family: var(--mono); color: var(--ink); font-size: 20px; }
 .recent-row.error {
@@ -1474,11 +1474,11 @@ details.meta pre {
   border-top: 1px solid var(--line-soft);
 }
 .loc-headrow span {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint);
 }
 .loc-slug { font-family: var(--mono); font-size: 20px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loc-scenes { font-family: var(--mono); font-size: 20px; color: var(--ink-dim); text-align: right; }
+.loc-scenes { font-family: var(--mono); font-size: 17px; color: var(--ink-dim); text-align: right; }
 .loc-meter { display: inline-flex; gap: 3px; }
 .loc-meter i { width: 11px; height: 4px; background: var(--line-soft); }
 .loc-meter i.on { background: var(--ok); }
@@ -1495,14 +1495,14 @@ details.meta pre {
 /* Finder list — canonical (2026-07-30c): Courier search over a scrollable
    list, parent rows expand to children, every row ends in its one verb.
    For any >30-item findable list. */
-.loc-search { max-width: 380px; margin: 8px 0 4px; padding: 7px 11px; font-size: 18px; }
+.loc-search { max-width: 380px; margin: 8px 0 4px; padding: 7px 11px; font-size: 20px; }
 .loc-scroll { max-height: 460px; overflow-y: auto; }
 .scene-row {
   display: flex; align-items: center; gap: 12px; padding: 4px 0 4px 26px;
   border-top: 1px dashed var(--line-soft);
 }
 .scene-row .loc-slug { flex: 1; font-size: 20px; }
-.scene-row .loc-draft { flex: none; font-size: 18px; }
+.scene-row .loc-draft { flex: none; font-size: 20px; }
 /* Wizard read-locations rows (plan P4/R2): name · sheet-match state · verb.
    Same finder vocabulary, three columns instead of four; grouped rows
    (plan P7) add the reassign select as a fourth. */
@@ -1512,7 +1512,7 @@ details.meta pre {
 .wiz-loc-row, .loc-thead { grid-template-columns: minmax(0,1fr) 240px 120px 190px; }
 .loc-thead { display: grid; gap: 10px; align-items: center; padding: 8px 0 6px;
   border-top: 1px solid var(--line); }
-.loc-thead span { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.loc-thead span { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); }
 .wiz-loc-row .loc-draft, .wiz-loc-row .loc-open,
 .wiz-loc-row .loc-gate { justify-self: end; }
@@ -1522,7 +1522,7 @@ details.meta pre {
 .wiz-v3 .loc-group { background: var(--field); padding: 8px 10px 6px; margin-top: 6px;
   border-top: none; }
 .wiz-v3 .loc-scroll { max-height: none; overflow-y: visible; }
-.wv-tag.loc-gate { margin: 0; font-size: 18px; padding: 3px 8px; }
+.wv-tag.loc-gate { margin: 0; font-size: 20px; padding: 3px 8px; }
 /* RULE_PASS_2 D (ruled 2026-08-18): the act heading is a HEADING — it was
    a `.text-act` that rendered identically to the column labels beside it,
    so the one remedy for a reading you disagree with gave no sign it could
@@ -1533,14 +1533,14 @@ details.meta pre {
 .loc-act-head { color: var(--ink-dim); }
 .loc-read { color: var(--ink-faint); letter-spacing: .14em; margin-left: 8px; }
 .loc-turn { display: block; color: var(--ink-dim); letter-spacing: .08em;
-  font-size: 20px; margin-top: 3px; text-transform: none; }
+  font-size: 17px; margin-top: 3px; text-transform: none; }
 .loc-group .loc-act-name { margin-left: 10px; }
 /* D4: the rows the read named that no slugline placed are a register
    below the acts, after a hairline — not a fourth act under a head that
    promises each row becomes a breakdown. */
 .loc-group.loc-register { margin-top: 18px; border-top: 1px solid var(--line); }
 .loc-group {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); padding: 10px 0 3px; margin-top: 2px;
   border-top: 1px solid var(--line-soft);
 }
@@ -1566,14 +1566,14 @@ details.meta pre {
 /* A render is money, so the cost is stated beside the button, never
    discovered after it. */
 .cd-spend { margin: 10px 0 0; color: var(--ink-faint);
-  font-family: var(--sans); font-size: 18px; line-height: 1.55; }
+  font-family: var(--sans); font-size: 20px; line-height: 1.55; }
 /* A stated gate, where the cost line sits when the act is available. It
    is --hold, not --bad: nothing has failed, something is not ready. */
 .cd-blocked { color: var(--ink-dim); border-left: 2px solid var(--hold);
   padding-left: 10px; }
 .cd-blocked .text-act { margin-left: 6px; }
 /* A fact that is not knowable yet says what would make it knowable. */
-.cd-none { font-style: normal; font-size: 18px; letter-spacing: .08em;
+.cd-none { font-style: normal; font-size: 20px; letter-spacing: .08em;
   color: var(--ink-faint); }
 
 /* UNCANONIZED — 2026-08-31 — the subjects rail (§3.3) */
@@ -1581,7 +1581,7 @@ details.meta pre {
    never shown in the findings, so the number was the whole of what the
    read said about the cast. Chips, and the one act they lead to. */
 .subj-rail { display: flex; flex-wrap: wrap; gap: 5px; }
-.subj-chip { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.subj-chip { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   border: 1px dashed var(--line); padding: 3px 8px; }
 /* Solid once it has a card — the same dashed/solid distinction the cast
    row and the uncast list already use. */
@@ -1607,7 +1607,7 @@ details.meta pre {
    not a machine fact (Rule 2). It was 9px uppercase Courier, which read
    as an error code on a broken image. */
 .lang-shot.none i { font-style: normal; font-family: var(--sans);
-  font-size: 18px; line-height: 1.5; text-align: center;
+  font-size: 20px; line-height: 1.5; text-align: center;
   color: var(--ink-faint); padding: 0 6px;
   /* The section inherits uppercase and tracking from `.fgroup`, which is
      right for a label and wrong for a sentence. Both are reset HERE
@@ -1615,7 +1615,7 @@ details.meta pre {
      them. */
   text-transform: none; letter-spacing: 0; }
 .lang-body { display: block; padding: 9px 11px 11px;
-  font-family: var(--sans); font-size: 18px; color: var(--ink); }
+  font-family: var(--sans); font-size: 20px; color: var(--ink); }
 .lang-card.open { border-color: var(--line); }
 
 /* UNCANONIZED — 2026-08-31 — environments as rows (§3.3) */
@@ -1628,11 +1628,11 @@ details.meta pre {
 .env-row.proposed { border-left: 2px solid var(--hold); }
 .env-locs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 7px 0 0;
   font-size: 20px; letter-spacing: .06em; color: var(--ink-dim); }
-.env-noloc { color: var(--ink-faint); letter-spacing: .1em; font-size: 18px; }
+.env-noloc { color: var(--ink-faint); letter-spacing: .1em; font-size: 20px; }
 
-.env-name { font-family: var(--mono); font-weight: 700; font-size: 20px; letter-spacing: .05em; }
-.env-notes { margin: 4px 0 8px; font-size: 18px; color: var(--ink-dim); }
-.env-facts { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
+.env-name { font-family: var(--mono); font-weight: 700; font-size: 17px; letter-spacing: .05em; }
+.env-notes { margin: 4px 0 8px; font-size: 20px; color: var(--ink-dim); }
+.env-facts { font-family: var(--mono); font-size: 17px; letter-spacing: .08em; color: var(--ink-faint); }
 .env-facts .prop-act {
   background: none; border: none; padding: 0; cursor: pointer;
   font-family: var(--mono); font-size: 20px; font-weight: 700;
@@ -1667,7 +1667,7 @@ details.meta pre {
    replaces the grid — same card anatomy, contained image, never cropped. */
 .ref-card.board-solo img { height: auto; max-height: 72vh; object-fit: contain; }
 .loc-state {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .05em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .05em;
   color: var(--ink-faint); text-align: right; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;
 }
@@ -1682,13 +1682,13 @@ details.meta pre {
 .fact span { color: var(--ink-faint); letter-spacing: .08em; }
 .fact b { color: var(--ink-dim); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fact-head {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); margin: 18px 0 4px; padding-top: 14px;
   border-top: 1px solid var(--line-soft);
 }
 .dsrow {
   display: flex; justify-content: space-between; gap: 12px; padding: 5px 0;
-  border-top: 1px solid var(--line-soft); font-size: 18px; color: var(--ink-dim);
+  border-top: 1px solid var(--line-soft); font-size: 20px; color: var(--ink-dim);
 }
 .dsrow:first-of-type { border-top: none; }
 .dsrow b { font-family: var(--mono); color: var(--ink); font-weight: 700; }
@@ -1801,7 +1801,7 @@ details.meta pre {
 /* takes filmstrip: every candidate for the panel; rejected dims image only */
 .takes { margin-top: 16px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
 .takes-head { display: flex; align-items: center; gap: 12px; }
-.takes-head .danger { margin-left: auto; font-size: 18px; padding: 3px 10px; }
+.takes-head .danger { margin-left: auto; font-size: 20px; padding: 3px 10px; }
 .takes-row { display: flex; gap: 12px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
 .take {
   flex: none; width: 118px; background: none; border: 1px solid var(--line);
@@ -1862,7 +1862,7 @@ details.meta pre {
   color: var(--ink-dim); white-space: pre-wrap; word-break: break-word;
   margin: 0; max-height: 300px; overflow-y: auto;
 }
-.carried { font-size: 18px; line-height: 1.5; border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.carried { font-size: 20px; line-height: 1.5; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 
 /* reference library: filter chips + status counts + jurisdiction block */
 /* Intake row — canonical (design review 2026-07-30): one-line entry into
@@ -1870,8 +1870,8 @@ details.meta pre {
    only the un-guessable field gets a ghost prefix; the submit is ghost —
    an intake row never spends the screen's amber. */
 .ref-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 18px; }
-.ref-add input[type="text"] { flex: 1 1 130px; min-width: 0; padding: 7px 10px; font-size: 18px; }
+.ref-add input[type="file"] { flex: 0 1 220px; min-width: 150px; font-size: 20px; }
+.ref-add input[type="text"] { flex: 1 1 130px; min-width: 0; padding: 7px 10px; font-size: 20px; }
 .ref-add #ref-role { flex: 2 1 220px; }
 .ref-add button { flex: none; }
 .intake-prefix {
@@ -1882,7 +1882,7 @@ details.meta pre {
 .ref-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .ref-chips { display: inline-flex; gap: 6px; }
 .ref-counts { margin-left: auto; display: inline-flex; gap: 16px; }
-.stat { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-dim); display: inline-flex; align-items: center; gap: 6px; }
+.stat { font-family: var(--mono); font-size: 17px; letter-spacing: .08em; color: var(--ink-dim); display: inline-flex; align-items: center; gap: 6px; }
 .stat i { width: 8px; height: 8px; display: inline-block; }
 .stat.ok i { background: var(--ok); }
 .stat.hold i { background: var(--hold); }
@@ -1905,14 +1905,14 @@ details.meta pre {
    right-aligned Courier counts. Anatomy documented in DESIGN_SYSTEM.md. */
 .shelf { margin-top: 28px; }
 .shelf-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.shelf-name { font-family: var(--mono); font-weight: 700; font-size: 20px; letter-spacing: .1em; color: var(--ink); }
-.shelf-ride { font-family: var(--mono); font-size: 20px; letter-spacing: .09em; color: var(--ink-faint); }
+.shelf-name { font-family: var(--mono); font-weight: 700; font-size: 17px; letter-spacing: .1em; color: var(--ink); }
+.shelf-ride { font-family: var(--mono); font-size: 17px; letter-spacing: .09em; color: var(--ink-faint); }
 .shelf-head .hint { margin: 0; }
-.shelf-count { margin-left: auto; font-family: var(--mono); font-size: 20px; letter-spacing: .06em; color: var(--ink-faint); white-space: nowrap; }
+.shelf-count { margin-left: auto; font-family: var(--mono); font-size: 17px; letter-spacing: .06em; color: var(--ink-faint); white-space: nowrap; }
 .shelf .ref-grid { margin-top: 12px; }
 
 /* settings: engine cards (mock 4d) */
-.eng-powers { margin: 4px 0; font-size: 18px; color: var(--ink-dim); }
+.eng-powers { margin: 4px 0; font-size: 20px; color: var(--ink-dim); }
 .eng-note { font-family: var(--mono); font-size: 20px; letter-spacing: .06em; color: var(--ink-faint); margin: 4px 0 10px; }
 .eng-note.warn { color: var(--ink-faint); }
 .facts-row {
@@ -1935,7 +1935,7 @@ details.meta pre {
 .eng-row-test { flex: none; font-family: var(--mono); font-size: 20px; color: var(--ink-faint); }
 .eng-row-test .ok { color: var(--ok); }
 .eng-row-test .bad { color: var(--ink-faint); }
-.eng-row button { flex: none; font-size: 18px; padding: 4px 12px; }
+.eng-row button { flex: none; font-size: 20px; padding: 4px 12px; }
 
 /* App dialog — canonical (plan v3 C15): --panel2 on a --bg scrim, quiet
    Courier title, labeled fields, one primary/danger confirm + ghost cancel.
@@ -1951,11 +1951,11 @@ details.meta pre {
   padding: 20px 22px; display: flex; flex-direction: column; gap: 12px;
 }
 .modal-title {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink); font-weight: 700;
 }
-.modal-body { margin: 0; font-size: 18px; color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
-.modal-field { display: flex; flex-direction: column; gap: 5px; font-size: 18px; color: var(--ink-dim); }
+.modal-body { margin: 0; font-size: 20px; color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
+.modal-field { display: flex; flex-direction: column; gap: 5px; font-size: 20px; color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
 /* UNCANONIZED — 2026-08-06 — colour field (hex + native picker).
    Two views of one value: the hex is what the form collects, the picker
@@ -1987,7 +1987,7 @@ details.meta pre {
    never .on — amber selection fill is reserved for single-choice chips
    (variant, filter). */
 .role-suggest { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.role-suggest .vchip { font-size: 18px; }
+.role-suggest .vchip { font-size: 20px; }
 .vchip.set { background: var(--panel2); border-color: var(--line-strong); color: var(--ink); }
 /* Stored-as preview — canonical (2026-07-30b): passive fact line, label
    faint, value dim, no field chrome; rendered only when it differs from
@@ -1997,7 +1997,7 @@ details.meta pre {
   color: var(--ink-dim); padding: 2px 0;
 }
 .role-preview::before {
-  content: "WILL BE STORED AS  "; font-size: 18px; letter-spacing: .12em;
+  content: "WILL BE STORED AS  "; font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint);
 }
 /* Reading view — canonical (design review 2026-07-30): one scrollable
@@ -2095,9 +2095,9 @@ details.meta pre {
    doc pass: card reach band, per-card DO-THIS-NEXT, care escalation. */
 
 .lib-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 18px; }
-.lib-title { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin: 6px 0 8px; }
-.lib-intro { color: var(--ink-dim); font-size: 18px; max-width: 64ch; }
-.lib-count { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); white-space: nowrap; }
+.lib-title { font-size: 33px; font-weight: 700; letter-spacing: -.01em; margin: 6px 0 8px; }
+.lib-intro { color: var(--ink-dim); font-size: 20px; max-width: 64ch; }
+.lib-count { font-size: 17px; letter-spacing: .1em; color: var(--ink-faint); white-space: nowrap; }
 
 /* `1fr` is max-content-floored, so a head row wider than its track
    pushes the grid past the window instead of wrapping — it did, by 45px,
@@ -2110,8 +2110,8 @@ details.meta pre {
 .prod-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .prod-card.open { border-left: 3px solid var(--accent); background: var(--panel2); }
 .prod-card-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.prod-name { font-weight: 700; font-size: 18px; }
-.prod-open { color: var(--accent); font-size: 20px; letter-spacing: .14em; }
+.prod-name { font-weight: 700; font-size: 20px; }
+.prod-open { color: var(--accent); font-size: 17px; letter-spacing: .14em; }
 .prod-slug { margin-left: auto; color: var(--ink-faint); font-size: 20px; letter-spacing: .06em; }
 
 /* The reach band: same four colors as the nav band, different question —
@@ -2121,19 +2121,19 @@ details.meta pre {
 .prod-band { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; }
 .prod-band span {
   border-top: 2px solid var(--line); background: var(--bg2);
-  padding: 5px 8px 6px; font-family: var(--mono); font-size: 20px;
+  padding: 5px 8px 6px; font-family: var(--mono); font-size: 17px;
   letter-spacing: .08em; color: var(--ink-faint);
 }
 .prod-band span.r-ok { border-top-color: var(--ok); color: var(--ink-dim); }
 .prod-band span.r-bad { border-top-color: var(--bad); color: var(--ink-dim); }
 
-.prod-counts { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-dim); }
-.prod-next-k { font-family: var(--mono); font-size: 20px; letter-spacing: .16em; color: var(--accent); margin-bottom: 3px; }
+.prod-counts { font-family: var(--mono); font-size: 17px; letter-spacing: .08em; color: var(--ink-dim); }
+.prod-next-k { font-family: var(--mono); font-size: 17px; letter-spacing: .16em; color: var(--accent); margin-bottom: 3px; }
 .prod-next-k.clear { color: var(--ink-faint); }
-.prod-next { font-size: 18px; color: var(--ink); }
+.prod-next { font-size: 20px; color: var(--ink); }
 
 .prod-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-soft); }
-.prod-care { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
+.prod-care { font-size: 17px; letter-spacing: .08em; color: var(--ink-faint); }
 /* A status that is only a colour disappears when the colour is lifted.
    `--hold` is not one of the floor's seven text colours and `--bad` is
    only sanctioned at headline scale or beside a hairline, so these marks
@@ -2144,7 +2144,10 @@ details.meta pre {
   border-left: 2px solid var(--hold); padding-left: 7px; }
 .prod-care.care-bad { color: var(--ink-faint);
   border-left: 2px solid var(--bad); padding-left: 7px; }
-.prod-actions { margin-left: auto; display: flex; gap: 8px; }
+/* Wraps: at the scaled ladder a row of four verbs no longer fits
+   beside the card's head on a 1280px window. */
+.prod-actions { margin-left: auto; display: flex; gap: 8px;
+  flex-wrap: wrap; justify-content: flex-end; }
 .prod-actions .ghost.urgent { border-color: var(--bad-line); }
 
 /* UNCANONIZED — 2026-08-06 — backup/import in-flight strip.
@@ -2194,20 +2197,20 @@ details.meta pre {
 /* the two dead ends, closed (PRODUCTIONS_PLAN M6) */
 .firstrun { display: flex; justify-content: center; padding: 64px 24px; }
 .firstrun-panel { max-width: 560px; width: 100%; padding: 34px 38px; }
-.firstrun-title { font-size: 24px; font-weight: 700; letter-spacing: -.01em; line-height: 1.12; margin: 10px 0 12px; }
-.firstrun-para { color: var(--ink-dim); font-size: 18px; margin-bottom: 18px; }
+.firstrun-title { font-size: 33px; font-weight: 700; letter-spacing: -.01em; line-height: 1.12; margin: 10px 0 12px; }
+.firstrun-para { color: var(--ink-dim); font-size: 20px; margin-bottom: 18px; }
 .firstrun-div { border-top: 1px solid var(--line-soft); margin: 22px 0 16px; }
 
 @media (max-width: 900px) {  }
 
 /* ratified changes (PRODUCTIONS_PASS_RATIFIED 2026-08-01) */
-.prod-next-clear { font-size: 18px; letter-spacing: .08em; color: var(--ink-faint); }
+.prod-next-clear { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 .asm-none { margin-bottom: 12px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* production-design gate tag (user ruling 2026-08-01): the stated,
    de-emphasized stand-in where Create Breakdown will appear. */
 .pd-lock {
-  font-size: 20px; letter-spacing: .1em; color: var(--ink-faint);
+  font-size: 17px; letter-spacing: .1em; color: var(--ink-faint);
   border: 1px dashed var(--line); padding: 2px 8px; white-space: nowrap;
 }
 
@@ -2225,7 +2228,7 @@ details.meta pre {
 #nav button.s-locked { background: #17191c; cursor: help; }
 #nav button.s-locked:hover { background: #17191c; }
 .lock-chip {
-  display: none; font-family: var(--mono); font-size: 20px;
+  display: none; font-family: var(--mono); font-size: 17px;
   letter-spacing: .1em; border: 1px solid var(--hold); color: var(--ink-faint);
   padding: 0 5px; margin-left: 8px; vertical-align: 1px;
 }
@@ -2242,11 +2245,11 @@ details.meta pre {
 }
 .bp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .bp-chip { border: 1px solid var(--hold); color: var(--ink-faint); font-size: 20px; letter-spacing: .1em; padding: 1px 8px; }
-.bp-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 18px; padding: 0 2px; }
+.bp-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 20px; padding: 0 2px; }
 .bp-x:hover { color: var(--ink); }
-.bp-sent { font-size: 18px; color: var(--ink-dim); margin-bottom: 14px; }
+.bp-sent { font-size: 20px; color: var(--ink-dim); margin-bottom: 14px; }
 .bp-sent b { color: var(--ink); }
-.bp-step { display: flex; gap: 10px; font-size: 18px; letter-spacing: .08em; color: var(--ink-faint); padding: 3px 0; }
+.bp-step { display: flex; gap: 10px; font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); padding: 3px 0; }
 .bp-step.cur { color: var(--ink); }
 .bp-step.cur .bp-mark { color: var(--accent); }
 /* UNCANONIZED — 2026-08-23 — locked-stage tally */
@@ -2260,7 +2263,7 @@ details.meta pre {
 /* The stage checklist (LOCKED_STAGE_PLAN L4, mock 12c): the rows ARE the
    navigation — verb, subtitle, address per row; done rows collapse. */
 .stage-check { max-width: 760px; margin: 26px auto 0; }
-.sc-headline { font-size: 24px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; margin: 8px 0 20px; }
+.sc-headline { font-size: 33px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; margin: 8px 0 20px; }
 .sc-list { border: 1px solid var(--line); background: var(--panel); }
 .sc-row {
   display: flex; align-items: center; gap: 14px; width: 100%;
@@ -2276,9 +2279,9 @@ details.meta pre {
 .sc-row.done .sc-mark { color: var(--ok); }
 .sc-row.cur .sc-mark { color: var(--accent); }
 .sc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.sc-label { font-weight: 600; font-size: 18px; }
+.sc-label { font-weight: 600; font-size: 20px; }
 .sc-row.done .sc-label, .sc-row.info .sc-label { font-weight: 400; color: var(--ink-dim); }
-.sc-sub { font-size: 18px; color: var(--ink-dim); }
+.sc-sub { font-size: 20px; color: var(--ink-dim); }
 .sc-row.todo .sc-sub { color: var(--ink-faint); }
 .sc-addr { flex: none; font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); }
 .sc-row.cur .sc-addr { color: var(--accent); }
@@ -2318,7 +2321,7 @@ details.meta pre {
 
    Fluid type cannot obey a nine-step scale by construction, so both are
    steps now. */
-.bf-title { color: #e8e5dd; font-weight: 700; font-size: 24px; letter-spacing: .02em; }
+.bf-title { color: #e8e5dd; font-weight: 700; font-size: 33px; letter-spacing: .02em; }
 .bf-sub { color: #9a978f; font-size: 20px; letter-spacing: .08em; margin-top: 4px; }
 .bf-rule { border-top: 3px solid var(--accent); margin-top: 8px; }
 .bf-slot { position: absolute; background: #232019; border: 1px solid var(--line); }  /* R12: frames are containment */
@@ -2361,7 +2364,7 @@ details.meta pre {
 /* Light-table state: the spec is context — compact bordered chips. */
 .spec-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
 .req-chip {
-  border: 1px solid var(--line); padding: 3px 10px; font-size: 18px;
+  border: 1px solid var(--line); padding: 3px 10px; font-size: 20px;
   color: var(--ink-dim); white-space: nowrap;
 }
 
@@ -2372,7 +2375,7 @@ details.meta pre {
   font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
   color: var(--ink-faint); white-space: nowrap;
 }
-.scope-line { font-size: 18px; letter-spacing: .06em; color: var(--ink-dim); margin: 4px 0 12px; }
+.scope-line { font-size: 20px; letter-spacing: .06em; color: var(--ink-dim); margin: 4px 0 12px; }
 
 /* Style anchors summarised: mandatory attachments state themselves once
    (ALWAYS ON chip), roles carry plate counts, IDs live behind SHOW IDS.
@@ -2387,7 +2390,7 @@ details.meta pre {
   display: flex; justify-content: space-between; align-items: baseline;
   padding: 8px 12px; border-bottom: 1px solid var(--line);
 }
-.anchor-sum-row .mono { font-size: 18px; letter-spacing: .08em; color: var(--ink-faint); }
+.anchor-sum-row .mono { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* The stated zero state (PANEL_CARD_PLAN P5): when the app decided and
    the answer was "nothing matched", say so — a quality warning before a
@@ -2395,8 +2398,8 @@ details.meta pre {
 .nomatch {
   border: 1px solid var(--bad); padding: 10px 14px; margin: 8px 0 10px;
 }
-.nomatch b { color: var(--ink-faint); font-size: 18px; letter-spacing: .1em; }
-.nomatch p { margin: 5px 0 0; font-size: 18px; color: var(--ink-dim); }
+.nomatch b { color: var(--ink-faint); font-size: 20px; letter-spacing: .1em; }
+.nomatch p { margin: 5px 0 0; font-size: 20px; color: var(--ink-dim); }
 /* A pre-checked match is the app's decision — distinguishable from a box
    the user ticked. */
 .ref-group.has-ref { border-left: 3px solid var(--ok); }
@@ -2435,7 +2438,7 @@ details.meta pre {
    plan's bare ".text-act" naming: the mock is the authority for its
    element. */
 .act-bar .text-act { white-space: nowrap; font-family: var(--sans);
-  font-size: 18px; letter-spacing: 0; font-weight: 600; }
+  font-size: 20px; letter-spacing: 0; font-weight: 600; }
 .act-dim { color: var(--ink-dim); }
 .act-dim:hover:not(:disabled) { color: var(--ink); }
 .act-reject { color: var(--ink-dim); }
@@ -2533,7 +2536,7 @@ details.meta pre {
 .rl .rl-rows { margin-top: 10px; border-top: 1px solid var(--line-soft); }
 .rl-row { display: flex; justify-content: space-between; align-items: baseline;
   gap: 16px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
-.rl-row .rl-lab { color: var(--ink-faint); font-size: 18px; }
+.rl-row .rl-lab { color: var(--ink-faint); font-size: 20px; }
 .rl-row .rl-val { color: var(--ink-faint); font-size: 20px; }
 .rl-row.in .rl-val { color: var(--ink); }
 .rl-failed .rd-note { color: var(--ink-faint); }
@@ -2543,22 +2546,22 @@ details.meta pre {
    ever writing to it. Prose at a 68ch measure, because 15.5px across a
    full workbench is a line nobody finishes. */
 .bible-doc { max-width: 68ch; }
-.bible-doc .bd-title { font-family: var(--sans); font-size: 34px; font-weight: 700;
+.bible-doc .bd-title { font-family: var(--sans); font-size: 48px; font-weight: 700;
   color: var(--ink); margin: 0 0 2px; letter-spacing: -.01em; }
-.bible-doc .bd-h2 { font-family: var(--sans); font-size: 19px; font-weight: 600;
+.bible-doc .bd-h2 { font-family: var(--sans); font-size: 22px; font-weight: 600;
   color: var(--ink); margin: 26px 0 0; padding-bottom: 7px;
   text-transform: none; letter-spacing: normal;
   border-bottom: 1px solid var(--hairline); }
 .bible-doc .bd-kick { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 14px 0 2px; }
-.bible-doc .bd-p { font-family: var(--sans); font-size: 18px; line-height: 1.7;
+.bible-doc .bd-p { font-family: var(--sans); font-size: 20px; line-height: 1.7;
   color: var(--ink-dim); margin: 12px 0 0; }
 .bible-doc .bd-ul { margin: 10px 0 0; padding-left: 18px; }
-.bible-doc .bd-ul li { font-family: var(--sans); font-size: 18px; line-height: 1.7;
+.bible-doc .bd-ul li { font-family: var(--sans); font-size: 20px; line-height: 1.7;
   color: var(--ink-dim); margin-bottom: 4px; }
 /* An Avoid list is a SET of exclusions, and a set reads as chips. */
 .bible-doc .bd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
-.bible-doc .bd-chip { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.bible-doc .bd-chip { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   border: 1px solid var(--line-soft); padding: 5px 9px; }
 /* `**Design language:**` names a field; the sentence after it is the
    answer. A grey lead, not bold ink. */
@@ -2573,14 +2576,14 @@ details.meta pre {
 /* The right rail: where you are, what wrote it, and the one act on it. */
 .bible-rail { display: flex; flex-direction: column; gap: 4px; }
 .bd-index { display: flex; flex-direction: column; margin-bottom: 8px; }
-.bd-idx { font-family: var(--sans); font-size: 18px; color: var(--ink-dim);
+.bd-idx { font-family: var(--sans); font-size: 20px; color: var(--ink-dim);
   background: none; border: 0; text-align: left; padding: 3px 0; cursor: pointer; }
 .bd-idx:hover { color: var(--ink); }
 .bd-wrote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
   margin-bottom: 8px; }
 .bd-wrote { margin: 0; }
 .bd-wrote img { width: 100%; display: block; border: 1px solid var(--line-soft); }
-.bd-wrote figcaption { font-family: var(--mono); font-size: 20px;
+.bd-wrote figcaption { font-family: var(--mono); font-size: 17px;
   letter-spacing: .1em; color: var(--ink-faint); margin-top: 3px;
   text-transform: uppercase; }
 .bible-viewrow { margin: 0 0 8px; align-items: center; }
@@ -2598,7 +2601,7 @@ details.meta pre {
   line-height: 1.7; background: var(--field); }
 /* The one thing a person editing this document must not do. Stated where
    they are about to do it, not in a doc they will not open. */
-.bible-editor-note { font-family: var(--mono); font-size: 20px;
+.bible-editor-note { font-family: var(--mono); font-size: 17px;
   letter-spacing: .12em; color: var(--ink-faint); margin: 0 0 6px; }
 .bible-check-row { margin-top: 10px; }
 .bc-head { color: var(--ink-dim); margin: 10px 0 6px; letter-spacing: .06em; }
@@ -2612,7 +2615,7 @@ details.meta pre {
 .prompt-comp .pc-head { color: var(--ink-dim); margin-bottom: 6px; }
 .prompt-comp .pc-row {
   display: grid; grid-template-columns: 1fr 3.5em 1fr 5em;
-  gap: 10px; align-items: center; padding: 2px 0; font-size: 18px;
+  gap: 10px; align-items: center; padding: 2px 0; font-size: 20px;
 }
 .prompt-comp .pc-bar { height: 8px; background: var(--line); display: block; }
 .prompt-comp .pc-pct { color: var(--ink); text-align: right; }
@@ -2672,7 +2675,7 @@ details.meta pre {
   /* §1.10 (STEP_SEQUENCE_SPEC): never truncate a title — two panel titles
      that differ only in their last word are the SAME string once cut. In a
      narrow rail the title wraps in full; height is the cheap axis there. */
-  font-size: 18px; color: var(--ink-faint);
+  font-size: 20px; color: var(--ink-faint);
   white-space: normal; overflow-wrap: anywhere; line-height: 1.35;
   font-family: var(--sans, inherit); letter-spacing: 0; text-transform: none;
 }
@@ -2689,7 +2692,7 @@ details.meta pre {
 .rail-legend .dot.none { border: 1px solid var(--line-strong); }
 .rail-derived { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
 .rail-derived .drow { display: flex; justify-content: space-between; gap: 8px; }
-.rail-derived .drow .mono { font-size: 18px; letter-spacing: .08em; color: var(--ink-faint); }
+.rail-derived .drow .mono { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* ==================================================================
    CONNECTORS_UI_PLAN (designer-ruled 2026-08-03) — the two AI roles,
@@ -2702,15 +2705,15 @@ details.meta pre {
    selector, nothing else; a live role wears one --ok square inside the
    field; each section closes with at most one Courier footnote. */
 .sec-head { margin: 28px 0 12px; }
-.sec-foot { font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
+.sec-foot { font-family: var(--mono); font-size: 17px; letter-spacing: .06em;
   color: var(--ink-faint); margin: 10px 2px 0; }
 .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .role-card { display: flex; flex-direction: column; }
 .role-kicker { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint); }
-.role-kicker b { font-family: var(--sans); font-size: 18px; font-weight: 600;
+.role-kicker b { font-family: var(--sans); font-size: 20px; font-weight: 600;
   letter-spacing: 0; color: var(--ink); margin-left: 8px; }
-.role-tag { float: right; font-family: var(--mono); font-size: 20px;
+.role-tag { float: right; font-family: var(--mono); font-size: 17px;
   letter-spacing: .12em; color: var(--ink-faint); }
 .role-sel { position: relative; margin-top: 10px; }
 .role-sel select { width: 100%; }
@@ -2727,10 +2730,10 @@ details.meta pre {
 .cred-row:first-child { border-top: none; }
 .cred-tile { width: 36px; height: 36px; background: var(--field); border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 20px; letter-spacing: .06em; color: var(--ink-dim); }
-.cred-tile.plus { color: var(--ink-faint); font-size: 18px; }
-.cred-name { font-weight: 600; font-size: 18px; display: block; }
-.cred-meta { font-family: var(--mono); font-size: 20px; letter-spacing: .04em; color: var(--ink-faint);
+  font-family: var(--mono); font-size: 17px; letter-spacing: .06em; color: var(--ink-dim); }
+.cred-tile.plus { color: var(--ink-faint); font-size: 20px; }
+.cred-name { font-weight: 600; font-size: 20px; display: block; }
+.cred-meta { font-family: var(--mono); font-size: 17px; letter-spacing: .04em; color: var(--ink-faint);
   display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-state { font-family: var(--mono); font-size: 20px; letter-spacing: .06em; color: var(--ink-dim); }
 .cred-mark { display: inline-block; width: 8px; height: 8px; margin-right: 7px; }
@@ -2762,8 +2765,8 @@ details.meta pre {
 .models-line { display: flex; align-items: baseline; gap: 14px;
   border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 2px 0;
   font-family: var(--mono); font-size: 20px; }
-.models-label { font-size: 18px; font-weight: 700; letter-spacing: .12em; }
-.models-facts { flex: 1; font-size: 18px; letter-spacing: .06em; color: var(--ink-dim); }
+.models-label { font-size: 20px; font-weight: 700; letter-spacing: .12em; }
+.models-facts { flex: 1; font-size: 20px; letter-spacing: .06em; color: var(--ink-dim); }
 .models-facts .m-bad { color: var(--ink-faint); }
 
 /* C5 — the model browser: capability before vendor */
@@ -2771,20 +2774,20 @@ details.meta pre {
 .cat-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
   border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
 .cat-bar input#cat-q { flex: 1; min-width: 220px; }
-.cat-f { display: flex; align-items: center; gap: 6px; font-size: 18px; color: var(--ink-dim);
+.cat-f { display: flex; align-items: center; gap: 6px; font-size: 20px; color: var(--ink-dim);
   border: 1px solid var(--line); padding: 5px 10px; cursor: pointer; white-space: nowrap; }
 .cat-f.on { border-color: var(--ok); color: var(--ink); }
 .cat-showing { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 .cat-group-head { padding: 14px 16px 8px; }
 .cat-group-title { font-family: var(--mono); font-size: 20px; letter-spacing: .12em; color: var(--ink); }
-.cat-group-sub { font-size: 18px; color: var(--ink-dim); margin-left: 10px; }
+.cat-group-sub { font-size: 20px; color: var(--ink-dim); margin-left: 10px; }
 .cat-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 290px 104px;
   gap: 14px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line-soft);
   border-left: 2px solid transparent; }
 .cat-row.dep-on { border-left-color: var(--bad); }
 .cat-row.unsup .cat-name, .cat-row.unsup .cred-tile { color: var(--ink-faint); }
 .cat-row.unsup .cat-meta { color: var(--ink-faint); } /* never dimmer than its name */
-.cat-name { font-weight: 600; font-size: 18px; display: block; }
+.cat-name { font-weight: 600; font-size: 20px; display: block; }
 .cat-meta { font-family: var(--mono); font-size: 20px; letter-spacing: .05em; color: var(--ink-faint);
   display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cat-badges { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
@@ -2809,13 +2812,13 @@ details.meta pre {
 .cat-prevbtn:hover { border-color: var(--line-strong); }
 .cat-strip { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
   border-top: 1px solid var(--line-soft); }
-.cat-strip .cred-tile { font-size: 18px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
-.cat-strip-txt { flex: 1; font-size: 18px; color: var(--ink-dim); }
+.cat-strip .cred-tile { font-size: 20px; line-height: 1.2; text-align: center; color: var(--ink-faint); }
+.cat-strip-txt { flex: 1; font-size: 20px; color: var(--ink-dim); }
 .cat-strip-cost { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; }
 
 /* C7 — the engine picker: search first, capability on every row */
 .picker-open { background: var(--field); border: 1px solid var(--line); color: var(--ink-dim);
-  width: 30px; cursor: pointer; font-size: 18px; margin-left: 6px; align-self: stretch; }
+  width: 30px; cursor: pointer; font-size: 20px; margin-left: 6px; align-self: stretch; }
 .picker-open:hover { border-color: var(--line-strong); color: var(--ink); }
 #engine-picker { position: fixed; z-index: 70; width: 400px; max-height: 430px;
   display: flex; flex-direction: column; background: var(--panel);
@@ -2835,17 +2838,17 @@ details.meta pre {
   border: none; border-left: 2px solid transparent; padding: 8px 12px; cursor: pointer; }
 .pick-row:hover { background: var(--panel2); }
 .pick-row.cur { border-left-color: var(--accent); background: var(--panel2); }
-.pick-name { display: block; font-size: 18px; font-weight: 600; color: var(--ink); }
+.pick-name { display: block; font-size: 20px; font-weight: 600; color: var(--ink); }
 .pick-facts { display: block; font-family: var(--mono); font-size: 20px; letter-spacing: .05em;
   color: var(--ink-faint); margin-top: 2px; }
 .pick-facts .pf-amber { font-style: normal; color: var(--accent); }
-.pick-none { padding: 14px 12px; font-size: 18px; color: var(--ink-dim); }
+.pick-none { padding: 14px 12px; font-size: 20px; color: var(--ink-dim); }
 .pick-foot { display: flex; justify-content: space-between; align-items: center;
   padding: 9px 12px; border-top: 1px solid var(--line-soft); }
 .pick-scope { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 
 /* Four-anchor shelf (ruled 2026-08-03): movie group vs board group */
-.wiz-group-label { font-family: var(--mono); font-size: 20px; letter-spacing: .12em;
+.wiz-group-label { font-family: var(--mono); font-size: 15px; letter-spacing: .12em;
   color: var(--ink-faint); margin: 14px 0 8px; }
 /* UNCANONIZED — 2026-08-05 — four-anchor row (user-directed): the four
    style-anchor roles share one 4-track grid; the R18 group labels ride
@@ -2863,10 +2866,10 @@ details.meta pre {
   padding: 8px 14px; cursor: pointer;
   display: flex; align-items: baseline; gap: 8px; }
 .read-tile:hover { border-color: var(--line-strong); }
-.read-num { font-size: 18px; font-weight: 700; line-height: 1.1;
+.read-num { font-size: 20px; font-weight: 700; line-height: 1.1;
   color: var(--ink); }
 .read-num.attn { color: var(--accent); }
-.read-lab { font-family: var(--mono); font-size: 20px;
+.read-lab { font-family: var(--mono); font-size: 15px;
   letter-spacing: .08em; color: var(--ink-faint); }
 /* The logline leads (user 2026-08-16: "needs to be more prominent"). It
    is the one sentence saying what the read understood, and it was set at
@@ -2876,14 +2879,14 @@ details.meta pre {
 .read-logline { border-left: 2px solid var(--accent);
   background: var(--panel); padding: 14px 18px 16px;
   display: flex; flex-direction: column; gap: 7px; }
-.read-log-kicker { font-family: var(--mono); font-size: 20px;
+.read-log-kicker { font-family: var(--mono); font-size: 15px;
   letter-spacing: .1em; color: var(--accent); }
 /* A6 (RULE_PASS 2026-08-16): 16.5px REFUSED — the scale is 24/15/11.5 and
    it holds because it is short. The promotion was ink tier and position,
    not size: it was --ink-dim at baseline inside a labelled row, dimmed
    and filed as a value. Full ink, kicker stacked above, starting at the
    left edge, measure capped per §1.9. */
-.read-logline p { font-size: 18px; font-weight: 400; color: var(--ink);
+.read-logline p { font-size: 20px; font-weight: 400; color: var(--ink);
   line-height: 1.55; max-width: 720px; }
 @media (max-width: 980px) {
   .read-tiles { grid-template-columns: repeat(2, 1fr); }
@@ -2918,7 +2921,7 @@ details.meta pre {
 .cast-tile-shot.none { display: flex; align-items: center; justify-content: center;
   background-image: repeating-linear-gradient(135deg,
     var(--field) 0 6px, var(--bg) 6px 12px); }
-.cast-tile-shot.none i { font-style: normal; font-size: 18px;
+.cast-tile-shot.none i { font-style: normal; font-size: 20px;
   letter-spacing: .08em; color: var(--ink-faint); }
 /* The name WRAPS rather than truncating. At the old 11.5px it fitted a
    99px tile on one line; at the floor's 14px it did not, and six of the
@@ -2931,7 +2934,7 @@ details.meta pre {
    one word per line, and twelve across is the user's own instruction
    (2026-09-10). The room comes from the tile's height, per "give the
    label the room". */
-.cast-tile-name { font-family: var(--sans); font-size: 18px; line-height: 1.35;
+.cast-tile-name { font-family: var(--sans); font-size: 20px; line-height: 1.35;
   color: var(--ink-dim); overflow: hidden; display: -webkit-box;
   -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   min-height: calc(3 * 1.35em); }
@@ -2939,7 +2942,7 @@ details.meta pre {
 .cast-tile:hover .cast-tile-name { color: var(--ink); }
 /* The count of what the twelve do not show rides the act that shows it. */
 .cast-open { flex: none; }
-.cast-open i { font-style: normal; font-size: 18px; letter-spacing: .08em;
+.cast-open i { font-style: normal; font-size: 20px; letter-spacing: .08em;
   color: var(--ink-faint); margin-left: 4px; }
 
 /* The screen replaces the stage rather than floating over it. Driven by
@@ -2974,7 +2977,7 @@ body[data-cast="1"] .wiz-head { display: none; }
    asks; these are its face. */
 .seg { display: flex; }
 .seg-source { display: none; }
-.seg-opt { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.seg-opt { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-dim); background: var(--field); cursor: pointer;
   border: 1px solid var(--line-soft); border-left-width: 0; padding: 7px 12px; }
 .seg-opt:first-child { border-left-width: 1px; }
@@ -2985,17 +2988,17 @@ body[data-cast="1"] .wiz-head { display: none; }
 .seg-opt:disabled { cursor: default; opacity: .55; }
 /* §2.4 — a control that spends states the cost beside the verb, in
    Courier, before it is pressed. A price found afterwards is a bill. */
-.cost { color: var(--ink-faint); font-size: 20px; letter-spacing: .12em;
+.cost { color: var(--ink-faint); font-size: 17px; letter-spacing: .12em;
   align-self: center; margin-left: 10px; }
 .wiz-run-row { align-items: flex-end; }
-.wiz-merge-note { font-family: var(--mono); font-size: 20px;
+.wiz-merge-note { font-family: var(--mono); font-size: 17px;
   letter-spacing: .1em; color: var(--ink-faint); margin: 8px 0 0; }
 /* UNCANONIZED — 2026-08-28 — PRODUCTION_DESIGN_UI_PLAN §3.1 */
 /* 24px Archivo, sentence case: the one thing on this row a person reads
    as prose. Everything else in the head is Courier, because everything
    else is the machine stating a fact — which file, how many pages, which
    step is done. */
-.wiz-stage-title { font-family: var(--sans); font-size: 24px; font-weight: 700;
+.wiz-stage-title { font-family: var(--sans); font-size: 33px; font-weight: 700;
   color: var(--ink); margin: 0; letter-spacing: -.01em; }
 .wiz-head-label { font-family: var(--mono); font-size: 20px; font-weight: 700;
   letter-spacing: .12em; color: var(--ink); white-space: nowrap; }
@@ -3004,7 +3007,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   letter-spacing: .04em; color: var(--ink-dim); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
 .step-rail { display: flex; }
-.rail-chip { font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
+.rail-chip { font-family: var(--mono); font-size: 17px; letter-spacing: .06em;
   color: var(--ink-dim); background: none; border: 1px solid transparent;
   border-left: 1px solid var(--line-soft); padding: 6px 12px; cursor: pointer;
   white-space: nowrap; }
@@ -3013,9 +3016,9 @@ body[data-cast="1"] .wiz-head { display: none; }
   background: var(--panel2); color: var(--ink); }
 .rail-chip.done .rail-num { color: var(--ok); }
 .rail-num { font-weight: 700; }
-.wiz-v3 h2 { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.wiz-v3 h2 { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   text-transform: uppercase; font-weight: 700; }
-.step-cond { font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
+.step-cond { font-family: var(--mono); font-size: 17px; letter-spacing: .06em;
   color: var(--ink-faint); font-weight: 400; margin-left: 12px; }
 
 /* UNCANONIZED — 2026-08-05 — color swatches (user-directed, wireframe
@@ -3044,10 +3047,10 @@ body[data-cast="1"] .wiz-head { display: none; }
   padding: 11px 13px; margin-top: 10px;
 }
 .pal-gate .k {
-  display: block; font-family: var(--mono); font-size: 20px;
+  display: block; font-family: var(--mono); font-size: 17px;
   letter-spacing: .14em; color: var(--accent); margin-bottom: 5px;
 }
-.pal-gate p { margin: 0; font-size: 18px; line-height: 1.5; color: var(--ink); }
+.pal-gate p { margin: 0; font-size: 20px; line-height: 1.5; color: var(--ink); }
 .pal-gate p b { color: var(--accent); font-weight: 700; }
 .swatch-add.is-locked { opacity: .4; }
 .swatch-add.is-locked button,
@@ -3065,7 +3068,7 @@ body[data-cast="1"] .wiz-head { display: none; }
   padding: 12px 14px; margin-top: 14px; }
 .swatch-note { font-family: var(--mono); font-size: 20px; letter-spacing: .05em;
   color: var(--ink-faint); line-height: 1.6; }
-.swatch-note .text-act { font-size: 18px; letter-spacing: .05em; }
+.swatch-note .text-act { font-size: 20px; letter-spacing: .05em; }
 .prop-head { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
   color: var(--ink-faint); border: 1px solid var(--hold); padding: 4px 8px; margin: 12px 0 10px; }
 /* PALETTE_GROUPS_PLAN (2026-08-06) — a design language is ONE swatch.
@@ -3101,10 +3104,10 @@ body[data-cast="1"] .wiz-head { display: none; }
 .modal.modal-custom { padding: 0; width: min(880px, 92vw); max-width: 92vw; }
 .sv-head { display: flex; align-items: baseline; gap: 12px;
   padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
-.sv-title { font-size: 19px; font-weight: 700; color: var(--ink); }
+.sv-title { font-size: 22px; font-weight: 700; color: var(--ink); }
 .sv-sub { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); }
 .sv-x { margin-left: auto; background: none; border: 0; padding: 0 2px;
-  font-size: 18px; line-height: 1; color: var(--ink-faint); cursor: pointer; }
+  font-size: 20px; line-height: 1; color: var(--ink-faint); cursor: pointer; }
 .sv-x:hover { color: var(--ink); }
 .sv-rampwrap { padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
 .sv-ramp { height: 92px; margin-top: 0; }
@@ -3121,9 +3124,9 @@ body[data-cast="1"] .wiz-head { display: none; }
 .sv-row.is-focus { outline: 1px solid var(--line); outline-offset: -1px; }
 .sv-chip { flex: none; width: 44px; }
 .sv-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.sv-name { font-size: 18px; font-weight: 700; color: var(--ink); }
+.sv-name { font-size: 20px; font-weight: 700; color: var(--ink); }
 .sv-hex { font-size: 20px; color: var(--ink-faint); }
-.sv-cite { font-size: 18px; color: var(--ink-dim); }
+.sv-cite { font-size: 20px; color: var(--ink-dim); }
 .sv-acts { margin-left: auto; flex: none; display: flex; gap: 16px; }
 .sv-acts .ok-act { color: var(--ok); }
 .sv-foot { display: flex; align-items: center; gap: 16px; padding: 13px 18px; }
@@ -3164,16 +3167,16 @@ body[data-cast="1"] .wiz-head { display: none; }
 #settings-firstrun { background: var(--bg); border: 1px solid var(--line); padding: 30px; }
 #settings-firstrun .fact-head.sec-head { margin: 30px 0 12px; }
 .fr-top { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 26px; margin-bottom: 30px; }
-.fr-eyebrow { font-family: var(--mono); font-size: 20px; letter-spacing: .14em; color: var(--accent); }
-.fr-h { font-size: 24px; font-weight: 700; margin: 8px 0 20px; }
+.fr-eyebrow { font-family: var(--mono); font-size: 17px; letter-spacing: .14em; color: var(--accent); }
+.fr-h { font-size: 33px; font-weight: 700; margin: 8px 0 20px; }
 .fr-connect-row { display: flex; align-items: center; gap: 16px; }
-.fr-connect { font-size: 18px; padding: 12px 22px; }
-.fr-oneclick { font-family: var(--mono); font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); }
+.fr-connect { font-size: 20px; padding: 12px 22px; }
+.fr-oneclick { font-family: var(--mono); font-size: 17px; letter-spacing: .1em; color: var(--ink-faint); }
 .fr-chain { display: flex; align-items: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-.fr-chip { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-dim);
+.fr-chip { font-family: var(--mono); font-size: 17px; letter-spacing: .08em; color: var(--ink-dim);
   border: 1px solid var(--line); padding: 3px 8px; }
-.fr-arrow { color: var(--ink-faint); font-size: 18px; }
-.fr-foot { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
+.fr-arrow { color: var(--ink-faint); font-size: 20px; }
+.fr-foot { font-family: var(--mono); font-size: 17px; letter-spacing: .08em; color: var(--ink-faint); margin-top: 12px; }
 /* AI-models notice per the delivered reference snippet (2026-08-04),
    tokenized. Typewriter grammar: the rule draws itself once; the block
    caret SNAPS via steps(1) — a fading caret reads as a glitch. The
@@ -3183,9 +3186,9 @@ body[data-cast="1"] .wiz-head { display: none; }
 .fr-notice { border-left: 1px solid var(--line-soft); padding-left: 34px;
   display: flex; flex-direction: column; gap: 26px;
   user-select: none; cursor: default; caret-color: transparent; }
-.fr-notice h3 { margin: 0 0 10px; font-size: 19px; font-weight: 600;
+.fr-notice h3 { margin: 0 0 10px; font-size: 22px; font-weight: 600;
   letter-spacing: -0.01em; color: var(--ink); }
-.fr-notice p { margin: 0; font-size: 18px; line-height: 1.7;
+.fr-notice p { margin: 0; font-size: 20px; line-height: 1.7;
   color: var(--ink-dim); text-wrap: pretty; }
 .fr-notice p strong { color: var(--ink); font-weight: 600; }
 .fr-cursor { display: inline-block; width: 9px; height: 17px;
@@ -3212,7 +3215,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 #settings-firstrun .role-card .role-kicker { margin: 0; }
 #settings-firstrun .role-card .wv-tag { flex: none; margin: 0; }
 /* MOCK_PARITY D6: an action speaks Archivo, not the machine voice. */
-#settings-firstrun .text-act { font-family: var(--sans); font-size: 18px;
+#settings-firstrun .text-act { font-family: var(--sans); font-size: 20px;
   font-weight: 400; letter-spacing: 0; text-decoration: underline; }
 #settings-firstrun .role-card .role-tag { float: none; margin-left: 10px; }
 .auth-modal .auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -3259,7 +3262,7 @@ body[data-cast="1"] .wiz-head { display: none; }
 .mq-track { display: flex; gap: 8px; width: max-content; animation: mq-scroll 36s linear infinite; }
 .mq-tile { display: inline-flex; align-items: center; gap: 8px; flex: none;
   border: 1px solid var(--line-soft); background: var(--bg2);
-  padding: 6px 12px 6px 6px; font-size: 18px;
+  padding: 6px 12px 6px 6px; font-size: 20px;
   color: var(--ink-dim); white-space: nowrap; }
 .mq-tile img { display: block; width: 22px; height: 22px; object-fit: contain; }
 @keyframes mq-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -3325,7 +3328,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .door { border: 1px solid var(--line); background: var(--bg2); padding: 16px 18px;
   display: flex; flex-direction: column; }
 .door-auto { border-color: var(--accent-line); border-top: 2px solid var(--accent); }
-.door-head { font-size: 18px; font-weight: 600; color: var(--ink);
+.door-head { font-size: 20px; font-weight: 600; color: var(--ink);
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .door-nature { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint);
   border: 1px solid var(--line); padding: 2px 7px; }
@@ -3333,10 +3336,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .door form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px;
   flex: 1; }
 .door label { display: flex; flex-direction: column; gap: 5px;
-  font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); text-transform: uppercase; }
 .door label input, .door label select, .door label textarea {
-  font-family: var(--sans); font-size: 18px; letter-spacing: 0;
+  font-family: var(--sans); font-size: 20px; letter-spacing: 0;
   text-transform: none; color: var(--ink); }
 .door textarea { min-height: 62px; resize: vertical; }
 .door-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -3361,12 +3364,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .q-help { display: inline-flex; align-items: center; justify-content: center;
   width: 14px; height: 14px; padding: 0; margin-left: 6px; vertical-align: 1px;
   border: 1px solid var(--line); background: transparent; color: var(--ink-faint);
-  font-family: var(--mono); font-size: 20px; line-height: 1; cursor: pointer; }
+  font-family: var(--mono); font-size: 17px; line-height: 1; cursor: pointer; }
 .q-help:hover, .q-help[aria-expanded="true"] { color: var(--ink);
   border-color: var(--line-strong); }
 .q-card { position: absolute; z-index: 55; max-width: 320px;
   background: var(--panel); border: 1px solid var(--line); padding: 12px 14px;
-  font-size: 18px; line-height: 1.55; color: var(--ink-dim);
+  font-size: 20px; line-height: 1.55; color: var(--ink-dim);
   font-family: var(--sans); letter-spacing: 0; text-transform: none; }
 .q-card b { color: var(--ink); font-weight: 600; }
 
@@ -3424,8 +3427,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* SCAN_CONSOLIDATION §3 — a long list shows its head and states its tail. */
 .loc-more { display: flex; align-items: baseline; gap: 10px;
   padding: 8px 12px; border-top: 1px solid var(--line-soft); }
-.loc-more-lab { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); }
-.loc-showing { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.loc-more-lab { font-size: 15px; letter-spacing: .1em; color: var(--ink-faint); }
+.loc-showing { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); margin-left: 6px; }
 
 /* SCAN_CONSOLIDATION §2 — edit a paragraph in a room, not in a cell. */
@@ -3462,10 +3465,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* R3 — recall beneath a free-text field: the last three briefs, filling
    the field when clicked. Recall, never constraint. */
 .mf-recall { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
-.mf-recall .text-act { font-size: 18px; color: var(--ink-faint); text-align: left; }
+.mf-recall .text-act { font-size: 20px; color: var(--ink-faint); text-align: left; }
 .mf-recall .text-act:hover { color: var(--ink); }
 /* R4 — Review all stands beside the column's count, not under the rows. */
-.pal-review { margin-left: 8px; font-size: 18px; }
+.pal-review { margin-left: 8px; font-size: 20px; }
 /* R3 — Rescan left the verdict bar for the viewer's header. */
 .sv-rescan { margin-left: auto; }
 .sv-head .sv-x { margin-left: 12px; }
@@ -3478,7 +3481,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    with R6's deletion; its orphaned body survived as a headless rule until
    2026-08-14 — invalid CSS the parser skipped, and the reason a brace
    count over this file never balanced.) */
-.stor-line { font-size: 20px; letter-spacing: .1em; color: var(--ink-dim); }
+.stor-line { font-size: 17px; letter-spacing: .1em; color: var(--ink-dim); }
 /* R6: no bar — the line's colour carries the state. */
 .stor-line.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
@@ -3486,8 +3489,8 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border-left: 2px solid var(--bad); padding-left: 7px; }
 .stor-rows { margin: 10px 0; }
 .stor-row { display: flex; justify-content: space-between; padding: 6px 0;
-  border-bottom: 1px solid var(--line-soft); font-size: 18px; color: var(--ink-dim); }
-.stor-row .mono { color: var(--ink); font-size: 18px; }
+  border-bottom: 1px solid var(--line-soft); font-size: 20px; color: var(--ink-dim); }
+.stor-row .mono { color: var(--ink); font-size: 20px; }
 
 /* Reference STYLE shelf — swatches consolidate into the same ramps the
    Production Design column draws (2026-08-08). Rows sit in their own
@@ -3505,7 +3508,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .loc-reg-head { display: flex; align-items: baseline; gap: 14px;
   margin-bottom: 8px; }
 .loc-reg-head .hint { margin-left: auto; }
-.loc-reg-label { font-size: 20px; letter-spacing: .14em;
+.loc-reg-label { font-size: 15px; letter-spacing: .14em;
   color: var(--ink-dim); }
 .loc-reg-row { display: grid;
   grid-template-columns: minmax(0, 1fr) 130px 210px 170px;
@@ -3514,10 +3517,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .loc-reg-cols { background: var(--field); border: 1px solid var(--line-soft);
   border-top: 0; font-size: 20px; letter-spacing: .12em;
   color: var(--ink-faint); }
-.loc-reg-place { font-weight: 600; font-size: 18px; }
-.loc-reg-row .mono { font-size: 18px; color: var(--ink-dim); }
+.loc-reg-place { font-weight: 600; font-size: 20px; }
+.loc-reg-row .mono { font-size: 20px; color: var(--ink-dim); }
 .loc-reg-act { text-align: right; }
-.loc-reg-foot { font-size: 20px; letter-spacing: .1em;
+.loc-reg-foot { font-size: 17px; letter-spacing: .1em;
   color: var(--ink-faint); padding: 10px 0 0; }
 
 /* R5 (canon pass, mock au-ref-style-shelf): the ramps ARE the STYLE
@@ -3527,7 +3530,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .pal-shelf-is-shelf .sw-ramp { height: 34px; }
 .pal-shelf-is-shelf .sw-ramp-label { order: -1; margin-bottom: 6px; }
 .pal-shelf-is-shelf .sw-ramp-label .hero.prov { color: var(--ink-faint); }
-.pal-open { align-self: flex-start; margin-top: 6px; font-size: 18px; }
+.pal-open { align-self: flex-start; margin-top: 6px; font-size: 20px; }
 .shelf-quarantine { margin-top: 18px; }
 .shelf-quarantine .ref-grid { margin-top: 10px; }
 
@@ -3536,10 +3539,10 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    Archivo in the case it was typed; no status colour anywhere. A
    stopped note stays legible and stated — the verb goes quiet. */
 .carried { display: block; }
-.carried .text-act { flex: none; font-size: 18px; }
+.carried .text-act { flex: none; font-size: 20px; }
 .carried-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .carried-id { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-dim); }
-.carried-note { font-family: var(--sans); font-size: 18px; color: var(--ink); margin: 3px 0 2px; }
+.carried-note { font-family: var(--sans); font-size: 20px; color: var(--ink); margin: 3px 0 2px; }
 .carried-state { font-family: var(--mono); font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 .carried.retired .carried-note { color: var(--ink-dim); }
 .carried.retired [data-retire] { color: var(--ink-faint); }
@@ -3553,16 +3556,16 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    primary act (Export when ready), AUTHORED chips, and the stale
    binding's take-the-new-line act. */
 .lb-arch-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.lb-count { color: var(--ink-faint); font-size: 18px; margin-left: 8px; }
+.lb-count { color: var(--ink-faint); font-size: 20px; margin-left: 8px; }
 .lb-list { display: flex; flex-direction: column; }
 .lb-row { display: flex; align-items: center; gap: 12px; padding: 8px 2px;
   border-top: 1px solid var(--line-soft); }
 .lb-row:first-child { border-top: 0; }
 .lb-sheet-row { cursor: pointer; }
 .lb-sheet-row:hover { background: var(--panel2); }
-.lb-id { color: var(--ink-faint); font-size: 18px; flex: none; width: 72px; }
-.lb-name { font-weight: 600; font-size: 18px; }
-.lb-facts { color: var(--ink-dim); font-size: 18px; flex: 1;
+.lb-id { color: var(--ink-faint); font-size: 20px; flex: none; width: 72px; }
+.lb-name { font-weight: 600; font-size: 20px; }
+.lb-facts { color: var(--ink-dim); font-size: 20px; flex: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-acts { flex: none; display: flex; gap: 8px; }
 .lb-intake { margin-top: 10px; }
@@ -3579,15 +3582,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 
 .sheet-tray { background: var(--panel); border: 1px solid var(--line);
   padding: 10px; display: flex; flex-direction: column; gap: 4px; }
-.tray-group-label { font-size: 18px; letter-spacing: .14em;
+.tray-group-label { font-size: 20px; letter-spacing: .14em;
   color: var(--ink-faint); margin: 8px 0 4px; }
 .tray-group-label:first-child { margin-top: 0; }
 .tray-block { text-align: left; background: transparent; color: var(--ink-dim);
-  border: 1px solid var(--line-soft); padding: 6px 9px; font-size: 18px;
+  border: 1px solid var(--line-soft); padding: 6px 9px; font-size: 20px;
   cursor: pointer; }
 .tray-block:hover { color: var(--ink); border-color: var(--line);
   background: var(--panel2); }
-.tray-foot { font-size: 18px; letter-spacing: .08em; color: var(--ink-faint);
+.tray-foot { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint);
   margin-top: 10px; line-height: 1.7; }
 
 .sheet-stage { min-width: 0; }
@@ -3595,7 +3598,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   margin-bottom: 8px; display: flex; gap: 14px; align-items: baseline; }
 .stage-meta-note { display: block; text-align: left; margin-top: 4px;
   color: var(--ink-faint); letter-spacing: .04em;
-  font-family: var(--sans); font-size: 18px; margin-left: auto; }
+  font-family: var(--sans); font-size: 20px; margin-left: auto; }
 .sheet-wrap { position: relative; background: var(--field);
   border: 1px solid var(--line); line-height: 0; }
 .sheet-wrap img { max-width: 100%; height: auto; display: block; }
@@ -3615,35 +3618,35 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   touch-action: none; }
 .ov-slot:hover { border-color: var(--line-bright); cursor: move; }
 .ov-empty { position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 18px; letter-spacing: .12em; color: var(--ink-faint); }
+  font-size: 20px; letter-spacing: .12em; color: var(--ink-faint); }
 
 .sheet-rail { background: var(--panel); border: 1px solid var(--line);
   padding: 12px; display: flex; flex-direction: column; gap: 14px; }
 .lb-rail-sec { border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .lb-rail-sec:first-child { border-top: 0; padding-top: 0; }
-.lb-rail-k { font-size: 18px; letter-spacing: .14em; color: var(--ink-faint);
+.lb-rail-k { font-size: 20px; letter-spacing: .14em; color: var(--ink-faint);
   margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
 .lb-slots { display: flex; flex-direction: column; }
 .lb-slot-row { display: flex; align-items: center; gap: 8px; padding: 5px 0;
-  border-top: 1px solid var(--line-soft); font-size: 18px; }
+  border-top: 1px solid var(--line-soft); font-size: 20px; }
 .lb-slot-row:first-child { border-top: 0; }
 .lb-slot-c { flex: 1; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; font-size: 18px; }
+  white-space: nowrap; font-size: 20px; }
 .lb-slot-c.faint { color: var(--ink-faint); }
 .lb-slot-acts { display: flex; gap: 8px; flex: none; }
-.lb-slot-acts .text-act { font-size: 18px; }
+.lb-slot-acts .text-act { font-size: 20px; }
 .lb-dot { flex: none; width: 7px; height: 7px; border: 1px solid var(--line); }
 .lb-dot.ok { background: var(--ok); border-color: var(--ok); }
 .lb-dot.bad { background: var(--bad); border-color: var(--bad); }
 .lb-dot.empty { background: transparent; }
 .lb-slot-manage { margin-top: 6px; display: flex; gap: 12px; }
 .lb-caps { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.lb-cap-row { display: flex; align-items: baseline; gap: 8px; font-size: 18px; }
-.lb-cap-k { font-size: 18px; letter-spacing: .12em; color: var(--ink-faint);
+.lb-cap-row { display: flex; align-items: baseline; gap: 8px; font-size: 20px; }
+.lb-cap-k { font-size: 20px; letter-spacing: .12em; color: var(--ink-faint);
   flex: none; width: 52px; }
 .lb-cap-text { flex: 1; color: var(--ink-dim); overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
-.lb-chip { font-size: 18px; letter-spacing: .1em; padding: 1px 6px;
+.lb-chip { font-size: 20px; letter-spacing: .1em; padding: 1px 6px;
   border: 1px solid var(--line); color: var(--ink-dim); flex: none; }
 .lb-chip.ok { border-color: var(--ok); color: var(--ok); }
 .lb-chip.bad { border-color: var(--bad); color: var(--bad); }
@@ -3651,20 +3654,20 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    authored caption blocks nothing. Plain Courier, no chip frame. */
 .lb-chip.authored { border: 0; padding: 0; color: var(--ink-dim); }
 .lb-stale-acts { display: flex; gap: 8px; margin: 4px 0 2px 60px; }
-.lb-del-block { margin-top: 10px; font-size: 18px; }
+.lb-del-block { margin-top: 10px; font-size: 20px; }
 .lb-ladder { display: flex; flex-wrap: wrap; gap: 6px; }
 .lb-rail-foot { margin-top: auto; }
-.lb-ready { color: var(--ok); font-size: 18px; letter-spacing: .1em; }
-.lb-not-ready { color: var(--ink-faint); font-size: 18px; letter-spacing: .1em; }
+.lb-ready { color: var(--ok); font-size: 20px; letter-spacing: .1em; }
+.lb-not-ready { color: var(--ink-faint); font-size: 20px; letter-spacing: .1em; }
 
 .lb-blocked { margin-top: 12px; }
 .lb-blocked-k { color: var(--accent); font-size: 20px; letter-spacing: .14em;
   margin-bottom: 6px; }
 .lb-blocked-rows { display: flex; flex-direction: column; gap: 4px;
-  font-size: 18px; color: var(--ink-dim); }
+  font-size: 20px; color: var(--ink-dim); }
 
 .lb-fill-modal { width: min(760px, 94vw); }
-.lb-fill-need { font-size: 18px; color: var(--ink-faint); letter-spacing: .1em;
+.lb-fill-need { font-size: 20px; color: var(--ink-faint); letter-spacing: .1em;
   margin-bottom: 10px; }
 .lb-fill-grid { display: grid; grid-template-columns: repeat(auto-fill,
   minmax(150px, 1fr)); gap: 10px; max-height: 52vh; overflow: auto; }
@@ -3673,7 +3676,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   cursor: pointer; text-align: left; color: var(--ink-dim); }
 .lb-fill-cell:hover { border-color: var(--line-bright); }
 .lb-fill-cell img { width: 100%; height: 84px; object-fit: cover; }
-.lb-fill-cell .mono { font-size: 18px; letter-spacing: .06em; }
+.lb-fill-cell .mono { font-size: 20px; letter-spacing: .06em; }
 .lb-fill-v.ok { color: var(--ok); }
 .lb-fill-v.hold { color: var(--ink-faint);
   border-left: 2px solid var(--hold); padding-left: 7px; }
@@ -3728,7 +3731,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    presentations — the workbench states the camera in force on one
    Courier line with the verb beside it, and opens the selects on ask. */
 .cam-stated { display: flex; align-items: baseline; gap: 14px; }
-.cam-sum { font-size: 18px; letter-spacing: .08em; color: var(--ink); }
+.cam-sum { font-size: 20px; letter-spacing: .08em; color: var(--ink); }
 .cam-sum .cam-src { color: var(--ink-faint); }
 .cam-stated .text-act { margin-left: auto; flex: none; }
 .cam-stated .ghost { margin-left: auto; flex: none; } /* HARNESS_AUDIT U4 */
@@ -3918,12 +3921,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* The words half of an anchor card. Same label voice as the form labels
    it was folded out of, so the question reads the same wherever it sits. */
 .wiz-words { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 8px;
-  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  font-family: var(--mono); font-size: 17px; font-weight: 700;
   letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
 /* Standing notes keep the label voice they had in the interview they were
    folded out of — the question reads the same wherever it sits. */
 .wiz-notes { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0;
-  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  font-family: var(--mono); font-size: 17px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim); }
 .wiz-notes textarea { min-height: 68px; }
 /* The camera default sits INSIDE the Cinematography card (2026-08-16), and
@@ -3932,7 +3935,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    above stops fighting it. */
 .wiz-col .cam-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
 .pick-btn { width: 100%; text-align: left; font-family: var(--sans);
-  font-size: 18px; letter-spacing: 0; text-transform: none;
+  font-size: 20px; letter-spacing: 0; text-transform: none;
   color: var(--ink-faint); padding: 8px 10px; }
 .pick-btn.chosen { color: var(--ink); }
 /* Nine cards run past the fold, and an act you have to scroll to find is
@@ -3980,11 +3983,11 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* B6 — provenance leads, and a hairline separates what this production
    made from what we authored. */
 .rs-src { font-family: var(--mono); text-transform: uppercase;
-  font-size: 20px; letter-spacing: .07em; color: var(--ok); }
+  font-size: 17px; letter-spacing: .07em; color: var(--ok); }
 .rs-seam { display: block; height: 1px; background: var(--line-soft);
   margin: 2px 0 4px; }
 /* B5 — the films are proper nouns a human wrote, so Archivo, not Courier. */
-.rs-films { font-size: 18px; color: var(--ink-dim); line-height: 1.5; }
+.rs-films { font-size: 20px; color: var(--ink-dim); line-height: 1.5; }
 /* B3 — no cell area at all when there are no frames, and one line saying so. */
 .rs-nof { display: block; font-size: 20px; letter-spacing: .08em;
   color: var(--ink-faint); }
@@ -4006,7 +4009,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    swapped for another as the door's source changes. */
 .door-row[hidden] { display: none; }
 .door-lab {
-  display: block; font-size: 18px; color: var(--ink); padding-top: 7px;
+  display: block; font-size: 20px; color: var(--ink); padding-top: 7px;
 }
 .door-lab .f-note { display: block; margin-top: 2px; }
 .door-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -4076,13 +4079,13 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border-left: 3px solid var(--bad-line); background: var(--field);
   padding: 9px 12px; margin: 8px 0 10px; display: grid; gap: 4px;
 }
-.sw-collide p { margin: 0; font-size: 18px; color: var(--ink-dim); line-height: 1.5; }
+.sw-collide p { margin: 0; font-size: 20px; color: var(--ink-dim); line-height: 1.5; }
 .sw-collide b { color: var(--ink-faint); font-weight: 400; letter-spacing: .08em; }
-.sw-collide .mini { color: var(--ink-faint); font-size: 18px; letter-spacing: .1em; }
+.sw-collide .mini { color: var(--ink-faint); font-size: 20px; letter-spacing: .1em; }
 .sw-collide { position: relative; }
 .sw-collide-x {
   position: absolute; top: 6px; right: 8px; background: none; border: none;
-  color: var(--ink-faint); font-size: 18px; line-height: 1; cursor: pointer;
+  color: var(--ink-faint); font-size: 20px; line-height: 1; cursor: pointer;
   padding: 2px 4px;
 }
 .sw-collide-x:hover { color: var(--ink); }
@@ -4106,15 +4109,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border: 1px solid var(--line-soft); overflow: hidden; }
 .rs-cell img { width: 100%; height: 100%; object-fit: cover; display: block;
   cursor: zoom-in; }
-.rs-prompt-link { align-self: start; font-size: 18px; }
+.rs-prompt-link { align-self: start; font-size: 20px; }
 /* the reading view behind the link (B4) */
-.rs-sub { font-family: var(--mono); font-size: 20px; letter-spacing: .1em;
+.rs-sub { font-family: var(--mono); font-size: 17px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-dim); margin: 0 0 10px; }
-.rs-q { font-size: 18px; font-weight: 600; color: var(--ink); margin: 0 0 10px;
+.rs-q { font-size: 20px; font-weight: 600; color: var(--ink); margin: 0 0 10px;
   max-width: 720px; }
-.rs-principle { font-size: 18px; color: var(--ink-dim); line-height: 1.55;
+.rs-principle { font-size: 20px; color: var(--ink-dim); line-height: 1.55;
   max-width: 720px; margin: 0 0 14px; }
-.rs-principle b { display: block; font-family: var(--mono); font-size: 20px;
+.rs-principle b { display: block; font-family: var(--mono); font-size: 17px;
   letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
   font-weight: 700; margin-bottom: 3px; }
 .rs-read-k { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint);
@@ -4155,7 +4158,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   border: 1px solid var(--line-soft); font-size: 20px; line-height: 1.6;
   color: var(--ink-dim); white-space: pre-wrap; }
 .rs-src { font-family: var(--mono); text-transform: uppercase;
-  font-size: 20px; letter-spacing: .07em; color: var(--ink-faint); }
+  font-size: 17px; letter-spacing: .07em; color: var(--ink-faint); }
 /* The chosen style, on the card, under its button — the plate small enough
    that the anchor row stays a row. Clicking it reopens the panel, because
    the thing you are looking at is the thing you would change. */
@@ -4178,15 +4181,15 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   gap: 4px; }
 .rs-chosen .rs-cell { aspect-ratio: 16 / 9; }
 .rs-chosen-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.rs-chosen .rs-name { font-size: 18px; font-weight: 600; color: var(--ink); }
-.rs-chosen .rs-desc { font-size: 18px; line-height: 1.45; }
+.rs-chosen .rs-name { font-size: 20px; font-weight: 600; color: var(--ink); }
+.rs-chosen .rs-desc { font-size: 20px; line-height: 1.45; }
 /* The plate slot takes a REAL example image the moment one exists (user
    2026-08-16: "you and i will generate images for this UI"). Until then
    the diagram underneath is what shows — the manifest lists only the keys
    that have a picture, so a missing one is never a broken image. */
 .rs-shot { position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; display: block; }
-.rs-def { font-size: 18px; color: var(--ink-dim); max-width: 720px;
+.rs-def { font-size: 20px; color: var(--ink-dim); max-width: 720px;
   margin: 2px 0 14px; }
 .rs-def b { color: var(--ink); font-weight: 600; }
 .rs-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -4199,12 +4202,12 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .rs-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .rs-card:hover { border-color: var(--line-strong); }
 .rs-card.on { border-color: var(--ink); }
-.rs-name { font-size: 18px; font-weight: 600; color: var(--ink-dim); }
+.rs-name { font-size: 20px; font-weight: 600; color: var(--ink-dim); }
 .rs-card.on .rs-name { color: var(--ink); }
-.rs-desc { font-size: 18px; color: var(--ink-dim); }
+.rs-desc { font-size: 20px; color: var(--ink-dim); }
 .rs-not { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint); }
 .rs-own { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 2px;
-  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  font-family: var(--mono); font-size: 17px; font-weight: 700;
   letter-spacing: .13em; text-transform: uppercase; color: var(--ink-dim); }
 
 /* UNCANONIZED — 2026-08-13 — board look picker (arrange room Style…).
@@ -4258,7 +4261,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .seq .seq-subject {
   /* Specificity matters here: .panel h2 sets 11px uppercase Courier, and
      the 24px anchor is the whole reason two roles may share 15px below. */
-  font-family: var(--sans); font-size: 24px; font-weight: 600;
+  font-family: var(--sans); font-size: 33px; font-weight: 600;
   letter-spacing: -.015em; text-transform: none; color: var(--ink);
   margin: 0; border: none; padding: 0;
 }
@@ -4309,7 +4312,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    whose job IS a sequence, the sequence is as much the subject as its
    title. Courier, because a step number is a machine fact. */
 .step-num {
-  flex: 0 0 58px; font-family: var(--mono); font-size: 24px;
+  flex: 0 0 58px; font-family: var(--mono); font-size: 36px;
   font-weight: 600; letter-spacing: -.01em; line-height: 1;
   color: var(--ink); padding-top: 0;
 }
@@ -4336,7 +4339,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 /* §1.9 — prose measures are capped independent of surface width; extra
    width goes to rails and grid columns, never to line length. */
 .step-prose, .seq .cam-sum {
-  font-size: 18px; font-weight: 400; color: var(--ink-dim);
+  font-size: 20px; font-weight: 400; color: var(--ink-dim);
   margin: 0; max-width: 720px;
 }
 .step-note {
@@ -4356,7 +4359,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    which upgrades the act-bar's existing text-acts for free. */
 .seq .verb, .seq .text-act {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-family: var(--sans); font-size: 18px; font-weight: 400;
+  font-family: var(--sans); font-size: 20px; font-weight: 400;
   letter-spacing: 0; color: var(--ink);
   text-decoration: underline; text-decoration-color: var(--line-bright);
   text-underline-offset: 3px; white-space: nowrap;
@@ -4366,7 +4369,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
   color: var(--ink-faint); text-decoration-color: transparent; cursor: not-allowed;
 }
 /* §1.2 — a standalone button is a string like any other: 15px, no fourth size. */
-.seq button.primary, .seq button.ghost { font-size: 18px; }
+.seq button.primary, .seq button.ghost { font-size: 20px; }
 
 /* §1.3 — fill classifies, border does not. A set member is --tile + a
    hairline stroke; it always sits one value above its ground. §1.8 — a
@@ -4378,7 +4381,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 }
 .obj-tile {
   background: var(--tile); border: 1px solid var(--line-soft);
-  padding: 7px 11px; font-size: 18px; color: var(--ink-dim);
+  padding: 7px 11px; font-size: 20px; color: var(--ink-dim);
   display: flex; align-items: baseline; gap: 8px; justify-content: space-between;
 }
 .obj-ref {
@@ -4392,7 +4395,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .seq .ref-groups { display: block; }
 .ref-row {
   display: flex; align-items: center; gap: 12px;
-  font-size: 18px; cursor: pointer;
+  font-size: 20px; cursor: pointer;
 }
 /* The marker is a CONTROL, so it carries an edge (user 2026-08-14: the
    off rows were tickable all along, but a 13px glyph with no box reads as
@@ -4416,7 +4419,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
 .ref-row:hover .ref-name { color: var(--ink); }
 .ref-name { letter-spacing: .08em; color: var(--ink-dim); flex: 0 0 auto; min-width: 210px; }
 .ref-row.on .ref-name { color: var(--ink); }
-.ref-kind { font-size: 18px; color: var(--ink-faint); flex: 1; }
+.ref-kind { font-size: 20px; color: var(--ink-faint); flex: 1; }
 .ref-why { letter-spacing: .08em; color: var(--ok); flex: none; }
 /* a change YOU just made reads as your decision, not as the app's */
 .ref-why-user { color: var(--ink-faint); }
@@ -4514,7 +4517,7 @@ body.tool-mode nav#nav button:hover .stage-l { color: var(--ink); }
    so rather than greying the button. */
 .gen-stated { display: flex; gap: 28px; flex-wrap: wrap; font-size: 20px; }
 .gen-stated i { font-style: normal; letter-spacing: .12em; color: var(--ink-faint); margin-right: 8px; }
-.gen-stated b { font-family: var(--sans); font-size: 18px; font-weight: 400; color: var(--ink); }
+.gen-stated b { font-family: var(--sans); font-size: 20px; font-weight: 400; color: var(--ink); }
 .wb-card .gen-row { margin-top: 12px; }
 /* A stated blocker keeps its state on a rule, not on its glyphs: these
    two are the most consequential sentences on the card ("this will not
@@ -4538,7 +4541,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    when consecutive ones collapse to a range. */
 .anchor-kind {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; padding: 2px 0; font-size: 18px; letter-spacing: .06em;
+  gap: 12px; padding: 2px 0; font-size: 20px; letter-spacing: .06em;
 }
 .anchor-head { color: var(--ink-dim); }
 .anchor-ids { color: var(--ink-faint); flex: none; }
@@ -4652,14 +4655,14 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 
 .made-cap {
   display: flex; justify-content: space-between; align-items: baseline;
-  gap: 10px; margin-top: 7px; font-size: 18px; color: var(--ink-dim);
+  gap: 10px; margin-top: 7px; font-size: 20px; color: var(--ink-dim);
 }
-.made-cap .mono { font-size: 18px; color: var(--ink-faint); }
+.made-cap .mono { font-size: 20px; color: var(--ink-faint); }
 .made-stake { flex: 0 0 260px; }
-.made-stake .step-prose { margin: 8px 0 10px; font-size: 18px; }
+.made-stake .step-prose { margin: 8px 0 10px; font-size: 20px; }
 
 .q-list { margin: 8px 0 0; padding-left: 18px; }
-.q-list li { font-size: 18px; color: var(--ink-dim); margin: 3px 0; max-width: 720px; }
+.q-list li { font-size: 20px; color: var(--ink-dim); margin: 3px 0; max-width: 720px; }
 .q-list li.answered { color: var(--ink-faint); }
 .q-list .q-ans { display: block; font-family: var(--mono); font-size: 20px;
   letter-spacing: .06em; color: var(--ok); }
@@ -4672,7 +4675,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    distinction this draws: a verb in a sentence is text, a tool in a
    toolbar is a control, and a control carries an edge. */
 .seq .act-bar .text-act {
-  font-size: 18px; font-weight: 600; color: var(--ink-dim);
+  font-size: 20px; font-weight: 600; color: var(--ink-dim);
   text-decoration: none;
   border: 1px solid var(--line); padding: 7px 13px;
 }
@@ -4745,7 +4748,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .take.rejected .take-frame img { opacity: .45; }
 .wb-card .take-cap {
   padding: 6px 0 0; color: var(--ink-faint);
-  font-size: 18px; letter-spacing: .08em;
+  font-size: 20px; letter-spacing: .08em;
 }
 .filmstrip .take.shown .take-cap { color: var(--ink); }
 .filmstrip .take.rejected .take-cap { color: var(--ink-faint); }
@@ -4833,7 +4836,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   width: min(620px, 92vw); }
 .tut-head { display: flex; align-items: center; justify-content: space-between; }
 .tut-kicker {
-  font-size: 18px; letter-spacing: .12em; text-transform: uppercase;
+  font-size: 20px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--sheet-dim-ui);
 }
 /* Q5 (ruled 2026-08-18): a release note does not earn its own ground or an
@@ -4845,15 +4848,15 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .tut-x {
   background: none; border: none; color: var(--sheet-dim-ui);
-  font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer;
+  font-size: 20px; line-height: 1; padding: 0 2px; cursor: pointer;
 }
 .tut-x:hover { color: var(--sheet-ink); }
 .tut-title {
-  font-family: var(--sans); font-size: 18px; font-weight: 600;
+  font-family: var(--sans); font-size: 20px; font-weight: 600;
   color: var(--sheet-ink); line-height: 1.25;
 }
 .tut-body { display: flex; flex-direction: column; gap: 9px; }
-.tut-p { margin: 0; font-size: 18px; line-height: 1.5; color: var(--sheet-ink); }
+.tut-p { margin: 0; font-size: 20px; line-height: 1.5; color: var(--sheet-ink); }
 .tut-p code { font-size: 20px; color: var(--sheet-ink); }
 /* Q4 (ruled 2026-08-18): neither `.gen-warn` (nothing is wrong, nothing is
    being spent) nor `step-cond` (that sits beside a step the user is
@@ -4861,7 +4864,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    --ink-dim, because at that moment it is the most important line in the
    popover and faint is the quietest tier available. Never amber. */
 .tut-wait {
-  font-size: 18px; letter-spacing: .1em; text-transform: uppercase;
+  font-size: 20px; letter-spacing: .1em; text-transform: uppercase;
   font-weight: 600; color: var(--sheet-ink);
   /* The sheet's own accent takes exactly one job on this layer: a 2px
      rule. It measures 3.15:1 on parchment — fine for a rule, fails AA for
@@ -4908,7 +4911,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    #9aa1a8 --ink-dim, #eceef0 --ink). This is CHROME, not the tour layer —
    the board-stock material is deliberately not here. */
 .tut-adm-where { color: var(--ink-dim); letter-spacing: .06em;
-  font-size: 18px; line-height: 1.7; margin: 14px 0 10px; }
+  font-size: 20px; line-height: 1.7; margin: 14px 0 10px; }
 .tut-adm-where b { color: var(--ink); font-weight: 400; }
 .tut-adm-ink   { color: var(--ink); }
 .tut-adm-dim   { color: var(--ink-dim); }
@@ -4922,9 +4925,9 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .tut-adm-head { font-family: var(--mono); font-size: 20px; letter-spacing: .09em;
   color: var(--ink-faint); padding: 5px 0; }
-.tut-adm-row { padding: 7px 0; align-items: baseline; font-size: 18px; }
-.tut-adm-row .mono { font-size: 18px; letter-spacing: .06em; line-height: 1.4; }
-.tut-adm-id { font-size: 18px; color: var(--ink); line-height: 1.4; }
+.tut-adm-row { padding: 7px 0; align-items: baseline; font-size: 20px; }
+.tut-adm-row .mono { font-size: 20px; letter-spacing: .06em; line-height: 1.4; }
+.tut-adm-id { font-size: 20px; color: var(--ink); line-height: 1.4; }
 /* The board keeps this column terse — a trigger is scanned here and read
    in the editor. Two lines, then ellipsis; the full phrasing rides the
    title so nothing is lost. */
@@ -4935,15 +4938,15 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 /* Q7: --accent-soft said "current stage" about a broken document. */
 .tut-adm-bad { box-shadow: inset 2px 0 0 var(--bad); }
 .tut-adm-acts { display: flex; flex-wrap: wrap; gap: 6px 8px; }
-.tut-adm-acts .text-act { color: var(--ink); font-size: 18px; }
-.tut-adm-empty { color: var(--ink-faint); font-size: 18px; padding: 18px 0; }
-.tut-adm-empty span { display: block; font-size: 18px; letter-spacing: .1em;
+.tut-adm-acts .text-act { color: var(--ink); font-size: 20px; }
+.tut-adm-empty { color: var(--ink-faint); font-size: 20px; padding: 18px 0; }
+.tut-adm-empty span { display: block; font-size: 20px; letter-spacing: .1em;
   margin-top: 6px; }
 
 /* The editor. Field labels are Courier caps at the faint tier; the fact
    under a field is the same voice one step quieter. */
 .tut-adm-edhead { display: flex; align-items: baseline; gap: 10px;
-  flex-wrap: wrap; font-size: 18px; letter-spacing: .1em; margin: 4px 0 14px; }
+  flex-wrap: wrap; font-size: 20px; letter-spacing: .1em; margin: 4px 0 14px; }
 .tut-adm-fields {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
   gap: 9px; margin-bottom: 12px;
@@ -4954,8 +4957,8 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 }
 .tut-adm-fields label.wide { grid-column: 1 / -1; }
 .tut-adm-stack { display: flex; flex-direction: column; gap: 9px; }
-.fl { font-size: 18px; letter-spacing: .09em; color: var(--ink-faint); }
-.fn { font-size: 18px; line-height: 1.5; letter-spacing: .06em; color: var(--ink-faint); }
+.fl { font-size: 20px; letter-spacing: .09em; color: var(--ink-faint); }
+.fn { font-size: 20px; line-height: 1.5; letter-spacing: .06em; color: var(--ink-faint); }
 .fn b { color: var(--ink); font-weight: 400; }
 .tut-adm-editor input[type=text], .tut-adm-editor select,
 .tut-adm-editor textarea {
@@ -4968,7 +4971,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    a row, and the more specific rule has to say so. */
 .tut-adm-flags label, .tut-adm-stack .tut-adm-flags label {
   display: flex; flex-direction: row; align-items: center; gap: 5px;
-  font-size: 18px; letter-spacing: .07em; color: var(--ink-dim); }
+  font-size: 20px; letter-spacing: .07em; color: var(--ink-dim); }
 .tut-adm-sect { border-top: 1px solid var(--hairline); padding-top: 10px;
   margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
 .tut-adm-plain { font-family: var(--mono); font-size: 20px; line-height: 1.6;
@@ -4978,9 +4981,9 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   margin: 8px 0; }
 .tut-adm-step-head { display: flex; align-items: center; gap: 8px;
   flex-wrap: wrap; padding: 7px 10px; border-bottom: 1px solid var(--line-soft);
-  font-size: 18px; letter-spacing: .09em; }
+  font-size: 20px; letter-spacing: .09em; }
 .tut-adm-gap { flex: 1; }
-.tut-adm-step-acts { display: flex; gap: 7px; font-size: 18px; }
+.tut-adm-step-acts { display: flex; gap: 7px; font-size: 20px; }
 .tut-adm-step-acts button { background: none; border: none; padding: 0;
   color: var(--ink-dim); font: inherit; cursor: pointer; }
 .tut-adm-step-acts button:hover:not(:disabled) { color: var(--ink); }
@@ -5006,15 +5009,15 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
    not uppercased — a wall of caps is not what the board draws either. */
 .tut-adm-hint { flex-basis: 100%; font-family: var(--mono); font-size: 20px;
   line-height: 1.5; letter-spacing: .06em; color: var(--ink-faint); }
-.tut-adm-n { font-size: 18px; letter-spacing: .08em; color: var(--ink-faint);
+.tut-adm-n { font-size: 20px; letter-spacing: .08em; color: var(--ink-faint);
   flex: none; }
 
 /* C13: the address, then the fault. */
 .tut-adm-errors { border: 1px solid var(--line); background: var(--field);
   border-left: 3px solid var(--bad); padding: 11px 12px; margin-top: 14px;
   display: flex; flex-direction: column; gap: 5px; }
-.tut-adm-ehead { font-size: 18px; letter-spacing: .1em; color: var(--ink-faint); }
-.tut-adm-ereason { font-size: 18px; line-height: 1.6; letter-spacing: .05em;
+.tut-adm-ehead { font-size: 20px; letter-spacing: .1em; color: var(--ink-faint); }
+.tut-adm-ereason { font-size: 20px; line-height: 1.6; letter-spacing: .05em;
   text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
 .tut-adm-back { display: block; margin-bottom: 14px; }
 .tut-adm-foot { justify-content: flex-end; }
@@ -5113,7 +5116,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
 .rd-slugline { color: var(--ink); margin-bottom: 2px; }
 /* the cast the ladder no longer has room for, where it does */
 .rd-with {
-  color: var(--ink-faint); font-size: 18px; letter-spacing: .1em;
+  color: var(--ink-faint); font-size: 20px; letter-spacing: .1em;
   margin-bottom: 8px;
 }
 .rd-action { display: block; }
@@ -5139,7 +5142,7 @@ body[data-view="boards"] main, body[data-view="specs"] main { max-width: 1920px;
   padding: 11px 14px;
 }
 .rd-obs, .rd-found {
-  margin: 0; font-size: 18px; line-height: 1.45; color: var(--ink);
+  margin: 0; font-size: 20px; line-height: 1.45; color: var(--ink);
   letter-spacing: .02em;
   /* one line each, always — a wrapped finding would move the panel too */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -5190,7 +5193,7 @@ body[data-read-busy="1"] #read-live button,
 body[data-read-busy="1"] #read-live input { pointer-events: auto; opacity: 1; }
 .rd .busy { margin-top: 0; }
 
-/* ================================= the 10px glyph floor, lowercase Courier */
+/* ============ the 10px ink floor, Courier that renders lowercase (R2 12) */
 /* User ruling, 2026-09-12: "no case - upper or lower should be smaller than
    10 px ever."
 

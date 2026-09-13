@@ -61,8 +61,11 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         self.assertIn("&larr; Cast", seg)
         self.assertIn("${esc(s.kind)} &middot; ${ev.scenes} SCENE", seg)
 
-    def test_the_name_is_24px(self):
-        self.assertIn("font-size: 24px", block(".cd-name {"))
+    def test_the_name_is_the_screen_title_size(self):
+        """24px in the plan; 33px since TYPE_SCALE_R2 was scaled x1.5 to
+        put its floor at 10px of ink (2026-09-12). The ROLE is what the
+        plan fixed — a screen title — and that has not changed."""
+        self.assertIn("font-size: 33px", block(".cd-name {"))
 
     def test_no_picture_is_the_one_amber_thing_on_it(self):
         """Amber marks the one thing asking for attention. §3 drops the
@@ -107,13 +110,13 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
         result they edit the description and generate again, which is why
         the edit button is large.\""""
         b = block(".cd-edit {")
-        self.assertIn("font-size: 18px", b)
+        self.assertIn("font-size: 20px", b)
         self.assertIn("border-color: var(--line-strong)", b)   # the plan's #6b7278
         self.assertIn('class="ghost cd-edit" data-f="edit">Edit description<', JS)
 
     def test_the_description_is_16px_over_1_6(self):
         b = block(".cd-desc {")
-        self.assertIn("font-size: 18px", b)
+        self.assertIn("font-size: 20px", b)
         self.assertIn("line-height: 1.6", b)
 
     def test_the_quotes_carry_their_page_in_courier_beside_italic_prose(self):
