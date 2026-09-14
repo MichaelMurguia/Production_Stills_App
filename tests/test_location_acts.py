@@ -114,7 +114,7 @@ class TheListIsChronological(unittest.TestCase):
 class FivePerActWithAnExpand(unittest.TestCase):
     def body(self):
         i = JS.index("// Grouped by ACT")
-        return JS[i:i + 7600]   # the strip grew with RULE_PASS_2 D
+        return JS[i:i + 9200]   # grew again with the 2026-09-14 copy fixes
 
     def test_it_groups_on_the_acts_the_server_derived(self):
         b = self.body()

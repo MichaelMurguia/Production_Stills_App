@@ -443,6 +443,27 @@ delta as new instructions.
      explicitly, and which canon separately requires (a gate states its
      blocker).
 
+  **Two rows I classified wrongly, user-caught the next day** ("this
+  doesnt look corrected. Is it?" — it was not):
+
+  - `NEEDS THE BIBLE` on all seventeen location rows. I had read it as a
+    state mark, which it is — but a state shared by EVERY row belongs to
+    the table, not repeated per line, and the SHEET column beside it
+    already read `NONE` on each. One sentence above the table now, with
+    the route to step 04.
+  - `TURNS ON — <23-word narrative sentence>`, which the code
+    `.toUpperCase()`d into Courier. I kept it as "provenance". Provenance
+    in this plan is a screenplay quote with its page number; this is a
+    generated summary, and it is prose. Setting prose in uppercase
+    Courier breaks Rule 2 regardless of the copy plan, and it made the
+    least machine-like thing on the stage the hardest to read. Archivo in
+    its own case now; the kicker stays Courier.
+
+  The lesson is narrower than "be more careful": both survived because I
+  classified from a LIST of extracted strings rather than from the
+  rendered block. A sentence reads differently in a column of seventeen
+  identical siblings than it does on a line of its own.
+
   **The plan's own caveat applies to the boards, not to this.** It warns
   that its mechanical pass over the 30 design boards also caught lines
   that are data — Hierarchy's slugline and ledger rows, `Production_Boards`'

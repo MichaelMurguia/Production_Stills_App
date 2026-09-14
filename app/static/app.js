@@ -3427,12 +3427,16 @@ function bindScreenplayUpload(form, cap = null) {
 function buildLocFinder(host, cfg) {
   host.innerHTML = `
     ${cfg.head || ""}
+    ${cfg.gate || ""}
     <input type="text" data-f="loc-search" class="loc-search" placeholder="${cfg.placeholder || "search locations…"}">
     <div class="loc-scroll"${cfg.maxHeight ? ` style="max-height:${cfg.maxHeight}px"` : ""}>
       ${cfg.headRow || ""}
       <div data-f="loc-list"></div>
     </div>
     ${cfg.footer || ""}`;
+  const go = $("[data-f=loc-gate-go]", host);
+  if (go) go.onclick = () => $('.panel.step[data-step="4"]')
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
   const draw = () => {
     const q = $("[data-f=loc-search]", host).value;
     $("[data-f=loc-list]", host).innerHTML = cfg.rows(q.trim().toUpperCase(), q);
@@ -6651,12 +6655,16 @@ async function renderWizard() {
         ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open breakdown</button>`
         : state.stage_summary?.production_design?.bible_saved
           ? `<button class="text-act loc-draft" data-loc="${esc(name)}">Create breakdown</button>`
-          : `<span class="wv-tag loc-gate">NEEDS THE BIBLE</span>`}
+          /* The gate is stated ONCE above the table, not on every row —
+             seventeen copies of one fact is the exact thing the copy
+             discipline cuts, and the SHEET cell beside this already says
+             NONE. An empty cell here keeps the column aligned. */
+          : `<span class="loc-env-blank">&mdash;</span>`}
     </div>`;
   const WIZ_LOC_THEAD = `
     <div class="loc-thead">
       <span>LOCATION</span>
-      <span>ENVIRONMENT — ITS VISUAL RULES</span>
+      <span>ENVIRONMENT</span>
       <span>SHEET</span>
       <span></span>
     </div>`;
@@ -6867,6 +6875,10 @@ async function renderWizard() {
               title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
                 acts.some(a => a.title) ? "Rename the acts" : "Name the acts"}</button>`
         }</span></div>`,
+        gate: state.stage_summary?.production_design?.bible_saved ? "" :
+          `<p class="loc-gate-one">No breakdown can be drafted until the Art
+             Direction Bible is saved.
+             <button type="button" class="text-act" data-f="loc-gate-go">Save it in step 04 &nearr;</button></p>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
         rows: (needle, q) => grouped.map(g => {
@@ -6885,7 +6897,12 @@ async function renderWizard() {
               cut.capped ? ` · <span class="loc-showing">SHOWING ${cut.shown.length}</span>` : ""}${
               g.act ? ` <button type="button" class="text-act loc-act-name" data-act="${g.act}"
                 title="Rename this act — a reading you disagree with is a reading you can change">Rename</button>` : ""}`
-            + (g.turn ? `<span class="loc-turn mono">TURNS ON — ${esc(String(g.turn).toUpperCase())}</span>` : "")
+            /* Rule 2: this is a SENTENCE, so Archivo and its own case.
+               It was uppercased into Courier, which made the least
+               machine-like thing on the stage the hardest to read
+               (user-caught 2026-09-14). The kicker stays Courier because
+               the kicker IS a label. */
+            + (g.turn ? `<span class="loc-turn"><i>TURNS ON</i>${esc(String(g.turn))}</span>` : "")
             + `</div>`
             + cut.shown.map(n => wizLocRow(n, byLoc[n]?.sheet, `
               <select class="loc-reassign" data-loc="${esc(n)}" title="The environment this location inherits its palette, light and atmosphere from — saved to the analysis immediately.">

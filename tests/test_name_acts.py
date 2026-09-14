@@ -114,6 +114,7 @@ class NamingActsTouchesNothingElse(unittest.TestCase):
 
 class TheAffordanceOnlyAppearsWhenItIsNeeded(unittest.TestCase):
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+    CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
     MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
 
     def test_the_route_exists_and_refuses_cleanly(self):
@@ -151,6 +152,7 @@ class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
     has to survive a re-run and it has to be arguable."""
 
     JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+    CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 
     def test_a_re_scan_does_not_drop_the_names(self):
         """merge_analysis starts from the FRESH read, so a run about
@@ -183,9 +185,18 @@ class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
         """D2 (2026-08-18): the turn is the evidence that makes an inferred
         act name checkable, and it was a bare `title` on the group — the
         evidence, hidden. A tooltip nobody knows exists is not
-        documentation."""
-        self.assertIn("loc-turn mono\">TURNS ON —", self.JS)
-        self.assertNotIn("Turns on: ", self.JS)
+        documentation.
+
+        It is still printed. It is no longer SHOUTED: a narrative sentence
+        uppercased into Courier violated Rule 2 and was the hardest thing
+        on the stage to read (user-caught 2026-09-14). Archivo now, in its
+        own case; the TURNS ON kicker stays Courier, because a label is
+        machine data even when the thing it labels is not."""
+        self.assertIn('class="loc-turn"><i>TURNS ON</i>', self.JS)
+        self.assertNotIn("loc-turn mono", self.JS)
+        b = self.CSS.split(chr(10) + ".loc-turn {")[1].split("}")[0]
+        self.assertIn("font-family: var(--sans)", b)
+        self.assertIn("text-transform: none", b)
 
 
 if __name__ == "__main__":

@@ -1570,8 +1570,21 @@ details.meta pre {
    checkable and it was hidden in a bare title. */
 .loc-act-head { color: var(--ink-dim); }
 .loc-read { color: var(--ink-faint); letter-spacing: .14em; margin-left: 8px; }
-.loc-turn { display: block; color: var(--ink-dim); letter-spacing: .08em;
-  font-size: var(--t-mark); margin-top: 3px; text-transform: none; }
+/* Rule 2: the beat an act turns on is PROSE, so Archivo and its own
+   case. It was uppercase Courier, which made a 23-word narrative
+   sentence the least readable thing on the stage (user, 2026-09-14:
+   "this doesnt look corrected"). The kicker stays Courier — a label is
+   machine data even when the thing it labels is not. */
+.loc-turn { display: block; font-family: var(--sans); font-size: var(--t-minor);
+  line-height: 1.5; color: var(--ink-dim); margin-top: 6px; max-width: 96ch;
+  letter-spacing: 0; text-transform: none; }
+.loc-turn i { font-style: normal; font-family: var(--mono);
+  font-size: var(--t-mark); letter-spacing: .12em; color: var(--ink-faint);
+  margin-right: 10px; }
+/* The gate, once, above the table it governs. */
+.loc-gate-one { margin: 8px 0 10px; padding-left: 10px;
+  border-left: 2px solid var(--hold); color: var(--ink-dim);
+  font-family: var(--sans); font-size: var(--t-minor); line-height: 1.5; }
 .loc-group .loc-act-name { margin-left: 10px; }
 /* D4: the rows the read named that no slugline placed are a register
    below the acts, after a hairline — not a fourth act under a head that
