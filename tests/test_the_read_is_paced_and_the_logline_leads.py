@@ -116,27 +116,46 @@ class TheFinishPanelKeepsNothing(unittest.TestCase):
         self.assertIn("Connect a working key", seg)
 
 
-class TheRouteIsPermanent(unittest.TestCase):
+class TheRouteIsTheBandNotASecondButton(unittest.TestCase):
+    """The read's route used to be a button on the read panel that
+    REMOVED ITSELF after seven seconds — a primary action on a timer, gone
+    if you looked away. That was the fault, and it is still fixed: nothing
+    here is on a clock.
+
+    The repair was a permanent `Review the read on Prod. Design` button
+    under the downstream counts (2026-08-31). The user removed it
+    2026-09-14. The numbered pipeline band is the navigation and is on
+    every view; a second route to stage 02, sitting under a block of
+    counts, competes with the band that already does it."""
+
     def seg(self):
         i = JS.index('$("#scr-downstream").innerHTML')
         return JS[i:JS.index("if (sp) renderLocations(state, langs);", i)]
 
-    def test_it_lives_on_the_stage_under_the_counts_the_read_produced(self):
-        self.assertIn('data-f="go-wizard"', self.seg())
-        self.assertIn("Review the read on Prod. Design", self.seg())
+    def test_the_second_route_is_gone(self):
+        """Assert the BUTTON, not the words: the comment that records the
+        removal names it, and a test that forbids the string would stop
+        the code explaining its own history."""
+        import re
+        code = re.sub(r"/\*.*?\*/", "", JS, flags=re.S)
+        self.assertNotIn('data-f="go-wizard"', code)
+        self.assertNotIn('class="ghost ds-go"', code)
+        self.assertNotIn("goWiz", code)
+        self.assertNotIn("ds-go", CSS)
 
-    def test_it_appears_only_when_there_is_a_read_to_review(self):
-        self.assertIn("analysis.analyzed_at ?", self.seg())
+    def test_the_counts_it_sat_under_are_untouched(self):
+        """Removing the button must not remove the facts it followed."""
+        seg = self.seg()
+        for row in ("Design languages", "Breakdowns", "Cited evidence rows",
+                    "Approved panels"):
+            self.assertIn(row, seg, row)
 
-    def test_it_goes_where_it_says(self):
-        self.assertIn('goWiz.onclick = () => showView("wizard")', self.seg())
-
-    def test_it_is_not_amber(self):
-        """Stage 01's one primary act is uploading a draft. A second amber
-        button is two claims on the same eye."""
-        self.assertIn('class="ghost ds-go"', self.seg())
-        b = CSS.split(NL + ".ds-go {")[1].split("}")[0]
-        self.assertNotIn("--accent", b)
+    def test_the_band_still_carries_the_route(self):
+        """It is the navigation, so it has to be there and it has to be
+        reachable while stage 02 is open."""
+        self.assertIn('<nav id="nav">', HTML)
+        self.assertIn('<button data-view="wizard"', HTML)
+        self.assertIn('<span class="stage-l">Prod. Design</span>', HTML)
 
 
 class TheLoglineLeads(unittest.TestCase):

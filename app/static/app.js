@@ -2552,21 +2552,17 @@ async function renderScreenplay() {
     <div class="dsrow"><span>Design languages</span><b>${langs}</b></div>
     <div class="dsrow"><span>Breakdowns</span><b>${specMetas.length}</b></div>
     <div class="dsrow"><span>Cited evidence rows</span><b>${citedRows}</b></div>
-    <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>
-    ${analysis.analyzed_at ? `<button type="button" class="ghost ds-go"
-        data-f="go-wizard">Review the read on Prod. Design</button>` : ""}` : "";
+    <div class="dsrow"><span>Approved panels</span><b>${(state.stage_summary?.panels || {}).approved ?? 0}</b></div>` : "";
 
-  /* The read's permanent route (user-directed 2026-08-31). It used to be
-     a button on the read panel that removed itself after seven seconds,
-     which put a primary action on a timer — look away and it was gone,
-     with no way back to it.
+  /* NO ROUTE BUTTON HERE (user-directed 2026-09-14).
 
-     Here it is on the stage, under the counts the read produced, for as
-     long as a read exists. Ghost rather than primary: stage 01's one
-     primary act is uploading a draft, and a second amber button would be
-     two claims on the same eye. */
-  const goWiz = $("[data-f=go-wizard]");
-  if (goWiz) goWiz.onclick = () => showView("wizard");
+     There was one: "Review the read on Prod. Design", added 2026-08-31
+     to replace a button that removed itself after seven seconds. The
+     timer was the real fault and it is still fixed. The button was the
+     wrong repair — the numbered pipeline band at the top of every view
+     IS the navigation, and 02 PROD. DESIGN is one click away from here
+     at all times. A second route to the same place, under a block of
+     counts, is a control competing with the band that already does it. */
 
   if (sp) renderLocations(state, langs);
 
