@@ -111,9 +111,41 @@ class TheServerRefusesAForeignRead(unittest.TestCase):
     def put(self, body):
         return self.app().put("/api/wizard/analysis", json=body)
 
-    def test_a_read_naming_no_draft_is_still_saved(self):
-        """An edit made on the page carries no sha and must keep working."""
+    def test_an_edit_naming_no_draft_is_still_saved(self):
+        """An edit made on the page carries no sha and must keep working.
+
+        Rewritten 2026-09-16. It used to seed nothing and assert 200,
+        which states the right principle with the wrong setup: a PUT into
+        a project holding NO analysis is not an edit, it is a restore —
+        and an unstamped restore is exactly the bug this file exists for.
+        The live project's own analysis predates the stamp, so the guard
+        has to let an unstamped edit through; it just may not let an
+        unstamped read arrive out of nowhere."""
+        self.store.save_wizard_analysis({"logline": "here already"})
         self.assertEqual(self.put({"logline": "x"}).status_code, 200)
+        self.assertEqual(self.store.load_wizard_analysis()["logline"], "x")
+
+    def test_an_unstamped_read_cannot_walk_in_unannounced(self):
+        """With no analysis here, a PUT is a restore, and a restore that
+        cannot name the draft it read is the 2026-08-31 fault verbatim —
+        it must not be able to skip the check by omitting the field."""
+        st = self.store.load_app_state()
+        st["screenplay"] = {"file": "a.pdf", "sha256": "a" * 64}
+        self.store.save_app_state(st)
+        r = self.put({"logline": "x"})
+        self.assertEqual(r.status_code, 409)
+        self.assertIsNone(self.store.load_wizard_analysis())
+
+    def test_an_edit_is_stamped_with_the_draft_that_is_here(self):
+        """Having let the unstamped edit through, it does not leave it
+        unstamped — the next PUT can be checked."""
+        self.store.save_wizard_analysis({"logline": "here already"})
+        st = self.store.load_app_state()
+        st["screenplay"] = {"file": "a.pdf", "sha256": "a" * 64}
+        self.store.save_app_state(st)
+        self.assertEqual(self.put({"logline": "x"}).status_code, 200)
+        self.assertEqual(
+            self.store.load_wizard_analysis()["screenplay_sha256"], "a" * 64)
 
     def test_a_read_of_another_draft_is_refused_and_says_which(self):
         st = self.store.load_app_state()

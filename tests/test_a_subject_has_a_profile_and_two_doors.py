@@ -320,12 +320,12 @@ class AppearsInSaysWhatItCannotKnow(unittest.TestCase):
     what would produce the answer rather than guessing from a name."""
 
     def test_it_states_the_blocker(self):
-        i = JS.index("const appearsIn = (s) => {")
+        i = JS.index("const appearsIn = () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
         self.assertIn("NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN", seg)
 
     def test_it_does_not_guess_from_a_name(self):
-        i = JS.index("const appearsIn = (s) => {")
+        i = JS.index("const appearsIn = () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
         for guess in ("indexOf", "includes(", "match("):
             self.assertNotIn(guess, seg, guess)
@@ -434,15 +434,17 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
         self.assertIn("(s.traits || []).length", s)
 
     def test_it_knows_whether_the_bible_is_saved(self):
-        self.assertIn(
-            "const bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;",
-            self.seg())
+        """It asks a LIVE answer, not the `state` snapshot renderWizard
+        took on entry — saving the Bible in step 04 has to arm this gate
+        without the stage being left and re-entered (found reviewing .90)."""
+        self.assertIn("bibleIsSaved()", self.seg())
+        self.assertIn("const bibleIsSaved = () => bibleSaved;", JS)
 
     def test_the_bible_is_the_first_thing_it_names(self):
         """Words with no Bible still cannot render, so naming the words
         first would send someone to fix the wrong thing."""
         s = self.seg()
-        self.assertLess(s.index("!bibleSaved"), s.index(": !hasWords"))
+        self.assertLess(s.index("!bibleIsSaved()"), s.index(": !hasWords"))
 
     def test_the_buttons_are_disabled_rather_than_left_to_fail(self):
         """Both screens' generate controls, not one of them."""

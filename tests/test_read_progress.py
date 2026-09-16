@@ -509,8 +509,8 @@ class TheStageWaitsForTheRead(unittest.TestCase):
     def test_a_failed_read_gives_the_stage_back(self):
         """The inventory is still true, and it is the only thing left to
         act on."""
-        i = self.JS.index("  fail(msg) {\n    this.stopTimers(); this.phase = \"failed\"")
-        self.assertIn("revealScreenplayStage()", self.JS[i:i + 500])
+        i = self.JS.index("  fail(msg) {\n    this.arming = false;")
+        self.assertIn("revealScreenplayStage()", self.JS[i:i + 600])
 
     def test_the_stage_returns_with_the_answers_already_in_it(self):
         i = self.JS.index("  finish(analysis) {")

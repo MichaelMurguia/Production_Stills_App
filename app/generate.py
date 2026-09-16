@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import re
+import uuid
 from pathlib import Path
 
 from . import (bible, imaging, mockflow, palette_plate, paths, revisions,
@@ -2649,7 +2650,14 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
 
     aspect = SUBJECT_ASPECT.get(kind, "4:5")
     ref_paths = _reference_image_paths(style_refs)
-    out = paths.DATA / "subject_render.png"
+    # PER CALL, not per process. This was the single fixed path
+    # `data/subject_render.png`, written and then unlinked in `finally`.
+    # The cast ribbon now offers Generate from twelve tiles and the cast
+    # screen from a thirteenth, so two renders in flight either handed
+    # one subject the other's picture or raced the unlink and died on
+    # FileNotFoundError — which is not a GenerationError, so it escaped
+    # main.py's handler as a 500 rather than a stated refusal.
+    out = paths.DATA / f"subject_render_{uuid.uuid4().hex}.png"
     try:
         if provider == "mock":
             mockflow.render(prompt, ref_paths, "1K", aspect, out)

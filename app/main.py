@@ -2721,8 +2721,26 @@ def api_put_wizard_analysis(body: dict) -> dict:
     it, it is not a read of that draft.
     """
     said = str(body.get("screenplay_sha256") or "")
+    here = str((store.load_app_state().get("screenplay") or {}).get("sha256") or "")
+    # An UNSTAMPED body used to skip the guard entirely — which is exactly
+    # the shape of the reads this guard exists to stop, because the field
+    # postdates them and a browser's cached copy has none.
+    #
+    # It cannot simply be required, either: an analysis read before the
+    # stamping also has no sha, and editing one (confirming a language,
+    # answering a question, renaming an act) comes back through here. A
+    # blanket refusal would 409 every edit on every project read before
+    # this release.
+    #
+    # The two cases separate cleanly by what the STUDIO holds. A restore
+    # arrives when there is nothing here; an edit arrives when there is.
+    restoring = store.load_wizard_analysis() is None
+    if restoring and not said:
+        raise HTTPException(409,
+            "That read cannot name the draft it read, so it cannot be "
+            "restored here. Read this draft rather than carrying another "
+            "one's answers over.")
     if said:
-        here = str((store.load_app_state().get("screenplay") or {}).get("sha256") or "")
         if not here:
             raise HTTPException(409, "There is no screenplay here to have read. "
                                      "Upload one and read it.")
@@ -2731,6 +2749,10 @@ def api_put_wizard_analysis(body: dict) -> dict:
                 "That read is of a different draft — it names screenplay "
                 f"{said[:8]} and this project holds {here[:8]}. Read this "
                 "draft rather than carrying the other one's answers over.")
+    # An edit of a pre-stamp analysis stamps it on the way past, so the
+    # next save of it is covered by the check above.
+    if not said and here:
+        body["screenplay_sha256"] = here
     store.save_wizard_analysis(body)
     return {"ok": True}
 

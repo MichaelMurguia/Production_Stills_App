@@ -2073,6 +2073,14 @@ async function showView(name, { push = true } = {}) {
   // measure (§1.11: the workbench is authored at 1920 with fixed rails;
   // every other view keeps the standing 1560px measure).
   document.body.dataset.view = name;
+  /* The cast screen is a body-level flag, and it had no teardown. Open
+     the cast, go to stage 01, come back to stage 02: `data-cast` was
+     still "1", so `styles.css` hid `.panel.step`, `.wiz-logline` and
+     `.wiz-head` and the stage rendered as the cast roster alone. Its
+     sibling `data-reading` has an explicit clear; this is the one the
+     router owes it. `renderWizard` re-sets it when it is arriving AT a
+     subject, which runs after this. */
+  delete document.body.dataset.cast;
   activeView = name;
   uiSet("view", name);
   syncUrl(push);
@@ -2602,8 +2610,12 @@ async function renderScreenplay() {
    which of it still holds. One thing is happening; the stage shows that
    thing. */
 function syncScreenplayStage() {
-  const reading = theRead.on && theRead.phase !== "found"
-                             && theRead.phase !== "failed";
+  // `arming` covers the gap between "a read is about to start" and
+  // `theRead.begin()` — two round trips during which `on` is false and
+  // the stage would otherwise paint itself visible and then hide.
+  const reading = theRead.arming
+               || (theRead.on && theRead.phase !== "found"
+                              && theRead.phase !== "failed");
   // On <body>, so it is already true when the stage renders. Hiding
   // after the fact is what made the side rail flash.
   if (reading) document.body.dataset.reading = "1";
@@ -2956,10 +2968,15 @@ const theBible = {
    the scene being read right now. Done bars are --ok, like every other
    meter in the app. */
 const theRead = {
+  // `arming` is true between "a read is about to start" and begin() — see
+  // syncScreenplayStage. Cleared by begin(), fail() and finish() so it can
+  // never outlive the read it announced.
+  arming: false,
   on: false, phase: "", engine: "", t0: 0, scenes: [], obs: [], at: -1,
   said: [], found: null, error: "", walk: null, clock: null, dwell: 900,
 
   async begin(engine, preview = false) {
+    this.arming = false;          // the read it announced has begun
     this.on = true; this.phase = "parse"; this.engine = engine || "the model";
     this.preview = !!preview;
     this.t0 = Date.now(); this.at = -1; this.said = []; this.found = null;
@@ -3013,6 +3030,7 @@ const theRead = {
   },
 
   finish(analysis) {
+    this.arming = false;
     this.stopTimers();
     this.phase = "found"; this.found = analysis || {};
     const langs = (this.found.design_worlds || []).length;
@@ -3053,6 +3071,7 @@ const theRead = {
   },
 
   fail(msg) {
+    this.arming = false;          // never outlive the read it announced
     this.stopTimers(); this.phase = "failed"; this.error = msg || "";
     this.paint();
     // A failed read must not leave the stage empty behind its own error
@@ -3309,6 +3328,15 @@ async function startTheRead() {
   } catch (err) {
     toast(`The read did not finish: ${err.message} — build the design plan on `
           + "Prod. Design when you are ready.", true);
+  } finally {
+    /* `arming` must never outlive this call. There are two early returns
+       ABOVE begin() — an analysis already exists, or no model is usable —
+       and on those paths nothing would ever clear it, so the stage would
+       stay hidden for the life of the page. Worse than the flash it was
+       added to stop. If begin() never ran, the stage is shown again. */
+    const began = theRead.on;
+    theRead.arming = false;
+    if (!began) syncScreenplayStage();
   }
 }
 
@@ -3399,8 +3427,18 @@ function bindScreenplayUpload(form, cap = null) {
       toast(cc && cc.missing
         ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
         : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
-      // Before the view renders, not after: the stage must never draw the
-      // panels a read is about to hide.
+      /* Before the view renders, not after: the stage must never draw the
+         panels a read is about to hide.
+
+         Setting the attribute alone did not survive. `showView` renders
+         the stage, which calls `syncScreenplayStage()`, which DELETES
+         the flag whenever `theRead.on` is false — and `startTheRead`
+         makes two round trips (/wizard/analysis, /settings) before
+         `begin()` sets it, while the render needs one. The stage flashed
+         fully visible, which is the exact thing this line claims to
+         prevent. `arming` is the read saying "I am about to begin", and
+         `syncScreenplayStage` honours it. */
+      theRead.arming = true;
       document.body.dataset.reading = "1";
       showView("screenplay");
       startTheRead();
@@ -4854,6 +4892,18 @@ async function renderWizard() {
   useTemplate("tpl-wizard");
   const state = await api("/api/state");
 
+  /* `state` is fetched ONCE, at entry, and this stage is long-lived —
+     the user saves the Bible in step 04 and then opens a cast screen
+     without ever leaving it. Two gates asked the snapshot whether the
+     Bible was saved (`castGenBlock`, and the locations table's banner),
+     so both went on refusing after a successful save: "The Art Direction
+     Bible is not saved yet" with the document sitting saved above them.
+
+     One live answer instead. `saveBible` moves it the moment the server
+     confirms, which is the same moment `updateBand()` unlocks stage 03. */
+  let bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;
+  const bibleIsSaved = () => bibleSaved;
+
   // The screenplay analysis is stored server-side (data/wizard_analysis.json)
   // so design languages survive browser storage. Older sessions kept it only
   // in localStorage — migrate that copy up once, and mirror the authoritative
@@ -6168,10 +6218,22 @@ async function renderWizard() {
      So it states that, rather than either guessing from a name match or
      showing a blank row (B3). A fact that says "not yet, and here is
      what would produce it" is worth more than a fact that is wrong. */
-  const appearsIn = (s) => {
-    const acts = (getAnalysis()?.acts || []).length;
-    return (s.ref_ids || []).length && acts
-      ? "" : `<i class="cd-none">NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN</i>`;
+  const appearsIn = () => {
+    /* It used to read:
+         (s.ref_ids || []).length && acts ? "" : <the blocker>
+       which returns EMPTY exactly when the condition holds — and
+       `renderCastAccepted` is only reached when the subject HAS an
+       approved picture, so the APPEARS IN cell rendered blank for every
+       subject on the cast state as soon as the read had produced acts.
+       A reserved shape saying nothing is the one thing B3 forbids.
+
+       The predicate was also asking the wrong question: whether a
+       subject has reference IMAGES has nothing to do with which acts it
+       appears in. Nothing in this app maps a subject to an act — the
+       read returns both and no edge between them — so there is no
+       condition to write. The cell states what would produce the answer,
+       always, until a subject is on a breakdown and the edge exists. */
+    return `<i class="cd-none">NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN</i>`;
   };
 
   /* The subject's own screen (CAST_CHARACTER_SCREEN_2026-09-12).
@@ -6248,8 +6310,7 @@ async function renderWizard() {
     const hasWords = !!(String(s.description || "").trim()
                      || String(s.subtitle || "").trim()
                      || (s.traits || []).length);
-    const bibleSaved = !!state?.stage_summary?.production_design?.bible_saved;
-    return !bibleSaved
+    return !bibleIsSaved()
         ? { why: "The Art Direction Bible is not saved yet, and a picture "
                + "renders FROM it.", act: "Save the Bible in step 04", go: "bible" }
       : !hasWords
@@ -6278,6 +6339,12 @@ async function renderWizard() {
       refreshCast();
     } catch (err) {
       toast(err.message, true);
+    } finally {
+      /* ALWAYS. `done()` was in the catch only, so every SUCCESSFUL
+         render left a 1s interval ticking against a node `refreshCast`
+         had already replaced — one leaked timer per generate, for the
+         life of the page. `done()` clears the interval and removes the
+         element, and both are safe on a node that is already detached. */
       stop.done();
     }
   };
@@ -6445,7 +6512,7 @@ async function renderWizard() {
             ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
             : `<p class="cd-nodesc">Nothing beyond the description above.</p>`}
           <div class="cd-facts">
-            <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn(s)}</span></div>
+            <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn()}</span></div>
             <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
           </div>
           <div class="cd-acts">
@@ -6649,7 +6716,7 @@ async function renderWizard() {
       <span class="loc-state">${sheet ? esc(sheet.spec_id) : "NONE"}</span>
       ${sheet
         ? `<button class="loc-open" data-open="${esc(sheet.spec_id)}">Open breakdown</button>`
-        : state.stage_summary?.production_design?.bible_saved
+        : bibleIsSaved()
           ? `<button class="text-act loc-draft" data-loc="${esc(name)}">Create breakdown</button>`
           /* The gate is stated ONCE above the table, not on every row —
              seventeen copies of one fact is the exact thing the copy
@@ -6871,7 +6938,7 @@ async function renderWizard() {
               title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
                 acts.some(a => a.title) ? "Rename the acts" : "Name the acts"}</button>`
         }</span></div>`,
-        gate: state.stage_summary?.production_design?.bible_saved ? "" :
+        gate: bibleIsSaved() ? "" :
           `<p class="loc-gate-one">No breakdown can be drafted until the Art
              Direction Bible is saved.
              <button type="button" class="text-act" data-f="loc-gate-go">Save it in step 04 &nearr;</button></p>`,
@@ -8444,6 +8511,10 @@ async function renderWizard() {
       if (quietIfUnchanged && text === bibleSavedText) return true;
       const r = await api("/api/style-bible", { method: "PUT", json: { text } });
       bibleSavedText = text;
+      // The gates on this stage ask `bibleIsSaved()`, not the snapshot
+      // `state` was fetched with — a cast screen opened after this must
+      // offer Generate, not refuse it.
+      bibleSaved = true;
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
       syncSwatchGen();  // the step-1 swatch gate arms itself right now too

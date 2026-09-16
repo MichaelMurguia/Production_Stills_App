@@ -245,7 +245,13 @@ def _write_page_offsets(pdf: Path, pages: list[str]) -> None:
         out.append(off)
         off += len(text) + 1          # the newline the join puts between pages
     try:
-        _atomic_write_json(pdf.parent / _PAGES_NAME, {"offsets": out})
+        # STAMPED with the draft it was computed from. Without this the
+        # sidecar was trusted on existence alone, so a second upload left
+        # the cast screen citing the FIRST draft's pagination — and a
+        # .txt draft, which has no pages at all, inherited them. The read
+        # record learned to name its draft this release; so does this.
+        _atomic_write_json(pdf.parent / _PAGES_NAME,
+                           {"offsets": out, "sha256": sha256_file(pdf)})
     except Exception:
         pass                          # no sidecar costs page refs, nothing else
 
@@ -254,9 +260,16 @@ def page_offsets() -> list[int]:
     """Where each page starts, backfilled from the stored PDF when the
     extraction predates the sidecar."""
     sc = paths.SCREENPLAY_DIR / _PAGES_NAME
-    if sc.exists():
-        return list((_read_json(sc, {}) or {}).get("offsets") or [])
     rec = load_app_state().get("screenplay") or {}
+    here = str(rec.get("sha256") or "")
+    if sc.exists():
+        side = _read_json(sc, {}) or {}
+        # Only if it is a sidecar for THIS draft. An unstamped one is from
+        # before the stamp existed and cannot prove what it describes, so
+        # it is rebuilt rather than believed.
+        if here and str(side.get("sha256") or "") == here:
+            return list(side.get("offsets") or [])
+        sc.unlink(missing_ok=True)
     pdf = paths.SCREENPLAY_DIR / str(rec.get("file", ""))
     if pdf.suffix.lower() != ".pdf" or not pdf.exists():
         return []
@@ -360,6 +373,11 @@ def set_screenplay(original_name: str, content: bytes) -> dict:
     }
     # Convert to the efficient format ONCE at import — every model call
     # reads this, not the PDF.
+    # A new draft invalidates the page sidecar: it maps offsets in the
+    # OLD extraction. Deleted here as well as stamped above — belt and
+    # braces, because a stale page ref is silently wrong rather than
+    # visibly broken.
+    (paths.SCREENPLAY_DIR / _PAGES_NAME).unlink(missing_ok=True)
     text = _extract_screenplay_text(dest)
     if text.strip():
         (paths.SCREENPLAY_DIR / _EXTRACTED_NAME).write_text(text, encoding="utf-8")
