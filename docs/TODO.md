@@ -178,6 +178,29 @@ Standing, from the bundle README:
 - A8 and C3 change shipped behaviour (`SETTLED`; the ledger freezing on
   the LOCK rather than on step 06) — A8 is done, C3 is in Part C.
 
+## Cloud economics — measured, decision pending (2026-09-19)
+
+`docs/TENANT_COST_FINDINGS.md`. Asked by the user as "we spin up a new
+server for every customer ... not very scalable — what are my options?"
+
+The answer measured out backwards from the intuition: **per-customer
+servers are ~$0.60/mo and fine; the volume they sit on is what grows, and
+a $9.99 subscriber goes margin-negative around 55–60 GB.** Pooling
+customers, sleeping tenants and cheaper compute hosts are all withdrawn —
+they optimise a line item already near zero. The custom domain was never
+coupled to any of it.
+
+Nothing built, nothing decided. Blocked on four answers, all in that file:
+
+- [ ] How many boards does a finished feature have? (turns the
+      extrapolated half of the margin curve into a real break-even)
+- [ ] Railway → workspace → **Usage**, tenants project — the per-service
+      breakdown, to confirm the curve and the suspected double egress
+- [ ] Does a rejected take survive its board's lock? (93% of board bytes;
+      a product ruling, not an infra one)
+- [ ] `SCOPES_PLAN.md`'s open question is no longer a cost question —
+      re-ask it as an operational one
+
 ## Housekeeping
 
 - [x] `STEP_SEQUENCE_SPEC_2026-08-14.md` deleted + ledgered (superseded)

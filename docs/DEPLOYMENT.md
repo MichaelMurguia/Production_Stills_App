@@ -15,7 +15,7 @@ NOT part of this project and must not be wired into it.
 | Service | Role | Key facts | Credentials live |
 |---|---|---|---|
 | **GoDaddy** | Registrar + DNS for `screenboardstudio.com` | Records: `www` CNAME → Railway, `_railway-verify.www` TXT, Resend sending records, apex 301-forward → www. Free email forwarding NOT available on this domain | GoDaddy account |
-| **Railway** (railway.com) | All hosting | Project "studioboards": storefront service (root dir `storefront`) + Postgres. Separate tenants project for cloud studios (project token). Deploys on push to `main`; usage-billed incl. ~$2–5/mo per tenant | Railway dashboard; every app secret is a service Variable |
+| **Railway** (railway.com) | All hosting | Project "studioboards": storefront service (root dir `storefront`) + Postgres. Separate tenants project for cloud studios (project token). Deploys on push to `main`; usage-billed. **Per tenant: ~$0.60/mo compute (flat, worked in or not) plus $0.15/GB-mo for its volume, which is the line that actually grows — measured 2026-09-19, see `docs/TENANT_COST_FINDINGS.md`** | Railway dashboard; every app secret is a service Variable |
 | **GitHub** | Repo + CI | `MichaelMurguia/Production_Stills_App`; Actions run both suites + release-zip + verify-deploy on every push; Railway watches `main` | GitHub account |
 | **Stripe** | All payments | Live + sandbox are parallel universes: 4 products each, webhook endpoint each (`/stripe/webhook`). Sole-proprietor activation. TODO: set support email to `support@screenboardstudio.com` | Keys in Railway variables only |
 | **Resend** | OUTBOUND transactional mail only (magic links, license recovery) — sends as `no-reply@`; **cannot receive mail** | Domain verified via GoDaddy DNS. **TODO: rotate the API key (exposed in a chat transcript 2026-08-03)** — new key → Railway `SMTP_PASS` → delete old | Key in Railway `SMTP_PASS` |
@@ -431,9 +431,17 @@ What the operator must grant, one time:
    repo in that project's scope (already true for the storefront; confirm
    for the tenants project on first provision).
 4. **Cost awareness** — each tenant is one Railway service + one volume
-   billed by usage to the operator's account (idle FastAPI ≈ $2–5/mo).
-   Tenant costs scale linearly with subscribers; the Personal tier margin
-   depends on it.
+   billed by usage to the operator's account. **Measured 2026-09-19
+   (`docs/TENANT_COST_FINDINGS.md`), replacing the ≈$2–5/mo estimate
+   written here on 2026-07-31, which was wrong in both directions:**
+   compute is ~$0.60/mo and does NOT grow with use (60 MB RSS, 0.01% of a
+   vCPU; generation is network wait and a 4K composite is 0.2s), while the
+   volume grows without bound at $0.15/GB-mo and Railway cannot shrink a
+   volume. A real production measures 266 MB of which 97% is images and
+   93% of board bytes are unused takes. **A $9.99 Cloud Personal
+   subscriber goes margin-negative around 55–60 GB of accumulated work** —
+   not from a spike, from ordinary use. The per-service compute is not
+   what to optimise; where the image bytes live is.
 
 Lifecycle (all driven by `provisioner.reconcile()` — startup, after cloud
 fulfillment, after subscription webhooks): PAID cloud purchase → service
@@ -468,6 +476,8 @@ algorithm; do not write "we cannot read your key" anywhere.
 - License recovery ("find my license by email") page.
 - Transactional emails beyond Stripe's own receipts.
 - Tenant volume backups / export-my-data — decide before real subscribers.
+  **Moving blobs to object storage would close this as a side effect and cut
+  the dominant cost line ~10× — see `docs/TENANT_COST_FINDINGS.md`.**
 
 ## Design language
 
