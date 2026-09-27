@@ -2572,7 +2572,7 @@ async function renderScreenplay() {
      at all times. A second route to the same place, under a block of
      counts, is a control competing with the band that already does it. */
 
-  if (sp) renderLocations(state, langs);
+  if (sp) renderLocations(state, langs, readIsOfOtherDraft(analysis, sp));
 
   // Citation report — report-only by canon rule: broken citations are
   // presented for the director's review, never auto-resolved.
@@ -3303,6 +3303,15 @@ const theRead = {
   },
 };
 
+/* A replaced draft is not re-read (that would overwrite curated work), so
+   the read can describe an older draft. Reads before 2026-08-31 carry no
+   sha, only a filename. */
+function readIsOfOtherDraft(a, sp) {
+  if (!a || !sp) return false;
+  if (a.screenplay_sha256 && sp.sha256) return a.screenplay_sha256 !== sp.sha256;
+  return !!(a.screenplay && sp.file) && a.screenplay !== sp.file;
+}
+
 async function startTheRead() {
   try {
     const have = await api("/api/wizard/analysis").catch(() => ({}));
@@ -3506,7 +3515,7 @@ function buildLocFinder(host, cfg) {
   draw();
 }
 
-async function renderLocations(state = null, langs = 0) {
+async function renderLocations(state = null, langs = 0, older = false) {
   const host = $("#dash-locations");
   if (!host) return;
   let data;
@@ -3518,7 +3527,7 @@ async function renderLocations(state = null, langs = 0) {
   }
   const readFact = $("[data-f=read] b");
   if (readFact) readFact.textContent =
-    `${langs} LANGUAGE${langs === 1 ? "" : "S"} · ${data.locations.length} `
+    `${langs} LANGUAGE${langs === 1 ? "" : "S"}${older ? " (OLDER DRAFT)" : ""} · ${data.locations.length} `
     + `LOC${data.locations.length === 1 ? "" : "S"}`;
 
   // Canonical coverage meter (plan v3 Part A.3): 4 segments; filled = --ok;
@@ -6667,13 +6676,16 @@ async function renderWizard() {
     $(".wiz-merge-note")?.classList.toggle("hidden", !a);
     if (!a) { lockHost.innerHTML = ""; return; }
     const sp = state.screenplay;
+    // Named by the draft it READ, not the one loaded now.
+    const older = readIsOfOtherDraft(a, sp);
     const bits = [
-      esc(sp?.file || a.screenplay || "screenplay"),
-      sp?.uploaded_at ? `uploaded ${esc(sp.uploaded_at)}` : "",
+      esc(a.screenplay || sp?.file || "screenplay"),
+      !older && sp?.uploaded_at ? `uploaded ${esc(sp.uploaded_at)}` : "",
       a.analyzed_at ? `read ${esc(a.analyzed_at)}` : "",
       a.model ? `by ${esc(a.model)}` : "",
     ].filter(Boolean).join(" — ");
-    lockHost.innerHTML = `<span class="badge APPROVED">READ</span> ${bits}
+    lockHost.innerHTML = (older ? `<span class="badge DRAFT">OLDER DRAFT</span>`
+                                : `<span class="badge APPROVED">READ</span>`) + ` ${bits}
       <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",

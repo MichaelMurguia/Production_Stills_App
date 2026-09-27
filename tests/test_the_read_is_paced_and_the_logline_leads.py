@@ -130,7 +130,7 @@ class TheRouteIsTheBandNotASecondButton(unittest.TestCase):
 
     def seg(self):
         i = JS.index('$("#scr-downstream").innerHTML')
-        return JS[i:JS.index("if (sp) renderLocations(state, langs);", i)]
+        return JS[i:JS.index("if (sp) renderLocations(state, langs", i)]
 
     def test_the_second_route_is_gone(self):
         """Assert the BUTTON, not the words: the comment that records the

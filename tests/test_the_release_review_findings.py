@@ -298,19 +298,17 @@ class TheRestoreGuardCannotBeSkipped(unittest.TestCase):
 
     def test_an_unnamed_restore_is_refused(self):
         seg = self.seg()
-        self.assertIn("restoring = store.load_wizard_analysis() is None", seg)
-        self.assertIn("if restoring and not said:", seg)
+        self.assertIn("held = store.load_wizard_analysis()", seg)
+        self.assertIn("if held is None:", seg)
+        self.assertIn("if not said:", seg)
 
-    def test_an_edit_of_a_pre_stamp_read_still_saves(self):
-        """The regression this fix had to avoid: projects read before the
-        stamping hold an analysis with no sha, and confirming a language
-        or answering a question saves through here."""
+    def test_an_edit_keeps_the_draft_its_read_names(self):
+        """Amended 2026-09-27: this fix stamped an unstamped edit with the
+        CURRENT draft, which after a replacement labelled an old read as
+        the new draft's. An edit now carries the held stamp, whatever it is."""
         seg = self.seg()
-        i = seg.index("if restoring and not said:")
-        j = seg.index("store.save_wizard_analysis(body)")
-        self.assertLess(i, j)
-        self.assertIn("if not said and here:", seg)
-        self.assertIn('body["screenplay_sha256"] = here', seg)
+        self.assertIn('body["screenplay_sha256"] = str(held.get("screenplay_sha256") or "")', seg)
+        self.assertNotIn('body["screenplay_sha256"] = here', seg)
 
     def test_a_foreign_draft_is_still_refused(self):
         seg = self.seg()
@@ -352,6 +350,30 @@ class OneControlUploadsTheScreenplay(unittest.TestCase):
         """Always live now, so `primary` would be permanent amber on an
         occasional act; stage 01's next step is the band's."""
         self.assertIn('<button type="submit" class="ghost">Upload a new draft</button>', HTML)
+
+class AReadSaysWhichDraftItRead(unittest.TestCase):
+    """2026-09-27: replacing a draft does not re-read it, and stage 02
+    labelled the old read with the new draft's name."""
+
+    def test_one_predicate(self):
+        self.assertEqual(JS.count("function readIsOfOtherDraft("), 1)
+        self.assertEqual(JS.count("readIsOfOtherDraft("), 3)
+
+    def test_the_sha_decides_when_both_have_one(self):
+        i = JS.index("function readIsOfOtherDraft(")
+        seg = JS[i:JS.index(NL + "}" + NL, i)]
+        self.assertIn("a.screenplay_sha256 !== sp.sha256", seg)
+        self.assertIn("a.screenplay !== sp.file", seg)   # pre-stamp reads
+
+    def test_stage_02_names_the_draft_it_read(self):
+        i = JS.index("const renderAnalyzeLock = () => {")
+        seg = JS[i:i + 1400]
+        self.assertIn('esc(a.screenplay || sp?.file || "screenplay")', seg)
+        self.assertIn('<span class="badge DRAFT">OLDER DRAFT</span>', seg)
+
+    def test_stage_01_marks_the_languages_count(self):
+        self.assertIn('${older ? " (OLDER DRAFT)" : ""}', JS)
+
 
 if __name__ == "__main__":
     unittest.main()

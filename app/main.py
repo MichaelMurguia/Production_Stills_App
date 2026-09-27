@@ -2734,13 +2734,14 @@ def api_put_wizard_analysis(body: dict) -> dict:
     #
     # The two cases separate cleanly by what the STUDIO holds. A restore
     # arrives when there is nothing here; an edit arrives when there is.
-    restoring = store.load_wizard_analysis() is None
-    if restoring and not said:
-        raise HTTPException(409,
-            "That read cannot name the draft it read, so it cannot be "
-            "restored here. Read this draft rather than carrying another "
-            "one's answers over.")
-    if said:
+    held = store.load_wizard_analysis()
+    if held is None:
+        # A RESTORE: it must name this draft.
+        if not said:
+            raise HTTPException(409,
+                "That read cannot name the draft it read, so it cannot be "
+                "restored here. Read this draft rather than carrying another "
+                "one's answers over.")
         if not here:
             raise HTTPException(409, "There is no screenplay here to have read. "
                                      "Upload one and read it.")
@@ -2749,10 +2750,13 @@ def api_put_wizard_analysis(body: dict) -> dict:
                 "That read is of a different draft — it names screenplay "
                 f"{said[:8]} and this project holds {here[:8]}. Read this "
                 "draft rather than carrying the other one's answers over.")
-    # An edit of a pre-stamp analysis stamps it on the way past, so the
-    # next save of it is covered by the check above.
-    if not said and here:
-        body["screenplay_sha256"] = here
+    else:
+        # An EDIT. A replaced draft is not re-read, so the read may be of
+        # an older draft — the edit keeps whatever stamp it has. Checking it
+        # against the current draft 409'd every edit after a replacement;
+        # stamping it with the current draft (2026-09-16) hid that it was
+        # stale. Found 2026-09-27.
+        body["screenplay_sha256"] = str(held.get("screenplay_sha256") or "")
     store.save_wizard_analysis(body)
     return {"ok": True}
 

@@ -136,16 +136,30 @@ class TheServerRefusesAForeignRead(unittest.TestCase):
         self.assertEqual(r.status_code, 409)
         self.assertIsNone(self.store.load_wizard_analysis())
 
-    def test_an_edit_is_stamped_with_the_draft_that_is_here(self):
-        """Having let the unstamped edit through, it does not leave it
-        unstamped — the next PUT can be checked."""
-        self.store.save_wizard_analysis({"logline": "here already"})
+    def _replaced(self, stamp):
+        """A read of draft A, then draft B uploaded over it."""
+        self.store.save_wizard_analysis({"logline": "old", "screenplay_sha256": stamp})
         st = self.store.load_app_state()
-        st["screenplay"] = {"file": "a.pdf", "sha256": "a" * 64}
+        st["screenplay"] = {"file": "b.pdf", "sha256": "b" * 64}
         self.store.save_app_state(st)
-        self.assertEqual(self.put({"logline": "x"}).status_code, 200)
-        self.assertEqual(
-            self.store.load_wizard_analysis()["screenplay_sha256"], "a" * 64)
+
+    def test_an_edit_after_a_replacement_is_saved(self):
+        """It 409'd: the page sends the read's own stamp (A) and the check
+        compared it with the loaded draft (B). Found 2026-09-27."""
+        self._replaced("a" * 64)
+        r = self.put({"logline": "x", "screenplay_sha256": "a" * 64})
+        self.assertEqual(r.status_code, 200)
+
+    def test_an_edit_never_restamps_the_read(self):
+        """The read is still of A — nor can a body claim otherwise."""
+        self._replaced("a" * 64)
+        self.put({"logline": "x", "screenplay_sha256": "b" * 64})
+        self.assertEqual(self.store.load_wizard_analysis()["screenplay_sha256"], "a" * 64)
+
+    def test_an_unstamped_read_is_not_stamped_as_the_new_draft(self):
+        self._replaced("")
+        self.put({"logline": "x"})
+        self.assertEqual(self.store.load_wizard_analysis()["screenplay_sha256"], "")
 
     def test_a_read_of_another_draft_is_refused_and_says_which(self):
         st = self.store.load_app_state()
