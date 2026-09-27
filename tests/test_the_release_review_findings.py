@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT))
 from app import generate, paths, store  # noqa: E402
 
 JS = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+HTML = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
 CSS = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
 MAIN = (ROOT / "app/main.py").read_text(encoding="utf-8")
 NL = chr(10)
@@ -316,6 +317,41 @@ class TheRestoreGuardCannotBeSkipped(unittest.TestCase):
         self.assertIn("names screenplay", seg)
         self.assertIn("if said != here:", seg)
 
+
+
+class OneControlUploadsTheScreenplay(unittest.TestCase):
+    """User, 2026-09-27: "you have two buttons. Upload a new draft and
+    Choose File. That's confusing right?" The browser's file input sat
+    beside the verb, and the verb was disabled until the input was used —
+    the live-looking button was the browser's, the action button was dead.
+    All three screenplay forms go through one binder, so it is fixed once."""
+
+    def seg(self):
+        i = JS.index("function bindScreenplayUpload(")
+        return JS[i:JS.index("\n}\n", i)]
+
+    def test_the_native_input_is_hidden_and_the_verb_opens_it(self):
+        s = self.seg()
+        self.assertIn("input.hidden = true;", s)
+        self.assertIn('submit.type = "button";', s)
+        self.assertIn("input.click()", s)
+
+    def test_choosing_a_file_is_the_submit(self):
+        self.assertIn("if (input.files.length) form.requestSubmit();", self.seg())
+
+    def test_the_verb_is_not_dead_until_a_file_is_chosen(self):
+        """Only the engine gate may disable it now."""
+        s = self.seg()
+        self.assertIn("submit.disabled = noEngine;", s)
+        self.assertNotIn("!input.files.length", s)
+
+    def test_a_failed_upload_can_be_retried_with_the_same_file(self):
+        self.assertIn('input.value = "";', self.seg())
+
+    def test_replace_does_not_carry_amber(self):
+        """Always live now, so `primary` would be permanent amber on an
+        occasional act; stage 01's next step is the band's."""
+        self.assertIn('<button type="submit" class="ghost">Upload a new draft</button>', HTML)
 
 if __name__ == "__main__":
     unittest.main()

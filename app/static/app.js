@@ -3365,13 +3365,29 @@ function bindScreenplayUpload(form, cap = null) {
     form.parentElement.querySelector("[data-f=up-gate-go]").onclick =
       () => showView("settings");
   }
+  /* ONE control (user, 2026-09-27: "you have two buttons. Upload a new
+     draft and Choose File. That's confusing right?"). It was the browser's
+     own file input — unstyled, `No file chosen` beside it — and then the
+     verb, disabled until the input had been used. So the live-looking
+     button was the browser's and the one dressed as the action was dead.
+
+     Now the verb IS the picker: it opens the file dialog, and choosing a
+     file submits. The OS dialog is the confirmation — cancelling it does
+     nothing — which is the same shape `Add images` has always had. The
+     native input stays in the form, hidden, because it is still what
+     carries the file. */
+  input.hidden = true;
+  input.required = false;   // a hidden required field blocks the submit it no longer guards
+  submit.type = "button";
+  submit.addEventListener("click", () => { if (!submit.disabled) input.click(); });
+  input.addEventListener("change", () => {
+    if (input.files.length) form.requestSubmit();
+  });
   const sync = () => {
-    submit.disabled = noEngine || !input.files.length;
+    submit.disabled = noEngine;
     submit.title = noEngine
-      ? "Connect an AI model first — Settings → AI & engines"
-      : input.files.length ? "" : "Choose a screenplay file first";
+      ? "Connect an AI model first — Settings → AI & engines" : "";
   };
-  input.addEventListener("change", sync);
   sync();
   /* The upload takes seconds — the file goes up, the server extracts its
      text, and every quote the breakdowns cite is re-checked against the
@@ -3450,6 +3466,7 @@ function bindScreenplayUpload(form, cap = null) {
       toast(err.message, true);
       submit.disabled = false;
       input.disabled = false;
+      input.value = "";   // or re-choosing the same file fires no `change`
     }
   });
 }
