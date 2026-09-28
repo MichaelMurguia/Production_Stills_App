@@ -406,5 +406,15 @@ class TheStageHeadHasNoScreenplayLine(unittest.TestCase):
         self.assertNotIn("#wiz-screenplay", JS)
 
 
+class TheModelPickerHidesOnceRead(unittest.TestCase):
+    """User 2026-09-28: "Get rid of Model. Get rid of ChatGPT-5.6. Keep
+    unlock and rerun." Hidden, not removed — a re-run needs a model."""
+
+    def test_hidden_when_read_and_back_on_unlock(self):
+        self.assertIn('$(".wiz-model")?.classList.toggle("hidden", !!a);', JS)
+        i = JS.index('$("#wiz-analyze-unlock").onclick')
+        self.assertIn('$(".wiz-model")?.classList.remove("hidden");', JS[i:i + 700])
+
+
 if __name__ == "__main__":
     unittest.main()

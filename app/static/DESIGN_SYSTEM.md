@@ -2103,7 +2103,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 ## Changelog
 
-- **2026-09-28** — Stage 02 read line is `Unlock & re-run` only — no READ badge (file, upload/read dates and model removed; an older draft keeps its filename). The period card drops "Every render is held to this".
+- **2026-09-28** — Stage 02 read line is `Unlock & re-run` only — no READ badge; the MODEL picker and its label hide once read and return on Unlock (file, upload/read dates and model removed; an older draft keeps its filename). The period card drops "Every render is held to this".
 - **2026-09-28** — `.rail-chip` bordered with a hover; in-page jumps land below the measured band (`scrollUnderBand`); the stage-02 head loses the screenplay line.
 - **2026-09-27** — A read of a replaced draft is marked `OLDER DRAFT` (stage 02 badge, stage 01 READ fact) and named by the draft it read.
 - **2026-09-27** — Screenplay upload is one control: the native file input is hidden, the verb opens the picker and choosing a file submits. Replace becomes `.ghost`.

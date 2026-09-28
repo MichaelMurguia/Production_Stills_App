@@ -6673,6 +6673,9 @@ async function renderWizard() {
     // Locked, not hidden: which model read this screenplay is a fact
     // worth keeping on screen.
     paintProviderSeg();
+    // Once read, the picker and its label hide (user 2026-09-28); Unlock &
+    // re-run brings them back, because a re-run needs a model chosen.
+    $(".wiz-model")?.classList.toggle("hidden", !!a);
     $("#wiz-analyze").classList.toggle("hidden", !!a);
     $(".wiz-run-row .cost")?.classList.toggle("hidden", !!a);
     $(".wiz-merge-note")?.classList.toggle("hidden", !a);
@@ -6691,6 +6694,8 @@ async function renderWizard() {
         "Re-running the read keeps everything you've confirmed — design languages, environments, and their location assignments survive by name. New finds arrive as PROPOSED for your review. Answered questions and cast subjects are never touched.",
         "Unlock"))) return;
       $("#wiz-provider").disabled = false;
+      $(".wiz-model")?.classList.remove("hidden");
+      paintProviderSeg();
       $("#wiz-analyze").classList.remove("hidden");
       lockHost.innerHTML = `<span class="mini">unlocked — pick a model and re-run; the previous analysis stands until then</span>`;
     };

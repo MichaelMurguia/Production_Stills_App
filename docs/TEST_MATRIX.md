@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2815 tests** across 139 files.
+**2816 tests** across 139 files.
 
 
-## Product app — 2585 tests in 122 files
+## Product app — 2586 tests in 122 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -145,7 +145,7 @@ temp home and external services are faked.
 | `test_the_findings_read_in_order.py` | 23 | The findings show what the read found, not just how much of it. |
 | `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |
 | `test_the_read_is_paced_and_the_logline_leads.py` | 26 | The read stops pretending to take a minute, and the logline leads. |
-| `test_the_release_review_findings.py` | 40 | Eight defects found reviewing the 2026.08.05.90 batch, and their fixes. |
+| `test_the_release_review_findings.py` | 41 | Eight defects found reviewing the 2026.08.05.90 batch, and their fixes. |
 | `test_token_economy.py` | 12 | What a model call costs, and what happens when it runs out. |
 | `test_tutorial_does_not_poll.py` | 9 | An idle tab must not talk to the server. |
 | `test_tutorials.py` | 42 | The tutorial system: content, vocabulary, and the two places it can rot. |
