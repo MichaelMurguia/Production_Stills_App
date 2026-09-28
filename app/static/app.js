@@ -6704,7 +6704,7 @@ async function renderWizard() {
       const btn = e.currentTarget;
       const m = await scriptReadModel();
       if (!m) return toast("No script-read model connected. Add one in Settings.", true);
-      if (!(await askRerun(m.label))) return;
+      if (!(await askRerun())) return;
       runDesignRead(m.id, m.label, btn);
     };
   };
@@ -6732,7 +6732,7 @@ async function renderWizard() {
                               "Proposals you never confirmed",
                               "Period and act names you didn't type"]],
   ];
-  const askRerun = modelLabel => modal({
+  const askRerun = () => modal({
     custom: `
       <div class="rr">
         <div class="rr-head">
@@ -6746,7 +6746,6 @@ async function renderWizard() {
           </section>`).join("")}
         </div>
         <div class="rr-foot">
-          <span class="rr-cost">2 CALLS · ${esc(modelLabel.toUpperCase())}</span>
           <button class="ghost" data-f="cancel">Cancel</button>
           <button class="primary" data-f="go">Rerun</button>
         </div>

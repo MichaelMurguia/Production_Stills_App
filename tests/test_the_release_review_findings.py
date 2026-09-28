@@ -472,7 +472,7 @@ class TheRerunDialogIsTheRerun(unittest.TestCase):
 
     def test_confirm_runs_the_read(self):
         s = self.seg()
-        self.assertIn("if (!(await askRerun(m.label))) return;", s)
+        self.assertIn("if (!(await askRerun())) return;", s)
         self.assertIn("runDesignRead(m.id, m.label, btn);", s)
 
     def test_the_model_is_the_script_read_role(self):
@@ -488,7 +488,7 @@ class TheRerunDialogIsTheRerun(unittest.TestCase):
         for k in ('"KEPT"', '"ADDED"', '"REPLACED"'):
             self.assertIn(k, s)
         self.assertIn("Rerun the design review using an updated script.", s)
-        self.assertIn("2 CALLS · ${esc(modelLabel.toUpperCase())}", s)
+        self.assertNotIn("2 CALLS", s)   # cut by the user, 2026-09-28
 
     def test_lines_are_escaped(self):
         self.assertIn("lines.map(l => `<li>${esc(l)}</li>`)", self.seg())

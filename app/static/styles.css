@@ -2015,8 +2015,8 @@ details.meta pre {
 /* UNCANONIZED — 2026-09-28 — the rerun dialog. What a rerun does is
    three facts, so it is three columns: KEPT, ADDED, REPLACED, each under
    a 2px rule in the colour of its outcome (--ok kept, --hold proposed,
-   --line-bright replaced — neutral, it is not an error). The call cost
-   sits beside the verb in Courier, as every spending verb's does. */
+   --line-bright replaced — neutral, it is not an error). No cost line:
+   the user cut it (2026-09-28). */
 .modal.modal-custom:has(.rr) { width: min(780px, 94vw); }
 .rr-head { padding: 22px 24px 20px; }
 .rr-lead { margin: 8px 0 0; font-size: var(--t-title); color: var(--ink); line-height: 1.35; }
@@ -2031,10 +2031,8 @@ details.meta pre {
   font-weight: 700; margin: 0 0 12px; color: var(--ink); }
 .rr-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
 .rr-col li { font-size: var(--t-body); color: var(--ink-dim); line-height: 1.35; }
-.rr-foot { display: flex; align-items: center; gap: 10px; padding: 14px 24px;
-  border-top: 1px solid var(--line-soft); background: var(--panel); }
-.rr-cost { margin-right: auto; font-family: var(--mono); font-size: var(--t-mark);
-  letter-spacing: .12em; color: var(--ink-faint); }
+.rr-foot { display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+  padding: 14px 24px; border-top: 1px solid var(--line-soft); background: var(--panel); }
 @media (max-width: 640px) {
   .rr-cols { grid-template-columns: 1fr; }
   .rr-col + .rr-col { border-left: 0; }
