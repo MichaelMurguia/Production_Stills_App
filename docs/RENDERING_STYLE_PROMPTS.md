@@ -105,7 +105,7 @@ RENDERING STYLE
 
 PRODUCTION PAINTING — READABLE FORM OVER SURFACE
 
-Painterly production concept art made to be read on a wall, not studied at arm's length. Form is carried by large value groups, silhouette and edge quality; brushwork exists to support those, never to become a surface effect in its own right. Materials are told apart by value, edge and colour before any texture is described. This is the default medium of film production art: fast, confident, and built for the distance a board is actually viewed from.
+Painted concept art meant to be read from across the room. Big value shapes, clear silhouettes, controlled edges. Brushwork serves the form. The standard look of film production art.
 
 Operating principle: Brushwork supports large readable forms — do not simulate brush texture across every surface; favour shape readability over surface texture.
 
@@ -228,7 +228,7 @@ RENDERING STYLE
 
 PRODUCTION PAINTING — READABLE FORM OVER SURFACE
 
-Painterly production concept art made to be read on a wall, not studied at arm's length. Form is carried by large value groups, silhouette and edge quality; brushwork exists to support those, never to become a surface effect in its own right. Materials are told apart by value, edge and colour before any texture is described. This is the default medium of film production art: fast, confident, and built for the distance a board is actually viewed from.
+Painted concept art meant to be read from across the room. Big value shapes, clear silhouettes, controlled edges. Brushwork serves the form. The standard look of film production art.
 
 Operating principle: Brushwork supports large readable forms — do not simulate brush texture across every surface; favour shape readability over surface texture.
 
@@ -351,7 +351,7 @@ RENDERING STYLE
 
 PRODUCTION PAINTING — READABLE FORM OVER SURFACE
 
-Painterly production concept art made to be read on a wall, not studied at arm's length. Form is carried by large value groups, silhouette and edge quality; brushwork exists to support those, never to become a surface effect in its own right. Materials are told apart by value, edge and colour before any texture is described. This is the default medium of film production art: fast, confident, and built for the distance a board is actually viewed from.
+Painted concept art meant to be read from across the room. Big value shapes, clear silhouettes, controlled edges. Brushwork serves the form. The standard look of film production art.
 
 Operating principle: Brushwork supports large readable forms — do not simulate brush texture across every surface; favour shape readability over surface texture.
 
@@ -478,7 +478,7 @@ RENDERING STYLE
 
 HAND-DRAWN CARTOON — INK LINE, FLAT FILL
 
-Drawn line with flat colour behind it. The mark stays human — line weight breathes, shapes stay simple and readable — and colour arrives as flat areas rather than rendered volume. Traditional animation production drawing, where clarity of silhouette matters more than description of surface.
+Ink line with flat color. The line has natural variation, shapes stay simple, and color sits in flat areas without shading. Classic animation drawing, where a clear silhouette matters most.
 
 Operating principle: The line carries the drawing; colour only fills it. Keep shapes simple enough to read at a glance.
 
@@ -601,7 +601,7 @@ RENDERING STYLE
 
 HAND-DRAWN CARTOON — INK LINE, FLAT FILL
 
-Drawn line with flat colour behind it. The mark stays human — line weight breathes, shapes stay simple and readable — and colour arrives as flat areas rather than rendered volume. Traditional animation production drawing, where clarity of silhouette matters more than description of surface.
+Ink line with flat color. The line has natural variation, shapes stay simple, and color sits in flat areas without shading. Classic animation drawing, where a clear silhouette matters most.
 
 Operating principle: The line carries the drawing; colour only fills it. Keep shapes simple enough to read at a glance.
 
@@ -724,7 +724,7 @@ RENDERING STYLE
 
 HAND-DRAWN CARTOON — INK LINE, FLAT FILL
 
-Drawn line with flat colour behind it. The mark stays human — line weight breathes, shapes stay simple and readable — and colour arrives as flat areas rather than rendered volume. Traditional animation production drawing, where clarity of silhouette matters more than description of surface.
+Ink line with flat color. The line has natural variation, shapes stay simple, and color sits in flat areas without shading. Classic animation drawing, where a clear silhouette matters most.
 
 Operating principle: The line carries the drawing; colour only fills it. Keep shapes simple enough to read at a glance.
 
@@ -851,7 +851,7 @@ RENDERING STYLE
 
 BLACK & WHITE SKETCH — GRAPHITE, NO COLOUR
 
-Graphite on paper. Tone is built by hatching and pressure rather than wash, the paper grain remains present, and there is no colour anywhere in the frame. A drawing made to work out value structure and form before anything else is decided.
+Graphite on paper. Tone comes from hatching and pressure, the paper grain shows, and there is no color. Used to work out form and values early.
 
 Operating principle: Value does all the work. If the drawing fails in grey, colour would not have saved it.
 
@@ -974,7 +974,7 @@ RENDERING STYLE
 
 BLACK & WHITE SKETCH — GRAPHITE, NO COLOUR
 
-Graphite on paper. Tone is built by hatching and pressure rather than wash, the paper grain remains present, and there is no colour anywhere in the frame. A drawing made to work out value structure and form before anything else is decided.
+Graphite on paper. Tone comes from hatching and pressure, the paper grain shows, and there is no color. Used to work out form and values early.
 
 Operating principle: Value does all the work. If the drawing fails in grey, colour would not have saved it.
 
@@ -1097,7 +1097,7 @@ RENDERING STYLE
 
 BLACK & WHITE SKETCH — GRAPHITE, NO COLOUR
 
-Graphite on paper. Tone is built by hatching and pressure rather than wash, the paper grain remains present, and there is no colour anywhere in the frame. A drawing made to work out value structure and form before anything else is decided.
+Graphite on paper. Tone comes from hatching and pressure, the paper grain shows, and there is no color. Used to work out form and values early.
 
 Operating principle: Value does all the work. If the drawing fails in grey, colour would not have saved it.
 
@@ -1224,7 +1224,7 @@ RENDERING STYLE
 
 3D RENDERED CARTOON — STYLISED DIMENSION
 
-Built and lit as geometry, then pulled away from realism on purpose. Surfaces are smooth and simply shaded, silhouettes are clean, forms are slightly exaggerated for readability. The dimensionality is real; the detail is not.
+3D models and lighting, stylized on purpose. Smooth, simple shading, clean silhouettes, slightly exaggerated shapes. Forms have real depth with simplified detail.
 
 Operating principle: Keep the volume honest and the detail stylised. Simplify surfaces, never silhouettes.
 
@@ -1348,7 +1348,7 @@ RENDERING STYLE
 
 3D RENDERED CARTOON — STYLISED DIMENSION
 
-Built and lit as geometry, then pulled away from realism on purpose. Surfaces are smooth and simply shaded, silhouettes are clean, forms are slightly exaggerated for readability. The dimensionality is real; the detail is not.
+3D models and lighting, stylized on purpose. Smooth, simple shading, clean silhouettes, slightly exaggerated shapes. Forms have real depth with simplified detail.
 
 Operating principle: Keep the volume honest and the detail stylised. Simplify surfaces, never silhouettes.
 
@@ -1472,7 +1472,7 @@ RENDERING STYLE
 
 3D RENDERED CARTOON — STYLISED DIMENSION
 
-Built and lit as geometry, then pulled away from realism on purpose. Surfaces are smooth and simply shaded, silhouettes are clean, forms are slightly exaggerated for readability. The dimensionality is real; the detail is not.
+3D models and lighting, stylized on purpose. Smooth, simple shading, clean silhouettes, slightly exaggerated shapes. Forms have real depth with simplified detail.
 
 Operating principle: Keep the volume honest and the detail stylised. Simplify surfaces, never silhouettes.
 
@@ -1600,7 +1600,7 @@ RENDERING STYLE
 
 PHOTO REAL — NO MARK OF THE HAND
 
-Reads as a photograph. Detail is lens-accurate, materials behave physically, and no trace of illustration survives anywhere in the frame. The image should be assessable as a still from the finished film rather than as a drawing of one.
+Looks like a photograph. Accurate lens detail, physically correct materials, no sign of illustration. It should pass for a still from the finished film.
 
 Operating principle: If any mark reveals a hand made this, it is the wrong style. Everything must be explicable as optics.
 
@@ -1725,7 +1725,7 @@ RENDERING STYLE
 
 PHOTO REAL — NO MARK OF THE HAND
 
-Reads as a photograph. Detail is lens-accurate, materials behave physically, and no trace of illustration survives anywhere in the frame. The image should be assessable as a still from the finished film rather than as a drawing of one.
+Looks like a photograph. Accurate lens detail, physically correct materials, no sign of illustration. It should pass for a still from the finished film.
 
 Operating principle: If any mark reveals a hand made this, it is the wrong style. Everything must be explicable as optics.
 
@@ -1850,7 +1850,7 @@ RENDERING STYLE
 
 PHOTO REAL — NO MARK OF THE HAND
 
-Reads as a photograph. Detail is lens-accurate, materials behave physically, and no trace of illustration survives anywhere in the frame. The image should be assessable as a still from the finished film rather than as a drawing of one.
+Looks like a photograph. Accurate lens detail, physically correct materials, no sign of illustration. It should pass for a still from the finished film.
 
 Operating principle: If any mark reveals a hand made this, it is the wrong style. Everything must be explicable as optics.
 
@@ -1979,7 +1979,7 @@ RENDERING STYLE
 
 INDUSTRIAL DESIGN — THE PRESENTATION DRAWING
 
-The drawing an industrial designer makes to sell a form: the object described precisely with clean keylines and controlled shading, sitting on a neutral ground with no environment around it. The object is the subject and the world is deliberately absent.
+The drawing a designer uses to sell a product. Clean keylines, controlled shading, a plain background, no environment. Only the object.
 
 Operating principle: Describe the object, not the scene. Nothing in the frame may compete with the form.
 
@@ -2103,7 +2103,7 @@ RENDERING STYLE
 
 INDUSTRIAL DESIGN — THE PRESENTATION DRAWING
 
-The drawing an industrial designer makes to sell a form: the object described precisely with clean keylines and controlled shading, sitting on a neutral ground with no environment around it. The object is the subject and the world is deliberately absent.
+The drawing a designer uses to sell a product. Clean keylines, controlled shading, a plain background, no environment. Only the object.
 
 Operating principle: Describe the object, not the scene. Nothing in the frame may compete with the form.
 
@@ -2227,7 +2227,7 @@ RENDERING STYLE
 
 INDUSTRIAL DESIGN — THE PRESENTATION DRAWING
 
-The drawing an industrial designer makes to sell a form: the object described precisely with clean keylines and controlled shading, sitting on a neutral ground with no environment around it. The object is the subject and the world is deliberately absent.
+The drawing a designer uses to sell a product. Clean keylines, controlled shading, a plain background, no environment. Only the object.
 
 Operating principle: Describe the object, not the scene. Nothing in the frame may compete with the form.
 
@@ -2355,7 +2355,7 @@ RENDERING STYLE
 
 INK & WASH — LINE CARRIES, WASH TONES
 
-Pen line carrying the drawing and diluted wash carrying the tone. The line is the structure and the wash is atmosphere; the two are visibly separate processes, and the paper stays present between them.
+Pen line for structure, diluted ink wash for tone and atmosphere. You can see both processes, and the paper shows between them.
 
 Operating principle: The line describes; the wash only weights. Never let wash do the drawing.
 
@@ -2478,7 +2478,7 @@ RENDERING STYLE
 
 INK & WASH — LINE CARRIES, WASH TONES
 
-Pen line carrying the drawing and diluted wash carrying the tone. The line is the structure and the wash is atmosphere; the two are visibly separate processes, and the paper stays present between them.
+Pen line for structure, diluted ink wash for tone and atmosphere. You can see both processes, and the paper shows between them.
 
 Operating principle: The line describes; the wash only weights. Never let wash do the drawing.
 
@@ -2601,7 +2601,7 @@ RENDERING STYLE
 
 INK & WASH — LINE CARRIES, WASH TONES
 
-Pen line carrying the drawing and diluted wash carrying the tone. The line is the structure and the wash is atmosphere; the two are visibly separate processes, and the paper stays present between them.
+Pen line for structure, diluted ink wash for tone and atmosphere. You can see both processes, and the paper shows between them.
 
 Operating principle: The line describes; the wash only weights. Never let wash do the drawing.
 
@@ -2728,7 +2728,7 @@ RENDERING STYLE
 
 GOUACHE & WATERCOLOR — PIGMENT ON PAPER
 
-Pigment in water on a textured ground. Edges pool and granulate, the paper grain shows through the thinner passages, and opaque gouache sits over transparent washes. The medium is unmistakably physical and slightly unpredictable.
+Paint and water on textured paper. Edges pool and granulate, paper shows through thin washes, and opaque gouache sits on top. Physical and a little unpredictable.
 
 Operating principle: Let the medium behave. Pooling, granulation and grain are the style, not defects to clean up.
 
@@ -2850,7 +2850,7 @@ RENDERING STYLE
 
 GOUACHE & WATERCOLOR — PIGMENT ON PAPER
 
-Pigment in water on a textured ground. Edges pool and granulate, the paper grain shows through the thinner passages, and opaque gouache sits over transparent washes. The medium is unmistakably physical and slightly unpredictable.
+Paint and water on textured paper. Edges pool and granulate, paper shows through thin washes, and opaque gouache sits on top. Physical and a little unpredictable.
 
 Operating principle: Let the medium behave. Pooling, granulation and grain are the style, not defects to clean up.
 
@@ -2972,7 +2972,7 @@ RENDERING STYLE
 
 GOUACHE & WATERCOLOR — PIGMENT ON PAPER
 
-Pigment in water on a textured ground. Edges pool and granulate, the paper grain shows through the thinner passages, and opaque gouache sits over transparent washes. The medium is unmistakably physical and slightly unpredictable.
+Paint and water on textured paper. Edges pool and granulate, paper shows through thin washes, and opaque gouache sits on top. Physical and a little unpredictable.
 
 Operating principle: Let the medium behave. Pooling, granulation and grain are the style, not defects to clean up.
 
@@ -3098,7 +3098,7 @@ RENDERING STYLE
 
 TECHNICAL BLUEPRINT — INFORMATION, NOT PICTURE
 
-An orthographic technical drawing: no perspective, no lighting, no rendering. Form is described by keyline, section and dimension. This is information rather than a picture, and it should be readable as a document.
+Orthographic technical drawing. No perspective, lighting or rendering. Keylines, sections and dimensions. It should read as a document.
 
 Operating principle: Communicate measurement and construction. Anything pictorial is out of scope.
 
@@ -3223,7 +3223,7 @@ RENDERING STYLE
 
 TECHNICAL BLUEPRINT — INFORMATION, NOT PICTURE
 
-An orthographic technical drawing: no perspective, no lighting, no rendering. Form is described by keyline, section and dimension. This is information rather than a picture, and it should be readable as a document.
+Orthographic technical drawing. No perspective, lighting or rendering. Keylines, sections and dimensions. It should read as a document.
 
 Operating principle: Communicate measurement and construction. Anything pictorial is out of scope.
 
@@ -3348,7 +3348,7 @@ RENDERING STYLE
 
 TECHNICAL BLUEPRINT — INFORMATION, NOT PICTURE
 
-An orthographic technical drawing: no perspective, no lighting, no rendering. Form is described by keyline, section and dimension. This is information rather than a picture, and it should be readable as a document.
+Orthographic technical drawing. No perspective, lighting or rendering. Keylines, sections and dimensions. It should read as a document.
 
 Operating principle: Communicate measurement and construction. Anything pictorial is out of scope.
 
@@ -3477,7 +3477,7 @@ RENDERING STYLE
 
 RENDERED ILLUSTRATION — NO VISIBLE HAND
 
-A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+Polished digital illustration. Smooth blended shading, crisp highlights, dense detail at the focal point that drops off quickly behind it. Clearly illustrated, with no visible brushwork.
 
 Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
 
@@ -3606,7 +3606,7 @@ RENDERING STYLE
 
 RENDERED ILLUSTRATION — NO VISIBLE HAND
 
-A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+Polished digital illustration. Smooth blended shading, crisp highlights, dense detail at the focal point that drops off quickly behind it. Clearly illustrated, with no visible brushwork.
 
 Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
 
@@ -3735,7 +3735,7 @@ RENDERING STYLE
 
 RENDERED ILLUSTRATION — NO VISIBLE HAND
 
-A fully rendered digital illustration, worked to a finish. Form is modelled in continuous tone, gradients are blended smooth, and speculars are sharp and deliberately placed. Detail is dense where the eye rests and falls away steeply into suggestion behind the subject. It is unmistakably illustrated rather than photographed, but nothing in it announces a hand.
+Polished digital illustration. Smooth blended shading, crisp highlights, dense detail at the focal point that drops off quickly behind it. Clearly illustrated, with no visible brushwork.
 
 Operating principle: Model in continuous tone and resolve every mark away. Spend detail only where the eye rests, and let the falloff behind it be painted rather than photographed.
 

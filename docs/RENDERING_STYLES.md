@@ -43,13 +43,9 @@ the room?
 
 ## Description
 
-Painterly production concept art made to be read on a wall, not studied at
-arm's length. Form is carried by large value groups, silhouette and edge
-quality; brushwork exists to support those, never to become a surface
-effect in its own right. Materials are told apart by value, edge and
-colour before any texture is described. This is the default medium of film
-production art: fast, confident, and built for the distance a board is
-actually viewed from.
+Painted concept art meant to be read from across the room. Big value
+shapes, clear silhouettes, controlled edges. Brushwork serves the form.
+The standard look of film production art.
 
 ## Operating Principle
 
@@ -97,11 +93,9 @@ What does this look like drawn by hand and filled flat?
 
 ## Description
 
-Drawn line with flat colour behind it. The mark stays human — line weight
-breathes, shapes stay simple and readable — and colour arrives as flat
-areas rather than rendered volume. Traditional animation production
-drawing, where clarity of silhouette matters more than description of
-surface.
+Ink line with flat color. The line has natural variation, shapes stay
+simple, and color sits in flat areas without shading. Classic animation
+drawing, where a clear silhouette matters most.
 
 ## Operating Principle
 
@@ -145,10 +139,8 @@ all?
 
 ## Description
 
-Graphite on paper. Tone is built by hatching and pressure rather than
-wash, the paper grain remains present, and there is no colour anywhere in
-the frame. A drawing made to work out value structure and form before
-anything else is decided.
+Graphite on paper. Tone comes from hatching and pressure, the paper grain
+shows, and there is no color. Used to work out form and values early.
 
 ## Operating Principle
 
@@ -193,10 +185,9 @@ deliberately stylised?
 
 ## Description
 
-Built and lit as geometry, then pulled away from realism on purpose.
-Surfaces are smooth and simply shaded, silhouettes are clean, forms are
-slightly exaggerated for readability. The dimensionality is real; the
-detail is not.
+3D models and lighting, stylized on purpose. Smooth, simple shading, clean
+silhouettes, slightly exaggerated shapes. Forms have real depth with
+simplified detail.
 
 ## Operating Principle
 
@@ -240,10 +231,9 @@ What does this look like as a photograph taken on set?
 
 ## Description
 
-Reads as a photograph. Detail is lens-accurate, materials behave
-physically, and no trace of illustration survives anywhere in the frame.
-The image should be assessable as a still from the finished film rather
-than as a drawing of one.
+Looks like a photograph. Accurate lens detail, physically correct
+materials, no sign of illustration. It should pass for a still from the
+finished film.
 
 ## Operating Principle
 
@@ -288,10 +278,8 @@ What does this look like as the presentation drawing of a designed object?
 
 ## Description
 
-The drawing an industrial designer makes to sell a form: the object
-described precisely with clean keylines and controlled shading, sitting on
-a neutral ground with no environment around it. The object is the subject
-and the world is deliberately absent.
+The drawing a designer uses to sell a product. Clean keylines, controlled
+shading, a plain background, no environment. Only the object.
 
 ## Operating Principle
 
@@ -336,9 +324,8 @@ behind it?
 
 ## Description
 
-Pen line carrying the drawing and diluted wash carrying the tone. The line
-is the structure and the wash is atmosphere; the two are visibly separate
-processes, and the paper stays present between them.
+Pen line for structure, diluted ink wash for tone and atmosphere. You can
+see both processes, and the paper shows between them.
 
 ## Operating Principle
 
@@ -381,9 +368,8 @@ What does this look like painted in water media on real paper?
 
 ## Description
 
-Pigment in water on a textured ground. Edges pool and granulate, the paper
-grain shows through the thinner passages, and opaque gouache sits over
-transparent washes. The medium is unmistakably physical and slightly
+Paint and water on textured paper. Edges pool and granulate, paper shows
+through thin washes, and opaque gouache sits on top. Physical and a little
 unpredictable.
 
 ## Operating Principle
@@ -427,10 +413,8 @@ What does this look like as a dimensioned orthographic drawing?
 
 ## Description
 
-An orthographic technical drawing: no perspective, no lighting, no
-rendering. Form is described by keyline, section and dimension. This is
-information rather than a picture, and it should be readable as a
-document.
+Orthographic technical drawing. No perspective, lighting or rendering.
+Keylines, sections and dimensions. It should read as a document.
 
 ## Operating Principle
 
@@ -475,11 +459,9 @@ until no mark is left?
 
 ## Description
 
-A fully rendered digital illustration, worked to a finish. Form is modelled
-in continuous tone, gradients are blended smooth, and speculars are sharp
-and deliberately placed. Detail is dense where the eye rests and falls away
-steeply into suggestion behind the subject. It is unmistakably illustrated
-rather than photographed, but nothing in it announces a hand.
+Polished digital illustration. Smooth blended shading, crisp highlights,
+dense detail at the focal point that drops off quickly behind it. Clearly
+illustrated, with no visible brushwork.
 
 ## Operating Principle
 

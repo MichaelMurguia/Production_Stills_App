@@ -25,7 +25,9 @@ How can the camera tell the story most clearly and excitingly?
 
 ## Description
 
-Bold, lucid visual storytelling in which composition, blocking, camera placement, and movement reveal information with clarity and momentum. Geography remains understandable, spectacle has scale, and the camera often discovers something with the audience. Frames feel cinematic without becoming self-conscious.
+Clear, bold storytelling. Composition and camera movement show the
+audience where everything is. Big moments get scale, and the camera often
+discovers things along with the audience.
 
 ## Operating Principle
 
@@ -110,7 +112,9 @@ Can blocking and depth tell the story inside one frame?
 
 ## Description
 
-The frame contains multiple layers of meaningful action. Foreground, middle ground, and background remain dramatically connected, allowing relationships, power, and story information to coexist rather than being broken into conventional coverage.
+Several layers of action in one frame. Foreground, middle and background
+all matter, so relationships play out in a single shot instead of being
+cut into coverage.
 
 ## Operating Principle
 
@@ -187,7 +191,8 @@ What does the scene feel like psychologically?
 
 ## Description
 
-Lighting and composition express psychological or moral conditions rather than merely describing physical space. Darkness can hide information, architecture can threaten characters, and faces may be partially withheld.
+Light shows how characters feel and what they hide. Deep shadow,
+threatening architecture, faces half in darkness.
 
 ## Operating Principle
 
@@ -265,7 +270,8 @@ What if we let the world provide the image?
 
 ## Description
 
-Photography appears discovered rather than imposed. Sun, windows, fire, practical lamps, overcast skies, and twilight determine the image. Camera placement tends toward observation rather than proclamation.
+Light comes from what is really there. Sun, windows, fire, lamps, overcast
+sky. The camera watches and does not show off.
 
 ## Operating Principle
 
@@ -343,7 +349,9 @@ What visual system governs this world?
 
 ## Description
 
-Composition is visibly designed. Symmetry, frontal staging, architecture, repeated geometry, and precise spatial relationships make the audience aware of the frame as an organizing system. This can feel imposing and inhuman or playful and storybook-like.
+Carefully composed frames. Symmetry, frontal staging, strong architecture
+and repeated shapes. Can feel cold and imposing, or playful like a
+storybook.
 
 ## Operating Principle
 
@@ -422,7 +430,8 @@ What does it feel like to physically be there?
 
 ## Description
 
-The camera shares physical space and duration with the characters. Instead of presenting an idealized view of action, it experiences movement, obstruction, danger, and discovery alongside them.
+The camera is in the scene with the characters. It moves with them, gets
+blocked, gets close to danger.
 
 ## Operating Principle
 
@@ -499,7 +508,9 @@ What can color and light say that dialogue cannot?
 
 ## Description
 
-Color is dramatic structure rather than decoration. Lighting, costume, environment, and production design cooperate around deliberate color relationships. Reality can bend toward emotion while remaining photographically coherent.
+Color drives the drama. Light, costume, sets and design are built around
+planned color relationships. Reality bends toward emotion but still looks
+photographed.
 
 ## Operating Principle
 
@@ -575,7 +586,8 @@ What does this moment feel like inside the character?
 
 ## Description
 
-Physical reality becomes subordinate to perception. Framing, focus, movement, exposure, reflection, and visual rhythm communicate memory, desire, fear, isolation, or altered perception.
+The camera shows how a character perceives things. Framing, focus,
+movement and exposure express memory, fear, desire or isolation.
 
 ## Operating Principle
 

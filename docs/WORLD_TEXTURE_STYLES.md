@@ -35,12 +35,9 @@ What does this world look like the moment before anything has touched it?
 
 ## Description
 
-Surfaces are as they left manufacture. Finishes are unbroken, tolerances
-are visible in how precisely parts meet, and there is no accumulated
-history anywhere on the frame. Pristine is a texture philosophy, not the
-absence of one: an unmarked surface is a deliberate statement about
-control, wealth, newness or sterility, and it should read as chosen rather
-than as unfinished rendering.
+Straight from the factory. Clean finishes, tight panel gaps, no scratches
+or dust. Nobody has touched anything yet. It should look intended, like
+someone is keeping it this way.
 
 ## Operating Principle
 
@@ -84,11 +81,8 @@ Where would this world actually be touched, and what would that leave?
 
 ## Description
 
-Used and maintained. Everything is in service, nothing is failing, and the
-wear is legible as a map of human traffic: worn where hands, feet and
-tools actually go, intact everywhere else. This is the texture of a
-working, cared-for world — the difference between a place that is old and
-a place that is used.
+Used every day and looked after. Wear shows where hands, feet and tools
+go. Everything else is intact. Nothing is failing.
 
 ## Operating Principle
 
@@ -132,11 +126,9 @@ What has the outside done to this, and who patched it afterwards?
 
 ## Description
 
-Exposure has done its work and someone has answered it. Sun has pulled
-colour out of upward faces, water has run and left its track, metal has
-oxidised where coating failed — and then a human intervened: a patch, a
-mismatched panel, a re-coat that does not quite match. The presence of
-repair is what separates weathered from decayed. This world is fought for.
+Exposure has done its work. Sun fading, water damage, rust. Maintained. A
+patch, a mismatched panel, a re-coat that does not quite match. The
+presence of repair is what separates weathered from decayed.
 
 ## Operating Principle
 
@@ -182,11 +174,8 @@ What is left standing after nobody came back?
 
 ## Description
 
-Maintenance stopped a long time ago. What remains is what has not
-collapsed yet, and the world is being taken back — rust has moved from
-surface to structure, growth is entering through failures, and loads have
-found new paths through what is still standing. Nobody is fighting this.
-The absence of repair is the point.
+Nobody has maintained this in years. Rust has eaten into the structure.
+Plants grow through the cracks. Nothing is being repaired.
 
 ## Operating Principle
 
@@ -232,12 +221,9 @@ What does the work itself deposit on the surfaces that do it?
 
 ## Description
 
-Heavy use rather than age. These are hard-wearing surfaces in active
-service, carrying exactly what the process running on them deposits: oil
-film, carbon, swarf, scale, dust of whatever is being handled. The
-equipment is sound and working — the grime is a by-product of function,
-not a symptom of neglect, and it accumulates according to what each
-surface actually does.
+Dirty from heavy use. Oil, soot, metal shavings, dust from whatever is
+being processed. The equipment runs fine. The grime builds up where the
+work happens.
 
 ## Operating Principle
 
