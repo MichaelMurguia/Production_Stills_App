@@ -558,7 +558,7 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
 }
 
 
-function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
+function modal({ title, body = "", items = [], fields = [], confirmLabel = "Confirm",
                 danger = false, custom = "", mount = null,
                 extraLabel = "", extraDanger = false }) {
   return new Promise(resolve => {
@@ -568,6 +568,8 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
       <div class="modal${custom ? " modal-custom" : ""}" role="dialog" aria-modal="true">
         ${custom || `<div class="modal-title">${esc(title)}</div>`}
         ${custom ? "" : body ? `<p class="modal-body">${esc(body)}</p>` : ""}
+        ${custom || !items.length ? "" : `<ul class="modal-list">${
+          items.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`}
         ${fields.map((f, i) => `
           <label class="modal-field">${esc(f.label)}
             ${f.textarea
@@ -642,8 +644,9 @@ function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
     (first || $("[data-mf=ok]", ov)).focus();
   });
 }
-const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
-  (await modal({ title, body, confirmLabel, danger })) !== null;
+const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false,
+                          items = []) =>
+  (await modal({ title, body, items, confirmLabel, danger })) !== null;
 
 // Revision identity (one board per unit, 2026-08-13) — mirrors
 // app/revisions.py. Prefer server-sent revision fields when present;
@@ -3306,6 +3309,14 @@ const theRead = {
 /* A replaced draft is not re-read (that would overwrite curated work), so
    the read can describe an older draft. Reads before 2026-08-31 carry no
    sha, only a filename. */
+/* A field typed by hand survives a re-run (wizard.merge_analysis reads
+   `hand_edited`). Only fields in wizard.HAND_EDITABLE are honoured. */
+function markHandEdited(a, field, on = true) {
+  const s = new Set(a.hand_edited || []);
+  if (on) s.add(field); else s.delete(field);
+  a.hand_edited = [...s];
+}
+
 function readIsOfOtherDraft(a, sp) {
   if (!a || !sp) return false;
   if (a.screenplay_sha256 && sp.sha256) return a.screenplay_sha256 !== sp.sha256;
@@ -6688,11 +6699,21 @@ async function renderWizard() {
     // READ went too — the locked picker already says the read ran.
     lockHost.innerHTML = (older
       ? `<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}` : "") + `
-      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:${older ? 8 : 0}px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
+      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:${older ? 8 : 0}px">Unlock &amp; re-run</button>
+      <span class="mini wiz-unlock-note">Selecting will show confirmation modal and details.</span>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",
-        "Re-running the read keeps everything you've confirmed — design languages, environments, and their location assignments survive by name. New finds arrive as PROPOSED for your review. Answered questions and cast subjects are never touched.",
-        "Unlock"))) return;
+        "Nothing runs yet. This brings back the model picker and Build Design "
+        + "Plan. The re-run reads the current draft and makes two paid model calls.",
+        "Unlock", false, [
+          "Design languages and environments you confirmed stay as they are, with their notes, keywords and locations.",
+          "New finds arrive as PROPOSED for your review.",
+          "Proposals you never confirmed are dropped unless the new read finds them again.",
+          "Answered questions and your cast are kept.",
+          "A period or act names you typed yourself are kept.",
+          "The logline, key locations and open-question list are replaced.",
+          "A period or act names you did not type are replaced if the new read finds them.",
+        ]))) return;
       $("#wiz-provider").disabled = false;
       $(".wiz-model")?.classList.remove("hidden");
       paintProviderSeg();
@@ -7029,6 +7050,7 @@ async function renderWizard() {
                         turn: cur?.turn || "" }]
               .filter(x => x.title)
               .sort((x, y) => x.n - y.n);
+            markHandEdited(a, "acts");
             saveAnalysis(a);
             renderWorlds();
           });
@@ -7227,6 +7249,8 @@ async function renderWizard() {
       if (v === null) return;
       const a = getAnalysis();
       a.period = String(v).trim();
+      // Cleared means "let the read decide" again.
+      markHandEdited(a, "period", !!a.period);
       if (await saveAnalysis(a)) {
         toast(a.period ? `Period set — every render is held to "${a.period}".`
                        : "Period cleared — renders are no longer era-constrained.");

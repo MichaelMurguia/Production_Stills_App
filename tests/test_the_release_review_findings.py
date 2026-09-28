@@ -413,7 +413,67 @@ class TheModelPickerHidesOnceRead(unittest.TestCase):
     def test_hidden_when_read_and_back_on_unlock(self):
         self.assertIn('$(".wiz-model")?.classList.toggle("hidden", !!a);', JS)
         i = JS.index('$("#wiz-analyze-unlock").onclick')
-        self.assertIn('$(".wiz-model")?.classList.remove("hidden");', JS[i:i + 700])
+        self.assertIn('$(".wiz-model")?.classList.remove("hidden");', JS[i:i + 1800])
+
+
+class AReRunKeepsWhatWasTypedByHand(unittest.TestCase):
+    """User 2026-09-28: "Protect hand edited lines." A re-run replaced a
+    period or act names the user had typed whenever the fresh read had
+    its own."""
+
+    def merge(self, prior, fresh):
+        from app import wizard
+        return wizard.merge_analysis(prior, fresh)
+
+    def test_a_hand_set_period_survives_a_read_that_names_one(self):
+        out = self.merge({"period": "The 1930s", "hand_edited": ["period"]},
+                         {"period": "241 years in the future"})
+        self.assertEqual(out["period"], "The 1930s")
+        self.assertEqual(out["hand_edited"], ["period"])
+
+    def test_hand_named_acts_survive(self):
+        mine = [{"n": 1, "title": "THE FALL", "turn": ""}]
+        out = self.merge({"acts": mine, "acts_named_by": "gpt", "hand_edited": ["acts"]},
+                         {"acts": [{"n": 1, "title": "ARRIVAL", "turn": ""}]})
+        self.assertEqual(out["acts"], mine)
+
+    def test_an_untouched_period_is_still_replaced(self):
+        out = self.merge({"period": "1930s"}, {"period": "1940s"})
+        self.assertEqual(out["period"], "1940s")
+
+    def test_only_editable_fields_are_honoured(self):
+        """A crafted body cannot pin the logline this way."""
+        out = self.merge({"logline": "old", "hand_edited": ["logline"]},
+                         {"logline": "new"})
+        self.assertEqual(out["logline"], "new")
+
+    def test_the_page_marks_both_edits(self):
+        self.assertIn('markHandEdited(a, "acts");', JS)
+        self.assertIn('markHandEdited(a, "period", !!a.period);', JS)
+
+    def test_naming_the_acts_clears_the_mark(self):
+        src = (ROOT / "app/wizard.py").read_text(encoding="utf-8")
+        i = src.index("def name_acts(")
+        self.assertIn('if f != "acts"]', src[i:i + 2600])
+
+
+class TheReRunConfirmSaysWhatHappens(unittest.TestCase):
+    def seg(self):
+        i = JS.index('$("#wiz-analyze-unlock").onclick')
+        return JS[i:i + 1600]
+
+    def test_the_consequences_are_listed(self):
+        s = self.seg()
+        for line in ("stay as they are", "arrive as PROPOSED",
+                     "are dropped unless", "typed yourself are kept",
+                     "open-question list are replaced"):
+            self.assertIn(line, s, line)
+
+    def test_the_modal_escapes_its_list(self):
+        self.assertIn("items.map(t => `<li>${esc(t)}</li>`)", JS)
+
+    def test_the_button_says_it_asks_first(self):
+        self.assertIn("Selecting will show confirmation modal and details.", JS)
 
 
 if __name__ == "__main__":

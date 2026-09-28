@@ -2010,6 +2010,11 @@ details.meta pre {
   text-transform: uppercase; color: var(--ink); font-weight: 700;
 }
 .modal-body { margin: 0; font-size: var(--t-body); color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
+/* UNCANONIZED — 2026-09-28 — a modal's list of consequences (the re-run
+   confirm). Same voice as .modal-body, one line per fact. */
+.modal-list { margin: 0; padding-left: 18px; font-size: var(--t-body);
+  color: var(--ink-dim); max-width: 74ch; display: grid; gap: 4px; }
+.wiz-unlock-note { margin-left: 10px; }
 .modal-field { display: flex; flex-direction: column; gap: 5px; font-size: var(--t-body); color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
 /* UNCANONIZED — 2026-08-06 — colour field (hex + native picker).

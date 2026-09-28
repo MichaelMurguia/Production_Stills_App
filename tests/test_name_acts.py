@@ -174,7 +174,7 @@ class ANameSurvivesAndCanBeDisagreedWith(unittest.TestCase):
     def test_the_heading_can_be_renamed(self):
         self.assertIn("loc-act-name", self.JS)
         i = self.JS.index('$$(".loc-act-name", secHost)')
-        seg = self.JS[i:i + 900]
+        seg = self.JS[i:i + 1000]
         self.assertIn("askText(`Act ${n}`", seg)
         self.assertIn("saveAnalysis(a)", seg)
         self.assertIn("e.stopPropagation()", seg, "renaming is not expanding")

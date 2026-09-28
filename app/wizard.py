@@ -147,7 +147,23 @@ def merge_analysis(prior: dict, fresh: dict) -> dict:
         out[field] = kept
     if prior.get("question_answers"):
         out["question_answers"] = prior["question_answers"]
+    # What the user typed by hand beats a re-run (user 2026-09-28). The
+    # page marks a field in `hand_edited` when it is saved by hand; "Name
+    # the acts" clears the mark, because asking the model is a choice too.
+    hand = [f for f in (prior.get("hand_edited") or []) if f in HAND_EDITABLE]
+    for f in hand:
+        out[f] = prior.get(f)
+        if f == "acts":
+            out["acts_named_by"] = prior.get("acts_named_by")
+    if hand:
+        out["hand_edited"] = hand
     return out
+
+
+# The fields of a read the page lets a person type. Everything else a
+# re-run can replace (design languages and environments are kept by their
+# own confirmed-status rule above).
+HAND_EDITABLE = ("period", "acts")
 
 
 def faction_self_check(analysis: dict, provider: str = "gemini") -> list[dict]:
@@ -1363,5 +1379,7 @@ def name_acts(provider: str = "gemini") -> dict:
     analysis = store.load_wizard_analysis() or {}
     analysis["acts"] = clean
     analysis["acts_named_by"] = model
+    analysis["hand_edited"] = [f for f in (analysis.get("hand_edited") or [])
+                               if f != "acts"]
     store.save_wizard_analysis(analysis)
     return {"acts": clean, "model": model}
