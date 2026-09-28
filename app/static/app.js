@@ -6678,16 +6678,13 @@ async function renderWizard() {
     $(".wiz-merge-note")?.classList.toggle("hidden", !a);
     if (!a) { lockHost.innerHTML = ""; return; }
     const sp = state.screenplay;
-    // Named by the draft it READ, not the one loaded now.
+    // Just the state (user 2026-09-28: file, dates and model were noise —
+    // the model is on the locked picker above). An older draft still names
+    // the draft the read was of, because that is the one fact to act on.
     const older = readIsOfOtherDraft(a, sp);
-    const bits = [
-      esc(a.screenplay || sp?.file || "screenplay"),
-      !older && sp?.uploaded_at ? `uploaded ${esc(sp.uploaded_at)}` : "",
-      a.analyzed_at ? `read ${esc(a.analyzed_at)}` : "",
-      a.model ? `by ${esc(a.model)}` : "",
-    ].filter(Boolean).join(" — ");
-    lockHost.innerHTML = (older ? `<span class="badge DRAFT">OLDER DRAFT</span>`
-                                : `<span class="badge APPROVED">READ</span>`) + ` ${bits}
+    lockHost.innerHTML = (older
+      ? `<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}`
+      : `<span class="badge APPROVED">READ</span>`) + `
       <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",
@@ -7165,10 +7162,9 @@ async function renderWizard() {
                message"). What every reader needs is the rule and, when it
                is unset, the consequence — neither of which is about
                anyone's film. -->
-          <span class="mini">${wizNoPeriod(analysis.period)
-            ? "The read found no period stated in the screenplay. Until one is "
-              + "set, renders are not held to any era."
-            : "Every render is held to this — nothing in frame may postdate it."}</span>
+          ${wizNoPeriod(analysis.period)
+            ? `<span class="mini">The read found no period stated in the screenplay. Until one is
+               set, renders are not held to any era.</span>` : ""}
         </div>
         <div class="read-tiles">${tiles}</div>
       </div>

@@ -396,9 +396,9 @@ class ThePeriodSaysWhatTheReadFound(unittest.TestCase):
         self.assertIn("The read found no period stated in the screenplay",
                       self.seg())
 
-    def test_a_set_period_states_the_rule_and_nothing_else(self):
-        self.assertIn("Every render is held to this — nothing in frame may postdate it.",
-                      self.seg())
+    def test_a_set_period_says_nothing(self):
+        """User 2026-09-28: "Get rid of this stuff." The value is enough."""
+        self.assertNotIn("postdate", JS)
 
     def test_unstated_is_not_treated_as_a_value(self):
         """The scan is TOLD to answer UNSTATED when the screenplay does not

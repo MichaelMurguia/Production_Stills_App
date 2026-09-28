@@ -368,8 +368,10 @@ class AReadSaysWhichDraftItRead(unittest.TestCase):
     def test_stage_02_names_the_draft_it_read(self):
         i = JS.index("const renderAnalyzeLock = () => {")
         seg = JS[i:i + 1400]
-        self.assertIn('esc(a.screenplay || sp?.file || "screenplay")', seg)
-        self.assertIn('<span class="badge DRAFT">OLDER DRAFT</span>', seg)
+        self.assertIn('<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}', seg)
+        # 2026-09-28: when current, the line is the badge alone.
+        for gone in ("uploaded ${", "read ${esc(a.analyzed_at)}", "by ${esc(a.model)}"):
+            self.assertNotIn(gone, seg)
 
     def test_stage_01_marks_the_languages_count(self):
         self.assertIn('${older ? " (OLDER DRAFT)" : ""}', JS)
