@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import re
+import threading
 import uuid
 from pathlib import Path
 
@@ -2686,6 +2687,167 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
     store.link_subject_ref(sid, ref["id"])
     return {"subject": sid, "reference": ref["id"], "provider": provider,
             "aspect_ratio": aspect, "status": ref["status"]}
+
+
+# ------------------------------------------- a design language's own plate
+
+# The cards under DESIGN LANGUAGES showed nothing until a panel was
+# approved — weeks into a production — so every card was a stated blank
+# (user, 2026-09-28: "have a generate button that will generate an image
+# ... Once the Art Bible is created, thumbnails will generate"). One plate
+# per language, rendered under the Bible, the anchors and the period, like
+# every other render.
+#
+# Spend: one 1K render per language. The page renders a missing plate for
+# a CONFIRMED language on its own, once; a failure is recorded here and is
+# never retried automatically — Generate retries it.
+_LANG_BUSY: dict[str, str] = {}   # key -> the language's name
+_LANG_BUSY_LOCK = threading.Lock()
+
+
+def language_key(name: str) -> str:
+    """A filename-safe key for a design language. The name is the user's."""
+    k = re.sub(r"[^a-z0-9]+", "-", str(name).lower()).strip("-")
+    if not k:
+        raise GenerationError("a design language needs a name before it can be rendered")
+    return k[:80]
+
+
+def _lang_dir() -> Path:
+    return paths.DATA / "language_plates"
+
+
+def load_language_plates() -> dict:
+    """Every plate this production has, each carrying its own key, plus
+    the NAMES rendering in this process right now. The page matches by
+    name and never derives a key — one slug rule, here."""
+    p = _lang_dir() / "index.json"
+    try:
+        idx = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except json.JSONDecodeError:
+        idx = {}
+    with _LANG_BUSY_LOCK:
+        busy = sorted(_LANG_BUSY.values())
+    return {"plates": [{"key": k, **r} for k, r in idx.items()], "rendering": busy}
+
+
+def language_plate_path(key: str) -> Path | None:
+    rec = next((r for r in load_language_plates()["plates"] if r["key"] == key), {})
+    f = rec.get("file")
+    p = _lang_dir() / f if f else None
+    return p if p and p.exists() else None
+
+
+def _record_language_plate(d: Path, key: str, rec: dict) -> None:
+    idx_p = d / "index.json"
+    try:
+        idx = json.loads(idx_p.read_text(encoding="utf-8")) if idx_p.exists() else {}
+    except json.JSONDecodeError:
+        idx = {}
+    idx[key] = rec
+    store._atomic_write_json(idx_p, idx)
+
+
+def language_plate(name: str, provider: str = "") -> dict:
+    """Render one plate for a design language and record it."""
+    name = str(name or "").strip()
+    key = language_key(name)
+    analysis = store.load_wizard_analysis() or {}
+    world = next((w for w in analysis.get("design_worlds") or []
+                  if str(w.get("name", "")).strip().casefold() == name.casefold()), None)
+    if world is None:
+        raise GenerationError(f"no design language named {name!r} in this production")
+    provider = provider or (load_settings().get("image_provider") or DEFAULT_PROVIDER)
+    if provider not in all_providers():
+        raise GenerationError(f"provider must be one of {sorted(all_providers())}")
+    if not load_style_bible().strip() or not paths.BIBLE.exists():
+        raise GenerationError("save the Art Direction Bible first — the plate renders from it")
+    clash = bible.anchor_conflicts()
+    if clash:
+        raise GenerationError("; ".join(clash) + ". Re-draft the Bible, or set "
+                              "the anchor back — this renders FROM the Bible.")
+
+    # The Bible's own section for this language when it has one; the
+    # read's description when it does not (a language confirmed after the
+    # Bible was drafted has no section until the next draft).
+    in_bible = next((n for n in bible.design_language_names()
+                     if n.casefold() == name.casefold()), None)
+    language = bible.render_context("", design_languages=[in_bible] if in_bible else [],
+                                    scene_lessons=[])
+    parts = [
+        f"DESIGN LANGUAGE PLATE — {name.upper()}",
+        "",
+        "Render ONE production design plate showing what this design language "
+        "looks like: its architecture, materials, surfaces, costume and "
+        "equipment, in a single establishing composition. A look, not a story "
+        "moment.",
+        "",
+        language,
+    ]
+    if not in_bible:
+        words = str(world.get("description", "")).strip()
+        kws = ", ".join(str(k) for k in (world.get("keywords") or []) if str(k).strip())
+        parts += ["", "THIS DESIGN LANGUAGE", f"{name}. {words}".strip()]
+        if kws:
+            parts.append(f"Keywords: {kws}")
+    period = production_period()
+    if period:
+        parts += ["", f"PERIOD: {period}. Nothing in frame may postdate it."]
+    style_refs = store.auto_style_references()
+    if style_refs:
+        parts += ["", "APPROVED REFERENCE ROLES",
+                  "Each attached reference image controls ONLY its assigned scope. "
+                  "Match it closely within that scope; it controls nothing else."]
+        parts += _reference_role_lines(style_refs)
+    parts += ["", "Render a single full-bleed image. No text, labels, or borders."]
+    prompt = chr(10).join(parts)
+    _require_room("this plate")
+    _require_prompt_fits(provider, prompt)
+    ref_paths = _reference_image_paths(style_refs)
+
+    with _LANG_BUSY_LOCK:
+        if key in _LANG_BUSY:
+            raise LanguagePlateBusy(f"{name} is already rendering")
+        _LANG_BUSY[key] = name
+    # Captured now: a project switch mid-render must not file this plate
+    # in another production.
+    d = _lang_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    tmp = d / f".{key}-{uuid.uuid4().hex}.png"
+    rev = int(store.load_app_state().get("bible_rev", 0))
+    try:
+        if provider == "mock":
+            mockflow.render(prompt, ref_paths, "1K", "16:9", tmp)
+        elif provider == "openai-chat":
+            _render_openai_chat(prompt, ref_paths, "1K", "16:9", tmp, verbatim=True)
+        elif provider.startswith("custom:"):
+            _render_custom(provider, prompt, ref_paths, "1K", "16:9", tmp)
+        elif provider.startswith(("or:", "fal:")):
+            _render_connector(provider, prompt, ref_paths, "1K", "16:9", tmp)
+        elif provider == "openai":
+            _render_openai(prompt, ref_paths, "1K", "16:9", tmp)
+        else:
+            _render_gemini(prompt, ref_paths, "1K", "16:9", tmp)
+        final = d / f"{key}.png"
+        tmp.replace(final)
+        rec = {"name": name, "file": final.name, "provider": provider,
+               "made_at": store.utcnow(), "bible_rev": rev, "status": "ready",
+               "from_bible_section": bool(in_bible)}
+    except Exception as e:  # noqa: BLE001 — recorded, then raised as stated
+        tmp.unlink(missing_ok=True)
+        rec = {"name": name, "status": "failed", "error": str(e)[:300],
+               "provider": provider, "made_at": store.utcnow(), "bible_rev": rev}
+        _record_language_plate(d, key, rec)
+        raise GenerationError(f"{name} did not render: {e}") from e
+    finally:
+        with _LANG_BUSY_LOCK:
+            _LANG_BUSY.pop(key, None)
+    _record_language_plate(d, key, rec)
+    return {"key": key, **rec}
+
+
+class LanguagePlateBusy(GenerationError):
+    """The same language is already rendering in this process."""
 
 
 def list_samples() -> list[dict]:

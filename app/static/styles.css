@@ -1669,6 +1669,22 @@ details.meta pre {
      rather than loosened up there — every other label in the group wants
      them. */
   text-transform: none; letter-spacing: 0; }
+/* UNCANONIZED — 2026-09-28 — a design language's generated plate: a
+   Generate button in the picture's corner, and the app's inline spinner
+   while it waits for the Bible or renders. */
+.lang-shot { position: relative; }
+/* Stacked and centred, in the prose voice the old blank line used: the
+   section's .fgroup uppercase and tracking are reset here, as they are
+   for `.lang-shot.none i`. */
+.lang-shot .busy.busy-inline.lang-wait { margin: 0 0 22px; flex-direction: column; gap: 10px;
+  font-family: var(--sans); text-transform: none; letter-spacing: normal;
+  color: var(--ink-dim); text-align: center; }
+.lang-shot .busy.busy-inline.lang-wait .spinner { width: 20px; height: 20px; border-width: 2px; }
+.lang-gen { position: absolute; right: 8px; bottom: 8px; padding: 4px 10px;
+  font-family: var(--sans); font-size: var(--t-body); color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
+.lang-gen:hover:not(:disabled) { border-color: var(--line-bright); }
+.lang-gen:disabled { cursor: default; color: var(--ink-faint); border-color: var(--hairline); }
 .lang-body { display: block; padding: 9px 11px 11px;
   font-family: var(--sans); font-size: var(--t-body); color: var(--ink); }
 .lang-card.open { border-color: var(--line); }

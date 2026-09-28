@@ -5726,6 +5726,69 @@ async function renderWizard() {
       .catch(() => wizLangArt);
   };
 
+  /* A generated plate per design language (user 2026-09-28). Matched by
+     NAME, case-folded — the server owns the key. Until the Bible exists a
+     card waits; once it does, each confirmed language with no plate
+     renders on its own, one at a time, once per page (a failure is never
+     retried automatically — Generate retries it). */
+  let wizLangPlates = [], wizLangServerBusy = new Set();
+  let wizLangPlatesAsked = false, wizLangPlatesLoaded = false;
+  const wizLangLocalBusy = new Set(), wizLangAutoTried = new Set();
+  // A refusal before the render starts (the Bible contradicting an anchor)
+  // records nothing server-side; the card still has to say it failed.
+  const wizLangErr = new Map();
+  let wizLangQueueRunning = false, wizLangPoll = null;
+  const fold = n => String(n || "").trim().toLowerCase();
+  const plateFor = name => wizLangPlates.find(r => fold(r.name) === fold(name));
+  const plateBusy = name => wizLangLocalBusy.has(fold(name)) || wizLangServerBusy.has(fold(name));
+  const imageModelReady = () => !!state?.capability?.image?.usable;
+  const loadWizLangPlates = () => {
+    wizLangPlatesAsked = true;
+    return api("/api/design-languages/plates").then(r => {
+      wizLangPlates = r.plates || [];
+      wizLangServerBusy = new Set((r.rendering || []).map(fold));
+      wizLangPlatesLoaded = true;
+    }).catch(() => {});
+  };
+  const generateLangPlate = async (name, { auto = false } = {}) => {
+    wizLangLocalBusy.add(fold(name));
+    renderWorlds();
+    try {
+      const rec = await api("/api/design-languages/plates", { method: "POST", json: { name } });
+      wizLangPlates = [...wizLangPlates.filter(r => r.key !== rec.key), rec];
+      wizLangErr.delete(fold(name));
+    } catch (err) {
+      wizLangErr.set(fold(name), err.message);
+      if (!auto) toast(err.message, true);
+      await loadWizLangPlates();
+    } finally {
+      wizLangLocalBusy.delete(fold(name));
+      renderWorlds();
+    }
+  };
+  const langAutoQueue = () => {
+    if (wizLangQueueRunning || !wizLangPlatesLoaded || !bibleIsSaved() || !imageModelReady()) return;
+    const next = (getAnalysis()?.design_worlds || []).find(w =>
+      fold(w.name) && w.status !== "PROPOSED" && !plateFor(w.name)
+      && !plateBusy(w.name) && !wizLangAutoTried.has(fold(w.name)));
+    if (!next) return;
+    wizLangAutoTried.add(fold(next.name));
+    wizLangQueueRunning = true;
+    generateLangPlate(next.name, { auto: true })
+      .finally(() => { wizLangQueueRunning = false; langAutoQueue(); });
+  };
+  // Another tab (or a page reload mid-render) is rendering: look again
+  // until it lands, then paint it.
+  const langPollServer = () => {
+    if (wizLangPoll || !wizLangServerBusy.size) return;
+    wizLangPoll = setTimeout(async () => {
+      wizLangPoll = null;
+      if (activeView !== "wizard") return;
+      await loadWizLangPlates();
+      renderWorlds();
+    }, 4000);
+  };
+
 /* What an anchor's WORDS amount to. One rule: two readers ask it and they
    used to answer differently.
 
@@ -7167,6 +7230,7 @@ async function renderWizard() {
     // correct itself.
     if (!wizRefsAsked) loadWizRefs().then(renderWorlds);
     if (!wizLangArtAsked) loadWizLangArt().then(renderWorlds);
+    if (!wizLangPlatesAsked) loadWizLangPlates().then(renderWorlds);
     // The reveal strip (plan P1 / R1): the read presents as a summary, not a
     // wall. Counts link to their sections; segments render only when their
     // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
@@ -7320,13 +7384,46 @@ async function renderWizard() {
       const chip = document.createElement("span");
       chip.className = "lang-card" + (open ? " open" : "") + (proposed ? " proposed" : "");
       chip.style.cursor = "pointer";
+      /* The picture, in order: this language's generated plate; a spinner
+         while it renders or while the Bible it renders from does not
+         exist yet; an approved panel in the language; a stated blank. */
       const shot = wizLangArt[String(w.name || "").trim().toUpperCase()];
+      const plate = plateFor(w.name);
+      const busy = plateBusy(w.name);
+      const ready = plate?.status === "ready";
+      const wait = t => `<span class="busy busy-inline lang-wait"><span class="spinner"></span>${t}</span>`;
       const art = document.createElement("span");
-      art.className = "lang-shot" + (shot ? "" : " none");
-      if (shot)
+      let fill = "";
+      if (ready && !busy) {
+        art.style.backgroundImage = `url('/api/design-languages/plates/${encodeURIComponent(plate.key)}/image?v=${encodeURIComponent(plate.made_at || "")}')`;
+      } else if (busy) {
+        fill = wait("Generating");
+      } else if (!bibleIsSaved()) {
+        fill = wait("Waiting for art bible");
+      } else if (shot) {
         art.style.backgroundImage = `url("${shot}")`;
-      else
-        art.innerHTML = `<i>Examples will appear here from your panels.</i>`;
+      } else if (!imageModelReady()) {
+        fill = `<i>No image model connected.</i>`;
+      } else if (plate?.status === "failed" || wizLangErr.has(fold(w.name))) {
+        fill = `<i title="${esc(wizLangErr.get(fold(w.name)) || plate?.error || "")}">Didn't render.</i>`;
+      } else if (proposed || wizLangAutoTried.has(fold(w.name))) {
+        fill = `<i>Not generated yet.</i>`;
+      } else {
+        fill = wait("Queued");
+      }
+      art.className = "lang-shot" + (fill ? " none" : "");
+      art.innerHTML = fill;
+      const canGen = bibleIsSaved() && imageModelReady() && !busy && !!String(w.name || "").trim();
+      const gen = document.createElement("button");
+      gen.type = "button";
+      gen.className = "lang-gen";
+      gen.textContent = ready ? "Regenerate" : "Generate";
+      gen.disabled = !canGen;
+      gen.title = !bibleIsSaved() ? "Save the Art Direction Bible first"
+        : !imageModelReady() ? "Connect an image model in Settings"
+        : busy ? "Rendering" : "1 render";
+      gen.onclick = e => { e.stopPropagation(); if (canGen) generateLangPlate(w.name); };
+      art.append(gen);
       chip.append(art);
       // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
       // CONFIRM / DROP in place. Confirmation is the default state — a
@@ -7361,7 +7458,7 @@ async function renderWizard() {
       }
       chip.title = `${w.description || ""}\nClick to ${open ? "collapse" : "expand"}.`;
       chip.onclick = e => {
-        if (e.target.closest(".prop-act")) return;
+        if (e.target.closest(".prop-act, .lang-gen")) return;
         open ? expandedWorlds.delete(i) : expandedWorlds.add(i);
         renderWorlds();
       };
@@ -7383,6 +7480,8 @@ async function renderWizard() {
       $("[data-f=edit]", rows[rows.length - 1])?.click();
     };
     tagHost.append(addChip);
+    langAutoQueue();
+    langPollServer();
     if (proposedN) tagHost.insertAdjacentHTML("afterend",
       `<p class="mini">The self-check found ${proposedN === 1 ? "a named group" : `${proposedN} named groups`} no language covers. Confirming writes its Bible section; the read never adds one itself.</p>`);
     worlds.forEach((w, i) => {
@@ -8608,6 +8707,7 @@ async function renderWizard() {
       $("#style-status").innerHTML = `<span class="badge LOCKED">REV ${r.rev}</span> saved`;
       updateBand();  // Breakdowns unlock themselves right now, visibly
       syncSwatchGen();  // the step-1 swatch gate arms itself right now too
+      renderWorlds();   // design-language plates stop waiting and start
       toast("Art Direction Bible saved — Breakdowns are open.");
       return true;
     } catch (err) { toast(err.message, true); return false; }

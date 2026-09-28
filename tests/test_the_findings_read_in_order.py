@@ -58,10 +58,13 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         scoped to a language is a vocabulary nothing on this screen
         teaches; a panel is what the language actually produced, and
         every production gets panels."""
+        # 2026-09-28: a generated plate leads; the panel is the fallback
+        # when there is no plate (user: "have a generate button").
         i = JS.index("const shot = wizLangArt[")
-        seg = JS[i:i + 400]
+        seg = JS[i:JS.index("chip.append(art);", i)]
         self.assertIn('String(w.name || "").trim().toUpperCase()', seg)
         self.assertIn('art.style.backgroundImage = `url("${shot}")`', seg)
+        self.assertLess(seg.index("if (ready && !busy)"), seg.index("} else if (shot) {"))
         self.assertNotIn("wizRefs", seg)
 
     def test_the_server_derives_it_from_approved_panels(self):
@@ -85,9 +88,12 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         empty. The old sentence named a mechanism ("no reference SCOPED
         to this language") instead of a next step, in a word the user had
         never been shown."""
-        i = JS.index('art.className = "lang-shot"')
-        seg = JS[i:i + 500]
-        self.assertIn("Examples will appear here from your panels.", seg)
+        # 2026-09-28: every blank names its blocker — the Bible, the image
+        # model, a failed render — instead of promising panels.
+        i = JS.index("The picture, in order: this language's generated plate")
+        seg = JS[i:JS.index("chip.append(art);", i)]
+        for said in ('"Waiting for art bible"', "No image model connected.", "Didn't render."):
+            self.assertIn(said, seg, said)
         self.assertNotIn("SCOPED", seg)
         b = CSS.split(NL + ".lang-shot.none {")[1].split("}")[0]
         self.assertIn("repeating-linear-gradient", b)

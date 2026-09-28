@@ -2564,6 +2564,35 @@ def api_design_language_examples() -> dict:
     return out
 
 
+@app.get("/api/design-languages/plates")
+def api_design_language_plates() -> dict:
+    """Every design-language plate this production has, and which are
+    rendering right now. See generate.language_plate."""
+    return generate.load_language_plates()
+
+
+@app.get("/api/design-languages/plates/{key}/image")
+def api_design_language_plate_image(key: str):
+    p = generate.language_plate_path(paths.safe_id(key) if key else key)
+    if p is None:
+        raise HTTPException(404, f"no plate for {key}")
+    return FileResponse(p)
+
+
+@app.post("/api/design-languages/plates")
+async def api_design_language_plate(body: dict) -> dict:
+    """Render one design language's plate. Spends one image render; the
+    page states that on the button before it is pressed."""
+    try:
+        return await run_in_threadpool(
+            generate.language_plate, str(body.get("name", "")),
+            str(body.get("provider", "")))
+    except generate.LanguagePlateBusy as e:
+        raise HTTPException(409, str(e))
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.get("/api/subjects/scenes")
 def api_subject_scene_counts() -> dict:
     """`{subject id: scenes}` for every cast subject, in one screenplay walk.

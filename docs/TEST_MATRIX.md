@@ -24,13 +24,14 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2829 tests** across 139 files.
+**2847 tests** across 140 files.
 
 
-## Product app — 2599 tests in 122 files
+## Product app — 2617 tests in 123 files
 
 | File | Tests | What it holds |
 |---|---:|---|
+| `test_a_design_language_has_a_plate.py` | 18 | A design language gets its own generated plate. |
 | `test_a_pass_does_not_outlive_its_key.py` | 9 | A stored test result must not outlive the credential it tested. |
 | `test_a_read_names_the_draft_it_read.py` | 16 | A read names the draft it read, and a stage does not retract itself. |
 | `test_a_subject_has_a_profile_and_two_doors.py` | 50 | A subject carries a profile, and two ways to get a picture. |

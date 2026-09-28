@@ -217,8 +217,9 @@ def main() -> int:
     env = dict(os.environ)
     env["SCREENBOARD_HOME"] = str(HOME)
     if not a.keys:
-        for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
-                  "OPENROUTER_API_KEY", "REPLICATE_API_TOKEN"):
+        # GOOGLE_API_KEY too: generate._client (Gemini) falls back to it.
+        for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY",
+                  "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "REPLICATE_API_TOKEN"):
             env[k] = ""
         # Blanking the environment was never enough: stored settings WIN
         # over it, so a dev home whose settings.json holds a key rendered
