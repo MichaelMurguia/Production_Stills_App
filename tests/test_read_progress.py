@@ -557,8 +557,10 @@ class ReadIsWhatTheModelDoes(unittest.TestCase):
         self.assertNotIn(">Read the screenplay<", seg)
 
     def test_every_door_to_the_file_says_the_same_thing(self):
-        """Three buttons open the upload. They disagreed."""
-        self.assertEqual(self.JS.count("Open screenplay"), 3)
+        """The buttons that open the upload used to disagree. Three became
+        two on 2026-09-28 — stage 02's head lost its door (user: "no reason
+        to open the screenplay here")."""
+        self.assertEqual(self.JS.count("Open screenplay"), 2)
         self.assertNotIn("Read the screenplay<", self.JS)
 
     def test_it_still_says_the_file_never_reaches_a_model(self):

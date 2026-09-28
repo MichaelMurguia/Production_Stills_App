@@ -657,6 +657,10 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".rail-chip.current", [
             "border: 1px solid var(--accent-line)", "background: var(--panel2)"])
         self.assert_decls(".rail-chip.done .rail-num", ["color: var(--ok)"])
+        # 2026-09-28: each chip bordered, so the rail reads as buttons.
+        self.assert_decls(".rail-chip", ["border: 1px solid var(--line)",
+                                         "background: var(--field)"])
+        self.assert_decls(".rail-chip:hover", ["border-color: var(--line-bright)"])
         self.assert_decls(".wiz-v3 h2", ["font-family: var(--mono)"])
         self.assert_decls(".step-cond", ["color: var(--ink-faint)"])
 

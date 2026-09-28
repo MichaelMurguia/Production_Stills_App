@@ -375,5 +375,33 @@ class AReadSaysWhichDraftItRead(unittest.TestCase):
         self.assertIn('${older ? " (OLDER DRAFT)" : ""}', JS)
 
 
+class AJumpLandsBelowTheBand(unittest.TestCase):
+    """User 2026-09-28: the step rail "should go to the top line of that
+    section, and the title of the section on screen." Header + band are
+    ~137px sticky; every jump subtracted a fixed 80, so titles landed
+    under the band — on the rail and on six other jumps."""
+
+    def test_no_fixed_offset_survives(self):
+        self.assertNotIn("scrollY - 80", JS)
+
+    def test_the_offset_is_measured(self):
+        i = JS.index("function stickyBottom()")
+        self.assertIn('$("nav#nav")?.getBoundingClientRect().bottom', JS[i:i + 200])
+        self.assertIn("stickyBottom() - 12", JS)
+
+    def test_the_rail_and_its_highlight_use_it(self):
+        self.assertIn("if (el) scrollUnderBand(el);", JS)
+        self.assertIn("top <= stickyBottom() + 20", JS)
+        self.assertNotIn("top <= 140", JS)
+
+
+class TheStageHeadHasNoScreenplayLine(unittest.TestCase):
+    """User 2026-09-28: 'No reason to open the screenplay here.'"""
+
+    def test_gone(self):
+        self.assertNotIn('id="wiz-screenplay"', HTML)
+        self.assertNotIn("#wiz-screenplay", JS)
+
+
 if __name__ == "__main__":
     unittest.main()

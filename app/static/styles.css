@@ -3065,16 +3065,13 @@ body[data-cast="1"] .wiz-head { display: none; }
   color: var(--ink); margin: 0; letter-spacing: -.01em; }
 .wiz-head-label { font-family: var(--mono); font-size: var(--t-body); font-weight: 700;
   letter-spacing: .12em; color: var(--ink); white-space: nowrap; }
-.wiz-head-file { margin-left: auto; text-align: right; min-width: 0;
-  font-family: var(--mono); font-size: var(--t-body);
-  letter-spacing: .04em; color: var(--ink-dim); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; }
-.step-rail { display: flex; }
+/* UNCANONIZED — 2026-09-28 — the rail reads as buttons (user: "I was not
+   sure what I could click"). Separators alone made it a line of labels. */
+.step-rail { display: flex; gap: 6px; flex-wrap: wrap; }
 .rail-chip { font-family: var(--mono); font-size: var(--t-mark); letter-spacing: .06em;
-  color: var(--ink-dim); background: none; border: 1px solid transparent;
-  border-left: 1px solid var(--line-soft); padding: 6px 12px; cursor: pointer;
-  white-space: nowrap; }
-.step-rail .rail-chip:first-child { border-left-color: transparent; }
+  color: var(--ink-dim); background: var(--field); border: 1px solid var(--line);
+  padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+.rail-chip:hover { color: var(--ink); border-color: var(--line-bright); }
 .rail-chip.current { border: 1px solid var(--accent-line);
   background: var(--panel2); color: var(--ink); }
 .rail-chip.done .rail-num { color: var(--ok); }
@@ -5276,7 +5273,7 @@ code, pre,
 .eng-powers, .rs-name, .rs-desc, .rs-films,
 .rs-chosen .rs-name, .rs-chosen .rs-desc,
 .text-act, .seq .act-bar .text-act, .act-bar .text-act, .update-bar .text-act,
-.scr-file, .prod-slug, .bible-path, .wiz-head-file, .wv-tag, .rp-val,
+.scr-file, .prod-slug, .bible-path, .wv-tag, .rp-val,
 .cam-lens .cam-lens-mm, .models-line, .panel-card .head .alloc input,
 input[type=text]#spec-auto-id, input[type=text]#spec-new-id,
 .mf-color input[type=text] {

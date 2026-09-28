@@ -3312,6 +3312,17 @@ function readIsOfOtherDraft(a, sp) {
   return !!(a.screenplay && sp.file) && a.screenplay !== sp.file;
 }
 
+/* The header and the pipeline band are both sticky (~137px together, more
+   when the band wraps). A jump to a section must land below them — the
+   old fixed 80px put every step title under the band. */
+function stickyBottom() {
+  return $("nav#nav")?.getBoundingClientRect().bottom || 0;
+}
+function scrollUnderBand(el) {
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY
+                         - stickyBottom() - 12, behavior: "smooth" });
+}
+
 async function startTheRead() {
   try {
     const have = await api("/api/wizard/analysis").catch(() => ({}));
@@ -4969,14 +4980,6 @@ async function renderWizard() {
         true));
   }
   if (wizAnalysis) wizACacheSet(wizAnalysis);
-  const spChars = state.screenplay?.text_chars;
-  $("#wiz-screenplay").innerHTML = state.screenplay
-    ? `${esc(state.screenplay.file)}${spChars ? ` &middot; ${spChars.toLocaleString()} CHARACTERS` : ""}
-       <button type="button" class="text-act" data-f="open-screenplay"
-         title="Open the original upload in a new tab — yours to read, never sent to a model">Open screenplay</button>`
-    : `<span class="badge REJECTED">NO SCREENPLAY</span> upload it on Stage 01 first — every step here needs it`;
-  $("[data-f=open-screenplay]", $("#wiz-screenplay"))
-    ?.addEventListener("click", () => window.open("/api/screenplay/file", "_blank"));
 
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
@@ -5332,9 +5335,7 @@ async function renderWizard() {
             + `<button class="text-act" data-f="sw-goto">REVIEW THEM</button>`;
           $("[data-f=sw-goto]", genHost).onclick = () => {
             const el = $('.wiz-col[data-role="COLOR_PALETTE"]');
-            if (el) window.scrollTo({
-              top: el.getBoundingClientRect().top + window.scrollY - 80,
-              behavior: "smooth" });
+            if (el) scrollUnderBand(el);
           };
         } catch (err) { toast(err.message, true); }
         go.disabled = false;
@@ -5362,8 +5363,11 @@ async function renderWizard() {
     let cur = 1;
     for (const [n] of RAIL) {
       const el = $(`.panel.step[data-step="${n}"]`);
-      if (el && el.getBoundingClientRect().top <= 140) cur = n;
+      if (el && el.getBoundingClientRect().top <= stickyBottom() + 20) cur = n;
     }
+    // The last step cannot scroll up to the band — the page ends first.
+    if (Math.ceil(window.scrollY + innerHeight) >= document.documentElement.scrollHeight - 2)
+      cur = RAIL[RAIL.length - 1][0];
     $$(".rail-chip", rail).forEach(c =>
       c.classList.toggle("current", +c.dataset.gotoStep === cur));
   };
@@ -5371,9 +5375,7 @@ async function renderWizard() {
     const chip = e.target.closest(".rail-chip");
     if (!chip) return;
     const el = $(`.panel.step[data-step="${chip.dataset.gotoStep}"]`);
-    if (el) window.scrollTo({
-      top: el.getBoundingClientRect().top + window.scrollY - 80,
-      behavior: "smooth" });
+    if (el) scrollUnderBand(el);
   };
   const onRailScroll = () => {
     if (!rail.isConnected)
@@ -6486,8 +6488,8 @@ async function renderWizard() {
     const goFix = $("[data-f=gen-go]", host);
     if (goFix) goFix.onclick = () => {
       closeCast();
-      $('.panel.step[data-step="4"]')?.scrollIntoView({ behavior: "smooth",
-                                                        block: "start" });
+      const b = $('.panel.step[data-step="4"]');
+      if (b) scrollUnderBand(b);
     };
     if (pending) {
       $("[data-f=accept]", host).onclick = () => castRule(pending, "APPROVED");
@@ -6857,9 +6859,7 @@ async function renderWizard() {
           $("[data-f=goto-lang]", ov)?.addEventListener("click", () => {
             done(null);
             const el = $("#wiz-langs-sec");
-            if (el) window.scrollTo({
-              top: el.getBoundingClientRect().top + window.scrollY - 80,
-              behavior: "smooth" });
+            if (el) scrollUnderBand(el);
           });
           $("[data-f=save]", ov).onclick = () => {
             const v = f => $(`[data-f=${f}]`, ov).value.trim();
@@ -7207,8 +7207,7 @@ async function renderWizard() {
     };
     $$(".read-tile", host).forEach(a => a.onclick = () => {
       const el = GOTO[a.dataset.goto]?.();
-      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80,
-                                behavior: "smooth" });
+      if (el) scrollUnderBand(el);
     });
     // The production states WHEN it is set, once, and every render is held
     // to it (first user test, 2026-08-23). Pre-filled by the scan; editable
@@ -8032,8 +8031,7 @@ async function renderWizard() {
       : `<span class="mini">no anchor has a picture yet</span>`;
     $$(".bd-idx", rail).forEach(b => b.onclick = () => {
       const el = document.getElementById(b.dataset.to);
-      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 80,
-                                behavior: "smooth" });
+      if (el) scrollUnderBand(el);
     });
   };
 
@@ -10866,8 +10864,7 @@ async function openSpecEditor(specId) {
     uiSet("boardSpec", specId);
     showView("boards");
   };
-  window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 80,
-                    behavior: "smooth" });
+  scrollUnderBand(panel);
 
   // The scope receipt (review 2026-08-01 §3+4): one line while every panel
   // inherits; with exceptions it tells the truth in two parts — the board's
@@ -11432,8 +11429,7 @@ REMOVE — marked for removal from the board.">
       const g = reasons.find(r => r.jump).jump;
       const target = $$(".ledger-row", ledgerHost).find(r => rowMatches(r, g.pid, g.obj))
         || $$(".panel-card", panelsHost).find(pc => pc.dataset.pid === g.pid) || panel;
-      window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80,
-                        behavior: "smooth" });
+      scrollUnderBand(target);
     };
   };
   panel.addEventListener("input", computeGate);
