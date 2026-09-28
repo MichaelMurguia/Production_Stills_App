@@ -1061,6 +1061,62 @@ being a design token. The font ban in this file governs chrome.
 
 ## Copy
 
+### Voice — built from the user's own edits (started 2026-09-28)
+
+The user asked for this: *"start learning from my text updates. Build a
+writing style."* Every rule below comes from a line the user rewrote or
+cut. **Add to it whenever the user edits copy** — quote the before and
+after, then the rule it teaches.
+
+**What the user wrote, verbatim (typos fixed, wording kept):**
+
+| Was | User's version |
+|---|---|
+| `NO REFERENCE SCOPED TO THIS LANGUAGE YET` | Examples will appear here from your panels. |
+| Exposure has done its work and someone has answered it. Sun has pulled colour out of upward faces, water has run and left its track, metal has oxidised where coating failed — and then a human intervened: a patch, a mismatched panel, a re-coat that does not quite match. The presence of repair is what separates weathered from decayed. This world is fought for. | Exposure has done its work. Sun fading, water damage, rust. Maintained. A patch, a mismatched panel, a re-coat that does not quite match. The presence of repair is what separates weathered from decayed. |
+| Every render is held to this. Say it the way you would say it to a concept artist — a decade, a century, an era, or a distance from now. | Period description. "200 years into the future", or "The 1930s", or "A long time ago in a galaxy far far..." |
+| *(a button with no explanation)* | Selecting will show confirmation modal and details. |
+| Nothing runs yet. This brings back the model picker and Build Design Plan. The re-run reads the current draft and makes two paid model calls. | Rerun the design review using an updated script. |
+
+**Cut outright, no replacement:** `WHAT A PANEL IS ALLOWED TO LOOK
+LIKE` · `Every render is held to this — nothing in frame may postdate it.` ·
+the read's file name, upload date, read date and model · the `READ` badge ·
+the `MODEL` label and its locked picker · `Descendant.pdf · 59,422
+CHARACTERS Open screenplay` · a `?` popover that was long and quoted the
+user's own script.
+
+**The rules they teach:**
+
+1. **Name the thing, then stop.** Lead with what it is — *"Period
+   description."* No preamble, no reason why it matters.
+2. **Fragments and noun lists beat clauses.** *"Sun fading, water damage,
+   rust."* not *"Sun has pulled colour out of upward faces…"*. One word can
+   be a sentence: *"Maintained."*
+3. **Do not explain the machinery.** How the system uses a value
+   (*"Every render is held to this"*) is a rule for this document, not
+   copy for the screen.
+4. **Examples: two or three, in quotes, spanning genres, never from the
+   production's own script.** Playful is fine — *"A long time ago in a
+   galaxy far far..."*.
+5. **Say what a control will do in one line; put the detail behind it.**
+   The consequences of a rerun live in its dialog, not beside its button.
+6. **Metadata nobody acts on goes.** File names, timestamps, model names,
+   character counts. Keep a fact only if it changes what the user does
+   next (`OLDER DRAFT` stays; `uploaded 2026-08-31T13:57:05` does not).
+7. **Plain words, the user's words.** *script*, *design review*,
+   *rerun*. Not *the read's merge semantics*, not *analysis*.
+8. **Nothing that reads as machine-written.** The user: *"Write like a
+   human. Concise. Stop marking the sentence structure so it can be
+   identified as Claude."* So none of:
+   - the em-dash pivot (*"…and then a human intervened: a patch"*)
+   - the *"X, not Y"* / *"rather than"* antithesis
+   - the closing aphorism (*"This world is fought for."*)
+   - three-beat lists added for rhythm rather than content
+   - colon reveals, *"the point"*, *"worth noting"*, *"deliberate"*,
+     *"legible"*, *"honest"*
+9. **Fix the user's typos, never their wording.** They type fast;
+   *"usingon an updated scritpt"* ships as *"using an updated script"*.
+
 ### Say it once, or show it (COPY_DISCIPLINE, ruled 2026-09-13)
 
 **A control explains itself by how it looks and what it is called. Not by
@@ -2011,7 +2067,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 | Date | Pattern | Used in | Why nothing existing worked |
 |---|---|---|---|
-| 2026-09-28 | **The re-run confirm lists its consequences** (user: "put these description bullets in the confirmation modal"): `modal()` gains an escaped `items` list, `.modal-list`, one line per fact, under the body. The re-run confirm uses it for seven lines — what is kept, what arrives PROPOSED, what is dropped, what is replaced. Beside `Unlock & re-run` a `.mini` line, the user's copy: "Selecting will show confirmation modal and details." | Stage 02 step 2; available to every `askConfirm` | New pattern — review whether a bulleted modal is the right shape for consequences, and whether a sentence beside a button saying it asks first is needed when every destructive button already does |
+| 2026-09-28 | **The rerun dialog is the rerun** (user: "The confirmation modal should execute the rerun. It should use the current AI model currently selected for script reads, not prompt for a new model." / "Format the confirmation modal so it is not ass."): `Rerun design review` opens a custom modal — the user's lead line, then three columns KEPT / ADDED / REPLACED, each under a 2px rule in its outcome colour (`--ok`, `--hold`, `--line-bright`; the colour is on the rule, never the word), and a footer with the Courier cost `2 CALLS · <MODEL>` beside Cancel and the primary `Rerun`. Confirming runs the read with the Settings script-read model through the same ladder Build Design Plan uses; the model picker no longer returns. Stacks to one column under 640px. Beside the button, the user's line: "Selecting will show confirmation modal and details." | Stage 02 step 2 | New pattern — review the three-column consequence layout as a reusable shape for any destructive rerun, and whether the button's explanatory line is still needed now the dialog carries it |
 | 2026-09-28 | **The step rail reads as buttons, and lands below the band** (user: "I was not sure what I could click"; "make sure they go to the top line of that section, and the title is on screen"): each `.rail-chip` is now bordered `--line` on `--field`, 6px apart, `--line-bright` on hover — separators alone read as a line of labels. Every in-page jump (the rail and six others) subtracted a fixed 80px while the sticky header + band is ~137px, so titles landed under the band; one `scrollUnderBand()` now measures `nav#nav`. The screenplay file line and its `Open screenplay` left the stage head | Stage 02 head; every in-page jump | New pattern for the rail chip — review whether bordered chips compete with the pipeline band above them; the last step (TEST) still cannot reach the band because the page ends |
 | 2026-09-27 | **A read says which draft it read**: replacing a draft does not re-read it, and stage 02 labelled the old read with the new draft's name. The lock line now names the draft the read was of, and when that is not the loaded draft its badge is `.badge.DRAFT` `OLDER DRAFT` instead of `READ`; stage 01's READ fact reads `3 LANGUAGES (OLDER DRAFT) · 11 LOCS` | Stage 02 read lock line; stage 01 READ fact | Built from canon — review the copy only |
 | 2026-09-27 | **One control uploads the screenplay** (user: "you have two buttons. Upload a new draft and Choose File. That's confusing right?"): every screenplay form showed the browser's own file input — unstyled, `No file chosen` beside it — next to the verb, and the verb stayed disabled until the input had been used, so the live-looking button was the browser's and the one dressed as the action was dead. The native input is now hidden; the verb opens the file dialog and choosing a file submits, the dialog itself being the confirmation (cancel does nothing) — the shape `Add images` already had. Only the engine gate can disable it now. **Replace drops from `.primary` to `.ghost`**: always live now, it would otherwise put permanent amber on an occasional act on a stage whose next step is the band's | All three screenplay forms — the Status lead, stage 01's empty state, and stage 01 → Replace | Built from canon — no new pattern. Review (1) Replace as `.ghost` — the stage now shows no amber action once a script is loaded; (2) whether a draft replacement, which re-checks every cited quote, wants a confirmation step that picking a file no longer gives it |
@@ -2104,7 +2160,7 @@ different vocabularies, and a ruling for one is not a ruling for the other.
 
 ## Changelog
 
-- **2026-09-28** — `modal()` `items` → `.modal-list`; the re-run confirm lists its consequences; a hand-typed period or act names survive a re-run.
+- **2026-09-28** — The rerun dialog (`.rr`, three outcome columns + cost footer) runs the read with the script-read model; a hand-typed period or act names survive a rerun. Copy → Voice section added from the user's edits.
 - **2026-09-28** — Stage 02 read line is `Unlock & re-run` only — no READ badge; the MODEL picker and its label hide once read and return on Unlock (file, upload/read dates and model removed; an older draft keeps its filename). The period card drops "Every render is held to this".
 - **2026-09-28** — `.rail-chip` bordered with a hover; in-page jumps land below the measured band (`scrollUnderBand`); the stage-02 head loses the screenplay line.
 - **2026-09-27** — A read of a replaced draft is marked `OLDER DRAFT` (stage 02 badge, stage 01 READ fact) and named by the draft it read.

@@ -2010,11 +2010,35 @@ details.meta pre {
   text-transform: uppercase; color: var(--ink); font-weight: 700;
 }
 .modal-body { margin: 0; font-size: var(--t-body); color: var(--ink-dim); white-space: pre-line; max-width: 74ch; }
-/* UNCANONIZED — 2026-09-28 — a modal's list of consequences (the re-run
-   confirm). Same voice as .modal-body, one line per fact. */
-.modal-list { margin: 0; padding-left: 18px; font-size: var(--t-body);
-  color: var(--ink-dim); max-width: 74ch; display: grid; gap: 4px; }
 .wiz-unlock-note { margin-left: 10px; }
+
+/* UNCANONIZED — 2026-09-28 — the rerun dialog. What a rerun does is
+   three facts, so it is three columns: KEPT, ADDED, REPLACED, each under
+   a 2px rule in the colour of its outcome (--ok kept, --hold proposed,
+   --line-bright replaced — neutral, it is not an error). The call cost
+   sits beside the verb in Courier, as every spending verb's does. */
+.modal.modal-custom:has(.rr) { width: min(780px, 94vw); }
+.rr-head { padding: 22px 24px 20px; }
+.rr-lead { margin: 8px 0 0; font-size: var(--t-title); color: var(--ink); line-height: 1.35; }
+.rr-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rr-col { padding: 16px 24px 22px; border-top: 2px solid var(--line-bright); }
+.rr-col + .rr-col { border-left: 1px solid var(--line-soft); }
+.rr-kept { border-top-color: var(--ok); }
+.rr-added { border-top-color: var(--hold); }
+/* The colour is on the rule, never the word: --hold is a line colour and
+   fails the 7:1 glyph floor. */
+.rr-kick { font-family: var(--mono); font-size: var(--t-mark); letter-spacing: .12em;
+  font-weight: 700; margin: 0 0 12px; color: var(--ink); }
+.rr-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.rr-col li { font-size: var(--t-body); color: var(--ink-dim); line-height: 1.35; }
+.rr-foot { display: flex; align-items: center; gap: 10px; padding: 14px 24px;
+  border-top: 1px solid var(--line-soft); background: var(--panel); }
+.rr-cost { margin-right: auto; font-family: var(--mono); font-size: var(--t-mark);
+  letter-spacing: .12em; color: var(--ink-faint); }
+@media (max-width: 640px) {
+  .rr-cols { grid-template-columns: 1fr; }
+  .rr-col + .rr-col { border-left: 0; }
+}
 .modal-field { display: flex; flex-direction: column; gap: 5px; font-size: var(--t-body); color: var(--ink-dim); }
 .modal-field textarea { min-height: 74px; }
 /* UNCANONIZED — 2026-08-06 — colour field (hex + native picker).

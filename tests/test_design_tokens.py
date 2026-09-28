@@ -661,6 +661,10 @@ class TokenContractTests(unittest.TestCase):
         self.assert_decls(".rail-chip", ["border: 1px solid var(--line)",
                                          "background: var(--field)"])
         self.assert_decls(".rail-chip:hover", ["border-color: var(--line-bright)"])
+        # 2026-09-28: the rerun dialog — outcome colours on the column rules.
+        self.assert_decls(".rr-kept", ["border-top-color: var(--ok)"])
+        self.assert_decls(".rr-added", ["border-top-color: var(--hold)"])
+        self.assert_decls(".rr-cost", ["color: var(--ink-faint)"])
         self.assert_decls(".wiz-v3 h2", ["font-family: var(--mono)"])
         self.assert_decls(".step-cond", ["color: var(--ink-faint)"])
 

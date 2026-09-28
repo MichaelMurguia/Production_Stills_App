@@ -558,7 +558,7 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
 }
 
 
-function modal({ title, body = "", items = [], fields = [], confirmLabel = "Confirm",
+function modal({ title, body = "", fields = [], confirmLabel = "Confirm",
                 danger = false, custom = "", mount = null,
                 extraLabel = "", extraDanger = false }) {
   return new Promise(resolve => {
@@ -568,8 +568,6 @@ function modal({ title, body = "", items = [], fields = [], confirmLabel = "Conf
       <div class="modal${custom ? " modal-custom" : ""}" role="dialog" aria-modal="true">
         ${custom || `<div class="modal-title">${esc(title)}</div>`}
         ${custom ? "" : body ? `<p class="modal-body">${esc(body)}</p>` : ""}
-        ${custom || !items.length ? "" : `<ul class="modal-list">${
-          items.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`}
         ${fields.map((f, i) => `
           <label class="modal-field">${esc(f.label)}
             ${f.textarea
@@ -644,9 +642,8 @@ function modal({ title, body = "", items = [], fields = [], confirmLabel = "Conf
     (first || $("[data-mf=ok]", ov)).focus();
   });
 }
-const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false,
-                          items = []) =>
-  (await modal({ title, body, items, confirmLabel, danger })) !== null;
+const askConfirm = async (title, body, confirmLabel = "Confirm", danger = false) =>
+  (await modal({ title, body, confirmLabel, danger })) !== null;
 
 // Revision identity (one board per unit, 2026-08-13) — mirrors
 // app/revisions.py. Prefer server-sent revision fields when present;
@@ -6699,28 +6696,66 @@ async function renderWizard() {
     // READ went too — the locked picker already says the read ran.
     lockHost.innerHTML = (older
       ? `<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}` : "") + `
-      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:${older ? 8 : 0}px">Unlock &amp; re-run</button>
+      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:${older ? 8 : 0}px">Rerun design review</button>
       <span class="mini wiz-unlock-note">Selecting will show confirmation modal and details.</span>`;
-    $("#wiz-analyze-unlock").onclick = async () => {
-      if (!(await askConfirm("Unlock the screenplay analysis",
-        "Nothing runs yet. This brings back the model picker and Build Design "
-        + "Plan. The re-run reads the current draft and makes two paid model calls.",
-        "Unlock", false, [
-          "Design languages and environments you confirmed stay as they are, with their notes, keywords and locations.",
-          "New finds arrive as PROPOSED for your review.",
-          "Proposals you never confirmed are dropped unless the new read finds them again.",
-          "Answered questions and your cast are kept.",
-          "A period or act names you typed yourself are kept.",
-          "The logline, key locations and open-question list are replaced.",
-          "A period or act names you did not type are replaced if the new read finds them.",
-        ]))) return;
-      $("#wiz-provider").disabled = false;
-      $(".wiz-model")?.classList.remove("hidden");
-      paintProviderSeg();
-      $("#wiz-analyze").classList.remove("hidden");
-      lockHost.innerHTML = `<span class="mini">unlocked — pick a model and re-run; the previous analysis stands until then</span>`;
+    // The dialog IS the rerun (user 2026-09-28): no unlock step, no model
+    // picker — it reads with the Settings script-read model.
+    $("#wiz-analyze-unlock").onclick = async e => {
+      const btn = e.currentTarget;
+      const m = await scriptReadModel();
+      if (!m) return toast("No script-read model connected. Add one in Settings.", true);
+      if (!(await askRerun(m.label))) return;
+      runDesignRead(m.id, m.label, btn);
     };
   };
+
+  /* The model a script read uses: the Settings narrative role, when it is
+     usable here; otherwise the first usable engine the picker offers. */
+  async function scriptReadModel() {
+    const sel = $("#wiz-provider");
+    let want = "";
+    try { want = (await api("/api/settings")).narrative_provider || ""; } catch { /* fall through */ }
+    const opts = [...sel.options].filter(o => o.value && !o.disabled);
+    const o = opts.find(x => x.value === want) || opts.find(x => x.value === sel.value) || opts[0];
+    return o ? { id: o.value, label: o.textContent.trim() } : null;
+  }
+
+  /* What a rerun keeps, adds and replaces, as three columns — the merge
+     rules in wizard.merge_analysis, said plainly. */
+  const RERUN_COLS = [
+    ["kept", "KEPT", ["Confirmed design languages and environments",
+                      "Their notes, keywords and locations",
+                      "Answered questions", "Your cast",
+                      "Period and act names you typed"]],
+    ["added", "ADDED", ["New design languages and environments, marked PROPOSED for review"]],
+    ["replaced", "REPLACED", ["Logline", "Key locations", "Open questions",
+                              "Proposals you never confirmed",
+                              "Period and act names you didn't type"]],
+  ];
+  const askRerun = modelLabel => modal({
+    custom: `
+      <div class="rr">
+        <div class="rr-head">
+          <div class="modal-title">Rerun design review</div>
+          <p class="rr-lead">Rerun the design review using an updated script.</p>
+        </div>
+        <div class="rr-cols">${RERUN_COLS.map(([k, label, lines]) => `
+          <section class="rr-col rr-${k}">
+            <h3 class="rr-kick">${label}</h3>
+            <ul>${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+          </section>`).join("")}
+        </div>
+        <div class="rr-foot">
+          <span class="rr-cost">2 CALLS · ${esc(modelLabel.toUpperCase())}</span>
+          <button class="ghost" data-f="cancel">Cancel</button>
+          <button class="primary" data-f="go">Rerun</button>
+        </div>
+      </div>`,
+    mount: (ov, done) => {
+      $("[data-f=cancel]", ov).onclick = () => done(null);
+      $("[data-f=go]", ov).onclick = () => done(true);
+    },
+  }).then(v => v === true);
 
   const expandedWorlds = new Set();
   // SCAN_CONSOLIDATION §3 — a long list shows its head and states its tail.
@@ -7648,9 +7683,14 @@ async function renderWizard() {
     renderWizLocs();
   };
 
-  $("#wiz-analyze").onclick = async (e) => {
-    const btn = e.target;
-    btn.disabled = true;
+  $("#wiz-analyze").onclick = e =>
+    runDesignRead($("#wiz-provider").value, selectedModelLabel($("#wiz-provider")), e.target);
+
+  /* One read, two doors: Build Design Plan (first time, model picked
+     there) and the rerun dialog (model from the Settings script-read
+     role, user 2026-09-28: "not prompt for a new model"). */
+  async function runDesignRead(provider, modelLabel, btn) {
+    if (btn) btn.disabled = true;
     /* The design plan's ladder.
 
        Same honesty rule as the Bible's: ASSEMBLE is real client-side work
@@ -7669,12 +7709,12 @@ async function renderWizard() {
              { key: "questions", label: "Open questions" },
              { key: "period", label: "Period" }],
     });
-    lad.phase("assemble", `Sending the screenplay to ${selectedModelLabel($("#wiz-provider"))}.`);
+    lad.phase("assemble", `Sending the screenplay to ${modelLabel}.`);
     try {
       lad.phase("read", "One call, and no way to see inside it — the clock "
                        + "is the only honest progress there is. A minute or two.");
       const analysis = await api("/api/wizard/analyze", {
-        method: "POST", json: { provider: $("#wiz-provider").value } });
+        method: "POST", json: { provider } });
       lad.phase("found", "");
       lad.set("langs", (analysis.design_worlds || []).length);
       lad.set("envs", (analysis.environments || []).length);
@@ -7698,8 +7738,8 @@ async function renderWizard() {
       // far the read got.
       lad.fail(err.message);
       toast(err.message, true);
-    } finally { btn.disabled = false; }
-  };
+    } finally { if (btn) btn.disabled = false; }
+  }
 
   renderWorlds();
   renderAnalyzeLock();

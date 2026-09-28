@@ -407,13 +407,18 @@ class TheStageHeadHasNoScreenplayLine(unittest.TestCase):
 
 
 class TheModelPickerHidesOnceRead(unittest.TestCase):
-    """User 2026-09-28: "Get rid of Model. Get rid of ChatGPT-5.6. Keep
-    unlock and rerun." Hidden, not removed — a re-run needs a model."""
+    """User 2026-09-28: "Get rid of Model. Get rid of ChatGPT-5.6." Then:
+    the rerun "should use the current AI model currently selected for
+    script reads, not prompt for a new model." So once read, the picker
+    never comes back on this path."""
 
-    def test_hidden_when_read_and_back_on_unlock(self):
+    def test_hidden_when_read(self):
         self.assertIn('$(".wiz-model")?.classList.toggle("hidden", !!a);', JS)
+
+    def test_the_rerun_does_not_reopen_it(self):
         i = JS.index('$("#wiz-analyze-unlock").onclick')
-        self.assertIn('$(".wiz-model")?.classList.remove("hidden");', JS[i:i + 1800])
+        seg = JS[i:JS.index("async function scriptReadModel", i)]
+        self.assertNotIn('classList.remove("hidden")', seg)
 
 
 class AReRunKeepsWhatWasTypedByHand(unittest.TestCase):
@@ -457,20 +462,36 @@ class AReRunKeepsWhatWasTypedByHand(unittest.TestCase):
         self.assertIn('if f != "acts"]', src[i:i + 2600])
 
 
-class TheReRunConfirmSaysWhatHappens(unittest.TestCase):
+class TheRerunDialogIsTheRerun(unittest.TestCase):
+    """User 2026-09-28: the confirm should execute the rerun, with the
+    script-read model, and be designed properly."""
+
     def seg(self):
         i = JS.index('$("#wiz-analyze-unlock").onclick')
-        return JS[i:i + 1600]
+        return JS[i:JS.index("}).then(v => v === true);", i)]
 
-    def test_the_consequences_are_listed(self):
+    def test_confirm_runs_the_read(self):
         s = self.seg()
-        for line in ("stay as they are", "arrive as PROPOSED",
-                     "are dropped unless", "typed yourself are kept",
-                     "open-question list are replaced"):
-            self.assertIn(line, s, line)
+        self.assertIn("if (!(await askRerun(m.label))) return;", s)
+        self.assertIn("runDesignRead(m.id, m.label, btn);", s)
 
-    def test_the_modal_escapes_its_list(self):
-        self.assertIn("items.map(t => `<li>${esc(t)}</li>`)", JS)
+    def test_the_model_is_the_script_read_role(self):
+        i = JS.index("async function scriptReadModel()")
+        self.assertIn(".narrative_provider", JS[i:i + 600])
+
+    def test_one_read_function_for_both_doors(self):
+        self.assertEqual(JS.count("async function runDesignRead("), 1)
+        self.assertIn('runDesignRead($("#wiz-provider").value', JS)
+
+    def test_three_columns_and_the_users_lead(self):
+        s = self.seg()
+        for k in ('"KEPT"', '"ADDED"', '"REPLACED"'):
+            self.assertIn(k, s)
+        self.assertIn("Rerun the design review using an updated script.", s)
+        self.assertIn("2 CALLS · ${esc(modelLabel.toUpperCase())}", s)
+
+    def test_lines_are_escaped(self):
+        self.assertIn("lines.map(l => `<li>${esc(l)}</li>`)", self.seg())
 
     def test_the_button_says_it_asks_first(self):
         self.assertIn("Selecting will show confirmation modal and details.", JS)
