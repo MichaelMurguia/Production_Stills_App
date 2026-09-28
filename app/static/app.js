@@ -6682,10 +6682,10 @@ async function renderWizard() {
     // the model is on the locked picker above). An older draft still names
     // the draft the read was of, because that is the one fact to act on.
     const older = readIsOfOtherDraft(a, sp);
+    // READ went too — the locked picker already says the read ran.
     lockHost.innerHTML = (older
-      ? `<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}`
-      : `<span class="badge APPROVED">READ</span>`) + `
-      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
+      ? `<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}` : "") + `
+      <button class="ghost" id="wiz-analyze-unlock" style="margin-left:${older ? 8 : 0}px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",
         "Re-running the read keeps everything you've confirmed — design languages, environments, and their location assignments survive by name. New finds arrive as PROPOSED for your review. Answered questions and cast subjects are never touched.",

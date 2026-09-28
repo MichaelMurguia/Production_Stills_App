@@ -369,7 +369,8 @@ class AReadSaysWhichDraftItRead(unittest.TestCase):
         i = JS.index("const renderAnalyzeLock = () => {")
         seg = JS[i:i + 1400]
         self.assertIn('<span class="badge DRAFT">OLDER DRAFT</span> ${esc(a.screenplay || "")}', seg)
-        # 2026-09-28: when current, the line is the badge alone.
+        # 2026-09-28: when current, the line is the button alone.
+        self.assertNotIn('<span class="badge APPROVED">READ</span>', seg)
         for gone in ("uploaded ${", "read ${esc(a.analyzed_at)}", "by ${esc(a.model)}"):
             self.assertNotIn(gone, seg)
 
