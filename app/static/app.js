@@ -7219,9 +7219,8 @@ async function renderWizard() {
       const v = await askText("When is this production set?", "Period", {
         value: analysis.period || "",
         placeholder: "e.g. 241 years in the future",
-        body: "Every render is held to this. Say it the way you would say it "
-            + "to a concept artist — a decade, a century, an era, or a "
-            + "distance from now.",
+        body: 'Period description. "200 years into the future", or "The 1930s", '
+            + 'or "A long time ago in a galaxy far far..."',  // user's copy, 2026-09-28
         hint: "Leave empty to constrain nothing.",
         confirmLabel: "Save period",
       });
