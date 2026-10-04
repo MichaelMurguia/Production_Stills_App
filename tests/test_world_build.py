@@ -259,6 +259,8 @@ class Consent(unittest.TestCase):
         i = js.index("async function startTheRead()")
         early = js[i:js.index("const s = await api(\"/api/settings\")", i)]
         self.assertIn('api("/api/world/build", { method: "POST" })', early)
+        self.assertIn("The world build did not start", early,
+                      "a write never swallows its failure (stop 1)")
 
     def test_the_button_names_the_cost_of_the_click(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")

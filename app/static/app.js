@@ -3298,7 +3298,8 @@ async function startTheRead() {
          consent for the build (user 2026-10-04: "my build is not working
          like that" — the read was skipped, so the build it starts never
          ran). Build from the read this production already has. */
-      await api("/api/world/build", { method: "POST" }).catch(() => {});
+      await api("/api/world/build", { method: "POST" }).catch(err =>
+        toast(`The world build did not start: ${err.message}`, true));
       return;
     }
     const s = await api("/api/settings");
