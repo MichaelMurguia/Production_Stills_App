@@ -271,12 +271,15 @@ class AProposalShowsTheLookItProposes(unittest.TestCase):
         self.assertIn(".anchor-hero.proposed .ah-scrim { display: none; }", CSS)
         self.assertIn('hero.classList.toggle("proposed", !!prop);', JS)
 
-    def test_both_answers_end_the_proposal_and_repaint(self):
+    def test_every_answer_ends_the_proposal_and_repaints(self):
         seg = between("const showProposals =", "const showTakeover =")
-        # Both go through `anchorAnswered`, which deletes the proposal,
-        # removes the overlay and repaints — one function, since a
-        # catalogue pick has to do exactly the same thing (2026-09-11).
-        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 2)
+        # Accepting goes through `anchorAnswered`, which deletes the
+        # proposal, removes the overlay and repaints — one function, since
+        # a catalogue pick has to do exactly the same thing (2026-09-11).
+        # The other verb is Change (2026-10-04): it opens the picker, and
+        # the pick it leads to is the catalogue caller, outside this block.
+        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 1)
+        self.assertIn("if (opts.uploadRole) anchorAnswered(opts.uploadRole);", JS)
         self.assertEqual(seg.count("refreshRefs();"), 1, "the first paint")
 
 

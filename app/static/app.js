@@ -8198,7 +8198,10 @@ async function renderWizard() {
      pick writes and then runs the same sync, so nothing downstream can
      tell the two apart; there is one path into an anchor, not two.
 
-     Dismissing leaves the card exactly as it was. Neither verb is amber:
+     Change opens the card's own picker (user 2026-10-04: the links are
+     "Use this" and "Change", not "Dismiss"); the proposal stands until
+     a pick replaces it, so backing out of the picker loses nothing.
+     Neither verb is amber:
      the proposal is the thing needing attention and it says so in
      `--hold`, and spending the accent on a card that already has an
      overlay would be two claims on the same eye. */
@@ -8231,7 +8234,7 @@ async function renderWizard() {
         <span class="ah-prop-why">${esc(p.why)}</span>
         <span class="ah-prop-acts">
           <button type="button" class="text-act" data-f="use">Use this</button>
-          <button type="button" class="text-act" data-f="drop">Dismiss</button>
+          <button type="button" class="text-act" data-f="change">Change</button>
         </span>`;
       $("[data-f=use]", box).onclick = () => {
         const fld = $(ANCHOR_FIELD[field]);
@@ -8243,12 +8246,16 @@ async function renderWizard() {
         anchorAnswered(ANCHOR_ROLE[field]);
         toast(`${p.name} set — it rides every render from here.`);
       };
-      // Dismissing gives the card back its empty state honestly — the
-      // picture went with the proposal, because it WAS the proposal.
-      $("[data-f=drop]", box).onclick = () => {
-        box.remove();
-        anchorAnswered(ANCHOR_ROLE[field]);
+      // The same picker the card opens. A catalogue pick already ends
+      // the proposal (2026-09-11), so nothing else is needed here.
+      $("[data-f=change]", box).onclick = () => {
+        const btn = $(".pick-btn", col) || $("[data-f=addbtn]", col);
+        if (btn) btn.click();
       };
+      // The box sits INSIDE the card's button. Without this a click on
+      // either verb also ran the card's own click and opened the picker
+      // on top of "Use this".
+      box.addEventListener("click", e => e.stopPropagation());
       hero.parentElement.style.position = "relative";
       hero.append(box);
     }
