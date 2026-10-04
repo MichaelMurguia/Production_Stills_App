@@ -973,7 +973,7 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
         lie on the settings page."""
         main = (ROOT / "app/main.py").read_text(encoding="utf-8")
         i = main.index('@app.post("/api/settings/test")')
-        seg = main[i:i + 1200]
+        seg = main[i:main.index("\n\n\n", i)]  # the whole handler
         self.assertIn("record = not key", seg)
         self.assertIn("if record:", seg)
 

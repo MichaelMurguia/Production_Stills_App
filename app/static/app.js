@@ -870,7 +870,8 @@ function authModal(key) {
             + `Save to close.`, "ok");
       } catch (err) {
         setBusy(false, "", testBtn);
-        say(`${P.name} refused it: ${err.message}`, "bad");
+        // 400 = "That is not a valid key." — a sentence already.
+        say(err.status === 400 ? err.message : `${P.name} refused it: ${err.message}`, "bad");
       } finally {
         testBtn.disabled = false;
         clearInterval(tick);

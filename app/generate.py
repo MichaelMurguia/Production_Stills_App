@@ -649,6 +649,48 @@ def _openai_client(timeout_s: float = 300.0, key: str = ""):
     return OpenAI(api_key=key, timeout=timeout_s)
 
 
+NOT_A_KEY = "That is not a valid key."
+
+# How each provider says "I do not recognise this key". 401 is the
+# standard; Gemini answers 400 and names it in the body instead.
+_KEY_REFUSED_MARKS = ("API_KEY_INVALID", "API key not valid", "invalid_api_key",
+                      "Incorrect API key", "invalid x-api-key",
+                      "authentication_error")
+
+
+def malformed_key(key: str) -> bool:
+    """No provider issues a key with whitespace or non-ASCII in it. A value
+    like that is something else pasted by mistake — on 2026-10-04 it was
+    the previous error message, still on the clipboard — and sending it to
+    a provider only earns a raw 401 that echoes it back."""
+    k = (key or "").strip()
+    return bool(k) and (bool(re.search(r"\s", k)) or not k.isascii())
+
+
+def key_refused(err: BaseException) -> bool:
+    """The provider answered, and its answer was that the key is not one it
+    issued — as opposed to a network failure, a missing model or a quota,
+    which are not the key's fault and keep their own messages."""
+    seen = 0
+    while err is not None and seen < 5:
+        if 401 in (getattr(err, "status_code", None), getattr(err, "code", None)):
+            return True
+        if any(m in str(err) for m in _KEY_REFUSED_MARKS):
+            return True
+        err, seen = err.__cause__ or err.__context__, seen + 1
+    return False
+
+
+def provider_display_name(provider: str) -> str:
+    if provider.startswith("custom:"):
+        try:
+            return _custom_engine(provider).get("label") or provider[7:]
+        except Exception:
+            return provider[7:]
+    return {"openai": "OpenAI", "openai-chat": "OpenAI", "gemini": "Gemini",
+            "anthropic": "Anthropic"}.get(provider, provider)
+
+
 def test_connection(provider: str = DEFAULT_PROVIDER, key: str = "") -> dict:
     """`key` proves a credential the studio has not saved. Testing must
     not mutate: writing the key first made a credential EXIST before the

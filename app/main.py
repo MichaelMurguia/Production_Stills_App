@@ -1344,6 +1344,9 @@ def _role_states(engines: dict) -> dict:
 
 @app.post("/api/settings")
 async def api_save_settings(body: dict) -> dict:
+    for f in ("gemini_api_key", "openai_api_key", "anthropic_api_key"):
+        if f in body and generate.malformed_key(str(body[f])):
+            raise HTTPException(400, generate.NOT_A_KEY)
     s = generate.load_settings()
     if "gemini_api_key" in body:
         s["gemini_api_key"] = str(body["gemini_api_key"]).strip()
@@ -1804,16 +1807,24 @@ async def api_test_settings(body: dict = None) -> dict:
     # a pass for a key the studio does not hold would be a lie on the row.
     key = str((body or {}).get("key", "") or "")
     record = not key
+    # "That is not a valid key." (user 2026-10-04) — 400, so the modal
+    # shows it as-is rather than as "<provider> refused it: <401 body>".
+    if generate.malformed_key(key):
+        raise HTTPException(400, generate.NOT_A_KEY)
     try:
         result = await run_in_threadpool(generate.test_connection, provider, key)
-    except generate.GenerationError as e:
-        if record:
-            _record_engine_test(provider, False, str(e))
-        raise HTTPException(422, str(e))
     except Exception as e:
+        if generate.key_refused(e):
+            status, msg = 400, (f"{generate.NOT_A_KEY[:-1]} — "
+                                f"{generate.provider_display_name(provider)} "
+                                "did not accept it.")
+        elif isinstance(e, generate.GenerationError):
+            status, msg = 422, str(e)
+        else:
+            status, msg = 502, f"{provider} connection failed: {e}"
         if record:
-            _record_engine_test(provider, False, str(e))
-        raise HTTPException(502, f"{provider} connection failed: {e}")
+            _record_engine_test(provider, False, msg)
+        raise HTTPException(status, msg)
     if record:
         _record_engine_test(provider, True)
     return result

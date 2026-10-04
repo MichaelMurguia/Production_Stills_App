@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2776 tests** across 138 files.
+**2787 tests** across 139 files.
 
 
-## Product app — 2546 tests in 121 files
+## Product app — 2557 tests in 122 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -88,6 +88,7 @@ temp home and external services are faked.
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
+| `test_not_a_valid_key.py` | 11 | A key the provider does not recognise reads "That is not a valid key." User-hit 2026-10-04, in the connect-a-key modal: the previous error |
 | `test_object_ref_detach.py` | 22 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |
 | `test_object_ref_matching.py` | 11 | One rule for "does this phrase name that thing", shared by every surface that asks (user-caught 2026-08-16: a panel with the required object "Sal's ey |
 | `test_one_resolved_manifest.py` | 18 | One fact, one computation — the manifest, the count, and the arrange room's SHORT verdict. |
