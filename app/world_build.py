@@ -68,9 +68,17 @@ def _sha() -> str:
 
 def _read() -> dict:
     try:
-        return json.loads(_path().read_text(encoding="utf-8"))
+        rec = json.loads(_path().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
+    # A finished build with failed steps is INCOMPLETE and not built,
+    # including a record written before that rule existed (2026-10-04:
+    # the first real build's renders all failed and it was stamped done).
+    if rec.get("state") == "done" and any(
+            s.get("state") == "failed" for s in rec.get("steps") or []):
+        rec["state"] = "incomplete"
+        rec.pop("built_for", None)
+    return rec
 
 
 def status() -> dict:
@@ -180,8 +188,19 @@ def _run(slug: str, sha: str) -> None:
                 run.error(key, e)
         run.guard()
         with run.mutex:
-            run.rec.update(state="done", built_for=sha, finished_at=store.utcnow(),
-                           step="", message="World visualized")
+            failed = [s for s in run.rec["steps"] if s["state"] == "failed"]
+            if failed:
+                # Not marked built: the draft stays due, and running it
+                # again redoes only what is missing (every step skips work
+                # already done). User-hit 2026-10-04: every render failed
+                # and the build still read as done, so nothing would ever
+                # retry it.
+                run.rec.update(state="incomplete", finished_at=store.utcnow(),
+                               step="", message=f"{len(failed)} step"
+                               f"{'s' if len(failed) != 1 else ''} did not finish")
+            else:
+                run.rec.update(state="done", built_for=sha, finished_at=store.utcnow(),
+                               step="", message="World visualized")
             _save(run.rec)
     except Stopped as e:
         # Not written: the switched-to production's folder is not ours.

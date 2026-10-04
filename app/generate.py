@@ -2149,11 +2149,16 @@ def narrative_default() -> str:
 
 
 def thumb_size(provider: str) -> str:
-    """The smallest size an engine can be asked for. Only the OpenAI
-    Images API takes an arbitrary area; Gemini's smallest is 1K, the chat
-    tool's presets start at 1024, and a custom or connector engine states
-    no sizes, so those ask for 1K."""
-    return "512" if provider == "openai" else "1K"
+    """The smallest size an engine can be asked for: 1K, on every engine.
+
+    The thumbnail was first asked for at the 512² budget (624x416, 384x688)
+    and gpt-image-2 refused both on the first real build, 2026-10-04:
+    "Requested resolution is below the current minimum pixel budget". 1K is
+    the smallest size proven to render, so it is the floor everywhere;
+    the economy is in `quality="medium"`, not in the pixel count. Gemini's
+    smallest is 1K too. Kept as a function so a proven smaller size has
+    one place to land."""
+    return "1K"
 
 
 def image_engine() -> str:

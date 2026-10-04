@@ -164,7 +164,7 @@ class Build(unittest.TestCase):
         self.assertEqual(langs["Terran Concord"]["basis"], "bible")
         self.assertEqual(langs["Oruna"]["basis"], "bible")
         self.assertEqual(envs["NORTHERN COAST"]["basis"], "bible")
-        self.assertTrue(all(r["size"] == "512" and r["quality"] == "medium"
+        self.assertTrue(all(r["size"] == "1K" and r["quality"] == "medium"
                             for r in self.renders))
         self.assertTrue(any("Salt-bleached timber" in r["prompt"] for r in self.renders))
 
@@ -174,7 +174,7 @@ class Build(unittest.TestCase):
         self.assertEqual(sorted(names.values()), ["Maren"], "vehicles stay on demand")
         self.assertEqual([names[p["sid"]] for p in self.portraits], ["Maren"])
         self.assertEqual((self.portraits[0]["size"], self.portraits[0]["quality"]),
-                         ("512", "medium"))
+                         ("1K", "medium"))
 
     def test_a_draft_is_built_once(self):
         self.build()
@@ -187,6 +187,43 @@ class Build(unittest.TestCase):
     def test_a_new_draft_is_due_again(self):
         self.build()
         store.set_screenplay("s2.txt", b"INT. HALL - NIGHT\n\nBrass.\n")
+        self.assertTrue(wb.needed())
+
+    def test_openai_thumbnails_are_never_below_1k(self):
+        """gpt-image-2 refused 624x416 and 384x688 on the first real build
+        (2026-10-04): "below the current minimum pixel budget"."""
+        self.assertEqual(generate.thumb_size("openai"), "1K")
+
+    def test_a_failed_render_leaves_the_build_incomplete_and_due(self):
+        """User-hit 2026-10-04: every render failed and the build read as
+        done, so nothing would ever retry it."""
+        calls = {"n": 0}
+
+        def flaky(provider, prompt, refs, size, aspect, out, **kw):
+            calls["n"] += 1
+            if "ENVIRONMENT STUDY" in prompt:
+                raise generate.GenerationError("refused")
+            Path(out).write_bytes(PNG)
+        generate.render_to.side_effect = flaky
+        st = self.build()
+        self.assertEqual(st["state"], "incomplete")
+        self.assertTrue(wb.needed(), "still due, so it can run again")
+        self.assertIn("did not finish", st["message"])
+        # Again, with the engine working: only the missing render is redone.
+        before = calls["n"]
+        generate.render_to.side_effect = lambda *a, **k: Path(a[5]).write_bytes(PNG)
+        n_bible = self.order.count("bible")
+        st = self.build()
+        self.assertEqual(st["state"], "done")
+        self.assertEqual(self.order.count("bible"), n_bible, "the Bible is not rewritten")
+        self.assertFalse(wb.needed())
+
+    def test_an_old_done_record_with_failures_reads_as_incomplete(self):
+        rec = wb._fresh(wb._sha())
+        rec["steps"][4]["state"] = "failed"
+        rec.update(state="done", built_for=wb._sha())
+        wb._save(rec)
+        self.assertEqual(wb.status()["state"], "incomplete")
         self.assertTrue(wb.needed())
 
     def test_a_failed_bible_still_leaves_best_guess_thumbnails(self):
@@ -264,7 +301,10 @@ class Consent(unittest.TestCase):
 
     def test_the_button_names_the_cost_of_the_click(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
-        self.assertEqual(js.count(">Process World Visualization</button>"), 3)
+        # Two upload forms, plus the stage's offer (whose label becomes
+        # "Run it again" when a build did not finish).
+        self.assertEqual(js.count(">Process World Visualization</button>"), 2)
+        self.assertIn('"Run it again" : "Process World Visualization"}</button>', js)
         self.assertIn("This could take up to an hour.", js)
         self.assertEqual(js.count("${WORLD_CONSENT}"), 3,
                          "the line stands beside every button that starts it")
@@ -290,6 +330,13 @@ class TheScreen(unittest.TestCase):
         self.assertNotIn("wp-steps", body)
         self.assertIn('steps.findIndex(st => st.state === "now")', body)
         self.assertIn("`STEP ${at + 1} OF ${steps.length}`", body)
+
+    def test_an_incomplete_build_is_offered_again_with_its_cause(self):
+        i = self.JS.index("async function renderWizard() {")
+        head = self.JS[i:i + 3200]
+        self.assertIn('ws.state === "incomplete" && ws.consented', head)
+        self.assertIn("Run it again", head)
+        self.assertIn('filter(st => st.state === "failed")', head)
 
     def test_only_a_consented_build_resumes_on_arrival(self):
         self.assertIn('ws.state === "interrupted" && ws.consented', self.JS)

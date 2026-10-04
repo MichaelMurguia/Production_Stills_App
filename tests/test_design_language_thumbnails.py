@@ -97,10 +97,11 @@ class Thumbnails(unittest.TestCase):
         st = lp.render("Terran Concord")
         self.assertEqual((st["state"], st["basis"], st["due"]), ("current", "guess", False))
         call = self.calls[-1]
-        # Small first (user 2026-10-04): the 512² budget on OpenAI, at
+        # Small first (user 2026-10-04) — the smallest size OpenAI accepts
+        # (1K; it refused the 512² budget on the first real build) at
         # medium quality, shaped to the card.
         self.assertEqual((call["size"], call["aspect"], call["quality"]),
-                         ("512", "3:2", "medium"))
+                         ("1K", "3:2", "medium"))
         self.assertIn("Polished imperial stone and brass", call["prompt"])
         self.assertIn("RENDERING STYLE: Production Painting", call["prompt"])
         self.assertIn("No text, lettering", call["prompt"])

@@ -4992,15 +4992,26 @@ async function renderWizard() {
   stopWorldPoll();
   worldBuild.t0 = 0;
   useTemplate("tpl-wizard");
-  if (ws && ws.needed && !ws.consented) {
+  // Offered when this draft was never built, and again when its build
+  // finished with steps that failed — the re-run redoes only what is
+  // missing, and the first failure is quoted so the cause is on screen.
+  const incomplete = ws && ws.state === "incomplete" && ws.consented;
+  if (ws && ws.needed && (!ws.consented || incomplete)) {
     const offer = document.createElement("div");
     offer.className = "panel world-offer";
+    const why = incomplete
+      ? (ws.steps || []).filter(st => st.state === "failed")
+          .map(st => `${st.label}: ${st.detail}`)[0] || ""
+      : "";
     offer.innerHTML = `
       <div class="wo-text">
-        <h3>Process World Visualization</h3>
-        <p class="mini">${WORLD_CONSENT}</p>
+        <h3>${incomplete ? "The world build did not finish" : "Process World Visualization"}</h3>
+        ${incomplete
+          ? `<p class="mini">${esc(ws.message || "")} — ${esc(why)}</p>
+             <p class="mini">Running it again redoes only what is missing.</p>`
+          : `<p class="mini">${WORLD_CONSENT}</p>`}
       </div>
-      <button class="primary" data-f="world-go">Process World Visualization</button>`;
+      <button class="primary" data-f="world-go">${incomplete ? "Run it again" : "Process World Visualization"}</button>`;
     $("[data-f=world-go]", offer).onclick = async () => {
       try {
         await api("/api/world/build", { method: "POST" });
