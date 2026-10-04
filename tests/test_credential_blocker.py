@@ -409,8 +409,10 @@ class TheLeadNeverJumpsAheadOfTheWork(Install):
     led with a stage 05 need — pointing the user at a thing stage 02
     produces, from a user standing at stage 02.
 
-    A blocker for a stage beyond the frontier stays in the BLOCKING list,
-    where it is true and useful. It just is not the one verb on screen.
+    A blocker for a stage beyond the frontier stays in the blocking DATA,
+    where it is true and useful. It just is not the one verb on screen —
+    and since 2026-10-04 Status does not list it either until its stage
+    arrives (AFutureStageIsNotAnError, below).
     """
 
     DRAFT = b"INT. ROOM - DAY\n\nA room.\n"
@@ -455,6 +457,80 @@ class TheLeadNeverJumpsAheadOfTheWork(Install):
         """A row nobody has ranked must never outrank a real one."""
         self.assertEqual(insights.stage_rank({"action": "who-knows"}), 9)
         self.assertEqual(insights.stage_rank({}), 9)
+
+
+class AFutureStageIsNotAnError(Install):
+    """User, 2026-10-04, at stage 02 of a first run, looking at a red GAP
+    row for the board layout master: "When onboarding I do not want to be
+    faced with an error at all."
+
+    That row is a stage-05 input. At stage 02 it is future work, not a
+    failure. /api/state marks a row `ahead` when its stage is past the
+    frontier, and Status leaves `ahead` rows out of its BLOCKING list.
+    The data keeps the row (the gap is true), and Status lists it the
+    moment its stage arrives.
+    """
+
+    DRAFT = b"INT. ROOM - DAY\n\nA room.\n"
+
+    def layout_row(self):
+        import app.main as appmain
+        rows = appmain.api_state()["blocking"]
+        return next(r for r in rows
+                    if "board layout master" in r["text"].lower())
+
+    def test_at_stage_02_the_layout_master_is_ahead(self):
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", self.DRAFT)
+        self.assertTrue(self.layout_row()["ahead"])
+
+    def test_the_lead_row_and_a_credential_are_never_ahead(self):
+        store.set_screenplay("d.txt", self.DRAFT)  # no key at all
+        import app.main as appmain
+        key = next(r for r in appmain.api_state()["blocking"] if r["kind"] == "KEY")
+        self.assertFalse(key["ahead"], "install-scope blocks every stage")
+
+    def test_at_stage_05_it_is_listed_again(self):
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", self.DRAFT)
+        real = insights.frontier_rank
+        insights.frontier_rank = lambda _s: 5
+        try:
+            self.assertFalse(self.layout_row()["ahead"])
+        finally:
+            insights.frontier_rank = real
+
+    def test_status_leaves_ahead_rows_out_of_its_list(self):
+        i = JS.index("const rest = ")
+        self.assertIn(".filter(b => !b.ahead)", JS[i:i + 120])
+
+
+class TheFirstRunVerbWaitsForAFile(unittest.TestCase):
+    """User, 2026-10-04: during the first run the upload button "should
+    not even show up until a screenplay is selected", and it reads
+    "Analyze script world". The Replace card keeps its stated disabled
+    button: a returning user replacing a draft is not being onboarded."""
+
+    def forms(self):
+        return [JS[i:JS.index("</form>", i)] for i in
+                (JS.index('id="status-screenplay-form"'),
+                 JS.index('id="screenplay-form-main"'))]
+
+    def test_both_first_run_forms_hide_the_verb_and_name_it(self):
+        for f in self.forms():
+            self.assertIn('class="primary hidden" data-reveal>Analyze script world</button>', f)
+            self.assertNotIn("start the read", f)
+
+    def test_choosing_a_file_reveals_it(self):
+        i = JS.index("function bindScreenplayUpload(")
+        sync = JS[JS.index("const sync = () => {", i):JS.index('input.addEventListener("change", sync)', i)]
+        self.assertIn('if ("reveal" in submit.dataset)', sync)
+        self.assertIn('classList.toggle("hidden", noEngine || !input.files.length)', sync)
+
+    def test_replace_keeps_its_visible_button(self):
+        html = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+        i = html.index('id="screenplay-form"')
+        self.assertNotIn("data-reveal", html[i:html.index("</form>", i)])
 
 
 class BlockersSpeakEnglish(Install):

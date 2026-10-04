@@ -793,6 +793,15 @@ def api_state() -> dict:
 
     blockers = insights.blocking()
     summary = insights.stage_summary(blockers)
+    # A gap that belongs to a stage the user has not reached is future
+    # work, not something they are failing at (user 2026-10-04: "When
+    # onboarding I do not want to be faced with an error at all" — the
+    # board layout master, a stage-05 input, was listed as BLOCKING at
+    # stage 02). The row stays in the data; Status lists it once its
+    # stage arrives.
+    frontier = insights.frontier_rank(summary)
+    for b in blockers:
+        b["ahead"] = insights.stage_rank(b) > frontier
     return {
         # The active production's name — never hardcoded.
         "project": paths._project_name(

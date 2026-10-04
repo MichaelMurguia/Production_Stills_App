@@ -2352,7 +2352,9 @@ async function renderStatus() {
   // promoted blocker leaves the list below and the count excludes it —
   // one fact, one place, one act. (The upload lead promotes the
   // screenplay blocker the same way.)
-  const rest = first ? blockers.slice(1) : blockers;
+  // Rows for a stage not yet reached (`ahead`) are future work, not
+  // errors — listed once their stage arrives (user 2026-10-04).
+  const rest = (first ? blockers.slice(1) : blockers).filter(b => !b.ahead);
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
@@ -2381,7 +2383,7 @@ async function renderStatus() {
       file. Nothing downstream unlocks without it.</p>
       <form id="status-screenplay-form" class="row" style="margin-top:10px">
         <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
-        <button type="submit" class="primary">Upload &amp; start the read</button>
+        <button type="submit" class="primary hidden" data-reveal>Analyze script world</button>
       </form>
       <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>`;
     bindScreenplayUpload($("#status-screenplay-form"), state.capability);
@@ -2515,7 +2517,7 @@ async function renderScreenplay() {
       Nothing downstream unlocks without it.</p>
       <form id="screenplay-form-main" class="row">
         <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
-        <button type="submit" class="primary">Upload &amp; start the read</button>
+        <button type="submit" class="primary hidden" data-reveal>Analyze script world</button>
       </form>
       <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>`;
     bindScreenplayUpload($("#screenplay-form-main"), state.capability);
@@ -3339,6 +3341,10 @@ function bindScreenplayUpload(form, cap = null) {
       () => showView("settings");
   }
   const sync = () => {
+    // First run: the verb does not exist until there is a file for it to
+    // act on (user 2026-10-04). Replace keeps its stated disabled button.
+    if ("reveal" in submit.dataset)
+      submit.classList.toggle("hidden", noEngine || !input.files.length);
     submit.disabled = noEngine || !input.files.length;
     submit.title = noEngine
       ? "Connect an AI model first — Settings → AI & engines"
