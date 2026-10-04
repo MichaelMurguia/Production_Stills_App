@@ -3107,6 +3107,28 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
     return record
 
 
+def render_to(provider: str, prompt: str, ref_paths: list[Path],
+              image_size: str, aspect_ratio: str, out: Path,
+              verbatim: bool = False):
+    """Render one image to `out` on `provider`. The panel's dispatch, made
+    callable so another caller cannot drift from it: several copies of
+    this branch existed and one had already lost the custom and connector
+    engines, sending those renders to gemini instead (review 2026-10-04)."""
+    if provider == "mock":
+        return mockflow.render(prompt, ref_paths, image_size, aspect_ratio, out)
+    if provider == "openai-chat":
+        return _render_openai_chat(prompt, ref_paths, image_size, aspect_ratio,
+                                   out, verbatim=verbatim)
+    if provider.startswith("custom:"):
+        return _render_custom(provider, prompt, ref_paths, image_size,
+                              aspect_ratio, out)
+    if provider.startswith(("or:", "fal:")):
+        return _render_connector(provider, prompt, ref_paths, image_size,
+                                 aspect_ratio, out)
+    render = _render_openai if provider == "openai" else _render_gemini
+    return render(prompt, ref_paths, image_size, aspect_ratio, out)
+
+
 def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
                    image_size: str = "2K", aspect_ratio: str = "16:9",
                    provider: str = DEFAULT_PROVIDER,
@@ -3166,22 +3188,9 @@ def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],
     _require_prompt_fits(provider, override or prompt)
     d = _spec_board_dir(spec_id)
     img_path = d / f"{cand_id}.png"
-    if provider == "mock":
-        notes = mockflow.render(override or prompt, ref_paths, image_size,
-                                aspect_ratio, img_path)
-    elif provider == "openai-chat":
-        # A user-edited prompt is final copy: skip the rewrite, render it as-is.
-        notes = _render_openai_chat(override or prompt, ref_paths, image_size,
-                                    aspect_ratio, img_path, verbatim=bool(override))
-    elif provider.startswith("custom:"):
-        notes = _render_custom(provider, override or prompt, ref_paths,
-                               image_size, aspect_ratio, img_path)
-    elif provider.startswith(("or:", "fal:")):
-        notes = _render_connector(provider, override or prompt, ref_paths,
-                                  image_size, aspect_ratio, img_path)
-    else:
-        render = _render_openai if provider == "openai" else _render_gemini
-        notes = render(override or prompt, ref_paths, image_size, aspect_ratio, img_path)
+    # A user-edited prompt is final copy: openai-chat skips its rewrite.
+    notes = render_to(provider, override or prompt, ref_paths, image_size,
+                      aspect_ratio, img_path, verbatim=bool(override))
     with Image.open(img_path) as im:
         width, height = im.size
 

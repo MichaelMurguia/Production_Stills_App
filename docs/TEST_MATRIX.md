@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2797 tests** across 140 files.
+**2815 tests** across 141 files.
 
 
-## Product app — 2567 tests in 123 files
+## Product app — 2585 tests in 124 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -66,6 +66,7 @@ temp home and external services are faked.
 | `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
+| `test_design_language_thumbnails.py` | 18 | Every design-language card gets a thumbnail before any panel exists. |
 | `test_design_tokens.py` | 124 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |

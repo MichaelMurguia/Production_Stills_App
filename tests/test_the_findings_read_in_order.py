@@ -59,9 +59,12 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         teaches; a panel is what the language actually produced, and
         every production gets panels."""
         i = JS.index("const shot = wizLangArt[")
-        seg = JS[i:i + 400]
+        seg = JS[i:i + 900]
         self.assertIn('String(w.name || "").trim().toUpperCase()', seg)
-        self.assertIn('art.style.backgroundImage = `url("${shot}")`', seg)
+        # A real panel still wins (2026-10-04): the language's thumbnail
+        # fills the card only when no approved panel exists.
+        self.assertIn("const pic = shot || prev?.url", seg)
+        self.assertIn('art.style.backgroundImage = `url("${pic}")`', seg)
         self.assertNotIn("wizRefs", seg)
 
     def test_the_server_derives_it_from_approved_panels(self):
@@ -86,7 +89,7 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         to this language") instead of a next step, in a word the user had
         never been shown."""
         i = JS.index('art.className = "lang-shot"')
-        seg = JS[i:i + 500]
+        seg = JS[i:JS.index("chip.append(art);", i)]
         self.assertIn("Examples will appear here from your panels.", seg)
         self.assertNotIn("SCOPED", seg)
         b = CSS.split(NL + ".lang-shot.none {")[1].split("}")[0]

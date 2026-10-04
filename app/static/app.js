@@ -4857,6 +4857,45 @@ async function renderSettings(openTab = "") {
     };
 
 
+/* Design-language thumbnails (user 2026-10-04: "auto generate images once
+   an art direction bible is created. Before that ... 'Best Guess'").
+
+   The server decides which are DUE (language_previews.state); this only
+   works through them, ONE at a time, and outlives a redraw of the stage,
+   so a repaint can never start a second queue and pay twice. A render
+   that fails is not retried by itself this session; its card says so and
+   offers the retry. */
+const langPreviews = { running: false, failed: {}, repaint: null };
+
+async function runLangPreviewQueue(list) {
+  if (langPreviews.running || !list?.engine) return;
+  langPreviews.running = true;
+  let rendered = 0;
+  try {
+    for (;;) {
+      const next = (list.languages || []).find(l =>
+        l.due && !langPreviews.failed[l.slug]);
+      if (!next) break;
+      next.rendering = true; next.due = false;
+      langPreviews.repaint?.(false);
+      rendered += 1;
+      try {
+        Object.assign(next, await api("/api/design-languages/previews/render",
+          { method: "POST", json: { name: next.name } }));
+      } catch (err) {
+        next.rendering = false;
+        langPreviews.failed[next.slug] = err.message;
+      }
+      langPreviews.repaint?.(false);
+    }
+  } finally {
+    langPreviews.running = false;
+  }
+  // One fresh read at the end: a redraw during the queue holds its own
+  // copy. Only after work was done, or reading would restart the queue.
+  if (rendered) langPreviews.repaint?.(true);
+}
+
 async function renderWizard() {
   useTemplate("tpl-wizard");
   const state = await api("/api/state");
@@ -5645,6 +5684,19 @@ async function renderWizard() {
     return api("/api/design-languages/examples")
       .then(m => (wizLangArt = m || {}))
       .catch(() => wizLangArt);
+  };
+
+  // Each card's thumbnail: rendered from a best guess before the Bible
+  // exists, from the Bible after. Fetched once per stage render; the queue
+  // above does the spending.
+  let wizLangPrev = { engine: "", languages: [] };
+  let wizLangPrevAsked = false;
+  let wizLangPrevFor = "";
+  const loadWizLangPrev = () => {
+    wizLangPrevAsked = true;
+    return api("/api/design-languages/previews")
+      .then(m => { wizLangPrev = m || wizLangPrev; runLangPreviewQueue(wizLangPrev); })
+      .catch(() => wizLangPrev);
   };
 
 /* What an anchor's WORDS amount to. One rule: two readers ask it and they
@@ -7020,6 +7072,20 @@ async function renderWizard() {
     // correct itself.
     if (!wizRefsAsked) loadWizRefs().then(renderWorlds);
     if (!wizLangArtAsked) loadWizLangArt().then(renderWorlds);
+    // Re-asked when a language is added, dropped or renamed — compared
+    // with the names it was last ASKED for, so a pair of names the server
+    // folds into one can never make this ask again on every paint.
+    const curNames = worlds.map(w => String(w.name || "").trim()).join("|");
+    if (!wizLangPrevAsked || (curNames !== wizLangPrevFor && !langPreviews.running)) {
+      wizLangPrevFor = curNames;
+      loadWizLangPrev().then(renderWorlds);
+    }
+    // The queue repaints through whichever stage render is current.
+    langPreviews.repaint = (refetch = true) => {
+      if (activeView !== "wizard") return;
+      if (refetch) wizLangPrevAsked = false;
+      renderWorlds();
+    };
     // The reveal strip (plan P1 / R1): the read presents as a summary, not a
     // wall. Counts link to their sections; segments render only when their
     // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
@@ -7087,6 +7153,7 @@ async function renderWizard() {
         <span class="uncast-label">DESIGN LANGUAGES
           <button type="button" class="q-help" data-help="langs" aria-label="What is a design language?">?</button></span>
         <div id="wiz-world-tags" class="lang-cards"></div>
+        <p class="lang-cost mono" id="wiz-lang-cost" hidden></p>
         <div id="wiz-worlds"></div>
       </div>
       <div id="wiz-envs-sec" style="margin-top:16px">
@@ -7147,6 +7214,19 @@ async function renderWizard() {
     };
     bindHelpButtons(host, WIZ_HELP);
     const tagHost = $("#wiz-world-tags", host);
+    /* What the thumbnails spend, stated where they appear, because they
+       spend without a click (/spend: a cost the user did not ask for must
+       at least be one they can read). One image per language on the
+       studio's image engine, and one more when the Bible first covers it. */
+    const costEl = $("#wiz-lang-cost", host);
+    if (costEl) {
+      const eng = wizLangPrev.engine;
+      costEl.hidden = !eng || !worlds.length;
+      costEl.textContent = eng
+        ? `THUMBNAILS · 1 IMAGE PER LANGUAGE ON ${eng.toUpperCase()} · `
+          + "1 MORE WHEN THE BIBLE FIRST COVERS IT"
+        : "";
+    }
     const wHost = $("#wiz-worlds", host);
     if (!worlds.length) tagHost.innerHTML = `<span class="mini">none — every board will use only the global sections of the Bible</span>`;
     worlds.forEach((w, i) => {
@@ -7175,12 +7255,43 @@ async function renderWizard() {
       chip.className = "lang-card" + (open ? " open" : "") + (proposed ? " proposed" : "");
       chip.style.cursor = "pointer";
       const shot = wizLangArt[String(w.name || "").trim().toUpperCase()];
+      // An approved panel is a real example and wins. Otherwise the
+      // language's thumbnail, labelled with what it was rendered from.
+      const prev = (wizLangPrev.languages || []).find(l =>
+        l.name.toLowerCase() === String(w.name || "").trim().toLowerCase());
       const art = document.createElement("span");
-      art.className = "lang-shot" + (shot ? "" : " none");
-      if (shot)
-        art.style.backgroundImage = `url("${shot}")`;
-      else
-        art.innerHTML = `<i>Examples will appear here from your panels.</i>`;
+      const pic = shot || prev?.url || "";
+      art.className = "lang-shot" + (pic ? "" : " none");
+      if (pic) art.style.backgroundImage = `url("${pic}")`;
+      const nextWord = prev?.next_basis === "bible" ? "from the Bible" : "a best guess";
+      if (!shot && prev?.rendering) {
+        art.className = "lang-shot" + (prev.url ? "" : " none");
+        art.insertAdjacentHTML("beforeend",
+          `<span class="lang-basis"><span class="busy busy-inline work">`
+          + `<span class="spinner"></span><span class="busy-label">Rendering ${nextWord}…</span>`
+          + `</span></span>`);
+      } else if (!shot && prev?.url) {
+        const label = prev.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS";
+        const old = prev.state === "outdated";
+        art.insertAdjacentHTML("beforeend",
+          `<span class="lang-basis mono">${old ? "BIBLE CHANGED" : label}`
+          + (old ? ` <button type="button" class="text-act" data-f="rerender">Re-render</button>` : "")
+          + `</span>`);
+      } else if (!shot && langPreviews.failed[prev?.slug]) {
+        art.innerHTML = `<i>The thumbnail didn't render: ${esc(langPreviews.failed[prev.slug])}</i>`
+          + ` <button type="button" class="text-act" data-f="rerender">Try again</button>`;
+      } else if (!shot) {
+        art.innerHTML = wizLangPrev.engine || !prev
+          ? `<i>Examples will appear here from your panels.</i>`
+          : `<i>Connect an image model to see a thumbnail of this language.</i>`;
+      }
+      const rr = $("[data-f=rerender]", art);
+      if (rr) rr.onclick = e => {
+        e.stopPropagation();
+        delete langPreviews.failed[prev.slug];
+        prev.due = true;
+        runLangPreviewQueue(wizLangPrev);
+      };
       chip.append(art);
       // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
       // CONFIRM / DROP in place. Confirmation is the default state — a

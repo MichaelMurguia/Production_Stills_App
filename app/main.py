@@ -2546,6 +2546,41 @@ def api_list_subjects() -> list[dict]:
     return store.list_subjects()
 
 
+@app.get("/api/design-languages/previews")
+def api_language_previews() -> dict:
+    """Every design-language card's thumbnail state, and which are DUE.
+    language_previews decides what spends; the client only asks."""
+    from . import language_previews
+    return language_previews.status()
+
+
+@app.post("/api/design-languages/previews/render")
+def api_language_preview_render(body: dict = Body(default={})) -> dict:
+    """Render one language's thumbnail. One image call on the studio's
+    image engine, at 1K."""
+    from . import language_previews
+    try:
+        return language_previews.render(str((body or {}).get("name", "")))
+    except KeyError:
+        raise HTTPException(404, "no such design language")
+    except language_previews.PreviewError as e:
+        raise HTTPException(422, str(e))
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/design-languages/previews/{slug}.png")
+def api_language_preview_image(slug: str):
+    from . import language_previews
+    try:
+        p = language_previews.image_path(slug)
+    except KeyError:
+        raise HTTPException(404)
+    if not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p, media_type="image/png")
+
+
 @app.get("/api/design-languages/examples")
 def api_design_language_examples() -> dict:
     """`{LANGUAGE: image url}` — one approved panel per design language.

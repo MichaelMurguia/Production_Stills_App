@@ -52,6 +52,10 @@ SERVER_TO_SERVER = {
     # so the caller is real but the path never appears as a literal.
     "/api/connectors/preview-image/{name}":
         "URL returned by POST /api/connectors/preview and rendered as an <img>",
+    # Same shape: language_previews.state() returns this URL as `url`, and
+    # the design-language card paints it as its background image.
+    "/api/design-languages/previews/{slug}.png":
+        "URL returned by GET /api/design-languages/previews, painted on the card",
 }
 
 # Routes whose mechanism is being removed. The value is the finding that

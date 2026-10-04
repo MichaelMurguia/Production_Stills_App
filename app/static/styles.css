@@ -1669,6 +1669,20 @@ details.meta pre {
      rather than loosened up there — every other label in the group wants
      them. */
   text-transform: none; letter-spacing: 0; }
+/* UNCANONIZED — 2026-10-04 — design-language thumbnails */
+/* What a thumbnail was rendered FROM rides on the picture (facts about an
+   image ride ON it): BEST GUESS before the Bible, FROM THE BIBLE after. A
+   Courier fact on a field strip along the bottom edge, never amber. */
+.lang-shot { position: relative; }
+.lang-basis { position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 5px 9px; background: var(--field); color: var(--ink-faint);
+  font-family: var(--mono); font-size: var(--t-mark);
+  letter-spacing: .1em; text-transform: uppercase; }
+.lang-basis .text-act { letter-spacing: 0; text-transform: none; }
+.lang-basis .busy-inline { margin: 0; }
+.lang-cost { margin: 2px 0 10px; color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .08em; }
 .lang-body { display: block; padding: 9px 11px 11px;
   font-family: var(--sans); font-size: var(--t-body); color: var(--ink); }
 .lang-card.open { border-color: var(--line); }
