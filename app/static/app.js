@@ -6137,7 +6137,7 @@ async function renderWizard() {
       ...subjects.map(x => {
         const r = castRefsOf(x, refs)[0];
         return `<button type="button" class="cast-tile" data-sid="${esc(x.id)}"
-            title="${esc(x.name)} — open this card">
+            data-kind="${esc(x.kind || "CHARACTER")}" title="${esc(x.name)} — open this card">
           <span class="cast-tile-shot${r ? "" : " none"}" style="${castShot(r)}"></span>
           <span class="cast-tile-name">${esc(x.name)}</span>
         </button>`;

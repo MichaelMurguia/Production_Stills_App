@@ -3068,6 +3068,13 @@ details.meta pre {
 /* An uncast tile is dashed and says so — it is not a card yet, and the
    click is what makes it one. */
 .cast-tile.uncast .cast-tile-shot { border-style: dashed; }
+/* A character's picture is anchored at the TOP of its frame, so whatever
+   the frame crops comes off the feet, never the head (user 2026-10-04:
+   "crop from bottom so the character's head is always in the frame").
+   Same size, aspect and image; only where the crop falls. Vehicles and
+   props stay centred. */
+.cast-tile[data-kind="CHARACTER"] .cast-tile-shot,
+.cast-card[data-kind="CHARACTER"] .cast-shot { background-position: center top; }
 .cast-tile-shot.none { display: flex; align-items: center; justify-content: center;
   background-image: repeating-linear-gradient(135deg,
     var(--field) 0 6px, var(--bg) 6px 12px); }

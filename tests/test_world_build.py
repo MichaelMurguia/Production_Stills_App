@@ -350,6 +350,15 @@ class TheScreen(unittest.TestCase):
         self.assertIn('class="env-shot" role="button" tabindex="0"', self.JS)
         self.assertIn(".env-shot { cursor: zoom-in; }", self.CSS)
 
+    def test_a_character_thumbnail_keeps_the_head(self):
+        """User 2026-10-04: crop from the bottom so the head stays in the
+        frame; size, aspect and composition unchanged."""
+        self.assertIn('.cast-tile[data-kind="CHARACTER"] .cast-tile-shot,\n'
+                      '.cast-card[data-kind="CHARACTER"] .cast-shot { background-position: center top; }',
+                      self.CSS)
+        self.assertIn('data-kind="${esc(x.kind || "CHARACTER")}" title="${esc(x.name)} — open this card"',
+                      self.JS)
+
     def test_only_a_consented_build_resumes_on_arrival(self):
         self.assertIn('ws.state === "interrupted" && ws.consented', self.JS)
 
