@@ -250,6 +250,16 @@ class Consent(unittest.TestCase):
         seg = main[i:main.index('@app.get("/api/world/status")', i)]
         self.assertIn("world_build.start()", seg)
 
+    def test_an_upload_that_skips_the_read_still_starts_the_build(self):
+        """User 2026-10-04, "my build is not working like that": a draft
+        uploaded to a production that already had a read skipped the read
+        (no re-scan of curated work), and the build only started when a
+        read finished. The click is the consent either way."""
+        js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
+        i = js.index("async function startTheRead()")
+        early = js[i:js.index("const s = await api(\"/api/settings\")", i)]
+        self.assertIn('api("/api/world/build", { method: "POST" })', early)
+
     def test_the_button_names_the_cost_of_the_click(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         self.assertEqual(js.count(">Process World Visualization</button>"), 3)

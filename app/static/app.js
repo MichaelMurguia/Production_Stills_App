@@ -3292,7 +3292,15 @@ const theRead = {
 async function startTheRead() {
   try {
     const have = await api("/api/wizard/analysis").catch(() => ({}));
-    if (have && (have.design_worlds || have.subjects || have.analyzed_at)) return;
+    if (have && (have.design_worlds || have.subjects || have.analyzed_at)) {
+      /* No re-scan of a curated production — but the click that brought us
+         here was "Process World Visualization", and that click is the
+         consent for the build (user 2026-10-04: "my build is not working
+         like that" — the read was skipped, so the build it starts never
+         ran). Build from the read this production already has. */
+      await api("/api/world/build", { method: "POST" }).catch(() => {});
+      return;
+    }
     const s = await api("/api/settings");
     const cap = s.capability?.narrative;
     if (!cap?.usable) return;

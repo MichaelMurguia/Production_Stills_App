@@ -667,7 +667,7 @@ class TheUploadStartsTheRead(unittest.TestCase):
 
     def body(self):
         i = self.JS.index("async function startTheRead()")
-        return self.JS[i:i + 1400]
+        return self.JS[i:self.JS.index("\n}\n", i)]   # the whole function
 
     def test_the_upload_fires_it(self):
         i = self.JS.index('const rec = await api("/api/screenplay"')
