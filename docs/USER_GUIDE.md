@@ -145,7 +145,7 @@ The root dependency gets its own room.
   blockers and in the Broken Citations panel here — for *your* review.
   Nothing is auto-corrected; locked breakdowns are immutable by canon rule.
 
-Accepted formats: PDF, FDX, Fountain, TXT. (PDF text extraction is used for
+Accepted formats: PDF, FDX, Fountain, TXT, HTML. (PDF text extraction is used for
 the coverage map and citation check; an image-only PDF disables those two
 features but nothing else.)
 

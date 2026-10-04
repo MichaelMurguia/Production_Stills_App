@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2771 tests** across 138 files.
+**2776 tests** across 138 files.
 
 
-## Product app — 2541 tests in 121 files
+## Product app — 2546 tests in 121 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -118,7 +118,7 @@ temp home and external services are faked.
 | `test_saved_prompt_follows_art_direction.py` | 12 | Regression, user-hit 2026-08-22 and reproduced end to end. |
 | `test_scan_screenplay.py` | 32 | Tell the app anything about a panel; it re-reads the screenplay. |
 | `test_scene_anchor.py` | 14 | Scene anchor regression (user-hit 2026-08-06): a breakdown run for "INT_BRIEFING_ROOM_DAY_V01" drafted the crash site. |
-| `test_screenplay_formats.py` | 4 | The four formats the app claims, actually read. |
+| `test_screenplay_formats.py` | 9 | The five formats the app claims, actually read. |
 | `test_screenplay_two_copies.py` | 6 | Two copies of the screenplay, and only one of them costs money (user rule, 2026-08-16). |
 | `test_secrets_at_rest.py` | 30 | Credentials are wrapped on disk, and the app never lies about whether. |
 | `test_sheet.py` | 70 | The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7, amended by the Lookbook rollback 2026-08-12): the size ladder with the R1 elastic/fixed rulin |
