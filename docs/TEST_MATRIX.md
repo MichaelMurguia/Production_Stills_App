@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2787 tests** across 139 files.
+**2790 tests** across 140 files.
 
 
-## Product app — 2557 tests in 122 files
+## Product app — 2560 tests in 123 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -86,6 +86,7 @@ temp home and external services are faked.
 | `test_medium_guard.py` | 4 | Regression (user-hit 2026-08-06): a bake-off sample rendered photo-real past an attached BOARD_RENDERING_STYLE anchor. |
 | `test_name_acts.py` | 16 | Naming the acts is its own small call (user 2026-08-16: "No Act Titles", reported on an analysis that predates the field). |
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
+| `test_narrative_calls_use_the_studios_engine.py` | 3 | Every narrative call with no provider named uses the studio's engine. |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
 | `test_not_a_valid_key.py` | 11 | A key the provider does not recognise reads "That is not a valid key." User-hit 2026-10-04, in the connect-a-key modal: the previous error |

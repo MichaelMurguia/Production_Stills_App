@@ -626,7 +626,12 @@ class TheUploadStartsTheRead(unittest.TestCase):
         i = self.MAIN.index('@app.post("/api/wizard/analyze")')
         seg = self.MAIN[i:i + 900]
         self.assertNotIn('body.get("provider", "gemini")', seg)
-        self.assertIn('generate.capability()["narrative"]', seg)
+        # The rule moved into one helper every narrative call shares
+        # (2026-10-04) — see test_narrative_calls_use_the_studios_engine.
+        self.assertIn("_narrative_provider(body)", seg)
+        j = self.MAIN.index("def _narrative_provider(")
+        self.assertIn('generate.capability()["narrative"]',
+                      self.MAIN[j:self.MAIN.index("\n\n\n", j)])
 
 
 class AHeldStepOffersNoNext(unittest.TestCase):

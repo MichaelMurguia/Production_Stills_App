@@ -1015,7 +1015,7 @@ async def api_wizard_swatches(body: dict) -> dict:
     langs = [str(x).strip() for x in (body.get("languages") or []) if str(x).strip()]
     try:
         return await run_in_threadpool(
-            wizard.generate_swatches, str(body.get("provider") or "gemini"),
+            wizard.generate_swatches, _narrative_provider(body),
             langs or None, str(body.get("note") or ""), bool(body.get("deep")))
     except autofill.AutofillError as e:
         raise HTTPException(409, str(e))
@@ -2431,7 +2431,7 @@ def api_name_acts(body: dict) -> dict:
     subjects to fill one field (user 2026-08-16)."""
     from . import wizard as _wiz
     try:
-        return _wiz.name_acts(str(body.get("provider") or "gemini"))
+        return _wiz.name_acts(_narrative_provider(body))
     except autofill.AutofillError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
@@ -2494,8 +2494,7 @@ async def api_suggest_anchors(body: dict = Body(default={})) -> dict:
     from . import wizard
     try:
         return await run_in_threadpool(
-            wizard.suggest_anchors,
-            str((body or {}).get("provider", "") or generate.DEFAULT_PROVIDER),
+            wizard.suggest_anchors, _narrative_provider(body),
             bool((body or {}).get("force")))
     except (autofill.AutofillError, generate.GenerationError) as e:
         raise HTTPException(422, str(e))
@@ -2512,8 +2511,7 @@ def api_bible_self_check(body: dict = None) -> dict:
     body = body or {}
     try:
         return wizard.bible_self_check(
-            str(body.get("text", "") or ""),
-            str(body.get("provider", "") or "gemini"))
+            str(body.get("text", "") or ""), _narrative_provider(body))
     except Exception as e:
         raise HTTPException(422, str(e))
 
@@ -2746,17 +2744,27 @@ def api_put_wizard_analysis(body: dict) -> dict:
     return {"ok": True}
 
 
+def _narrative_provider(body: dict | None) -> str:
+    """The text model a call uses when the caller names none: the
+    narrative engine this studio HAS. Hardcoding gemini meant an
+    OpenAI-only install got a stated-unavailable engine for any caller
+    that did not pass one (found 2026-08-20 wiring the upload's own read).
+
+    ONE rule for every narrative call. On 2026-10-04 the read had it and
+    four others still defaulted to gemini, so on an OpenAI-only studio the
+    anchor proposals failed on every arrival at stage 02, silently, and
+    the three cards sat blank (user-hit: "These are blank. Fix")."""
+    provider = str((body or {}).get("provider") or "")
+    if provider:
+        return provider
+    cap = generate.capability()["narrative"]
+    return (generate.load_settings().get("narrative_provider")
+            or (cap["engines"][0] if cap["engines"] else "gemini"))
+
+
 @app.post("/api/wizard/analyze")
 async def api_wizard_analyze(body: dict) -> dict:
-    # Default to the narrative engine this studio HAS. Hardcoding gemini
-    # meant an OpenAI-only install got a stated-unavailable engine for any
-    # caller that did not pass one (found 2026-08-20 wiring the upload's
-    # own read).
-    provider = body.get("provider") or ""
-    if not provider:
-        cap = generate.capability()["narrative"]
-        provider = (generate.load_settings().get("narrative_provider")
-                    or (cap["engines"][0] if cap["engines"] else "gemini"))
+    provider = _narrative_provider(body)
     try:
         analysis = await run_in_threadpool(wizard.analyze_screenplay, provider)
     except autofill.AutofillError as e:
