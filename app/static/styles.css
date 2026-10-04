@@ -1695,17 +1695,9 @@ details.meta pre {
   animation: spin 1.1s linear infinite; }
 .wp-title { font-family: var(--sans); font-size: var(--t-screen);
   font-weight: 600; color: var(--ink); margin: 0; }
-.wp-now { font-size: var(--t-body); color: var(--ink-dim); margin: 0; min-height: 1.5em; }
-.wp-steps { list-style: none; margin: 8px 0 0; padding: 0; width: 100%;
-  display: flex; flex-direction: column; gap: 1px; text-align: left; }
-.wp-step { display: flex; justify-content: space-between; gap: 16px;
-  padding: 8px 2px; border-bottom: 1px solid var(--line-soft); }
-.wp-step .wp-label { color: var(--ink-faint); font-size: var(--t-body); }
-.wp-step.now .wp-label, .wp-step.done .wp-label { color: var(--ink); }
-.wp-step .wp-state { color: var(--ink-faint); font-size: var(--t-mark);
-  letter-spacing: .08em; text-align: right; }
-.wp-step.done .wp-state { color: var(--ok); }
-.wp-step.failed .wp-state { color: var(--ink-dim); }
+.wp-now { font-size: var(--t-title); color: var(--ink); margin: 0; min-height: 1.5em; }
+.wp-detail { color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .1em; margin: 0; min-height: 1.4em; }
 .wp-clock { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .1em; margin: 6px 0 0; }
 @media (prefers-reduced-motion: reduce) {
   .world-proc { animation: none; }

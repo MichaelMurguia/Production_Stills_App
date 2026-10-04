@@ -4939,23 +4939,26 @@ function paintWorldBuild(ws) {
         <span class="spinner" aria-hidden="true"></span>
         <h1 class="wp-title">Visualizing world</h1>
         <p class="wp-now" aria-live="polite"></p>
-        <ol class="wp-steps"></ol>
+        <p class="wp-detail mono"></p>
         <p class="wp-clock mono"></p>
       </div>`;
     main.replaceChildren(host);
   }
-  $(".wp-now", host).textContent = ws.message || "Starting";
-  const mark = { done: "DONE", now: "NOW", failed: "SKIPPED", waiting: "" };
-  $(".wp-steps", host).innerHTML = (ws.steps || []).map(st => `
-    <li class="wp-step ${esc(st.state)}">
-      <span class="wp-label">${esc(st.label)}</span>
-      <span class="wp-state mono">${esc(mark[st.state] || "")}${
-        st.detail ? ` · ${esc(st.detail)}` : ""}</span>
-    </li>`).join("");
+  /* One step at a time (user 2026-10-04: "Just show one process step at
+     a time"). The step running now, its own progress, and where it sits
+     in the sequence; the finished and waiting steps are not listed. */
+  const steps = ws.steps || [];
+  const at = steps.findIndex(st => st.state === "now");
+  const cur = steps[at];
+  $(".wp-now", host).textContent = cur ? cur.label : "Starting";
+  $(".wp-detail", host).textContent = cur?.detail ? cur.detail.toUpperCase() : "";
   const started = Date.parse(ws.started_at || "") || worldBuild.t0 || Date.now();
   const mins = Math.max(0, Math.floor((Date.now() - started) / 60000));
-  $(".wp-clock", host).textContent = mins
-    ? `${mins} MIN · THIS CAN TAKE UP TO AN HOUR` : "THIS CAN TAKE UP TO AN HOUR";
+  $(".wp-clock", host).textContent = [
+    at >= 0 ? `STEP ${at + 1} OF ${steps.length}` : "",
+    mins ? `${mins} MIN` : "",
+    "THIS CAN TAKE UP TO AN HOUR",
+  ].filter(Boolean).join(" · ");
 }
 
 async function pollWorldBuild() {

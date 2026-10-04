@@ -281,6 +281,16 @@ class TheScreen(unittest.TestCase):
         self.assertIn("paintWorldBuild(ws)", head)
         self.assertIn('<h1 class="wp-title">Visualizing world</h1>', self.JS)
 
+    def test_one_step_at_a_time(self):
+        """User 2026-10-04: "Just show one process step at a time." The
+        running step, its own progress, and its place in the sequence;
+        no list of finished and waiting steps."""
+        i = self.JS.index("function paintWorldBuild(ws)")
+        body = self.JS[i:self.JS.index("async function pollWorldBuild()", i)]
+        self.assertNotIn("wp-steps", body)
+        self.assertIn('steps.findIndex(st => st.state === "now")', body)
+        self.assertIn("`STEP ${at + 1} OF ${steps.length}`", body)
+
     def test_only_a_consented_build_resumes_on_arrival(self):
         self.assertIn('ws.state === "interrupted" && ws.consented', self.JS)
 
