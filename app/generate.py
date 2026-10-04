@@ -2132,7 +2132,40 @@ def _render_gemini(prompt: str, ref_paths: list[Path],
 # OpenAI's Image API takes explicit pixel dimensions rather than Gemini's
 # size-class + aspect-ratio pair, with hard constraints: edges must be
 # multiples of 16, longest edge <= 3840, total pixels <= 8,294,400.
-_OPENAI_AREA = {"1K": 1024 * 1024, "2K": 2048 * 2048, "4K": 3840 * 2160}
+# "512" is the thumbnail budget (user 2026-10-04: "economical with image
+# generation by rendering only small thumbnails at first. 512x512?") —
+# the area of 512², shaped to whatever aspect the slot asks for.
+_OPENAI_AREA = {"512": 512 * 512, "1K": 1024 * 1024, "2K": 2048 * 2048,
+                "4K": 3840 * 2160}
+
+
+def narrative_default() -> str:
+    """The text model a call uses when nobody names one: the narrative
+    engine this studio HAS. One rule for every narrative call (2026-10-04),
+    now including the unattended world build."""
+    cap = capability()["narrative"]
+    return (load_settings().get("narrative_provider")
+            or (cap["engines"][0] if cap["engines"] else "gemini"))
+
+
+def thumb_size(provider: str) -> str:
+    """The smallest size an engine can be asked for. Only the OpenAI
+    Images API takes an arbitrary area; Gemini's smallest is 1K, the chat
+    tool's presets start at 1024, and a custom or connector engine states
+    no sizes, so those ask for 1K."""
+    return "512" if provider == "openai" else "1K"
+
+
+def image_engine() -> str:
+    """The engine an unattended render uses: the studio's preferred image
+    engine when it can run, otherwise the first that can. "" when none can.
+    (subject_portrait used to fall back to a setting nothing writes, which
+    is always gemini — review 2026-10-04.)"""
+    usable = list(capability()["image"].get("engines") or [])
+    if not usable:
+        return ""
+    pref = preferred_provider()
+    return pref if pref in usable else usable[0]
 
 
 def openai_size(image_size: str, aspect_ratio: str) -> str:
@@ -2162,7 +2195,8 @@ def legal_openai_size(width: int, height: int) -> str:
 
 
 def _render_openai(prompt: str, ref_paths: list[Path],
-                   image_size: str, aspect_ratio: str, out_path: Path) -> str:
+                   image_size: str, aspect_ratio: str, out_path: Path,
+                   quality: str = "high") -> str:
     import base64
 
     client = _openai_client()
@@ -2175,13 +2209,13 @@ def _render_openai(prompt: str, ref_paths: list[Path],
             try:
                 response = client.images.edit(
                     model=OPENAI_MODEL, image=files, prompt=prompt,
-                    size=size, quality="high")
+                    size=size, quality=quality)
             finally:
                 for f in files:
                     f.close()
         else:
             response = client.images.generate(
-                model=OPENAI_MODEL, prompt=prompt, size=size, quality="high")
+                model=OPENAI_MODEL, prompt=prompt, size=size, quality=quality)
     except Exception as e:
         raise _wrap_engine_error("OpenAI", e) from e
 
@@ -2607,7 +2641,12 @@ def sample_probe(provider: str, subject: str | None = None) -> dict:
 SUBJECT_ASPECT = {"CHARACTER": "9:16", "VEHICLE": "16:9", "PROP": "16:9"}
 
 
-def subject_portrait(sid: str, provider: str = "") -> dict:
+import threading as _threading
+_LIBRARY_WRITE = _threading.Lock()
+
+
+def subject_portrait(sid: str, provider: str = "", size: str = "1K",
+                     quality: str = "") -> dict:
     """Render one reference image FOR a subject, from its own words.
 
     The upload door already existed; this is the other one the user asked
@@ -2624,8 +2663,7 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
     subj = store.get_subject(sid)
     if subj is None:
         raise GenerationError(f"unknown subject: {sid}")
-    provider = provider or (load_settings().get("image_provider")
-                            or DEFAULT_PROVIDER)
+    provider = provider or image_engine() or DEFAULT_PROVIDER
     if provider not in all_providers():
         raise GenerationError(f"provider must be one of {sorted(all_providers())}")
 
@@ -2691,25 +2729,29 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
 
     aspect = SUBJECT_ASPECT.get(kind, "4:5")
     ref_paths = _reference_image_paths(style_refs)
-    out = paths.DATA / "subject_render.png"
+    # A private temp file per render: a shared one let two portraits
+    # rendering at once read, or delete, each other's paid image.
+    import tempfile
+    paths.ensure_dirs()
+    fd, tmp = tempfile.mkstemp(prefix=".subject-", suffix=".png", dir=paths.DATA)
+    os.close(fd)
+    out = Path(tmp)
     try:
-        if provider == "mock":
-            mockflow.render(prompt, ref_paths, "1K", aspect, out)
-        elif provider == "openai-chat":
-            _render_openai_chat(prompt, ref_paths, "1K", aspect, out, verbatim=True)
-        elif provider == "openai":
-            _render_openai(prompt, ref_paths, "1K", aspect, out)
-        else:
-            _render_gemini(prompt, ref_paths, "1K", aspect, out)
+        render_to(provider, prompt, ref_paths, size, aspect, out,
+                  verbatim=True, quality=quality)
         data = out.read_bytes()
     finally:
         out.unlink(missing_ok=True)
 
     role = f"{store.SUBJECT_ROLE_PREFIX[kind]} — {subj['name'].upper()}"
-    ref = store.add_reference(
-        f"{subj['name']}.png", data, role, [], [],
-        notes=f"generated reference for subject {subj['name']} ({sid}) "
-              f"by {provider}")
+    # The library and the cast file are read-modify-write; the world build
+    # renders several portraits at once, so their WRITES take turns.
+    with _LIBRARY_WRITE:
+        ref = store.add_reference(
+            f"{subj['name']}.png", data, role, [], [],
+            notes=f"generated reference for subject {subj['name']} ({sid}) "
+                  f"by {provider}")
+        store.link_subject_ref(sid, ref["id"])
     # It lands PROVISIONAL, not approved. Asking for a render is not the
     # same as accepting the one that came back, and the plan puts Accept /
     # Reject under the frame for exactly that (2026-09-12, replacing the
@@ -2717,7 +2759,6 @@ def subject_portrait(sid: str, provider: str = "") -> dict:
     # supplied plate, where the user had already SEEN the picture).
     # add_reference already defaults to PROVISIONAL — the change here is
     # the REMOVAL of the approve call that used to follow it.
-    store.link_subject_ref(sid, ref["id"])
     return {"subject": sid, "reference": ref["id"], "provider": provider,
             "aspect_ratio": aspect, "status": ref["status"]}
 
@@ -3109,7 +3150,7 @@ def rerender_full(spec_id: str, cand_id: str, image_size: str = "4K",
 
 def render_to(provider: str, prompt: str, ref_paths: list[Path],
               image_size: str, aspect_ratio: str, out: Path,
-              verbatim: bool = False):
+              verbatim: bool = False, quality: str = ""):
     """Render one image to `out` on `provider`. The panel's dispatch, made
     callable so another caller cannot drift from it: several copies of
     this branch existed and one had already lost the custom and connector
@@ -3125,8 +3166,12 @@ def render_to(provider: str, prompt: str, ref_paths: list[Path],
     if provider.startswith(("or:", "fal:")):
         return _render_connector(provider, prompt, ref_paths, image_size,
                                  aspect_ratio, out)
-    render = _render_openai if provider == "openai" else _render_gemini
-    return render(prompt, ref_paths, image_size, aspect_ratio, out)
+    if provider == "openai":
+        # `quality` is the one OpenAI-only lever: thumbnails ask for
+        # "medium"; panels keep the default, "high".
+        return _render_openai(prompt, ref_paths, image_size, aspect_ratio, out,
+                              **({"quality": quality} if quality else {}))
+    return _render_gemini(prompt, ref_paths, image_size, aspect_ratio, out)
 
 
 def generate_panel(spec_id: str, panel_id: str, ref_ids: list[str],

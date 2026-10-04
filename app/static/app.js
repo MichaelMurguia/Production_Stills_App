@@ -2383,9 +2383,10 @@ async function renderStatus() {
       file. Nothing downstream unlocks without it.</p>
       <form id="status-screenplay-form" class="row" style="margin-top:10px">
         <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
-        <button type="submit" class="primary hidden" data-reveal>Analyze script world</button>
+        <button type="submit" class="primary hidden" data-reveal>Process World Visualization</button>
       </form>
-      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>`;
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>
+      <p class="mini world-consent">${WORLD_CONSENT}</p>`;
     bindScreenplayUpload($("#status-screenplay-form"), state.capability);
   } else {
     lead.innerHTML = `
@@ -2517,9 +2518,10 @@ async function renderScreenplay() {
       Nothing downstream unlocks without it.</p>
       <form id="screenplay-form-main" class="row">
         <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
-        <button type="submit" class="primary hidden" data-reveal>Analyze script world</button>
+        <button type="submit" class="primary hidden" data-reveal>Process World Visualization</button>
       </form>
-      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>`;
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>
+      <p class="mini world-consent">${WORLD_CONSENT}</p>`;
     bindScreenplayUpload($("#screenplay-form-main"), state.capability);
     $("#screenplay-form").closest(".panel").classList.add("hidden");
   }
@@ -4873,15 +4875,15 @@ async function runLangPreviewQueue(list) {
   let rendered = 0;
   try {
     for (;;) {
-      const next = (list.languages || []).find(l =>
-        l.due && !langPreviews.failed[l.slug]);
+      const next = [...(list.languages || []), ...(list.environments || [])]
+        .find(l => l.due && !langPreviews.failed[l.slug]);
       if (!next) break;
       next.rendering = true; next.due = false;
       langPreviews.repaint?.(false);
       rendered += 1;
       try {
         Object.assign(next, await api("/api/design-languages/previews/render",
-          { method: "POST", json: { name: next.name } }));
+          { method: "POST", json: { name: next.name, kind: next.kind } }));
       } catch (err) {
         next.rendering = false;
         langPreviews.failed[next.slug] = err.message;
@@ -4896,8 +4898,105 @@ async function runLangPreviewQueue(list) {
   if (rendered) langPreviews.repaint?.(true);
 }
 
+/* Process World Visualization (user 2026-10-04). The upload's click is the
+   consent: the read, then the Art Direction Bible, then small thumbnails
+   of every design language, environment and character, all server-side
+   (app/world_build.py). This line stands beside every button that starts
+   it, so the cost of the click is read before it is made. */
+const WORLD_CONSENT = "Reads the screenplay, writes the Art Direction Bible, "
+  + "and renders small thumbnails of every design language, environment "
+  + "and character. This could take up to an hour.";
+
+/* While it runs, Production Design is one quiet screen: the label, a
+   spinner, and the steps as they move (user: "an elegant blank screen
+   with a 'Visualizing World' label ... give status updates periodically
+   ... have the page background hue shift very very slowly"). It asks the
+   server every few seconds and hands back to the stage when it is done. */
+const worldBuild = { timer: null, t0: 0 };
+
+function stopWorldPoll() {
+  clearTimeout(worldBuild.timer);
+  worldBuild.timer = null;
+}
+
+function paintWorldBuild(ws) {
+  const main = $("#main");
+  let host = $(".world-proc", main);
+  if (!host) {
+    host = document.createElement("section");
+    host.className = "view world-proc";
+    host.innerHTML = `
+      <div class="wp-center">
+        <span class="spinner" aria-hidden="true"></span>
+        <h1 class="wp-title">Visualizing world</h1>
+        <p class="wp-now" aria-live="polite"></p>
+        <ol class="wp-steps"></ol>
+        <p class="wp-clock mono"></p>
+      </div>`;
+    main.replaceChildren(host);
+  }
+  $(".wp-now", host).textContent = ws.message || "Starting";
+  const mark = { done: "DONE", now: "NOW", failed: "SKIPPED", waiting: "" };
+  $(".wp-steps", host).innerHTML = (ws.steps || []).map(st => `
+    <li class="wp-step ${esc(st.state)}">
+      <span class="wp-label">${esc(st.label)}</span>
+      <span class="wp-state mono">${esc(mark[st.state] || "")}${
+        st.detail ? ` · ${esc(st.detail)}` : ""}</span>
+    </li>`).join("");
+  const started = Date.parse(ws.started_at || "") || worldBuild.t0 || Date.now();
+  const mins = Math.max(0, Math.floor((Date.now() - started) / 60000));
+  $(".wp-clock", host).textContent = mins
+    ? `${mins} MIN · THIS CAN TAKE UP TO AN HOUR` : "THIS CAN TAKE UP TO AN HOUR";
+}
+
+async function pollWorldBuild() {
+  stopWorldPoll();
+  if (activeView !== "wizard") return;
+  let ws = null;
+  try { ws = await api("/api/world/status"); } catch { /* keep the screen */ }
+  if (activeView !== "wizard") return;
+  if (ws && ws.state !== "running") {
+    updateBand?.();
+    renderWizard();
+    return;
+  }
+  if (ws) paintWorldBuild(ws);
+  worldBuild.timer = setTimeout(pollWorldBuild, 3000);
+}
+
 async function renderWizard() {
+  let ws = await api("/api/world/status").catch(() => null);
+  // A build this draft already consented to, stopped by a restart, picks
+  // up where it left off. A draft never built is OFFERED the build below;
+  // arriving is not a click.
+  if (ws && ws.state === "interrupted" && ws.consented)
+    ws = await api("/api/world/build", { method: "POST" }).catch(() => ws);
+  if (ws && ws.state === "running") {
+    worldBuild.t0 = worldBuild.t0 || Date.now();
+    paintWorldBuild(ws);
+    worldBuild.timer = setTimeout(pollWorldBuild, 3000);
+    return;
+  }
+  stopWorldPoll();
+  worldBuild.t0 = 0;
   useTemplate("tpl-wizard");
+  if (ws && ws.needed && !ws.consented) {
+    const offer = document.createElement("div");
+    offer.className = "panel world-offer";
+    offer.innerHTML = `
+      <div class="wo-text">
+        <h3>Process World Visualization</h3>
+        <p class="mini">${WORLD_CONSENT}</p>
+      </div>
+      <button class="primary" data-f="world-go">Process World Visualization</button>`;
+    $("[data-f=world-go]", offer).onclick = async () => {
+      try {
+        await api("/api/world/build", { method: "POST" });
+        renderWizard();
+      } catch (err) { toast(err.message, true); }
+    };
+    $("#main .view")?.prepend(offer);
+  }
   const state = await api("/api/state");
 
   // The screenplay analysis is stored server-side (data/wizard_analysis.json)
@@ -5695,7 +5794,7 @@ async function renderWizard() {
   const loadWizLangPrev = () => {
     wizLangPrevAsked = true;
     return api("/api/design-languages/previews")
-      .then(m => { wizLangPrev = m || wizLangPrev; runLangPreviewQueue(wizLangPrev); })
+      .then(m => { wizLangPrev = m || wizLangPrev; })
       .catch(() => wizLangPrev);
   };
 
@@ -7080,7 +7179,8 @@ async function renderWizard() {
       wizLangPrevFor = curNames;
       loadWizLangPrev().then(renderWorlds);
     }
-    // The queue repaints through whichever stage render is current.
+    // Re-render (a Bible edit) or Try again (a failure) go through the
+    // one queue; the world build renders everything else.
     langPreviews.repaint = (refetch = true) => {
       if (activeView !== "wizard") return;
       if (refetch) wizLangPrevAsked = false;
@@ -7223,8 +7323,8 @@ async function renderWizard() {
       const eng = wizLangPrev.engine;
       costEl.hidden = !eng || !worlds.length;
       costEl.textContent = eng
-        ? `THUMBNAILS · 1 IMAGE PER LANGUAGE ON ${eng.toUpperCase()} · `
-          + "1 MORE WHEN THE BIBLE FIRST COVERS IT"
+        ? `SMALL THUMBNAILS ON ${eng.toUpperCase()} · `
+          + "1 PER DESIGN LANGUAGE AND ENVIRONMENT · RE-RENDER ONLY WHEN YOU ASK"
         : "";
     }
     const wHost = $("#wiz-worlds", host);
@@ -7602,13 +7702,22 @@ async function renderWizard() {
            the whole question an environment answers is WHICH places live
            under it.
 
-           The plan also asks for a 120px thumb on each row. There is
-           nothing to put in it: an environment has no picture anywhere in
-           this app, and a slot that can never fill is worse than no slot
-           (B3). Logged for the designer rather than faked. */
-        card.className = "env-row" + (proposed ? " proposed" : "");
+           The plan also asks for a thumb on each row. Since 2026-10-04
+           the world build renders one per environment, so the slot is
+           drawn exactly when its picture exists — never an empty frame
+           (B3). */
+        const ep = (wizLangPrev.environments || []).find(l =>
+          l.name.toLowerCase() === String(env.name || "").trim().toLowerCase());
+        card.className = "env-row" + (proposed ? " proposed" : "")
+          + (ep?.url ? " has-shot" : "");
         const locs = (env.locations || []);
+        const epOld = ep?.state === "outdated";
         card.innerHTML = `
+          ${ep?.url ? `<span class="env-shot" style="background-image:url('${ep.url}')">
+            <span class="lang-basis mono">${epOld ? "BIBLE CHANGED"
+              : ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"}${epOld
+              ? ` <button type="button" class="text-act" data-f="env-rerender">Re-render</button>` : ""}</span>
+          </span>` : ""}
           <div class="env-name">${esc(env.name || "(unnamed)")}</div>
           <p class="env-notes">${esc(env.notes || "")}</p>
           <div class="env-locs mono">${locs.length
@@ -7624,6 +7733,11 @@ async function renderWizard() {
         // It opens a room that shows the prose, what inherits it, and the
         // blast radius, and states that before the save.
         $("[data-f=edit]", card).onclick = () => openEnvModal(env, i, patchEnvs);
+        $("[data-f=env-rerender]", card)?.addEventListener("click", e => {
+          e.stopPropagation();
+          ep.due = true;
+          runLangPreviewQueue(wizLangPrev);
+        });
         $("[data-f=confirm]", card)?.addEventListener("click", () => {
           patchEnvs(list => { delete list[i].status; });
           toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);

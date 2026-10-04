@@ -508,7 +508,8 @@ class AFutureStageIsNotAnError(Install):
 class TheFirstRunVerbWaitsForAFile(unittest.TestCase):
     """User, 2026-10-04: during the first run the upload button "should
     not even show up until a screenplay is selected", and it reads
-    "Analyze script world". The Replace card keeps its stated disabled
+    "Process World Visualization" (renamed the same day from "Analyze
+    script world"). The Replace card keeps its stated disabled
     button: a returning user replacing a draft is not being onboarded."""
 
     def forms(self):
@@ -518,7 +519,7 @@ class TheFirstRunVerbWaitsForAFile(unittest.TestCase):
 
     def test_both_first_run_forms_hide_the_verb_and_name_it(self):
         for f in self.forms():
-            self.assertIn('class="primary hidden" data-reveal>Analyze script world</button>', f)
+            self.assertIn('class="primary hidden" data-reveal>Process World Visualization</button>', f)
             self.assertNotIn("start the read", f)
 
     def test_choosing_a_file_reveals_it(self):
@@ -706,8 +707,11 @@ class TheUploadStartsTheRead(unittest.TestCase):
         # (2026-10-04) — see test_narrative_calls_use_the_studios_engine.
         self.assertIn("_narrative_provider(body)", seg)
         j = self.MAIN.index("def _narrative_provider(")
-        self.assertIn('generate.capability()["narrative"]',
+        self.assertIn("generate.narrative_default()",
                       self.MAIN[j:self.MAIN.index("\n\n\n", j)])
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        k = gen.index("def narrative_default(")
+        self.assertIn('capability()["narrative"]', gen[k:gen.index("\n\n\n", k)])
 
 
 class AHeldStepOffersNoNext(unittest.TestCase):

@@ -65,9 +65,10 @@ class Thumbnails(unittest.TestCase):
             {"medium": "Production Painting rendering style"}), encoding="utf-8")
         self.calls = []
 
-        def fake_render(provider, prompt, ref_paths, size, aspect, out, verbatim=False):
+        def fake_render(provider, prompt, ref_paths, size, aspect, out, **kw):
             self.calls.append({"provider": provider, "prompt": prompt,
-                               "size": size, "aspect": aspect})
+                               "size": size, "aspect": aspect,
+                               "quality": kw.get("quality", "")})
             Path(out).write_bytes(PNG)
         p1 = mock.patch.object(generate, "render_to", side_effect=fake_render)
         p2 = mock.patch.object(lp, "engine", return_value="openai")
@@ -96,7 +97,10 @@ class Thumbnails(unittest.TestCase):
         st = lp.render("Terran Concord")
         self.assertEqual((st["state"], st["basis"], st["due"]), ("current", "guess", False))
         call = self.calls[-1]
-        self.assertEqual((call["size"], call["aspect"]), ("1K", "3:2"))
+        # Small first (user 2026-10-04): the 512² budget on OpenAI, at
+        # medium quality, shaped to the card.
+        self.assertEqual((call["size"], call["aspect"], call["quality"]),
+                         ("512", "3:2", "medium"))
         self.assertIn("Polished imperial stone and brass", call["prompt"])
         self.assertIn("RENDERING STYLE: Production Painting", call["prompt"])
         self.assertIn("No text, lettering", call["prompt"])
@@ -146,7 +150,7 @@ class Thumbnails(unittest.TestCase):
     def test_one_language_never_renders_twice_at_once(self):
         gate, release = threading.Event(), threading.Event()
 
-        def slow(provider, prompt, refs, size, aspect, out, verbatim=False):
+        def slow(provider, prompt, refs, size, aspect, out, **kw):
             gate.set()
             release.wait(5)
             Path(out).write_bytes(PNG)
@@ -182,7 +186,7 @@ class TheRoutes(unittest.TestCase):
         self.client = TestClient(appmain.app)
 
     def test_status_render_and_image(self):
-        def fake(provider, prompt, refs, size, aspect, out, verbatim=False):
+        def fake(provider, prompt, refs, size, aspect, out, **kw):
             Path(out).write_bytes(PNG)
         with mock.patch.object(generate, "render_to", side_effect=fake), \
                 mock.patch.object(lp, "engine", return_value="openai"):
@@ -229,12 +233,12 @@ class TheCards(unittest.TestCase):
         self.assertGreater(i, 0)
 
     def test_what_it_spends_is_stated_where_it_spends(self):
-        """It renders without a click, so the cost is on screen: one image
-        per language on the named engine, one more when the Bible covers
-        it (/spend)."""
+        """The build renders without a further click, so the cost is on
+        screen beside the result: small thumbnails on the named engine, one
+        per language and environment (/spend)."""
         self.assertIn('id="wiz-lang-cost"', self.JS)
-        self.assertIn("1 IMAGE PER LANGUAGE ON ${eng.toUpperCase()}", self.JS)
-        self.assertIn("1 MORE WHEN THE BIBLE FIRST COVERS IT", self.JS)
+        self.assertIn("SMALL THUMBNAILS ON ${eng.toUpperCase()}", self.JS)
+        self.assertIn("1 PER DESIGN LANGUAGE AND ENVIRONMENT", self.JS)
 
     def test_the_card_says_what_it_was_rendered_from(self):
         self.assertIn('prev.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"', self.JS)

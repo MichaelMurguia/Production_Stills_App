@@ -2417,20 +2417,14 @@ async def api_save_style_bible(body: dict) -> dict:
     text = str(body.get("text", "")).strip()
     if not text:
         raise HTTPException(422, "style bible cannot be empty")
-    generate.save_style_bible(text + "\n")
     # The missing trigger (user-hit 2026-08-22, on a standard first-run
     # setup: pick the anchors, draft the Bible, press Generate a sample,
-    # and be refused). The sync ran on the interview save and at boot —
-    # but a Bible DRAFTED after the anchors was written by a model, in
-    # the model's own words, and nothing re-derived its Rendering
-    # Language afterwards. The anchor is the style; the section is its
-    # transcription; so it is re-derived the moment a Bible is saved,
-    # however it was written.
-    bible.sync_from_anchors()
-    state = store.load_app_state()
-    state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
-    store.save_app_state(state)
-    return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
+    # and be refused). A Bible DRAFTED after the anchors was written by a
+    # model in its own words, and nothing re-derived its Rendering
+    # Language afterwards — so save_document re-derives it on every save,
+    # however the Bible was written.
+    rev = bible.save_document(text)
+    return {"text": text + "\n", "is_default": False, "rev": rev}
 
 
 @app.post("/api/wizard/acts")
@@ -2556,11 +2550,13 @@ def api_language_previews() -> dict:
 
 @app.post("/api/design-languages/previews/render")
 def api_language_preview_render(body: dict = Body(default={})) -> dict:
-    """Render one language's thumbnail. One image call on the studio's
-    image engine, at 1K."""
+    """Render one card's thumbnail (`kind`: language | environment). One
+    small image call on the studio's image engine."""
     from . import language_previews
     try:
-        return language_previews.render(str((body or {}).get("name", "")))
+        return language_previews.render(
+            str((body or {}).get("name", "")),
+            str((body or {}).get("kind", "") or "language"))
     except KeyError:
         raise HTTPException(404, "no such design language")
     except language_previews.PreviewError as e:
@@ -2799,11 +2795,7 @@ def _narrative_provider(body: dict | None) -> str:
     anchor proposals failed on every arrival at stage 02, silently, and
     the three cards sat blank (user-hit: "These are blank. Fix")."""
     provider = str((body or {}).get("provider") or "")
-    if provider:
-        return provider
-    cap = generate.capability()["narrative"]
-    return (generate.load_settings().get("narrative_provider")
-            or (cap["engines"][0] if cap["engines"] else "gemini"))
+    return provider or generate.narrative_default()
 
 
 @app.post("/api/wizard/analyze")
@@ -2839,7 +2831,29 @@ async def api_wizard_analyze(body: dict) -> dict:
     # to a screenplay nobody read (see the recovery guard in app.js).
     analysis["screenplay_sha256"] = sp.get("sha256", "")
     store.save_wizard_analysis(analysis)
+    # The read is the first step of Process World Visualization, whose
+    # click is the consent for the rest (user 2026-10-04): Production
+    # Design now fills itself in the background, Bible first, then the
+    # thumbnails. Once per draft; asking twice never builds twice.
+    from . import world_build
+    world_build.start()
     return analysis
+
+
+@app.get("/api/world/status")
+def api_world_status() -> dict:
+    """Where the background world build is: each step, its detail, and a
+    one-line message for the Visualizing World screen."""
+    from . import world_build
+    return world_build.status()
+
+
+@app.post("/api/world/build")
+def api_world_build() -> dict:
+    """Start the world build if this draft has a read that was never
+    built. Idempotent — the screen calls it on arrival."""
+    from . import world_build
+    return world_build.start()
 
 
 # One question per anchor, plus the three no anchor can hold (user ruling

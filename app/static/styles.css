@@ -140,6 +140,11 @@
      thing a person reads — the numbers for each face are in
      DESIGN_SYSTEM.md under "the legibility floor".
      ---------------------------------------------------------------- */
+  /* UNCANONIZED — 2026-10-04 — the Visualizing world ground drifts
+     between these three near-blacks (one flat colour at a time). */
+  --world-a: #121417;
+  --world-b: #14131b;
+  --world-c: #111917;
   --t-scale: .8;
 
   --t-kicker:  calc(15px * var(--t-scale));  /* Courier CAPS — section kickers, step labels */
@@ -1669,6 +1674,56 @@ details.meta pre {
      rather than loosened up there — every other label in the group wants
      them. */
   text-transform: none; letter-spacing: 0; }
+/* UNCANONIZED — 2026-10-04 — Visualizing world */
+/* The whole of Production Design while the world build runs: a label, a
+   spinner and the steps, centred on a ground whose hue drifts very slowly
+   between three near-blacks (user: "have the page background hue shift
+   very very slowly"). Not a gradient: one flat colour at a time, changing
+   over minutes. Amber stays on the spinner alone. */
+.world-proc { min-height: calc(100vh - 140px); display: flex;
+  align-items: center; justify-content: center; padding: 48px 16px;
+  background: var(--world-a);
+  animation: world-hue 240s ease-in-out infinite alternate; }
+@keyframes world-hue {
+  0% { background-color: var(--world-a); }
+  50% { background-color: var(--world-b); }
+  100% { background-color: var(--world-c); } }
+.wp-center { display: flex; flex-direction: column; align-items: center;
+  gap: 16px; max-width: 560px; width: 100%; text-align: center; }
+.world-proc .spinner { width: 30px; height: 30px; border-radius: 50%;
+  border: 2.5px solid var(--line); border-top-color: var(--accent);
+  animation: spin 1.1s linear infinite; }
+.wp-title { font-family: var(--sans); font-size: var(--t-screen);
+  font-weight: 600; color: var(--ink); margin: 0; }
+.wp-now { font-size: var(--t-body); color: var(--ink-dim); margin: 0; min-height: 1.5em; }
+.wp-steps { list-style: none; margin: 8px 0 0; padding: 0; width: 100%;
+  display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.wp-step { display: flex; justify-content: space-between; gap: 16px;
+  padding: 8px 2px; border-bottom: 1px solid var(--line-soft); }
+.wp-step .wp-label { color: var(--ink-faint); font-size: var(--t-body); }
+.wp-step.now .wp-label, .wp-step.done .wp-label { color: var(--ink); }
+.wp-step .wp-state { color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .08em; text-align: right; }
+.wp-step.done .wp-state { color: var(--ok); }
+.wp-step.failed .wp-state { color: var(--ink-dim); }
+.wp-clock { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .1em; margin: 6px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .world-proc { animation: none; }
+  .world-proc .spinner { animation: none; } }
+.world-offer { display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 12px 24px; }
+.world-offer .wo-text { display: grid; gap: 4px; max-width: 70ch; }
+.world-offer h3 { margin: 0; }
+.world-consent { color: var(--ink-dim); max-width: 60ch; }
+/* An environment row with its thumbnail at the left. */
+.env-row.has-shot { display: grid; grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: 14px; }
+.env-row.has-shot > :not(.env-shot) { grid-column: 2; }
+.env-shot { grid-column: 1; grid-row: 1 / span 6; position: relative;
+  display: block; aspect-ratio: 1.5; align-self: start;
+  background: var(--field) center / cover no-repeat; }
+.env-shot .lang-basis { letter-spacing: .04em; }
+
 /* UNCANONIZED — 2026-10-04 — design-language thumbnails */
 /* What a thumbnail was rendered FROM rides on the picture (facts about an
    image ride ON it): BEST GUESS before the Bible, FROM THE BIBLE after. A

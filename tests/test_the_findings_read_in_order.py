@@ -171,14 +171,15 @@ class EnvironmentsNameTheirLocations(unittest.TestCase):
         i = JS.index('<div class="env-locs mono">')
         self.assertIn("${locs.length} LOCATION${locs.length === 1", JS[i:i + 700])
 
-    def test_no_thumb_slot_was_built_that_cannot_fill(self):
-        """§3.3 asks for a 120px thumb per row. An environment has no
-        picture anywhere in this app. A slot that can never fill is worse
-        than no slot (B3) — this is logged for the designer, not faked."""
+    def test_the_thumb_appears_only_when_there_is_a_picture(self):
+        """§3.3 asks for a thumb per row. Until 2026-10-04 an environment
+        had no picture anywhere, and a slot that can never fill is worse
+        than no slot (B3). The world build now renders one per environment,
+        so the slot exists exactly when its picture does."""
         i = JS.index('card.className = "env-row"')
-        seg = JS[max(0, i - 900):i]
-        self.assertIn("nothing to put in it", seg)
-        self.assertNotIn("env-shot", CSS)
+        seg = JS[i:i + 900]
+        self.assertIn('(ep?.url ? " has-shot" : "")', seg)
+        self.assertIn('${ep?.url ? `<span class="env-shot"', seg)
 
 
 class TheSubjectsRailShowsWhatItCounts(unittest.TestCase):
