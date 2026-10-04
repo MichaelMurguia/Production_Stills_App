@@ -338,6 +338,18 @@ class TheScreen(unittest.TestCase):
         self.assertIn("Run it again", head)
         self.assertIn('filter(st => st.state === "failed")', head)
 
+    def test_an_environment_thumbnail_opens_larger(self):
+        """User 2026-10-04: "Environment thumbs should be clickable to see
+        a larger version." The shared lightbox, the whole set, keyboard
+        too, and the basis rides into the caption."""
+        i = self.JS.index('const shotEl = $(".env-shot", card);')
+        body = self.JS[i:i + 1200]
+        self.assertIn("openLightbox(set.map(", body)
+        self.assertIn('e.key === "Enter"', body)
+        self.assertIn('"FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL', body)
+        self.assertIn('class="env-shot" role="button" tabindex="0"', self.JS)
+        self.assertIn(".env-shot { cursor: zoom-in; }", self.CSS)
+
     def test_only_a_consented_build_resumes_on_arrival(self):
         self.assertIn('ws.state === "interrupted" && ws.consented', self.JS)
 

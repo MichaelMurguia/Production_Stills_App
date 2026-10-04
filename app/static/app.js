@@ -7736,7 +7736,7 @@ async function renderWizard() {
         const locs = (env.locations || []);
         const epOld = ep?.state === "outdated";
         card.innerHTML = `
-          ${ep?.url ? `<span class="env-shot" style="background-image:url('${ep.url}')">
+          ${ep?.url ? `<span class="env-shot" role="button" tabindex="0" title="View larger" style="background-image:url('${ep.url}')">
             <span class="lang-basis mono">${epOld ? "BIBLE CHANGED"
               : ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"}${epOld
               ? ` <button type="button" class="text-act" data-f="env-rerender">Re-render</button>` : ""}</span>
@@ -7761,6 +7761,28 @@ async function renderWizard() {
           ep.due = true;
           runLangPreviewQueue(wizLangPrev);
         });
+        /* The thumbnail opens larger (user 2026-10-04: "Environment thumbs
+           should be clickable to see a larger version"), in the lightbox
+           every other picture uses, with every environment's thumbnail in
+           it so the arrows walk the set. What it was rendered from rides
+           into the caption, as it does on the thumbnail. */
+        const shotEl = $(".env-shot", card);
+        if (shotEl) {
+          const open = e => {
+            if (e.target.closest("button")) return;
+            const set = (wizLangPrev.environments || []).filter(x => x.url);
+            const at = Math.max(0, set.findIndex(x => x.slug === ep.slug));
+            openLightbox(set.map(x => ({
+              src: x.url,
+              caption: `${x.name.toUpperCase()} — ${x.basis === "bible"
+                ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL`,
+            })), at);
+          };
+          shotEl.addEventListener("click", open);
+          shotEl.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
+          });
+        }
         $("[data-f=confirm]", card)?.addEventListener("click", () => {
           patchEnvs(list => { delete list[i].status; });
           toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);

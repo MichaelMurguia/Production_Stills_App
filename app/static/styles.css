@@ -1715,6 +1715,8 @@ details.meta pre {
   display: block; aspect-ratio: 1.5; align-self: start;
   background: var(--field) center / cover no-repeat; }
 .env-shot .lang-basis { letter-spacing: .04em; }
+.env-shot { cursor: zoom-in; }
+.env-shot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* UNCANONIZED — 2026-10-04 — design-language thumbnails */
 /* What a thumbnail was rendered FROM rides on the picture (facts about an
