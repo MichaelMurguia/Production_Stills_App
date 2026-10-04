@@ -5817,7 +5817,10 @@ async function renderWizard() {
   const loadWizLangPrev = () => {
     wizLangPrevAsked = true;
     return api("/api/design-languages/previews")
-      .then(m => { wizLangPrev = m || wizLangPrev; })
+      .then(m => {
+        wizLangPrev = m || wizLangPrev;
+        if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+      })
       .catch(() => wizLangPrev);
   };
 
@@ -8126,19 +8129,67 @@ async function renderWizard() {
     return { shot, swatches: rampOrder(sw).slice(0, 8) };
   };
 
-  const renderBibleDoc = (text, refs) => {
-    const host = $("#bible-doc");
-    if (!host) return;
+  /* One section at a time (user 2026-10-04: "For humans looking at the
+     interface, it should be a well-formatted, sectioned document"; ruled:
+     an index, and one section shown at a time, each editable on its own).
+
+     The FILE is unchanged and is still what every model reads — and only
+     the sections a shot needs are sent (bible.render_context). This is a
+     view over it: the index is the file's own `##` headings, environments
+     are the `###` entries under `## Environments`, and a design language
+     is a `##` the read named. The renderer reads; saving a section is
+     bibleSaveSection's job, below, through the one Bible save. */
+  const BIBLE_LOOK = ["Overall Visual Identity", "Rendering Language",
+                      "Lighting Language", "Character Presentation"];
+  const BIBLE_GROUPS = [["look", "THE LOOK"], ["languages", "DESIGN LANGUAGES"],
+                        ["environments", "ENVIRONMENTS"], ["reference", "REFERENCE"]];
+  let bibleDocArgs = null;
+  let bibleSecEdit = "";
+
+  const bibleModel = text => {
     const lines = String(text || "").split("\n");
+    let title = "";
+    const h2 = [];
+    lines.forEach((l, i) => {
+      const t = l.trim();
+      let m;
+      if (!title && (m = t.match(/^#\s+(.+)$/))) title = m[1].trim();
+      if ((m = t.match(/^##\s+(.+)$/))) h2.push({ i, title: m[1].trim() });
+    });
+    const langs = new Set((getAnalysis()?.design_worlds || [])
+      .map(w => String(w.name || "").trim().toLowerCase()).filter(Boolean));
+    const secs = [];
+    h2.forEach((h, k) => {
+      const end = k + 1 < h2.length ? h2[k + 1].i : lines.length;
+      if (h.title.toLowerCase() === "environments") {
+        const kids = [];
+        for (let i = h.i + 1; i < end; i++) {
+          const m = lines[i].trim().match(/^###\s+(.+)$/);
+          if (m) kids.push({ i, title: m[1].trim() });
+        }
+        kids.forEach((c, j) => secs.push({
+          key: "env-" + slugify(c.title), title: c.title, group: "environments",
+          from: c.i + 1, to: j + 1 < kids.length ? kids[j + 1].i : end }));
+        return;
+      }
+      const group = BIBLE_LOOK.includes(h.title) ? "look"
+        : langs.has(h.title.toLowerCase()) ? "languages" : "reference";
+      secs.push({ key: slugify(h.title), title: h.title, group, from: h.i + 1, to: end });
+    });
+    return { title, lines, secs };
+  };
+
+  // A section's body as the drafter wrote it: `###` kickers, paragraphs,
+  // `**bold**` leads, `-` lists, and an Avoid list as a set of chips.
+  const bibleBodyHtml = lines => {
     const out = [];
-    let para = [], list = [], chips = [], inAvoid = false, section = "";
+    let para = [], list = [], inAvoid = false;
     const flushPara = () => {
       if (para.length) out.push(`<p class="bd-p">${bibleInline(para.join(" "))}</p>`);
       para = [];
     };
     const flushList = () => {
       if (!list.length) return;
-      // An Avoid list is a set of exclusions, and a set reads as chips.
       out.push(inAvoid
         ? `<div class="bd-chips">${list.map(x =>
             `<span class="bd-chip">${esc(x)}</span>`).join("")}</div>`
@@ -8147,47 +8198,163 @@ async function renderWizard() {
       list = [];
     };
     const flush = () => { flushPara(); flushList(); };
-
     for (const raw of lines) {
       const t = raw.trim();
-      if (!t) { flush(); continue; }
+      if (!t || t === "---") { flush(); continue; }
       let m;
-      if ((m = t.match(/^#\s+(.+)$/))) {
-        flush(); inAvoid = false;
-        out.push(`<h1 class="bd-title">${esc(m[1])}</h1>`);
-      } else if ((m = t.match(/^##\s+(.+)$/))) {
-        flush();
-        section = m[1];
-        inAvoid = false;
-        out.push(`<h2 class="bd-h2" id="bd-${slugify(section)}">${esc(section)}</h2>`);
-        const { shot, swatches } = bibleArt(refs, section);
-        if (shot || swatches.length) {
-          out.push(`<div class="bd-art">${shot
-            ? `<img class="bd-shot" src="/api/references/${esc(shot.id)}/image?size=md" alt="">`
-            : ""}${swatches.length
-            ? `<div class="bd-ramp">${swatches.map(w =>
-                `<i style="${bandStyle(w)}" title="${esc(w.name || "")} ${esc(w.hex)}"></i>`).join("")}</div>`
-            : ""}</div>`);
-        }
-      } else if ((m = t.match(/^###\s+(.+)$/))) {
+      if ((m = t.match(/^###\s+(.+)$/))) {
         flush();
         inAvoid = /^avoid/i.test(m[1]);
         out.push(`<p class="bd-kick">${esc(m[1])}</p>`);
       } else if ((m = t.match(/^[-*]\s+(.+)$/))) {
         flushPara();
         list.push(m[1]);
+      } else if ((m = t.match(/^\*{0,2}(?:Keywords|Triggers)\*{0,2}\s*:\s*(.+)$/i))) {
+        // The model's trigger words: machine data, so a Courier line of
+        // their own rather than the opening of the next paragraph.
+        flush();
+        out.push(`<p class="bd-keys mono">KEYWORDS · ${esc(m[1].replace(/\*\*/g, ""))}</p>`);
       } else {
         flushList();
+        // A `**Label:**` line is a field of its own — the drafter writes
+        // them on consecutive lines, and joined they read as one wall.
+        if (/^\*\*[^*]+:\*\*/.test(t)) flushPara();
         para.push(t);
       }
     }
     flush();
-    host.innerHTML = out.join("") ||
-      `<p class="bd-p bd-none">Nothing written yet. Build the Art Direction
-       Bible above and it reads here.</p>`;
+    return out.join("");
+  };
+
+  const renderBibleDoc = (text, refs) => {
+    const host = $("#bible-doc");
+    if (!host) return;
+    bibleDocArgs = [text, refs];
+    const model = bibleModel(text);
+    host.classList.toggle("split", model.secs.length > 0);
+    if (!model.secs.length) {
+      host.innerHTML = String(text || "").trim()
+        ? `<div class="bd-sec">${bibleBodyHtml(model.lines.filter(l => !/^#\s+/.test(l.trim())))}</div>`
+        : `<p class="bd-p bd-none">Nothing written yet. Build the Art Direction
+           Bible above and it reads here.</p>`;
+      return;
+    }
+    const want = uiGet("bibleSection", "");
+    const sec = model.secs.find(x => x.key === want) || model.secs[0];
+    const nav = BIBLE_GROUPS.map(([g, label]) => {
+      const items = model.secs.filter(x => x.group === g);
+      return items.length ? `<p class="bd-nav-label">${label}</p>${items.map(x =>
+        `<button type="button" class="bd-nav-item${x.key === sec.key ? " on" : ""}"
+           data-key="${esc(x.key)}">${esc(x.title)}</button>`).join("")}` : "";
+    }).join("");
+
+    // The pictures: a language's or environment's own thumbnail, and a
+    // language's approved reference and swatch ramp. None is a placeholder.
+    const prevList = sec.group === "languages" ? wizLangPrev.languages
+      : sec.group === "environments" ? wizLangPrev.environments : [];
+    const thumb = (prevList || []).find(p =>
+      p.url && p.name.toLowerCase() === sec.title.toLowerCase());
+    const { shot, swatches } = sec.group === "languages"
+      ? bibleArt(refs, sec.title) : { shot: null, swatches: [] };
+    const art = [];
+    if (thumb) art.push(`<img class="bd-thumb" data-f="bd-zoom" src="${esc(thumb.url)}"
+      alt="${esc(sec.title)}" title="View larger">`);
+    if (shot || swatches.length) {
+      if (shot) art.push(`<img class="bd-shot" src="/api/references/${esc(shot.id)}/image?size=md" alt="">`);
+      if (swatches.length) art.push(`<div class="bd-ramp">${swatches.map(w =>
+        `<i style="${bandStyle(w)}" title="${esc(w.name || "")} ${esc(w.hex)}"></i>`).join("")}</div>`);
+    }
+    // A language's materials live under `## Core Material Language` in the
+    // file; they belong on its page, so they are shown here and edited there.
+    let materials = "";
+    if (sec.group === "languages") {
+      const core = model.secs.find(x => x.title === "Core Material Language");
+      if (core) {
+        const body = model.lines.slice(core.from, core.to);
+        const at = body.findIndex(l =>
+          (l.trim().match(/^###\s+(.+)$/) || [])[1]?.trim().toLowerCase() === sec.title.toLowerCase());
+        if (at >= 0) {
+          const end = body.findIndex((l, i) => i > at && /^###\s+/.test(l.trim()));
+          const lines = body.slice(at + 1, end < 0 ? body.length : end);
+          if (lines.some(l => l.trim()))
+            materials = `<p class="bd-kick">Materials</p>${bibleBodyHtml(lines)}
+              <p class="bd-from mono">EDITED UNDER CORE MATERIAL LANGUAGE</p>`;
+        }
+      }
+    }
+    const bodyLines = model.lines.slice(sec.from, sec.to);
+    const groupLabel = (BIBLE_GROUPS.find(([g]) => g === sec.group) || [])[1] || "";
+    const editing = bibleSecEdit === sec.key;
+    host.innerHTML = `
+      ${model.title ? `<h1 class="bd-title">${esc(model.title)}</h1>` : ""}
+      <div class="bd-split">
+        <nav class="bd-nav" aria-label="Bible sections">${nav}</nav>
+        <article class="bd-sec">
+          <header class="bd-sec-head">
+            <div><p class="bd-nav-label">${groupLabel}</p>
+              <h2 class="bd-h2" id="bd-${esc(sec.key)}">${esc(sec.title)}</h2></div>
+            ${editing ? "" : `<button type="button" class="text-act" data-f="bd-edit">Edit</button>`}
+          </header>
+          ${art.length ? `<div class="bd-art">${art.join("")}</div>` : ""}
+          ${editing
+            ? `<textarea class="bd-edit-area" data-f="bd-text" spellcheck="true">${esc(bodyLines.join("\n").trim())}</textarea>
+               <div class="row bd-edit-row">
+                 <button type="button" class="primary" data-f="bd-save">Save section</button>
+                 <button type="button" class="ghost" data-f="bd-cancel">Cancel</button>
+                 <span class="mini">Only this section changes. Headings inside it are kept as written.</span>
+               </div>`
+            : bibleBodyHtml(bodyLines) + materials}
+        </article>
+      </div>`;
+    bindBibleSection(host, model, sec, thumb);
   };
 
   const slugify = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  /* The reader's buttons. Choosing a section is a view preference; saving
+     one rewrites exactly that section's lines and goes through saveBible,
+     the one path every Bible write takes (it re-derives Rendering
+     Language from the anchor and bumps the revision on the server). */
+  const bindBibleSection = (host, model, sec, thumb) => {
+    $$(".bd-nav-item", host).forEach(btn => btn.onclick = () => {
+      uiSet("bibleSection", btn.dataset.key);
+      bibleSecEdit = "";
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+    });
+    const zoom = $("[data-f=bd-zoom]", host);
+    if (zoom && thumb) zoom.onclick = () => openLightbox([{ src: thumb.url,
+      caption: `${sec.title.toUpperCase()} — ${thumb.basis === "bible"
+        ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL` }]);
+    const edit = $("[data-f=bd-edit]", host);
+    if (edit) edit.onclick = () => {
+      bibleSecEdit = sec.key;
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+      $("[data-f=bd-text]", host)?.focus();
+    };
+    const cancel = $("[data-f=bd-cancel]", host);
+    if (cancel) cancel.onclick = () => {
+      bibleSecEdit = "";
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+    };
+    const save = $("[data-f=bd-save]", host);
+    if (save) save.onclick = () => bibleSaveSection(model, sec,
+      $("[data-f=bd-text]", host).value, save);
+  };
+
+  const bibleSaveSection = async (model, sec, body, btn) => {
+    const lines = model.lines;
+    const next = [...lines.slice(0, sec.from), "",
+                  ...String(body || "").trim().split("\n"), "",
+                  ...lines.slice(sec.to)]
+      .join("\n").replace(/\n{3,}/g, "\n\n");
+    btn.disabled = true;
+    $("#style-bible").value = next;
+    const ok = await saveBible();
+    btn.disabled = false;
+    if (!ok) return;
+    bibleSecEdit = "";
+    await loadBibleEditor();
+  };
 
   /* The section index, the anchors that wrote it, and the self-check —
      the right rail (§3.5). The index is built from the SAME headings the
@@ -8202,20 +8369,18 @@ async function renderWizard() {
       const r = refs.find(x => roleHead(x.role) === role && x.status === "APPROVED");
       return r ? { role, r } : null;
     }).filter(Boolean);
-    $("[data-f=bd-index]", rail).innerHTML = secs.length
-      ? secs.map(x => `<button type="button" class="bd-idx" data-to="bd-${slugify(x)}">${esc(x)}</button>`).join("")
-      : `<span class="mini">no sections yet</span>`;
+    // The section index moved into the reader (2026-10-04), where choosing
+    // one SHOWS it; the rail keeps only what wrote the Bible.
+    const idx = $("[data-f=bd-index]", rail);
+    if (idx) { idx.hidden = true; idx.previousElementSibling?.setAttribute("hidden", ""); }
+    void secs;
     $("[data-f=bd-wrote]", rail).innerHTML = anchors.length
       ? anchors.map(({ role, r }) => `<figure class="bd-wrote">
            <img src="/api/references/${esc(r.id)}/image?size=thumb" alt="">
            <figcaption>${esc(role.replaceAll("_", " ").toLowerCase())}</figcaption>
          </figure>`).join("")
       : `<span class="mini">no anchor has a picture yet</span>`;
-    $$(".bd-idx", rail).forEach(b => b.onclick = () => {
-      const el = document.getElementById(b.dataset.to);
-      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 80,
-                                behavior: "smooth" });
-    });
+
   };
 
   /* Which of the three views is showing. READING is the default and the

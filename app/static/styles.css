@@ -2691,6 +2691,39 @@ details.meta pre {
 .bible-doc .bd-ramp { display: flex; height: 26px; }
 .bible-doc .bd-ramp i { display: block; width: 34px; }
 .bible-doc .bd-none { color: var(--ink-faint); }
+/* UNCANONIZED — 2026-10-04 — the Bible, one section at a time */
+/* An index of the file's own headings at the left, grouped; the chosen
+   section at the right at a reading measure. Selection is an ink bar,
+   never amber (status owns colour, selection owns an outline). */
+.bible-doc.split { max-width: none; }
+.bd-split { display: grid; grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0 32px; align-items: start; }
+.bd-nav { position: sticky; top: 90px; display: flex; flex-direction: column;
+  gap: 2px; max-height: calc(100vh - 120px); overflow-y: auto; }
+.bd-nav-label { font-family: var(--mono); font-size: var(--t-kicker);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
+  margin: 14px 0 4px; }
+.bd-nav-label:first-child { margin-top: 0; }
+.bd-nav-item { text-align: left; background: none; border: 0;
+  border-left: 2px solid transparent; padding: 5px 10px; cursor: pointer;
+  font-family: var(--sans); font-size: var(--t-body); color: var(--ink-dim); }
+.bd-nav-item:hover { color: var(--ink); }
+.bd-nav-item.on { color: var(--ink); border-left-color: var(--ink); }
+.bd-sec { max-width: 68ch; min-width: 0; }
+.bd-sec-head { display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.bd-sec-head .bd-h2 { margin: 0; }
+.bd-sec-head .bd-nav-label { margin: 0 0 2px; }
+.bd-thumb { width: 360px; max-width: 100%; display: block; cursor: zoom-in;
+  border: 1px solid var(--line-soft); }
+.bd-from { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .08em; margin: 6px 0 0; }
+.bd-keys { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .06em;
+  line-height: 1.6; margin: 12px 0 0; }
+.bd-edit-area { width: 100%; min-height: 320px; margin-top: 14px; }
+.bd-edit-row { align-items: center; gap: 12px; }
+@media (max-width: 900px) {
+  .bd-split { grid-template-columns: 1fr; }
+  .bd-nav { position: static; max-height: none; flex-direction: row; flex-wrap: wrap; } }
 /* The right rail: where you are, what wrote it, and the one act on it. */
 .bible-rail { display: flex; flex-direction: column; gap: 4px; }
 .bd-index { display: flex; flex-direction: column; margin-bottom: 8px; }
