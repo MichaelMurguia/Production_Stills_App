@@ -340,15 +340,15 @@ class TheScreen(unittest.TestCase):
 
     def test_an_environment_thumbnail_opens_larger(self):
         """User 2026-10-04: "Environment thumbs should be clickable to see
-        a larger version." The shared lightbox, the whole set, keyboard
-        too, and the basis rides into the caption."""
-        i = self.JS.index('const shotEl = $(".env-shot", card);')
-        body = self.JS[i:i + 1200]
-        self.assertIn("openLightbox(set.map(", body)
-        self.assertIn('e.key === "Enter"', body)
-        self.assertIn('"FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL', body)
-        self.assertIn('class="env-shot" role="button" tabindex="0"', self.JS)
-        self.assertIn(".env-shot { cursor: zoom-in; }", self.CSS)
+        a larger version." Since the card itself opens the environment
+        room (same day), the larger picture is in the room, and clicking
+        it opens the lightbox with the basis in the caption."""
+        i = self.JS.index("async function openEnvModal(env, idx, patchEnvs, ep = null)")
+        room = self.JS[i:i + 9000]
+        self.assertIn('<img class="envm-shot" data-f="env-zoom"', room)
+        self.assertIn('$("[data-f=env-zoom]", ov)?.addEventListener("click", () => openLightbox([{', room)
+        self.assertIn('"FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL', room)
+        self.assertIn(".envm-shot { width: 100%; display: block; cursor: zoom-in;", self.CSS)
 
     def test_a_character_thumbnail_keeps_the_head(self):
         """User 2026-10-04: crop from the bottom so the head stays in the

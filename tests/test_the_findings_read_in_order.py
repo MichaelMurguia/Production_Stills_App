@@ -147,39 +147,42 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         self.assertIn("wizRefs = refs;", JS)
 
 
-class EnvironmentsNameTheirLocations(unittest.TestCase):
-    def test_they_are_rows_not_a_grid_of_cards(self):
-        self.assertNotIn("env-card", JS)
-        self.assertNotIn("env-grid", JS)
-        self.assertIn('card.className = "env-row"', JS)
-        self.assertIn(".env-rows { display: flex; flex-direction: column;", CSS)
+class EnvironmentsAreAGridOfCards(unittest.TestCase):
+    """User 2026-10-04 (replacing §3.3's rows): "make a card similar to the
+    Style Anchor cards. Include the titles and the description on the
+    cards. The individual locations and editing can happen by clicking the
+    card. Make the whole environment section a grid of cards." """
 
-    def test_each_row_names_its_locations_in_courier(self):
-        i = JS.index('<div class="env-locs mono">')
-        seg = JS[i:i + 400]
-        self.assertIn("locs.map(l =>", seg)
-        b = CSS.split(NL + ".env-locs {")[1].split("}")[0]
-        self.assertIn("letter-spacing", b)
+    def seg(self):
+        i = JS.index('const grid = $(".env-cards", envHost);')
+        return JS[i:JS.index('$("[data-f=env-add]", envHost).onclick', i)]
 
-    def test_an_environment_with_no_locations_says_so(self):
-        i = JS.index('<div class="env-locs mono">')
-        self.assertIn("NO LOCATION ASSIGNED", JS[i:i + 500])
+    def test_a_grid_of_anchor_style_cards(self):
+        self.assertIn('<div class="env-cards"></div>', JS)
+        self.assertIn('card.className = "anchor-hero env-card"', self.seg())
+        self.assertIn(".env-cards { display: grid; grid-template-columns: repeat(3,", CSS)
+        self.assertNotIn('card.className = "env-row"', JS)
 
-    def test_the_count_is_kept_beside_the_names(self):
-        """The names are what you act on; the count is still the thing the
-        tile above links to."""
-        i = JS.index('<div class="env-locs mono">')
-        self.assertIn("${locs.length} LOCATION${locs.length === 1", JS[i:i + 700])
+    def test_the_name_the_description_and_the_count_are_on_the_card(self):
+        s = self.seg()
+        self.assertIn('<span class="ah-role mono">${esc(env.name || "(unnamed)")}</span>', s)
+        self.assertIn('<span class="ah-line env-desc">${esc(env.notes', s)
+        self.assertIn("${locs.length} LOCATION${locs.length === 1", s)
 
-    def test_the_thumb_appears_only_when_there_is_a_picture(self):
-        """§3.3 asks for a thumb per row. Until 2026-10-04 an environment
-        had no picture anywhere, and a slot that can never fill is worse
-        than no slot (B3). The world build now renders one per environment,
-        so the slot exists exactly when its picture does."""
-        i = JS.index('card.className = "env-row"')
-        seg = JS[i:i + 900]
-        self.assertIn('(ep?.url ? " has-shot" : "")', seg)
-        self.assertIn('${ep?.url ? `<span class="env-shot"', seg)
+    def test_the_picture_is_the_thumbnail_and_never_a_basis_label(self):
+        """The thumbnail strip used to say FROM THE BIBLE; the card shows
+        the name there instead. A state appears only when there is one."""
+        s = self.seg()
+        self.assertIn("background-image:url('${esc(ep.url)}')", s)
+        self.assertNotIn('"FROM THE BIBLE"', s)
+        self.assertIn('["BIBLE CHANGED", ""]', s)
+
+    def test_the_click_opens_the_room_with_locations_and_editing(self):
+        self.assertIn("card.onclick = () => openEnvModal(env, i, patchEnvs, ep);", self.seg())
+        i = JS.index("async function openEnvModal(env, idx, patchEnvs, ep = null)")
+        room = JS[i:i + 6000]
+        self.assertIn("LOCATIONS THAT INHERIT THIS", room)
+        self.assertIn('data-f="notes"', room)
 
 
 class TheSubjectsRailShowsWhatItCounts(unittest.TestCase):

@@ -1707,16 +1707,24 @@ details.meta pre {
 .world-offer .wo-text { display: grid; gap: 4px; max-width: 70ch; }
 .world-offer h3 { margin: 0; }
 .world-consent { color: var(--ink-dim); max-width: 60ch; }
-/* An environment row with its thumbnail at the left. */
-.env-row.has-shot { display: grid; grid-template-columns: 200px minmax(0, 1fr);
-  column-gap: 14px; }
-.env-row.has-shot > :not(.env-shot) { grid-column: 2; }
-.env-shot { grid-column: 1; grid-row: 1 / span 6; position: relative;
-  display: block; aspect-ratio: 1.5; align-self: start;
-  background: var(--field) center / cover no-repeat; }
-.env-shot .lang-basis { letter-spacing: .04em; }
-.env-shot { cursor: zoom-in; }
-.env-shot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Environments as a grid of anchor-style cards (2026-10-04). The card
+   reuses .anchor-hero / .ah-*; these rules only fit an environment into
+   it: the name in the role slot, a clamped description and a Courier
+   count in the scrim. The rows these replace are retired. */
+.env-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+@media (max-width: 1100px) { .env-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .env-cards { grid-template-columns: 1fr; } }
+.env-card .ah-role { right: 10px; color: var(--ink); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.env-card:has(.ah-state) .ah-role { right: 130px; }
+.env-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; }
+.env-count { font-size: var(--t-mark); letter-spacing: .1em; color: var(--ink-faint); }
+.env-card.proposed { border: 1px dashed var(--hold); }
+.envm-shot { width: 100%; display: block; cursor: zoom-in; margin-bottom: 6px;
+  border: 1px solid var(--line-soft); }
+.envm-basis { font-size: var(--t-mark); letter-spacing: .08em; color: var(--ink-faint);
+  margin: 0 0 12px; }
 
 /* UNCANONIZED — 2026-10-04 — design-language thumbnails */
 /* What a thumbnail was rendered FROM rides on the picture (facts about an

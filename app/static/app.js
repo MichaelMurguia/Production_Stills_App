@@ -6867,7 +6867,7 @@ async function renderWizard() {
     return best;
   };
 
-  async function openEnvModal(env, idx, patchEnvs) {
+  async function openEnvModal(env, idx, patchEnvs, ep = null) {
     const a = getAnalysis() || {};
     const lang = languageFor(env, a.design_worlds || []);
     let swatches = [];
@@ -6918,6 +6918,11 @@ async function renderWizard() {
             </div>
           </div>
           <div class="envm-side">
+            ${ep?.url ? `<img class="envm-shot" data-f="env-zoom" src="${esc(ep.url)}"
+                 alt="${esc(env.name || "")}" title="View larger">
+              <p class="envm-basis mono">${ep.state === "outdated" ? "BIBLE CHANGED"
+                : ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"}${ep.state === "outdated"
+                ? ` <button type="button" class="text-act" data-f="env-rerender">Re-render</button>` : ""}</p>` : ""}
             <p class="envm-lab">LOCATIONS THAT INHERIT THIS — ${locs.length}</p>
             <div class="envm-locs">${cut.shown.map(l =>
               `<span class="envm-loc mono">${esc(l)}</span>`).join("")
@@ -6941,6 +6946,16 @@ async function renderWizard() {
         const wire = () => {
           $("[data-f=x]", ov).onclick = () => done(null);
           $("[data-f=cancel]", ov).onclick = () => done(null);
+          // The larger picture lives here now that a click on the card opens
+          // the room (it opened the lightbox before, 2026-10-04).
+          $("[data-f=env-zoom]", ov)?.addEventListener("click", () => openLightbox([{
+            src: ep.url, caption: `${String(env.name || "").toUpperCase()} — ${
+              ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL` }]));
+          $("[data-f=env-rerender]", ov)?.addEventListener("click", () => {
+            ep.due = true;
+            done(null);
+            runLangPreviewQueue(wizLangPrev);
+          });
           wireCapRows(ov, () => { $(".envm", ov).outerHTML = draw(); wire(); });
           $("[data-f=goto-lang]", ov)?.addEventListener("click", () => {
             done(null);
@@ -7704,7 +7719,7 @@ async function renderWizard() {
     if (envHost) {
       const envs = analysis.environments || [];
       envHost.innerHTML = `
-        ${envs.length ? `<div class="env-rows"></div>`
+        ${envs.length ? `<div class="env-cards"></div>`
           : `<div class="env-empty">NO ENVIRONMENTS IN THIS READ — RE-RUN TO EXTRACT THEM</div>`}
         <div class="row" style="margin-top:8px">
           <input type="text" data-f="env-name" placeholder="add manually — name…" style="max-width:200px" title="An environment the read missed — the biome or world panels live in, e.g. FOREST.">
@@ -7718,82 +7733,40 @@ async function renderWizard() {
         saveAnalysis(a);
         renderWorlds();
       };
-      const grid = $(".env-rows", envHost);
+      /* A grid of cards in the style anchors' vocabulary (user 2026-10-04:
+         "make a card similar to the Style Anchor cards. Include the titles
+         and the description on the cards. The individual locations and
+         editing can happen by clicking the card. Make the whole
+         environment section a grid of cards"). The picture is the
+         environment's thumbnail; its NAME sits where the role label sits
+         on an anchor; the scrim carries the description and how many
+         locations inherit it. A state shows only when there is one.
+         Everything else — the locations, the rules, the larger picture —
+         is the environment room the click opens. */
+      const grid = $(".env-cards", envHost);
       if (grid) envs.forEach((env, i) => {
         const proposed = env.status === "PROPOSED";
-        const card = document.createElement("div");
-        /* §3.3 asks for ROWS, not a grid of cards, and for each one to
-           name the locations assigned to it in Courier. A card said "4
-           LOCATIONS" — a count you had to open the row to spend, when
-           the whole question an environment answers is WHICH places live
-           under it.
-
-           The plan also asks for a thumb on each row. Since 2026-10-04
-           the world build renders one per environment, so the slot is
-           drawn exactly when its picture exists — never an empty frame
-           (B3). */
         const ep = (wizLangPrev.environments || []).find(l =>
           l.name.toLowerCase() === String(env.name || "").trim().toLowerCase());
-        card.className = "env-row" + (proposed ? " proposed" : "")
-          + (ep?.url ? " has-shot" : "");
-        const locs = (env.locations || []);
-        const epOld = ep?.state === "outdated";
+        const locs = env.locations || [];
+        const state = proposed ? ["PROPOSED", " prop"]
+          : ep?.state === "outdated" ? ["BIBLE CHANGED", ""]
+          : ep?.url && ep.basis !== "bible" ? ["BEST GUESS", " set"] : null;
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "anchor-hero env-card" + (proposed ? " proposed" : "")
+          + (ep?.url ? "" : " empty");
+        card.title = `${env.name || "(unnamed)"} — open its locations and rules`;
         card.innerHTML = `
-          ${ep?.url ? `<span class="env-shot" role="button" tabindex="0" title="View larger" style="background-image:url('${ep.url}')">
-            <span class="lang-basis mono">${epOld ? "BIBLE CHANGED"
-              : ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"}${epOld
-              ? ` <button type="button" class="text-act" data-f="env-rerender">Re-render</button>` : ""}</span>
-          </span>` : ""}
-          <div class="env-name">${esc(env.name || "(unnamed)")}</div>
-          <p class="env-notes">${esc(env.notes || "")}</p>
-          <div class="env-locs mono">${locs.length
-            ? locs.map(l => `<span>${esc(l)}</span>`).join("")
-            : `<span class="env-noloc">NO LOCATION ASSIGNED &mdash; THIS ENVIRONMENT RIDES NOTHING YET</span>`}</div>
-          <div class="env-facts">${locs.length} LOCATION${locs.length === 1 ? "" : "S"}
-            <button class="text-act" data-f="edit" style="float:right">Edit</button></div>
-          ${proposed ? `<div class="env-facts prop-tail" style="margin-top:4px">· PROPOSED —
-            <button class="prop-act" data-f="confirm" title="Keep this environment — it becomes a Bible entry on the next draft.">CONFIRM</button> /
-            <button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button></div>` : ""}`;
-        // SCAN_CONSOLIDATION §2 — a 30-word paragraph that other records
-        // INHERIT is not editable in a 14px field inside a 5-up grid cell.
-        // It opens a room that shows the prose, what inherits it, and the
-        // blast radius, and states that before the save.
-        $("[data-f=edit]", card).onclick = () => openEnvModal(env, i, patchEnvs);
-        $("[data-f=env-rerender]", card)?.addEventListener("click", e => {
-          e.stopPropagation();
-          ep.due = true;
-          runLangPreviewQueue(wizLangPrev);
-        });
-        /* The thumbnail opens larger (user 2026-10-04: "Environment thumbs
-           should be clickable to see a larger version"), in the lightbox
-           every other picture uses, with every environment's thumbnail in
-           it so the arrows walk the set. What it was rendered from rides
-           into the caption, as it does on the thumbnail. */
-        const shotEl = $(".env-shot", card);
-        if (shotEl) {
-          const open = e => {
-            if (e.target.closest("button")) return;
-            const set = (wizLangPrev.environments || []).filter(x => x.url);
-            const at = Math.max(0, set.findIndex(x => x.slug === ep.slug));
-            openLightbox(set.map(x => ({
-              src: x.url,
-              caption: `${x.name.toUpperCase()} — ${x.basis === "bible"
-                ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL`,
-            })), at);
-          };
-          shotEl.addEventListener("click", open);
-          shotEl.addEventListener("keydown", e => {
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); }
-          });
-        }
-        $("[data-f=confirm]", card)?.addEventListener("click", () => {
-          patchEnvs(list => { delete list[i].status; });
-          toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);
-        });
-        $("[data-f=drop]", card)?.addEventListener("click", () => {
-          patchEnvs(list => list.splice(i, 1));
-          toast(`"${env.name}" dropped — re-running the read can propose it again.`);
-        });
+          <span class="ah-shot${ep?.url ? "" : " none"}"${ep?.url
+            ? ` style="background-image:url('${esc(ep.url)}')"` : ""}></span>
+          <span class="ah-role mono">${esc(env.name || "(unnamed)")}</span>
+          ${state ? `<span class="ah-state mono${state[1]}">${state[0]}</span>` : ""}
+          <span class="ah-scrim">
+            <span class="ah-line env-desc">${esc(env.notes || "No description yet")}</span>
+            <span class="env-count mono">${locs.length} LOCATION${locs.length === 1 ? "" : "S"}</span>
+          </span>`;
+        card.onclick = () => openEnvModal(env, i, patchEnvs, ep);
         grid.append(card);
       });
       $("[data-f=env-add]", envHost).onclick = () => {
