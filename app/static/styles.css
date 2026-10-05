@@ -1674,6 +1674,22 @@ details.meta pre {
      rather than loosened up there — every other label in the group wants
      them. */
   text-transform: none; letter-spacing: 0; }
+/* UNCANONIZED — 2026-10-04 — locations as a workbook, one tab per act */
+/* The tabs sit between the search box and the table, flush with the
+   table's top edge. Selection is an ink rule under the tab (selection
+   owns an outline, never amber); the count is Courier. */
+.loc-tabs { display: flex; flex-wrap: wrap; gap: 0 2px; margin: 10px 0 0;
+  border-bottom: 1px solid var(--line); }
+.loc-tab { background: none; border: 0; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; padding: 8px 14px; cursor: pointer; text-align: left;
+  font-family: var(--sans); font-size: var(--t-body); color: var(--ink-dim); }
+.loc-tab b { font-weight: 400; color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .08em; margin-left: 6px; }
+.loc-tab:hover { color: var(--ink); }
+.loc-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.loc-tab.none { opacity: .45; }
+.loc-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* UNCANONIZED — 2026-10-04 — Visualizing world */
 /* The whole of Production Design while the world build runs: a label, a
    spinner and the steps, centred on a ground whose hue drifts very slowly

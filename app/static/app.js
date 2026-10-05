@@ -3443,6 +3443,7 @@ function buildLocFinder(host, cfg) {
     ${cfg.head || ""}
     ${cfg.gate || ""}
     <input type="text" data-f="loc-search" class="loc-search" placeholder="${cfg.placeholder || "search locations…"}">
+    ${cfg.tabs ? `<div class="loc-tabs" role="tablist" data-f="loc-tabs"></div>` : ""}
     <div class="loc-scroll"${cfg.maxHeight ? ` style="max-height:${cfg.maxHeight}px"` : ""}>
       ${cfg.headRow || ""}
       <div data-f="loc-list"></div>
@@ -3453,6 +3454,7 @@ function buildLocFinder(host, cfg) {
     ?.scrollIntoView({ behavior: "smooth", block: "start" });
   const draw = () => {
     const q = $("[data-f=loc-search]", host).value;
+    if (cfg.tabs) $("[data-f=loc-tabs]", host).innerHTML = cfg.tabs(q.trim().toUpperCase());
     $("[data-f=loc-list]", host).innerHTML = cfg.rows(q.trim().toUpperCase(), q);
     $$(".loc-draft", host).forEach(btn => {
       btn.onclick = () => {
@@ -7060,11 +7062,15 @@ async function renderWizard() {
       // The head counts only what it claims: placeable locations.
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       if (register) grouped.push(register);
+      const locActKey = () => {
+        const want = uiGet("locAct", "");
+        return grouped.some(g => g.key === want) ? want : grouped[0]?.key;
+      };
       buildLocFinder(secHost, {
         // D1: the provenance moved to the headings it applies to — a
         // string three groups above the thing it describes discloses less
         // than position, and position alone does not disclose.
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} <span class="loc-showing">FIVE SHOWN PER ACT</span>${
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total}${
           wizCov?.acts_derived || acts.some(a => a.title) ? "" :
           ` <button type="button" class="text-act" data-f="name-acts"
               title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
@@ -7076,10 +7082,28 @@ async function renderWizard() {
              <button type="button" class="text-act" data-f="loc-gate-go">Save it in step 04 &nearr;</button></p>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
-        rows: (needle, q) => grouped.map(g => {
+        /* A workbook: one tab per act, and the act's locations under it
+           (user 2026-10-04: "a tabbed workbook section. Tabs are acts. The
+           acts contain the locations"). The chosen tab is remembered per
+           production. A search reads across every act, so it shows its
+           matches grouped by act and the tabs say how many each holds. */
+        tabs: needle => {
+          const cur = locActKey();
+          return grouped.map(g => {
+            const n = needle ? g.locs.filter(x => x.toUpperCase().includes(needle)).length
+                             : g.locs.length;
+            const short = g.register ? "NOT IN A SLUGLINE" : g.label;
+            return `<button type="button" role="tab" class="loc-tab${
+                !needle && g.key === cur ? " on" : ""}${needle && !n ? " none" : ""}"
+                aria-selected="${!needle && g.key === cur}" data-tab="${esc(g.key)}">`
+              + `${esc(short)} <b class="mono">${n}</b></button>`;
+          }).join("");
+        },
+        rows: (needle, q) => grouped.filter(g => needle || g.key === locActKey()).map(g => {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
-          const cut = capList(locs, g.key, { searching: !!needle });
+          const cut = needle ? capList(locs, g.key, { searching: true })
+                             : { shown: locs, hidden: 0, capped: false };
           // D1: three states, three drawings — printed, READ, unnamed.
           // D2: the beat the act turns on is the evidence that makes an
           // inferred name checkable; it was a bare title on the group.
@@ -7110,6 +7134,12 @@ async function renderWizard() {
           // Expanding an act redraws the finder in place — the needle and
           // the scroll position stay where the user left them.
           wireCapRows(secHost, redraw);
+          $$(".loc-tab", secHost).forEach(t => t.onclick = () => {
+            uiSet("locAct", t.dataset.tab);
+            const box = $("[data-f=loc-search]", secHost);
+            if (box) box.value = "";   // choosing an act ends the search
+            redraw();
+          });
           // Naming the acts is its own small call, NOT a re-scan: a
           // re-scan would overwrite curated design languages, environments
           // and subjects to fill one field (user 2026-08-16).

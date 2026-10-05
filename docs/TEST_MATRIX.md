@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2845 tests** across 142 files.
+**2851 tests** across 142 files.
 
 
-## Product app — 2615 tests in 125 files
+## Product app — 2621 tests in 125 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -81,7 +81,7 @@ temp home and external services are faked.
 | `test_image_variants.py` | 22 | Display-tier image serving (app.imaging + candidate/reference resolvers). |
 | `test_ledger_ui.py` | 15 | Evidence ledger + workbench scope UX (user 2026-08-13) — JS pins. |
 | `test_loc_cap.py` | 20 | A long list shows its head and states its tail (SCAN_CONSOLIDATION §3). |
-| `test_location_acts.py` | 21 | The location list reads in acts, chronologically (user 2026-08-16: "LOCATION list should be divided into 3 acts if they can be derived from the screen |
+| `test_location_acts.py` | 27 | The location list reads in acts, chronologically (user 2026-08-16: "LOCATION list should be divided into 3 acts if they can be derived from the screen |
 | `test_lock_is_not_freeze.py` | 13 | A LOCK is not a FREEZE. |
 | `test_looks.py` | 19 | Board looks (2026-08-13): a look is a persisted sheet-level property that survives arrangement commits; dress is PURE DERIVATION resolved from canon a |
 | `test_medium_guard.py` | 4 | Regression (user-hit 2026-08-06): a bake-off sample rendered photo-real past an attached BOARD_RENDERING_STYLE anchor. |
