@@ -59,7 +59,7 @@ class TheRegister(unittest.TestCase):
         i = JS.index("function buildUnanchoredRegister")
         block = JS[i:JS.index("function buildUncastCard", i)]
         self.assertIn("loc-register", block)
-        self.assertIn("UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES", block)
+        self.assertIn("UNANCHORED · FROM THE SCREENPLAY'S SCENE HEADINGS", block)
         self.assertNotIn("subj-card", block)
 
     def test_its_one_act_prefills_head_and_title(self):

@@ -3148,7 +3148,7 @@ const theRead = {
       <p class="rd-note mono" id="rd-note"></p>
       <div class="rd-body">
         <div class="rd-ladder" id="rd-ladder">${rows
-          || '<p class="hint">No sluglines parsed — the model is reading the text as a whole.</p>'}</div>
+          || '<p class="hint">No scene headings found — the model is reading the text as a whole.</p>'}</div>
         <div class="rd-page" id="rd-page"></div>
       </div>
       <div class="rd-ticker" id="rd-ticker"></div>`;
@@ -3517,7 +3517,7 @@ async function renderLocations(state = null, langs = 0) {
     head: `<div class="loc-head">
       <span class="f-label">Locations · ${data.locations.length}</span>
       <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>`,
-    headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
+    headRow: `<div class="loc-row loc-headrow"><span>SCENE HEADING</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
     placeholder: "search locations and scenes…",
     footer: `<p class="mini"><span class="f-label" style="font-size:var(--t-mark)">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
     rows: (needle, q) => {
@@ -7057,7 +7057,7 @@ async function renderWizard() {
       // list and becomes a register below it, with its own honest label.
       const register = actless.length
         ? { key: "no-act", register: true,
-            label: "NAMED IN THE READ · NOT IN ANY SLUGLINE", locs: actless }
+            label: "NAMED IN THE READ · NOT IN ANY SCENE HEADING", locs: actless }
         : null;
       // The head counts only what it claims: placeable locations.
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
@@ -7092,7 +7092,7 @@ async function renderWizard() {
           return grouped.map(g => {
             const n = needle ? g.locs.filter(x => x.toUpperCase().includes(needle)).length
                              : g.locs.length;
-            const short = g.register ? "NOT IN A SLUGLINE" : g.label;
+            const short = g.register ? "NOT IN A SCENE HEADING" : g.label;
             return `<button type="button" role="tab" class="loc-tab${
                 !needle && g.key === cur ? " on" : ""}${needle && !n ? " none" : ""}"
                 aria-selected="${!needle && g.key === cur}" data-tab="${esc(g.key)}">`
@@ -9163,7 +9163,7 @@ function buildUnanchoredRegister(locs) {
   reg.className = "loc-register";
   reg.innerHTML = `
     <div class="loc-reg-head">
-      <span class="mono loc-reg-label">UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES</span>
+      <span class="mono loc-reg-label">UNANCHORED · FROM THE SCREENPLAY'S SCENE HEADINGS</span>
       <span class="hint">these places are named in the script and have no imagery</span>
     </div>
     <div class="loc-reg-row loc-reg-cols mono">
@@ -10147,8 +10147,8 @@ async function renderSpecs(openId = null) {
         if (note) {
           note.textContent = !scenePick
             ? (scenes.length
-               ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
-               : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD")
+               ? `${scenes.length} SCENE HEADINGS ACROSS ${locs.length} LOCATIONS`
+               : "NO SCENE HEADINGS — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD")
             : scenePick.kind === "scene"
               ? `SCENE SAVED · LINE ${scenePick.line + 1}`
               : `LOCATION SAVED · ${scenePick.scenes} SCENE`
@@ -10399,7 +10399,7 @@ async function renderSpecs(openId = null) {
       el.innerHTML = BOARD_TYPES.map(t =>
         `<option value="${t.value}">${esc(t.label)}</option>`).join("");
       el.title = boardTypeTitle("What kind of board this is — it governs the "
-        + "slugline, the panel template and how the scenes are read. Your "
+        + "scene heading, the panel template and how the scenes are read. Your "
         + "choice, not the model's: it is sent as an absolute rule.");
     }
   }
@@ -10992,7 +10992,7 @@ async function openSpecEditor(specId) {
           <option ${spec.mode === "DESIGN_EXPLORATION" ? "selected" : ""}>DESIGN_EXPLORATION</option>
         </select>
       </label>
-      <label title="${esc(boardTypeTitle("What kind of board this is — it governs slugline behavior."))}">Board type
+      <label title="${esc(boardTypeTitle("What kind of board this is — it governs scene-heading behavior."))}">Board type
         <select id="sp-btype" ${boardFrozen ? "disabled" : ""}>
           ${BOARD_TYPES.map(t => `<option value="${t.value}" ${(spec.board_type || "LOCATION") === t.value ? "selected" : ""}>${t.label}</option>`).join("")}
         </select>
@@ -11000,13 +11000,13 @@ async function openSpecEditor(specId) {
       <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${boardFrozen ? "disabled" : ""}></label>
       </div>
       <div class="grid-form">
-      <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the slugline; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
+      <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the scene heading; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
         <select id="sp-intext" ${boardFrozen ? "disabled" : ""}>
           ${["", "INT", "EXT", "INT/EXT"].map(v => `<option value="${v}" ${(spec.setting?.int_ext || "") === v ? "selected" : ""}>${v || "—"}</option>`).join("")}
         </select>
       </label>
-      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${boardFrozen ? "disabled" : ""}></label>
-      <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
+      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the scene heading.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${boardFrozen ? "disabled" : ""}></label>
+      <label class="setf" data-setf="tod" title="Scene boards only: the scene heading's time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
         <select id="sp-tod" ${boardFrozen ? "disabled" : ""}>
           ${[...new Set(["", ...TIMES_OF_DAY, "MAGIC HOUR",
                          ...(bible_catalog?.atmospheres || []),
@@ -12591,11 +12591,11 @@ const BOARD_TYPES = [
   { value: "LOCATION", label: "LOCATION",
     hint: "a place across times — time of day is chosen per panel" },
   { value: "ASSET", label: "ASSET",
-    hint: "a prop, vehicle or character — neutral presentation, no slugline" },
+    hint: "a prop, vehicle or character — neutral presentation, no scene heading" },
   { value: "LIGHTING_STUDY", label: "LIGHTING STUDY",
     hint: "derived from an approved panel — geometry locked, only light varies" },
   { value: "MASTER", label: "MASTER",
-    hint: "presentation grammar — four panels, neutral, no slugline" },
+    hint: "presentation grammar — four panels, neutral, no scene heading" },
 ];
 /* ONE definition of the vocabulary, read by both selects. The intake's
    title named three of the five and the sheet editor's named all five,

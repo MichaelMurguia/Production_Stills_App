@@ -150,7 +150,7 @@ class FivePerActWithAnExpand(unittest.TestCase):
         group under a head reading EACH BECOMES ONE BREAKDOWN, the count
         and the claim disagreed. It sits below the acts, labelled."""
         b = self.body()
-        self.assertIn("NOT IN ANY SLUGLINE", b)
+        self.assertIn("NOT IN ANY SCENE HEADING", b)
         self.assertIn("register: true", b)
 
     def test_the_environment_is_still_reachable_per_row(self):
@@ -205,7 +205,7 @@ class TheActsAreAWorkbook(unittest.TestCase):
     def test_one_tab_per_act_and_the_register_last(self):
         b = self.body()
         self.assertIn("tabs: needle => {", b)
-        self.assertIn('g.register ? "NOT IN A SLUGLINE" : g.label', b)
+        self.assertIn('g.register ? "NOT IN A SCENE HEADING" : g.label', b)
         self.assertIn('role="tab"', b)
 
     def test_only_the_chosen_act_is_listed(self):
