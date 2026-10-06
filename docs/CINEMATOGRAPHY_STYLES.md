@@ -1,4 +1,4 @@
-# The Beltminers — Cinematography Styles
+# Cinematography Styles
 
 ## Purpose
 
