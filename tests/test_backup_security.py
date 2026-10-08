@@ -140,7 +140,7 @@ class SecurityTests(unittest.TestCase):
         rows = insights.blocking()
         care = [b for b in rows if b["kind"] == "CARE"]
         self.assertEqual(len(care), 1)
-        self.assertIn("never been backed up", care[0]["text"])
+        self.assertEqual("Never backed up", care[0]["text"])   # a label (2026-10-07)
         self.assertEqual(rows[-1]["kind"], "CARE", "the reminder never outranks real blockers")
         backup.make_backup("")
         self.assertFalse([b for b in insights.blocking() if b["kind"] == "CARE"],

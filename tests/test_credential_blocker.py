@@ -141,7 +141,7 @@ class BlockerTests(Install):
         self.assertEqual(len(rows), 1)
         self.assertEqual(
             rows[0]["text"],
-            "No AI engine connected — nothing can be read, drafted or rendered")
+            "No AI model connected")   # a label, no explanation (2026-10-07)
         self.assertEqual(rows[0]["action"], "settings")
         self.assertEqual(rows[0]["scope"], "install",
                          "the only blocker that survives a production switch")
@@ -174,7 +174,7 @@ class BlockerTests(Install):
                                     "openai-chat": {"ok": False}})
         row = self.keyrows()[0]
         self.assertIn("failed its last test", row["text"])
-        self.assertNotIn("No AI engine connected", row["text"])
+        self.assertNotIn("No AI model connected", row["text"])
 
     def test_the_credential_leads_because_it_locks_the_upload(self):
         """User ruling 2026-08-18: the screenplay is locked until an AI
@@ -188,7 +188,7 @@ class BlockerTests(Install):
         store.save_app_state({"screenplay": {"filename": "s.pdf"}})
         blockers = insights.blocking()
         verb = insights.next_verb(insights.stage_summary(blockers), blockers)
-        self.assertIn("No AI engine connected", verb["text"])
+        self.assertIn("No AI model connected", verb["text"])
         self.assertEqual(verb["action"], "settings")
 
     def test_a_key_row_never_marks_a_stage_it_does_not_block(self):
