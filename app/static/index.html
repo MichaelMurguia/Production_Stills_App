@@ -243,7 +243,10 @@
     <div class="panel step" data-step="2">
       <h2>Build Design Plan </h2>
       <div class="row wiz-run-row">
-        <div class="fgroup wiz-model" title="Which model does the research and drafting. Both receive identical instructions."><span class="f-label">Model</span>
+        <!-- Hidden, not removed (user 2026-10-07: "Get rid of Model"): every
+             narrative call still reads #wiz-provider, which defaults to the
+             studio's own engine (fillNarrativeSelect). -->
+        <div class="fgroup wiz-model hidden"><span class="f-label">Model</span>
           <select id="wiz-provider" class="seg-source">
             <option value="gemini">Gemini (research pass)</option>
             <option value="openai">OpenAI GPT-5.6</option>

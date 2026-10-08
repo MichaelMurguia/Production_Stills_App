@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2864 tests** across 143 files.
+**2866 tests** across 143 files.
 
 
-## Product app — 2634 tests in 126 files
+## Product app — 2636 tests in 126 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -89,7 +89,7 @@ temp home and external services are faked.
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_narrative_calls_use_the_studios_engine.py` | 3 | Every narrative call with no provider named uses the studio's engine. |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
-| `test_no_on_page_explanations.py` | 14 | RULED (user) 2026-10-07: no on-page explanations or instructions. |
+| `test_no_on_page_explanations.py` | 16 | RULED (user) 2026-10-07: no on-page explanations or instructions. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
 | `test_not_a_valid_key.py` | 11 | A key the provider does not recognise reads "That is not a valid key." User-hit 2026-10-04, in the connect-a-key modal: the previous error |
 | `test_object_ref_detach.py` | 22 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |

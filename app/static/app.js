@@ -6692,14 +6692,10 @@ async function renderWizard() {
     $(".wiz-run-row .cost")?.classList.toggle("hidden", !!a);
     $(".wiz-merge-note")?.classList.toggle("hidden", !a);
     if (!a) { lockHost.innerHTML = ""; return; }
-    const sp = state.screenplay;
-    const bits = [
-      esc(sp?.file || a.screenplay || "screenplay"),
-      sp?.uploaded_at ? `uploaded ${esc(sp.uploaded_at)}` : "",
-      a.analyzed_at ? `read ${esc(a.analyzed_at)}` : "",
-      a.model ? `by ${esc(a.model)}` : "",
-    ].filter(Boolean).join(" — ");
-    lockHost.innerHTML = `<span class="badge APPROVED">READ</span> ${bits}
+    // The mark and its verb only (user 2026-10-07: "Get rid of this" —
+    // the file name, both timestamps and the model). The file is named
+    // in the stage header already.
+    lockHost.innerHTML = `<span class="badge APPROVED">READ</span>
       <button class="ghost" id="wiz-analyze-unlock" style="margin-left:8px" title="Re-enable the model picker and re-run the analysis. The current one is kept until a re-run succeeds.">Unlock &amp; re-run</button>`;
     $("#wiz-analyze-unlock").onclick = async () => {
       if (!(await askConfirm("Unlock the screenplay analysis",

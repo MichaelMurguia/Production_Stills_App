@@ -125,5 +125,23 @@ class EmptyStatesAndToasts(unittest.TestCase):
         self.assertIn("toast(`Not saved — ${err.message}`, true);", JS)
 
 
+class TheDesignPlanStepCarriesNoReadLineOrModel(unittest.TestCase):
+    """User 2026-10-07: get rid of "Io_EngineOutput_BedtimeRead.html —
+    uploaded … — read … — by gpt-5.6", and "Get rid of Model"."""
+
+    def test_the_read_line_is_the_mark_and_its_verb(self):
+        i = JS.index("const renderAnalyzeLock = () => {")
+        seg = JS[i:i + 1600]
+        self.assertIn('<span class="badge APPROVED">READ</span>', seg)
+        self.assertIn("Unlock &amp; re-run", seg)
+        for gone in ("`uploaded ${", "`read ${", "`by ${"):
+            self.assertNotIn(gone, seg, gone)
+
+    def test_the_model_row_is_hidden_but_still_answers(self):
+        """Hidden, not removed: every narrative call reads #wiz-provider."""
+        self.assertIn('<div class="fgroup wiz-model hidden">', HTML)
+        self.assertIn('<select id="wiz-provider"', HTML)
+
+
 if __name__ == "__main__":
     unittest.main()
