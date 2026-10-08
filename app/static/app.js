@@ -7313,10 +7313,6 @@ async function renderWizard() {
                message"). What every reader needs is the rule and, when it
                is unset, the consequence — neither of which is about
                anyone's film. -->
-          <span class="mini">${wizNoPeriod(analysis.period)
-            ? "The read found no period stated in the screenplay. Until one is "
-              + "set, renders are not held to any era."
-            : "Every render is held to this — nothing in frame may postdate it."}</span>
         </div>
         <div class="read-tiles">${tiles}</div>
       </div>
@@ -7368,10 +7364,6 @@ async function renderWizard() {
       const v = await askText("When is this production set?", "Period", {
         value: analysis.period || "",
         placeholder: "e.g. 241 years in the future",
-        body: "Every render is held to this. Say it the way you would say it "
-            + "to a concept artist — a decade, a century, an era, or a "
-            + "distance from now.",
-        hint: "Leave empty to constrain nothing.",
         confirmLabel: "Save period",
       });
       if (v === null) return;

@@ -395,13 +395,16 @@ class ThePeriodSaysWhatTheReadFound(unittest.TestCase):
         for gone in ("WW2 aircraft", "far-future salt pan"):
             self.assertNotIn(gone, JS, gone)
 
-    def test_an_unset_period_says_the_read_looked(self):
-        self.assertIn("The read found no period stated in the screenplay",
-                      self.seg())
-
-    def test_a_set_period_states_the_rule_and_nothing_else(self):
-        self.assertIn("Every render is held to this — nothing in frame may postdate it.",
-                      self.seg())
+    def test_the_card_carries_no_explanation(self):
+        """User 2026-10-07: "On production tab get rid of this, 'Every
+        render is held to this — nothing in frame may postdate it.' ...
+        No explanations or instructions." The card is the label, the value
+        and its verb."""
+        s = self.seg()
+        for gone in ("Every render is held to this",
+                     "The read found no period stated in the screenplay"):
+            self.assertNotIn(gone, s, gone)
+        self.assertIn('<span class="rp-val mono">', s)
 
     def test_unstated_is_not_treated_as_a_value(self):
         """The scan is TOLD to answer UNSTATED when the screenplay does not
