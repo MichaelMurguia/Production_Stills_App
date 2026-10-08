@@ -89,7 +89,11 @@ class TheUncastAreAList(unittest.TestCase):
 
     def test_nothing_uncast_is_stated_rather_than_blank(self):
         i = JS.index("const renderCastRoster =")
-        self.assertIn("Nothing uncast", JS[i:JS.index("const renderCastDetail =", i)])
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Empty states are
+        # short Courier labels.
+        seg = JS[i:JS.index("const renderCastDetail =", i)]
+        self.assertIn("NOTHING UNCAST", seg)
+        self.assertNotIn("the whole read is on a card", seg)
 
     def test_every_door_goes_through_the_one_path(self):
         """One way to cast, whichever door you came in by (2026-08-16).

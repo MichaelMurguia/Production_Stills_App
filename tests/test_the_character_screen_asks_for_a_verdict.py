@@ -138,8 +138,11 @@ class TheEmptyScreenIsTheFrameAndTheWords(unittest.TestCase):
 
     def test_a_draft_that_never_describes_them_says_so(self):
         """B3 again: an empty SCREENPLAY block would read as a bug."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Still not empty —
+        # a label.
         i = JS.index("const castWords = (s, ev) => `")
-        self.assertIn("there is nothing to quote", JS[i:i + 1800])
+        self.assertIn('<p class="cd-nodesc">NO QUOTES</p>', JS[i:i + 1800])
+        self.assertNotIn("there is nothing to quote", JS[i:i + 1800])
 
     def test_nothing_else_is_on_it(self):
         """The plan's list of cuts, asserted as cuts."""
@@ -175,7 +178,10 @@ class AcceptAndReject(unittest.TestCase):
     def test_reject_says_what_to_do_next(self):
         """Rejecting without a next step leaves the user at an empty
         frame wondering what changed."""
-        self.assertIn("Edit the description and generate again.", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Toasts say what
+        # happened; the Edit description and Generate verbs are on screen.
+        self.assertNotIn("Edit the description and generate again.", JS)
+        self.assertIn('toast(status === "APPROVED" ? "Accepted" : "Rejected");', JS)
 
     def test_a_pending_picture_outranks_an_accepted_one(self):
         """A question left behind a filmstrip is a question nobody

@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2851 tests** across 142 files.
+**2864 tests** across 143 files.
 
 
-## Product app — 2621 tests in 125 files
+## Product app — 2634 tests in 126 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -89,6 +89,7 @@ temp home and external services are faked.
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
 | `test_narrative_calls_use_the_studios_engine.py` | 3 | Every narrative call with no provider named uses the studio's engine. |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
+| `test_no_on_page_explanations.py` | 14 | RULED (user) 2026-10-07: no on-page explanations or instructions. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
 | `test_not_a_valid_key.py` | 11 | A key the provider does not recognise reads "That is not a valid key." User-hit 2026-10-04, in the connect-a-key modal: the previous error |
 | `test_object_ref_detach.py` | 22 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |
@@ -143,7 +144,7 @@ temp home and external services are faked.
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |
 | `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
-| `test_the_anchor_row_shows_what_was_chosen.py` | 43 | The anchor cards wear the look they were set to. |
+| `test_the_anchor_row_shows_what_was_chosen.py` | 42 | The anchor cards wear the look they were set to. |
 | `test_the_character_screen_asks_for_a_verdict.py` | 38 | A character's own screen, and the verdict it asks for. |
 | `test_the_findings_read_in_order.py` | 22 | The findings show what the read found, not just how much of it. |
 | `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |

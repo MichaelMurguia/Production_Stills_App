@@ -292,7 +292,10 @@ class ColourLeftStepOne(unittest.TestCase):
 
     def test_the_swatch_result_no_longer_points_away(self):
         """The act and its result are one step apart no more."""
-        self.assertIn("LANDS IN STEP 4 / COLOUR, BESIDE THIS", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The standing line
+        # went; the result line names where they landed.
+        self.assertNotIn("LANDS IN STEP 4 / COLOUR, BESIDE THIS", JS)
+        self.assertIn("PROPOSED IN COLOR PALETTE · ", JS)
 
     def test_the_render_shelf_is_still_four(self):
         """A palette reference still rides every render. Moving a card

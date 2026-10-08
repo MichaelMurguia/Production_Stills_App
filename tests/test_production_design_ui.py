@@ -94,9 +94,13 @@ class TheThingsThatSpendSayThatTheyDo(unittest.TestCase):
         """Still stated before it is pressed — as a TOKEN since
         COPY_DISCIPLINE (2026-09-13), not a warning sentence. The rule
         did not change; the number of words did."""
-        for phrase in ("COSTS A MODEL CALL", "SPENDS MONEY"):
-            self.assertIn(phrase, HTML, phrase)
-        self.assertNotIn("THIS SPENDS MONEY", HTML, "a token, not a sentence")
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Rule 2 removes the
+        # on-page cost statements; the verbs and their tooltips stay.
+        for phrase in ("COSTS A MODEL CALL", "SPENDS MONEY", "2 RENDERS PER ENGINE"):
+            self.assertNotIn(phrase, HTML, phrase)
+        self.assertNotIn('class="cost mono"', HTML)
+        for verb in ('id="wiz-analyze"', 'id="bible-regen"', 'id="wiz-samples-go"'):
+            self.assertIn(verb, HTML, verb)
 
     def test_the_cost_is_courier_and_never_amber(self):
         b = block(".cost {")
@@ -107,8 +111,11 @@ class TheThingsThatSpendSayThatTheyDo(unittest.TestCase):
         """It read "ADVISORY · IT NEVER EDITS · NOT RUN ON SAVE". The
         first word is the state; the other two narrate behaviour that
         belongs in documentation (COPY_DISCIPLINE tests 2 and 3)."""
-        self.assertIn('<span class="cost mono">ADVISORY</span>', HTML)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. ADVISORY is named
+        # in the ruling as a cost-style line; the tooltip keeps the rest.
+        self.assertNotIn('<span class="cost mono">ADVISORY</span>', HTML)
         self.assertNotIn("IT NEVER EDITS", HTML)
+        self.assertIn('id="bible-check"', HTML)
 
 
 class OneChoiceOneControl(unittest.TestCase):
@@ -185,7 +192,9 @@ class TheBibleIsTwoColumns(unittest.TestCase):
     def test_the_editor_says_the_one_thing_you_must_not_do(self):
         """The headings are parsed by app/bible.py; renaming one silently
         stops that section reaching renders."""
-        self.assertIn("SECTION HEADINGS ARE PARSED &mdash; DO NOT RENAME", HTML)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. An instruction —
+        # removed. (The heading parse itself is unchanged.)
+        self.assertNotIn("SECTION HEADINGS ARE PARSED", HTML)
 
     def test_the_verb_row_governs_the_whole_step(self):
         """It belongs to neither column, so it stays above both."""

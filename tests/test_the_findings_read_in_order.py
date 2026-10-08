@@ -90,7 +90,10 @@ class DesignLanguagesLeadWithAPicture(unittest.TestCase):
         never been shown."""
         i = JS.index('art.className = "lang-shot"')
         seg = JS[i:JS.index("chip.append(art);", i)]
-        self.assertIn("Examples will appear here from your panels.", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The empty state is a
+        # label, the one the user named: "NO PANELS YET".
+        self.assertIn("NO PANELS YET", seg)
+        self.assertNotIn("Examples will appear here from your panels.", seg)
         self.assertNotIn("SCOPED", seg)
         b = CSS.split(NL + ".lang-shot.none {")[1].split("}")[0]
         self.assertIn("repeating-linear-gradient", b)
@@ -214,7 +217,9 @@ class TheSubjectsRailShowsWhatItCounts(unittest.TestCase):
         self.assertIn("go.onclick = openCast", s)
 
     def test_nothing_uncast_offers_nothing(self):
-        self.assertIn("Every subject the read found is on a card.", self.seg())
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Label, not sentence.
+        self.assertIn("ALL CAST", self.seg())
+        self.assertNotIn("Every subject the read found is on a card.", self.seg())
 
 
 class TheLoglineDoesNotComeBack(unittest.TestCase):

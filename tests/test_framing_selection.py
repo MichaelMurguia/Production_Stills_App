@@ -152,7 +152,10 @@ class TheDirectorCanReadTheReasoning(unittest.TestCase):
         i = JS.index("function framingNote")
         seg = " ".join(JS[i:i + 1200].split())
         self.assertIn("camera_recipe_why", seg)
-        self.assertIn("pull against each other", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The conflict is
+        # stated as a fact; the explanation of what it means went.
+        self.assertIn("is not a ${st.name} framing", seg)
+        self.assertNotIn("pull against each other", seg)
 
     def test_it_redraws_when_either_select_changes(self):
         i = JS.index("function wireCameraRow")

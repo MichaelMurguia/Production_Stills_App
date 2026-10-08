@@ -69,11 +69,13 @@ class TheEditorCanSave(unittest.TestCase):
         ONLY statement of why was a hover title — while the help text below
         told them to press it. A disabled control has to state its unmet
         condition beside it and say where it is resolved."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Still on screen,
+        # never only a tooltip — as labels that name the take.
         b = preview_block()
-        self.assertIn("AN APPROVED TAKE FREEZES THIS PANEL · NO PROMPT CAN BE SAVED TO IT", b)
-        self.assertIn("Withdraw the approval on", b)
-        self.assertIn("Settled by ${esc(approvedTakes.join", b,
+        self.assertIn('"FROZEN BY AN APPROVED TAKE"', b)
+        self.assertIn("SETTLED BY ${esc(approvedTakes.join", b,
                       "name the take that did it, not just the fact")
+        self.assertNotIn("Withdraw the approval on", b)
 
     def test_the_frozen_help_does_not_advertise_the_dead_button(self):
         """The unfrozen copy says "Save prompt to this panel to make them
@@ -88,8 +90,10 @@ class TheEditorCanSave(unittest.TestCase):
         """An approval freezes the SAVE, not the render — a panel with an
         approved take is exactly where you iterate. Blocking the experiment
         too would be a gate nobody asked for."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The sentence went;
+        # the behaviour it described is what stays asserted below.
         b = preview_block()
-        self.assertIn("You can still test:", b)
+        self.assertNotIn("You can still test:", b)
         self.assertIn('data-f="generate-edited"', b)
         i = b.index('data-f="generate-edited"')
         self.assertNotIn("r.frozen", b[i:i + 200],
@@ -113,20 +117,25 @@ class TheEditorCanSave(unittest.TestCase):
 
 class TheOverrideIsReadableAsState(unittest.TestCase):
     def test_the_step_head_says_the_panel_is_off_the_compile(self):
-        self.assertIn("SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The head states the
+        # override as a label, in both places it is drawn.
+        self.assertEqual(JS.count('<span class="step-meta-alert">SAVED PROMPT</span>'), 2)
+        self.assertNotIn("STEPS 01–04 DO NOT WRITE THIS PANEL", JS)
 
     def test_the_generate_step_says_it_too(self):
         """Step 05's head sits above step 06 but a user who edits the camera
         and hits Generate never has to read it. The warning belongs where
         the spend happens as well."""
-        self.assertIn("THIS TAKE RENDERS FROM THE SAVED PROMPT", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Label, at the spend.
+        self.assertEqual(JS.count("RENDERS FROM THE SAVED PROMPT</span>"), 2)
+        self.assertNotIn("CAMERA AND OBJECTS BELOW DO NOT WRITE IT", JS)
 
     def test_the_state_line_distinguishes_saved_from_unsaved(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Four states, four
+        # labels — still distinct.
         b = preview_block()
-        for s in ("SAVED PROMPT · EVERY TAKE OF THIS PANEL RENDERS FROM THIS",
-                  "UNSAVED CHANGES OVER THE SAVED PROMPT · SAVE OR THEY RIDE ONE TAKE",
-                  "EDITED · UNSAVED · THIS TAKE ONLY",
-                  "UNEDITED · STEPS 01–04 COMPILE THIS"):
+        for s in ('"SAVED PROMPT"', '"UNSAVED CHANGES"',
+                  '"EDITED · UNSAVED"', '"UNEDITED"'):
             self.assertIn(s, b, s)
 
     def test_the_alert_is_amber(self):

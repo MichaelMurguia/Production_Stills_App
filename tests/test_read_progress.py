@@ -221,11 +221,18 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         it was written for is unchanged: this phase must say that nothing
         inside it can be reported, which is why a sweep stands here and
         not a bar."""
-        self.assertIn("NEITHER REPORTING PROGRESS FROM INSIDE", self.js)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The note is now the
+        # state alone; the sweep (not a bar) is what says nothing inside it
+        # can be reported, and it still says nothing it cannot measure.
+        self.assertNotIn("NEITHER REPORTING PROGRESS FROM INSIDE", self.js)
+        self.assertIn('note.textContent = this.engine.toUpperCase() + " IS READING";', self.js)
         self.assertNotIn("ONE CALL, NO ", self.js)
 
     def test_the_parse_phase_says_nothing_has_been_sent(self):
-        self.assertIn("NOTHING SENT ANYWHERE YET", self.js)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The parse phase is
+        # a count label.
+        self.assertNotIn("NOTHING SENT ANYWHERE YET", self.js)
+        self.assertIn('this.scenes.length + " SCENES PARSED"', self.js)
 
     def test_the_ladder_is_fed_by_the_digest_route(self):
         block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
@@ -337,7 +344,8 @@ class TheModelPhaseClaimsNothing(unittest.TestCase):
         built to avoid telling them."""
         block = self.js.split("const theRead")[1].split("async function startTheRead")[0]
         self.assertIn('this.phase = this.preview ? "previewed" : "model";', block)
-        self.assertIn("NO MODEL WAS CALLED", block)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Label, not sentence.
+        self.assertIn("PREVIEW ONLY · NO MODEL CALLED", block)
         # and it must not fall into the model phase's copy
         i = block.index('"previewed"')
         self.assertNotIn("IS READING", block[i:i + 400])
@@ -571,7 +579,7 @@ class ReadIsWhatTheModelDoes(unittest.TestCase):
         """Nothing else may take it: the stage-01 surface is still the
         read, and its phases still say so."""
         self.assertIn("Reading the draft", self.JS)
-        self.assertIn('IS READING —', self.JS)
+        self.assertIn('" IS READING"', self.JS)
 
 
 if __name__ == "__main__":

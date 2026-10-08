@@ -245,18 +245,25 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
     def test_the_callout_carries_the_users_own_copy(self):
         """Verbatim, 2026-08-22. Not a paraphrase — the user wrote this
         sentence and the step is bold."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Rule 1: a gate is a
+        # SHORT LABEL + the LINK that fixes it — "NEEDS THE BIBLE · Open it".
+        # The user's 2026-08-22 sentence is superseded by the user's ruling.
         b = self.body()
-        self.assertIn("LOCKED — NO ART DIRECTION BIBLE", b)
-        self.assertIn("Color swatches reference the Art Direction Bible "
-                      "once created.", b)
-        self.assertIn("<b>Step 4</b>", b)
+        self.assertIn('<span class="k">NEEDS THE BIBLE</span>', b)
+        self.assertIn(">Open it ↗</button>", b)
+        self.assertNotIn("Color swatches reference the Art Direction Bible", b)
 
     def test_the_callout_carries_no_verb(self):
-        """Removed on instruction: the step it names is on the same page,
-        and a button that only scrolls is not worth a primary's weight."""
+        """Removed on instruction: a button that only scrolls is not worth
+        a primary's weight. The 2026-10-07 ruling brought back the LINK —
+        a text act, never a primary — because a gate names its fix."""
         b = self.body()
-        self.assertNotIn("pal-go", b)
-        self.assertNotIn("<button", b)
+        self.assertNotIn("pal-go\"", b)
+        i = b.index("gate.innerHTML")
+        gate = b[i:i + 400]
+        self.assertIn('class="text-act" data-f="pal-gate-go"', gate)
+        self.assertNotIn("primary", gate)
+        self.assertIn('scrollIntoView', b[i:i + 700])
 
     def test_everything_that_states_a_palette_is_locked_together(self):
         """Three passes, one per control left behind — the hand-added
@@ -393,8 +400,10 @@ class AnAnchorCanBeWordsOrAPicture(Install):
         self.assertIn("done: (pd.anchors_stated || 0) > 0", seg)
         self.assertNotIn("ADD STYLE REFERENCE", seg)
         self.assertIn("DESCRIBE THE LOOK", seg)
-        self.assertIn("in words or a picture", seg)
-        self.assertIn("four anchors", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The checklist row's
+        # explanatory sub-line went; the label is the gate.
+        self.assertNotIn("in words or a picture", seg)
+        self.assertNotIn("sub:", seg)
         self.assertNotIn("the three anchors", seg)
 
 
@@ -596,7 +605,11 @@ class TheUploadIsLocked(Install):
     def test_the_gate_is_readable_before_it_is_hit(self):
         """A gate surfaced only as an error after the user acts is the
         thing the product rule forbids."""
-        self.assertIn("NO AI MODEL CONNECTED", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The gate is a label
+        # + the link to its fix; the tooltip keeps the fuller sentence.
+        self.assertIn('<p class="up-gate mono">NO AI MODEL ·', JS)
+        self.assertIn('data-f="up-gate-go">Connect one ↗</button>', JS)
+        self.assertNotIn("THE MOMENT IT LANDS", JS)
         self.assertIn("Connect an AI model first — Settings → AI & engines", JS)
         # every upload form is told what the server declared
         self.assertEqual(JS.count("bindScreenplayUpload($("), 3)
@@ -695,7 +708,11 @@ class TheUploadStartsTheRead(unittest.TestCase):
         self.assertLess(b.index("usable) return;"), b.index("theRead.begin"))
 
     def test_a_failure_points_at_the_manual_door(self):
-        self.assertIn("build the design plan on", self.body())
+        """RULED 2026-10-07 (user): no on-page explanations or instructions. The failure toast
+        keeps the server's reason and drops the advice."""
+        b = self.body()
+        self.assertIn("toast(`The read did not finish: ${err.message}`, true);", b)
+        self.assertNotIn("build the design plan on", b)
 
     def test_the_scan_defaults_to_an_engine_this_studio_has(self):
         """Hardcoding gemini handed an OpenAI-only install a stated-
@@ -753,9 +770,13 @@ class KindsAreFullyWired(unittest.TestCase):
                           f"{kind} would render as an unstyled badge")
 
     def test_every_blocking_kind_has_a_support_line(self):
-        support = re.search(r"const BLOCK_SUPPORT = \{(.*?)\n\};", JS, re.S).group(1)
-        for kind in self.kinds_the_server_emits() - {"CARE"}:
-            self.assertIn(f"{kind}:", support, f"{kind} explains nothing")
+        """RULED 2026-10-07 (user): no on-page explanations or instructions. The support line
+        under the lead was an explanation and BLOCK_SUPPORT is gone; every
+        kind still renders its verb (above) and the server's own text."""
+        self.assertNotIn("BLOCK_SUPPORT", JS)
+        self.assertNotIn('class="next-support"', JS)
+        i = JS.index('<div class="next-text">${monoIds(esc(next.text))}</div>')
+        self.assertIn("BLOCK_VERBS[first.kind]", JS[i:i + 400])
 
 
 class OneAuthority(unittest.TestCase):

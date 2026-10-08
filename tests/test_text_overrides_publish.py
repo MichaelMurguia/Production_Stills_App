@@ -217,11 +217,12 @@ class TheUiOffersIt(unittest.TestCase):
         i = HTML.index("Page text editing")
         panel = HTML[i:HTML.index("dbg-text-count", i)]
         self.assertNotIn("live on this install only", panel)
-        self.assertIn("starts on <b>this install only</b>", panel)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The panel's
+        # paragraphs went; the publish button's tooltip carries the gate.
+        self.assertNotIn('<p class="hint">', panel)
         flat = " ".join(panel.split())
-        self.assertIn("rides the next deploy to every studio", flat)
-        self.assertIn("needs a writable checkout", flat)
-        self.assertIn("on a hosted studio it writes nothing", flat)
+        self.assertIn("It still needs a commit and a deploy", flat)
+        self.assertIn("on a hosted studio the source is not writable", flat)
 
     def test_the_shipped_file_exists_in_source(self):
         """It rides every deploy, so it must be in the repo even when

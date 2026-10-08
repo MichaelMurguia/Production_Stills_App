@@ -321,7 +321,10 @@ class TwoStatesPerStep(unittest.TestCase):
     def test_confirmations_are_advisory_and_never_gate(self):
         """§2.4 — the gate is honest. A render is the end of a sequence,
         not a reward for finishing one."""
-        self.assertIn("UNCONFIRMED — YOU CAN STILL RENDER", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The gate line is a
+        # label; that it never blocks is the behaviour asserted below.
+        self.assertIn('UNCONFIRMED`', JS)
+        self.assertNotIn("YOU CAN STILL RENDER", JS)
         i = JS.index('data-f="generate"')
         self.assertNotIn("confCount", JS[i - 400:i + 400],
                          "an unconfirmed step must not disable the act")
@@ -365,12 +368,17 @@ class ReferencesStateTheirReason(unittest.TestCase):
         i = JS.index('$(".ref-groups", card).addEventListener')
         seg = JS[i:i + 1100]
         self.assertIn('row.classList.toggle("on", on)', seg)
-        self.assertIn("ATTACHED — RIDES THE NEXT TAKE", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The row brightens
+        # and states its new state in one word.
+        self.assertIn('"ATTACHED")', seg)
+        self.assertNotIn("RIDES THE NEXT TAKE", seg)
 
     def test_the_always_on_anchors_never_sit_among_the_toggles(self):
         i = JS.index('<span class="anchors-k">STYLE ANCHORS</span>')
         self.assertIn("ALWAYS ON", JS[i:i + 900])
-        self.assertIn("SET ON PRODUCTION DESIGN", JS[i:i + 900])
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The source line was
+        # explanation; ALWAYS ON is the label and its tooltip the rest.
+        self.assertNotIn("SET ON PRODUCTION DESIGN", JS[i:i + 900])
         j = JS.index('class="ref-groups"')
         self.assertLess(j, i, "the toggles are their own list, above")
 
@@ -447,7 +455,10 @@ class ThePalettePicker(unittest.TestCase):
         self.assertIn('data-ids="${esc(JSON.stringify(ids))}"', b,
                       "a row carries its whole group's ids")
         self.assertNotIn("data-sid", b, "no per-colour control survives")
-        self.assertIn("A PALETTE ATTACHES WHOLE", b)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The foot line went;
+        # each row's own tooltip still says it attaches whole.
+        self.assertNotIn("A PALETTE ATTACHES WHOLE", b)
+        self.assertIn("; attaches whole", b)
 
     def test_it_reuses_the_canonical_ramp(self):
         """The shelf's own component, not a second drawing of a palette:

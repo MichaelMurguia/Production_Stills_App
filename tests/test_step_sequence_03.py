@@ -172,13 +172,17 @@ class TheBoardOpensOnWhatItMade(unittest.TestCase):
         self.assertIn("object-fit: contain", block(".made-frame img"))
 
     def test_it_states_the_stake_in_one_line(self):
-        self.assertIn("cannot be assembled until", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. One line, a label.
+        self.assertNotIn("cannot be assembled until", JS)
+        self.assertIn("const stake = `${approvedN} OF ${panels.length} APPROVED`;", JS)
 
 
 class TheGateAndTheQuestions(unittest.TestCase):
     def test_approve_states_its_gate_and_does_not_lie(self):
         """§3.2 — a draft with twelve open questions CAN be approved."""
-        self.assertIn("YOU CAN STILL APPROVE", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The gate states the
+        # condition as a label; that it never disables Approve is below.
+        self.assertNotIn("YOU CAN STILL APPROVE", JS)
         i = JS.index("const approveGate")
         self.assertIn("qOpen.length", JS[i:i + 700])
         j = JS.index('id="sp-approve"')
@@ -190,11 +194,17 @@ class TheGateAndTheQuestions(unittest.TestCase):
         i = JS.index("const qStepHtml")
         seg = JS[i:i + 1800]
         self.assertIn('label: "OPEN QUESTIONS"', seg)
-        self.assertIn("ANSWER ONE AND IT BECOMES CANON", seg)
-        self.assertIn("TOLD NOT TO INVENT ONE", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The consequence
+        # lives in the answer modal (modals are kept), not on the step.
+        self.assertNotIn("ANSWER ONE AND IT BECOMES CANON", seg)
+        self.assertIn("An answer becomes canon for this", JS)
+        self.assertIn("render is told not to invent one", JS)
 
     def test_the_mode_aware_copy_survives(self):
-        self.assertIn("EXPLORING IS HOW YOU DECIDE THEM", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. It survives in the
+        # answer modal, mode-aware as before.
+        self.assertNotIn("EXPLORING IS HOW YOU DECIDE THEM", JS)
+        self.assertIn("A design exploration is where these get decided", JS)
 
 
 class TheLedgerFreezesOnTheLock(unittest.TestCase):

@@ -304,9 +304,14 @@ class TheBandSaysWhatIsMissingInTheUsersWords(unittest.TestCase):
         about the name of the missing thing is how one missing thing
         reads as two."""
         self.assertEqual(JS.count("NO AI MODEL"), 6)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Every site is the
+        # same label now; where a link fits, it follows ("Connect one").
         for phrasing in ("NO AI MODEL — ADD A KEY IN SETTINGS",
                          "NO AI MODEL — ADD A GEMINI OR OPENAI KEY IN SETTINGS"):
-            self.assertIn(phrasing, JS, phrasing)
+            self.assertNotIn(phrasing, JS, phrasing)
+        # three AI-model gates, plus the image-model gate on a design
+        # language card
+        self.assertEqual(JS.count(">Connect one ↗</button>"), 4)
 
 
 

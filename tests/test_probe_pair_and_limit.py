@@ -149,12 +149,19 @@ class TheProbeRendersTwice(unittest.TestCase):
         i = JS.index("wiz-pair")
         seg = " ".join(JS[i:i + 1600].split())
         self.assertIn("smp.has_image_b ?", seg)
-        self.assertIn("nothing here shows this engine's variance", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. One image and a
+        # label saying so.
+        self.assertIn("ONE RUN", seg)
+        self.assertNotIn("nothing here shows this engine's variance", seg)
 
     def test_the_pair_says_what_the_difference_between_them_means(self):
         i = JS.index("wiz-pair")
         seg = " ".join(JS[i:i + 1600].split())
-        self.assertIn("this engine's variance, not a decision it made", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The pair shows
+        # itself; the sentence explaining it went to nowhere — the
+        # regenerate tooltip still says why there are two.
+        self.assertNotIn("this engine's variance, not a decision it made", seg)
+        self.assertIn("one take cannot show run-to-run variance", JS)
 
     def test_neither_run_is_shown_as_the_answer(self):
         """Equal size, no hierarchy — making one larger would make it the
@@ -172,7 +179,9 @@ class TheProbeRendersTwice(unittest.TestCase):
     def test_the_wait_is_stated_as_two_takes(self):
         i = JS.index("Rendering ${subject")
         self.assertIn("two runs", JS[i:i + 400])
-        self.assertIn("two takes of the same prompt", JS[i:i + 400])
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The busy label
+        # carries it; the hint line under it went.
+        self.assertNotIn("two takes of the same prompt", JS[i:i + 400])
 
     def test_both_open_in_one_lightbox_in_order(self):
         """The comparison has to survive the click that magnifies it."""

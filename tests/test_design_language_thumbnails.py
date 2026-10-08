@@ -234,12 +234,13 @@ class TheCards(unittest.TestCase):
         self.assertGreater(i, 0)
 
     def test_what_it_spends_is_stated_where_it_spends(self):
-        """The build renders without a further click, so the cost is on
-        screen beside the result: small thumbnails on the named engine, one
-        per language and environment (/spend)."""
-        self.assertIn('id="wiz-lang-cost"', self.JS)
-        self.assertIn("SMALL THUMBNAILS ON ${eng.toUpperCase()}", self.JS)
-        self.assertIn("1 PER DESIGN LANGUAGE AND ENVIRONMENT", self.JS)
+        """RULED 2026-10-07 (user): no on-page explanations or instructions. Rule 2: cost
+        statements on the page are removed — this line is named in the
+        ruling. The thumbnails still render through the one queue."""
+        self.assertNotIn('id="wiz-lang-cost"', self.JS)
+        self.assertNotIn("SMALL THUMBNAILS ON", self.JS)
+        self.assertNotIn("1 PER DESIGN LANGUAGE AND ENVIRONMENT", self.JS)
+        self.assertIn("runLangPreviewQueue(", self.JS)
 
     def test_the_card_says_what_it_was_rendered_from(self):
         self.assertIn('prev.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"', self.JS)

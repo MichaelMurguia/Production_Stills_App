@@ -305,7 +305,10 @@ class Consent(unittest.TestCase):
         # "Run it again" when a build did not finish).
         self.assertEqual(js.count(">Process World Visualization</button>"), 2)
         self.assertIn('"Run it again" : "Process World Visualization"}</button>', js)
-        self.assertIn("This could take up to an hour.", js)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The consent line is
+        # the short label the user asked for; the explanation went.
+        self.assertIn('const WORLD_CONSENT = "Can take up to an hour";', js)
+        self.assertNotIn("Reads the screenplay, writes the Art Direction Bible", js)
         self.assertEqual(js.count("${WORLD_CONSENT}"), 3,
                          "the line stands beside every button that starts it")
 

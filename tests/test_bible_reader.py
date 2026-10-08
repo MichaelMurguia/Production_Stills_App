@@ -50,9 +50,15 @@ class ThreeViewsOverOneFile(unittest.TestCase):
         self.assertIn('$("#bible-doc")?.classList.toggle("hidden", v !== "reading")', seg)
 
     def test_the_markdown_view_carries_the_parse_warning(self):
-        self.assertIn('id="bible-md-note"', HTML)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. "SECTION HEADINGS
+        # ARE PARSED — DO NOT RENAME" was an instruction; it and its toggle
+        # are gone. The three views themselves are unchanged.
+        self.assertNotIn('id="bible-md-note"', HTML)
+        self.assertNotIn("DO NOT RENAME", HTML)
         i = JS.index("const syncBibleView =")
-        self.assertIn('note.hidden = v === "reading"', JS[i:i + 700])
+        self.assertNotIn("bible-md-note", JS[i:i + 700])
+        self.assertIn('$("#bible-doc")?.classList.toggle("hidden", v !== "reading")',
+                      JS[i:i + 700])
 
     def test_editing_forces_the_source_view(self):
         """You cannot edit a render. While editing there is one view."""
@@ -164,9 +170,12 @@ class TheRailSaysWhereYouAreAndWhatWroteIt(unittest.TestCase):
         self.assertIn("AUTO_ATTACH_HEADS.map", JS[i:i + 1200])
 
     def test_an_empty_rail_states_the_gap(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Empty states are
+        # short Courier labels.
         i = JS.index("const renderBibleRail =")
         seg = JS[i:i + 1600]
-        self.assertIn("no anchor has a picture yet", seg)
+        self.assertIn("NO PICTURES YET", seg)
+        self.assertNotIn("no anchor has a picture yet", seg)
 
     def test_the_rail_no_longer_lists_sections(self):
         """The index moved into the reader, where choosing a section shows

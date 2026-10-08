@@ -62,7 +62,10 @@ class TheLocationsAreOffered(unittest.TestCase):
         self.assertIn('locPick.value === OTHER', JS)
 
     def test_an_unscanned_production_says_what_to_do(self):
-        self.assertIn("build the design plan in Step 2 to list your locations", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. A gate inside an
+        # <option> is a label naming what it needs; no instruction.
+        self.assertIn("NEEDS THE DESIGN PLAN · STEP 2", JS)
+        self.assertNotIn("build the design plan in Step 2 to list your locations", JS)
 
     def test_a_typed_location_is_remembered_as_typed(self):
         """Reopening on a free-text choice must restore the text, not
@@ -93,7 +96,9 @@ class TheSpecIdNamesItself(unittest.TestCase):
     hand, one word at a time, by the person who wrote the auto-fill."""
 
     def test_the_field_says_it_fills_itself(self):
-        self.assertIn("NAMED FROM YOUR SCENE", HTML)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The Courier note
+        # went; the placeholder (a field's own hint) still says it.
+        self.assertNotIn("NAMED FROM YOUR SCENE", HTML)
         self.assertIn("fills itself when you pick or paste a scene", HTML)
 
     def test_it_no_longer_reads_as_a_blank_to_invent(self):
@@ -109,7 +114,10 @@ class TheSpecIdNamesItself(unittest.TestCase):
         i = HTML.index('id="spec-new-id"')
         seg = HTML[i - 400:i + 200]
         self.assertIn("GENETICS_FACTION_V001", seg)
-        self.assertIn("A NAME ONLY", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. "A NAME ONLY" was
+        # an explanatory note; the ? help card still carries it.
+        self.assertNotIn("A NAME ONLY", seg)
+        self.assertIn('data-help="spec-id"', seg)
 
     def test_the_autofill_still_exists_and_still_yields(self):
         """Filling itself must never overwrite what the user typed."""
@@ -174,14 +182,19 @@ class AFrozenStepSaysWhyOnScreen(unittest.TestCase):
         self.assertIn("FROZEN BY ${approvedTakes.join", JS)
 
     def test_it_names_the_door_out(self):
-        """Knowing you are blocked is half an answer."""
-        self.assertIn("USE WITHDRAW APPROVAL ON THAT", JS)
+        """Knowing you are blocked is half an answer. RULED 2026-10-07 (user): no on-page explanations or instructions.
+        The label names the take that froze it; the door out is that
+        take's own Withdraw approval act, on the same card."""
+        self.assertNotIn("USE WITHDRAW APPROVAL ON THAT", JS)
+        self.assertIn('mk("Withdraw approval"', JS)
 
     def test_it_says_what_is_still_allowed(self):
-        """An approval freezes the SHEET, not the experiment — the same
-        rule the prompt editor already states. A user who reads only
-        "frozen" reasonably concludes the panel is finished with them."""
-        self.assertIn("GENERATING A NEW TAKE IS", JS)
+        """An approval freezes the SHEET, not the experiment. RULED 2026-10-07 (user): no on-page explanations or instructions.
+        So the sentence went — the behaviour it described stays, and is
+        what this asserts: Generate is never disabled by a freeze."""
+        self.assertNotIn("GENERATING A NEW TAKE IS", JS)
+        i = JS.index('data-f="generate"')
+        self.assertNotIn("frozen", JS[i:i + 120])
 
     def test_a_settled_step_is_not_painted_as_an_error(self):
         css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
