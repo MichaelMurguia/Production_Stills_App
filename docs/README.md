@@ -7,6 +7,7 @@ is a second copy, and a second copy drifts.
 | If you are touching… | The document that governs it | Known to be out of date |
 |---|---|---|
 | `app/` UI — markup, CSS, copy | `app/static/DESIGN_SYSTEM.md` | its `## Uncanonized patterns` table is a queue, not canon |
+| the owner's standing UI direction, for the design review | `docs/UI_DIRECTION_2026-10.md` | a brief for Claude Design; the rulings themselves live in `DESIGN_SYSTEM.md` |
 | `app/` behaviour | `docs/ARCHITECTURE.md` | — |
 | what a NEW user meets, arrival to first upload | `docs/FIRST_RUN.md` | — |
 | tutorials — writing one, or the system behind them | `docs/TUTORIALS.md` | — |
