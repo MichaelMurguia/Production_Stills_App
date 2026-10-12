@@ -8,6 +8,7 @@ a raw multi-megabyte PNG (or a missing variant) fails the build, not the visitor
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import os
 import re
 import sys

@@ -24,7 +24,7 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2847 tests** across 140 files.
+**2849 tests** across 141 files.
 
 
 ## Product app — 2617 tests in 123 files
@@ -156,18 +156,19 @@ temp home and external services are faked.
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
 
 
-## Storefront — 230 tests in 17 files
+## Storefront — 232 tests in 18 files
 
 | File | Tests | What it holds |
 |---|---:|---|
 | `test_account_keeps_its_promise.py` | 12 | Regression, user-hit 2026-08-22 on the live site. |
-| `test_accounts.py` | 14 | Account lifecycle: magic links are single-use and uniform, sessions come from signed cookies, the account page lists the email's purchases, Google rou |
+| `test_accounts.py` | 14 | Account lifecycle: magic links are single-use and uniform, sessions come import _offline # noqa: F401 — no real network in tests from signed cookies,  |
 | `test_admin_storage.py` | 23 | Fleet storage on the admin page (user 2026-08-07). |
 | `test_audit_fixes.py` | 13 | Regression tests for the 2026-08-02 storefront audit batch: unpaid sessions never fulfill, refunds close the door, canceled services are never abandon |
 | `test_door_preview.py` | 8 | The workspace door's render preview (TAKE_ACTIONS S1). |
 | `test_fleet_autoupdate.py` | 5 | The fleet updates itself when a push deploys the storefront (user ruling 2026-08-12: "update automatically when you push changes"). |
 | `test_fulfillment.py` | 3 | Fulfillment invariants: idempotency on stripe_session_id, detached-safe returns, and Stripe-shaped (attribute-only, no dict .get()) field access. |
 | `test_mail_paths.py` | 17 | Mail, end to end — the send path and the receive path. |
+| `test_offline_guard.py` | 2 | Every storefront test file imports _offline, so no test reaches the network. |
 | `test_pipeline.py` | 3 | The /pipeline page: static, always 200, and its provenance claims stay tied to the real Beltminers record (STORE_DESIGN_SYSTEM §6 — true numbers). |
 | `test_provisioner.py` | 11 | Provisioning invariants: cloud fulfillment queues a workspace; reconcile converges PENDING → ACTIVE exactly once with a configured Railway; missing co |
 | `test_recovery_and_export.py` | 9 | Tier A invariants: license recovery is anti-enumeration and env-gated, legal pages exist, the entitlement export hides without its token and never lea |

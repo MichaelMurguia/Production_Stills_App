@@ -350,6 +350,10 @@ name on it (redemption requires a signed-in account).
   merge semantics, board layout, size rules, keyword derivation, project
   paths, and TestClient functional passes over the auth gate and projects
   lifecycle).
+  **Every storefront test file starts with `import _offline`** (enforced by
+  `tests/test_offline_guard.py`). It stubs `provisioner._domain_serves`,
+  the one real HTTPS call reconcile makes; without it the suite's result
+  depended on the network and on 2026-10-11 it hung outright.
 - **Deploy = push to `main`.** Railway builds `storefront/` only (root
   directory setting). Confirm with `/healthz` that the new rev is serving.
   Rollback: redeploy a previous deployment in the Railway dashboard.

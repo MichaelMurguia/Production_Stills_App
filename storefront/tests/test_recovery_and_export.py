@@ -3,6 +3,7 @@ legal pages exist, the entitlement export hides without its token and never
 leaks with a wrong one."""
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import os
 import sys
 import tempfile

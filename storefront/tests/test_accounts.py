@@ -1,4 +1,5 @@
 """Account lifecycle: magic links are single-use and uniform, sessions come
+import _offline  # noqa: F401 — no real network in tests
 from signed cookies, the account page lists the email's purchases, Google
 routes gate when unconfigured, and logout clears."""
 from __future__ import annotations

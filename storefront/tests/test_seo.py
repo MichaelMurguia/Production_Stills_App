@@ -3,6 +3,7 @@ metadata and structured data; private/transactional pages and every
 tenant host say noindex; robots.txt and sitemap.xml exist and agree."""
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import json
 import os
 import re

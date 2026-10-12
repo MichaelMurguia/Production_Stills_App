@@ -11,6 +11,7 @@ ruling silently was not happening on the live store.
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import re
 import sys
 import unittest

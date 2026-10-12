@@ -12,6 +12,7 @@ somebody to fix the wrong thing during an incident.
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import asyncio
 import os
 import sys

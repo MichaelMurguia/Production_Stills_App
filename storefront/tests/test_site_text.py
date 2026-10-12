@@ -3,6 +3,7 @@ overrides ARE the page copy — but writes exist only for signed-in
 OWNER_EMAILS accounts, and the editor script ships only to them."""
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import os
 import sys
 import tempfile

@@ -8,6 +8,7 @@ own owner, and the studio's credential never leaves the server.
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import os
 import sys
 import tempfile

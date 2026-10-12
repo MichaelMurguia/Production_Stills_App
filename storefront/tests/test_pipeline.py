@@ -5,6 +5,7 @@ Run from storefront/:  python -m unittest discover -s tests -v
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import os
 import sys
 import tempfile

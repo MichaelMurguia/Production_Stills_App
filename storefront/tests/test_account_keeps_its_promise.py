@@ -13,6 +13,7 @@ copy made a promise only a poller can keep.
 """
 from __future__ import annotations
 
+import _offline  # noqa: F401 — no real network in tests
 import pathlib
 import re
 import sys
