@@ -67,8 +67,11 @@ class TheCopySaysHowItDiffersFromReject(unittest.TestCase):
         self.assertIn("unlike Reject it records no reason", JS[i:i + 400])
 
     def test_it_says_the_take_survives(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The toast says what
+        # happened; the tooltip still says the take survives.
         i = JS.index('mk("Withdraw approval"')
-        self.assertIn("the take is untouched", JS[i:i + 900])
+        self.assertIn("The take keeps its image", JS[i:i + 900])
+        self.assertNotIn("the take is untouched", JS[i:i + 900])
 
 
 class TheBackendWasAlreadyThere(unittest.TestCase):

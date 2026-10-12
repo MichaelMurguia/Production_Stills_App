@@ -344,7 +344,10 @@ class TheThreeSurfacesWireUp(unittest.TestCase):
         self.assertIn("PRODUCTION DEFAULT", block)
         self.assertIn("THIS PANEL", block)
         self.assertIn("Frozen by an approved take", block)
-        self.assertIn('NEVER "CUSTOM"', block)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The JOURNALED line
+        # under the camera editor was explanation.
+        self.assertNotIn('NEVER "CUSTOM"', block)
+        self.assertNotIn("NEXT TAKE PAINTS FROM THESE", block)
         self.assertIn("Save camera", block)
 
 

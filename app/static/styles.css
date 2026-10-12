@@ -140,6 +140,11 @@
      thing a person reads — the numbers for each face are in
      DESIGN_SYSTEM.md under "the legibility floor".
      ---------------------------------------------------------------- */
+  /* UNCANONIZED — 2026-10-04 — the Visualizing world ground drifts
+     between these three near-blacks (one flat colour at a time). */
+  --world-a: #121417;
+  --world-b: #14131b;
+  --world-c: #111917;
   --t-scale: .8;
 
   --t-kicker:  calc(15px * var(--t-scale));  /* Courier CAPS — section kickers, step labels */
@@ -1685,6 +1690,89 @@ details.meta pre {
   background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
 .lang-gen:hover:not(:disabled) { border-color: var(--line-bright); }
 .lang-gen:disabled { cursor: default; color: var(--ink-faint); border-color: var(--hairline); }
+
+/* UNCANONIZED — 2026-10-04 — locations as a workbook, one tab per act */
+/* The tabs sit between the search box and the table, flush with the
+   table's top edge. Selection is an ink rule under the tab (selection
+   owns an outline, never amber); the count is Courier. */
+.loc-tabs { display: flex; flex-wrap: wrap; gap: 0 2px; margin: 10px 0 0;
+  border-bottom: 1px solid var(--line); }
+.loc-tab { background: none; border: 0; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; padding: 8px 14px; cursor: pointer; text-align: left;
+  font-family: var(--sans); font-size: var(--t-body); color: var(--ink-dim); }
+.loc-tab b { font-weight: 400; color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .08em; margin-left: 6px; }
+.loc-tab:hover { color: var(--ink); }
+.loc-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.loc-tab.none { opacity: .45; }
+.loc-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* UNCANONIZED — 2026-10-04 — Visualizing world */
+/* The whole of Production Design while the world build runs: a label, a
+   spinner and the steps, centred on a ground whose hue drifts very slowly
+   between three near-blacks (user: "have the page background hue shift
+   very very slowly"). Not a gradient: one flat colour at a time, changing
+   over minutes. Amber stays on the spinner alone. */
+.world-proc { min-height: calc(100vh - 140px); display: flex;
+  align-items: center; justify-content: center; padding: 48px 16px;
+  background: var(--world-a);
+  animation: world-hue 240s ease-in-out infinite alternate; }
+@keyframes world-hue {
+  0% { background-color: var(--world-a); }
+  50% { background-color: var(--world-b); }
+  100% { background-color: var(--world-c); } }
+.wp-center { display: flex; flex-direction: column; align-items: center;
+  gap: 16px; max-width: 560px; width: 100%; text-align: center; }
+.world-proc .spinner { width: 30px; height: 30px; border-radius: 50%;
+  border: 2.5px solid var(--line); border-top-color: var(--accent);
+  animation: spin 1.1s linear infinite; }
+.wp-title { font-family: var(--sans); font-size: var(--t-screen);
+  font-weight: 600; color: var(--ink); margin: 0; }
+.wp-now { font-size: var(--t-title); color: var(--ink); margin: 0; min-height: 1.5em; }
+.wp-detail { color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .1em; margin: 0; min-height: 1.4em; }
+.wp-clock { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .1em; margin: 6px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .world-proc { animation: none; }
+  .world-proc .spinner { animation: none; } }
+.world-offer { display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 12px 24px; }
+.world-offer .wo-text { display: grid; gap: 4px; max-width: 70ch; }
+.world-offer h3 { margin: 0; }
+.world-consent { color: var(--ink-dim); max-width: 60ch; }
+/* Environments as a grid of anchor-style cards (2026-10-04). The card
+   reuses .anchor-hero / .ah-*; these rules only fit an environment into
+   it: the name in the role slot, a clamped description and a Courier
+   count in the scrim. The rows these replace are retired. */
+.env-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+@media (max-width: 1100px) { .env-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .env-cards { grid-template-columns: 1fr; } }
+.env-card .ah-role { right: 10px; color: var(--ink); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.env-card:has(.ah-state) .ah-role { right: 130px; }
+.env-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; }
+.env-count { font-size: var(--t-mark); letter-spacing: .1em; color: var(--ink-faint); }
+.env-card.proposed { border: 1px dashed var(--hold); }
+.envm-shot { width: 100%; display: block; cursor: zoom-in; margin-bottom: 6px;
+  border: 1px solid var(--line-soft); }
+.envm-basis { font-size: var(--t-mark); letter-spacing: .08em; color: var(--ink-faint);
+  margin: 0 0 12px; }
+
+/* UNCANONIZED — 2026-10-04 — design-language thumbnails */
+/* What a thumbnail was rendered FROM rides on the picture (facts about an
+   image ride ON it): BEST GUESS before the Bible, FROM THE BIBLE after. A
+   Courier fact on a field strip along the bottom edge, never amber. */
+.lang-shot { position: relative; }
+.lang-basis { position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 5px 9px; background: var(--field); color: var(--ink-faint);
+  font-family: var(--mono); font-size: var(--t-mark);
+  letter-spacing: .1em; text-transform: uppercase; }
+.lang-basis .text-act { letter-spacing: 0; text-transform: none; }
+.lang-basis .busy-inline { margin: 0; }
+.lang-cost { margin: 2px 0 10px; color: var(--ink-faint); font-size: var(--t-mark);
+  letter-spacing: .08em; }
 .lang-body { display: block; padding: 9px 11px 11px;
   font-family: var(--sans); font-size: var(--t-body); color: var(--ink); }
 .lang-card.open { border-color: var(--line); }
@@ -2671,6 +2759,39 @@ details.meta pre {
 .bible-doc .bd-ramp { display: flex; height: 26px; }
 .bible-doc .bd-ramp i { display: block; width: 34px; }
 .bible-doc .bd-none { color: var(--ink-faint); }
+/* UNCANONIZED — 2026-10-04 — the Bible, one section at a time */
+/* An index of the file's own headings at the left, grouped; the chosen
+   section at the right at a reading measure. Selection is an ink bar,
+   never amber (status owns colour, selection owns an outline). */
+.bible-doc.split { max-width: none; }
+.bd-split { display: grid; grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0 32px; align-items: start; }
+.bd-nav { position: sticky; top: 90px; display: flex; flex-direction: column;
+  gap: 2px; max-height: calc(100vh - 120px); overflow-y: auto; }
+.bd-nav-label { font-family: var(--mono); font-size: var(--t-kicker);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
+  margin: 14px 0 4px; }
+.bd-nav-label:first-child { margin-top: 0; }
+.bd-nav-item { text-align: left; background: none; border: 0;
+  border-left: 2px solid transparent; padding: 5px 10px; cursor: pointer;
+  font-family: var(--sans); font-size: var(--t-body); color: var(--ink-dim); }
+.bd-nav-item:hover { color: var(--ink); }
+.bd-nav-item.on { color: var(--ink); border-left-color: var(--ink); }
+.bd-sec { max-width: 68ch; min-width: 0; }
+.bd-sec-head { display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.bd-sec-head .bd-h2 { margin: 0; }
+.bd-sec-head .bd-nav-label { margin: 0 0 2px; }
+.bd-thumb { width: 360px; max-width: 100%; display: block; cursor: zoom-in;
+  border: 1px solid var(--line-soft); }
+.bd-from { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .08em; margin: 6px 0 0; }
+.bd-keys { color: var(--ink-faint); font-size: var(--t-mark); letter-spacing: .06em;
+  line-height: 1.6; margin: 12px 0 0; }
+.bd-edit-area { width: 100%; min-height: 320px; margin-top: 14px; }
+.bd-edit-row { align-items: center; gap: 12px; }
+@media (max-width: 900px) {
+  .bd-split { grid-template-columns: 1fr; }
+  .bd-nav { position: static; max-height: none; flex-direction: row; flex-wrap: wrap; } }
 /* The right rail: where you are, what wrote it, and the one act on it. */
 .bible-rail { display: flex; flex-direction: column; gap: 4px; }
 .bd-index { display: flex; flex-direction: column; margin-bottom: 8px; }
@@ -3015,6 +3136,13 @@ details.meta pre {
 /* An uncast tile is dashed and says so — it is not a card yet, and the
    click is what makes it one. */
 .cast-tile.uncast .cast-tile-shot { border-style: dashed; }
+/* A character's picture is anchored at the TOP of its frame, so whatever
+   the frame crops comes off the feet, never the head (user 2026-10-04:
+   "crop from bottom so the character's head is always in the frame").
+   Same size, aspect and image; only where the crop falls. Vehicles and
+   props stay centred. */
+.cast-tile[data-kind="CHARACTER"] .cast-tile-shot,
+.cast-card[data-kind="CHARACTER"] .cast-shot { background-position: center top; }
 .cast-tile-shot.none { display: flex; align-items: center; justify-content: center;
   background-image: repeating-linear-gradient(135deg,
     var(--field) 0 6px, var(--bg) 6px 12px); }
@@ -3270,6 +3398,9 @@ body[data-cast="1"] .wiz-head { display: none; }
 #settings-firstrun { background: var(--bg); border: 1px solid var(--line); padding: 30px; }
 #settings-firstrun .fact-head.sec-head { margin: 30px 0 12px; }
 .fr-top { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 26px; margin-bottom: 30px; }
+/* 2026-10-07 (no on-page explanations): the .fr-notice column left the
+   markup, so the hero takes the row rather than leaving 340px empty. */
+.fr-top:not(:has(.fr-notice)) { grid-template-columns: minmax(0,1fr); }
 .fr-eyebrow { font-family: var(--mono); font-size: var(--t-mark); letter-spacing: .14em; color: var(--accent); }
 .fr-h { font-size: var(--t-screen); font-weight: 700; margin: 8px 0 20px; }
 .fr-connect-row { display: flex; align-items: center; gap: 16px; }

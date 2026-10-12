@@ -199,12 +199,19 @@ class TheReportIsReadableAndAdvisory(unittest.TestCase):
     def test_a_clean_read_says_what_it_read_and_what_it_ignored(self):
         i = JS.index("const renderBibleConflicts")
         seg = " ".join(JS[i:i + 900].split())
-        self.assertIn("characters", seg)
-        self.assertIn("Deliberate contrast between different subjects is not counted", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. A clean read is a
+        # label carrying the count it read.
+        self.assertIn("NO CONFLICTS · ${", seg)
+        self.assertIn("CHARACTERS READ", seg)
+        self.assertNotIn("Deliberate contrast between different subjects is not counted", seg)
 
     def test_the_report_says_nothing_was_changed(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The head is the
+        # count; that the check never edits lives in the button's tooltip.
         i = JS.index("const renderBibleConflicts")
-        self.assertIn("ADVISORY, NOTHING WAS CHANGED", JS[i:i + 1400])
+        self.assertNotIn("ADVISORY, NOTHING WAS CHANGED", JS[i:i + 1400])
+        self.assertIn("CONFLICT${", JS[i:i + 1400])
+        self.assertIn("it never edits the document", HTML)
 
     def test_it_is_not_painted_as_a_failure(self):
         """A contradiction the director meant is still the director's

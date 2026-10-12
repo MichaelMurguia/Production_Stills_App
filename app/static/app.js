@@ -542,7 +542,7 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
         ${meta ? `<span class="step-meta mono">${meta}</span>` : ""}
         <span class="step-acts">
           ${frozen && id ? `<span class="step-confirmed step-settled mono" title="${esc(frozenWhy
-             || "Settled by an approved take — withdraw the approval to change it")}">✓ SETTLED</span>` : ""}
+             || "SETTLED BY AN APPROVED TAKE")}">✓ SETTLED</span>` : ""}
           ${done && id && !frozen ? `<button type="button" class="step-confirmed mono" data-unconfirm="${esc(id)}"
              title="Unconfirm — this step needs you again">✓ CONFIRMED</button>` : ""}
           ${verbs}
@@ -551,7 +551,7 @@ function seqStep({ n, id = "", label, meta = "", verbs = "", body = "",
         </span>
       </div>
       ${frozen && id ? `<div class="step-frozen mono">${esc(frozenWhy
-         || "Settled by an approved take — withdraw the approval to change it")}</div>` : ""}
+         || "SETTLED BY AN APPROVED TAKE")}</div>` : ""}
       ${body ? `<div class="step-content">${body}</div>` : ""}
     </div>
   </section>`;
@@ -870,7 +870,8 @@ function authModal(key) {
             + `Save to close.`, "ok");
       } catch (err) {
         setBusy(false, "", testBtn);
-        say(`${P.name} refused it: ${err.message}`, "bad");
+        // 400 = "That is not a valid key." — a sentence already.
+        say(err.status === 400 ? err.message : `${P.name} refused it: ${err.message}`, "bad");
       } finally {
         testBtn.disabled = false;
         clearInterval(tick);
@@ -1468,8 +1469,8 @@ function updateTextEditChip() {
     chip = document.createElement("div");
     chip.id = "text-edit-chip";
     chip.className = "text-edit-chip mono";
-    chip.textContent =
-      "TEXT EDIT ON — ALT-CLICK ANY TEXT TO REWRITE IT · EXIT IN SETTINGS → DEBUG TOOLS";
+    chip.textContent = "TEXT EDIT ON";
+    chip.title = "Alt-click any text to rewrite it · turn it off in Settings → Debug tools";
     document.body.append(chip);
   }
 }
@@ -1548,12 +1549,9 @@ function gateChain(state) {
     // states the blocker); every stage waits.
     { label: "CONNECT AN AI MODEL", verb: "Connect a model",
       done: !!(state.capability && state.capability.any_credential),
-      stage: "settings",
-      sub: "Every stage runs on a model you connect — your key, your bill" },
-    { label: "UPLOAD THE SCREENPLAY", verb: "Upload the screenplay", done: !!ss.screenplay, stage: "screenplay",
-      sub: "The read starts here — everything downstream derives from the draft" },
-    { label: "RUN THE SCRIPT SCAN", verb: "Run the script scan", done: !!pd.scan_done, stage: "wizard",
-      sub: "Reads the draft for design languages, environments, locations and cast" },
+      stage: "settings" },
+    { label: "UPLOAD THE SCREENPLAY", verb: "Upload the screenplay", done: !!ss.screenplay, stage: "screenplay" },
+    { label: "RUN THE SCRIPT SCAN", verb: "Run the script scan", done: !!pd.scan_done, stage: "wizard" },
     // "What is style reference?" (user, 2026-08-22, looking at stage 03's
     // gate). It was jargon, and its sub-line was wrong twice over: it named
     // Board layout, which is not one of these anchors, and said three when
@@ -1561,18 +1559,13 @@ function gateChain(state) {
     // stated entirely in words — including one chosen from the style
     // pickers, which write words — never satisfied it.
     { label: "DESCRIBE THE LOOK", verb: "Describe the look",
-      done: (pd.anchors_stated || 0) > 0, stage: "wizard",
-      sub: "Any one of the four anchors — world texture, colour, "
-         + "cinematography, rendering style — in words or a picture" },
+      done: (pd.anchors_stated || 0) > 0, stage: "wizard" },
     { label: "COMPLETE THE LOOK INTERVIEW", verb: "Complete the look interview",
       done: (pd.interview_answered || 0) > 0 || !!pd.bible_saved,
-      optional: true, stage: "wizard",
-      sub: "Optional — touchstones, medium, palette; blanks come back marked PROPOSED" },
-    { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard",
-      sub: "Everything above becomes the document every render obeys" },
+      optional: true, stage: "wizard" },
+    { label: "DRAFT THE ART DIRECTION BIBLE", verb: "Draft the Art Direction Bible", done: !!pd.bible_saved, stage: "wizard" },
     { label: "DRAFT & LOCK A BREAKDOWN", verb: "Draft & lock a breakdown", done: (ss.breakdowns?.locked || 0) > 0, stage: "specs",
-      tally: (ss.breakdowns?.locked || 0) > 0 ? "" : `${ss.breakdowns?.drafts || 0} DRAFTED · NONE LOCKED`,
-      sub: "Only a locked breakdown can render" },
+      tally: (ss.breakdowns?.locked || 0) > 0 ? "" : `${ss.breakdowns?.drafts || 0} DRAFTED · NONE LOCKED` },
     // The tally answers the question the label raises. User-caught
     // 2026-08-23: "the board is still locked. Maybe it's not a bug. You
     // might have to generate three panels" — even the author could not tell
@@ -1580,8 +1573,7 @@ function gateChain(state) {
     // wrong rule about his own app. It wants one.
     { label: "RENDER AND APPROVE PANELS", verb: "Render and approve panels", done: (ss.panels?.approved || 0) > 0, stage: "boards",
       tally: (ss.panels?.approved || 0) > 0 ? ""
-        : `${ss.panels?.candidates || 0} TAKE${(ss.panels?.candidates || 0) === 1 ? "" : "S"} RENDERED · NONE APPROVED YET · ONE IS ENOUGH`,
-      sub: "Takes are judged full-size, one at a time" },
+        : `${ss.panels?.candidates || 0} TAKE${(ss.panels?.candidates || 0) === 1 ? "" : "S"} RENDERED · NONE APPROVED YET · ONE IS ENOUGH` },
   ];
 }
 
@@ -1687,8 +1679,7 @@ function stageChecklist({ kicker, headline, rows, footnote }) {
           return `
             <button class="sc-row ${r.state}" data-stage="${esc(r.stage || "")}">
               <span class="sc-mark">${r.state === "cur" ? "→" : "·"}</span>
-              <span class="sc-main"><span class="sc-label">${esc(r.verb || r.label)}</span>
-                ${r.sub ? `<span class="sc-sub">${esc(r.sub)}</span>` : ""}</span>
+              <span class="sc-main"><span class="sc-label">${esc(r.verb || r.label)}</span></span>
               <span class="sc-addr mono">${esc(r.addr || "")} ↗</span>
             </button>`;
         }).join("")}
@@ -1794,8 +1785,8 @@ async function fillNarrativeSelect(sel) {
   }
   if (!usable.length) {
     sel.innerHTML = failed.length
-      ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
-      : `<option value="">NO NARRATIVE MODEL — ADD A KEY OR CONNECT OPENROUTER</option>`;
+      ? `<option value="">KEY FAILED ITS TEST</option>`
+      : `<option value="">NO NARRATIVE MODEL</option>`;
     sel.disabled = true;
     sel.title = failed.length
       ? "Every configured key failed its last test — retest or replace it in Settings."
@@ -1838,8 +1829,8 @@ async function fillProviderSelect(sel, labels) {
   }
   if (!usable.length) {
     sel.innerHTML = failed.length
-      ? `<option value="">KEY FAILED ITS TEST — RETEST IN SETTINGS</option>`
-      : `<option value="">NO AI MODEL — ADD A KEY IN SETTINGS</option>`;
+      ? `<option value="">KEY FAILED ITS TEST</option>`
+      : `<option value="">NO AI MODEL</option>`;
     sel.disabled = true;
     sel.title = failed.length
       ? "Every configured key failed its last test — retest or replace it in Settings."
@@ -1946,7 +1937,7 @@ async function openEnginePicker(sel, s) {
           : "").join("")}
         ${serverRows}
         ${!list.length && !state.server?.length
-          ? `<p class="pick-none">Nothing in your enabled set matches.</p>` : ""}
+          ? `<p class="pick-none mono">NO MATCH</p>` : ""}
       </div>
       <div class="pick-foot">
         <span class="pick-scope">${state.server ? "SEARCHED ENABLED + FULL CATALOG" : "SEARCHING ENABLED MODELS"}</span>
@@ -2313,13 +2304,6 @@ async function updateBand() {
 
 const BLOCK_VERBS = { HOLD: "Review", GAP: "Add", KEY: "Connect",
                       SIZE: "Regenerate", CITE: "Review", CARE: "Backup" };
-const BLOCK_SUPPORT = {
-  HOLD: "Held rows on required objects block the lock — read each cited source, then pass or cut the row.",
-  GAP: "A missing input upstream stops generation downstream.",
-  SIZE: "Nothing is ever blown up — regenerate the panel at a larger size.",
-  CITE: "The current draft no longer contains quotes this breakdown cites — review the flagged rows.",
-  KEY: "The app calls models on your own key — without one, the roles that need it cannot run at all.",
-};
 
 // Gate stated before it is hit (user ruling 2026-08-01): a breakdown draws
 // its rendering language, environments and subjects from the bible, so
@@ -2359,7 +2343,9 @@ async function renderStatus() {
   // promoted blocker leaves the list below and the count excludes it —
   // one fact, one place, one act. (The upload lead promotes the
   // screenplay blocker the same way.)
-  const rest = first ? blockers.slice(1) : blockers;
+  // Rows for a stage not yet reached (`ahead`) are future work, not
+  // errors — listed once their stage arrives (user 2026-10-04).
+  const rest = (first ? blockers.slice(1) : blockers).filter(b => !b.ahead);
   const next = state.next || { text: "Upload the screenplay", action: "screenplay" };
   const action = next.action === "dashboard" ? "screenplay" : next.action;
   const lead = $("#dash-next");
@@ -2383,14 +2369,12 @@ async function renderStatus() {
     lead.innerHTML = `
       <div class="next-label">DO THIS NEXT</div>
       <div class="next-text">Upload the screenplay</div>
-      <p class="next-support">The read starts here: every location, cast
-      member, design language and open question comes out of this one
-      file. Nothing downstream unlocks without it.</p>
       <form id="status-screenplay-form" class="row" style="margin-top:10px">
-        <input type="file" accept=".pdf,.fdx,.txt,.fountain" required>
-        <button type="submit" class="primary">Upload &amp; start the read</button>
+        <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
+        <button type="submit" class="primary hidden" data-reveal>Process World Visualization</button>
       </form>
-      <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>
+      <p class="mini world-consent">${WORLD_CONSENT}</p>`;
     bindScreenplayUpload($("#status-screenplay-form"), state.capability);
   } else {
     lead.innerHTML = `
@@ -2398,8 +2382,6 @@ async function renderStatus() {
       <div class="next-row">
         <div style="flex:1;min-width:0">
           <div class="next-text">${monoIds(esc(next.text))}</div>
-          <p class="next-support">${esc(first ? BLOCK_SUPPORT[first.kind] || "" :
-            "Everything upstream is satisfied.")}</p>
         </div>
         <button class="primary" data-f="go">${esc(first ? BLOCK_VERBS[first.kind] || "Open" : "Open")}</button>
       </div>`;
@@ -2439,11 +2421,9 @@ async function renderStatus() {
     };
     blocking.innerHTML =
       (rest.length
-        ? `<h2>Blocking — ${rest.length} more <span class="hint">beyond the one stated above</span></h2>`
+        ? `<h2>Blocking — ${rest.length} more</h2>`
           + scoped(rest)
-        : `<h2>Advisory <span class="hint">${first
-            ? "care of existing work — the one blocker is stated above"
-            : "care of existing work — nothing blocks the next render"}</span></h2>`)
+        : `<h2>Advisory</h2>`)
       + (advisories.length && rest.length
         ? `<div class="advisory-label">ADVISORY</div>` : "")
       + advisories.map(row).join("");
@@ -2470,11 +2450,11 @@ async function renderStatus() {
           <span class="recent-ts" title="${esc(e.ts || "")}">${esc(localTime(e.ts))}</span>
           <span class="recent-text">${monoIds(esc(e.text))}</span>
         </div>`).join("")
-    : `<p class="mini">No activity recorded yet.</p>`;
+    : `<p class="mini mono">NO ACTIVITY YET</p>`;
 
   $("#dash-prohibited").innerHTML =
     state.prohibited_inventions.map(p => `<li>${esc(p)}</li>`).join("") ||
-    `<li class="mini">none recorded</li>`;
+    `<li class="mini mono">NONE RECORDED</li>`;
 }
 
 function openSheet(specId) {
@@ -2517,14 +2497,12 @@ async function renderScreenplay() {
     mainPanel.innerHTML = `
       <div class="stage-kicker">STAGE 01 OF 5</div>
       <h3 class="stage-headline">Upload the screenplay</h3>
-      <p class="hint">The read starts here: every location, cast member,
-      design language and open question comes out of this one file.
-      Nothing downstream unlocks without it.</p>
       <form id="screenplay-form-main" class="row">
-        <input type="file" accept=".pdf,.fdx,.txt,.fountain" required>
-        <button type="submit" class="primary">Upload &amp; start the read</button>
+        <input type="file" accept=".pdf,.fdx,.txt,.fountain,.html,.htm" required>
+        <button type="submit" class="primary hidden" data-reveal>Process World Visualization</button>
       </form>
-      <p class="mini">PDF · FDX · FOUNTAIN · TXT</p>`;
+      <p class="mini">PDF · FDX · FOUNTAIN · TXT · HTML</p>
+      <p class="mini world-consent">${WORLD_CONSENT}</p>`;
     bindScreenplayUpload($("#screenplay-form-main"), state.capability);
     $("#screenplay-form").closest(".panel").classList.add("hidden");
   }
@@ -2544,7 +2522,7 @@ async function renderScreenplay() {
     $("[data-f=read-script]").onclick = () =>
       window.open("/api/screenplay/file", "_blank");
   } else {
-    $("#dash-screenplay").innerHTML = `<p class="mini">No screenplay uploaded yet — upload it to unlock every stage downstream.</p>`;
+    $("#dash-screenplay").innerHTML = `<p class="mini mono">NO SCREENPLAY YET</p>`;
   }
 
   // Downstream counts: everything hanging off this file. Cited evidence rows
@@ -2581,7 +2559,7 @@ async function renderScreenplay() {
   if (missing.length) {
     cit.classList.remove("hidden");
     cit.innerHTML = `
-      <h2>Broken citations — ${missing.length} <span class="hint">quotes these sheets cite that the current draft no longer contains — nothing is changed automatically; review each row on its sheet</span></h2>
+      <h2>Broken citations — ${missing.length}</h2>
       ${missing.map(m => `
         <div class="block-row">
           <span class="block-kind CITE">CITE</span>
@@ -2898,23 +2876,21 @@ const theBible = {
     });
 
     const busy = $("#bb-busy", host);
-    const spin = { writing: "Writing the Art Direction Bible from the anchors, "
-                          + "the read and the cast",
-                   colour: "Scoping colour — proposing a palette for each "
-                         + "design language from the bible just written" }[this.phase];
+    const spin = { writing: "Writing the Art Direction Bible",
+                   colour: "Proposing colour" }[this.phase];
     busy.innerHTML = spin
       ? `<div class="busy wrap"><span class="spinner"></span>
-         <span class="busy-label">${esc(spin)}.</span>
+         <span class="busy-label">${esc(spin)}</span>
          <span class="busy-bar"></span></div>` : "";
 
     const note = $("#bb-note", host);
     note.classList.toggle("bad", this.phase === "failed");
     note.textContent = {
-      assemble: "ASSEMBLED HERE — NOTHING SENT ANYWHERE YET",
+      assemble: "ASSEMBLED",
       writing: "",
-      sections: "THE BIBLE IS WRITTEN AND SAVED — BREAKDOWNS ARE OPEN",
+      sections: "BIBLE SAVED",
       colour: "",
-      done: "THE BIBLE IS WRITTEN, SAVED, AND ITS COLOUR PROPOSED",
+      done: "BIBLE SAVED · COLOUR PROPOSED",
       failed: `IT DID NOT FINISH — ${(this.error || "").toUpperCase()}`,
     }[this.phase] || "";
 
@@ -2933,7 +2909,7 @@ const theBible = {
       return `<div class="rd-row ${now ? "now" : state}">
         <span class="rd-n">${String(i + 1).padStart(2, "0")}</span>
         <span class="rd-slug">${esc(l)}</span>${right}</div>`;
-    }).join("") || '<p class="hint">No design languages — the bible will derive them.</p>';
+    }).join("") || '<p class="mini mono">NO DESIGN LANGUAGES</p>';
 
     const page = $("#bb-page", host);
     page.innerHTML = this.phase === "assemble" || this.phase === "writing"
@@ -3035,8 +3011,7 @@ const theRead = {
     this.phase = "found"; this.found = analysis || {};
     const langs = (this.found.design_worlds || []).length;
     const subj = (this.found.subjects || []).length;
-    toast(`The read found ${langs} design language(s) and ${subj} subject(s) `
-          + "— review them on Prod. Design.");
+    toast(`Read: ${langs} design language(s), ${subj} subject(s)`);
 
     /* Straight to the end state (user-directed 2026-08-31: "it still has
        a 7 second display before final state transition. That needs to go
@@ -3096,12 +3071,10 @@ const theRead = {
       return { kind: "auth", line: E + " REFUSED THE KEY IT WAS GIVEN" };
     if (/insufficient_quota|credit[_ ]balance|no credits remaining|exceeded your current quota|billing/i.test(e))
       return { kind: "quota",
-               line: E + " TOOK THE KEY AND REFUSED THE WORK — THE ACCOUNT "
-                 + "HAS NO CREDIT LEFT. THE KEY IS GOOD; THE BALANCE IS NOT" };
+               line: E + " — THE ACCOUNT HAS NO CREDIT LEFT" };
     if (/rate[_ ]?limit|\b429\b|too many requests/i.test(e))
       return { kind: "rate",
-               line: E + " IS RATE-LIMITING THIS KEY — THE READ CAN BE RUN "
-                 + "AGAIN SHORTLY" };
+               line: E + " IS RATE-LIMITING THIS KEY" };
     return { kind: "other", line: "THE READ DID NOT FINISH" };
   },
 
@@ -3162,7 +3135,7 @@ const theRead = {
       <p class="rd-note mono" id="rd-note"></p>
       <div class="rd-body">
         <div class="rd-ladder" id="rd-ladder">${rows
-          || '<p class="hint">No sluglines parsed — the model is reading the text as a whole.</p>'}</div>
+          || '<p class="mini mono">NO SCENE HEADINGS FOUND</p>'}</div>
         <div class="rd-page" id="rd-page"></div>
       </div>
       <div class="rd-ticker" id="rd-ticker"></div>`;
@@ -3220,21 +3193,16 @@ const theRead = {
     const note = $("#rd-note", host);
     if (note) {
       if (this.phase === "parse")
-        note.textContent = "PARSED HERE — " + this.scenes.length
-          + " SCENES OFF THE PAGE, NOTHING SENT ANYWHERE YET";
+        note.textContent = this.scenes.length + " SCENES PARSED";
       else if (this.phase === "model")
         // "ONE CALL" was not true and this surface exists to be exact
         // about spend: `/api/wizard/analyze` makes the read AND a cheaper
         // faction self-check pass whose failure degrades silently. Two.
         // Either way the point stands — neither reports progress from
         // inside, which is why there is a sweep here and not a bar.
-        note.textContent = this.engine.toUpperCase() + " IS READING — THE READ AND "
-          + "A SHORTER CHECK PASS, NEITHER REPORTING PROGRESS FROM INSIDE. "
-          + "THE PARSE ABOVE IS COMPLETE, AND LOCAL. EVERY STAGE IS HELD "
-          + "UNTIL IT LANDS — ALL OF THEM ARE ABOUT TO CHANGE.";
+        note.textContent = this.engine.toUpperCase() + " IS READING";
       else if (this.phase === "previewed")
-        note.textContent = "PREVIEW ONLY — THE PARSE IS COMPLETE AND REAL. "
-          + "NO MODEL WAS CALLED, SO THE READ'S OWN FINDINGS ARE NOT HERE.";
+        note.textContent = "PREVIEW ONLY · NO MODEL CALLED";
       else if (this.phase === "found") note.textContent = "THE READ IS IN.";
       else {
         // Do NOT shout a provider's error back at the user. Uppercasing a
@@ -3334,7 +3302,16 @@ function scrollUnderBand(el) {
 async function startTheRead() {
   try {
     const have = await api("/api/wizard/analysis").catch(() => ({}));
-    if (have && (have.design_worlds || have.subjects || have.analyzed_at)) return;
+    if (have && (have.design_worlds || have.subjects || have.analyzed_at)) {
+      /* No re-scan of a curated production — but the click that brought us
+         here was "Process World Visualization", and that click is the
+         consent for the build (user 2026-10-04: "my build is not working
+         like that" — the read was skipped, so the build it starts never
+         ran). Build from the read this production already has. */
+      await api("/api/world/build", { method: "POST" }).catch(err =>
+        toast(`The world build did not start: ${err.message}`, true));
+      return;
+    }
     const s = await api("/api/settings");
     const cap = s.capability?.narrative;
     if (!cap?.usable) return;
@@ -3387,8 +3364,7 @@ function bindScreenplayUpload(form, cap = null) {
   if (noEngine) {
     input.disabled = true;
     form.insertAdjacentHTML("afterend",
-      `<p class="up-gate mono">NO AI MODEL CONNECTED — THE SCREENPLAY IS READ
-       THE MOMENT IT LANDS, AND THAT READ NEEDS AN ENGINE
+      `<p class="up-gate mono">NO AI MODEL ·
        <button type="button" class="text-act" data-f="up-gate-go">Connect one ↗</button></p>`);
     form.parentElement.querySelector("[data-f=up-gate-go]").onclick =
       () => showView("settings");
@@ -3412,7 +3388,11 @@ function bindScreenplayUpload(form, cap = null) {
     if (input.files.length) form.requestSubmit();
   });
   const sync = () => {
-    submit.disabled = noEngine;
+    // First run: the verb does not exist until there is a file for it to
+    // act on (user 2026-10-04). Replace keeps its stated disabled button.
+    if ("reveal" in submit.dataset)
+      submit.classList.toggle("hidden", noEngine || !input.files.length);
+    submit.disabled = noEngine || !input.files.length;
     submit.title = noEngine
       ? "Connect an AI model first — Settings → AI & engines" : "";
   };
@@ -3451,14 +3431,11 @@ function bindScreenplayUpload(form, cap = null) {
              { key: "missing", label: "Quotes the new draft no longer has" }],
     });
     lad.set("file", `${file.name} · ${mb} MB`);
-    lad.phase("send", `Sending ${mb} MB. The text is extracted on arrival — `
-                    + `the original is never sent to a model.`);
+    lad.phase("send", "");
     const fd = new FormData();
     fd.append("file", file);
     try {
-      lad.phase("read", "One call: the upload, the text extraction and the "
-                      + "citation re-check happen together, and there is no way "
-                      + "to see inside it. The clock is the only honest progress.");
+      lad.phase("read", "");
       const rec = await api("/api/screenplay", { method: "POST", body: fd });
       const cc = rec.citation_check;
       lad.phase("check", "");
@@ -3466,8 +3443,8 @@ function bindScreenplayUpload(form, cap = null) {
       lad.set("checked", cc ? cc.quotes_checked : null);
       lad.set("missing", cc ? cc.missing : null);
       lad.done(cc && cc.missing
-        ? `${cc.missing} of ${cc.quotes_checked} cited quotes are no longer in this draft — review them below.`
-        : "Uploaded and read. Inventory Script below, then Production Design.");
+        ? `${cc.missing} OF ${cc.quotes_checked} CITED QUOTES MISSING`
+        : "UPLOADED");
       toast(cc && cc.missing
         ? `Draft uploaded — ${cc.missing} of ${cc.quotes_checked} cited quote(s) no longer found; review below.`
         : "Draft uploaded." + (cc ? ` All ${cc.quotes_checked} cited quotes still present.` : ""));
@@ -3508,6 +3485,7 @@ function buildLocFinder(host, cfg) {
     ${cfg.head || ""}
     ${cfg.gate || ""}
     <input type="text" data-f="loc-search" class="loc-search" placeholder="${cfg.placeholder || "search locations…"}">
+    ${cfg.tabs ? `<div class="loc-tabs" role="tablist" data-f="loc-tabs"></div>` : ""}
     <div class="loc-scroll"${cfg.maxHeight ? ` style="max-height:${cfg.maxHeight}px"` : ""}>
       ${cfg.headRow || ""}
       <div data-f="loc-list"></div>
@@ -3518,6 +3496,7 @@ function buildLocFinder(host, cfg) {
     ?.scrollIntoView({ behavior: "smooth", block: "start" });
   const draw = () => {
     const q = $("[data-f=loc-search]", host).value;
+    if (cfg.tabs) $("[data-f=loc-tabs]", host).innerHTML = cfg.tabs(q.trim().toUpperCase());
     $("[data-f=loc-list]", host).innerHTML = cfg.rows(q.trim().toUpperCase(), q);
     $$(".loc-draft", host).forEach(btn => {
       btn.onclick = () => {
@@ -3579,10 +3558,9 @@ async function renderLocations(state = null, langs = 0, older = false) {
   buildLocFinder(host, {
     head: `<div class="loc-head">
       <span class="f-label">Locations · ${data.locations.length}</span>
-      <span class="hint">${data.scene_count} scenes · sorted by scene count · click a location to list its scenes</span></div>`,
-    headRow: `<div class="loc-row loc-headrow"><span>SLUGLINE</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
+      <span class="mini mono">${data.scene_count} SCENES</span></div>`,
+    headRow: `<div class="loc-row loc-headrow"><span>SCENE HEADING</span><span>SCENES</span><span>DETAIL</span><span>SHEET</span></div>`,
     placeholder: "search locations and scenes…",
-    footer: `<p class="mini"><span class="f-label" style="font-size:var(--t-mark)">DETAIL</span> how much the script describes — thin coverage spends inference budget faster</p>`,
     rows: (needle, q) => {
       const list = data.locations.filter(l =>
         !needle || l.location.includes(needle) ||
@@ -3605,7 +3583,7 @@ async function renderLocations(state = null, langs = 0, older = false) {
             ${sheetCell(l)}
           </div>${sceneRows}`;
       };
-      const empty = `<p class="mini">nothing matches "${esc(q)}"</p>`;
+      const empty = `<p class="mini mono">NO MATCH FOR "${esc(q)}"</p>`;
       // Environment grouping (plan P7): the read's verbatim slugline
       // assignments — the same buckets as the wizard's finder list, zero
       // fuzzy matching. No environments = the flat table it always was.
@@ -3719,8 +3697,7 @@ async function renderProjectsView() {
         const res = await fetch(
           `/api/projects/safety-zip?slug=${encodeURIComponent(slug)}`);
         if (res.status === 404) {
-          toast("No safety copy — one is written automatically before each "
-                + "import, and this production has not been imported into.");
+          toast("No safety copy");
           return;
         }
         if (!res.ok) throw new Error((await res.text()) || `failed (${res.status})`);
@@ -3731,7 +3708,7 @@ async function renderProjectsView() {
         a.href = url; a.download = fname;
         document.body.append(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        toast(`${fname} downloaded — the production as it was before its last import.`);
+        toast(`${fname} downloaded`);
       } catch (err) { toast(err.message, true); }
       finally { b.disabled = false; }
     });
@@ -3739,8 +3716,7 @@ async function renderProjectsView() {
     $$("#prod-cards [data-backup]").forEach(b => b.onclick = async () => {
       const slug = b.dataset.backup;
       const card = b.closest(".prod-card");
-      const busy = startBusy($("[data-busy]", card), "Packing the production…",
-        "API keys are never included.");
+      const busy = startBusy($("[data-busy]", card), "Packing the production…");
       $$(".prod-actions button", card).forEach(x => x.disabled = true);
       try {
         const res = await fetch(`/api/projects/backup?slug=${encodeURIComponent(slug)}`);
@@ -3856,8 +3832,7 @@ async function renderProjectsView() {
         });
         if (vals === null) return;
         const card = $(`#prod-cards [data-card="${CSS.escape(p.slug)}"]`);
-        const busy = startBusy($("[data-busy]", card), "Importing the backup…",
-          "A safety copy is packed first.");
+        const busy = startBusy($("[data-busy]", card), "Importing the backup…");
         const fd = new FormData();
         fd.append("file", f);
         fd.append("slug", p.slug);
@@ -3865,7 +3840,7 @@ async function renderProjectsView() {
         try {
           const r = await api("/api/projects/import", { method: "POST", body: fd });
           toast(`"${r.name}" set to the version from "${r.imported_from}" — `
-                + `${r.files} files. Back it up when you are happy with it.`);
+                + `${r.files} files`);
           if (r.was_active) return location.reload();
           refresh();
         } catch (err) {
@@ -3900,7 +3875,7 @@ async function renderProjectsView() {
     fd.append("file", f);
     try {
       const r = await api("/api/projects/restore", { method: "POST", body: fd });
-      toast(`"${r.name}" restored as a new production (${r.slug}) — open it from the shelf.`);
+      toast(`"${r.name}" restored as a new production (${r.slug})`);
       $("#proj-zip").value = "";
       renderCards();
     } catch (err) { toast(err.message, true); }
@@ -3932,7 +3907,7 @@ async function renderStorage() {
   try { s = await api("/api/storage"); }
   catch { host.innerHTML = '<p class="mini">storage could not be read</p>'; return; }
   if (!s.total) {
-    host.innerHTML = '<p class="mini">this install’s volume cannot be measured</p>';
+    host.innerHTML = '<p class="mini mono">VOLUME NOT MEASURABLE</p>';
     $("#storage-cond").textContent = "";
     return;
   }
@@ -3944,7 +3919,7 @@ async function renderStorage() {
   const tight = s.free < 350 * 1024 * 1024;
   const state = tight ? "bad" : s.low ? "hold" : "";
   $("#storage-cond").textContent = tight
-    ? "A RENDER WOULD BE REFUSED — FREE SPACE FIRST"
+    ? "A RENDER WOULD BE REFUSED"
     : s.low ? "GETTING TIGHT" : "";
   // R6 (canon pass 2026-08-10): the coverage meter is the project's only
   // meter — a capacity is a Courier number line whose colour carries its
@@ -3962,10 +3937,7 @@ async function renderStorage() {
     <div class="stor-rows">${(s.breakdown || []).map(r => `
       <div class="stor-row"><span>${esc(r.kind)}</span>
         <span class="mono">${mb(r.bytes)}</span></div>`).join("")
-      || '<p class="mini">nothing stored yet</p>'}</div>
-    <p class="mini">Takes are never upscaled, so a 4K take is 20–40 MB and every
-    one is kept until it is rejected and deleted. Reject a take, then Delete,
-    to reclaim its space.</p>`;
+      || '<p class="mini mono">NOTHING STORED YET</p>'}</div>`;
 }
 
 /* The tutorial CMS (tutorial-admin.js) is fetched the first time its tab
@@ -4178,7 +4150,7 @@ async function renderSettings(openTab = "") {
   const usableProviders = Object.keys(settings.providers).filter(usableProvider);
   if (!usableProviders.length) {
     iSel.closest(".role-sel").innerHTML =
-      `<p class="wv-tag">WILL RUN ON THE FIRST ENGINE YOU ADD</p>`;
+      `<p class="wv-tag">NO IMAGE ENGINE YET</p>`;
   } else {
     iSel.innerHTML = usableProviders.map(v =>
       `<option value="${esc(v)}">${esc(settings.providers[v])}</option>`).join("");
@@ -4235,7 +4207,7 @@ async function renderSettings(openTab = "") {
       connected: orRow.status !== "NOT_CONNECTED",
       account: "https://openrouter.ai/settings/keys",
       facts: (orRow.identity ? `${esc(orRow.identity)} · ` : "")
-        + "SCOPED KEY — REVOKE FROM THEIR DASHBOARD",
+        + "SCOPED KEY",
       state: cxState(orRow), actions: cxActs(orRow.status) },
     { key: "openai", tile: "OAI", icon: "openai", name: "OpenAI",
       connected: !!engAll.openai?.configured,
@@ -4440,8 +4412,8 @@ async function renderSettings(openTab = "") {
       && (!f.priced || m.price_per_image)
       && (!f.q || `${m.label} ${m.developer} ${m.provider_model_id}`.toLowerCase().includes(f.q.toLowerCase())));
     const groups = [
-      ["ANCHORS REFERENCES", "Takes your approved reference images as input — the only kind that can hold a face, a vehicle or a location on model.", hits.filter(m => m.refs)],
-      ["STYLE STUDIES ONLY", "Text-only input. Cannot hold a subject on model — use these for look development, never for a canon panel.", hits.filter(m => !m.refs)],
+      ["ANCHORS REFERENCES", hits.filter(m => m.refs)],
+      ["STYLE STUDIES ONLY", hits.filter(m => !m.refs)],
     ];
     const row = m => `
       <div class="cat-row${m.status !== "active" && m.enabled ? " dep-on" : ""}${!m.supported ? " unsup" : ""}">
@@ -4469,18 +4441,10 @@ async function renderSettings(openTab = "") {
           <span class="cat-showing">SHOWING ${hits.length}</span>
           <button class="text-act" id="cat-close">Close</button>
         </div>
-        ${groups.map(([title, sub, rows]) => rows.length ? `
-          <div class="cat-group-head"><span class="cat-group-title">${title}</span>
-          <span class="cat-group-sub">${sub}</span></div>
+        ${groups.map(([title, rows]) => rows.length ? `
+          <div class="cat-group-head"><span class="cat-group-title">${title}</span></div>
           ${rows.map(row).join("")}` : "").join("")}
-        ${!hits.length ? `<p class="mini" style="padding:16px 4px">Nothing matches in ${cxStats.total} synced models — loosen a filter. The per-panel picker can also search fal's live catalog.</p>` : ""}
-        <div class="cat-strip">
-          <span class="cred-tile">NO<br>PRV</span>
-          <span class="cat-strip-txt"><b>Render a test frame</b> — click an enabled model's tile.
-          One standardised in-house prompt through your own key; the result becomes that
-          model's preview — our witnessed output, not the vendor's marketing sample.</span>
-          <span class="cat-strip-cost">BILLED TO YOUR KEY AT THE ENGINE'S RATE</span>
-        </div>
+        ${!hits.length ? `<p class="mini mono" style="padding:16px 4px">NO MATCH IN ${cxStats.total} MODELS</p>` : ""}
       </div>`;
     $("#cat-q").oninput = e => {
       f.q = e.target.value; uiSet("catalogFilters", f); renderCatalogBrowser();
@@ -4502,7 +4466,7 @@ async function renderSettings(openTab = "") {
         try {
           const r = await api("/api/connectors/preview", { method: "POST", json: { id: m.id } });
           m.preview = r.preview;
-          toast(`${m.label}: test frame witnessed — it is the preview now.`);
+          toast(`${m.label}: test frame rendered`);
         } catch (err) { toast(err.message, true); }
         renderCatalogBrowser();
       };
@@ -4516,9 +4480,7 @@ async function renderSettings(openTab = "") {
           m.enabled = !m.enabled;
           const st = await api("/api/connectors");
           cxStats = st.stats;
-          toast(m.enabled
-            ? `${m.label} enabled — it now appears in every Model dropdown.`
-            : `${m.label} disabled — it leaves the dropdowns; its takes keep their records.`);
+          toast(m.enabled ? `${m.label} enabled` : `${m.label} disabled`);
         } catch (err) { toast(err.message, true); }
         renderCatalogBrowser();
       };
@@ -4573,7 +4535,7 @@ async function renderSettings(openTab = "") {
     mockBox.checked = !!settings.engines?.mock?.configured;
     const mockState = () => {
       $("#dbg-mock-state").textContent = mockBox.checked
-        ? "ON — MOCK ENGINE listed in every model dropdown" : "";
+        ? "ON" : "";
     };
     mockState();
     mockBox.onchange = async () => {
@@ -4581,9 +4543,7 @@ async function renderSettings(openTab = "") {
         await api("/api/settings", { method: "POST",
                                      json: { debug_mock: mockBox.checked } });
         mockState();
-        toast(mockBox.checked
-          ? "Mock engine ON — pick MOCK ENGINE in any model dropdown; nothing will be billed."
-          : "Mock engine OFF — dropdowns show real engines only.");
+        toast(mockBox.checked ? "Mock engine on" : "Mock engine off");
       } catch (err) { mockBox.checked = !mockBox.checked; toast(err.message, true); }
     };
     /* Preview the read (owner tools only). The parse half needs no engine
@@ -4597,7 +4557,7 @@ async function renderSettings(openTab = "") {
       const st = $("#dbg-read-state");
       const d = await api("/api/screenplay/digest").catch(() => null);
       if (!d || !d.available || !d.scenes.length) {
-        st.textContent = "NO SCREENPLAY PARSED — UPLOAD A DRAFT FIRST";
+        st.textContent = "NO SCREENPLAY PARSED";
         return;
       }
       st.textContent = "";
@@ -4609,8 +4569,7 @@ async function renderSettings(openTab = "") {
     te.onchange = () => {
       localStorage.setItem("sbTextEdit", te.checked ? "1" : "0");
       updateTextEditChip();
-      toast(te.checked ? "Text edit mode ON — Alt-click any text to rewrite it."
-                       : "Text edit mode OFF — your rewrites stay until cleared.");
+      toast(te.checked ? "Text edit mode on" : "Text edit mode off");
     };
     const count = () => {
       const n = Object.keys(_textOverrides).length;
@@ -4627,8 +4586,7 @@ async function renderSettings(openTab = "") {
       try {
         const r = await api("/api/debug/text-overrides/publish", { method: "POST" });
         if (r.published) {
-          toast(`${r.count} edit(s) written to source. Commit `
-                + "app/content/ui_text.json and deploy — then every studio has them.");
+          toast(`${r.count} edit(s) written to source`);
         } else {
           // Not a failure: it is the honest answer on a hosted studio, and
           // the payload is what someone commits by hand.
@@ -4648,7 +4606,7 @@ async function renderSettings(openTab = "") {
         await api("/api/debug/text-overrides", { method: "DELETE" });
         _textOverrides = {};
         count();
-        toast("Text edits cleared — originals are back.");
+        toast("Text edits cleared");
         showView("settings");
       } catch (err) { toast(err.message, true); }
     };
@@ -4910,8 +4868,8 @@ async function renderSettings(openTab = "") {
               if (!r) return;
               const found = r.groups.reduce((t, g) => t + g.swatches.length, 0);
               toast(found
-                ? `${found} more proposed for ${lang} — review them in the strip.`
-                : "Nothing more found.");
+                ? `${found} more proposed for ${lang}`
+                : "Nothing more found");
               onChange();
               done(null);
             };
@@ -4933,8 +4891,155 @@ async function renderSettings(openTab = "") {
     };
 
 
+/* Design-language thumbnails (user 2026-10-04: "auto generate images once
+   an art direction bible is created. Before that ... 'Best Guess'").
+
+   The server decides which are DUE (language_previews.state); this only
+   works through them, ONE at a time, and outlives a redraw of the stage,
+   so a repaint can never start a second queue and pay twice. A render
+   that fails is not retried by itself this session; its card says so and
+   offers the retry. */
+const langPreviews = { running: false, failed: {}, repaint: null };
+
+async function runLangPreviewQueue(list) {
+  if (langPreviews.running || !list?.engine) return;
+  langPreviews.running = true;
+  let rendered = 0;
+  try {
+    for (;;) {
+      const next = [...(list.languages || []), ...(list.environments || [])]
+        .find(l => l.due && !langPreviews.failed[l.slug]);
+      if (!next) break;
+      next.rendering = true; next.due = false;
+      langPreviews.repaint?.(false);
+      rendered += 1;
+      try {
+        Object.assign(next, await api("/api/design-languages/previews/render",
+          { method: "POST", json: { name: next.name, kind: next.kind } }));
+      } catch (err) {
+        next.rendering = false;
+        langPreviews.failed[next.slug] = err.message;
+      }
+      langPreviews.repaint?.(false);
+    }
+  } finally {
+    langPreviews.running = false;
+  }
+  // One fresh read at the end: a redraw during the queue holds its own
+  // copy. Only after work was done, or reading would restart the queue.
+  if (rendered) langPreviews.repaint?.(true);
+}
+
+/* Process World Visualization (user 2026-10-04). The upload's click is the
+   consent: the read, then the Art Direction Bible, then small thumbnails
+   of every design language, environment and character, all server-side
+   (app/world_build.py). This line stands beside every button that starts
+   it, so the cost of the click is read before it is made. */
+const WORLD_CONSENT = "Can take up to an hour";
+
+/* While it runs, Production Design is one quiet screen: the label, a
+   spinner, and the steps as they move (user: "an elegant blank screen
+   with a 'Visualizing World' label ... give status updates periodically
+   ... have the page background hue shift very very slowly"). It asks the
+   server every few seconds and hands back to the stage when it is done. */
+const worldBuild = { timer: null, t0: 0 };
+
+function stopWorldPoll() {
+  clearTimeout(worldBuild.timer);
+  worldBuild.timer = null;
+}
+
+function paintWorldBuild(ws) {
+  const main = $("#main");
+  let host = $(".world-proc", main);
+  if (!host) {
+    host = document.createElement("section");
+    host.className = "view world-proc";
+    host.innerHTML = `
+      <div class="wp-center">
+        <span class="spinner" aria-hidden="true"></span>
+        <h1 class="wp-title">Visualizing world</h1>
+        <p class="wp-now" aria-live="polite"></p>
+        <p class="wp-detail mono"></p>
+        <p class="wp-clock mono"></p>
+      </div>`;
+    main.replaceChildren(host);
+  }
+  /* One step at a time (user 2026-10-04: "Just show one process step at
+     a time"). The step running now, its own progress, and where it sits
+     in the sequence; the finished and waiting steps are not listed. */
+  const steps = ws.steps || [];
+  const at = steps.findIndex(st => st.state === "now");
+  const cur = steps[at];
+  $(".wp-now", host).textContent = cur ? cur.label : "Starting";
+  $(".wp-detail", host).textContent = cur?.detail ? cur.detail.toUpperCase() : "";
+  const started = Date.parse(ws.started_at || "") || worldBuild.t0 || Date.now();
+  const mins = Math.max(0, Math.floor((Date.now() - started) / 60000));
+  $(".wp-clock", host).textContent = [
+    at >= 0 ? `STEP ${at + 1} OF ${steps.length}` : "",
+    mins ? `${mins} MIN` : "",
+    "THIS CAN TAKE UP TO AN HOUR",
+  ].filter(Boolean).join(" · ");
+}
+
+async function pollWorldBuild() {
+  stopWorldPoll();
+  if (activeView !== "wizard") return;
+  let ws = null;
+  try { ws = await api("/api/world/status"); } catch { /* keep the screen */ }
+  if (activeView !== "wizard") return;
+  if (ws && ws.state !== "running") {
+    updateBand?.();
+    renderWizard();
+    return;
+  }
+  if (ws) paintWorldBuild(ws);
+  worldBuild.timer = setTimeout(pollWorldBuild, 3000);
+}
+
 async function renderWizard() {
+  let ws = await api("/api/world/status").catch(() => null);
+  // A build this draft already consented to, stopped by a restart, picks
+  // up where it left off. A draft never built is OFFERED the build below;
+  // arriving is not a click.
+  if (ws && ws.state === "interrupted" && ws.consented)
+    ws = await api("/api/world/build", { method: "POST" }).catch(() => ws);
+  if (ws && ws.state === "running") {
+    worldBuild.t0 = worldBuild.t0 || Date.now();
+    paintWorldBuild(ws);
+    worldBuild.timer = setTimeout(pollWorldBuild, 3000);
+    return;
+  }
+  stopWorldPoll();
+  worldBuild.t0 = 0;
   useTemplate("tpl-wizard");
+  // Offered when this draft was never built, and again when its build
+  // finished with steps that failed — the re-run redoes only what is
+  // missing, and the first failure is quoted so the cause is on screen.
+  const incomplete = ws && ws.state === "incomplete" && ws.consented;
+  if (ws && ws.needed && (!ws.consented || incomplete)) {
+    const offer = document.createElement("div");
+    offer.className = "panel world-offer";
+    const why = incomplete
+      ? (ws.steps || []).filter(st => st.state === "failed")
+          .map(st => `${st.label}: ${st.detail}`)[0] || ""
+      : "";
+    offer.innerHTML = `
+      <div class="wo-text">
+        <h3>${incomplete ? "The world build did not finish" : "Process World Visualization"}</h3>
+        ${incomplete
+          ? `<p class="mini">${esc(ws.message || "")} — ${esc(why)}</p>`
+          : `<p class="mini">${WORLD_CONSENT}</p>`}
+      </div>
+      <button class="primary" data-f="world-go">${incomplete ? "Run it again" : "Process World Visualization"}</button>`;
+    $("[data-f=world-go]", offer).onclick = async () => {
+      try {
+        await api("/api/world/build", { method: "POST" });
+        renderWizard();
+      } catch (err) { toast(err.message, true); }
+    };
+    $("#main .view")?.prepend(offer);
+  }
   const state = await api("/api/state");
 
   /* `state` is fetched ONCE, at entry, and this stage is long-lived —
@@ -4983,11 +5088,21 @@ async function renderWizard() {
     wizAnalysis = localAnalysis;
     api("/api/wizard/analysis", { method: "PUT", json: localAnalysis })
       .catch(err => toast(
-        `This browser holds a screenplay read the studio does not, and it `
-        + `could not be uploaded — ${err.message}. Do not clear site data.`,
+        `This browser's screenplay read could not be uploaded — ${err.message}`,
         true));
   }
   if (wizAnalysis) wizACacheSet(wizAnalysis);
+  const spChars = state.screenplay?.text_chars;
+  $("#wiz-screenplay").innerHTML = state.screenplay
+    ? `${esc(state.screenplay.file)}${spChars ? ` &middot; ${spChars.toLocaleString()} CHARACTERS` : ""}
+       <button type="button" class="text-act" data-f="open-screenplay"
+         title="Open the original upload in a new tab — yours to read, never sent to a model">Open screenplay</button>`
+    : `<span class="badge REJECTED">NO SCREENPLAY</span>
+       <button type="button" class="text-act" data-f="go-screenplay">Upload it ↗</button>`;
+  $("[data-f=open-screenplay]", $("#wiz-screenplay"))
+    ?.addEventListener("click", () => window.open("/api/screenplay/file", "_blank"));
+  $("[data-f=go-screenplay]", $("#wiz-screenplay"))
+    ?.addEventListener("click", () => showView("screenplay"));
 
   // Engine state (user ruling 2026-08-01): keys live in Settings only —
   // the wizard's model selector states the gate when none are configured
@@ -4998,8 +5113,9 @@ async function renderWizard() {
     $("#wiz-analyze").title = "Add a Gemini or OpenAI key in Settings first.";
     $("#wiz-draft").disabled = true;
     $("#wiz-draft").title = "Add a Gemini or OpenAI key in Settings first.";
-    $("#wiz-analyze-lock").textContent =
-      "NO AI MODEL — ADD A GEMINI OR OPENAI KEY IN SETTINGS";
+    $("#wiz-analyze-lock").innerHTML = `<span class="mono">NO AI MODEL</span> ·
+      <button type="button" class="text-act" data-f="analyze-gate-go">Connect one ↗</button>`;
+    $("[data-f=analyze-gate-go]").onclick = () => showView("settings");
   }
 
   // ---- Color swatches (NON-CANON, user-directed 2026-08-05) ----
@@ -5031,7 +5147,7 @@ async function renderWizard() {
         const ref = await api("/api/references/swatch",
           { method: "POST", json: { hex, pair_hex: (vals.pair || "").trim(),
                                     name: name || undefined, approve: true } });
-        toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added as an approved palette swatch.`);
+        toast(`${ref.id} — ${name ? name.toUpperCase() + " " : ""}${hex.toUpperCase()} added`);
         refreshRefs();
       } catch (err) { toast(err.message, true); }
     };
@@ -5110,9 +5226,10 @@ async function renderWizard() {
       // the step it names is on the same page, and a button that scrolls
       // is not worth the weight of a primary.
       gate.innerHTML = `
-        <span class="k">LOCKED — NO ART DIRECTION BIBLE</span>
-        <p>Color swatches reference the Art Direction Bible once created.
-        <b>Step 4</b></p>`;
+        <span class="k">NEEDS THE BIBLE</span>
+        <button type="button" class="text-act" data-f="pal-gate-go">Open it ↗</button>`;
+      $("[data-f=pal-gate-go]", gate).onclick = () => $('.panel.step[data-step="4"]')
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     // The colour block itself, without the card chrome — rebuilt in place
@@ -5174,8 +5291,7 @@ async function renderWizard() {
         const prior = uiGet("swatchBriefs", []).filter(x => x !== ask.note.trim());
         uiSet("swatchBriefs", [ask.note.trim(), ...prior].slice(0, 3));
       }
-      const busy = startBusy(host, label,
-        "Proposing only colors it can ground in your saved Bible.");
+      const busy = startBusy(host, label);
       try {
         return await api("/api/wizard/swatches", { method: "POST",
           json: { provider: $("#wiz-provider").value, note: ask.note, deep,
@@ -5187,7 +5303,7 @@ async function renderWizard() {
       const total = r.groups.reduce((n, g) => n + g.swatches.length, 0);
       if (!total) { strip.innerHTML = ""; return; }
       const headTxt = n =>
-        `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} — NOT CANON UNTIL APPROVED`;
+        `${n} PROPOSED${r.model ? ` BY ${(r.model || "").toUpperCase()}` : ""} · NOT CANON`;
       /* What the set repeats, measured (2026-08-22). The user's first
          real run returned four ramps built from one six-slot recipe — 23
          of 27 colours had a near-twin in another design language — and
@@ -5200,8 +5316,7 @@ async function renderWizard() {
           <button type="button" class="sw-collide-x" data-f="collide-x"
             title="Dismiss — the proposals are unchanged">&times;</button>
           ${bad.map(c => `<p class="mono"><b>${esc(c.kind)}</b> ${esc(c.text)}</p>`).join("")
-          }<p class="mini mono">REGENERATE FOR A DIFFERENT READ, OR APPROVE WHAT
-           WORKS AND RESCAN THE LANGUAGE THAT DOES NOT</p></div>` : ""}
+          }</div>` : ""}
         ${r.groups.map((g, i) => `
           <div class="sw-ramp" data-lang="${esc(g.language)}" data-gi="${i}">${
             rampOrder(g.swatches).map(band).join("")}</div>
@@ -5284,7 +5399,7 @@ async function renderWizard() {
           catch (err) { toast(err.message, true); return reflow(); }
           g.swatches = g.swatches.filter(x => x.ref_id !== sw.ref_id);
         }
-        toast(`${g.language} approved as one palette.`);
+        toast(`${g.language} approved`);
         refreshRefs();
         reflow();
       });
@@ -5325,7 +5440,7 @@ async function renderWizard() {
         <button class="ghost" data-f="sw-go">Generate palette swatches</button>
         <button class="text-act" data-f="sw-deep"
           title="A second, wider read for the colors the Bible only mentions in passing — existing swatches excluded">Deep scan</button>
-        <span class="swatch-note" data-f="sw-result">FROM THE SAVED BIBLE · LANDS IN STEP 4 / COLOUR, BESIDE THIS</span>
+        <span class="swatch-note" data-f="sw-result"></span>
         <div data-f="sw-busy"></div>`;
       const go = $("[data-f=sw-go]", genHost);
       const runGen = async deep => {
@@ -5414,7 +5529,7 @@ async function renderWizard() {
   locPick.innerHTML =
     (sampleLocs.length
       ? sampleLocs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("")
-      : `<option value="">build the design plan in Step 2 to list your locations</option>`)
+      : `<option value="">NEEDS THE DESIGN PLAN · STEP 2</option>`)
     + `<option value="${OTHER}">Somewhere else — type it…</option>`;
   const useOther = on => {
     locInput.classList.toggle("hidden", !on);
@@ -5453,17 +5568,19 @@ async function renderWizard() {
       col.className = "wiz-col";
       col.innerHTML = `
         <div class="wiz-col-head"><span class="f-label">${esc(smp?.label || p)}</span></div>
-        <p class="mini" style="color:var(--bad)">KEY FAILED ITS TEST &mdash;
-        retest or replace it in Settings before this engine competes.</p>`;
+        <p class="mini mono" style="color:var(--bad)">KEY FAILED ITS TEST &middot;
+        <button type="button" class="text-act" data-f="to-settings">Settings ↗</button></p>`;
+      $("[data-f=to-settings]", col).onclick = () => showView("settings");
       host.append(col);
     }
     if (!avail.length && !failedList.length) {
       host.innerHTML = [1, 2, 3].map(() => `
         <div class="wiz-col">
           <div class="wiz-col-head"><span class="f-label">&mdash;</span></div>
-          <p class="mini">NO AI MODEL &mdash; add a Gemini or
-          OpenAI key in Settings and this slot names itself.</p>
+          <p class="mini mono">NO AI MODEL &middot;
+          <button type="button" class="text-act" data-f="to-settings">Connect one ↗</button></p>
         </div>`).join("");
+      $$("[data-f=to-settings]", host).forEach(b => { b.onclick = () => showView("settings"); });
       return;
     }
     for (const smp of samples.filter(x => avail.includes(x.provider))) {
@@ -5491,10 +5608,8 @@ async function renderWizard() {
                  ? `<img class="wiz-sample" src="/api/wizard/samples/${esc(smp.provider)}/image?run=b&t=${Date.now()}" alt="${esc(smp.provider)} sample, second run">`
                  : ""}
              </div>
-             <p class="mini wiz-pair-note">${smp.has_image_b
-               ? "Two runs of the same prompt. What differs between them is this engine's variance, not a decision it made."
-               : "One run — the second did not complete, so nothing here shows this engine's variance."}</p>`
-          : '<p class="mini">no sample yet</p>'}
+             ${smp.has_image_b ? "" : '<p class="mini mono wiz-pair-note">ONE RUN</p>'}`
+          : '<p class="mini mono">NO SAMPLE YET</p>'}
         <div class="row" style="margin-top:auto">
           ${smp.has_image && !isPref ? `<button class="text-act" data-f="pick">Make default</button>` : ""}
           <button class="text-act" data-f="regen" title="Render this engine's sample twice from the same prompt — one take cannot show run-to-run variance, and this card exists to be compared">${smp.has_image ? "Regenerate" : "Generate"}</button>
@@ -5511,7 +5626,7 @@ async function renderWizard() {
       if (pick) pick.onclick = async () => {
         try {
           await api("/api/settings", { method: "POST", json: { preferred_provider: smp.provider } });
-          toast(`${smp.label} is now the default image model everywhere.`);
+          toast(`${smp.label} is the default image model`);
           renderSamples();
         } catch (err) { toast(err.message, true); }
       };
@@ -5519,8 +5634,7 @@ async function renderWizard() {
         e.target.disabled = true;
         const subject = sampleSubject();
         const busy = startBusy($("#wiz-samples-busy"),
-          `Rendering ${subject || "the fallback test scene"} with ${smp.label} — two runs…`,
-          "~60–180 s · two takes of the same prompt, so the variance is visible");
+          `Rendering ${subject || "the fallback test scene"} with ${smp.label} — two runs…`);
         try {
           await api(`/api/wizard/samples/${smp.provider}`, { method: "POST", json: { subject } });
           renderSamples();
@@ -5548,13 +5662,12 @@ async function renderWizard() {
     if (!avail.length) {
       btn.disabled = false;
       return toast(failedList.length
-        ? "Every configured key failed its test — retest or replace in Settings."
-        : "Save at least one API key first.", true);
+        ? "Every configured key failed its test"
+        : "No API key saved", true);
     }
     const subject = sampleSubject();
     const busy = startBusy($("#wiz-samples-busy"),
-      `Rendering ${subject || "the fallback test scene"} with ${avail.length} engine(s)…`,
-      "one 1K render each; they appear below as they finish");
+      `Rendering ${subject || "the fallback test scene"} with ${avail.length} engine(s)…`);
     try {
       for (const p of avail) {
         busy.label(`Rendering ${subject || "the fallback test scene"} with ${p}…`);
@@ -5562,7 +5675,7 @@ async function renderWizard() {
         catch (err) { toast(`${p}: ${err.message}`, true); }
         renderSamples();
       }
-      toast("Samples ready — compare and click “Make default” on the winner.");
+      toast("Samples ready");
     } finally { busy.done(); btn.disabled = false; }
   };
 
@@ -5789,6 +5902,22 @@ async function renderWizard() {
     }, 4000);
   };
 
+  // Each card's thumbnail: rendered from a best guess before the Bible
+  // exists, from the Bible after. Fetched once per stage render; the queue
+  // above does the spending.
+  let wizLangPrev = { engine: "", languages: [] };
+  let wizLangPrevAsked = false;
+  let wizLangPrevFor = "";
+  const loadWizLangPrev = () => {
+    wizLangPrevAsked = true;
+    return api("/api/design-languages/previews")
+      .then(m => {
+        wizLangPrev = m || wizLangPrev;
+        if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+      })
+      .catch(() => wizLangPrev);
+  };
+
 /* What an anchor's WORDS amount to. One rule: two readers ask it and they
    used to answer differently.
 
@@ -5966,8 +6095,8 @@ async function renderWizard() {
         $("[data-f=hero-line]", hero).textContent = chosen
           ? String(chosen.description || chosen.desc || "").slice(0, 90)
           : words && words !== name ? words.slice(0, 90)
-          : nMine ? `${nMine} attached — no words yet`
-          : "Choose a look, or describe one in your own words";
+          : nMine ? `${nMine} attached`
+          : "";
         hero.classList.toggle("empty", !nMine && !inWords);
         // One thing to do on this card: change it. The picker is the same
         // one the off-page button opens, so there is still one path.
@@ -6102,7 +6231,7 @@ async function renderWizard() {
       ...subjects.map(x => {
         const r = castRefsOf(x, refs)[0];
         return `<button type="button" class="cast-tile" data-sid="${esc(x.id)}"
-            title="${esc(x.name)} — open this card">
+            data-kind="${esc(x.kind || "CHARACTER")}" title="${esc(x.name)} — open this card">
           <span class="cast-tile-shot${r ? "" : " none"}" style="${castShot(r)}"></span>
           <span class="cast-tile-name">${esc(x.name)}</span>
         </button>`;
@@ -6249,7 +6378,7 @@ async function renderWizard() {
         }).join("")}</div>`);
     }
     if (!subjects.length)
-      out.push(`<p class="mini">Nobody cast yet. The scan finds them; casting one makes its card.</p>`);
+      out.push(`<p class="mini mono">NOBODY CAST YET</p>`);
     // The uncast, as a list, with the manual door inside the same block.
     const byKind = {};
     for (const u of uncast) (byKind[u.kind] ||= []).push(u);
@@ -6263,7 +6392,7 @@ async function renderWizard() {
               data-bulk="${esc(k)}"
               title="Casts each of these by the single-cast path — cards appear in the library ready for photos."
               >Cast these ${rows.length}</button>` : ""}
-        </div>`).join("") || `<p class="mini">Nothing uncast — the whole read is on a card.</p>`}
+        </div>`).join("") || `<p class="mini mono">NOTHING UNCAST</p>`}
       <div class="cast-unrow" style="margin-top:12px">
         <b>OR</b>
         <input type="text" id="cast-add-name" placeholder="name one the scan missed" style="max-width:260px">
@@ -6384,9 +6513,7 @@ async function renderWizard() {
     </div>
     <p class="cd-desc">${s.description ? esc(s.description)
       : s.subtitle ? esc(s.subtitle)
-      : `<span class="cd-nodesc">The read wrote no description for this one.
-           Write what it LOOKS like &mdash; a render from a name alone is the
-           engine's invention rather than this production's.</span>`}</p>
+      : `<span class="cd-nodesc">NO DESCRIPTION</span>`}</p>
     ${ev.quotes.length ? `<p class="cd-kick cd-kick2">SCREENPLAY</p>
       <!-- A page ref needs the page sidecar, which only a PDF has. A
            draft uploaded as text is still located — by scene — rather
@@ -6398,8 +6525,7 @@ async function renderWizard() {
           <i>&ldquo;${esc(q.line)}&rdquo;</i>
         </div>`).join("")}`
       : `<p class="cd-kick cd-kick2">SCREENPLAY</p>
-         <p class="cd-nodesc">No line in this draft names ${esc(s.name)} outside a
-            dialogue cue &mdash; there is nothing to quote.</p>`}`;
+         <p class="cd-nodesc">NO QUOTES</p>`}`;
 
   /* Both conditions the server refuses a render on, asked HERE so the
      button states them instead of discovering them. The third — a Bible
@@ -6413,8 +6539,10 @@ async function renderWizard() {
         ? { why: "The Art Direction Bible is not saved yet, and a picture "
                + "renders FROM it.", act: "Save the Bible in step 04", go: "bible" }
       : !hasWords
-        ? { why: "Nothing to render from &mdash; write what this looks like first.",
-            act: "", go: null }
+        ? { why: "NEEDS A DESCRIPTION", act: "", go: null }
+      : null;
+      : !hasWords
+        ? { why: "NEEDS A DESCRIPTION", act: "", go: null }
       : null;
   };
 
@@ -6430,11 +6558,10 @@ async function renderWizard() {
      422 in milliseconds (2026-09-10). */
   const castGenerate = async (s, host) => {
     const stop = startBusy($(".cd-frame", host) || $(".cd-strip", host),
-                           `Rendering ${s.name}`,
-                           "one picture, full body, from the words on this screen");
+                           `Rendering ${s.name}`);
     try {
       await api(`/api/subjects/${s.id}/generate`, { method: "POST", json: {} });
-      toast(`${s.name} rendered — accept it or reject it.`);
+      toast(`${s.name} rendered`);
       refreshCast();
     } catch (err) {
       toast(err.message, true);
@@ -6492,9 +6619,7 @@ async function renderWizard() {
     try {
       await api(`/api/references/${ref.id}/status`, { method: "POST",
         json: { status, reason: "RULED ON THE CAST SCREEN" } });
-      toast(status === "APPROVED"
-        ? "Accepted — it is this subject's picture now."
-        : "Rejected. Edit the description and generate again.");
+      toast(status === "APPROVED" ? "Accepted" : "Rejected");
       refreshCast();
     } catch (err) { toast(err.message, true); }
   };
@@ -6540,10 +6665,10 @@ async function renderWizard() {
                         sentence explaining them is the aside the copy
                         discipline removes (2026-09-13). */
             : block
-              ? `<p class="cd-spend cd-blocked">${block.why}
-                   ${block.go ? `<button type="button" class="text-act"
+              ? `<p class="cd-spend cd-blocked mono">${block.why}${block.go ? ` &middot;
+                   <button type="button" class="text-act"
                      data-f="gen-go">${esc(block.act)} &nearr;</button>` : ""}</p>`
-              : `<p class="cd-spend mono">1 RENDER</p>`}
+              : ""}
         </div>
         <div>${castWords(s, ev)}</div>
       </div>`;
@@ -6599,17 +6724,16 @@ async function renderWizard() {
             <button type="button" class="cd-more" data-f="gen"
               title="Rerolls the picture from the SAME description — it spends a render.">GENERATE<br>ANOTHER</button>
           </div>
-          <p class="cd-spend mono">SAME DESCRIPTION &middot; 1 RENDER</p>
         </div>
         <div>
           <p class="cd-kick">WHO THIS IS</p>
           <p class="cd-desc">${s.description ? esc(s.description)
             : s.subtitle ? esc(s.subtitle)
-            : `<span class="cd-nodesc">No description yet.</span>`}</p>
+            : `<span class="cd-nodesc">NO DESCRIPTION</span>`}</p>
           <p class="cd-kick cd-kick2">WHAT RIDES EVERY PROMPT</p>
           ${(s.traits || []).length
             ? (s.traits || []).map(t => `<div class="cd-trait">${esc(t)}</div>`).join("")
-            : `<p class="cd-nodesc">Nothing beyond the description above.</p>`}
+            : `<p class="cd-nodesc">NONE</p>`}
           <div class="cd-facts">
             <div class="cd-fact"><b>APPEARS IN</b><span>${appearsIn()}</span></div>
             <div class="cd-fact"><b>LIVES ON</b><span>REFERENCE / SUBJECTS</span></div>
@@ -6659,7 +6783,7 @@ async function renderWizard() {
     const grid = $("#wiz-subj-grid");
     const [subjects, refs] = await Promise.all([api("/api/subjects"), api("/api/references")]);
     grid.innerHTML = subjects.length ? "" :
-      `<p class="mini" style="grid-column:1/-1">No subjects yet — click a recommended tag above or add one manually.</p>`;
+      `<p class="mini mono" style="grid-column:1/-1">NO SUBJECTS YET</p>`;
     for (const s of subjects)
       grid.append(buildSubjectCard(s, refs,
         () => { renderCastRow(); renderSubjectGrid(); wizardStepBadges(); },
@@ -6699,8 +6823,7 @@ async function renderWizard() {
       return true;
     } catch (err) {
       wizACacheSet(prev || {});
-      toast(`Not saved — ${err.message}. Your answer is still on screen; `
-            + "copy it before leaving this page.", true);
+      toast(`Not saved — ${err.message}`, true);
       return false;
     }
   };
@@ -6901,7 +7024,7 @@ async function renderWizard() {
     return best;
   };
 
-  async function openEnvModal(env, idx, patchEnvs) {
+  async function openEnvModal(env, idx, patchEnvs, ep = null) {
     const a = getAnalysis() || {};
     const lang = languageFor(env, a.design_worlds || []);
     let swatches = [];
@@ -6952,6 +7075,11 @@ async function renderWizard() {
             </div>
           </div>
           <div class="envm-side">
+            ${ep?.url ? `<img class="envm-shot" data-f="env-zoom" src="${esc(ep.url)}"
+                 alt="${esc(env.name || "")}" title="View larger">
+              <p class="envm-basis mono">${ep.state === "outdated" ? "BIBLE CHANGED"
+                : ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"}${ep.state === "outdated"
+                ? ` <button type="button" class="text-act" data-f="env-rerender">Re-render</button>` : ""}</p>` : ""}
             <p class="envm-lab">LOCATIONS THAT INHERIT THIS — ${locs.length}</p>
             <div class="envm-locs">${cut.shown.map(l =>
               `<span class="envm-loc mono">${esc(l)}</span>`).join("")
@@ -6975,6 +7103,16 @@ async function renderWizard() {
         const wire = () => {
           $("[data-f=x]", ov).onclick = () => done(null);
           $("[data-f=cancel]", ov).onclick = () => done(null);
+          // The larger picture lives here now that a click on the card opens
+          // the room (it opened the lightbox before, 2026-10-04).
+          $("[data-f=env-zoom]", ov)?.addEventListener("click", () => openLightbox([{
+            src: ep.url, caption: `${String(env.name || "").toUpperCase()} — ${
+              ep.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL` }]));
+          $("[data-f=env-rerender]", ov)?.addEventListener("click", () => {
+            ep.due = true;
+            done(null);
+            runLangPreviewQueue(wizLangPrev);
+          });
           wireCapRows(ov, () => { $(".envm", ov).outerHTML = draw(); wire(); });
           $("[data-f=goto-lang]", ov)?.addEventListener("click", () => {
             done(null);
@@ -7072,16 +7210,20 @@ async function renderWizard() {
       // list and becomes a register below it, with its own honest label.
       const register = actless.length
         ? { key: "no-act", register: true,
-            label: "NAMED IN THE READ · NOT IN ANY SLUGLINE", locs: actless }
+            label: "NAMED IN THE READ · NOT IN ANY SCENE HEADING", locs: actless }
         : null;
       // The head counts only what it claims: placeable locations.
       const total = grouped.reduce((n, g) => n + g.locs.length, 0);
       if (register) grouped.push(register);
+      const locActKey = () => {
+        const want = uiGet("locAct", "");
+        return grouped.some(g => g.key === want) ? want : grouped[0]?.key;
+      };
       buildLocFinder(secHost, {
         // D1: the provenance moved to the headings it applies to — a
         // string three groups above the thing it describes discloses less
         // than position, and position alone does not disclose.
-        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total} <span class="loc-showing">FIVE SHOWN PER ACT</span>${
+        head: `<div class="loc-head"><span class="uncast-label">LOCATIONS — ${total}${
           wizCov?.acts_derived || acts.some(a => a.title) ? "" :
           ` <button type="button" class="text-act" data-f="name-acts"
               title="One small read of the screenplay that fills the act names only — your design languages, environments and subjects are not touched.">${
@@ -7093,10 +7235,28 @@ async function renderWizard() {
              <button type="button" class="text-act" data-f="loc-gate-go">Save it in step 04 &nearr;</button></p>`,
         headRow: WIZ_LOC_THEAD,
         placeholder: "find a location…",
-        rows: (needle, q) => grouped.map(g => {
+        /* A workbook: one tab per act, and the act's locations under it
+           (user 2026-10-04: "a tabbed workbook section. Tabs are acts. The
+           acts contain the locations"). The chosen tab is remembered per
+           production. A search reads across every act, so it shows its
+           matches grouped by act and the tabs say how many each holds. */
+        tabs: needle => {
+          const cur = locActKey();
+          return grouped.map(g => {
+            const n = needle ? g.locs.filter(x => x.toUpperCase().includes(needle)).length
+                             : g.locs.length;
+            const short = g.register ? "NOT IN A SCENE HEADING" : g.label;
+            return `<button type="button" role="tab" class="loc-tab${
+                !needle && g.key === cur ? " on" : ""}${needle && !n ? " none" : ""}"
+                aria-selected="${!needle && g.key === cur}" data-tab="${esc(g.key)}">`
+              + `${esc(short)} <b class="mono">${n}</b></button>`;
+          }).join("");
+        },
+        rows: (needle, q) => grouped.filter(g => needle || g.key === locActKey()).map(g => {
           const locs = g.locs.filter(n => !needle || n.toUpperCase().includes(needle));
           if (!locs.length) return "";
-          const cut = capList(locs, g.key, { searching: !!needle });
+          const cut = needle ? capList(locs, g.key, { searching: true })
+                             : { shown: locs, hidden: 0, capped: false };
           // D1: three states, three drawings — printed, READ, unnamed.
           // D2: the beat the act turns on is the evidence that makes an
           // inferred name checkable; it was a bare title on the group.
@@ -7122,11 +7282,17 @@ async function renderWizard() {
                   `<option${(assignedTo[n] || "UNASSIGNED") === en ? " selected" : ""}>${esc(en)}</option>`).join("")}
               </select>`)).join("")
             + capRow(g.key, cut.hidden, g.label);
-        }).join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+        }).join("") || `<p class="mini mono">NO MATCH FOR "${esc(q)}"</p>`,
         onDraw: (redraw) => {
           // Expanding an act redraws the finder in place — the needle and
           // the scroll position stay where the user left them.
           wireCapRows(secHost, redraw);
+          $$(".loc-tab", secHost).forEach(t => t.onclick = () => {
+            uiSet("locAct", t.dataset.tab);
+            const box = $("[data-f=loc-search]", secHost);
+            if (box) box.value = "";   // choosing an act ends the search
+            redraw();
+          });
           // Naming the acts is its own small call, NOT a re-scan: a
           // re-scan would overwrite curated design languages, environments
           // and subjects to fill one field (user 2026-08-16).
@@ -7209,7 +7375,7 @@ async function renderWizard() {
       rows: (needle, q) => keyLocs
         .filter(n => !needle || n.toUpperCase().includes(needle))
         .map(n => wizLocRow(n, matchOf(n)?.sheet))
-        .join("") || `<p class="mini">nothing matches "${esc(q)}"</p>`,
+        .join("") || `<p class="mini mono">NO MATCH FOR "${esc(q)}"</p>`,
     });
   };
 
@@ -7231,6 +7397,21 @@ async function renderWizard() {
     if (!wizRefsAsked) loadWizRefs().then(renderWorlds);
     if (!wizLangArtAsked) loadWizLangArt().then(renderWorlds);
     if (!wizLangPlatesAsked) loadWizLangPlates().then(renderWorlds);
+    // Re-asked when a language is added, dropped or renamed — compared
+    // with the names it was last ASKED for, so a pair of names the server
+    // folds into one can never make this ask again on every paint.
+    const curNames = worlds.map(w => String(w.name || "").trim()).join("|");
+    if (!wizLangPrevAsked || (curNames !== wizLangPrevFor && !langPreviews.running)) {
+      wizLangPrevFor = curNames;
+      loadWizLangPrev().then(renderWorlds);
+    }
+    // Re-render (a Bible edit) or Try again (a failure) go through the
+    // one queue; the world build renders everything else.
+    langPreviews.repaint = (refetch = true) => {
+      if (activeView !== "wizard") return;
+      if (refetch) wizLangPrevAsked = false;
+      renderWorlds();
+    };
     // The reveal strip (plan P1 / R1): the read presents as a summary, not a
     // wall. Counts link to their sections; segments render only when their
     // data exists (no "0 ENVIRONMENTS", no "0 ANSWERED").
@@ -7287,9 +7468,6 @@ async function renderWizard() {
                message"). What every reader needs is the rule and, when it
                is unset, the consequence — neither of which is about
                anyone's film. -->
-          ${wizNoPeriod(analysis.period)
-            ? `<span class="mini">The read found no period stated in the screenplay. Until one is
-               set, renders are not held to any era.</span>` : ""}
         </div>
         <div class="read-tiles">${tiles}</div>
       </div>
@@ -7350,15 +7528,14 @@ async function renderWizard() {
       // Cleared means "let the read decide" again.
       markHandEdited(a, "period", !!a.period);
       if (await saveAnalysis(a)) {
-        toast(a.period ? `Period set — every render is held to "${a.period}".`
-                       : "Period cleared — renders are no longer era-constrained.");
+        toast(a.period ? `Period set — "${a.period}"` : "Period cleared");
         renderWorlds();
       }
     };
     bindHelpButtons(host, WIZ_HELP);
     const tagHost = $("#wiz-world-tags", host);
     const wHost = $("#wiz-worlds", host);
-    if (!worlds.length) tagHost.innerHTML = `<span class="mini">none — every board will use only the global sections of the Bible</span>`;
+    if (!worlds.length) tagHost.innerHTML = `<span class="mini mono">NONE</span>`;
     worlds.forEach((w, i) => {
       const open = expandedWorlds.has(i);
       const proposed = w.status === "PROPOSED";
@@ -7394,9 +7571,16 @@ async function renderWizard() {
       const wait = t => `<span class="busy busy-inline lang-wait"><span class="spinner"></span>${t}</span>`;
       const art = document.createElement("span");
       let fill = "";
+      const prev = (wizLangPrev.languages || []).find(l =>
+        l.name.toLowerCase() === String(w.name || "").trim().toLowerCase());
+      const pic = shot || prev?.url || "";
       if (ready && !busy) {
         art.style.backgroundImage = `url('/api/design-languages/plates/${encodeURIComponent(plate.key)}/image?v=${encodeURIComponent(plate.made_at || "")}')`;
-      } else if (busy) {
+      } else if (pic) {
+        art.style.backgroundImage = `url("${pic}")`;
+      }
+      art.className = "lang-shot" + (pic ? "" : " none");
+      if (busy) {
         fill = wait("Generating");
       } else if (!bibleIsSaved()) {
         fill = wait("Waiting for art bible");
@@ -7411,19 +7595,38 @@ async function renderWizard() {
       } else {
         fill = wait("Queued");
       }
-      art.className = "lang-shot" + (fill ? " none" : "");
       art.innerHTML = fill;
-      const canGen = bibleIsSaved() && imageModelReady() && !busy && !!String(w.name || "").trim();
-      const gen = document.createElement("button");
-      gen.type = "button";
-      gen.className = "lang-gen";
-      gen.textContent = ready ? "Regenerate" : "Generate";
-      gen.disabled = !canGen;
-      gen.title = !bibleIsSaved() ? "Save the Art Direction Bible first"
-        : !imageModelReady() ? "Connect an image model in Settings"
-        : busy ? "Rendering" : "1 render";
-      gen.onclick = e => { e.stopPropagation(); if (canGen) generateLangPlate(w.name); };
-      art.append(gen);
+      if (!shot && prev?.rendering) {
+        art.className = "lang-shot" + (prev.url ? "" : " none");
+        art.insertAdjacentHTML("beforeend",
+          `<span class="lang-basis"><span class="busy busy-inline work">`
+          + `<span class="spinner"></span><span class="busy-label">Rendering ${prev?.next_basis === "bible" ? "from the Bible" : "a best guess"}…</span>`
+          + `</span></span>`);
+      } else if (!shot && prev?.url) {
+        const label = prev.basis === "bible" ? "FROM THE BIBLE" : "BEST GUESS";
+        const old = prev.state === "outdated";
+        art.insertAdjacentHTML("beforeend",
+          `<span class="lang-basis mono">${old ? "BIBLE CHANGED" : label}`
+          + (old ? ` <button type="button" class="text-act" data-f="rerender">Re-render</button>` : "")
+          + `</span>`);
+      } else if (!shot && langPreviews.failed[prev?.slug]) {
+        art.innerHTML = `<i>The thumbnail didn't render: ${esc(langPreviews.failed[prev.slug])}</i>`
+          + ` <button type="button" class="text-act" data-f="rerender">Try again</button>`;
+      } else if (!shot) {
+        art.innerHTML = wizLangPrev.engine || !prev
+          ? `<i class="mono">NO PANELS YET</i>`
+          : `<i class="mono">NEEDS AN IMAGE MODEL</i> &middot;
+             <button type="button" class="text-act" data-f="lang-gate-go">Connect one ↗</button>`;
+        const lg = $("[data-f=lang-gate-go]", art);
+        if (lg) lg.onclick = e => { e.stopPropagation(); showView("settings"); };
+      }
+      const rr = $("[data-f=rerender]", art);
+      if (rr) rr.onclick = e => {
+        e.stopPropagation();
+        delete langPreviews.failed[prev.slug];
+        prev.due = true;
+        runLangPreviewQueue(wizLangPrev);
+      };
       chip.append(art);
       // PROPOSED chip vocabulary (Gap 5 ruling §1): dashed --hold, suffixed
       // CONFIRM / DROP in place. Confirmation is the default state — a
@@ -7442,7 +7645,7 @@ async function renderWizard() {
           delete a.design_worlds[i].status;
           saveAnalysis(a);
           renderWorlds();
-          toast(`${w.name} confirmed — it becomes a Bible section on the next draft.`);
+          toast(`${w.name} confirmed`);
         };
         $("[data-f=drop]", body).onclick = e => {
           e.stopPropagation();
@@ -7451,7 +7654,7 @@ async function renderWizard() {
           saveAnalysis(a);
           expandedWorlds.clear();
           renderWorlds();
-          toast(`"${w.name}" dropped — re-running the read can propose it again.`);
+          toast(`"${w.name}" dropped`);
         };
       } else {
         body.textContent = w.name || "(unnamed)";
@@ -7524,10 +7727,10 @@ async function renderWizard() {
         deriveBtn.disabled = true;
         try {
           const r = await api(`/api/screenplay/keywords?name=${encodeURIComponent(name)}`);
-          if (!r.available) return toast("No screenplay text to scan — upload the screenplay first.", true);
-          if (!r.hits) return toast(`The screenplay never mentions "${name}" — nothing to derive.`, true);
+          if (!r.available) return toast("No screenplay text to scan", true);
+          if (!r.hits) return toast(`The screenplay never mentions "${name}"`, true);
           $("[data-f=keywords]", row).value = r.keywords.join(", ");
-          toast(`${r.keywords.length} keywords from ${r.hits} mentions — review, then Save.`);
+          toast(`${r.keywords.length} keywords from ${r.hits} mentions`);
         } catch (err) { toast(err.message, true); }
         finally { syncDerive(); }
       };
@@ -7650,7 +7853,7 @@ async function renderWizard() {
             if (v === (st.answer || "")) { renderWorlds(); return; }
             answerBtn.disabled = true;
             const ok = await patch({ answer: v, deferred: false });
-            if (ok && v) toast("Answer saved — it rides into the Bible draft.");
+            if (ok && v) toast("Answer saved");
           };
           const discard = () => {
             if (settled) return;
@@ -7699,7 +7902,7 @@ async function renderWizard() {
                >${esc(n)}</span>`).join("")}</div>
           ${uncastN ? `<button type="button" class="text-act" data-f="go-cast"
              style="margin-top:9px">Cast what is uncast &mdash; ${uncastN}</button>`
-           : `<p class="mini">Every subject the read found is on a card.</p>`}`;
+           : `<p class="mini mono">ALL CAST</p>`}`;
         const go = $("[data-f=go-cast]", subjRail);
         if (go) go.onclick = openCast;
       }).catch(() => { subjRail.innerHTML = ""; });
@@ -7712,8 +7915,8 @@ async function renderWizard() {
     if (envHost) {
       const envs = analysis.environments || [];
       envHost.innerHTML = `
-        ${envs.length ? `<div class="env-rows"></div>`
-          : `<div class="env-empty">NO ENVIRONMENTS IN THIS READ — RE-RUN TO EXTRACT THEM</div>`}
+        ${envs.length ? `<div class="env-cards"></div>`
+          : `<div class="env-empty">NO ENVIRONMENTS</div>`}
         <div class="row" style="margin-top:8px">
           <input type="text" data-f="env-name" placeholder="add manually — name…" style="max-width:200px" title="An environment the read missed — the biome or world panels live in, e.g. FOREST.">
           <input type="text" data-f="env-notes" placeholder="palette, light, atmosphere…" style="max-width:320px" title="One line on what this world looks like — becomes its Bible entry on the next draft.">
@@ -7726,46 +7929,40 @@ async function renderWizard() {
         saveAnalysis(a);
         renderWorlds();
       };
-      const grid = $(".env-rows", envHost);
+      /* A grid of cards in the style anchors' vocabulary (user 2026-10-04:
+         "make a card similar to the Style Anchor cards. Include the titles
+         and the description on the cards. The individual locations and
+         editing can happen by clicking the card. Make the whole
+         environment section a grid of cards"). The picture is the
+         environment's thumbnail; its NAME sits where the role label sits
+         on an anchor; the scrim carries the description and how many
+         locations inherit it. A state shows only when there is one.
+         Everything else — the locations, the rules, the larger picture —
+         is the environment room the click opens. */
+      const grid = $(".env-cards", envHost);
       if (grid) envs.forEach((env, i) => {
         const proposed = env.status === "PROPOSED";
-        const card = document.createElement("div");
-        /* §3.3 asks for ROWS, not a grid of cards, and for each one to
-           name the locations assigned to it in Courier. A card said "4
-           LOCATIONS" — a count you had to open the row to spend, when
-           the whole question an environment answers is WHICH places live
-           under it.
-
-           The plan also asks for a 120px thumb on each row. There is
-           nothing to put in it: an environment has no picture anywhere in
-           this app, and a slot that can never fill is worse than no slot
-           (B3). Logged for the designer rather than faked. */
-        card.className = "env-row" + (proposed ? " proposed" : "");
-        const locs = (env.locations || []);
+        const ep = (wizLangPrev.environments || []).find(l =>
+          l.name.toLowerCase() === String(env.name || "").trim().toLowerCase());
+        const locs = env.locations || [];
+        const state = proposed ? ["PROPOSED", " prop"]
+          : ep?.state === "outdated" ? ["BIBLE CHANGED", ""]
+          : ep?.url && ep.basis !== "bible" ? ["BEST GUESS", " set"] : null;
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "anchor-hero env-card" + (proposed ? " proposed" : "")
+          + (ep?.url ? "" : " empty");
+        card.title = `${env.name || "(unnamed)"} — open its locations and rules`;
         card.innerHTML = `
-          <div class="env-name">${esc(env.name || "(unnamed)")}</div>
-          <p class="env-notes">${esc(env.notes || "")}</p>
-          <div class="env-locs mono">${locs.length
-            ? locs.map(l => `<span>${esc(l)}</span>`).join("")
-            : `<span class="env-noloc">NO LOCATION ASSIGNED &mdash; THIS ENVIRONMENT RIDES NOTHING YET</span>`}</div>
-          <div class="env-facts">${locs.length} LOCATION${locs.length === 1 ? "" : "S"}
-            <button class="text-act" data-f="edit" style="float:right">Edit</button></div>
-          ${proposed ? `<div class="env-facts prop-tail" style="margin-top:4px">· PROPOSED —
-            <button class="prop-act" data-f="confirm" title="Keep this environment — it becomes a Bible entry on the next draft.">CONFIRM</button> /
-            <button class="prop-act" data-f="drop" title="Remove this proposal — re-running the read can propose it again.">DROP</button></div>` : ""}`;
-        // SCAN_CONSOLIDATION §2 — a 30-word paragraph that other records
-        // INHERIT is not editable in a 14px field inside a 5-up grid cell.
-        // It opens a room that shows the prose, what inherits it, and the
-        // blast radius, and states that before the save.
-        $("[data-f=edit]", card).onclick = () => openEnvModal(env, i, patchEnvs);
-        $("[data-f=confirm]", card)?.addEventListener("click", () => {
-          patchEnvs(list => { delete list[i].status; });
-          toast(`${env.name} confirmed — it becomes a Bible entry on the next draft.`);
-        });
-        $("[data-f=drop]", card)?.addEventListener("click", () => {
-          patchEnvs(list => list.splice(i, 1));
-          toast(`"${env.name}" dropped — re-running the read can propose it again.`);
-        });
+          <span class="ah-shot${ep?.url ? "" : " none"}"${ep?.url
+            ? ` style="background-image:url('${esc(ep.url)}')"` : ""}></span>
+          <span class="ah-role mono">${esc(env.name || "(unnamed)")}</span>
+          ${state ? `<span class="ah-state mono${state[1]}">${state[0]}</span>` : ""}
+          <span class="ah-scrim">
+            <span class="ah-line env-desc">${esc(env.notes || "No description yet")}</span>
+            <span class="env-count mono">${locs.length} LOCATION${locs.length === 1 ? "" : "S"}</span>
+          </span>`;
+        card.onclick = () => openEnvModal(env, i, patchEnvs, ep);
         grid.append(card);
       });
       $("[data-f=env-add]", envHost).onclick = () => {
@@ -7774,7 +7971,7 @@ async function renderWizard() {
         patchEnvs(list => list.push({
           name, notes: $("[data-f=env-notes]", envHost).value.trim(),
           keywords: [], locations: [] }));
-        toast(`${name} added — assign its locations below.`);
+        toast(`${name} added`);
       };
     }
 
@@ -7807,10 +8004,9 @@ async function renderWizard() {
              { key: "questions", label: "Open questions" },
              { key: "period", label: "Period" }],
     });
-    lad.phase("assemble", `Sending the screenplay to ${modelLabel}.`);
+    lad.phase("assemble", `Sending the screenplay to ${selectedModelLabel($("#wiz-provider")) || modelLabel}.`);
     try {
-      lad.phase("read", "One call, and no way to see inside it — the clock "
-                       + "is the only honest progress there is. A minute or two.");
+      lad.phase("read", "");
       const analysis = await api("/api/wizard/analyze", {
         method: "POST", json: { provider } });
       lad.phase("found", "");
@@ -7823,13 +8019,13 @@ async function renderWizard() {
       // UNSTATED when the screenplay does not fix a period, and printing
       // that word as a result would read as something it found.
       lad.set("period", wizNoPeriod(analysis.period) ? null : analysis.period);
-      lad.done("Review what it found below, then build the Art Direction Bible.");
+      lad.done("");
       saveAnalysis(analysis);
       expandedWorlds.clear();
       renderWorlds();
       renderAnalyzeLock();
       renderCastRow();
-      toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s) — review below.`);
+      toast(`Found ${(analysis.design_worlds || []).length} design language(s) and ${(analysis.subjects || []).length} subject(s)`);
     } catch (err) {
       // The ladder keeps its rows and states the failure in place. It
       // used to vanish on error, taking with it the only record of how
@@ -7958,10 +8154,8 @@ async function renderWizard() {
       if (saved) {
         $("#style-status").innerHTML =
           `<span class="badge LOCKED">SAVED</span> WRITTEN BY `
-          + `${esc(r.model || "the model").toUpperCase()} — BREAKDOWNS ARE OPEN. `
-          + `EDIT BELOW TO CHANGE IT`;
-        toast(`Art Direction Bible written by ${r.model} and saved — Breakdowns `
-              + "are open. Search it for (PROPOSED) to find its guesses.");
+          + `${esc(r.model || "the model").toUpperCase()}`;
+        toast("Bible saved");
       }
     } catch (err) { theBible.fail(err.message); toast(err.message, true); }
     finally { btn.disabled = false; if (regen) regen.disabled = false; }
@@ -8106,19 +8300,67 @@ async function renderWizard() {
     return { shot, swatches: rampOrder(sw).slice(0, 8) };
   };
 
-  const renderBibleDoc = (text, refs) => {
-    const host = $("#bible-doc");
-    if (!host) return;
+  /* One section at a time (user 2026-10-04: "For humans looking at the
+     interface, it should be a well-formatted, sectioned document"; ruled:
+     an index, and one section shown at a time, each editable on its own).
+
+     The FILE is unchanged and is still what every model reads — and only
+     the sections a shot needs are sent (bible.render_context). This is a
+     view over it: the index is the file's own `##` headings, environments
+     are the `###` entries under `## Environments`, and a design language
+     is a `##` the read named. The renderer reads; saving a section is
+     bibleSaveSection's job, below, through the one Bible save. */
+  const BIBLE_LOOK = ["Overall Visual Identity", "Rendering Language",
+                      "Lighting Language", "Character Presentation"];
+  const BIBLE_GROUPS = [["look", "THE LOOK"], ["languages", "DESIGN LANGUAGES"],
+                        ["environments", "ENVIRONMENTS"], ["reference", "REFERENCE"]];
+  let bibleDocArgs = null;
+  let bibleSecEdit = "";
+
+  const bibleModel = text => {
     const lines = String(text || "").split("\n");
+    let title = "";
+    const h2 = [];
+    lines.forEach((l, i) => {
+      const t = l.trim();
+      let m;
+      if (!title && (m = t.match(/^#\s+(.+)$/))) title = m[1].trim();
+      if ((m = t.match(/^##\s+(.+)$/))) h2.push({ i, title: m[1].trim() });
+    });
+    const langs = new Set((getAnalysis()?.design_worlds || [])
+      .map(w => String(w.name || "").trim().toLowerCase()).filter(Boolean));
+    const secs = [];
+    h2.forEach((h, k) => {
+      const end = k + 1 < h2.length ? h2[k + 1].i : lines.length;
+      if (h.title.toLowerCase() === "environments") {
+        const kids = [];
+        for (let i = h.i + 1; i < end; i++) {
+          const m = lines[i].trim().match(/^###\s+(.+)$/);
+          if (m) kids.push({ i, title: m[1].trim() });
+        }
+        kids.forEach((c, j) => secs.push({
+          key: "env-" + slugify(c.title), title: c.title, group: "environments",
+          from: c.i + 1, to: j + 1 < kids.length ? kids[j + 1].i : end }));
+        return;
+      }
+      const group = BIBLE_LOOK.includes(h.title) ? "look"
+        : langs.has(h.title.toLowerCase()) ? "languages" : "reference";
+      secs.push({ key: slugify(h.title), title: h.title, group, from: h.i + 1, to: end });
+    });
+    return { title, lines, secs };
+  };
+
+  // A section's body as the drafter wrote it: `###` kickers, paragraphs,
+  // `**bold**` leads, `-` lists, and an Avoid list as a set of chips.
+  const bibleBodyHtml = lines => {
     const out = [];
-    let para = [], list = [], chips = [], inAvoid = false, section = "";
+    let para = [], list = [], inAvoid = false;
     const flushPara = () => {
       if (para.length) out.push(`<p class="bd-p">${bibleInline(para.join(" "))}</p>`);
       para = [];
     };
     const flushList = () => {
       if (!list.length) return;
-      // An Avoid list is a set of exclusions, and a set reads as chips.
       out.push(inAvoid
         ? `<div class="bd-chips">${list.map(x =>
             `<span class="bd-chip">${esc(x)}</span>`).join("")}</div>`
@@ -8127,47 +8369,161 @@ async function renderWizard() {
       list = [];
     };
     const flush = () => { flushPara(); flushList(); };
-
     for (const raw of lines) {
       const t = raw.trim();
-      if (!t) { flush(); continue; }
+      if (!t || t === "---") { flush(); continue; }
       let m;
-      if ((m = t.match(/^#\s+(.+)$/))) {
-        flush(); inAvoid = false;
-        out.push(`<h1 class="bd-title">${esc(m[1])}</h1>`);
-      } else if ((m = t.match(/^##\s+(.+)$/))) {
-        flush();
-        section = m[1];
-        inAvoid = false;
-        out.push(`<h2 class="bd-h2" id="bd-${slugify(section)}">${esc(section)}</h2>`);
-        const { shot, swatches } = bibleArt(refs, section);
-        if (shot || swatches.length) {
-          out.push(`<div class="bd-art">${shot
-            ? `<img class="bd-shot" src="/api/references/${esc(shot.id)}/image?size=md" alt="">`
-            : ""}${swatches.length
-            ? `<div class="bd-ramp">${swatches.map(w =>
-                `<i style="${bandStyle(w)}" title="${esc(w.name || "")} ${esc(w.hex)}"></i>`).join("")}</div>`
-            : ""}</div>`);
-        }
-      } else if ((m = t.match(/^###\s+(.+)$/))) {
+      if ((m = t.match(/^###\s+(.+)$/))) {
         flush();
         inAvoid = /^avoid/i.test(m[1]);
         out.push(`<p class="bd-kick">${esc(m[1])}</p>`);
       } else if ((m = t.match(/^[-*]\s+(.+)$/))) {
         flushPara();
         list.push(m[1]);
+      } else if ((m = t.match(/^\*{0,2}(?:Keywords|Triggers)\*{0,2}\s*:\s*(.+)$/i))) {
+        // The model's trigger words: machine data, so a Courier line of
+        // their own rather than the opening of the next paragraph.
+        flush();
+        out.push(`<p class="bd-keys mono">KEYWORDS · ${esc(m[1].replace(/\*\*/g, ""))}</p>`);
       } else {
         flushList();
+        // A `**Label:**` line is a field of its own — the drafter writes
+        // them on consecutive lines, and joined they read as one wall.
+        if (/^\*\*[^*]+:\*\*/.test(t)) flushPara();
         para.push(t);
       }
     }
     flush();
-    host.innerHTML = out.join("") ||
-      `<p class="bd-p bd-none">Nothing written yet. Build the Art Direction
-       Bible above and it reads here.</p>`;
+    return out.join("");
+  };
+
+  const renderBibleDoc = (text, refs) => {
+    const host = $("#bible-doc");
+    if (!host) return;
+    bibleDocArgs = [text, refs];
+    const model = bibleModel(text);
+    host.classList.toggle("split", model.secs.length > 0);
+    if (!model.secs.length) {
+      host.innerHTML = String(text || "").trim()
+        ? `<div class="bd-sec">${bibleBodyHtml(model.lines.filter(l => !/^#\s+/.test(l.trim())))}</div>`
+        : `<p class="bd-p bd-none mono">NOTHING WRITTEN YET</p>`;
+      return;
+    }
+    const want = uiGet("bibleSection", "");
+    const sec = model.secs.find(x => x.key === want) || model.secs[0];
+    const nav = BIBLE_GROUPS.map(([g, label]) => {
+      const items = model.secs.filter(x => x.group === g);
+      return items.length ? `<p class="bd-nav-label">${label}</p>${items.map(x =>
+        `<button type="button" class="bd-nav-item${x.key === sec.key ? " on" : ""}"
+           data-key="${esc(x.key)}">${esc(x.title)}</button>`).join("")}` : "";
+    }).join("");
+
+    // The pictures: a language's or environment's own thumbnail, and a
+    // language's approved reference and swatch ramp. None is a placeholder.
+    const prevList = sec.group === "languages" ? wizLangPrev.languages
+      : sec.group === "environments" ? wizLangPrev.environments : [];
+    const thumb = (prevList || []).find(p =>
+      p.url && p.name.toLowerCase() === sec.title.toLowerCase());
+    const { shot, swatches } = sec.group === "languages"
+      ? bibleArt(refs, sec.title) : { shot: null, swatches: [] };
+    const art = [];
+    if (thumb) art.push(`<img class="bd-thumb" data-f="bd-zoom" src="${esc(thumb.url)}"
+      alt="${esc(sec.title)}" title="View larger">`);
+    if (shot || swatches.length) {
+      if (shot) art.push(`<img class="bd-shot" src="/api/references/${esc(shot.id)}/image?size=md" alt="">`);
+      if (swatches.length) art.push(`<div class="bd-ramp">${swatches.map(w =>
+        `<i style="${bandStyle(w)}" title="${esc(w.name || "")} ${esc(w.hex)}"></i>`).join("")}</div>`);
+    }
+    // A language's materials live under `## Core Material Language` in the
+    // file; they belong on its page, so they are shown here and edited there.
+    let materials = "";
+    if (sec.group === "languages") {
+      const core = model.secs.find(x => x.title === "Core Material Language");
+      if (core) {
+        const body = model.lines.slice(core.from, core.to);
+        const at = body.findIndex(l =>
+          (l.trim().match(/^###\s+(.+)$/) || [])[1]?.trim().toLowerCase() === sec.title.toLowerCase());
+        if (at >= 0) {
+          const end = body.findIndex((l, i) => i > at && /^###\s+/.test(l.trim()));
+          const lines = body.slice(at + 1, end < 0 ? body.length : end);
+          if (lines.some(l => l.trim()))
+            materials = `<p class="bd-kick">Materials</p>${bibleBodyHtml(lines)}
+              <p class="bd-from mono">EDITED UNDER CORE MATERIAL LANGUAGE</p>`;
+        }
+      }
+    }
+    const bodyLines = model.lines.slice(sec.from, sec.to);
+    const groupLabel = (BIBLE_GROUPS.find(([g]) => g === sec.group) || [])[1] || "";
+    const editing = bibleSecEdit === sec.key;
+    host.innerHTML = `
+      ${model.title ? `<h1 class="bd-title">${esc(model.title)}</h1>` : ""}
+      <div class="bd-split">
+        <nav class="bd-nav" aria-label="Bible sections">${nav}</nav>
+        <article class="bd-sec">
+          <header class="bd-sec-head">
+            <div><p class="bd-nav-label">${groupLabel}</p>
+              <h2 class="bd-h2" id="bd-${esc(sec.key)}">${esc(sec.title)}</h2></div>
+            ${editing ? "" : `<button type="button" class="text-act" data-f="bd-edit">Edit</button>`}
+          </header>
+          ${art.length ? `<div class="bd-art">${art.join("")}</div>` : ""}
+          ${editing
+            ? `<textarea class="bd-edit-area" data-f="bd-text" spellcheck="true">${esc(bodyLines.join("\n").trim())}</textarea>
+               <div class="row bd-edit-row">
+                 <button type="button" class="primary" data-f="bd-save">Save section</button>
+                 <button type="button" class="ghost" data-f="bd-cancel">Cancel</button>
+               </div>`
+            : bibleBodyHtml(bodyLines) + materials}
+        </article>
+      </div>`;
+    bindBibleSection(host, model, sec, thumb);
   };
 
   const slugify = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  /* The reader's buttons. Choosing a section is a view preference; saving
+     one rewrites exactly that section's lines and goes through saveBible,
+     the one path every Bible write takes (it re-derives Rendering
+     Language from the anchor and bumps the revision on the server). */
+  const bindBibleSection = (host, model, sec, thumb) => {
+    $$(".bd-nav-item", host).forEach(btn => btn.onclick = () => {
+      uiSet("bibleSection", btn.dataset.key);
+      bibleSecEdit = "";
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+    });
+    const zoom = $("[data-f=bd-zoom]", host);
+    if (zoom && thumb) zoom.onclick = () => openLightbox([{ src: thumb.url,
+      caption: `${sec.title.toUpperCase()} — ${thumb.basis === "bible"
+        ? "FROM THE BIBLE" : "BEST GUESS"} · THUMBNAIL` }]);
+    const edit = $("[data-f=bd-edit]", host);
+    if (edit) edit.onclick = () => {
+      bibleSecEdit = sec.key;
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+      $("[data-f=bd-text]", host)?.focus();
+    };
+    const cancel = $("[data-f=bd-cancel]", host);
+    if (cancel) cancel.onclick = () => {
+      bibleSecEdit = "";
+      if (bibleDocArgs) renderBibleDoc(...bibleDocArgs);
+    };
+    const save = $("[data-f=bd-save]", host);
+    if (save) save.onclick = () => bibleSaveSection(model, sec,
+      $("[data-f=bd-text]", host).value, save);
+  };
+
+  const bibleSaveSection = async (model, sec, body, btn) => {
+    const lines = model.lines;
+    const next = [...lines.slice(0, sec.from), "",
+                  ...String(body || "").trim().split("\n"), "",
+                  ...lines.slice(sec.to)]
+      .join("\n").replace(/\n{3,}/g, "\n\n");
+    btn.disabled = true;
+    $("#style-bible").value = next;
+    const ok = await saveBible();
+    btn.disabled = false;
+    if (!ok) return;
+    bibleSecEdit = "";
+    await loadBibleEditor();
+  };
 
   /* The section index, the anchors that wrote it, and the self-check —
      the right rail (§3.5). The index is built from the SAME headings the
@@ -8182,19 +8538,17 @@ async function renderWizard() {
       const r = refs.find(x => roleHead(x.role) === role && x.status === "APPROVED");
       return r ? { role, r } : null;
     }).filter(Boolean);
-    $("[data-f=bd-index]", rail).innerHTML = secs.length
-      ? secs.map(x => `<button type="button" class="bd-idx" data-to="bd-${slugify(x)}">${esc(x)}</button>`).join("")
-      : `<span class="mini">no sections yet</span>`;
+    // The section index moved into the reader (2026-10-04), where choosing
+    // one SHOWS it; the rail keeps only what wrote the Bible.
+    const idx = $("[data-f=bd-index]", rail);
+    if (idx) { idx.hidden = true; idx.previousElementSibling?.setAttribute("hidden", ""); }
+    void secs;
     $("[data-f=bd-wrote]", rail).innerHTML = anchors.length
       ? anchors.map(({ role, r }) => `<figure class="bd-wrote">
            <img src="/api/references/${esc(r.id)}/image?size=thumb" alt="">
            <figcaption>${esc(role.replaceAll("_", " ").toLowerCase())}</figcaption>
          </figure>`).join("")
-      : `<span class="mini">no anchor has a picture yet</span>`;
-    $$(".bd-idx", rail).forEach(b => b.onclick = () => {
-      const el = document.getElementById(b.dataset.to);
-      if (el) scrollUnderBand(el);
-    });
+      : `<span class="mini mono">NO PICTURES YET</span>`;
   };
 
   /* Which of the three views is showing. READING is the default and the
@@ -8209,8 +8563,6 @@ async function renderWizard() {
     $("#bible-views")?.classList.toggle("hidden", editing);
     $$("#bible-views .seg-opt").forEach(b =>
       b.classList.toggle("on", b.dataset.v === v));
-    const note = $("#bible-md-note");
-    if (note) note.hidden = v === "reading";
   };
 
   /* R2 — the Bible read against itself (2026-08-25).
@@ -8234,14 +8586,12 @@ async function renderWizard() {
     if (!host) return;
     if (!r) { host.innerHTML = ""; return; }
     if (!r.conflicts?.length) {
-      host.innerHTML = `<div class="bc-none mini">Read ${
-        (r.checked_chars || 0).toLocaleString()} characters — no two rules that
-        cannot both hold in one frame. Deliberate contrast between different
-        subjects is not counted, and is not a fault.</div>`;
+      host.innerHTML = `<div class="bc-none mini mono">NO CONFLICTS · ${
+        (r.checked_chars || 0).toLocaleString()} CHARACTERS READ</div>`;
       return;
     }
     host.innerHTML = `<div class="bc-head mono">${r.conflicts.length} CONFLICT${
-      r.conflicts.length === 1 ? "" : "S"} — ADVISORY, NOTHING WAS CHANGED</div>`
+      r.conflicts.length === 1 ? "" : "S"}</div>`
       + r.conflicts.map(c => `<div class="bc-row">
           <div class="bc-secs mono">${c.sections.map(esc).join("  ✕  ")}</div>
           ${c.quotes.map(q => `<div class="bc-q">“${esc(q)}”</div>`).join("")}
@@ -8401,8 +8751,7 @@ async function renderWizard() {
       await api("/api/wizard/interview", { method: "PUT",
         json: Object.fromEntries(Object.entries(IV)
           .map(([sel, key]) => [key, $(sel)?.value.trim() || ""])) });
-      $("#wiz-iv-state").textContent =
-        "SAVED — THESE ANSWERS BIND EVERY BIBLE DRAFT";
+      $("#wiz-iv-state").textContent = "SAVED";
     } catch (err) {
       $("#wiz-iv-state").textContent = `NOT SAVED — ${err.message}`;
     }
@@ -8447,7 +8796,10 @@ async function renderWizard() {
      pick writes and then runs the same sync, so nothing downstream can
      tell the two apart; there is one path into an anchor, not two.
 
-     Dismissing leaves the card exactly as it was. Neither verb is amber:
+     Change opens the card's own picker (user 2026-10-04: the links are
+     "Use this" and "Change", not "Dismiss"); the proposal stands until
+     a pick replaces it, so backing out of the picker loses nothing.
+     Neither verb is amber:
      the proposal is the thing needing attention and it says so in
      `--hold`, and spending the accent on a card that already has an
      overlay would be two claims on the same eye. */
@@ -8480,7 +8832,7 @@ async function renderWizard() {
         <span class="ah-prop-why">${esc(p.why)}</span>
         <span class="ah-prop-acts">
           <button type="button" class="text-act" data-f="use">Use this</button>
-          <button type="button" class="text-act" data-f="drop">Dismiss</button>
+          <button type="button" class="text-act" data-f="change">Change</button>
         </span>`;
       $("[data-f=use]", box).onclick = () => {
         const fld = $(ANCHOR_FIELD[field]);
@@ -8490,14 +8842,18 @@ async function renderWizard() {
         }
         box.remove();
         anchorAnswered(ANCHOR_ROLE[field]);
-        toast(`${p.name} set — it rides every render from here.`);
+        toast(`${p.name} set`);
       };
-      // Dismissing gives the card back its empty state honestly — the
-      // picture went with the proposal, because it WAS the proposal.
-      $("[data-f=drop]", box).onclick = () => {
-        box.remove();
-        anchorAnswered(ANCHOR_ROLE[field]);
+      // The same picker the card opens. A catalogue pick already ends
+      // the proposal (2026-09-11), so nothing else is needed here.
+      $("[data-f=change]", box).onclick = () => {
+        const btn = $(".pick-btn", col) || $("[data-f=addbtn]", col);
+        if (btn) btn.click();
       };
+      // The box sits INSIDE the card's button. Without this a click on
+      // either verb also ran the card's own click and opened the picker
+      // on top of "Use this".
+      box.addEventListener("click", e => e.stopPropagation());
       hero.parentElement.style.position = "relative";
       hero.append(box);
     }
@@ -8524,8 +8880,7 @@ async function renderWizard() {
     const el = document.createElement("div");
     el.className = "sp-takeover";
     el.innerHTML = `<span class="spinner"></span>
-      <span class="sp-take-label">Processing screenplay</span>
-      <span class="sp-take-note">READING IT FOR THE LOOK &middot; ONCE PER DRAFT</span>`;
+      <span class="sp-take-label">Processing screenplay</span>`;
     document.body.append(el);
   };
   const hideTakeover = () => $(".sp-takeover")?.remove();
@@ -8694,7 +9049,7 @@ async function renderWizard() {
   const saveBible = async ({ quietIfUnchanged = false } = {}) => {
     try {
       const text = $("#style-bible").value.trim();
-      if (!text) { toast("The bible is empty — create it above, or paste content, before saving.", true); return false; }
+      if (!text) { toast("The bible is empty", true); return false; }
       // Pressing Save having changed nothing is not a save. No revision
       // bump, no journal line, no toast claiming something happened.
       if (quietIfUnchanged && text === bibleSavedText) return true;
@@ -8750,7 +9105,7 @@ function buildRefCard(r, lbItems, i) {
   card.className = `ref-card ${r.status}`;
   const usage = r.status === "REJECTED"
     ? `<div class="juris bad">REJECTED ${esc((r.rejected_at || r.added_at || "").slice(5, 10).replace("-", " "))}${r.status_reason ? ` — ${esc(r.status_reason.toUpperCase())}` : ""}</div>
-       <div class="meta">THE PIPELINE CANNOT ATTACH THIS</div>`
+       <div class="meta">QUARANTINED</div>`
     : isAutoAttach
       ? `<div class="meta">AUTO-ATTACHED · ALL RENDERS</div>`
       : (r.used_in ? `<div class="meta">USED IN ${r.used_in} RENDER${r.used_in > 1 ? "S" : ""}</div>` : "");
@@ -8899,7 +9254,7 @@ function buildSubjectCard(s, refs, onChange, opts = {}) {
       <button class="danger" data-f="del" title="Remove this title card (its reference images stay in the library)">×</button>
     </div>
     <div class="subj-identity" data-f="identity" title="Identity text — rides in every prompt this subject appears in. Click to edit.">${
-      s.subtitle ? esc(s.subtitle) : `<span class="mini">add identity text — it rides in every prompt</span>`}</div>
+      s.subtitle ? esc(s.subtitle) : `<span class="mini mono">NO IDENTITY TEXT</span>`}</div>
     ${(s.traits || []).length ? `<div class="subj-traits mini">${esc(s.traits.join(" "))}</div>` : ""}
     <div class="subj-imgs" data-f="imgs"><button type="button" class="subj-slot" data-f="add-photos" title="Add reference photos to ${esc(s.name.toUpperCase())} — choose them, look at them, then attach. Each becomes an approved ${esc(role)} — ${esc(s.name.toUpperCase())} reference.">+</button></div>
     <div class="subj-facts">${imgs.length} PHOTO${imgs.length === 1 ? "" : "S"} · ${esc(role)} — ${esc(s.name.toUpperCase())}${
@@ -8972,8 +9327,7 @@ function buildUnanchoredRegister(locs) {
   reg.className = "loc-register";
   reg.innerHTML = `
     <div class="loc-reg-head">
-      <span class="mono loc-reg-label">UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES</span>
-      <span class="hint">these places are named in the script and have no imagery</span>
+      <span class="mono loc-reg-label">UNANCHORED · FROM THE SCREENPLAY'S SCENE HEADINGS</span>
     </div>
     <div class="loc-reg-row loc-reg-cols mono">
       <span>PLACE</span><span>SCENES</span><span>ENVIRONMENT</span><span></span>
@@ -8984,8 +9338,7 @@ function buildUnanchoredRegister(locs) {
       <span class="mono">${l.scenes || 0}</span>
       <span class="mono loc-reg-env">${esc(envOf(l).toUpperCase())}</span>
       <span class="loc-reg-act"><button type="button" class="text-act" data-loc="${esc(l.location)}">Add reference</button></span>
-    </div>`).join("")}
-    <div class="mono loc-reg-foot">ADD REFERENCE PREFILLS LOCATION_GEOMETRY — &lt;NAME&gt; · CASTING STAYS SUBJECTS-ONLY</div>`;
+    </div>`).join("")}`;
   reg.onclick = e => {
     const b = e.target.closest("[data-loc]");
     if (b) addReferenceDialog({ head: "LOCATION_GEOMETRY", title: b.dataset.loc });
@@ -9024,8 +9377,7 @@ function buildUncastCard(rec) {
       <span class="kind-badge">${esc(rec.kind || "CHARACTER")}</span>
       <span class="cast-badge uncast">UNCAST</span>
     </div>
-    <div class="subj-identity">${esc(rec.subtitle
-      || "Found by the screenplay read — no card yet. Casting it creates the card and carries its screenplay identity into prompts.")}</div>
+    <div class="subj-identity">${esc(rec.subtitle || "NO CARD YET")}</div>
     <div><button type="button" class="ghost" data-f="cast">Cast this subject</button></div>`;
   // One gesture here too — it casts and opens that subject's own screen
   // on stage 02, which is where its picture is made.
@@ -9489,10 +9841,10 @@ const SHELVES = [
   { key: "STYLE", name: "STYLE", ride: "RIDES ALONG — EVERY RENDER, AUTOMATICALLY",
     note: "", count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"} · ${n.roles} ROLE${n.roles === 1 ? "" : "S"}` },
   { key: "SUBJECT", name: "SUBJECTS", ride: "RIDES ALONG — WHEN ITS SUBJECT APPEARS ON A PANEL",
-    note: "cast in Production Design step 3 — same cards, this is where they live",
+    note: "",
     count: n => `${n.cast} CAST · ${n.uncast} UNCAST` },
   { key: "SCENE", name: "SCENES", ride: "RIDES ALONG — WHEN A BOARD COVERS ITS SCENE",
-    note: "promoted takes, light studies, crops of environments",
+    note: "",
     count: n => `${n.total} ANCHOR${n.total === 1 ? "" : "S"}` },
 ];
 
@@ -9686,8 +10038,7 @@ async function renderReferences() {
             const q_ = document.createElement("div");
             q_.className = "shelf-quarantine";
             q_.innerHTML = `<div class="mono loc-reg-label">QUARANTINED · AWAITING A VERDICT</div>
-              <div class="ref-grid" data-f="qgrid"></div>
-              <div class="mono loc-reg-foot">A VERDICT HAPPENS WHERE THE PROPOSAL IS — THESE KEEP THEIR CARDS UNTIL RULED</div>`;
+              <div class="ref-grid" data-f="qgrid"></div>`;
             const qlb = qRefs.map(r => ({
               src: `/api/references/${r.id}/image`,
               caption: `${r.id} — ${r.role} (${r.status})` }));
@@ -9709,7 +10060,7 @@ async function renderReferences() {
       const grid = $("[data-f=shelf-grid]", section);
       fill(grid);
       if (!grid.children.length && !$(".pal-shelf", section))
-        grid.innerHTML = `<p class="mini" style="grid-column:1/-1">${q.v ? "nothing on this shelf matches" : "nothing on this shelf yet"}</p>`;
+        grid.innerHTML = `<p class="mini mono" style="grid-column:1/-1">${q.v ? "NO MATCH" : "NOTHING YET"}</p>`;
       host.append(section);
     }
   };
@@ -9804,14 +10155,12 @@ async function renderSpecs(openId = null) {
   try {
     const gateState = await api("/api/state");
     if (!gateState.stage_summary?.production_design?.bible_saved) {
-      const rows = [...checklistRows(gateState, UNLOCK_NEED.specs),
-                    { verb: "Breakdowns unlock automatically", state: "info" }];
+      const rows = checklistRows(gateState, UNLOCK_NEED.specs);
       const left = rows.filter(r => r.state === "cur" || r.state === "todo").length;
       $("#main").innerHTML = `<section class="view">` + stageChecklist({
         kicker: `BREAKDOWNS ARE LOCKED — ${left} STEP${left === 1 ? "" : "S"} LEFT`,
-        headline: "A sheet draws its language, environments and<br>subjects from the bible. There isn't one yet.",
+        headline: "Needs the Art Direction Bible",
         rows,
-        footnote: "NOTHING HERE IS BLOCKED BY US — EVERY STEP IS YOURS TO MAKE",
       }) + `</section>`;
       bindStageChecklist($("#main"));
       return;
@@ -9956,8 +10305,8 @@ async function renderSpecs(openId = null) {
         if (note) {
           note.textContent = !scenePick
             ? (scenes.length
-               ? `${scenes.length} SLUGLINES ACROSS ${locs.length} LOCATIONS`
-               : "NO SLUGLINES — UPLOAD A SCREENPLAY, OR DESCRIBE THE BOARD")
+               ? `${scenes.length} SCENE HEADINGS ACROSS ${locs.length} LOCATIONS`
+               : "NO SCENE HEADINGS")
             : scenePick.kind === "scene"
               ? `SCENE SAVED · LINE ${scenePick.line + 1}`
               : `LOCATION SAVED · ${scenePick.scenes} SCENE`
@@ -10065,10 +10414,8 @@ async function renderSpecs(openId = null) {
          paste row is off screen, and a switch you cannot reach is not
          one. */
       const STANDING = [
-        { kind: "none", label: "None",
-          sub: "describe the board yourself" },
-        { kind: "paste", label: "Paste a section",
-          sub: "the screenplay is not read" },
+        { kind: "none", label: "None", sub: "" },
+        { kind: "paste", label: "Paste a section", sub: "" },
       ];
 
       let found = [];
@@ -10094,8 +10441,7 @@ async function renderSpecs(openId = null) {
         // in the screenplay.
         hits.innerHTML = STANDING.map(row).join("")
           + (matches.length
-             ? `<p class="scene-ask mono">${matches.length} IN THE
-                SCREENPLAY — PICKING ONE SAVES ITS PLACE FOR THE SCAN</p>`
+             ? `<p class="scene-ask mono">${matches.length} IN THE SCREENPLAY</p>`
              : "")
           + matches.map((r, i) => row(r, i + STANDING.length)).join("");
         hits.hidden = false;
@@ -10208,7 +10554,7 @@ async function renderSpecs(openId = null) {
       el.innerHTML = BOARD_TYPES.map(t =>
         `<option value="${t.value}">${esc(t.label)}</option>`).join("");
       el.title = boardTypeTitle("What kind of board this is — it governs the "
-        + "slugline, the panel template and how the scenes are read. Your "
+        + "scene heading, the panel template and how the scenes are read. Your "
         + "choice, not the model's: it is sent as an absolute rule.");
     }
   }
@@ -10354,8 +10700,7 @@ async function renderSpecs(openId = null) {
     const source = $("#spec-auto-source")?.value.trim() || "";
     const panels = $("#spec-auto-panels")?.value.trim() || "";
     if (!brief && !source) {
-      toast("Say what this board should get, or paste a section. To make an "
-            + "empty sheet, use Blank sheet beside it.", true);
+      toast("No brief and no pasted section", true);
       return;
     }
     // Only a scene carries a line to point at; a location board wants all
@@ -10366,8 +10711,7 @@ async function renderSpecs(openId = null) {
     const busy = status && startBusy(status,
       source ? "Breaking down the section you pasted…"
              : pick ? `Reading ${pick.label} and drafting the breakdown…`
-             : "Reading the screenplay and drafting the breakdown…",
-      panels ? "building the panels you named" : "deciding the panels it needs");
+             : "Reading the screenplay and drafting the breakdown…");
     try {
       const spec = await api("/api/specs/autofill", { method: "POST", json: {
         specification_id: slugSpecId($("#spec-auto-id").value),
@@ -10383,8 +10727,7 @@ async function renderSpecs(openId = null) {
       } });
       busy?.done();
       toast(`${spec.specification_id} drafted: ${spec.panels.length} panels, `
-            + `${spec.evidence_ledger.length} evidence rows`
-            + (source ? " — from the section you pasted." : "."));
+            + `${spec.evidence_ledger.length} evidence rows`);
       localStorage.removeItem("autoSpecDraft");
       renderSpecs(spec.specification_id);
     } catch (err) {
@@ -10404,7 +10747,7 @@ async function renderSpecs(openId = null) {
         board_type: $("#spec-new-btype")?.value || "LOCATION",
         subject: $("#spec-new-subject").value.trim() || id,
       } });
-      toast(`${spec.specification_id} created — an empty sheet to fill.`);
+      toast(`${spec.specification_id} created`);
       localStorage.removeItem("blankSpecDraft");
       renderSpecs(spec.specification_id);
     } catch (err) { toast(err.message, true); }
@@ -10415,7 +10758,7 @@ async function renderSpecs(openId = null) {
   const countEl = $("#spec-count");
   if (countEl) countEl.textContent = specs.length || "";
   tbody.innerHTML = specs.length ? "" :
-    `<tr><td colspan="6" class="mini">NO BREAKDOWNS YET — RUN ONE ABOVE</td></tr>`;
+    `<tr><td colspan="6" class="mini mono">NO BREAKDOWNS YET</td></tr>`;
   for (const s of specs) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -10599,8 +10942,7 @@ async function openSpecEditor(specId) {
     && (spec.panels || []).every(p => panelFrozen(p.id));
   const BOARD_STEPS = ["identity", "direction", "scope"];
   const frozenWhyBoard = boardFrozen
-    ? `Board-level and settled by ${approvedCands.map(c => c.candidate_id).join(", ")}`
-      + " — withdraw that approval to change it"
+    ? `SETTLED BY ${approvedCands.map(c => c.candidate_id).join(", ")}`
     : "";
   const isFrozenStep = id => boardFrozen && BOARD_STEPS.includes(id);
   const confCountSpec = SPEC_STEPS
@@ -10618,7 +10960,7 @@ async function openSpecEditor(specId) {
     : [qOpen.length ? `${qOpen.length} QUESTION${qOpen.length === 1 ? "" : "S"} OPEN` : "",
        stepsLeft ? `${stepsLeft} STEP${stepsLeft === 1 ? "" : "S"} UNCONFIRMED` : "",
       ].filter(Boolean).join(" AND ") +
-      (qOpen.length || stepsLeft ? " — YOU CAN STILL APPROVE"
+      (qOpen.length || stepsLeft ? ""
                                  : "EVERY STEP CONFIRMED, EVERY QUESTION ANSWERED");
 
   // §3.15 — the breakdown opens on what it has made. The empty frame is
@@ -10651,7 +10993,7 @@ async function openSpecEditor(specId) {
     // work still outstanding, and it names where to go and do it.
     const VERDICT_LINE = {
       TOO_SMALL: () => "",
-      UNAPPROVED: () => "NO APPROVED TAKE — APPROVE ONE ON THE WORKBENCH",
+      UNAPPROVED: () => "NO APPROVED TAKE",
       NO_CANDIDATE: () => "",
       STALE_APPROVAL: () => "",
     };
@@ -10696,16 +11038,13 @@ async function openSpecEditor(specId) {
         <span class="mono">${p.allocation_percent ? `${p.allocation_percent}%` : ""}</span></div>
       </div>`;
     }).join("");
-    const stake = approvedN === panels.length
-      ? `Every panel approved. This board can be assembled.`
-      : `${approvedN === 0 ? "No panels" : `${approvedN} panel${approvedN === 1 ? "" : "s"}`} approved of ${panels.length}. The board cannot be assembled until ${
-          panels.length - approvedN === 1 ? "the last one has" : "each of the rest has"} an approved take.`;
+    const stake = `${approvedN} OF ${panels.length} APPROVED`;
     return `
       <div class="made">
         <div class="made-grid filmroll">${frames}</div>
         <div class="made-stake">
           <div class="rail-label">WHAT THIS BOARD HAS MADE</div>
-          <p class="step-prose">${esc(stake)}</p>
+          <p class="step-prose mono">${esc(stake)}</p>
           <button type="button" class="verb" data-f="to-panels">04 Panels</button>
         </div>
       </div>`;
@@ -10722,9 +11061,6 @@ async function openSpecEditor(specId) {
     verbs: `<button type="button" class="verb" data-f="answer-qs"${locked ? " disabled" : ""}>${
       qOpen.length === qAll.length ? "Answer these" : "Edit answers"}</button>`,
     body: `
-      <div class="step-note mono">${spec.mode === "DESIGN_EXPLORATION"
-        ? "THESE DO NOT NEED ANSWERS ON A DESIGN EXPLORATION — EXPLORING IS HOW YOU DECIDE THEM"
-        : "THE SCREENPLAY DOES NOT ANSWER THESE · ANSWER ONE AND IT BECOMES CANON FOR THIS BOARD · LEAVE IT OPEN AND EVERY RENDER IS TOLD NOT TO INVENT ONE"}</div>
       <ul class="q-list">${qAll.slice(0, 4).map(q => `
         <li${qAns[q] ? ' class="answered"' : ""}>${esc(q)}${
           String(qAns[q] || "").trim() ? `<span class="q-ans">${esc(qAns[q])}</span>` : ""}</li>`).join("")}
@@ -10762,25 +11098,18 @@ async function openSpecEditor(specId) {
       ].filter(Boolean).join("  ·  ")}  ·  ${confCountSpec} OF ${SPEC_STEPS.length} ${
         boardFrozen ? "SETTLED" : "CONFIRMED"}</span>
     </div>
-    ${spec.autofilled ? '<div class="step-note mono seq-autofill">AUTO-FILLED — REVIEW BEFORE APPROVING</div>' : ""}
+    ${spec.autofilled ? '<div class="step-note mono seq-autofill">AUTO-FILLED</div>' : ""}
     ${spec.autofill ? `<p class="mini">Drafted by ${esc(spec.autofill.model)} from: “${esc(spec.autofill.prompt)}”</p>` : ""}
     ${!locked && spec.status === "DRAFT" && spec.revision_scope ? `
       <p class="mini mono">REVISES ${spec.revision_scope.revised.length} OF ${(spec.panels || []).length} PANELS · ${spec.revision_scope.carried.length} CARRIED FROM ${esc(spec.revised_from?.specification_id || "")}</p>` : ""}
     ${locked ? `
     <div class="gate-strip lock-strip">
       <span class="gate-label" style="color:var(--ink-dim)">LOCKED</span>
-      <span class="gate-text">${allFrozen
-        ? `Every panel has an approved take, so this breakdown is settled — objects,
-           panels and the ledger are what those renders were approved against.`
+      <span class="gate-text mono">${allFrozen
+        ? "EVERY PANEL APPROVED · SETTLED"
         : boardFrozen
-          ? `${approvedPanelIds.size} of ${(spec.panels || []).length} panels have an
-             approved take. <b>Those panels are frozen</b>; the rest, and any panel you
-             add, stay editable. Board-level fields are settled because a take was
-             approved against them.`
-          : `Locked, but nothing has been rendered from it yet — <b>everything here is
-             still editable</b> and saving re-stamps the lock. A panel freezes when one
-             of its takes is approved.`}
-        ${allFrozen ? "To edit:" : "To change a frozen part:"}</span>
+          ? `${approvedPanelIds.size} OF ${(spec.panels || []).length} PANELS FROZEN`
+          : "NOTHING APPROVED · EDITABLE"}</span>
       <button class="block-act" data-f="lock-revise">Create revision</button>
       <button class="block-act" data-f="lock-unlock">Unlock &amp; edit</button>
     </div>` : ""}
@@ -10789,7 +11118,6 @@ async function openSpecEditor(specId) {
     ${boardMadeHtml}
     <div class="steps">
         ${seqStep({ n: "01", id: "identity", label: "IDENTITY",
-          meta: "WHAT THIS BREAKDOWN IS",
           verbs: `<button type="button" class="verb" data-f="focus-identity">Edit</button>`,
           done: confIs("identity"),
           frozen: isFrozenStep("identity"), frozenWhy: frozenWhyBoard,
@@ -10801,7 +11129,7 @@ async function openSpecEditor(specId) {
           <option ${spec.mode === "DESIGN_EXPLORATION" ? "selected" : ""}>DESIGN_EXPLORATION</option>
         </select>
       </label>
-      <label title="${esc(boardTypeTitle("What kind of board this is — it governs slugline behavior."))}">Board type
+      <label title="${esc(boardTypeTitle("What kind of board this is — it governs scene-heading behavior."))}">Board type
         <select id="sp-btype" ${boardFrozen ? "disabled" : ""}>
           ${BOARD_TYPES.map(t => `<option value="${t.value}" ${(spec.board_type || "LOCATION") === t.value ? "selected" : ""}>${t.label}</option>`).join("")}
         </select>
@@ -10809,13 +11137,13 @@ async function openSpecEditor(specId) {
       <label title="The overall board format the approved panels get assembled onto (e.g. wide cinematic production board). Descriptive — the pixel canvas is chosen at assembly time.">Canvas <input type="text" id="sp-canvas" value="${esc(spec.layout?.canvas || "")}" ${boardFrozen ? "disabled" : ""}></label>
       </div>
       <div class="grid-form">
-      <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the slugline; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
+      <label class="setf" data-setf="intext" title="Interior or exterior — the first half of the scene heading; it decides the lighting logic (practicals and openings vs sky and sun).">INT / EXT
         <select id="sp-intext" ${boardFrozen ? "disabled" : ""}>
           ${["", "INT", "EXT", "INT/EXT"].map(v => `<option value="${v}" ${(spec.setting?.int_ext || "") === v ? "selected" : ""}>${v || "—"}</option>`).join("")}
         </select>
       </label>
-      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the slugline.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${boardFrozen ? "disabled" : ""}></label>
-      <label class="setf" data-setf="tod" title="Scene boards only: the slugline time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
+      <label class="setf" data-setf="location" title="The location as the screenplay names it — the middle of the scene heading.">Location <input type="text" id="sp-location" placeholder="as the slugline names it…" value="${esc(spec.setting?.location || "")}" ${boardFrozen ? "disabled" : ""}></label>
+      <label class="setf" data-setf="tod" title="Scene boards only: the scene heading's time of day (DAY, NIGHT, DUSK…). All panels of a scene board share it — it overrides any style image's hour or hue. A screenplay continuity marker (SAME, CONTINUOUS) is not an hour: pick the real one.">Time of day
         <select id="sp-tod" ${boardFrozen ? "disabled" : ""}>
           ${[...new Set(["", ...TIMES_OF_DAY, "MAGIC HOUR",
                          ...(bible_catalog?.atmospheres || []),
@@ -10830,14 +11158,13 @@ async function openSpecEditor(specId) {
       </div>` })}
 
         ${seqStep({ n: "02", id: "direction", label: "DIRECTION",
-          meta: "WHAT THE PANELS ARE TOLD",
           verbs: "",
           done: confIs("direction"),
           frozen: isFrozenStep("direction"), frozenWhy: frozenWhyBoard,
           body: `      <div class="grid-form">
       <label class="wide" title="One flowing paragraph describing the scene this board depicts — location and structure, time of day and light, atmosphere, key contents and their arrangement. Auto-fill drafts it from screenplay evidence; edit it freely. Injected into every panel prompt as THE SCENE, right before the panel's purpose.">The Scene <textarea id="sp-scene" ${boardFrozen ? "disabled" : ""} placeholder="One paragraph describing the scene — drafted by auto-fill, or write your own">${esc(spec.scene || "")}</textarea></label>
       <label class="wide" title="One or two sentences of board-specific art direction layered on top of the Art Direction Bible — how THIS board should feel. Goes into every panel prompt as BOARD-SPECIFIC TREATMENT.">Render intent <textarea id="sp-intent" ${boardFrozen ? "disabled" : ""}>${esc(spec.render_intent || "")}</textarea></label>
-      <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects into every render prompt on this board.">Forbidden elements <span class="hint">(one per line)</span>
+      <label class="wide" title="Board-wide never-include list, one item per line. Merged with each panel's forbidden objects into every render prompt on this board.">Forbidden elements
         <textarea id="sp-forbidden" ${boardFrozen ? "disabled" : ""}>${esc((spec.forbidden_elements || []).join("\n"))}</textarea>
       </label>
       <label title="How many objects on this board may rest on WEAK evidence — things the screenplay only hints at rather than states (WEAK_INFERENCE rows in the evidence ledger). 0 means every object must be solidly supported. This budgets honest guesses; unsupported inventions are always forbidden regardless (their budget is pinned to 0).">Weak-inference budget <input type="number" id="sp-weak" min="0" value="${esc(String(spec.canon_budget?.weak_inference_max ?? 2))}" ${boardFrozen ? "disabled" : ""}></label>
@@ -10846,7 +11173,6 @@ async function openSpecEditor(specId) {
         ${qStepHtml}
 
         ${bible_catalog?.exists ? seqStep({ n: "04", id: "scope", label: "SCOPE",
-          meta: "WHICH BIBLE SECTIONS REACH THIS BOARD",
           done: confIs("scope"),
           frozen: isFrozenStep("scope"), frozenWhy: frozenWhyBoard,
           body: `      <div class="scope-cols">
@@ -10855,7 +11181,7 @@ async function openSpecEditor(specId) {
           <div id="sp-design">${bible_catalog.design_languages.map(n => {
             const sel = spec.design_languages ?? bible_inferred.design_languages;
             return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${boardFrozen ? "disabled" : ""}> ${esc(n)}</label>`;
-          }).join("") || '<span class="mini">none defined in the Bible</span>'}</div>
+          }).join("") || '<span class="mini mono">NONE</span>'}</div>
         </div>
         <div class="fgroup" title="The physical world this board lives in. Its Bible entry (palette, light, atmosphere) is injected between the design languages and the scene lessons.">
           <span class="f-label">Environment</span>
@@ -10863,19 +11189,18 @@ async function openSpecEditor(specId) {
             <option value="">— none —</option>
             ${envOptions.map(n => `<option value="${esc(n)}"${envCurrent && envCurrent.toLowerCase() === n.toLowerCase() ? " selected" : ""}>${esc(n)}${envNotes[n] ? ` — ${esc(envNotes[n].slice(0, 44))}` : ""}${(bible_catalog.environments || []).includes(n) ? "" : " (not in Bible yet)"}</option>`).join("")}
           </select>
-          <p class="mini" style="margin:6px 0 0">One per sheet — a board lives somewhere.${!spec.environments && envCurrent ? ` Inferred ${esc(envCurrent)} from the location; change it if the read guessed wrong.` : ""}</p>
-          <p class="mini" style="margin:4px 0 0">Environment sets the biome's palette and light. ATMOSPHERE is this breakdown's weather and mood — it wins where they overlap.</p>
+          ${!spec.environments && envCurrent ? '<p class="mini mono" style="margin:6px 0 0">INFERRED FROM THE LOCATION</p>' : ""}
         </div>
         <div class="fgroup" title="Scene-locked lessons are the Bible's accumulated rules for specific scenes/subjects. Check the ones that apply to this board.">
           <span class="f-label">Scene lessons</span>
           <div id="sp-lessons">${bible_catalog.scene_lessons.map(n => {
             const sel = spec.scene_lessons ?? bible_inferred.scene_lessons;
             return `<label class="mini check"><input type="checkbox" value="${esc(n)}" ${sel.includes(n) ? "checked" : ""} ${boardFrozen ? "disabled" : ""}> ${esc(n)}</label>`;
-          }).join("") || '<span class="mini">none recorded yet</span>'}</div>
+          }).join("") || '<span class="mini mono">NONE YET</span>'}</div>
         </div>
       </div>
       <div class="scope-carry" id="sp-carry"></div>
-      ${spec.design_languages ? "" : '<p class="mini" style="margin:8px 0 0">Pre-checked from keyword inference — save the spec to make this selection explicit and governed.</p>'}` }) : ""}
+      ${spec.design_languages ? "" : '<p class="mini mono" style="margin:8px 0 0">INFERRED · NOT SAVED</p>'}` }) : ""}
 
         ${seqStep({ n: "05", id: "panels", label: "PANELS",
           meta: `${(spec.panels || []).length} · ALLOCATION ${allocTotal}%`,
@@ -10892,14 +11217,13 @@ async function openSpecEditor(specId) {
           // fact they need BEFORE reading the ledger: how much of what the
           // model claimed as the screenplay's word actually was. Amber,
           // because it is the state the reviewer has to act on.
-          meta: `${(spec.evidence_ledger || []).length} ROWS · ${
+          meta: `${(spec.evidence_ledger || []).length} ROWS${
             spec.citations?.demoted
-              ? `<span class="step-meta-alert">${spec.citations.demoted} OF ${
-                  spec.citations.claimed} CITATIONS NOT FOUND IN THE SCREENPLAY —
-                 THOSE ROWS ARE HELD</span>`
+              ? ` · <span class="step-meta-alert">${spec.citations.demoted} OF ${
+                  spec.citations.claimed} CITATIONS NOT FOUND · HELD</span>`
               : spec.citations?.claimed
-                ? `ALL ${spec.citations.claimed} CITATIONS FOUND IN THE SCREENPLAY`
-                : "EVERY REQUIRED OBJECT HAS A PASS ROW"}`,
+                ? ` · ALL ${spec.citations.claimed} CITATIONS FOUND`
+                : ""}`,
           verbs: "",
           done: confIs("evidence"),
           frozen: isFrozenStep("evidence"), frozenWhy: frozenWhyBoard,
@@ -10915,15 +11239,13 @@ async function openSpecEditor(specId) {
       ${allFrozen ? "" : '<button class="ghost" id="sp-add-ledger">+ Add evidence row</button>'}` })}
 
         ${seqStep({ n: "07", label: "APPROVE & LOCK",
-          meta: "APPROVING LOCKS THE OBJECTS, PANELS AND LEDGER · ONLY THEN CAN STAGE 04 GENERATE",
           verbs: `${allFrozen ? "" : `
         <button class="primary" id="sp-save">Save</button>
         <button class="ghost" id="sp-validate">Validate</button>`}
       ${locked ? "" : `<button class="ghost" id="sp-approve">Approve &amp; lock</button>`}
       ${locked ? `
         <button class="ghost" id="sp-revise">Create revision</button>
-        <button class="danger" id="sp-unlock" title="Void the approval and edit this spec in place — refused if approved candidates or boards depend on it">Unlock &amp; edit</button>
-        <span class="hint">revision keeps the approved version as history; unlock voids it and edits in place (refused while approved candidates/boards depend on this spec)</span>` : ""}`,
+        <button class="danger" id="sp-unlock" title="Void the approval and edit this spec in place — refused if approved candidates or boards depend on it">Unlock &amp; edit</button>` : ""}`,
           body: `<div class="gen-gate mono">${approveGate}</div>` })}
       </div>
 
@@ -11184,7 +11506,7 @@ async function openSpecEditor(specId) {
         <input type="text" data-f="purpose" placeholder="The production question this panel answers" value="${esc(p.purpose || "")}" ${ro ? "disabled" : ""}>
       </div>
       <div class="fgroup" title="Camera and composition for this panel. Each axis falls back to the production's Art Direction Bible camera default when blank, and overrides it when set. The app writes the professional directive into the render prompt.">
-        <span class="f-label">Camera <span class="hint">(blank = the bible default)</span></span>
+        <span class="f-label">Camera</span>
         ${cameraRow("pcam", p, "— production default —", ro)}
       </div>
       <div class="two-col">
@@ -11351,13 +11673,13 @@ async function openSpecEditor(specId) {
           .slice(0, 8);
         suggestHost.innerHTML = (lib.length ? `
           <div class="suggest-group">
-            <div class="suggest-label">IN THE LIBRARY — PICKING ONE GUARANTEES THE MATCH</div>
+            <div class="suggest-label">IN THE LIBRARY</div>
             <div class="chips">${lib.map(s =>
               `<button type="button" class="vchip" data-add="${esc(s.title)}" title="Adds the object with this exact title — the reference group attaches at generation">+ ${esc(s.title)}${
                 s.suffix ? `<span class="suffix">· ${s.suffix}</span>` : ""}</button>`).join("")}</div>
           </div>` : "") + (scene.length ? `
           <div class="suggest-group">
-            <div class="suggest-label">IN THE SCENE PARAGRAPH — WILL NEED EVIDENCE</div>
+            <div class="suggest-label">IN THE SCENE PARAGRAPH</div>
             <div class="chips">${scene.map(t =>
               `<button type="button" class="vchip loose" data-add="${esc(t)}" title="A noun from this sheet's scene paragraph — added un-matched, like free-typing it">+ ${esc(t)}</button>`).join("")}</div>
           </div>` : "");
@@ -11395,7 +11717,7 @@ async function openSpecEditor(specId) {
         await api(`/api/specs/${specId}`, { method: "PUT", json: collect() });
         await api(`/api/specs/${specId}/revision-scope`,
           { method: "POST", json: { panel_id: pid } });
-        toast(`${pid} joined the revision — it is editable now.`);
+        toast(`${pid} joined the revision`);
         openSpecEditor(specId);
       } catch (err) { toast(err.message, true); }
     });
@@ -11533,8 +11855,7 @@ REMOVE — marked for removal from the board.">
       failed to render this breakdown's ${panelsHost.children.length ? "ledger" : "panels"}</b>
       — the breakdown itself is intact on the server (${(spec.panels || []).length} panels,
       ${(spec.evidence_ledger || []).length} evidence rows).
-      <span class="mono">${esc(String(err.message || err))}</span> —
-      reload to retry; if it persists this is an app bug worth reporting.</div>`;
+      <span class="mono">${esc(String(err.message || err))}</span></div>`;
     throw err;
   }
 
@@ -11557,23 +11878,23 @@ REMOVE — marked for removal from the board.">
       });
     });
     if (gaps.length) reasons.push({
-      text: `${gaps.length} required object(s) lack a PASS evidence row — pass them or cut the object; the model can't promote its own guesses.`,
+      text: `${gaps.length} REQUIRED OBJECT(S) WITHOUT A PASS ROW`,
       jump: gaps[0],
     });
     const panelCards = $$(".panel-card", panelsHost);
     const alloc = $$("[data-f=alloc]", panelsHost).reduce((n, i) => n + (+i.value || 0), 0);
     if (panelCards.length && (alloc < 99 || alloc > 101))
-      reasons.push({ text: `layout allocation totals ${alloc}% — panels must total 100%.` });
+      reasons.push({ text: `ALLOCATION ${alloc}% OF 100%` });
     const noSrc = $$(".ledger-row", ledgerHost)
       .filter(r => !$("[data-f=source]", r).value.trim()).length;
     if (noSrc) reasons.push({
-      text: `${noSrc} evidence row(s) have no citation — every row needs a source.` });
+      text: `${noSrc} EVIDENCE ROW(S) WITHOUT A CITATION` });
     const weakMax = +$("#sp-weak", panel).value || 0;
     const weak = $$(".ledger-row", ledgerHost).filter(r =>
       $("[data-f=evidence_class]", r).value === "WEAK_INFERENCE" &&
       $("[data-f=status]", r).value === "PASS").length;
     if (weak > weakMax) reasons.push({
-      text: `weak-inference budget exceeded — ${weak} PASS row(s) on weak evidence, ${weakMax} allowed.` });
+      text: `WEAK INFERENCE ${weak} OF ${weakMax} ALLOWED` });
 
     const approveBtn = $("#sp-approve", panel);
     if (approveBtn) approveBtn.disabled = !!reasons.length;
@@ -11741,7 +12062,7 @@ REMOVE — marked for removal from the board.">
         await api(`/api/specs/${specId}`, { method: "PUT", json: collect() });
         await api(`/api/specs/${specId}/approve`, { method: "POST" });
         updateBand();  // Panels unlocks itself right now, visibly
-        toast(`${specId} approved and locked — Panels is open.`);
+        toast(`${specId} approved and locked`);
         renderSpecs(specId);
       } catch (err) { toast(err.message, true); }
     };
@@ -11807,7 +12128,7 @@ REMOVE — marked for removal from the board.">
         "Unlock & edit", true))) return;
       try {
         await api(`/api/specs/${specId}/unlock`, { method: "POST" });
-        toast(`${specId} unlocked — now an editable DRAFT. Approve again when done.`);
+        toast(`${specId} unlocked`);
         renderSpecs(specId);
       } catch (err) { toast(err.message, true); }
     };
@@ -11848,8 +12169,7 @@ REMOVE — marked for removal from the board.">
       await api(`/api/specs/${specId}`, { method: "PUT",
         json: { ...collect(), question_answers: answers } });
       const n = Object.keys(answers).length;
-      toast(n ? `${n} of ${qs.length} answered — they ride every panel's prompt.`
-              : "Answers cleared — the questions stay open.");
+      toast(n ? `${n} of ${qs.length} answered` : "Answers cleared");
       renderSpecs(specId);
     } catch (err) { toast(err.message, true); }
   };
@@ -12138,7 +12458,7 @@ function openGrammarReader(st) {
   ov.addEventListener("click", e => { if (e.target === ov) close(); });
   $("[data-f=copy]", ov).onclick = async () => {
     try { await navigator.clipboard.writeText(st.prompt || ""); toast("Prompt copied."); }
-    catch { toast("Could not copy — select the text instead.", true); }
+    catch { toast("Could not copy", true); }
   };
 }
 
@@ -12398,11 +12718,11 @@ const BOARD_TYPES = [
   { value: "LOCATION", label: "LOCATION",
     hint: "a place across times — time of day is chosen per panel" },
   { value: "ASSET", label: "ASSET",
-    hint: "a prop, vehicle or character — neutral presentation, no slugline" },
+    hint: "a prop, vehicle or character — neutral presentation, no scene heading" },
   { value: "LIGHTING_STUDY", label: "LIGHTING STUDY",
     hint: "derived from an approved panel — geometry locked, only light varies" },
   { value: "MASTER", label: "MASTER",
-    hint: "presentation grammar — four panels, neutral, no slugline" },
+    hint: "presentation grammar — four panels, neutral, no scene heading" },
 ];
 /* ONE definition of the vocabulary, read by both selects. The intake's
    title named three of the five and the sheet editor's named all five,
@@ -12626,19 +12946,13 @@ function bibleSelectionHtml(sel) {
     /* R1.3 — nothing matched, so everything was carried. The prompt did
        not shrink; the reader still learns why, because "no saving here"
        is a result and an empty panel is not. */
-    return `<div class="pc-with mini">
-      <b>Characters — all carried.</b> This panel names none of them, and a panel
-      that names no character may still be about one — a hand, a silhouette, a chair
-      someone has just left. Losing the roster is worse than carrying it.</div>`;
+    return `<div class="pc-with mini mono">CHARACTERS · ALL CARRIED</div>`;
   }
   return `<div class="pc-with mini">
     <b>Withheld from this panel</b> — ${sel.withheld.length} line${
-      sel.withheld.length === 1 ? "" : "s"} of Character Presentation, because this
-    panel does not name the people ${sel.withheld.length === 1 ? "it" : "they"}
-    describe${sel.withheld.length === 1 ? "s" : ""}:
-    ${[...new Set(sel.withheld.map(w => w.title))].map(esc).join(" · ")}.
-    The ${sel.carried} that govern any frame — how people are presented, what
-    not to invent — still ride.</div>`;
+      sel.withheld.length === 1 ? "" : "s"} of Character Presentation:
+    ${[...new Set(sel.withheld.map(w => w.title))].map(esc).join(" · ")}
+    · ${sel.carried} carried</div>`;
 }
 
 function framingNote(panel) {
@@ -12650,8 +12964,7 @@ function framingNote(panel) {
   const out = [];
   if (key && ids.length && !ids.includes(key)) {
     const r = recipeByKey(key);
-    out.push(`${r ? r.name : key} is not a framing ${st.name} sanctions — `
-      + "rendering it is a choice, not an error, but the two will pull against each other.");
+    out.push(`${r ? r.name : key} is not a ${st.name} framing`);
   }
   const why = String(panel?.camera_recipe_why || "").trim();
   if (why && !pick) out.push(why);
@@ -12740,8 +13053,8 @@ const providerOptions = (settings, selected) => {
     && settings.engines?.[v]?.last_test?.ok === false);
   if (!usable.length) {
     return `<option value="">${failed.length
-      ? "KEY FAILED ITS TEST — RETEST IN SETTINGS"
-      : "NO AI MODEL — ADD A KEY IN SETTINGS"}</option>`;
+      ? "KEY FAILED ITS TEST"
+      : "NO AI MODEL"}</option>`;
   }
   const sel = (selected === "mock" && settings.engines?.mock?.configured) ? "mock"
     : usable.some(([v]) => v === selected) ? selected : usable[0][0];
@@ -12786,8 +13099,8 @@ async function renderBoards() {
   }
   if (!specs.length) {
     $("#board-panels").innerHTML =
-      `<div class="panel mini">No signed-off breakdowns yet — panels render from a locked breakdown.
-       <button class="text-act" data-f="to-specs">Open Breakdowns</button></div>`;
+      `<div class="panel mini mono">NEEDS A LOCKED BREAKDOWN &middot;
+       <button class="text-act" data-f="to-specs">Open Breakdowns ↗</button></div>`;
     $("[data-f=to-specs]").onclick = () => showView("specs");
   }
 }
@@ -12817,7 +13130,7 @@ async function promoteDialog(specId, c) {
   try {
     const ref = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/promote`,
       { method: "POST", json: { role: r.role, notes: r.notes, controls: r.controls } });
-    toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role}), approved as canon anchor.`);
+    toast(`${c.candidate_id} promoted to ${ref.id} (${ref.role})`);
     // If the title names a cast/subject card, link the reference to it so
     // the card mosaic and the library stay one view of the same canon.
     try {
@@ -12883,7 +13196,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
     wd.onclick = async () => {
       try {
         await post(`/api/specs/${specId}/candidates/${c.candidate_id}/unapprove`);
-        toast(`${c.candidate_id} back to CANDIDATE — the panel is editable again.`);
+        toast(`${c.candidate_id} back to CANDIDATE`);
         refresh();
         updateBand();  // withdrawal can CLOSE 05 again — same fact, reversed
       } catch (err) { toast(err.message, true); }
@@ -12899,7 +13212,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
           "Create study"))) return;
         try {
           const study = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/lighting-study`, { method: "POST", json: {} });
-          toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels — review it on the Breakdowns tab, trim any you don't want, then approve.`);
+          toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels`);
         } catch (err) { toast(err.message, true); }
       };
       actions.append(ls);
@@ -12930,7 +13243,7 @@ function renderCard(specId, c, refresh, lbItems = null, lbIndex = 0, getRefs = n
         fd.append("ref_ids", JSON.stringify(getRefs ? getRefs() : []));
         const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/repair?provider=${encodeURIComponent(provider)}`,
           { method: "POST", body: fd });
-        toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}. Review it in the gallery.`);
+        toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}`);
         refresh();
       });
     actions.append(rp);
@@ -13034,11 +13347,11 @@ async function addPanelDialog(specId) {
     confirmLabel: "Add panel",
   });
   if (!res) return;
-  if (!res.purpose) { toast("A brief is required — it is the only thing steering the render.", true); return; }
+  if (!res.purpose) { toast("A brief is required", true); return; }
   try {
     const p = await api(`/api/specs/${specId}/panels`, { method: "POST",
       json: { title: res.title, purpose: res.purpose } });
-    toast(`${p.id} added — a work order at 0% allocation; balance it on the breakdown before assembly.`);
+    toast(`${p.id} added`);
     await renderBoardPanels(specId);
   } catch (err) { toast(err.message, true); }
 }
@@ -13053,7 +13366,7 @@ async function proposeCorrections(specId, candId, onDone) {
     const r = await api(`/api/specs/${specId}/candidates/${candId}/correction-intake`,
       { method: "POST", json: {} });
     if ((r.deltas || []).length) {
-      toast(`${candId} — ${r.deltas.length} structural delta${r.deltas.length === 1 ? "" : "s"} proposed from the rejection. Review them under CARRIED REJECTIONS.`);
+      toast(`${candId} — ${r.deltas.length} structural delta${r.deltas.length === 1 ? "" : "s"} proposed`);
       if (onDone) onDone();
     }
   } catch (err) { /* advisory only */ }
@@ -13338,7 +13651,6 @@ async function renderBoardPanels(specId) {
       <div class="takes filmstrip">
         <div class="takes-head">
           <span class="f-label">Takes · ${panelCands.length}${pending.length ? ` <span style="color:var(--accent)">· ${pending.length} painting</span>` : ""}</span>
-          <span class="hint">rejected takes stay as a record</span>
           ${staged && (staged.model_notes || staged.render_prompt) ? `<button class="text-act" data-f="notes">${staged.prompt_source === "edited" ? "Edited render prompt" : "Model notes / rewritten prompt"}</button>` : ""}
           ${sheetRejected ? `<button class="danger" data-f="purge" title="Removes the image files from disk — each rejection reason keeps riding its own panel's future prompts as a director's correction">Delete ${sheetRejected} rejected forever</button>` : ""}
         </div>
@@ -13436,10 +13748,7 @@ async function renderBoardPanels(specId) {
       // that one exists (2026-08-24: "it says I cant change camera... I
       // get the 'no' icon when i hover over change camera").
       frozenWhy: approvedTakes.length
-        ? `FROZEN BY ${approvedTakes.join(", ")} — WHAT THIS PANEL ASKS FOR IS `
-          + "SETTLED WHILE A TAKE IS APPROVED. USE WITHDRAW APPROVAL ON THAT "
-          + "TAKE IN THE STRIP ABOVE TO CHANGE IT. GENERATING A NEW TAKE IS "
-          + "NEVER BLOCKED."
+        ? `FROZEN BY ${approvedTakes.join(", ")}`
         : "",
     });
 
@@ -13588,7 +13897,6 @@ async function renderBoardPanels(specId) {
               <div class="brief-acts">
                 <button type="button" class="ghost" data-f="brief-save">Save brief</button>
                 <button type="button" class="verb" data-f="brief-cancel">Cancel</button>
-                <span class="mini mono">JOURNALED · NEXT TAKE PAINTS FROM THE NEW BRIEF · NOTHING ELSE INHERITS IT</span>
               </div>
             </div>` })}
 
@@ -13603,7 +13911,7 @@ async function renderBoardPanels(specId) {
                      title="View the matching reference plate(s) in the lightbox">REF</button>`
                 : `<button type="button" class="obj-ref obj-ref-add" data-addref="${esc(o)}"
                      title="No reference matches this object — supply one right here; it enters the library approved and attaches like any other">+ REF</button>`}</span>`).join("")
-              || '<span class="mini">none — this panel is steered by its purpose alone</span>'}</div>
+              || '<span class="mini mono">NONE</span>'}</div>
             <div class="step-note mono">+ FORBIDDEN ${ownForbid.length + boardForbid.length} · ${forbidHead}</div>
             ${forbidChips ? `<div class="step-note mono step-forbid">${
               [...ownForbid, ...boardForbid].map(f => esc(String(f).toUpperCase())).join("  ·  ")}</div>` : ""}` })}
@@ -13625,19 +13933,17 @@ async function renderBoardPanels(specId) {
               ${(() => {
                 const notes = [
                   camFraming ? "" : camOrient ? "" : "VIEW NOT FIXED — PRODUCTION DEFAULT",
-                  camFraming ? "FRAMING SET — THE PRODUCTION DEFAULT DOES NOT RIDE THIS PANEL" : "",
-                  scopeBits.length ? `SETTING ${esc(scopeBits.slice(-2).join(" "))} OVERRIDES THE HOUR AND HUE OF ANY ATTACHED STYLE IMAGE` : "",
+                  camFraming ? "FRAMING SET" : "",
+                  scopeBits.length ? `SETTING ${esc(scopeBits.slice(-2).join(" "))}` : "",
                 ].filter(Boolean);
                 return notes.length ? `<div class="step-note mono">${notes.join("  ·  ")}</div>` : "";
               })()}
               <div class="cam-editor hidden" data-f="cam-editor">
-                <span class="mono cam-open-k">CAMERA OPENED · NEXT TAKE PAINTS FROM THESE</span>
                 ${cameraRow("cam", p, "— production default —", false)}
                 <div class="cam-editor-acts">
                   <button type="button" class="primary" data-f="cam-save">Save camera</button>
                   <button type="button" class="verb" data-f="cam-cancel">Cancel</button>
                 </div>
-                <span class="mini mono">JOURNALED · RE-STAMPS THE LOCK · A CUSTOM LENS STATES ITS MM IN THE LINE, NEVER "CUSTOM"</span>
               </div>
             </div>` })}
 
@@ -13646,7 +13952,6 @@ async function renderBoardPanels(specId) {
           verbs: `<button type="button" class="verb mono" data-f="show-ids"
             title="Name every plate this render will attach — the ticked groups AND the always-on style anchors">Show ids</button>`,
           body: `
-            <div class="step-note mono">GROUPED BY SUBJECT · EACH CONTROLS ONLY ITS OWN ROLE</div>
             ${(() => {
               // P5: unchecked boxes read as a choice not yet made; in fact
               // the app decided and the answer was NOTHING MATCHED. Say so
@@ -13656,29 +13961,22 @@ async function renderBoardPanels(specId) {
               if (!groupList.length || panelCands.length
                   || groupList.some(g => reqObjs.some(o => matches(o, g.name))))
                 return "";
-              const shown = reqObjs.slice(0, 4).map(o => `"${esc(o)}"`).join(", ");
-              const more = reqObjs.length > 4 ? ` (+${reqObjs.length - 4} more)` : "";
               return `<div class="nomatch">
-                <b class="mono">NO MATCHES</b>
-                <p>${reqObjs.length
-                  ? `Nothing in the library matches what this panel requires: ${shown}${more}.`
-                  : "This panel lists no required objects, so nothing could be matched."}
-                It will render from text and style alone — tick a group below to
-                attach one anyway.</p></div>`;
+                <b class="mono">NO MATCHES</b></div>`;
             })()}
             <div class="ref-groups">
               ${onGroups.map(g => groupRow(g, true)).join("")}
               ${offGroups.length ? `<div class="ref-off-head mono">OFF · ${offGroups.length}
                 <span>${refWhyOff}</span></div>` : ""}
               <div class="ref-off">${offGroups.map(g => groupRow(g, false)).join("")}</div>
-              ${groupList.length ? "" : '<span class="mini">no approved subject references yet — add them via the cast &amp; subjects cards on Production Design</span>'}
+              ${groupList.length ? "" : '<span class="mini mono">NO SUBJECT REFERENCES YET</span>'}
             </div>
             ${(() => {
               // §2.3: the always-on style anchors are not optional and must
               // not sit among the toggles — they are set on Production
               // Design and ride every render on this board.
               if (!styleAnchors.length)
-                return '<div class="step-note mono">NO STYLE ANCHORS YET — UPLOAD A BOARD RENDERING STYLE OR CINEMATOGRAPHY STYLE IMAGE ON PRODUCTION DESIGN</div>';
+                return '<div class="step-note mono">NO STYLE ANCHORS YET</div>';
               const heads = {};
               for (const r of styleAnchors) (heads[roleHead(r.role)] ??= []).push(r);
               const pretty = h => h.replace(/_STYLE$/, "").replaceAll("_", " ");
@@ -13687,7 +13985,6 @@ async function renderBoardPanels(specId) {
                 ${Object.entries(heads).map(([h, rs]) =>
                   `${esc(pretty(h))} ${rs.length} PLATE${rs.length === 1 ? "" : "S"}`).join("  ·  ")}
                 <span class="always-on" title="Auto-attached to every render on this board — they control style only, never content">ALWAYS ON</span>
-                <span class="anchors-src">SET ON PRODUCTION DESIGN · ATTACHED TO EVERY RENDER ON THIS BOARD</span>
               </div>
               <div class="mini hidden" data-f="anchor-ids">${styleAnchors.map(r =>
                 `<span class="badge LOCKED" title="Auto-attached — controls style only, never content">${esc(r.id)} ${esc(r.role)}</span>`).join(" ")}
@@ -13747,7 +14044,6 @@ async function renderBoardPanels(specId) {
                       <span class="n">NO PLATE ATTACHED</span>
                     </span>
                   </label>
-                  <div class="mini mono pal-foot">NOTHING TICKED = AUTO · A PALETTE ATTACHES WHOLE</div>
                 </div>
               </div>`;
             })() : ""}` })}
@@ -13758,7 +14054,7 @@ async function renderBoardPanels(specId) {
           // exactly the failure the gate rules forbid, so the step says it
           // where the step is read (user 2026-08-16).
           meta: p.prompt_override
-            ? `<span class="step-meta-alert">SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL</span>`
+            ? `<span class="step-meta-alert">SAVED PROMPT</span>`
             : `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`,
           verbs: `
             <button type="button" class="verb" data-f="preview"
@@ -13790,8 +14086,7 @@ async function renderBoardPanels(specId) {
               workOrder ? "Generate first take" : "Generate candidate"}</button>`,
           body: `
             ${p.prompt_override ? `<div class="step-note mono"><span
-              class="step-meta-alert">THIS TAKE RENDERS FROM THE SAVED PROMPT</span>
-              · STEP 05 HOLDS THE TEXT · CAMERA AND OBJECTS BELOW DO NOT WRITE IT</div>` : ""}
+              class="step-meta-alert">RENDERS FROM THE SAVED PROMPT</span></div>` : ""}
             <div class="gen-stated mono">
               <span><i>MODEL</i> <b data-f="say-model">—</b></span>
               <span><i>SIZE</i> <b data-f="say-size">—</b></span>
@@ -13878,7 +14173,7 @@ async function renderBoardPanels(specId) {
           refCount.textContent =
             `${picked.length} PICKED + ${auto.length} ALWAYS-ON`
             + ` = ${m.count} OF ${m.max} ATTACHED`
-            + (m.over ? " — OVER LIMIT, UNTICK A GROUP OR NARROW THE PALETTE" : "");
+            + (m.over ? " — OVER LIMIT" : "");
           refCount.style.color = m.over ? "var(--bad)" : "";
 
           // Every plate that will ride, named, grouped by role. Consecutive
@@ -13941,8 +14236,8 @@ async function renderBoardPanels(specId) {
         const why = $(".ref-why", row);
         if (why) {
           why.textContent = on
-            ? (row.dataset.was ? refWhy : "ATTACHED — RIDES THE NEXT TAKE")
-            : (row.dataset.was ? "DETACHED — WILL NOT RIDE" : "");
+            ? (row.dataset.was ? refWhy : "ATTACHED")
+            : (row.dataset.was ? "DETACHED" : "");
           why.classList.toggle("ref-why-user", on ? !row.dataset.was : !!row.dataset.was);
         }
       }
@@ -13953,9 +14248,7 @@ async function renderBoardPanels(specId) {
       p.ref_ids = checkedRefs();
       api(`/api/specs/${specId}/panels/${p.id}/refs`, {
         method: "POST", json: { ref_ids: p.ref_ids },
-      }).catch(err => toast(
-        `Reference pick not saved — ${err.message}. It will ride THIS take `
-        + "but may not survive a refresh.", true));
+      }).catch(err => toast(`Reference pick not saved — ${err.message}`, true));
       // §1.7: a confirmation that outlives what it confirmed is a lie.
       if (confIs("references")) { confSet("references", false); renderBoardPanels(specId); }
     });
@@ -14080,8 +14373,7 @@ async function renderBoardPanels(specId) {
       box.checked = true;
       updateRefCount();
       box.closest(".ref-row")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      toast(`${how.id} (${g.name}) will ride this panel's next take — `
-            + "ticked in step 04, untick it there to change your mind.");
+      toast(`${how.id} (${g.name}) attached`);
     });
 
     // View (user 2026-08-14, corrected same day): not a bare lightbox —
@@ -14114,9 +14406,7 @@ async function renderBoardPanels(specId) {
                 method: "POST",
                 json: { object: obj, exclude: gs.map(g => g.name) },
               });
-              toast(`"${obj}" is no longer matched to ${
-                gs.map(g => g.name).join(", ")}. The plates stay in the library `
-                + "— use + REF to point it somewhere else.");
+              toast(`"${obj}" unmatched from ${gs.map(g => g.name).join(", ")}`);
               renderBoardPanels(specId);
             } catch (err) { toast(err.message, true); }
           } });
@@ -14221,7 +14511,7 @@ async function renderBoardPanels(specId) {
         try {
           const out = await api(`/api/specs/${specId}/panels/${p.id}/purpose`, {
             method: "POST", json: { purpose: input.value } });
-          toast(`${p.id} brief amended — journaled; the next take paints from it.`);
+          toast(`${p.id} brief amended`);
           p.purpose = out.purpose;
           renderBoardPanels(specId);
         } catch (err) { toast(err.message, true); }
@@ -14251,7 +14541,7 @@ async function renderBoardPanels(specId) {
         try {
           await api(`/api/specs/${specId}/panels/${p.id}/camera`,
             { method: "POST", json: readCameraFields("cam", camInline) });
-          toast(`${p.id} camera set — the next take uses it.`);
+          toast(`${p.id} camera set`);
           renderBoardPanels(specId);
         } catch (err) { toast(err.message, true); renderBoardPanels(specId); }
       };
@@ -14305,8 +14595,7 @@ async function renderBoardPanels(specId) {
       await loadCinemaStyles();
       const st = (CINEMA_STYLES || []).find(x => x.key === readCine.dataset.key);
       if (!st) return toast(
-        "That cinematography is no longer in docs/CINEMATOGRAPHY_STYLES.md — "
-        + "the take still records which one rode it.", true);
+        "That cinematography is no longer in docs/CINEMATOGRAPHY_STYLES.md", true);
       const NL = "\n";
       const para = t => String(t || "").trim();
       const list = a => (Array.isArray(a) ? a : [a]).filter(Boolean)
@@ -14392,7 +14681,7 @@ async function renderBoardPanels(specId) {
           const nearest = usable.reduce((b, a) =>
             Math.abs(a.value - cur.value) < Math.abs(b.value - cur.value) ? a : b);
           aspectSel.value = nearest.id;
-          if (!quiet) toast(`${cur.label} isn't available on ${modelSel.options[modelSel.selectedIndex].text} — snapped to ${nearest.label}, the nearest shape it can genuinely render.`);
+          if (!quiet) toast(`${cur.label} isn't available on ${modelSel.options[modelSel.selectedIndex].text} — snapped to ${nearest.label}`);
         }
       }
     };
@@ -14441,16 +14730,14 @@ async function renderBoardPanels(specId) {
       platesWarn.classList.toggle("hidden", !blind);
       if (blind) {
         platesWarn.textContent =
-          `THIS ENGINE NEVER SEES YOUR ${nPlates} REFERENCE PLATE${nPlates === 1 ? "" : "S"}`
-          + " — IT RENDERS FROM A WRITTEN DESCRIPTION OF THEM."
-          + " A LIKENESS WILL BE APPROXIMATE. PICK GEMINI OR GPT IMAGE 2 TO SEND THE IMAGES.";
+          `THIS ENGINE NEVER SEES YOUR ${nPlates} REFERENCE PLATE${nPlates === 1 ? "" : "S"}`;
       }
       // §2.4 the gate is honest: unconfirmed steps do NOT block a render,
       // so the surface says so rather than grey out the button. A render is
       // the end of a sequence, not a reward for finishing one.
       const left = CONF_STEPS.length - confCount;
       genGate.textContent = left
-        ? `${left} STEP${left === 1 ? "" : "S"} UNCONFIRMED — YOU CAN STILL RENDER`
+        ? `${left} STEP${left === 1 ? "" : "S"} UNCONFIRMED`
         : "ALL FIVE STEPS CONFIRMED";
       genGate.classList.toggle("gate-clear", !left);
     };
@@ -14530,14 +14817,14 @@ async function renderBoardPanels(specId) {
             // Save that cannot be pressed is worse than saying nothing
             // (user-caught 2026-08-16: "I cant save prompt to panel once I
             // open and edit" — the refusal lived only in a hover tooltip).
-            ? "AN APPROVED TAKE FREEZES THIS PANEL · NO PROMPT CAN BE SAVED TO IT"
+            ? "FROZEN BY AN APPROVED TAKE"
             : isSaved
-              ? "SAVED PROMPT · EVERY TAKE OF THIS PANEL RENDERS FROM THIS"
+              ? "SAVED PROMPT"
               : saved
-                ? "UNSAVED CHANGES OVER THE SAVED PROMPT · SAVE OR THEY RIDE ONE TAKE"
+                ? "UNSAVED CHANGES"
                 : dirty
-                  ? "EDITED · UNSAVED · THIS TAKE ONLY"
-                  : "UNEDITED · STEPS 01–04 COMPILE THIS";
+                  ? "EDITED · UNSAVED"
+                  : "UNEDITED";
           // Amber is the live signal — the text a render is about to use.
           // A frozen panel is a SETTLED fact, and canon already paints
           // settled steps with --ok (.step-confirmed), so this borrows that
@@ -14545,27 +14832,11 @@ async function renderBoardPanels(specId) {
           editState.classList.toggle("settled", !!r.frozen);
           editState.classList.toggle("edited",
             !r.frozen && (isSaved || dirty || !!saved));
+          // The gate as a label: who settled it. No sentence.
           editHelp.innerHTML = r.frozen
-            // State the unmet condition beside the disabled control, and
-            // say where it is resolved — the approval is withdrawn on the
-            // TAKE, not here. And say what still works: the one-take path
-            // is open, so an experiment is not blocked, only a save is.
-            ? `${approvedTakes.length
-                 ? `<b>Settled by ${esc(approvedTakes.join(", "))}.</b>`
-                 : "<b>Settled by an approved take.</b>"}
-               An approval freezes exactly what it was approved against, and
-               this panel's prompt is part of that. Withdraw the approval on
-               that take in the strip above to change it.
-               <b>You can still test:</b> <i>Generate from this prompt</i>
-               renders one take from your edits without saving anything.`
-            : saved
-              ? `<b>Steps 01–04 no longer compile this panel.</b> Camera, required
-                 objects and references below still attach their images, but the
-                 written prompt is the text above — change it here, or
-                 <i>Clear saved prompt</i> to go back to the compile.`
-              : `Unsaved edits ride ONE take and are archived with it under
-                 <i>Edited render prompt</i>. <b>Save prompt to this panel</b> to make
-                 them stick — every later take of this panel then renders from them.`;
+            ? `<span class="mono">SETTLED BY ${esc(approvedTakes.join(", ")
+                 || "AN APPROVED TAKE")}</span>`
+            : "";
           clearBtn.classList.toggle("hidden", !saved || r.frozen);
           saveBtn.textContent = r.frozen ? "Save prompt — frozen by an approval"
                                 : saved ? "Save changes to this panel"
@@ -14579,9 +14850,7 @@ async function renderBoardPanels(specId) {
           // 01–04 would make of this panel while a saved prompt is on it.
           promptBox.value = r.compiled;
           sayState();
-          toast(saved
-            ? "Compiled text restored in the box. The saved prompt is untouched — Save to replace it, or Clear to remove it."
-            : "Reverted to the compiled prompt.");
+          toast(saved ? "Compiled text restored" : "Reverted to the compiled prompt");
         };
         const putPrompt = async (text, msg) => {
           const res = await api(`/api/specs/${specId}/panels/${p.id}/prompt`, {
@@ -14599,7 +14868,7 @@ async function renderBoardPanels(specId) {
           const meta = $("[data-step=prompt] .step-meta", card);
           if (meta) {
             meta.innerHTML = text
-              ? `<span class="step-meta-alert">SAVED PROMPT — STEPS 01–04 DO NOT WRITE THIS PANEL</span>`
+              ? `<span class="step-meta-alert">SAVED PROMPT</span>`
               : `COMPILED FROM 01–04${lockHash ? ` · HASH ${esc(String(lockHash).slice(0, 16))}` : ""}`;
           }
           const genStep = $("[data-step='06'] .step-content", card)
@@ -14607,9 +14876,7 @@ async function renderBoardPanels(specId) {
           const note = genStep && $(".step-note", genStep);
           if (text && genStep && !note) {
             genStep.insertAdjacentHTML("afterbegin",
-              `<div class="step-note mono"><span class="step-meta-alert">THIS TAKE
-               RENDERS FROM THE SAVED PROMPT</span> · STEP 05 HOLDS THE TEXT ·
-               CAMERA AND OBJECTS BELOW DO NOT WRITE IT</div>`);
+              `<div class="step-note mono"><span class="step-meta-alert">RENDERS FROM THE SAVED PROMPT</span></div>`);
           } else if (!text && note) {
             note.remove();
           }
@@ -14618,14 +14885,13 @@ async function renderBoardPanels(specId) {
         saveBtn.onclick = async () => {
           saveBtn.disabled = true;
           try {
-            await putPrompt(promptBox.value.trim(),
-              "Saved. Every take of this panel renders from this text until you clear it.");
+            await putPrompt(promptBox.value.trim(), "Prompt saved");
           } catch (err) { toast(err.message, true); saveBtn.disabled = false; }
         };
         clearBtn.onclick = async () => {
           clearBtn.disabled = true;
           try {
-            await putPrompt("", "Cleared — this panel compiles from steps 01–04 again.");
+            await putPrompt("", "Prompt cleared");
             promptBox.value = r.compiled;
             sayState();
           } catch (err) { toast(err.message, true); }
@@ -14664,9 +14930,6 @@ async function renderBoardPanels(specId) {
                  <span class="pc-name mono">${esc(b.head)}</span>
                  <span class="pc-n mono">${b.chars.toLocaleString()}</span>
                </div>`).join("")
-            + `<div class="mini">Every block here reaches the image model. A block that
-               describes something this panel does not contain is not neutral — it
-               competes with the ones that do.</div>`
             /* R1.2 — and what was left OUT, with the reason. The measure
                above says a block is 31% of the prompt; this says which
                paragraphs the selection decided not to send. A selector
@@ -14735,8 +14998,7 @@ async function renderBoardPanels(specId) {
     if (compBtn) compBtn.onclick = async () => {
       compBtn.disabled = true;
       const busy = startBusy(busyHost,
-        `Checking ${p.id} composition against the screenplay…`,
-        "one narrative call, no image spend — typically 5–20 seconds");
+        `Checking ${p.id} composition against the screenplay…`);
       try {
         const v = await api(`/api/specs/${specId}/panels/${p.id}/composition-check`, {
           method: "POST",
@@ -14812,15 +15074,14 @@ async function renderBoardPanels(specId) {
       const busy = startBusy(busyHost,
         `Generating ${p.id} with ${modelLabel} — ${size} ${aspect}` +
         `${renderPrompt ? " from your edited prose" : ""}…`,
-        "typically 30–120 seconds; the take appears in the strip above",
-        () => ctrl.abort());
+        "", () => ctrl.abort());
       const before = new Set(panelCands.map(c => c.candidate_id));
       const pendId = addPendingTake(specId, p.id, `PAINTING — NEW TAKE · ${size}`);
       const finish = () => { busy.done(); btn.disabled = false; btn.textContent = idleLabel;
         removePendingTake(specId, p.id, pendId); };
       const landed = cand => {
         finish();
-        toast(`${cand.candidate_id} generated (${cand.width}×${cand.height}) — CANDIDATE, unapproved.`);
+        toast(`${cand.candidate_id} generated (${cand.width}×${cand.height})`);
         // A gateway-cut poll can outlive navigation: announce the arrival,
         // never hijack whatever view the user is on now back to this spec
         // (2026-08-12 review). The take is on disk; the strip shows it on
@@ -14844,7 +15105,7 @@ async function renderBoardPanels(specId) {
       } catch (err) {
         if (err.name === "AbortError") {
           finish();
-          toast("Canceled. Note: if the model had already started painting, the candidate may still arrive — check the gallery in a minute.");
+          toast("Canceled");
           return;
         }
         // A cut connection — a gateway 502/504 on a long render, or a dropped
@@ -14857,14 +15118,12 @@ async function renderBoardPanels(specId) {
             { signal: ctrl.signal });
           if (ctrl.signal.aborted) {
             finish();
-            toast("Canceled. Note: if the model had already started painting, the candidate may still arrive — check the gallery in a minute.");
+            toast("Canceled");
             return;
           }
           if (fresh) { landed(fresh); return; }
           finish();
-          report.innerHTML = `<div class="report"><b>Still rendering</b> — the connection
-            dropped, but the engine keeps working; the take appears in the strip above when
-            it finishes (this can take a couple of minutes). Refresh if it doesn't.
+          report.innerHTML = `<div class="report"><b>Still rendering</b> — connection dropped
             <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
           return;
         }
@@ -14877,12 +15136,6 @@ async function renderBoardPanels(specId) {
           const detail = err.message.split("Provider said:")[1]?.trim() || "";
           report.innerHTML = `<div class="report" style="border-left:2px solid var(--hold)">
             <b class="mono" style="color:var(--hold);letter-spacing:.08em">ENGINE REFUSED — CONTENT POLICY</b>
-            <p style="margin:6px 0 4px">The engine's safety system declined this panel's
-            content. Nothing is broken and nothing was billed — but this exact staging
-            will not render on this engine.</p>
-            <p style="margin:0 0 4px"><b>The craft answer:</b> restage the panel to imply
-            the sensitive element rather than inventory it (edit the breakdown's required
-            objects), or try a different engine — policy lines differ.</p>
             ${detail ? `<p class="mini mono" style="margin-top:6px">PROVIDER — ${esc(detail)}</p>` : ""}
             <button class="ghost" style="float:right" onclick="this.parentElement.remove()">Dismiss</button></div>`;
         } else {
@@ -14900,8 +15153,7 @@ async function renderBoardPanels(specId) {
       btn.disabled = true;
       btn.textContent = "Drafting…";
       const busy = startBusy(busyHost,
-        `Drafting render prose for ${p.id} with GPT-5.6…`,
-        "usually 10–30 seconds; no image is generated yet");
+        `Drafting render prose for ${p.id} with GPT-5.6…`);
       try {
         const r = await api(`/api/specs/${specId}/panels/${p.id}/draft-prose`, {
           method: "POST", json: { ref_ids: checkedRefs() },
@@ -14910,9 +15162,7 @@ async function renderBoardPanels(specId) {
         const box = document.createElement("div");
         box.className = "report";
         box.innerHTML = `
-          <p class="mini">Render prose drafted by ${esc(r.chat_model)} from the locked spec.
-          Edit it freely — the exact text below is what the image model receives, and it is
-          archived with the candidate. Works with any model in the dropdown.</p>
+          <p class="mini mono">DRAFTED BY ${esc(String(r.chat_model || "").toUpperCase())}</p>
           <textarea data-f="prose-text" style="width:100%;min-height:240px;font-family:Consolas,monospace;font-size:var(--t-body)"></textarea>
           <div class="row" style="margin-top:8px">
             <button class="ghost gen-go" data-f="generate-prose" ${prefKeyFailed ? "disabled" : ""} ${prefKeyFailed ? `title="${genGateTitle}"` : ""}>Generate from this prose</button>
@@ -15044,8 +15294,7 @@ async function renderBoardPanels(specId) {
           try {
             const r = await post(
               `/api/specs/${specId}/candidates/${c.candidate_id}/unapprove`);
-            toast(`${r.candidate_id} back to CANDIDATE — the take is untouched, `
-                  + "nothing rides future prompts, and the panel is editable again.");
+            toast(`${r.candidate_id} back to CANDIDATE`);
             refresh();
             updateBand();
           } catch (err) { toast(err.message, true); }
@@ -15103,13 +15352,12 @@ async function renderBoardPanels(specId) {
           const lockable = $$(".act-bar button", card).filter(b => !b.disabled);
           lockable.forEach(b => { b.disabled = true; });
           const busy = startBusy($("[data-f=shot-busy]", card),
-            `Painting the full-size take from ${c.candidate_id} — ${size} on ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`,
-            "30–120 seconds; the new take will land in the strip and take the stage");
+            `Painting the full-size take from ${c.candidate_id} — ${size} on ${prov === "gemini" ? "Gemini" : "GPT Image 2"}…`);
           const pendId = addPendingTake(specId, p.id, `PAINTING — FULL-SIZE OF ${c.candidate_id}`);
           try {
             const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/rerender`,
               { method: "POST", json: { image_size: size, provider: prov } });
-            toast(`${rec.candidate_id} — full-size take ready (${rec.width}×${rec.height}). Now staged; judge it against ${c.candidate_id}.`);
+            toast(`${rec.candidate_id} — full-size take ready (${rec.width}×${rec.height})`);
             roomSel.staged[p.id] = rec.candidate_id;  // show the result, immediately
             persistRoomSel();
             if ($("#board-panels")) await renderBoardPanels(specId);
@@ -15133,7 +15381,7 @@ async function renderBoardPanels(specId) {
               fd.append("ref_ids", JSON.stringify(checkedRefs()));
               const rec = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/repair?provider=${encodeURIComponent(provider)}`,
                 { method: "POST", body: fd });
-              toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}. It joins the takes strip.`);
+              toast(`${rec.candidate_id} — repaired region of ${c.candidate_id}`);
               if ($("#board-panels")) await renderBoardPanels(specId);
             } finally {
               removePendingTake(specId, p.id, pendId);
@@ -15152,7 +15400,7 @@ async function renderBoardPanels(specId) {
           "Create study"))) return;
         try {
           const study = await api(`/api/specs/${specId}/candidates/${c.candidate_id}/lighting-study`, { method: "POST", json: {} });
-          toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels — review it on the Breakdowns tab, trim any you don't want, then approve.`);
+          toast(`${study.specification_id} created with ${study.panels.length} atmosphere panels`);
         } catch (err) { toast(err.message, true); }
       }, c.status !== "APPROVED"
         ? { disabled: true, title: "Approve this take first — the study locks this panel's geometry" }
@@ -15256,7 +15504,7 @@ async function renderBoardPanels(specId) {
   const der = document.createElement("div");
   der.className = "panel";
   der.innerHTML = `
-    <h2>Derived panels <span class="hint">(materials &amp; palette built FROM this board's approved panels — the board cannot disagree with itself)</span></h2>
+    <h2>Derived panels</h2>
     <div class="gen-row" style="border-top:none;padding-top:0;margin-top:0">
       <div class="fgroup" title="Which model paints the materials strip. The palette needs no model — it is measured, not generated.">
         <span class="f-label">Model (materials)</span>
@@ -15267,7 +15515,7 @@ async function renderBoardPanels(specId) {
         <button class="primary" id="der-materials" ${approvedPanelCands.length ? "" : "disabled"} title="Generated: close-up studies of materials VISIBLE in the approved panels — this cabin's timber, not generic timber">Derive materials</button>
       </div>
     </div>
-    ${approvedPanelCands.length ? "" : '<p class="mini">Approve at least one panel candidate to enable derivation.</p>'}
+    ${approvedPanelCands.length ? "" : '<p class="mini mono">NEEDS AN APPROVED PANEL</p>'}
     <div id="der-busy"></div>
     <div class="ref-grid" id="der-gallery" style="margin-top:12px"></div>`;
 
@@ -15284,8 +15532,7 @@ async function renderBoardPanels(specId) {
     const btn = e.target;
     btn.disabled = true;
     const busy = startBusy($("#der-busy", der),
-      "Deriving materials strip from the board's approved panels…",
-      "the approved panels are attached as the only allowed material sources");
+      "Deriving materials strip from the board's approved panels…");
     try {
       const c = await api(`/api/specs/${specId}/derive/materials`, {
         method: "POST", json: { provider: $("#der-model", der).value } });
@@ -15376,10 +15623,9 @@ async function renderBoardPanels(specId) {
         <span class="drow"><span>Palette</span><span class="mono">${derivedCands.some(c => c.panel_id === "PALETTE") ? "SAMPLED" : "NOT SAMPLED"}</span></span>
         <span class="drow"><span>Materials</span><span class="mono">${derivedCands.some(c => c.panel_id === "MATERIALS") ? "DERIVED" : "NOT DERIVED"}</span></span>
       </button>
-      <div class="rail-note">Both are measured from this breakdown's approved panels at assembly.</div>
-      <div class="rail-note">${boards.length
-        ? `This sheet is assembled in <button class="text-act" data-f="to-assembly">${boards.length} board${boards.length === 1 ? "" : "s"}</button>.`
-        : `Not assembled yet — <button class="text-act" data-f="to-assembly">05 Boards</button> is where that happens.`}</div>
+      <div class="rail-note mono">${boards.length
+        ? `ASSEMBLED IN <button class="text-act" data-f="to-assembly">${boards.length} board${boards.length === 1 ? "" : "s"}</button>`
+        : `NOT ASSEMBLED · <button class="text-act" data-f="to-assembly">05 Boards</button>`}</div>
     </div>`;
   $("[data-f=to-assembly]", rail).onclick = () => showView("assembly");
   $$(".rail-panel", rail).forEach(btn => {
@@ -15432,7 +15678,6 @@ async function renderBoardPanels(specId) {
         ${subjRefs.length === 0 ? `
           <div class="nomatch" style="margin:6px 0 2px">
             <b class="mono">NO SUBJECT REFERENCES</b>
-            <p>This take was painted from the written spec${styleCount ? ` and the ${styleCount} style plate${styleCount === 1 ? "" : "s"} only` : " alone"}.</p>
           </div>` : ""}
         ${(() => {
           // Grouped by kind (§2.15): eleven plate ids read as four facts,
@@ -15507,8 +15752,8 @@ async function renderBoardPanels(specId) {
         await api(`/api/specs/${specId}/candidates/${b.dataset.retire}/feedback-retire`,
           { method: "POST", json: { retired: !b.dataset.retired } });
         toast(b.dataset.retired
-          ? `${b.dataset.retire} carries again — future prompts ride it.`
-          : `${b.dataset.retire} no longer carried — the note stays, stated in the rail.`);
+          ? `${b.dataset.retire} carries again`
+          : `${b.dataset.retire} no longer carried`);
         renderBoardPanels(specId);
       } catch (err) { toast(err.message, true); }
     });
@@ -15533,7 +15778,7 @@ async function renderBoardPanels(specId) {
         try {
           await api(`/api/specs/${specId}/candidates/${b.dataset.fbEdit}/feedback-delete`,
             { method: "POST", json: {} });
-          toast(`${b.dataset.fbEdit} note deleted — journaled; no longer carried.`);
+          toast(`${b.dataset.fbEdit} note deleted`);
           renderBoardPanels(specId);
         } catch (err) { toast(err.message, true); }
         return;
@@ -15541,7 +15786,7 @@ async function renderBoardPanels(specId) {
       try {
         await api(`/api/specs/${specId}/candidates/${b.dataset.fbEdit}/feedback-edit`,
           { method: "POST", json: { reason: r.v } });
-        toast(`${b.dataset.fbEdit} note updated — it carries into future prompts as written.`);
+        toast(`${b.dataset.fbEdit} note updated`);
         renderBoardPanels(specId);
       } catch (err) { toast(err.message, true); }
     });
@@ -15582,7 +15827,7 @@ async function renderBoardPanels(specId) {
             try {
               const r = await api(`/api/specs/${specId}/candidates/${t.candidate_id}/correction-intake/apply`,
                 { method: "POST", json: { indices } });
-              toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied — journaled; the next take paints from them.`);
+              toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied`);
               done(null);
               renderBoardPanels(specId);
             } catch (err) { toast(err.message, true); }
@@ -15600,7 +15845,7 @@ async function renderBoardPanels(specId) {
       try {
         const r = await api(`/api/specs/${specId}/candidates/${b.dataset.applyIntake}/correction-intake/apply`,
           { method: "POST", json: { indices } });
-        toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied — journaled; the next take paints from them.`);
+        toast(`${r.applied} delta${r.applied === 1 ? "" : "s"} applied`);
         renderBoardPanels(specId);
       } catch (err) { toast(err.message, true); }
     });
@@ -15675,14 +15920,12 @@ async function renderAssembly() {
     // No generic navigation button anywhere; the rows are the navigation.
     let gateState = {};
     try { gateState = await api("/api/state"); } catch { /* stateless fallback */ }
-    const rows = [...checklistRows(gateState, UNLOCK_NEED.assembly),
-                  { verb: "Boards assemble here", state: "info" }];
+    const rows = checklistRows(gateState, UNLOCK_NEED.assembly);
     const left = rows.filter(r => r.state === "cur" || r.state === "todo").length;
     host.innerHTML = stageChecklist({
       kicker: `NO BOARDS YET — ${left} STEP${left === 1 ? "" : "S"} LEFT`,
-      headline: "A board starts life<br>as a breakdown.",
+      headline: "Needs an approved panel",
       rows,
-      footnote: "NOTHING HERE IS BLOCKED BY US — EVERY STEP IS YOURS TO MAKE",
     });
     bindStageChecklist(host);
     return;
@@ -15703,7 +15946,7 @@ async function renderAssembly() {
     // C2 (ratified 2026-08-01): the middle state gets one line, not the
     // checklist — the picker and bench already state the path by being
     // present. The line disappears the moment a board exists.
-    const note = `<div class="mini mono asm-none">NO BOARDS YET &mdash; APPROVE EVERY PANEL IN A SHEET, THEN ASSEMBLE</div>`;
+    const note = `<div class="mini mono asm-none">NO BOARDS YET</div>`;
     const rememberedA = baseOf(uiGet("asmSpec", ""));
     if (rememberedA && units.some(u => u.base === rememberedA)) {
       sel.value = rememberedA;
@@ -15734,7 +15977,7 @@ async function renderAssembly() {
     p.className = "panel";
     p.dataset.f = "made-boards";   // A7: arrange mode hides it
     p.innerHTML = `
-      <h2>Completed boards <span class="hint">(every assembled wall, newest first — click one to view and judge it; pick a sheet above to assemble more)</span></h2>
+      <h2>Completed boards</h2>
       <div class="ref-grid" data-f="grid" style="margin-top:10px"></div>`;
     const grid = $("[data-f=grid]", p);
     all.forEach((b, i) => {
@@ -15800,7 +16043,7 @@ async function renderAssembly() {
         </div>
         <div class="row" style="margin-top:12px;align-items:center">
           <span class="badge ${esc(b.status)}">${esc(b.status === "CANDIDATE" ? "CANDIDATE — UNAPPROVED" : b.status)}</span>
-          <span class="mini mono">${b.width}×${b.height} · ${esc(b.layout_variant || "aspect")} LAYOUT · CLICK ANY FRAME FOR THE FULL TAKE</span>
+          <span class="mini mono">${b.width}×${b.height} · ${esc(b.layout_variant || "aspect")} LAYOUT</span>
           <span style="flex:1"></span>
           ${b.status !== "APPROVED" ? `<button class="primary" data-bf="approve">Approve board</button>` : ""}
           ${b.status !== "REJECTED" ? `<button class="ghost" data-bf="reject">Reject</button>` : ""}
@@ -15900,8 +16143,7 @@ async function renderAssemblyFor(specId) {
     return `
       ${notReady.length ? `<div class="slot-alert">${notReady.length} SLOT${notReady.length > 1 ? "S" : ""} NOT READY —
         ${esc(notReady.map(s =>
-          `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}
-        — nothing is ever blown up${notReady.some(s => s.status === "TOO_SMALL") ? "; regenerate the small panel larger" : ""}</div>` : ""}
+          `${s.panel_id} ${VERDICT[s.status].toLowerCase()}`).join(" · "))}</div>` : ""}
       <div class="slotmap" style="aspect-ratio:${sm.canvas.width}/${sm.canvas.height}">
         <div class="slot apdrawn" style="left:1.7%;top:3%;width:96.6%;height:${Math.max(4, (minY - 0.05) * 100).toFixed(1)}%">
           <span class="slot-id">${esc((_bandState?.project || spec.project || "").toUpperCase())} — ${esc((spec.subject || specId).toUpperCase())}</span>
@@ -15951,7 +16193,6 @@ async function renderAssemblyFor(specId) {
     </div>
     <div class="slot-caption" style="margin-top:14px">
       <span class="f-label">Slot map · true 4K canvas</span>
-      <span class="hint">readiness only — Arrange this board opens the arrange room below</span>
     </div>
     <div data-f="slot-wrap">${sm ? slotHtml(sm) : ""}</div>
     <div id="asm-arrange-host" style="margin-top:14px"></div>
@@ -15974,7 +16215,7 @@ async function renderAssemblyFor(specId) {
     try {
       await api(`/api/specs/${specId}/board-keeps/${kb.dataset.keep}`,
         { method: "PUT", json: { candidate_id: kb.dataset.cand } });
-      toast(`${kb.dataset.keep} — old take kept; journaled. The slot stops asking.`);
+      toast(`${kb.dataset.keep} — old take kept`);
       refreshMap();
     } catch (err) { toast(err.message, true); }
   });
@@ -16064,11 +16305,10 @@ async function renderAssemblyFor(specId) {
     btn.disabled = true; btn.textContent = "Assembling…";
     const [w, h] = $("#asm-size", asm).value.split("x").map(Number);
     const busy = startBusy($("#asm-busy", asm),
-      `Assembling ${w}×${h} board from approved panels…`,
-      "composing panels and typography onto the canvas");
+      `Assembling ${w}×${h} board from approved panels…`);
     try {
       const b = await api(`/api/specs/${specId}/assemble`, { method: "POST", json: { width: w, height: h, variant } });
-      toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout) — BOARD CANDIDATE, unapproved.`);
+      toast(`${b.candidate_id} assembled (${b.width}×${b.height}, ${variant} layout)`);
       // The finished board is the point — land ON it, full size
       // (user ruling 2026-08-02).
       uiSet("asmSpec", "");
@@ -16125,8 +16365,7 @@ async function renderAssemblyFor(specId) {
       </button>`).join("")
       + `<div class="pm-div"></div>
          <button class="text-act pm-new">+ New production</button>
-         <button class="text-act proj-manage">Manage productions…</button>
-         <div class="pm-foot mono">SWITCHING RELOADS THE STUDIO. UNSAVED FORM TEXT IS NOT CARRIED OVER.</div>`;
+         <button class="text-act proj-manage">Manage productions…</button>`;
     $(".brand").appendChild(menu);
     $$(".proj-item:not([disabled])", menu).forEach(b => b.onclick = async () => {
       try {
@@ -16486,8 +16725,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       <button class="ghost" data-f="style" title="Choose a presentation style for this board — the room stays neutral; the style shows in previews and export">Style…</button>
       <span data-f="export-slot">${exportBtns(ready.ready)}</span>
     </div>
-    <div class="stage-meta mono">BOARD · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}
-      <span class="stage-meta-note">drag middle to move · drop on a tile to split · edges resize · Alt = free</span></div>
+    <div class="stage-meta mono" title="Drag middle to move · drop on a tile to split · edges resize · Alt = free">BOARD · ${sh.medium === "PRINT" ? "3:2" : "16:9"} · ${esc(sheetSizeLine(sh))}</div>
     <div class="arr-ctls mono">
       <label>GUTTER <input type="range" data-f="gutter" min="0" max="120" step="6" value="${gutter}">
         <span data-f="gutter-val">${gutter} PX</span></label>
@@ -16582,12 +16820,12 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   const gateHtml = () => {
     const rows = (ready.blocked || []).slice(0, 4).map(b =>
       b.kind === "TYPE_FLOOR"
-        ? `<span>${esc(b.block_id)} sets type under the floor — pick a larger size.</span>`
+        ? `<span class="mono">${esc(b.block_id)} — TYPE UNDER THE FLOOR</span>`
         : b.kind === "SLOT_APPROVAL"
-        ? `<span>${esc(panelOf(b.block_id, b.slot_id))} — <span class="mono">${esc(b.candidate_id)}</span> is not approved — approve it on the workbench.</span>`
+        ? `<span class="mono">${esc(panelOf(b.block_id, b.slot_id))} — ${esc(b.candidate_id)} NOT APPROVED</span>`
         : b.kind === "SLOT_OFFERED"
-        ? `<span>${esc(b.panel_id || panelOf(b.block_id, b.slot_id))}'s take <span class="mono">${esc(b.candidate_id)}</span> was approved against R${b.from_revision} and the panel changed in R${b.floor} — re-render on the workbench or <button type="button" class="text-act" data-gate-keep="${esc(b.panel_id || "")}" data-cand="${esc(b.candidate_id)}">Keep</button> it.</span>`
-        : `<span>${esc(panelOf(b.block_id, b.slot_id))} ${b.have?.[0] ? `has ${b.have[0]}×${b.have[1]}px of the ${b.need[0]}×${b.need[1]} it needs — regenerate larger or crop less` : "has no approved take — approve one on the workbench"}.</span>`)
+        ? `<span class="mono">${esc(b.panel_id || panelOf(b.block_id, b.slot_id))} — ${esc(b.candidate_id)} APPROVED AGAINST R${b.from_revision} &middot; <button type="button" class="text-act" data-gate-keep="${esc(b.panel_id || "")}" data-cand="${esc(b.candidate_id)}">Keep</button></span>`
+        : `<span class="mono">${esc(panelOf(b.block_id, b.slot_id))} — ${b.have?.[0] ? `${b.have[0]}×${b.have[1]} OF ${b.need[0]}×${b.need[1]} PX` : "NO APPROVED TAKE"}</span>`)
       .join("");
     return ready.ready ? "" : `
       <div class="panel panel-lead lb-blocked">
@@ -16603,7 +16841,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
       try {
         await api(`/api/specs/${baseOf(specId)}/board-keeps/${b.dataset.gateKeep}`,
           { method: "PUT", json: { candidate_id: b.dataset.cand } });
-        toast(`${b.dataset.gateKeep} — old take kept; journaled.`);
+        toast(`${b.dataset.gateKeep} — old take kept`);
         ready = await api(`/api/sheets/${sheetId}/readiness`);
         paintChrome();
       } catch (err) { toast(err.message, true); }
@@ -16804,7 +17042,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
   };
   const benchPanel = pid => {
     if (allIds().length <= 1) {
-      toast("A board keeps at least one panel — bench the rest, not the last.", true);
+      toast("A board keeps at least one panel", true);
       return;
     }
     hideArrows();
@@ -17155,9 +17393,7 @@ async function renderArrangeRoom(sheetId, host, onClose) {
           ready = await api(`/api/sheets/${sheetId}/readiness`);
           cleanup();
           paint();
-          toast(selKey
-            ? `Style set: ${selKey.replace(/_/g, " ")} — previews and export now dress the board.`
-            : "Style cleared — the board exports as bare INK.");
+          toast(selKey ? `Style set: ${selKey.replace(/_/g, " ")}` : "Style cleared");
         } catch (err) { toast(err.message, true); }
       }
     };

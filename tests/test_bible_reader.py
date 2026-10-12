@@ -50,9 +50,15 @@ class ThreeViewsOverOneFile(unittest.TestCase):
         self.assertIn('$("#bible-doc")?.classList.toggle("hidden", v !== "reading")', seg)
 
     def test_the_markdown_view_carries_the_parse_warning(self):
-        self.assertIn('id="bible-md-note"', HTML)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. "SECTION HEADINGS
+        # ARE PARSED — DO NOT RENAME" was an instruction; it and its toggle
+        # are gone. The three views themselves are unchanged.
+        self.assertNotIn('id="bible-md-note"', HTML)
+        self.assertNotIn("DO NOT RENAME", HTML)
         i = JS.index("const syncBibleView =")
-        self.assertIn('note.hidden = v === "reading"', JS[i:i + 700])
+        self.assertNotIn("bible-md-note", JS[i:i + 700])
+        self.assertIn('$("#bible-doc")?.classList.toggle("hidden", v !== "reading")',
+                      JS[i:i + 700])
 
     def test_editing_forces_the_source_view(self):
         """You cannot edit a render. While editing there is one view."""
@@ -65,13 +71,19 @@ class ThreeViewsOverOneFile(unittest.TestCase):
         self.assertIn("context/01_ART_DIRECTION_BIBLE.md", HTML)
 
 
+def reader():
+    """The reader, start to end: the section model, the body renderer and
+    renderBibleDoc (2026-10-04 split it into three)."""
+    i = JS.index("const BIBLE_LOOK =")
+    return JS[i:JS.index("const slugify =", i)]
+
+
 class TheRendererNeverMutatesTheFile(unittest.TestCase):
     """The plan's hard constraint. A renderer that writes is a second
     author of a document the whole pipeline parses."""
 
     def seg(self):
-        i = JS.index("const renderBibleDoc =")
-        return JS[i:JS.index("const slugify =", i)]
+        return reader()
 
     def test_it_only_reads(self):
         s = self.seg()
@@ -92,8 +104,7 @@ class ItSupportsOnlyWhatTheDrafterEmits(unittest.TestCase):
     parseable by a heading walk."""
 
     def seg(self):
-        i = JS.index("const renderBibleDoc =")
-        return JS[i:JS.index("const slugify =", i)]
+        return reader()
 
     def test_the_four_shapes_and_no_others(self):
         s = self.seg()
@@ -120,13 +131,12 @@ class ItSupportsOnlyWhatTheDrafterEmits(unittest.TestCase):
 
 class AnAvoidListIsASet(unittest.TestCase):
     def test_it_renders_as_chips(self):
-        s = JS[JS.index("const renderBibleDoc ="):]
-        self.assertIn('class="bd-chips"', s[:4000])
-        self.assertIn("inAvoid", s[:4000])
+        s = reader()
+        self.assertIn('class="bd-chips"', s)
+        self.assertIn("inAvoid", s)
 
     def test_only_under_an_avoid_heading(self):
-        i = JS.index("const renderBibleDoc =")
-        self.assertIn("inAvoid = /^avoid/i.test(", JS[i:i + 4000])
+        self.assertIn("inAvoid = /^avoid/i.test(", reader())
 
 
 class ThePictureComesFromWhatTheProductionHas(unittest.TestCase):
@@ -138,9 +148,7 @@ class ThePictureComesFromWhatTheProductionHas(unittest.TestCase):
     def test_a_language_with_no_art_renders_as_prose_alone(self):
         """B3 — never a placeholder. A reserved shape that states nothing
         is worse than no shape."""
-        i = JS.index("const renderBibleDoc =")
-        seg = JS[i:JS.index("const slugify =", i)]
-        self.assertIn("if (shot || swatches.length)", seg)
+        self.assertIn("if (shot || swatches.length)", reader())
 
     def test_the_language_rule_lives_in_one_place(self):
         """A JS twin of `store.reference_language` would be free to drift
@@ -162,10 +170,18 @@ class TheRailSaysWhereYouAreAndWhatWroteIt(unittest.TestCase):
         self.assertIn("AUTO_ATTACH_HEADS.map", JS[i:i + 1200])
 
     def test_an_empty_rail_states_the_gap(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Empty states are
+        # short Courier labels.
         i = JS.index("const renderBibleRail =")
         seg = JS[i:i + 1600]
-        self.assertIn("no sections yet", seg)
-        self.assertIn("no anchor has a picture yet", seg)
+        self.assertIn("NO PICTURES YET", seg)
+        self.assertNotIn("no anchor has a picture yet", seg)
+
+    def test_the_rail_no_longer_lists_sections(self):
+        """The index moved into the reader, where choosing a section shows
+        it (2026-10-04). Two indexes would be two answers to one question."""
+        i = JS.index("const renderBibleRail =")
+        self.assertIn("idx.hidden = true", JS[i:i + 1600])
 
 
 class TheDocumentKeepsItsOwnVoice(unittest.TestCase):
@@ -185,6 +201,81 @@ class TheDocumentKeepsItsOwnVoice(unittest.TestCase):
     def test_a_kicker_is_courier(self):
         """Rule 2 — `###` is the machine's own sub-label."""
         self.assertIn("var(--mono)", block(".bible-doc .bd-kick {"))
+
+
+class OneSectionAtATime(unittest.TestCase):
+    """User 2026-10-04: "For humans looking at the interface, it should be
+    a well-formatted, sectioned document." Ruled: an index, one section at
+    a time, and each section editable on its own. The file is unchanged."""
+
+    def test_the_index_groups_the_file_s_own_headings(self):
+        r = reader()
+        for label in ('"THE LOOK"', '"DESIGN LANGUAGES"', '"ENVIRONMENTS"', '"REFERENCE"'):
+            self.assertIn(label, r)
+        self.assertIn('h.title.toLowerCase() === "environments"', r)
+
+    def test_selection_is_ink_never_amber(self):
+        b = block(".bd-nav-item.on {")
+        self.assertIn("var(--ink)", b)
+        self.assertNotIn("accent", b)
+
+    def test_a_section_save_goes_through_the_one_bible_save(self):
+        i = JS.index("const bibleSaveSection =")
+        seg = JS[i:i + 900]
+        self.assertIn("await saveBible()", seg)
+        self.assertIn("await loadBibleEditor()", seg)
+        self.assertNotIn('api("/api/style-bible"', seg)
+
+    def test_the_model_and_the_splice_on_a_real_bible(self):
+        """Run the section model and the splice in Node against a Bible
+        with globals, two languages, materials and environments."""
+        import shutil
+        import subprocess
+        import textwrap
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node not installed")
+        a = JS.index("  const BIBLE_LOOK =")
+        model = JS[a:JS.index("  // A section's body as the drafter wrote it", a)]
+        b = JS.index("  const bibleSaveSection =")
+        splice = JS[b:JS.index("btn.disabled = true;", b)]
+        prog = textwrap.dedent(r"""
+          const slugify = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          const getAnalysis = () => ({ design_worlds: [{ name: "Terran Concord" }, { name: "Oruna" }] });
+          %MODEL%
+          const TEXT = [
+            "# Io — Art Direction Bible", "", "## Status", "Locked.", "",
+            "## Overall Visual Identity", "- Lived-In.", "",
+            "## Terran Concord", "Brass and marble.", "",
+            "## Oruna", "Woven reed.", "",
+            "## Core Material Language", "### Terran Concord", "- brass", "",
+            "## Environments", "### NORTHERN COAST", "Storm light.", "", "### CITADEL", "Gold leaf.", ""
+          ].join("\n");
+          const m = bibleModel(TEXT);
+          const groups = {};
+          m.secs.forEach(x => (groups[x.group] = groups[x.group] || []).push(x.title));
+          const oruna = m.secs.find(x => x.title === "Oruna");
+          %SPLICE% return next; };
+          const next = bibleSaveSection(m, oruna, "Woven reed on tidal flats.\n- stilts");
+          console.log(JSON.stringify({ title: m.title, groups, next }));
+        """)
+        prog = prog.replace("%MODEL%", model).replace(
+            "%SPLICE%", splice.replace("async (model, sec, body, btn)", "(model, sec, body, btn)"))
+        out = subprocess.run([node, "-e", prog], capture_output=True, text=True,
+                             encoding="utf-8", timeout=30)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        import json as _json
+        r = _json.loads(out.stdout)
+        self.assertEqual(r["title"], "Io — Art Direction Bible")
+        self.assertEqual(r["groups"]["look"], ["Overall Visual Identity"])
+        self.assertEqual(r["groups"]["languages"], ["Terran Concord", "Oruna"])
+        self.assertEqual(r["groups"]["environments"], ["NORTHERN COAST", "CITADEL"])
+        self.assertEqual(r["groups"]["reference"], ["Status", "Core Material Language"])
+        nxt = r["next"]
+        self.assertIn("## Oruna\n\nWoven reed on tidal flats.\n- stilts\n\n## Core Material Language", nxt)
+        self.assertNotIn("Woven reed.\n", nxt)
+        self.assertIn("## Terran Concord\nBrass and marble.", nxt, "other sections untouched")
+        self.assertIn("### CITADEL\nGold leaf.", nxt)
 
 
 if __name__ == "__main__":

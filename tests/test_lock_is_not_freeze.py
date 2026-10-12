@@ -90,10 +90,12 @@ class TheStripStatesWhichCase(unittest.TestCase):
     def test_it_distinguishes_all_three(self):
         """"LOCKED — read-only" was simply false in two of the three
         states, and a gate that lies is worse than no gate."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Still three cases,
+        # still never a lie — each a label now.
         e = editor()
-        self.assertIn("nothing has been rendered from it yet", e)
-        self.assertIn("panels have an\n             approved take", e)
-        self.assertIn("Every panel has an approved take", e)
+        self.assertIn("NOTHING APPROVED · EDITABLE", e)
+        self.assertIn("PANELS FROZEN", e)
+        self.assertIn("EVERY PANEL APPROVED · SETTLED", e)
 
     def test_it_never_claims_read_only_outright(self):
         self.assertNotIn("Approved and read-only — objects, panels, and the ledger cannot change here",

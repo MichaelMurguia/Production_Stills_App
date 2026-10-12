@@ -87,14 +87,11 @@ class CopyPointsAtTheRightStep(unittest.TestCase):
         """It names the control rather than a step now — the button is on
         the same panel, and "above" cannot go stale the way a number can.
         If it ever names a step again, that step must be the Bible's."""
-        m = re.search(r"The bible is empty — ([^\"]+)", JS)
-        self.assertTrue(m, "the empty-bible message must say where to go")
-        said = m.group(1)
-        step = re.search(r"step (\d+)", said)
-        if step:
-            self.assertEqual(int(step.group(1)), self.bible())
-        else:
-            self.assertIn("above", said)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. An error keeps its
+        # reason and drops its advice — so it no longer points anywhere,
+        # and therefore cannot point at a wrong step.
+        self.assertIn('toast("The bible is empty", true)', JS)
+        self.assertNotRegex(JS, r"The bible is empty — ")
 
     def test_the_server_refusal_points_at_the_bible(self):
         m = re.search(r"Draft and save the Bible first \(step (\d+)\)", WIZ)
@@ -106,9 +103,12 @@ class CopyPointsAtTheRightStep(unittest.TestCase):
         generation reads the saved Bible in step 4 and the swatches landed
         in step 1. Colour moved to the Bible, so they are one step now and
         the line says "beside this" rather than pointing away."""
-        m = re.search(r"LANDS IN STEP (\d+) / COLOUR", JS)
-        self.assertTrue(m, "the swatch result must still name where it lands")
-        self.assertEqual(int(m.group(1)), self.palette())
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The standing
+        # "LANDS IN STEP n" line went; the RESULT still names where the
+        # swatches landed and links there.
+        self.assertNotRegex(JS, r"LANDS IN STEP (\d+) / COLOUR")
+        self.assertIn("PROPOSED IN COLOR PALETTE · ", JS)
+        self.assertIn('data-f="sw-goto">REVIEW THEM</button>', JS)
 
     def test_the_cast_pointer_names_the_cast_step(self):
         cast = rail()["cast"]

@@ -1,6 +1,6 @@
-"""The four formats the app claims, actually read.
+"""The five formats the app claims, actually read.
 
-`PDF · FDX · FOUNTAIN · TXT` appears on the Status lead, the stage-01
+`PDF · FDX · FOUNTAIN · TXT · HTML` appears on the Status lead, the stage-01
 empty state, the Replace card and the file picker's `accept`. Nothing
 proved the app could read all four until 2026-08-20, and it could not
 read one of them WELL: Final Draft is XML, and every non-PDF file was
@@ -67,11 +67,29 @@ def pdf_bytes() -> bytes:
     return bytes(out)
 
 
+def imsdb_bytes() -> bytes:
+    """A script archive page: the script in one <pre>, wrapped in the
+    site's menus, scripts and footer — the shape most saved web scripts
+    have."""
+    menu = "".join(f'<td><a href="/genre/{g}">{g}</a></td>'
+                   for g in ("Action", "Drama", "Sci-Fi", "Thriller"))
+    body = "\n".join(SCENES).replace("VERA", "<b>VERA</b>")
+    return (
+        '<html><head><meta http-equiv="Content-Type" '
+        'content="text/html; charset=utf-8"><title>The Quiet Shift Script</title>'
+        '<style>td{font:12px Arial}</style><script>var ad = "INT. NOWHERE - DAY";</script>'
+        f'</head><body><table><tr>{menu}</tr></table><nav>Home &gt; Scripts</nav>'
+        f'<table><tr><td class="scrtext"><pre>{body}</pre></td></tr></table>'
+        '<footer>&copy; Script Archive. All rights reserved.</footer></body></html>'
+    ).encode("utf-8")
+
+
 FILES = {
     "script.txt": "\n".join(SCENES).encode("utf-8"),
     "script.fountain": ("Title: The Quiet Shift\n\n" + "\n".join(SCENES)).encode("utf-8"),
     "script.fdx": fdx_bytes(),
     "script.pdf": pdf_bytes(),
+    "script.html": imsdb_bytes(),
 }
 
 
@@ -119,6 +137,83 @@ class EveryClaimedFormatReads(unittest.TestCase):
         _, plain = self.load("script.txt")
         self.assertLess(len(fdx), len(plain) * 1.2,
                         "Final Draft should cost about what the plain text does")
+
+    def test_a_web_page_is_read_as_a_script_not_as_a_page(self):
+        """The site around the script is billed on every model call if it
+        survives import. The <pre> is the script; the rest goes."""
+        _, html = self.load("script.html")
+        for leftover in ("<pre", "<b>", "Thriller", "Home > Scripts",
+                         "All rights reserved", "var ad", "INT. NOWHERE",
+                         "font:12px"):
+            self.assertNotIn(leftover, html)
+        self.assertIn("Cold light. VERA works a panel loose.", html)
+        self.setUp()
+        _, plain = self.load("script.txt")
+        self.assertLess(len(html), len(plain) * 1.2,
+                        "a saved web page should cost about what the plain text does")
+
+    def test_pre_keeps_its_indentation(self):
+        """In an archive script the indentation IS the structure — a
+        character cue is the line indented furthest."""
+        page = ("<html><body><pre>INT. GALLEY - DAY\n\n"
+                "                         MARCUS\n"
+                "               Coffee's cold.\n</pre></body></html>")
+        rec = store.set_screenplay("cue.htm", page.encode("utf-8"))
+        self.assertTrue(rec.get("text_chars"))
+        self.assertIn("\n                         MARCUS\n",
+                      store.screenplay_text_cached())
+
+    def test_an_export_without_pre_reads_as_paragraphs(self):
+        """Writing tools export one element per block and style the
+        heading with CSS. The heading must reach the parser in capitals,
+        each element on its own line, with entities decoded."""
+        rows = []
+        for line in SCENES:
+            if not line:
+                continue
+            if line.startswith(("INT.", "EXT.")):
+                rows.append(f'<p class="scene-heading">{line.lower()}</p>')
+            else:
+                rows.append(f'<p class="action">{line} &amp; more&nbsp;here</p>')
+        page = ('<!DOCTYPE html><html><head><style>.scene-heading'
+                '{text-transform:uppercase}</style></head><body>'
+                + "\n".join(rows) + "</body></html>")
+        store.set_screenplay("export.html", page.encode("utf-8"))
+        text = store.screenplay_text_cached()
+        self.assertIn("\nINT. ORBITAL RELAY - GALLEY - DAY\n", text)
+        self.assertIn("MARCUS pours coffee. & more here", text)
+        self.assertNotIn("text-transform", text)
+        exported = len(insights.locations()["locations"])
+        self.setUp()
+        self.load("script.txt")
+        self.assertEqual(exported, len(insights.locations()["locations"]))
+
+    def test_a_speech_sits_on_consecutive_lines(self):
+        """The shape of a real styled export (DESCENDANT, 2026-10-04): the
+        cue is CSS-capitalised, and a dialogue block's cue, parenthetical
+        and line read as one speech, not three paragraphs."""
+        page = ('<section class="scene"><div class="slug">int. galley — day</div>'
+                '<div class="action">Steam.</div>'
+                '<div class="dialogue-block"><div class="cue">Marcus '
+                '<span class="cue-ext">(radio)</span></div>'
+                '<div class="paren">(flat)</div>'
+                '<div class="line">Coffee\'s cold.</div></div>'
+                '<div class="action">He drinks it.</div></section>')
+        store.set_screenplay("styled.html", page.encode("utf-8"))
+        self.assertEqual(store.screenplay_text_cached(),
+                         "INT. GALLEY — DAY\n\nSteam.\n\n"
+                         "MARCUS (RADIO)\n(flat)\nCoffee's cold.\n\n"
+                         "He drinks it.")
+
+    def test_a_page_in_its_declared_charset(self):
+        """Old archive pages are windows-1252. Decoded as UTF-8, every
+        curly quote and dash in the script becomes U+FFFD."""
+        page = ('<html><head><meta charset="windows-1252"></head><body><pre>'
+                "INT. GALLEY — DAY\n\nMARCUS: “Cold.”</pre></body></html>")
+        store.set_screenplay("old.html", page.encode("cp1252"))
+        text = store.screenplay_text_cached()
+        self.assertIn("“Cold.”", text)
+        self.assertNotIn("�", text)
 
     def test_an_unreadable_file_extracts_nothing_rather_than_guessing(self):
         """An image-only scan has no text layer. Empty is the documented

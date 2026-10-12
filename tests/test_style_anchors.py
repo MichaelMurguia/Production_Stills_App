@@ -185,7 +185,10 @@ class SwatchSelectorWiring(unittest.TestCase):
         # NOTHING still means auto, but there is now an explicit "no colour
         # reference" row, so "none selected" had become ambiguous between
         # the two.
-        self.assertIn("NOTHING TICKED = AUTO", self.JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The foot line went;
+        # the group's tooltip still states the auto rule.
+        self.assertNotIn("NOTHING TICKED = AUTO", self.JS)
+        self.assertIn("Unselected = the style shelf's automatic pick", self.JS)
 
     def test_a_panel_can_choose_no_colour_reference_at_all(self):
         """User-caught 2026-08-25: "I cant see a way to remove the color

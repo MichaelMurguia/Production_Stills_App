@@ -237,7 +237,10 @@ class ThePanelSaysWhatItWithheld(unittest.TestCase):
         i = JS.index("function bibleSelectionHtml")
         seg = " ".join(JS[i:i + 1600].split())
         self.assertIn("if (sel.unsure)", seg)
-        self.assertIn("a chair someone has just left", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Still a result,
+        # not a blank — as a label.
+        self.assertIn("CHARACTERS · ALL CARRIED", seg)
+        self.assertNotIn("a chair someone has just left", seg)
 
     def test_it_is_not_a_warning(self):
         """Withholding a paragraph about someone who is not in the frame

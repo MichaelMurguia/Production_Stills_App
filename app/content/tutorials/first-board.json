@@ -49,7 +49,7 @@
       "id": "upload",
       "surface": "spotlight",
       "title": "Stage 01 — Upload the Draft",
-      "body": "It all starts with a story. It can be a brief, short story, or full screenplay. Upload a PDF, Final Draft, Fountain or plain text.",
+      "body": "It all starts with a story. It can be a brief, short story, or full screenplay. Upload a PDF, Final Draft, Fountain, web page (HTML) or plain text.",
       "anchor": "status.next",
       "side": "right",
       "align": "start",

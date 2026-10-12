@@ -105,7 +105,10 @@ class TheFinishPanelKeepsNothing(unittest.TestCase):
         the surface that announced it."""
         i = READ.index("finish(analysis) {")
         seg = READ[i:READ.index(NL + "  fail(msg) {", i)]
-        self.assertIn("The read found ${langs} design language(s)", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The toast carries the
+        # counts; the advice after them went.
+        self.assertIn("toast(`Read: ${langs} design language(s), ${subj} subject(s)`);", seg)
+        self.assertNotIn("review them on Prod. Design", seg)
 
     def test_a_failed_read_keeps_its_own_buttons(self):
         """A failure is not a receipt — it states a condition and links to
@@ -262,8 +265,10 @@ class TheModelPhaseIsMeasuredNotPaced(unittest.TestCase):
         note = READ[i:READ.index('else if (this.phase === "previewed")', i)]
         said = note[note.index("note.textContent ="):]
         self.assertNotIn("ONE CALL", said)
-        self.assertIn("THE READ AND ", said)
-        self.assertIn("A SHORTER CHECK PASS", said)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. It claims no number
+        # of calls at all now — only the state.
+        self.assertIn('" IS READING"', said)
+        self.assertNotIn("CALL", said)
 
 
 if __name__ == "__main__":

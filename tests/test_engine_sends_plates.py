@@ -92,7 +92,10 @@ class EverySurfaceSaysWhichKind(unittest.TestCase):
         self.assertIn("!sendsPlates(appSettings, modelSel.value)", JS[i:i + 160])
 
     def test_the_warning_names_the_way_out(self):
-        self.assertIn("PICK GEMINI OR GPT IMAGE 2 TO SEND THE IMAGES", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The warning states
+        # the condition; the advice that followed it went.
+        self.assertIn("THIS ENGINE NEVER SEES YOUR ${nPlates} REFERENCE PLATE", JS)
+        self.assertNotIn("PICK GEMINI OR GPT IMAGE 2 TO SEND THE IMAGES", JS)
 
     def test_the_client_reads_the_servers_declaration(self):
         """Not a hardcoded list in the JS — that is how the two drift."""

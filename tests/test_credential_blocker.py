@@ -141,7 +141,7 @@ class BlockerTests(Install):
         self.assertEqual(len(rows), 1)
         self.assertEqual(
             rows[0]["text"],
-            "No AI engine connected — nothing can be read, drafted or rendered")
+            "No AI model connected")   # a label, no explanation (2026-10-07)
         self.assertEqual(rows[0]["action"], "settings")
         self.assertEqual(rows[0]["scope"], "install",
                          "the only blocker that survives a production switch")
@@ -174,7 +174,7 @@ class BlockerTests(Install):
                                     "openai-chat": {"ok": False}})
         row = self.keyrows()[0]
         self.assertIn("failed its last test", row["text"])
-        self.assertNotIn("No AI engine connected", row["text"])
+        self.assertNotIn("No AI model connected", row["text"])
 
     def test_the_credential_leads_because_it_locks_the_upload(self):
         """User ruling 2026-08-18: the screenplay is locked until an AI
@@ -188,7 +188,7 @@ class BlockerTests(Install):
         store.save_app_state({"screenplay": {"filename": "s.pdf"}})
         blockers = insights.blocking()
         verb = insights.next_verb(insights.stage_summary(blockers), blockers)
-        self.assertIn("No AI engine connected", verb["text"])
+        self.assertIn("No AI model connected", verb["text"])
         self.assertEqual(verb["action"], "settings")
 
     def test_a_key_row_never_marks_a_stage_it_does_not_block(self):
@@ -245,18 +245,25 @@ class ThePaletteIsGatedOnTheBible(unittest.TestCase):
     def test_the_callout_carries_the_users_own_copy(self):
         """Verbatim, 2026-08-22. Not a paraphrase — the user wrote this
         sentence and the step is bold."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Rule 1: a gate is a
+        # SHORT LABEL + the LINK that fixes it — "NEEDS THE BIBLE · Open it".
+        # The user's 2026-08-22 sentence is superseded by the user's ruling.
         b = self.body()
-        self.assertIn("LOCKED — NO ART DIRECTION BIBLE", b)
-        self.assertIn("Color swatches reference the Art Direction Bible "
-                      "once created.", b)
-        self.assertIn("<b>Step 4</b>", b)
+        self.assertIn('<span class="k">NEEDS THE BIBLE</span>', b)
+        self.assertIn(">Open it ↗</button>", b)
+        self.assertNotIn("Color swatches reference the Art Direction Bible", b)
 
     def test_the_callout_carries_no_verb(self):
-        """Removed on instruction: the step it names is on the same page,
-        and a button that only scrolls is not worth a primary's weight."""
+        """Removed on instruction: a button that only scrolls is not worth
+        a primary's weight. The 2026-10-07 ruling brought back the LINK —
+        a text act, never a primary — because a gate names its fix."""
         b = self.body()
-        self.assertNotIn("pal-go", b)
-        self.assertNotIn("<button", b)
+        self.assertNotIn("pal-go\"", b)
+        i = b.index("gate.innerHTML")
+        gate = b[i:i + 400]
+        self.assertIn('class="text-act" data-f="pal-gate-go"', gate)
+        self.assertNotIn("primary", gate)
+        self.assertIn('scrollIntoView', b[i:i + 700])
 
     def test_everything_that_states_a_palette_is_locked_together(self):
         """Three passes, one per control left behind — the hand-added
@@ -393,8 +400,10 @@ class AnAnchorCanBeWordsOrAPicture(Install):
         self.assertIn("done: (pd.anchors_stated || 0) > 0", seg)
         self.assertNotIn("ADD STYLE REFERENCE", seg)
         self.assertIn("DESCRIBE THE LOOK", seg)
-        self.assertIn("in words or a picture", seg)
-        self.assertIn("four anchors", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The checklist row's
+        # explanatory sub-line went; the label is the gate.
+        self.assertNotIn("in words or a picture", seg)
+        self.assertNotIn("sub:", seg)
         self.assertNotIn("the three anchors", seg)
 
 
@@ -409,8 +418,10 @@ class TheLeadNeverJumpsAheadOfTheWork(Install):
     led with a stage 05 need — pointing the user at a thing stage 02
     produces, from a user standing at stage 02.
 
-    A blocker for a stage beyond the frontier stays in the BLOCKING list,
-    where it is true and useful. It just is not the one verb on screen.
+    A blocker for a stage beyond the frontier stays in the blocking DATA,
+    where it is true and useful. It just is not the one verb on screen —
+    and since 2026-10-04 Status does not list it either until its stage
+    arrives (AFutureStageIsNotAnError, below).
     """
 
     DRAFT = b"INT. ROOM - DAY\n\nA room.\n"
@@ -455,6 +466,81 @@ class TheLeadNeverJumpsAheadOfTheWork(Install):
         """A row nobody has ranked must never outrank a real one."""
         self.assertEqual(insights.stage_rank({"action": "who-knows"}), 9)
         self.assertEqual(insights.stage_rank({}), 9)
+
+
+class AFutureStageIsNotAnError(Install):
+    """User, 2026-10-04, at stage 02 of a first run, looking at a red GAP
+    row for the board layout master: "When onboarding I do not want to be
+    faced with an error at all."
+
+    That row is a stage-05 input. At stage 02 it is future work, not a
+    failure. /api/state marks a row `ahead` when its stage is past the
+    frontier, and Status leaves `ahead` rows out of its BLOCKING list.
+    The data keeps the row (the gap is true), and Status lists it the
+    moment its stage arrives.
+    """
+
+    DRAFT = b"INT. ROOM - DAY\n\nA room.\n"
+
+    def layout_row(self):
+        import app.main as appmain
+        rows = appmain.api_state()["blocking"]
+        return next(r for r in rows
+                    if "board layout master" in r["text"].lower())
+
+    def test_at_stage_02_the_layout_master_is_ahead(self):
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", self.DRAFT)
+        self.assertTrue(self.layout_row()["ahead"])
+
+    def test_the_lead_row_and_a_credential_are_never_ahead(self):
+        store.set_screenplay("d.txt", self.DRAFT)  # no key at all
+        import app.main as appmain
+        key = next(r for r in appmain.api_state()["blocking"] if r["kind"] == "KEY")
+        self.assertFalse(key["ahead"], "install-scope blocks every stage")
+
+    def test_at_stage_05_it_is_listed_again(self):
+        self.settings(openai_api_key="sk-test")
+        store.set_screenplay("d.txt", self.DRAFT)
+        real = insights.frontier_rank
+        insights.frontier_rank = lambda _s: 5
+        try:
+            self.assertFalse(self.layout_row()["ahead"])
+        finally:
+            insights.frontier_rank = real
+
+    def test_status_leaves_ahead_rows_out_of_its_list(self):
+        i = JS.index("const rest = ")
+        self.assertIn(".filter(b => !b.ahead)", JS[i:i + 120])
+
+
+class TheFirstRunVerbWaitsForAFile(unittest.TestCase):
+    """User, 2026-10-04: during the first run the upload button "should
+    not even show up until a screenplay is selected", and it reads
+    "Process World Visualization" (renamed the same day from "Analyze
+    script world"). The Replace card keeps its stated disabled
+    button: a returning user replacing a draft is not being onboarded."""
+
+    def forms(self):
+        return [JS[i:JS.index("</form>", i)] for i in
+                (JS.index('id="status-screenplay-form"'),
+                 JS.index('id="screenplay-form-main"'))]
+
+    def test_both_first_run_forms_hide_the_verb_and_name_it(self):
+        for f in self.forms():
+            self.assertIn('class="primary hidden" data-reveal>Process World Visualization</button>', f)
+            self.assertNotIn("start the read", f)
+
+    def test_choosing_a_file_reveals_it(self):
+        i = JS.index("function bindScreenplayUpload(")
+        sync = JS[JS.index("const sync = () => {", i):JS.index('input.addEventListener("change", sync)', i)]
+        self.assertIn('if ("reveal" in submit.dataset)', sync)
+        self.assertIn('classList.toggle("hidden", noEngine || !input.files.length)', sync)
+
+    def test_replace_keeps_its_visible_button(self):
+        html = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+        i = html.index('id="screenplay-form"')
+        self.assertNotIn("data-reveal", html[i:html.index("</form>", i)])
 
 
 class BlockersSpeakEnglish(Install):
@@ -519,7 +605,11 @@ class TheUploadIsLocked(Install):
     def test_the_gate_is_readable_before_it_is_hit(self):
         """A gate surfaced only as an error after the user acts is the
         thing the product rule forbids."""
-        self.assertIn("NO AI MODEL CONNECTED", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The gate is a label
+        # + the link to its fix; the tooltip keeps the fuller sentence.
+        self.assertIn('<p class="up-gate mono">NO AI MODEL ·', JS)
+        self.assertIn('data-f="up-gate-go">Connect one ↗</button>', JS)
+        self.assertNotIn("THE MOMENT IT LANDS", JS)
         self.assertIn("Connect an AI model first — Settings → AI & engines", JS)
         # every upload form is told what the server declared
         self.assertEqual(JS.count("bindScreenplayUpload($("), 3)
@@ -590,7 +680,7 @@ class TheUploadStartsTheRead(unittest.TestCase):
 
     def body(self):
         i = self.JS.index("async function startTheRead()")
-        return self.JS[i:i + 1400]
+        return self.JS[i:self.JS.index("\n}\n", i)]   # the whole function
 
     def test_the_upload_fires_it(self):
         i = self.JS.index('const rec = await api("/api/screenplay"')
@@ -618,7 +708,11 @@ class TheUploadStartsTheRead(unittest.TestCase):
         self.assertLess(b.index("usable) return;"), b.index("theRead.begin"))
 
     def test_a_failure_points_at_the_manual_door(self):
-        self.assertIn("build the design plan on", self.body())
+        """RULED 2026-10-07 (user): no on-page explanations or instructions. The failure toast
+        keeps the server's reason and drops the advice."""
+        b = self.body()
+        self.assertIn("toast(`The read did not finish: ${err.message}`, true);", b)
+        self.assertNotIn("build the design plan on", b)
 
     def test_the_scan_defaults_to_an_engine_this_studio_has(self):
         """Hardcoding gemini handed an OpenAI-only install a stated-
@@ -626,7 +720,15 @@ class TheUploadStartsTheRead(unittest.TestCase):
         i = self.MAIN.index('@app.post("/api/wizard/analyze")')
         seg = self.MAIN[i:i + 900]
         self.assertNotIn('body.get("provider", "gemini")', seg)
-        self.assertIn('generate.capability()["narrative"]', seg)
+        # The rule moved into one helper every narrative call shares
+        # (2026-10-04) — see test_narrative_calls_use_the_studios_engine.
+        self.assertIn("_narrative_provider(body)", seg)
+        j = self.MAIN.index("def _narrative_provider(")
+        self.assertIn("generate.narrative_default()",
+                      self.MAIN[j:self.MAIN.index("\n\n\n", j)])
+        gen = (ROOT / "app/generate.py").read_text(encoding="utf-8")
+        k = gen.index("def narrative_default(")
+        self.assertIn('capability()["narrative"]', gen[k:gen.index("\n\n\n", k)])
 
 
 class AHeldStepOffersNoNext(unittest.TestCase):
@@ -668,9 +770,13 @@ class KindsAreFullyWired(unittest.TestCase):
                           f"{kind} would render as an unstyled badge")
 
     def test_every_blocking_kind_has_a_support_line(self):
-        support = re.search(r"const BLOCK_SUPPORT = \{(.*?)\n\};", JS, re.S).group(1)
-        for kind in self.kinds_the_server_emits() - {"CARE"}:
-            self.assertIn(f"{kind}:", support, f"{kind} explains nothing")
+        """RULED 2026-10-07 (user): no on-page explanations or instructions. The support line
+        under the lead was an explanation and BLOCK_SUPPORT is gone; every
+        kind still renders its verb (above) and the server's own text."""
+        self.assertNotIn("BLOCK_SUPPORT", JS)
+        self.assertNotIn('class="next-support"', JS)
+        i = JS.index('<div class="next-text">${monoIds(esc(next.text))}</div>')
+        self.assertIn("BLOCK_VERBS[first.kind]", JS[i:i + 400])
 
 
 class OneAuthority(unittest.TestCase):

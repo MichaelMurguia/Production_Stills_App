@@ -793,6 +793,15 @@ def api_state() -> dict:
 
     blockers = insights.blocking()
     summary = insights.stage_summary(blockers)
+    # A gap that belongs to a stage the user has not reached is future
+    # work, not something they are failing at (user 2026-10-04: "When
+    # onboarding I do not want to be faced with an error at all" — the
+    # board layout master, a stage-05 input, was listed as BLOCKING at
+    # stage 02). The row stays in the data; Status lists it once its
+    # stage arrives.
+    frontier = insights.frontier_rank(summary)
+    for b in blockers:
+        b["ahead"] = insights.stage_rank(b) > frontier
     return {
         # The active production's name — never hardcoded.
         "project": paths._project_name(
@@ -1015,7 +1024,7 @@ async def api_wizard_swatches(body: dict) -> dict:
     langs = [str(x).strip() for x in (body.get("languages") or []) if str(x).strip()]
     try:
         return await run_in_threadpool(
-            wizard.generate_swatches, str(body.get("provider") or "gemini"),
+            wizard.generate_swatches, _narrative_provider(body),
             langs or None, str(body.get("note") or ""), bool(body.get("deep")))
     except autofill.AutofillError as e:
         raise HTTPException(409, str(e))
@@ -1344,6 +1353,9 @@ def _role_states(engines: dict) -> dict:
 
 @app.post("/api/settings")
 async def api_save_settings(body: dict) -> dict:
+    for f in ("gemini_api_key", "openai_api_key", "anthropic_api_key"):
+        if f in body and generate.malformed_key(str(body[f])):
+            raise HTTPException(400, generate.NOT_A_KEY)
     s = generate.load_settings()
     if "gemini_api_key" in body:
         s["gemini_api_key"] = str(body["gemini_api_key"]).strip()
@@ -1804,16 +1816,24 @@ async def api_test_settings(body: dict = None) -> dict:
     # a pass for a key the studio does not hold would be a lie on the row.
     key = str((body or {}).get("key", "") or "")
     record = not key
+    # "That is not a valid key." (user 2026-10-04) — 400, so the modal
+    # shows it as-is rather than as "<provider> refused it: <401 body>".
+    if generate.malformed_key(key):
+        raise HTTPException(400, generate.NOT_A_KEY)
     try:
         result = await run_in_threadpool(generate.test_connection, provider, key)
-    except generate.GenerationError as e:
-        if record:
-            _record_engine_test(provider, False, str(e))
-        raise HTTPException(422, str(e))
     except Exception as e:
+        if generate.key_refused(e):
+            status, msg = 400, (f"{generate.NOT_A_KEY[:-1]} — "
+                                f"{generate.provider_display_name(provider)} "
+                                "did not accept it.")
+        elif isinstance(e, generate.GenerationError):
+            status, msg = 422, str(e)
+        else:
+            status, msg = 502, f"{provider} connection failed: {e}"
         if record:
-            _record_engine_test(provider, False, str(e))
-        raise HTTPException(502, f"{provider} connection failed: {e}")
+            _record_engine_test(provider, False, msg)
+        raise HTTPException(status, msg)
     if record:
         _record_engine_test(provider, True)
     return result
@@ -2397,20 +2417,14 @@ async def api_save_style_bible(body: dict) -> dict:
     text = str(body.get("text", "")).strip()
     if not text:
         raise HTTPException(422, "style bible cannot be empty")
-    generate.save_style_bible(text + "\n")
     # The missing trigger (user-hit 2026-08-22, on a standard first-run
     # setup: pick the anchors, draft the Bible, press Generate a sample,
-    # and be refused). The sync ran on the interview save and at boot —
-    # but a Bible DRAFTED after the anchors was written by a model, in
-    # the model's own words, and nothing re-derived its Rendering
-    # Language afterwards. The anchor is the style; the section is its
-    # transcription; so it is re-derived the moment a Bible is saved,
-    # however it was written.
-    bible.sync_from_anchors()
-    state = store.load_app_state()
-    state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
-    store.save_app_state(state)
-    return {"text": text + "\n", "is_default": False, "rev": state["bible_rev"]}
+    # and be refused). A Bible DRAFTED after the anchors was written by a
+    # model in its own words, and nothing re-derived its Rendering
+    # Language afterwards — so save_document re-derives it on every save,
+    # however the Bible was written.
+    rev = bible.save_document(text)
+    return {"text": text + "\n", "is_default": False, "rev": rev}
 
 
 @app.post("/api/wizard/acts")
@@ -2420,7 +2434,7 @@ def api_name_acts(body: dict) -> dict:
     subjects to fill one field (user 2026-08-16)."""
     from . import wizard as _wiz
     try:
-        return _wiz.name_acts(str(body.get("provider") or "gemini"))
+        return _wiz.name_acts(_narrative_provider(body))
     except autofill.AutofillError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
@@ -2483,8 +2497,7 @@ async def api_suggest_anchors(body: dict = Body(default={})) -> dict:
     from . import wizard
     try:
         return await run_in_threadpool(
-            wizard.suggest_anchors,
-            str((body or {}).get("provider", "") or generate.DEFAULT_PROVIDER),
+            wizard.suggest_anchors, _narrative_provider(body),
             bool((body or {}).get("force")))
     except (autofill.AutofillError, generate.GenerationError) as e:
         raise HTTPException(422, str(e))
@@ -2501,8 +2514,7 @@ def api_bible_self_check(body: dict = None) -> dict:
     body = body or {}
     try:
         return wizard.bible_self_check(
-            str(body.get("text", "") or ""),
-            str(body.get("provider", "") or "gemini"))
+            str(body.get("text", "") or ""), _narrative_provider(body))
     except Exception as e:
         raise HTTPException(422, str(e))
 
@@ -2526,6 +2538,43 @@ def api_bible_sections() -> dict:
 @app.get("/api/subjects")
 def api_list_subjects() -> list[dict]:
     return store.list_subjects()
+
+
+@app.get("/api/design-languages/previews")
+def api_language_previews() -> dict:
+    """Every design-language card's thumbnail state, and which are DUE.
+    language_previews decides what spends; the client only asks."""
+    from . import language_previews
+    return language_previews.status()
+
+
+@app.post("/api/design-languages/previews/render")
+def api_language_preview_render(body: dict = Body(default={})) -> dict:
+    """Render one card's thumbnail (`kind`: language | environment). One
+    small image call on the studio's image engine."""
+    from . import language_previews
+    try:
+        return language_previews.render(
+            str((body or {}).get("name", "")),
+            str((body or {}).get("kind", "") or "language"))
+    except KeyError:
+        raise HTTPException(404, "no such design language")
+    except language_previews.PreviewError as e:
+        raise HTTPException(422, str(e))
+    except generate.GenerationError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/design-languages/previews/{slug}.png")
+def api_language_preview_image(slug: str):
+    from . import language_previews
+    try:
+        p = language_previews.image_path(slug)
+    except KeyError:
+        raise HTTPException(404)
+    if not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p, media_type="image/png")
 
 
 @app.get("/api/design-languages/examples")
@@ -2790,17 +2839,23 @@ def api_put_wizard_analysis(body: dict) -> dict:
     return {"ok": True}
 
 
+def _narrative_provider(body: dict | None) -> str:
+    """The text model a call uses when the caller names none: the
+    narrative engine this studio HAS. Hardcoding gemini meant an
+    OpenAI-only install got a stated-unavailable engine for any caller
+    that did not pass one (found 2026-08-20 wiring the upload's own read).
+
+    ONE rule for every narrative call. On 2026-10-04 the read had it and
+    four others still defaulted to gemini, so on an OpenAI-only studio the
+    anchor proposals failed on every arrival at stage 02, silently, and
+    the three cards sat blank (user-hit: "These are blank. Fix")."""
+    provider = str((body or {}).get("provider") or "")
+    return provider or generate.narrative_default()
+
+
 @app.post("/api/wizard/analyze")
 async def api_wizard_analyze(body: dict) -> dict:
-    # Default to the narrative engine this studio HAS. Hardcoding gemini
-    # meant an OpenAI-only install got a stated-unavailable engine for any
-    # caller that did not pass one (found 2026-08-20 wiring the upload's
-    # own read).
-    provider = body.get("provider") or ""
-    if not provider:
-        cap = generate.capability()["narrative"]
-        provider = (generate.load_settings().get("narrative_provider")
-                    or (cap["engines"][0] if cap["engines"] else "gemini"))
+    provider = _narrative_provider(body)
     try:
         analysis = await run_in_threadpool(wizard.analyze_screenplay, provider)
     except autofill.AutofillError as e:
@@ -2831,7 +2886,29 @@ async def api_wizard_analyze(body: dict) -> dict:
     # to a screenplay nobody read (see the recovery guard in app.js).
     analysis["screenplay_sha256"] = sp.get("sha256", "")
     store.save_wizard_analysis(analysis)
+    # The read is the first step of Process World Visualization, whose
+    # click is the consent for the rest (user 2026-10-04): Production
+    # Design now fills itself in the background, Bible first, then the
+    # thumbnails. Once per draft; asking twice never builds twice.
+    from . import world_build
+    world_build.start()
     return analysis
+
+
+@app.get("/api/world/status")
+def api_world_status() -> dict:
+    """Where the background world build is: each step, its detail, and a
+    one-line message for the Visualizing World screen."""
+    from . import world_build
+    return world_build.status()
+
+
+@app.post("/api/world/build")
+def api_world_build() -> dict:
+    """Start the world build if this draft has a read that was never
+    built. Idempotent — the screen calls it on arrival."""
+    from . import world_build
+    return world_build.start()
 
 
 # One question per anchor, plus the three no anchor can hold (user ruling

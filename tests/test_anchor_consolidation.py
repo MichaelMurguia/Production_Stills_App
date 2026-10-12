@@ -973,7 +973,7 @@ class TheKeyModalSaysWhatItIsDoing(unittest.TestCase):
         lie on the settings page."""
         main = (ROOT / "app/main.py").read_text(encoding="utf-8")
         i = main.index('@app.post("/api/settings/test")')
-        seg = main[i:i + 1200]
+        seg = main[i:main.index("\n\n\n", i)]  # the whole handler
         self.assertIn("record = not key", seg)
         self.assertIn("if record:", seg)
 
@@ -1262,10 +1262,14 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
     def test_each_states_its_nature_once(self):
         """Canon (2026-08-06): each door states its nature in Courier
         beside its name."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Each door is named
+        # by its head; the Courier nature line beside it was explanation.
         i = HTML.index('class="intake-doors"')
         seg = HTML[i:i + 6000]
-        self.assertIn("READS THE SCREENPLAY", seg)
-        self.assertIn("YOU FILL EVERYTHING", seg)
+        self.assertIn('<p class="door-head">Break it down for me</p>', seg)
+        self.assertIn('<p class="door-head">Blank sheet</p>', seg)
+        self.assertNotIn("READS THE SCREENPLAY", seg)
+        self.assertNotIn("YOU FILL EVERYTHING", seg)
 
     def test_amber_marks_the_stronger_door(self):
         """The merge's own complaint was that "amber sat on the superseded
@@ -1498,8 +1502,10 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
         b = self.blank()
         for gone in ("spec-new-source", "spec-new-panels", "spec-new-provider"):
             self.assertNotIn(gone, b, f"{gone} makes it a superset again")
-        self.assertIn("NOTHING IS READ", b)
-        self.assertIn("NO MODEL RUNS", HTML)
+        # The explanatory notes went (RULED 2026-10-07); the field set
+        # above is what keeps the blank door from being a superset.
+        self.assertNotIn("NOTHING IS READ", b)
+        self.assertNotIn("NO MODEL RUNS", HTML)
 
     def test_they_call_different_endpoints(self):
         """What actually makes them two acts rather than one form."""
@@ -1514,17 +1520,16 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
     def test_each_states_what_it_does_to_the_work(self):
         """A1: a label names its effect, not its filing destination.
         RULE_PASS_2 C5 took the first person out of it."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The field LABELS
+        # stay; every Courier note that explained a field is gone.
         a = self.auto()
-        self.assertIn("SCREENPLAY IS READ FOR IT", a)
-        self.assertIn("PASTE WINS — SCRIPT NOT READ", a)
-        self.assertIn("EMPTY — CONTENT DECIDES", a)
-        # Was "A NAME ONLY" until 2026-08-24. That named the field's TYPE,
-        # not its effect — the rule this test exists for — and it read as
-        # an instruction to invent one, which is what happened in the first
-        # user test ("I don't have the vocabulary to understand what this
-        # should actually be") even though the field fills itself.
-        self.assertIn("NAMED FROM YOUR SCENE", a)
-        self.assertIn("EDIT IF YOU LIKE", a)
+        for label in ("What should I get?", "Or paste a section",
+                      "Panels to include", "Spec ID"):
+            self.assertIn(label, a, label)
+        for note in ("SCREENPLAY IS READ FOR IT", "PASTE WINS — SCRIPT NOT READ",
+                     "EMPTY — CONTENT DECIDES", "NAMED FROM YOUR SCENE",
+                     "EDIT IF YOU LIKE"):
+            self.assertNotIn(note, a, note)
 
     def test_the_section_carries_a_way_to_read_the_screenplay(self):
         self.assertIn('id="spec-auto-open-screenplay"', self.auto())
@@ -1551,9 +1556,13 @@ class TheBreakdownHasTwoDoors(unittest.TestCase):
     def test_an_empty_auto_door_says_where_to_go(self):
         """It cannot make an empty sheet any more, so it must not fail
         silently — it names the door that can."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The refusal keeps
+        # its reason; the pointer to the other door was advice and went.
         i = JS.index('$("#spec-auto-form").addEventListener("submit"')
         seg = JS[i:i + 900]
-        self.assertIn("use Blank sheet beside it", seg)
+        self.assertIn('toast("No brief and no pasted section", true)', seg)
+        self.assertIn("return;", seg[seg.index("No brief and no pasted section"):])
+        self.assertNotIn("use Blank sheet beside it", seg)
 
     def test_each_door_keeps_its_own_draft(self):
         """One localStorage key would restore half a form into the wrong

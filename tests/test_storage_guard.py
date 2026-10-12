@@ -129,7 +129,10 @@ class TheReadoutUI(unittest.TestCase):
         self.assertIn('tight ? "bad" : s.low ? "hold" : ""', JS[i:i + 120])
 
     def test_it_says_how_to_reclaim(self):
-        self.assertIn("Reject a take, then Delete", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The readout states
+        # the space; the instruction under it went.
+        self.assertNotIn("Reject a take, then Delete", JS)
+        self.assertIn("ROOM FOR ~${takes} MORE 4K TAKE", JS)
 
 
 if __name__ == "__main__":

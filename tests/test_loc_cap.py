@@ -95,9 +95,9 @@ class SourceImplementsTheRule(unittest.TestCase):
 
     def test_the_group_header_states_the_cap_while_collapsed(self):
         self.assertIn("SHOWING ${cut.shown.length}", JS)
-        # the grouping moved from environment to ACT (user 2026-08-16);
-        # the cap and the way it states itself are unchanged
-        self.assertIn("FIVE SHOWN PER ACT", JS)
+        # Since 2026-10-04 the acts are tabs and a tab shows its whole act;
+        # the cap still governs a search's grouped results.
+        self.assertIn("capList(locs, g.key, { searching: true })", JS)
 
     def test_one_helper_serves_both_lists(self):
         """The locations table and the modal's inheriting list must not

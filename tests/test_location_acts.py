@@ -114,7 +114,7 @@ class TheListIsChronological(unittest.TestCase):
 class FivePerActWithAnExpand(unittest.TestCase):
     def body(self):
         i = JS.index("// Grouped by ACT")
-        return JS[i:i + 9200]   # grew again with the 2026-09-14 copy fixes
+        return JS[i:JS.index("// Flat (plan P4)", i)]   # the whole act-grouped branch
 
     def test_it_groups_on_the_acts_the_server_derived(self):
         b = self.body()
@@ -125,12 +125,14 @@ class FivePerActWithAnExpand(unittest.TestCase):
         b = self.body()
         self.assertIn("a.title ?", b, "no title, no dash")
 
-    def test_five_shown_then_an_expand(self):
+    def test_a_tab_shows_its_whole_act_and_a_search_keeps_the_cap(self):
+        """2026-10-04: the acts are tabs, so a tab has the room for every
+        location in its act. A search reads across acts and keeps the
+        app's one capping rule."""
         b = self.body()
-        self.assertIn("capList(locs, g.key", b)
+        self.assertIn("capList(locs, g.key, { searching: true })", b)
+        self.assertIn("{ shown: locs, hidden: 0, capped: false }", b)
         self.assertIn("capRow(g.key", b)
-        self.assertIn("FIVE SHOWN PER ACT", b)
-        # the cap itself is the app's one capping rule, not a second one
         self.assertIn("const LOC_CAP = 5;", JS)
 
     def test_the_head_keeps_only_what_is_true_of_the_whole_strip(self):
@@ -140,7 +142,7 @@ class FivePerActWithAnExpand(unittest.TestCase):
         Position alone does not disclose, and a head three groups above the
         thing it describes discloses less than position."""
         b = self.body()
-        self.assertIn("FIVE SHOWN PER ACT", b)
+        self.assertNotIn("FIVE SHOWN PER ACT", b, "a tab shows its whole act")
         self.assertNotIn("NAMES FROM THE SCENE SCAN", b)
 
     def test_a_location_with_no_scene_is_a_register_not_an_act(self):
@@ -148,7 +150,7 @@ class FivePerActWithAnExpand(unittest.TestCase):
         group under a head reading EACH BECOMES ONE BREAKDOWN, the count
         and the claim disagreed. It sits below the acts, labelled."""
         b = self.body()
-        self.assertIn("NOT IN ANY SLUGLINE", b)
+        self.assertIn("NOT IN ANY SCENE HEADING", b)
         self.assertIn("register: true", b)
 
     def test_the_environment_is_still_reachable_per_row(self):
@@ -190,6 +192,45 @@ class NamesComeFromTheReadingWhenTheScriptPrintsNone(unittest.TestCase):
         identical — so the marker rides the heading it qualifies."""
         self.assertIn('loc-read mono">READ', JS)
         self.assertIn('g.titleFrom === "scan"', JS)
+
+
+class TheActsAreAWorkbook(unittest.TestCase):
+    """User 2026-10-04: "a tabbed workbook section. Tabs are acts. The
+    acts contain the locations." """
+
+    def body(self):
+        i = JS.index("// Grouped by ACT")
+        return JS[i:JS.index("// Flat (plan P4)", i)]
+
+    def test_one_tab_per_act_and_the_register_last(self):
+        b = self.body()
+        self.assertIn("tabs: needle => {", b)
+        self.assertIn('g.register ? "NOT IN A SCENE HEADING" : g.label', b)
+        self.assertIn('role="tab"', b)
+
+    def test_only_the_chosen_act_is_listed(self):
+        self.assertIn("grouped.filter(g => needle || g.key === locActKey())", self.body())
+
+    def test_the_chosen_tab_is_remembered_per_production(self):
+        b = self.body()
+        self.assertIn('uiGet("locAct", "")', b)
+        self.assertIn('uiSet("locAct", t.dataset.tab)', b)
+
+    def test_a_search_reads_every_act(self):
+        """A search must never hide a match in another tab."""
+        b = self.body()
+        self.assertIn("needle ? g.locs.filter(x => x.toUpperCase().includes(needle)).length", b)
+
+    def test_the_finder_places_tabs_above_the_table(self):
+        i = JS.index("function buildLocFinder(host, cfg)")
+        seg = JS[i:i + 900]
+        self.assertLess(seg.index('data-f="loc-tabs"'), seg.index("${cfg.headRow"))
+
+    def test_selection_is_ink_never_amber(self):
+        css = (ROOT / "app/static/styles.css").read_text(encoding="utf-8")
+        b = css.split("\n.loc-tab.on {")[1].split("}")[0]
+        self.assertIn("var(--ink)", b)
+        self.assertNotIn("accent", b)
 
 
 if __name__ == "__main__":

@@ -24,10 +24,10 @@ the fix. Tests never touch a real install: `app.paths` is redirected to a
 temp home and external services are faked.
 
 
-**2849 tests** across 141 files.
+**2866 tests** across 143 files.
 
 
-## Product app — 2617 tests in 123 files
+## Product app — 2636 tests in 126 files
 
 | File | Tests | What it holds |
 |---|---:|---|
@@ -47,7 +47,7 @@ temp home and external services are faked.
 | `test_backup_security.py` | 7 | Backup roundtrip + security invariants: no keys in backups, zip-slip refused, restore never overwrites, traversal ids 404, headers present, and the re |
 | `test_bible.py` | 5 | Bible section model: every non-system ## section is a design language, environments ride the level-3 container, and render_context injects in the docu |
 | `test_bible_editor.py` | 26 | The Art Direction Bible panel: one button, at the top, four verbs. |
-| `test_bible_reader.py` | 23 | The Bible is written as markdown and read as a document. |
+| `test_bible_reader.py` | 28 | The Bible is written as markdown and read as a document. |
 | `test_bible_selection.py` | 22 | R1 — selection, not truncation. |
 | `test_bible_self_check.py` | 23 | R2 — does the Art Direction Bible agree with itself? |
 | `test_brief_amend.py` | 9 | The panel brief is editable BETWEEN takes (user 2026-08-08). |
@@ -63,10 +63,11 @@ temp home and external services are faked.
 | `test_connectors.py` | 19 | Connector registry, state derivation, filters, enable rules (N1) — all against a temp install home; no network anywhere in this file. |
 | `test_consolidate_revisions.py` | 29 | Collapsing a revision chain into one breakdown (user ruling 2026-08-16, "Yes Collapse", asked for concretely 2026-08-16: "I still have 2 CANYON_GRM br |
 | `test_correction_intake.py` | 14 | Correction intake (2026-08-13): a rejection becomes structure. |
-| `test_credential_blocker.py` | 64 | A missing credential is a blocker (user ruling 2026-08-18). |
+| `test_credential_blocker.py` | 71 | A missing credential is a blocker (user ruling 2026-08-18). |
 | `test_credentials_stay_put.py` | 19 | A pasted API key must not leave the machine it was pasted on. |
 | `test_debug_tools.py` | 8 | Debug tools (user request 2026-08-03): the mock engine — the whole pipeline scan → bible → breakdown → panels → board on static content, zero model ca |
 | `test_deep_links.py` | 9 | Every stage and selection is a shareable URL (user 2026-08-12): /panels/SPEC-0001, /boards/SPEC-0001/BOARD-0002, /boards/SPEC-0001/arrange. |
+| `test_design_language_thumbnails.py` | 18 | Every design-language card gets a thumbnail before any panel exists. |
 | `test_design_tokens.py` | 124 | Mechanical token assertions (design-verify step 4, standing suite). |
 | `test_docs_are_current.py` | 4 | Documentation that can go stale is derived, not restated. |
 | `test_engine_sends_plates.py` | 12 | Which engines put the reference IMAGES in front of the image model. |
@@ -81,14 +82,17 @@ temp home and external services are faked.
 | `test_image_variants.py` | 22 | Display-tier image serving (app.imaging + candidate/reference resolvers). |
 | `test_ledger_ui.py` | 15 | Evidence ledger + workbench scope UX (user 2026-08-13) — JS pins. |
 | `test_loc_cap.py` | 20 | A long list shows its head and states its tail (SCAN_CONSOLIDATION §3). |
-| `test_location_acts.py` | 21 | The location list reads in acts, chronologically (user 2026-08-16: "LOCATION list should be divided into 3 acts if they can be derived from the screen |
+| `test_location_acts.py` | 27 | The location list reads in acts, chronologically (user 2026-08-16: "LOCATION list should be divided into 3 acts if they can be derived from the screen |
 | `test_lock_is_not_freeze.py` | 13 | A LOCK is not a FREEZE. |
 | `test_looks.py` | 19 | Board looks (2026-08-13): a look is a persisted sheet-level property that survives arrangement commits; dress is PURE DERIVATION resolved from canon a |
 | `test_medium_guard.py` | 4 | Regression (user-hit 2026-08-06): a bake-off sample rendered photo-real past an attached BOARD_RENDERING_STYLE anchor. |
 | `test_name_acts.py` | 16 | Naming the acts is its own small call (user 2026-08-16: "No Act Titles", reported on an analysis that predates the field). |
 | `test_narrative.py` | 12 | F6 backend (narrative via OpenRouter/Claude): the narrative role runs on the stored Anthropic key or the OpenRouter connection — dispatch, gating, set |
+| `test_narrative_calls_use_the_studios_engine.py` | 3 | Every narrative call with no provider named uses the studio's engine. |
 | `test_no_control_bytes.py` | 2 | No control bytes in source. |
+| `test_no_on_page_explanations.py` | 16 | RULED (user) 2026-10-07: no on-page explanations or instructions. |
 | `test_no_scroll_jump.py` | 7 | Redrawing the panels host must not throw the reader to the top (user 2026-08-16: "when I click on the frames in the strip the page jumps to the top. |
+| `test_not_a_valid_key.py` | 11 | A key the provider does not recognise reads "That is not a valid key." User-hit 2026-10-04, in the connect-a-key modal: the previous error |
 | `test_object_ref_detach.py` | 22 | A required object can be ruled NOT covered by a reference group (user 2026-08-16: "I have reference for 'airlock hatch behind Sal' and its green but t |
 | `test_object_ref_matching.py` | 11 | One rule for "does this phrase name that thing", shared by every surface that asks (user-caught 2026-08-16: a panel with the required object "Sal's ey |
 | `test_one_resolved_manifest.py` | 18 | One fact, one computation — the manifest, the count, and the arrange room's SHORT verdict. |
@@ -119,7 +123,7 @@ temp home and external services are faked.
 | `test_saved_prompt_follows_art_direction.py` | 12 | Regression, user-hit 2026-08-22 and reproduced end to end. |
 | `test_scan_screenplay.py` | 32 | Tell the app anything about a panel; it re-reads the screenplay. |
 | `test_scene_anchor.py` | 14 | Scene anchor regression (user-hit 2026-08-06): a breakdown run for "INT_BRIEFING_ROOM_DAY_V01" drafted the crash site. |
-| `test_screenplay_formats.py` | 4 | The four formats the app claims, actually read. |
+| `test_screenplay_formats.py` | 9 | The five formats the app claims, actually read. |
 | `test_screenplay_two_copies.py` | 6 | Two copies of the screenplay, and only one of them costs money (user rule, 2026-08-16). |
 | `test_secrets_at_rest.py` | 30 | Credentials are wrapped on disk, and the app never lies about whether. |
 | `test_sheet.py` | 70 | The sheet grammar (SHEET_SYSTEM_PLAN §12 + tech spec §7, amended by the Lookbook rollback 2026-08-12): the size ladder with the R1 elastic/fixed rulin |
@@ -141,9 +145,9 @@ temp home and external services are faked.
 | `test_swatches.py` | 13 | Color swatches (NON-CANON widget, user-directed 2026-08-05): the swatch reference endpoint renders pure solid pixels with the facts in the notes; prop |
 | `test_take_bar.py` | 20 | The take action bar — one verdict, two lists, no wrap (mock 17a, 2026-08-08; supersedes the 14a comparison contract in this file's own history). |
 | `test_text_overrides_publish.py` | 17 | An admin's text edit reaches every studio at the next redeploy. |
-| `test_the_anchor_row_shows_what_was_chosen.py` | 43 | The anchor cards wear the look they were set to. |
+| `test_the_anchor_row_shows_what_was_chosen.py` | 42 | The anchor cards wear the look they were set to. |
 | `test_the_character_screen_asks_for_a_verdict.py` | 38 | A character's own screen, and the verdict it asks for. |
-| `test_the_findings_read_in_order.py` | 23 | The findings show what the read found, not just how much of it. |
+| `test_the_findings_read_in_order.py` | 22 | The findings show what the read found, not just how much of it. |
 | `test_the_pdf_never_reaches_a_model.py` | 12 | The raw upload is for the user to read. |
 | `test_the_read_is_paced_and_the_logline_leads.py` | 26 | The read stops pretending to take a minute, and the logline leads. |
 | `test_the_release_review_findings.py` | 54 | Eight defects found reviewing the 2026.08.05.90 batch, and their fixes. |
@@ -154,6 +158,7 @@ temp home and external services are faked.
 | `test_what_the_take_rendered_from.py` | 9 | C4 — a take can say what it was actually rendered from. |
 | `test_withdraw_approval_ui.py` | 13 | An approved panel can go back to draft WITHOUT being rejected (user 2026-08-16: "I need to be able to put an approved panel back into draft without ha |
 | `test_wizard_merge.py` | 5 | Re-run merge semantics (Gap 5 rulings): confirmed work survives by name, fresh finds arrive PROPOSED, answered questions are never touched. |
+| `test_world_build.py` | 26 | Process World Visualization: Production Design fills itself in. |
 
 
 ## Storefront — 232 tests in 18 files

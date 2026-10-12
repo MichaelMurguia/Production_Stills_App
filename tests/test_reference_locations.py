@@ -59,7 +59,7 @@ class TheRegister(unittest.TestCase):
         i = JS.index("function buildUnanchoredRegister")
         block = JS[i:JS.index("function buildUncastCard", i)]
         self.assertIn("loc-register", block)
-        self.assertIn("UNANCHORED · FROM THE SCREENPLAY'S SLUGLINES", block)
+        self.assertIn("UNANCHORED · FROM THE SCREENPLAY'S SCENE HEADINGS", block)
         self.assertNotIn("subj-card", block)
 
     def test_its_one_act_prefills_head_and_title(self):
@@ -70,8 +70,14 @@ class TheRegister(unittest.TestCase):
         self.assertIn('class="text-act"', block)
 
     def test_the_footer_states_the_jurisdiction(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The footer explained
+        # the register; it went. Casting stays subjects-only in BEHAVIOUR:
+        # the register's one act prefills LOCATION_GEOMETRY, never a cast.
         i = JS.index("function buildUnanchoredRegister")
-        self.assertIn("CASTING STAYS SUBJECTS-ONLY", JS[i:i + 2400])
+        seg = JS[i:JS.index("\n}\n", i)]   # the function alone
+        self.assertNotIn("CASTING STAYS SUBJECTS-ONLY", seg)
+        self.assertIn('addReferenceDialog({ head: "LOCATION_GEOMETRY"', seg)
+        self.assertNotIn("castSubject", seg)
 
     def test_the_dialog_accepts_the_prefill(self):
         # Signature extended 2026-08-14 (add-reference-in-place): approve

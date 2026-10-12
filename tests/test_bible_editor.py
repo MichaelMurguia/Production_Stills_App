@@ -221,15 +221,21 @@ class TheActIsWatched(unittest.TestCase):
         phase strip already say the same thing without a sentence, and
         the read panel keeps the fuller statement where it is the only
         thing on screen."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The spinner says
+        # what is happening in its label alone.
         b = self.body()
-        self.assertIn("Writing the Art Direction Bible from the anchors", b)
+        self.assertIn('writing: "Writing the Art Direction Bible"', b)
+        self.assertNotIn("from the anchors", b)
         self.assertNotIn("it reports nothing", b)
 
     def test_the_local_phases_carry_real_work(self):
         """The ladder is the production's actual design languages and the
         page is the director's actual answers — nothing invented."""
         b = self.body()
-        self.assertIn("ASSEMBLED HERE — NOTHING SENT ANYWHERE YET", b)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The phase note is
+        # a state label; the "nothing sent" explanation went.
+        self.assertIn('assemble: "ASSEMBLED"', b)
+        self.assertNotIn("NOTHING SENT ANYWHERE YET", b)
         self.assertIn("THE DIRECTOR'S ANSWERS", b)
         self.assertIn("SECTIONS WRITTEN", b)
 

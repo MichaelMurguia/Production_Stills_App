@@ -271,12 +271,15 @@ class AProposalShowsTheLookItProposes(unittest.TestCase):
         self.assertIn(".anchor-hero.proposed .ah-scrim { display: none; }", CSS)
         self.assertIn('hero.classList.toggle("proposed", !!prop);', JS)
 
-    def test_both_answers_end_the_proposal_and_repaint(self):
+    def test_every_answer_ends_the_proposal_and_repaints(self):
         seg = between("const showProposals =", "const showTakeover =")
-        # Both go through `anchorAnswered`, which deletes the proposal,
-        # removes the overlay and repaints — one function, since a
-        # catalogue pick has to do exactly the same thing (2026-09-11).
-        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 2)
+        # Accepting goes through `anchorAnswered`, which deletes the
+        # proposal, removes the overlay and repaints — one function, since
+        # a catalogue pick has to do exactly the same thing (2026-09-11).
+        # The other verb is Change (2026-10-04): it opens the picker, and
+        # the pick it leads to is the catalogue caller, outside this block.
+        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 1)
+        self.assertIn("if (opts.uploadRole) anchorAnswered(opts.uploadRole);", JS)
         self.assertEqual(seg.count("refreshRefs();"), 1, "the first paint")
 
 
@@ -392,13 +395,20 @@ class ThePeriodSaysWhatTheReadFound(unittest.TestCase):
         for gone in ("WW2 aircraft", "far-future salt pan"):
             self.assertNotIn(gone, JS, gone)
 
-    def test_an_unset_period_says_the_read_looked(self):
-        self.assertIn("The read found no period stated in the screenplay",
-                      self.seg())
+    def test_the_card_carries_no_explanation(self):
+        """User 2026-10-07: "On production tab get rid of this, 'Every
+        render is held to this — nothing in frame may postdate it.' ...
+        No explanations or instructions." The card is the label, the value
+        and its verb."""
+        s = self.seg()
+        for gone in ("Every render is held to this",
+                     "The read found no period stated in the screenplay"):
+            self.assertNotIn(gone, s, gone)
+        self.assertIn('<span class="rp-val mono">', s)
 
-    def test_a_set_period_says_nothing(self):
-        """User 2026-09-28: "Get rid of this stuff." The value is enough."""
-        self.assertNotIn("postdate", JS)
+    def test_unstated_is_not_treated_as_a_value(self):
+        """The scan is TOLD to answer UNSTATED when the screenplay does not
+
 
     def test_unstated_is_not_treated_as_a_value(self):
         """The scan is TOLD to answer UNSTATED when the screenplay does not

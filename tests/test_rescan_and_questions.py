@@ -139,10 +139,12 @@ class AnsweredQuestionsReachThePrompt(_IsolatedStyleContext):
     def test_the_copy_no_longer_contradicts_itself(self):
         js = (ROOT / "app/static/app.js").read_text(encoding="utf-8")
         self.assertNotIn("decide them yourself or run a DESIGN_EXPLORATION board", js)
-        # The mode-aware copy survives; STEP_SEQUENCE_SPEC §3.2 made the
-        # step's own note Courier, so it states the same thing in caps.
-        self.assertIn("EXPLORING IS HOW YOU DECIDE THEM", js)
-        self.assertIn("ANSWER ONE AND IT BECOMES CANON", js)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The step's note
+        # went; the mode-aware copy survives in the answer MODAL, which
+        # the ruling keeps.
+        self.assertNotIn("EXPLORING IS HOW YOU DECIDE THEM", js)
+        self.assertIn("A design exploration is where these get decided", js)
+        self.assertIn("An answer becomes canon for this", js)
         self.assertIn('data-f="answer-qs"', js)
 
     def test_the_answer_verb_does_not_spend_amber(self):

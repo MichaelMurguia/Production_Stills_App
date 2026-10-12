@@ -118,6 +118,17 @@ class NothingUnverifiableSurvives(unittest.TestCase):
         every visit to the tab would spend — a bill that grows by
         navigation rather than by work."""
         from app import autofill, store
+        import tempfile
+        from pathlib import Path as _P
+        sys.path.insert(0, str(ROOT / "tests"))
+        from test_app_api import _redirect_home, _restore_home
+        # Its own home, with a screenplay: the cache is keyed on the
+        # script's hash, and without one this passed only when an earlier
+        # test happened to leave a screenplay behind (found 2026-10-04 —
+        # it failed alone and passed in the full run).
+        _redirect_home(_P(tempfile.mkdtemp(prefix="sb-sugg-")))
+        self.addCleanup(_restore_home)
+        store.set_screenplay("s.txt", b"INT. HANGAR - NIGHT\n")
         calls = []
         was_draft, was_text = autofill._draft, store.screenplay_text_cached
         try:
@@ -205,16 +216,28 @@ class AProposalIsNotAnAnswer(unittest.TestCase):
         self.assertIn("fld.value = p.value", seg)
         self.assertIn('new Event("change", { bubbles: true })', seg)
 
-    def test_dismissing_gives_the_card_back_its_empty_state(self):
-        """The proposal's picture went with it, because it WAS the
-        proposal — the card must not keep wearing a look nobody took."""
+    def test_the_verbs_are_use_this_and_change(self):
+        """User 2026-10-04: the links are "Use this" and "Change", not
+        "Dismiss". Change opens the card's own picker — the one the card
+        itself opens — rather than dropping the proposal."""
         i = JS.index("const showProposals =")
         seg = JS[i:JS.index("const showTakeover =", i)]
-        self.assertIn('$("[data-f=drop]", box).onclick = () => {', seg)
-        # Both doors call the one function that ends a proposal — the
-        # catalogue pick is a third caller, outside this block (2026-09-11).
-        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 2,
-                         "accepting ends the proposal too")
+        self.assertIn('data-f="use">Use this</button>', seg)
+        self.assertIn('data-f="change">Change</button>', seg)
+        self.assertNotIn("Dismiss</button>", seg)
+        j = seg.index('$("[data-f=change]", box).onclick')
+        self.assertIn('$(".pick-btn", col)', seg[j:j + 300])
+        # Only accepting ends the proposal here. Change leaves it standing
+        # until the catalogue pick ends it (that caller is outside this
+        # block, 2026-09-11), so backing out of the picker loses nothing.
+        self.assertEqual(seg.count("anchorAnswered(ANCHOR_ROLE[field]);"), 1)
+
+    def test_a_click_on_the_box_never_reaches_the_card(self):
+        """The box sits inside the card's button, so a click on "Use this"
+        also ran the card's own click and opened the picker on top."""
+        i = JS.index("const showProposals =")
+        seg = JS[i:JS.index("const showTakeover =", i)]
+        self.assertIn('box.addEventListener("click", e => e.stopPropagation());', seg)
 
     def test_a_proposal_is_hold_and_never_amber(self):
         """It is the thing needing attention and says so in `--hold`, the
@@ -269,7 +292,10 @@ class ColourLeftStepOne(unittest.TestCase):
 
     def test_the_swatch_result_no_longer_points_away(self):
         """The act and its result are one step apart no more."""
-        self.assertIn("LANDS IN STEP 4 / COLOUR, BESIDE THIS", JS)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The standing line
+        # went; the result line names where they landed.
+        self.assertNotIn("LANDS IN STEP 4 / COLOUR, BESIDE THIS", JS)
+        self.assertIn("PROPOSED IN COLOR PALETTE · ", JS)
 
     def test_the_render_shelf_is_still_four(self):
         """A palette reference still rides every render. Moving a card
@@ -357,9 +383,6 @@ class EitherDoorEndsTheProposal(unittest.TestCase):
         i = JS.index('$("[data-f=use]", box).onclick')
         self.assertIn("anchorAnswered(ANCHOR_ROLE[field]);", JS[i:i + 600])
 
-    def test_dismissing_uses_it(self):
-        i = JS.index('$("[data-f=drop]", box).onclick')
-        self.assertIn("anchorAnswered(ANCHOR_ROLE[field]);", JS[i:i + 400])
 
     def test_the_catalogue_pick_uses_it_too(self):
         """The door that did not, and the whole of this bug."""

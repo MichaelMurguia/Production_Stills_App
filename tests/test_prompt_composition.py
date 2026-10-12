@@ -85,8 +85,11 @@ class ThePanelShowsIt(unittest.TestCase):
         """A number without a consequence is trivia."""
         i = JS.index('const comp = $("[data-f=composition]", report);')
         seg = " ".join(JS[i:i + 1600].split())
-        self.assertIn("competes with the ones that do", seg)
-        self.assertIn("is not neutral", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The numbers stand
+        # on their own; the sentence about why they matter went.
+        self.assertNotIn("competes with the ones that do", seg)
+        self.assertNotIn("is not neutral", seg)
+        self.assertIn("MADE OF · ${cm.total.toLocaleString()} CHARACTERS", seg)
 
     def test_the_bar_is_a_measurement_not_a_verdict(self):
         """No block is good or bad on its own, so nothing here is painted

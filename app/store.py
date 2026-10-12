@@ -289,6 +289,140 @@ def page_of(offset: int) -> int:
     return bisect.bisect_right(offs, offset) if offs else 0
 
 
+def _decode_html(raw: bytes) -> str:
+    """Bytes to text the way a browser would: BOM first, then the page's
+    own declared charset, then UTF-8. Script archives are old pages, and a
+    windows-1252 one decoded as UTF-8 turns every curly quote into U+FFFD."""
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8", "replace")
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16", "replace")
+    m = re.search(rb"""charset\s*=\s*["']?([A-Za-z0-9_.:-]+)""", raw[:4096], re.I)
+    for enc in ([m.group(1).decode("ascii")] if m else []) + ["utf-8"]:
+        try:
+            return raw.decode(enc)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return raw.decode("cp1252", "replace")
+
+
+def _html_screenplay_text(raw: bytes) -> str:
+    """A screenplay saved as a web page, as the plain text a .txt of the
+    same script would hold.
+
+    - `<pre>` keeps its layout exactly. Script archives (IMSDb and its
+      kind) publish the whole script in one, and the indentation is the
+      script's structure.
+    - When `<pre>` holds most of the page's text, it IS the script and the
+      rest — site menus, ads, footers — is dropped rather than billed.
+    - Otherwise block elements become paragraphs separated by a blank
+      line, the shape a plain-text script has.
+    - An element whose class names a scene heading or a cue (`slug`,
+      `scene-heading`, `cue`, ...) is upper-cased: exporters style both
+      with text-transform, and the slugline and cue parsers only see
+      capitals.
+    - Inside a `dialogue` block the cue, parenthetical and line sit on
+      consecutive lines, as a printed script sets them.
+    """
+    from html.parser import HTMLParser
+
+    skip = {"script", "style", "title", "noscript", "template", "svg",
+            "nav", "footer", "iframe", "select", "button", "textarea"}
+    block = {"p", "div", "section", "article", "main", "header", "aside",
+             "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "dl",
+             "dt", "dd", "tr", "table", "blockquote", "center", "hr",
+             "figure", "figcaption", "body"}
+    void = {"br", "hr", "img", "meta", "link", "input", "area", "base",
+            "col", "embed", "source", "track", "wbr", "param"}
+    capitals = re.compile(r"\b(slug(line)?|scene[\s_-]*head(ing)?|cue)\b", re.I)
+    dialogue = re.compile(r"dialog", re.I)
+
+    class _Script(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.out: list[str] = []
+            self.pres: list[str] = []
+            self.pre_buf: list[str] = []
+            self.pre_depth = 0
+            # (tag, upper-case its text, inside it lines sit tight)
+            self.stack: list[tuple[str, bool, bool]] = []
+
+        def _break(self, n: int) -> None:
+            # Breaks merge rather than stack: one element's close and the
+            # next one's open are one boundary, not two.
+            if any(tight for _, _, tight in self.stack):
+                n = 1
+            if self.out and not self.out[-1].strip("\n"):
+                self.out[-1] = "\n" * max(len(self.out[-1]), n)
+            else:
+                self.out.append("\n" * n)
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "br":
+                self._break(1)
+                if self.pre_depth:
+                    self.pre_buf.append("\n")
+                return
+            if tag in block:
+                self._break(2)
+            if tag == "pre":
+                self._break(2)
+                self.pre_depth += 1
+            if tag in void:
+                return
+            a = dict(attrs)
+            names = f"{a.get('class') or ''} {a.get('id') or ''}"
+            self.stack.append((tag, bool(capitals.search(names)),
+                               bool(dialogue.search(names))))
+
+        def handle_endtag(self, tag):
+            if tag in block:
+                self._break(2)
+            if tag == "pre" and self.pre_depth:
+                self.pre_depth -= 1
+                self._break(2)
+                if not self.pre_depth:
+                    self.pres.append("".join(self.pre_buf))
+                    self.pre_buf = []
+            # Pop back to the matching open tag: HTML leaves <p> and <li>
+            # unclosed, and a missed close must not strand a skip.
+            for i in range(len(self.stack) - 1, -1, -1):
+                if self.stack[i][0] == tag:
+                    del self.stack[i:]
+                    break
+
+        def handle_data(self, data):
+            if any(t in skip for t, _, _ in self.stack):
+                return
+            if any(up for _, up, _ in self.stack):
+                data = data.upper()
+            if self.pre_depth:
+                self.out.append(data)
+                self.pre_buf.append(data)
+                return
+            data = re.sub(r"\s+", " ", data)
+            if not self.out or self.out[-1].endswith("\n"):
+                data = data.lstrip()
+            if data:
+                self.out.append(data)
+
+    def tidy(text: str) -> str:
+        text = text.replace("\xa0", " ").replace("\r\n", "\n").replace("\r", "\n")
+        text = "\n".join(line.rstrip() for line in text.split("\n"))
+        return re.sub(r"\n{3,}", "\n\n", text).strip("\n")
+
+    parser = _Script()
+    parser.feed(_decode_html(raw))
+    parser.close()
+    if parser.pre_buf:  # a <pre> the page never closed
+        parser.pres.append("".join(parser.pre_buf))
+    page = tidy("".join(parser.out))
+    pre = tidy("\n\n".join(parser.pres))
+    if pre.strip() and len(pre) >= 0.5 * len(page):
+        return pre
+    return page
+
+
 def _extract_screenplay_text(p: Path) -> str:
     """The screenplay's plain text — the model-efficient format. A PDF
     billed to a model costs per PAGE (image + text); the same script as
@@ -332,6 +466,15 @@ def _extract_screenplay_text(p: Path) -> str:
                 return text
         except Exception:
             pass  # not parseable as Final Draft — fall through to raw text
+    if p.suffix.lower() in (".html", ".htm"):
+        # A web page is markup around a script, and the markup is billed on
+        # every model call just as FDX's was. Converted once, here. Unlike
+        # FDX there is no raw fallback: raw HTML is the thing being avoided,
+        # and empty is the documented "nothing readable" signal.
+        try:
+            return _html_screenplay_text(p.read_bytes())
+        except Exception:
+            return ""
     try:
         return p.read_bytes().decode("utf-8", "replace")
     except Exception:

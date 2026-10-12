@@ -322,7 +322,10 @@ class AppearsInSaysWhatItCannotKnow(unittest.TestCase):
     def test_it_states_the_blocker(self):
         i = JS.index("const appearsIn = () => {")
         seg = JS[i:JS.index(NL + "  };", i)]
-        self.assertIn("NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN", seg)
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The blocker is a
+        # label now, not the sentence about what would produce it.
+        self.assertIn("NONE YET", seg)
+        self.assertNotIn("NOT UNTIL THIS SUBJECT IS ON A BREAKDOWN", seg)
 
     def test_it_does_not_guess_from_a_name(self):
         i = JS.index("const appearsIn = () => {")
@@ -472,9 +475,18 @@ class TheGenerateGateReadsBeforeItIsHit(unittest.TestCase):
         reads `1 RENDER`, or the refusal, never both. A refusal stays a
         sentence — that is the app accounting for itself, which the same
         plan explicitly keeps."""
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Cost lines went
+        # with them, so the open card states nothing and the blocked card
+        # states only its gate label + the link that fixes it.
         i = JS.index('cd-spend cd-blocked')
         seg = JS[max(0, i - 400):i + 600]
-        self.assertLess(seg.index("cd-blocked"), seg.index("1 RENDER"))
+        self.assertNotIn("1 RENDER", seg)
+        self.assertIn("${block.why}", seg)
+        self.assertIn('data-f="gen-go"', seg)
+        j = JS.index("const castGenBlock = (s) => {")
+        gate = JS[j:j + 900]
+        self.assertIn('why: "NEEDS THE BIBLE", act: "Open it"', gate)
+        self.assertIn('why: "NEEDS A DESCRIPTION"', gate)
 
     def test_the_gate_is_hold_not_bad(self):
         b = CSS.split(NL + ".cd-blocked {")[1].split("}")[0]

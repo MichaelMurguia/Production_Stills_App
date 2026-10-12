@@ -70,9 +70,12 @@ class TheCompiledPromptIsEditable(unittest.TestCase):
 
 class TheStateIsReadableBeforeItIsHit(unittest.TestCase):
     def test_the_line_states_which_text_will_be_sent(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Still a state for
+        # every case — as labels.
         b = preview_block()
-        self.assertIn("UNEDITED · STEPS 01–04 COMPILE THIS", b)
-        self.assertIn("EDITED · UNSAVED · THIS TAKE ONLY", b)
+        self.assertIn('"UNEDITED"', b)
+        self.assertIn('"EDITED · UNSAVED"', b)
+        self.assertNotIn("STEPS 01–04 COMPILE THIS", b)
 
     def test_it_updates_while_you_type(self):
         b = preview_block()
@@ -86,7 +89,11 @@ class TheStateIsReadableBeforeItIsHit(unittest.TestCase):
                       CSS)
 
     def test_the_one_take_scope_is_stated_not_discovered(self):
-        self.assertIn("Unsaved edits ride ONE take", preview_block())
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The explanatory help
+        # paragraph went; the state label still says UNSAVED.
+        b = preview_block()
+        self.assertNotIn("Unsaved edits ride ONE take", b)
+        self.assertIn('"EDITED · UNSAVED"', b)
 
 
 class TheOverridePathIsUnchanged(unittest.TestCase):

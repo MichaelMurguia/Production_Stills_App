@@ -76,11 +76,14 @@ class LegacyTitledRoles(unittest.TestCase):
 
 class TheNoMatchNoticeNamesWhatFailed(unittest.TestCase):
     def test_it_lists_the_required_objects(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The notice is the
+        # NO MATCHES label; each required object still shows its own
+        # "+ REF" verdict in step 02, which names what failed per object.
         i = JS.index("NO MATCHES")
         block = JS[i - 700:i + 700]
-        self.assertIn("Nothing in the library matches what this panel requires",
-                      block)
-        self.assertIn("reqObjs.slice(0, 4)", block)
+        self.assertNotIn("Nothing in the library matches what this panel requires",
+                         block)
+        self.assertIn('data-addref="${esc(o)}"', JS)
 
     def test_the_hardcoded_claim_is_gone(self):
         """The sentence that enumerated role kinds and then asserted what
@@ -89,12 +92,16 @@ class TheNoMatchNoticeNamesWhatFailed(unittest.TestCase):
         self.assertNotIn("Every group in the library is", JS_CODE)
 
     def test_it_says_what_to_do_next(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. Instruction removed.
         i = JS.index("NO MATCHES")
-        self.assertIn("tick a group below", JS[i:i + 700])
+        self.assertNotIn("tick a group below", JS[i:i + 700])
 
     def test_no_required_objects_is_its_own_sentence(self):
+        # RULED 2026-10-07 (user): no on-page explanations or instructions. The label stands for
+        # both cases; the REQUIRED step's own NONE states the empty list.
         i = JS.index("NO MATCHES")
-        self.assertIn("lists no required objects", JS[i:i + 700])
+        self.assertNotIn("lists no required objects", JS[i:i + 700])
+        self.assertIn("'<span class=\"mini mono\">NONE</span>'", JS)
 
 
 class TheSettingsPointerIsGone(unittest.TestCase):

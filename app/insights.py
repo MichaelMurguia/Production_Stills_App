@@ -98,16 +98,16 @@ def blocking() -> list[dict]:
         stages = ([] + (["wizard"] if not narr["usable"] else [])
                   + (["boards"] if not img["usable"] else []))
         if both:
-            text = ("Every engine key failed its last test — nothing can be "
-                    "read, drafted or rendered") if (narr["failed"] and img["failed"])                 else "No AI engine connected — nothing can be read, drafted or rendered"
+            text = "Every engine key failed its last test" if (narr["failed"] and img["failed"]) \
+                else "No AI model connected"
             sub = "BLOCKS STAGE 02 AND STAGE 04"
         elif not narr["usable"]:
-            text = ("The narrative key failed its last test — the key is "
-                    "there, the engine will not run") if narr["failed"]                 else "No narrative model — nothing can be read or drafted"
+            text = "The narrative key failed its last test" if narr["failed"] \
+                else "No narrative model"
             sub = "BLOCKS STAGE 02 — RENDERING STILL RUNS"
         else:
-            text = ("Every image engine failed its last test — the keys are "
-                    "there, the engines will not run") if img["failed"]                 else "No image engine — nothing can be rendered"
+            text = "Every image engine failed its last test" if img["failed"] \
+                else "No image engine"
             sub = "BLOCKS STAGE 04 — RESEARCH STILL RUNS"
         out.append({
             "kind": "KEY", "action": "settings", "scope": "install",
@@ -123,8 +123,7 @@ def blocking() -> list[dict]:
     if not any(r["role"] == "BOARD_LAYOUT_STYLE" and r["status"] == "APPROVED"
                for r in refs):
         out.append({"kind": "GAP", "role": "BOARD_LAYOUT_STYLE",
-                    "text": "No approved board layout master — needed to "
-                            "assemble boards, not to render panels",
+                    "text": "No approved board layout master",
                     "action": "references"})
 
     approved_ref_ids = {r["id"] for r in refs if r["status"] == "APPROVED"}
@@ -194,7 +193,7 @@ def blocking() -> list[dict]:
                     "text": f"Panel {slot['panel_id']} rendered "
                             f"{slot['candidate_width']}×{slot['candidate_height']}px "
                             f"into a {slot['slot_width']}×{slot['slot_height']}px "
-                            f"slot — {sid} — never upscaled, regenerate larger",
+                            f"slot — {sid}",
                 })
 
     rep = load_citation_report()
@@ -219,9 +218,7 @@ def blocking() -> list[dict]:
             out.append({
                 "kind": "CARE", "action": "specs", "spec_id": sk.get("base", ""),
                 "text": f"{sk.get('base', '')} did not consolidate at boot — "
-                        f"{sk.get('reason', 'reason not recorded')}. Its revision "
-                        "chain is still split, so its board picks takes by the "
-                        "old rules.",
+                        f"{sk.get('reason', 'reason not recorded')}",
             })
     except Exception:  # noqa: BLE001 — an advisory row must never break the list
         pass
@@ -234,14 +231,12 @@ def blocking() -> list[dict]:
         if days is None:
             out.append({
                 "kind": "CARE", "action": "projects",
-                "text": "This production has never been backed up — download "
-                        "a backup zip from Productions",
+                "text": "Never backed up",
             })
         elif days >= 7:
             out.append({
                 "kind": "CARE", "action": "projects",
-                "text": f"Last backup {days} days ago — download a fresh one "
-                        "from Productions",
+                "text": f"Last backup {days} days ago",
             })
     # Pipeline order, so the list reads the way the product runs. Stable,
     # so rows that block the same stage keep the order they were found in;
@@ -394,20 +389,20 @@ def next_verb(summary: dict, blockers: list[dict]) -> dict:
     if not summary["screenplay"]:
         return {"text": "Upload the screenplay", "action": "dashboard"}
     if not summary["production_design"]["bible_saved"]:
-        return {"text": "Draft the Art Direction Bible in the setup wizard",
+        return {"text": "Draft the Art Direction Bible",
                 "action": "wizard"}
     if summary["breakdowns"]["locked"] == 0:
         if summary["breakdowns"]["drafts"] == 0:
-            return {"text": "Draft a breakdown sheet from the screenplay",
+            return {"text": "Draft a breakdown",
                     "action": "specs"}
-        return {"text": "Validate and lock a draft breakdown sheet",
+        return {"text": "Lock a breakdown",
                 "action": "specs"}
     if summary["panels"]["approved"] == 0:
-        return {"text": "Generate and approve panels for a locked sheet",
+        return {"text": "Generate and approve panels",
                 "action": "boards"}
     if summary["boards"]["assembled"] == 0:
         return {"text": "Assemble the first 4K board", "action": "boards"}
-    return {"text": "Generate panels for the next sheet, or assemble a board",
+    return {"text": "Generate panels or assemble a board",
             "action": "boards"}
 
 

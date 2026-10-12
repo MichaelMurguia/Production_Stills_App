@@ -65,6 +65,24 @@ def load_text() -> str:
     return ""
 
 
+def save_document(text: str) -> int:
+    """Save the Art Direction Bible the way every writer must: the file,
+    then the Rendering Language re-derived from the anchor (the anchor IS
+    the style; the section is its transcription), then the revision bump
+    that tells every reader it changed. Returns the new revision.
+
+    One function because there are now two writers — the editor's Save and
+    the world build (2026-10-04) — and a second copy of these three steps
+    is how one of them gets forgotten."""
+    from . import generate, store
+    generate.save_style_bible(text.strip() + "\n")
+    sync_from_anchors()
+    state = store.load_app_state()
+    state["bible_rev"] = int(state.get("bible_rev", 0)) + 1
+    store.save_app_state(state)
+    return state["bible_rev"]
+
+
 def save_text(text: str) -> None:
     paths.BIBLE.parent.mkdir(parents=True, exist_ok=True)
     paths.BIBLE.write_text(text.rstrip() + "\n", encoding="utf-8")
